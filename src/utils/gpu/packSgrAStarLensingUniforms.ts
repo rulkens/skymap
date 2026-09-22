@@ -15,7 +15,8 @@
  *
  *   f32  0..15  (byte   0.. 63): cam.viewProj              mat4x4<f32>
  *   f32 16..17  (byte  64.. 71): cam.viewportPx             vec2<f32>
- *   f32 18..19  (byte  72.. 79): cam._pad0 / _pad1          untouched (zero)
+ *   f32 18      (byte  72.. 75): cam.pxPerRad               f32
+ *   f32 19      (byte  76.. 79): cam._pad0                  untouched (zero)
  *   f32 20      (byte  80.. 83): schwarzschildRadiusM       f32
  *   f32 21      (byte  84.. 87): innerRs                    f32
  *   f32 22      (byte  88.. 91): outerRs                    f32
@@ -71,6 +72,8 @@ export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 export function packSgrAStarLensingUniforms(input: {
   readonly viewProj: Float32Array | Mat4;
   readonly viewportPx: Vec2;
+  /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
+  readonly pxPerRad: number;
   readonly schwarzschildRadiusM: number;
   readonly innerRs: number;
   readonly outerRs: number;
@@ -94,6 +97,7 @@ export function packSgrAStarLensingUniforms(input: {
   const {
     viewProj,
     viewportPx,
+    pxPerRad,
     schwarzschildRadiusM,
     innerRs,
     outerRs,
@@ -115,7 +119,7 @@ export function packSgrAStarLensingUniforms(input: {
     quadPlaneRadiusRs,
   } = input;
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
-  writeCameraPrefix(out, viewProj, viewportPx); // f32 0..17; 18..19 stay zero
+  writeCameraPrefix(out, viewProj, viewportPx, pxPerRad); // f32 0..18; 19 stays zero
   out[20] = schwarzschildRadiusM; // byte 80
   out[21] = innerRs; // byte 84
   out[22] = outerRs; // byte 88

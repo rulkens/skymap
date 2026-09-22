@@ -85,6 +85,8 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  *                   is read off its rotation rows (see the module header).
  * @param viewportPx Pixel size of the TARGET this pass draws into, not the
  *                   canvas (see the module header).
+ * @param pxPerRad   The target's pixels per radian along y — the camera
+ *                   prefix's focal term, `viewportPx[1] / (2·tan(fovY/2))`.
  * @param tuning     The live look knobs, the app's own `MilkyWayTuning`.
  * @param fadeAlpha  The composed visibility fade (`deriveMilkyWayFade`).
  *                   Defaults to 1 — no fade — for callers that don't track it.
@@ -93,17 +95,17 @@ export function packCloudUniforms(
   viewProj: Float32Array,
   view: Float32Array,
   viewportPx: Vec2,
+  pxPerRad: number,
   tuning: MilkyWayTuning,
   fadeAlpha = 1,
   dst?: Float32Array,
 ): Float32Array {
   const out = dst ?? new Float32Array(CLOUD_UNIFORM_FLOATS);
 
-  // viewProj 0..15, viewportPx 16..17 — the shared 80-byte camera prefix.
-  writeCameraPrefix(out, viewProj, viewportPx);
-  // 18..19 are CameraUniforms' two named pads, which writeCameraPrefix leaves
-  // alone by contract.
-  out[18] = 0;
+  // viewProj 0..15, viewportPx 16..17, pxPerRad 18 — the shared 80-byte prefix.
+  writeCameraPrefix(out, viewProj, viewportPx, pxPerRad);
+  // 19 is CameraUniforms' named pad, which writeCameraPrefix leaves alone by
+  // contract.
   out[19] = 0;
 
   // model 20..35 — identity: this tool has no scene to place the cloud into.

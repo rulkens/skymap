@@ -37,6 +37,11 @@ export type MilkyWayCloudDrawArgs = {
   readonly vp: Float32Array;
   /** Canvas size in device pixels — `[width, height]`. Drives the star px clamp. */
   readonly viewportPx: Vec2;
+  /**
+   * Pixels per radian for THIS target — `ctx.drawPxPerRad` scaled by
+   * `viewportPx[1] / canvasHeight` when the target is smaller than the canvas.
+   */
+  readonly pxPerRad: number;
   /** Camera-facing billboard right axis (world space) — `cameraBillboardBasis(ctx.cam)`. */
   readonly camRight: Vec3;
   /** Camera-facing billboard up axis (world space). */

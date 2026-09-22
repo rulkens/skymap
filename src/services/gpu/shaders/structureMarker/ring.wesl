@@ -1,29 +1,26 @@
 // structureMarker/ring.wesl — screen-anti-aliased ring at world radius.
 //
 // One instance per structure marker.  Vertex stage: identical to halo.wesl's
-// world-sized billboard expansion — same shared 'expandBillboardWorld'
-// helper from lib/billboard.wesl (screen-aligned, no shear under
-// orbit, see that file's "Screen-aligned vs view-aligned" subsection
-// for the derivation).  The quad's half-extent is the same radiusMpc
-// so the ring (drawn at exactly 'uv == 1.0' in the fragment, i.e. the
-// unit circle on the quad) lands at world radius 'radiusMpc' from the
-// centre.
+// world-sized billboard expansion — 'worldLenToPx' for the screen radius,
+// 'pxToClipOffset' for the corner (screen-aligned, no shear under orbit;
+// see lib/billboard.wesl's "Screen-aligned vs view-aligned" subsection for
+// the derivation).  The quad's half-extent is the marker's own screen
+// radius, so the ring (drawn at exactly 'uv == 1.0' in the fragment, i.e.
+// the unit circle on the quad) lands on the marker's radius.
 //
 // Fragment: compute the distance from the billboard centre in UV
-// space.  At |uv| == 1 we're exactly at the world-space radiusMpc
-// from centre (because the quad's half-extent IS radiusMpc).  Emit a
-// 1-2 px-wide AA band centred on |uv| == 1, alpha = ringAlpha inside
-// the band, smoothstep AA on each edge.
+// space.  At |uv| == 1 we're exactly at the marker's radius (the quad's
+// half-extent IS that radius in pixels).  Emit a 1-2 px-wide AA band
+// centred on |uv| == 1, alpha = ringAlpha inside the band, smoothstep
+// AA on each edge.
 //
 // ### Computing the band width in UV space
 //
 // The visible ring should be ~1-2 px wide regardless of how big the
 // halo is on screen.  Convert pixel width → UV width:
 //
-//   sizePx  = worldLenToPx(cam, radiusMpc, centerClip.w)  — the
-//             screen-pixel half-extent of the billboard, exactly the
-//             same value 'expandBillboardWorld' uses internally to
-//             expand the corners.
+//   sizePx  = the screen-pixel half-extent of the billboard, the same
+//             value the vertex stage expands the corners by.
 //   uvWidth = pxWidth / sizePx                            — 1 UV unit
 //             spans sizePx pixels on screen.
 //
@@ -34,8 +31,9 @@ import package::structureMarker::io::Uniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
+import package::structureMarker::io::MARKER_SIZE_PX_RETUNE;
 import package::lib::billboard::quadCorner;
-import package::lib::billboard::expandBillboardWorld;
+import package::lib::billboard::pxToClipOffset;
 import package::lib::billboard::worldLenToPx;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
@@ -72,32 +70,24 @@ fn vs(
   let worldPos = input.positionAndRadius.xyz;
   let radiusMpc = input.positionAndRadius.w;
 
-  // Same world-sized, screen-aligned billboard expansion as halo.wesl,
-  // but the quad is widened by RING_QUAD_MARGIN so the AA band at
-  // |uv| == 1 doesn't clip at the cardinal points (see constant above).
-  // The 'uv' varying scales to match (corner * MARGIN), so the ring's
-  // d == 1 line still lands at world radius 'radiusMpc' — the MARGIN
-  // scale on both the geometry and the varying cancels.
+  // Same screen-aligned billboard expansion as halo.wesl, but the quad is
+  // widened by RING_QUAD_MARGIN so the AA band at |uv| == 1 doesn't clip at
+  // the cardinal points (see constant above).  The 'uv' varying scales to
+  // match (corner * MARGIN), so the ring's d == 1 line still lands on the
+  // marker's radius — the MARGIN scale on both the geometry and the varying
+  // cancels.  'sizePx' is also what the fragment converts RING_PX_WIDTH /
+  // RING_AA_WIDTH into UV-space band widths against.
   let centerClip = worldToClip(u.cam, worldPos);
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.cam, centerClip, radiusMpc * RING_QUAD_MARGIN, corner);
-
-  // Pixel half-extent of the billboard — the fragment needs this to
-  // convert RING_PX_WIDTH / RING_AA_WIDTH into UV-space band widths.
-  // Recomputed (not extracted from 'expandBillboardWorld') because
-  // returning a tuple from the helper would force every caller to
-  // accept a pair.  Identical cost to the work the helper does
-  // internally; the WGSL compiler is free to CSE the duplicate
-  // multiply.
-  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w);
+  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w) * MARKER_SIZE_PX_RETUNE;
+  let offset = pxToClipOffset(u.cam, corner * (sizePx * RING_QUAD_MARGIN), centerClip.w);
 
   var out: VsOut;
   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
-  // uv scales with MARGIN so the ring's d == 1 line lands at world
-  // radius 'radiusMpc' (not MARGIN * radiusMpc): at uv = (1, 0) we're
-  // at corner = (1/MARGIN, 0), pixel offset (1/MARGIN) * MARGIN *
-  // sizePx = sizePx = radiusMpc.  The quad's actual cardinal edges
-  // are at uv = ±MARGIN, giving the AA band room outside the ring.
+  // uv scales with MARGIN so the ring's d == 1 line lands at sizePx (not
+  // MARGIN * sizePx): at uv = (1, 0) we're at corner = (1/MARGIN, 0), pixel
+  // offset (1/MARGIN) * MARGIN * sizePx = sizePx.  The quad's actual
+  // cardinal edges are at uv = ±MARGIN, giving the AA band room outside.
   out.uv = corner * RING_QUAD_MARGIN;
   // Ring uses its own dedicated colour slot (separate from the halo)
   // so voids — which opt out of the additive halo — still get the

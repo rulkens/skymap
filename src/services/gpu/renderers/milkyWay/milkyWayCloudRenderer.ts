@@ -226,17 +226,16 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   // passes read the identical struct; only the viewport differs (the star pass
   // is sized to the reduced-resolution aggregate target).
   function writeUniforms(target: GPUBuffer, args: MilkyWayCloudDrawArgs): void {
-    const { vp, viewportPx, camRight, camUp, model, fadeAlpha, tuning } = args;
+    const { vp, viewportPx, pxPerRad, camRight, camUp, model, fadeAlpha, tuning } = args;
     const f32 = uniformScratch;
 
     // Pack io.wesl's Uniforms (byte offsets in the io.wesl header):
-    // viewProj 0..15, viewportPx 16..17, pad 18..19, model 20..35,
+    // viewProj 0..15, viewportPx 16..17, pxPerRad 18, pad 19, model 20..35,
     // camRight 36..39, camUp 40..43, params0 44..47,
     // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent).
-    writeCameraPrefix(f32, vp, viewportPx);
+    writeCameraPrefix(f32, vp, viewportPx, pxPerRad);
     // Explicit pad zeroing — this scratch is reused across frames, so the
-    // pads can't rely on zero-init the way a fresh Float32Array can.
-    f32[18] = 0;
+    // pad can't rely on zero-init the way a fresh Float32Array can.
     f32[19] = 0;
     f32.set(model, 20);
     // camRight/camUp are vec4 (xyz + 0 pad) so each lands on a clean 16-byte slot.

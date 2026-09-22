@@ -10,6 +10,7 @@ import { hasPickableLabel } from '../../../src/utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../src/utils/labels/labelPickQuads';
 import { LABEL_PICK_GRACE_PADDING_PX } from '../../../src/data/labels/labelPickGracePaddingPx';
 import { ATLAS_FONT_SIZE } from '../../../src/data/fonts';
+import { LABEL_EM_PX_RETUNE } from '../../../src/data/labels/labelSizingDefaults';
 import type { Label2D } from '../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../src/@types/rendering/LabelBBox';
 import type { Label2DProjection } from '../../../src/@types/rendering/Label2DProjection';
@@ -21,13 +22,14 @@ const BBOX: LabelBBox = { minX: -10, minY: -20, maxX: 30, maxY: 5 };
 // assertions turn, with every quad landing on the same pixel.
 const VP = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]);
 
-// viewportPx[1] = 2 · ATLAS_FONT_SIZE, so a label with worldEmMpc = clipW
-// projects to exactly one atlas em and the bbox scales by 1 (see
-// labelScreenRect's own test).
+// pxPerRad is the one that, once the shader's retune factor lands, projects a
+// label with worldEmMpc = clipW to exactly one atlas em, so the bbox scales by
+// 1 (see labelScreenRect's own test).
 const PROJECTION: Label2DProjection = {
   vp: VP,
   vpF32: VP,
   viewportPx: [200, 2 * ATLAS_FONT_SIZE],
+  pxPerRad: ATLAS_FONT_SIZE / LABEL_EM_PX_RETUNE,
 };
 
 const label = (over: Partial<Label2D> = {}): Label2D =>

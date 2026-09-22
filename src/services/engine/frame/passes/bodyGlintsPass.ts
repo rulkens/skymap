@@ -306,7 +306,7 @@ export const bodyGlintsPass: ContentPass = {
     // anchors. Uses the slab's f64 `vp`, NOT the f32-narrowed `view.vp` —
     // narrowed HERE, at the GPU-upload boundary.
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
-    renderer.draw(pass, staging, count, rebasedVp, view.viewportPx);
+    renderer.draw(pass, staging, count, rebasedVp, view.viewportPx, ctx.drawPxPerRad);
   },
 
   // Pick aspect — stamps the sub-pixel `glints` bodies into the NEAR0 r32uint pick
@@ -478,6 +478,7 @@ export const bodyGlintsPass: ContentPass = {
     pickRenderer.drawPoints(pass, {
       vp: rebasedVp,
       viewportPx: view.viewportPx,
+      pxPerRad: ctx.drawPxPerRad,
       points: pickPoints,
       // The glint depth variant: every point forces its per-instance CLASS band
       // (`bandClass` above), so importance (not nearness, not list order) decides —

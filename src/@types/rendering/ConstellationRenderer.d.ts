@@ -27,6 +27,8 @@ export type ConstellationRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
+    pxPerRad: number,
     halfWidthPx: number,
     intensity: number,
     fadeOpacity: number,

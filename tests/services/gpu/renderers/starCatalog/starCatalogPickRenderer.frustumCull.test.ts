@@ -93,6 +93,7 @@ function twoLeafArgs(
     source: Source.GaiaStars,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
+    pxPerRad: 1000,
     drawCount: 2,
     firstRecord: new Uint32Array([0, A_RECORDS]),
     recordCount: new Uint32Array([A_RECORDS, B_RECORDS]),

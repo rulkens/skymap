@@ -67,6 +67,9 @@ export const milkyWayAggregatePass: ContentPass = {
     cloudRenderer.drawStars(pass, {
       vp: view.vp,
       viewportPx: [vw, vh],
+      // A target spanning the same frustum in fewer rows scales the focal
+      // term with its height (as `drawStarStream` does for its half-res row).
+      pxPerRad: ctx.drawPxPerRad * (vh / ctx.canvasSize.height),
       camRight,
       camUp,
       model: milkyWayModelCached(),

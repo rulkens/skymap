@@ -217,7 +217,7 @@ describe('selectionRingPass.draw', () => {
     >;
     expect(rendererSpy.draw).toHaveBeenCalledOnce();
     // The selection is `draw`'s 4th argument.
-    const arg = rendererSpy.draw.mock.calls[0]![3]!;
+    const arg = rendererSpy.draw.mock.calls[0]![4]!;
     // worldPos copied straight from the row's x/y/z
     expect(arg.worldPos[0]).toBeCloseTo(0);
     expect(arg.worldPos[1]).toBeCloseTo(0);
@@ -237,7 +237,7 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    const arg = rendererSpy.draw.mock.calls[0]![3]!;
+    const arg = rendererSpy.draw.mock.calls[0]![4]!;
     // apparentPxRadius = (60 * 2 / 1000 / 10) * 720 = 8.64
     // apparentPxRadius * 0.5 = 4.32; > pointSizePx (4); * 6 = 25.92
     expect(arg.ringRadiusPx).toBeCloseTo(25.92, 4);
@@ -252,7 +252,7 @@ describe('selectionRingPass.draw', () => {
       typeof makeRendererSpy
     >;
     expect(rendererSpy.draw).toHaveBeenCalledOnce();
-    const arg = rendererSpy.draw.mock.calls[0]![3]!;
+    const arg = rendererSpy.draw.mock.calls[0]![4]!;
     expect(arg.worldPos[0]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[0]);
     expect(arg.worldPos[1]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[1]);
     expect(arg.worldPos[2]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[2]);
@@ -304,7 +304,7 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.draw.mock.calls[0]![4]).toEqual({
+    expect(rendererSpy.draw.mock.calls[0]![5]).toEqual({
       colorView: sentinelColorView,
       depthView: farDepthView,
       frame: null,

@@ -184,6 +184,7 @@ export const near0SelectionRingPass: ContentPass = {
       pass,
       rebasedVp,
       view.viewportPx,
+      ctx.drawPxPerRad,
       { worldPos: clampedCentre, ringRadiusPx, alpha },
       occluded ? scene : undefined,
     );

@@ -42,7 +42,7 @@ const VIEW = new Float32Array([
 
 describe('packCloudUniforms', () => {
   it('output is io.wesl-sized (208 bytes) with viewProj at floats 0-15', () => {
-    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING);
+    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], 1000, TUNING);
     expect(out.byteLength).toBe(208);
     expect(out.length).toBe(CLOUD_UNIFORM_FLOATS);
     expect(Array.from(out.slice(0, 16))).toEqual(Array.from(VIEW_PROJ));
@@ -52,14 +52,14 @@ describe('packCloudUniforms', () => {
     // The star pass draws into the reduced-resolution aggregate and the dust
     // pass draws full-res, so the same packer has to emit two viewports —
     // the lane stars.wesl converts NDC to pixels through before clamping.
-    const full = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING);
+    const full = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], 1000, TUNING);
     expect([full[16], full[17]]).toEqual([800, 600]);
-    const reduced = packCloudUniforms(VIEW_PROJ, VIEW, [266, 200], TUNING);
+    const reduced = packCloudUniforms(VIEW_PROJ, VIEW, [266, 200], 1000, TUNING);
     expect([reduced[16], reduced[17]]).toEqual([266, 200]);
   });
 
   it('model is the identity at floats 20-35', () => {
-    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING);
+    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], 1000, TUNING);
     // prettier-ignore
     expect(Array.from(out.slice(20, 36))).toEqual([
       1, 0, 0, 0,
@@ -74,7 +74,7 @@ describe('packCloudUniforms', () => {
     // axis-aligned, so right/up read off cleanly as [1,0,0] / [0,1,0].
     const view = mat4.lookAt([0, 0, 10], [0, 0, 0], [0, 1, 0]);
     const viewProj = mat4.multiply(mat4.perspective(1, 1, 0.1, 100), view);
-    const out = packCloudUniforms(viewProj, view, [800, 600], TUNING);
+    const out = packCloudUniforms(viewProj, view, [800, 600], 1000, TUNING);
     expect(out[36]).toBeCloseTo(1, 12);
     expect(out[37]).toBeCloseTo(0, 12);
     expect(out[38]).toBeCloseTo(0, 12);
@@ -86,7 +86,7 @@ describe('packCloudUniforms', () => {
   });
 
   it('params0/params1 carry the tuning knobs at their io.wesl lanes', () => {
-    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING);
+    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], 1000, TUNING);
     // params0 = (fadeAlpha, exposure, modelScale, softness). The tool has no
     // scene placement, so lane z is pinned 1; lane x defaults to 1 when no
     // visibility fade is supplied.
@@ -105,7 +105,7 @@ describe('packCloudUniforms', () => {
     // The frame loop hands the same scratch to both passes every frame, so a
     // lane left unwritten would silently carry the other pass's value.
     const dst = new Float32Array(CLOUD_UNIFORM_FLOATS).fill(-7);
-    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], TUNING, 1, dst);
+    const out = packCloudUniforms(VIEW_PROJ, VIEW, [800, 600], 1000, TUNING, 1, dst);
     expect(out).toBe(dst);
     expect(Array.from(dst).some((v) => v === -7)).toBe(false);
   });

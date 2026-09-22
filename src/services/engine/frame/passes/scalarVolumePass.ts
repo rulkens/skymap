@@ -56,6 +56,9 @@ export const scalarVolumePass: ContentPass = {
       pass,
       view.vp,
       [vw, vh],
+      // A target spanning the same frustum in fewer rows scales the focal
+      // term with its height (as `drawStarStream` does for its half-res row).
+      ctx.drawPxPerRad * (vh / ctx.canvasSize.height),
       view.camPos,
       liveness.settingsOf,
       liveness.fadeOpacityOf,

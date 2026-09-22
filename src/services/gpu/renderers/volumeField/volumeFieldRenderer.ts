@@ -362,14 +362,15 @@ export function createVolumeFieldRenderer(
     listIds() {
       return Array.from(fields.keys());
     },
-    draw(pass, viewProj, viewportPx, cameraPosWorld, settingsOf, fadeOpacityOf) {
+    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
       // Per-field uniform buffer layout (256 bytes; mat4 alignment):
       //   0..63   viewProj         (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx       (vec2)
-      //  72..79   _pad0, _pad1
+      //  72..75   pxPerRad
+      //  76..79   _pad0
       //  80..143  modelMatrix      (mat4x4)
       // 144..207  invModelMatrix   (mat4x4)
       // 208..219  cameraPosWorld   (vec3)
@@ -422,10 +423,9 @@ export function createVolumeFieldRenderer(
         // fade", so we skip the GPU work entirely.
         const opacity = fadeOpacityOf(e.id);
         if (opacity <= 0 || s.intensity <= 0) continue;
-        writeCameraPrefix(scratch, viewProj, viewportPx);
+        writeCameraPrefix(scratch, viewProj, viewportPx, pxPerRad);
         // Explicit pad zeroing — the scratch is reused across the field
-        // loop, so the pads can't rely on Float32Array zero-init.
-        scratch[18] = 0;
+        // loop, so the pad can't rely on Float32Array zero-init.
         scratch[19] = 0;
         for (let i = 0; i < 16; i++) scratch[20 + i] = e.modelMatrix[i] ?? 0;
         for (let i = 0; i < 16; i++) scratch[36 + i] = e.invModelMatrix[i] ?? 0;

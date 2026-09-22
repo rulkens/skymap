@@ -19,9 +19,9 @@
 // ## Uniforms layout — CameraUniforms-prefix only at v1
 //
 // The 80-byte CameraUniforms prefix carries viewProj + viewportPx +
-// two pads.  No renderer-specific tail at v1.  The CPU-side write site
-// in structureMarkerRenderer.ts allocates 80 bytes and writes the same
-// shape as markerLineRenderer.ts.
+// pxPerRad + one pad.  No renderer-specific tail at v1.  The CPU-side
+// write site in structureMarkerRenderer.ts allocates 80 bytes and writes
+// the same shape as markerLineRenderer.ts.
 //
 // ## Why no per-vertex attribute struct
 //
@@ -37,6 +37,12 @@ import package::lib::camera::CameraUniforms;
 struct Uniforms {
   cam: CameraUniforms,
 };
+
+// Ring and halo radii were tuned by eye when 'worldLenToPx' under-reported
+// the true apparent size by tan(fovY/2).  Folding tan(30 degrees) back in
+// keeps the markers the size they are today at the app's 60 degree fov,
+// while they now track the fov slider instead of ignoring it.
+const MARKER_SIZE_PX_RETUNE: f32 = 0.57735;
 
 // ── per-instance attributes ───────────────────────────────────────
 //

@@ -56,12 +56,12 @@ describe('createBodyGlintRenderer', () => {
 
     // Zero count — nothing packed, nothing drawn.
     const empty = mockPass();
-    renderer.draw(empty, batch(0), 0, new Float32Array(16), [1920, 1080]);
+    renderer.draw(empty, batch(0), 0, new Float32Array(16), [1920, 1080], 1000);
     expect(empty.draw).not.toHaveBeenCalled();
 
     // Two glints — one instanced draw of 6 vertices × 2 instances.
     const two = mockPass();
-    renderer.draw(two, batch(2), 2, new Float32Array(16), [1920, 1080]);
+    renderer.draw(two, batch(2), 2, new Float32Array(16), [1920, 1080], 1000);
     expect(two.draw).toHaveBeenCalledTimes(1);
     expect(two.draw).toHaveBeenCalledWith(6, 2);
 
@@ -73,6 +73,7 @@ describe('createBodyGlintRenderer', () => {
       MAX_GLINTS + 10,
       new Float32Array(16),
       [1920, 1080],
+      1000,
     );
     expect(over.draw).toHaveBeenCalledWith(6, MAX_GLINTS);
   });

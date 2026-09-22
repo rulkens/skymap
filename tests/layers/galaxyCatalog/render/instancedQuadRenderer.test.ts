@@ -333,6 +333,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj,
         viewport: [800, 600],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(10 * FLOATS_PER_INSTANCE),
         instanceCount: 10,
       });
@@ -345,6 +346,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj,
         viewport: [800, 600],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(50 * FLOATS_PER_INSTANCE),
         instanceCount: 50,
       });
@@ -357,6 +359,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj,
         viewport: [800, 600],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(200 * FLOATS_PER_INSTANCE),
         instanceCount: 200,
       });
@@ -390,6 +393,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj: new Float32Array(16),
         viewport: [100, 100],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(0),
         instanceCount: 0,
       });
@@ -425,6 +429,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj: new Float32Array(16),
         viewport: [100, 100],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(5 * FLOATS_PER_INSTANCE),
         instanceCount: 5,
       });
@@ -525,6 +530,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj: new Float32Array(16),
         viewport: [512, 512],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
         instanceCount: 1,
         viewSlot: 1,
@@ -534,6 +540,7 @@ describe('createInstancedQuadRenderer', () => {
         pass,
         viewProj: new Float32Array(16),
         viewport: [512, 512],
+        pxPerRad: 1000,
         instanceBytes: new Float32Array(FLOATS_PER_INSTANCE),
         instanceCount: 1,
         viewSlot: 2,

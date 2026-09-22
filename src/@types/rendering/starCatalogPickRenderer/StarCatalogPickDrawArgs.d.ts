@@ -22,6 +22,8 @@ export type StarCatalogPickDrawArgs = {
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
+  /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
+  readonly pxPerRad: number;
   /** How many leaf nodes this pick draws — valid entries in each flat array below. */
   readonly drawCount: number;
   /** Per-node record-slice base (`node.firstRecord`) — a flat `Uint32Array`. */

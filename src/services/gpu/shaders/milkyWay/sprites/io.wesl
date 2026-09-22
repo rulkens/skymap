@@ -34,7 +34,7 @@
 // ## Byte layout (canonical — the offset authority for the CPU packer)
 //
 //   offset 0   : cam: CameraUniforms  (80 B; viewProj 0..63, viewportPx
-//                                       64..71, _pad0 72..75, _pad1 76..79)
+//                                       64..71, pxPerRad 72..75, _pad0 76..79)
 //   offset 80  : model: mat4x4<f32>   (64 B; per-cloud world placement)
 //   offset 144 : camRight: vec4<f32>  (xyz billboard right + 0)
 //   offset 160 : camUp: vec4<f32>     (xyz billboard up + 0)

@@ -41,5 +41,7 @@ export type BodyGlintRenderer = Renderer & {
     count: number,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
+    pxPerRad: number,
   ): void;
 };

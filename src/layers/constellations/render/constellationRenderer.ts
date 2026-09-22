@@ -68,7 +68,8 @@ import { buildConstellationInstances, FLOATS_PER_SEGMENT } from './buildConstell
 //
 //   offset  0..63 : viewProj     mat4x4<f32>   (CameraUniforms.viewProj)
 //   offset 64..71 : viewportPx   vec2<f32>     (CameraUniforms.viewportPx)
-//   offset 72..79 : _pad0, _pad1 2 × f32       (CameraUniforms reserved)
+//   offset 72..75 : pxPerRad     f32           (CameraUniforms focal term)
+//   offset 76..79 : _pad0        f32           (CameraUniforms reserved)
 //   offset 80..83 : halfWidthPx  f32
 //   offset 84..87 : intensity    f32
 //   offset 88..95 : _pad0, _pad1 2 × f32       (vec3 alignment pad)
@@ -240,6 +241,7 @@ export function createConstellationRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
     halfWidthPx: number,
     intensity: number,
     fadeOpacity: number,
@@ -284,7 +286,7 @@ export function createConstellationRenderer(
     // Pack the 112-byte Uniforms struct (byte layout documented on
     // CONSTELLATION_UNIFORM_BYTES above). Reused scratch, so the named pads are
     // left as their prior contents — they are never read by the shader.
-    writeCameraPrefix(uniformF32, viewProj, viewportPx);
+    writeCameraPrefix(uniformF32, viewProj, viewportPx, pxPerRad);
     uniformF32[CONSTELLATION_HALFWIDTH_F32] = halfWidthPx;
     uniformF32[CONSTELLATION_INTENSITY_F32] = intensity;
     uniformF32[CONSTELLATION_COLOR_F32] = lineColor[0];

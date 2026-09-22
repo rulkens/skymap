@@ -135,7 +135,7 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     near0SelectionRingPass.draw(pass, view, ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const [, , , opts] = renderer.draw.mock.calls[0]!;
+    const [, , , , opts] = renderer.draw.mock.calls[0]!;
     const handed = opts.worldPos as [number, number, number];
     const handedLen = Math.hypot(handed[0], handed[1], handed[2]);
 
@@ -187,7 +187,7 @@ describe('near0SelectionRingPass.draw — live body position', () => {
 
     near0SelectionRingPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
 
-    const [, , , opts] = renderer.draw.mock.calls[0]!;
+    const [, , , , opts] = renderer.draw.mock.calls[0]!;
     const handed = opts.worldPos as [number, number, number];
 
     // camPos is the origin, so the handed camera-relative centre equals the live

@@ -2,12 +2,12 @@
 // structure halos (clusters / superclusters; voids opt out).
 //
 // One instance per structure marker.  The vertex stage projects the
-// marker's world-space centre to clip space, then expands a unit quad
-// whose world-space half-extent equals physicalRadiusMpc using the
-// shared 'expandBillboardWorld' helper in lib/billboard.wesl —
-// screen-axis-aligned (no shear under orbit), world-sized (grows
-// naturally as the camera approaches), zero extra uniforms.  See
-// lib/billboard.wesl's "Screen-aligned vs view-aligned" subsection.
+// marker's world-space centre to clip space, then expands a unit quad to
+// the marker's apparent radius in pixels ('worldLenToPx' +
+// 'pxToClipOffset' from lib/billboard.wesl) — screen-axis-aligned (no
+// shear under orbit), world-sized (grows naturally as the camera
+// approaches), zero extra uniforms.  See lib/billboard.wesl's
+// "Screen-aligned vs view-aligned" subsection.
 //
 // The fragment stage emits an additive radial gradient: centre alpha
 // full, edge alpha zero, smoothstep falloff across the quad.
@@ -16,8 +16,10 @@ import package::structureMarker::io::Uniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
+import package::structureMarker::io::MARKER_SIZE_PX_RETUNE;
 import package::lib::billboard::quadCorner;
-import package::lib::billboard::expandBillboardWorld;
+import package::lib::billboard::pxToClipOffset;
+import package::lib::billboard::worldLenToPx;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
@@ -40,7 +42,8 @@ fn vs(
   // lib/billboard.wesl for the derivation.
   let centerClip = worldToClip(u.cam, worldPos);
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.cam, centerClip, radiusMpc, corner);
+  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w) * MARKER_SIZE_PX_RETUNE;
+  let offset = pxToClipOffset(u.cam, corner * sizePx, centerClip.w);
 
   var out: VsOut;
   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);

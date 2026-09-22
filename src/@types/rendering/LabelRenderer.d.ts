@@ -57,6 +57,8 @@ export type LabelRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
+    pxPerRad: number,
     scene?: OverlaySceneOcclusion,
   ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */

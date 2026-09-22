@@ -18,6 +18,7 @@ import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsys
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -43,6 +44,9 @@ function makeCtx(nowMs = 0): FrameView {
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
+    // The pxPerRad that, through the label sizing's retune factor, reproduces
+    // the pre-pxPerRad `viewportHeight / 2` projection these rects assume.
+    drawPxPerRad: 500 / LABEL_EM_PX_RETUNE,
   } as unknown as FrameView;
 }
 
@@ -67,6 +71,9 @@ function makeNear0Ctx(nowMs = 0): FrameView {
     drawCamPos: [0, 0, 0],
     slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
+    // The pxPerRad that, through the label sizing's retune factor, reproduces
+    // the pre-pxPerRad `viewportHeight / 2` projection these rects assume.
+    drawPxPerRad: 500 / LABEL_EM_PX_RETUNE,
   } as unknown as FrameView;
 }
 

@@ -34,7 +34,7 @@ export function labelPickQuads(args: {
   readonly measure: (label: Label2D) => LabelBBox | null;
 }): LabelPickQuad[] {
   const { labels, projection, measure } = args;
-  const viewportHeightPx = projection.viewportPx[1];
+  const { pxPerRad } = projection;
   // Shared with the declutter arms (`label2DDirector`) — a label cannot be
   // decluttered against one screen position and clicked at another.
   const projected = projectLabels(labels, projection);
@@ -58,7 +58,7 @@ export function labelPickQuads(args: {
           bbox,
           screenPx: p.screenPx,
           clipW: p.clipW,
-          viewportHeightPx,
+          pxPerRad,
           padPx: LABEL_PICK_GRACE_PADDING_PX,
           // Outline styles paint up to `outlineEmFrac * displayEmPx` past the
           // ink (labels/vertex.wesl's quad expansion) — the pick rect must

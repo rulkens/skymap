@@ -56,12 +56,12 @@
 // reads correctly at the centre's depth, with zero extra uniforms —
 // just 'CameraUniforms.viewportPx' that every renderer already has.
 //
-// 'expandBillboardWorld' below is the screen-aligned variant. It
-// composes 'worldLenToPx' + 'pxToClipOffset' (the two primitives
+// That variant lives at its call sites rather than as a fourth export:
+// each composes 'worldLenToPx' + 'pxToClipOffset' (the two primitives
 // already used inline by 'labels/vertex.wesl' — the original instance
-// of this pattern in the codebase). Halo / ring use it directly;
-// labels keep their clamp logic but express the pixel arithmetic in
-// terms of the same primitives.
+// of this pattern in the codebase) around its OWN eye-tuned size
+// constant, so a shared wrapper would have had a single line left to
+// share and nowhere honest to put the constant.
 //
 // ## What about the corner-ordering mismatch
 //
@@ -229,19 +229,24 @@ fn expandBillboardScreen(
 // shared CameraUniforms.viewProj has no separate view/proj split, so
 // clip.w is the cleanest depth proxy available without extra uniforms).
 //
-// Derivation: at depth w, world-length L maps to (L / w) NDC units
-// along the Y axis; multiplying by (viewportPx.y / 2) converts NDC to
-// pixels. Mirrors the standard perspective NDC→screen projection. The
-// Y axis is the canonical one because 'fovY' is the fixed reference
-// for perspective projection; X tracks Y by the viewport aspect ratio
+// Derivation: at depth w, world-length L subtends L / w radians;
+// multiplying by 'cam.pxPerRad' converts radians to pixels. The Y axis
+// is the canonical one because 'fovY' is the fixed reference for
+// perspective projection; X tracks Y by the viewport aspect ratio
 // automatically once we're back in pixel space.
+//
+// The focal term arrives in the prefix rather than being rebuilt from
+// 'viewportPx.y * 0.5' (which is only right at fovY = 90 degrees and
+// is blind to a dome face's or VR eye's own fov) — see
+// lib/camera.wesl's 'pxPerRad' section. Every eye-tuned constant on
+// the consumer side was retuned once against the corrected scale.
 //
 // This is one of the two primitives the original instance of the
 // pattern in 'labels/vertex.wesl' computed inline; extracting it lets
 // halo / ring / labels all share the same canonical derivation.
 
 fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
-  return (worldLen / clipW) * (cam.viewportPx.y * 0.5);
+  return (worldLen / clipW) * cam.pxPerRad;
 }
 
 // ── pxToClipOffset ───────────────────────────────────────────────────
@@ -257,38 +262,9 @@ fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
 // reads as 'offsetPx' actual pixels on screen regardless of depth.
 // Same cancellation as 'expandBillboardScreen' above, but accepts an
 // arbitrary 2D pixel offset rather than a unit corner × size — useful
-// for labels' per-glyph atlas-px offsets and as a building block for
-// 'expandBillboardWorld' below.
+// for labels' per-glyph atlas-px offsets and, paired with
+// 'worldLenToPx', for the world-sized billboards halo / ring expand.
 
 fn pxToClipOffset(cam: CameraUniforms, offsetPx: vec2<f32>, clipW: f32) -> vec2<f32> {
   return offsetPx * (2.0 / cam.viewportPx) * clipW;
-}
-
-// ── expandBillboardWorld ─────────────────────────────────────────────
-//
-// Camera-facing square billboard sized in world-space Mpc. Composes
-// 'worldLenToPx' + 'pxToClipOffset' for the common round / square
-// halo case. The result is always screen-axis-aligned (no shear
-// under orbit) and grows naturally with proximity (because the pixel
-// size is computed from worldRadius / clipW).
-//
-// See the module header's "Screen-aligned vs view-aligned" subsection
-// for why this is SCREEN-aligned and NOT view-aligned (no
-// 'camera_right' / 'camera_up' needed — clip.w is the depth proxy).
-//
-// Caller pattern:
-//
-//   let centerClip = worldToClip(u.cam, worldPos);
-//   let corner     = quadCorner(vi);
-//   let offset     = expandBillboardWorld(u.cam, centerClip, radiusMpc, corner);
-//   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
-
-fn expandBillboardWorld(
-  cam: CameraUniforms,
-  centerClip: vec4<f32>,
-  worldRadius: f32,
-  corner: vec2<f32>,
-) -> vec2<f32> {
-  let sizePx = worldLenToPx(cam, worldRadius, centerClip.w);
-  return pxToClipOffset(cam, corner * sizePx, centerClip.w);
 }

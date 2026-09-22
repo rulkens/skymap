@@ -116,6 +116,7 @@ export const milkyWayPass: ContentPass = {
       // dust pass's own size clamp is in NDC, not pixels, so this only feeds
       // the shared camera prefix — but keeping it honest costs nothing.)
       viewportPx: view.viewportPx,
+      pxPerRad: ctx.drawPxPerRad,
       camRight,
       camUp,
       model: milkyWayModelCached(),

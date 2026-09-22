@@ -99,6 +99,7 @@ function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
   return {
     vp: new Float32Array(16).fill(7),
     viewportPx: [1920, 1080],
+    pxPerRad: 1000,
     camRight: [1, 0, 0],
     camUp: [0, 1, 0],
     model: Float32Array.from({ length: 16 }, (_, i) => i + 100),

@@ -21,6 +21,7 @@ export function cosmoLabelProjection(ctx: FrameView): Label2DProjection {
     vp: ctx.vp,
     vpF32: ctx.vp,
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+    pxPerRad: ctx.drawPxPerRad,
   };
   cache.set(ctx, projection);
   return projection;
