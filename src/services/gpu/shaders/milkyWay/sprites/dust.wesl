@@ -34,6 +34,10 @@ import package::lib::cloudSprite::dustTransmittance;
 // sprite sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
 
+// Screen-size clamp cap, ported verbatim from the tool's dust pass (NDC, not
+// pixels — see the module header for why dust and stars clamp differently).
+const DUST_NDC_CAP: f32 = 0.16;
+
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -57,22 +61,19 @@ fn vs(@location(0) corner: vec2<f32>,
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
   let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
 
-  let cClip = worldToClip(u.cam, center);
-  // The quad is tilted against the view plane, so its corners sit at
-  // different depths; projecting them independently draws a trapezoid
-  // and spikes a corner that crosses behind the eye across the screen.
-  // Sharing the centre's depth keeps the image a parallelogram on the
-  // centre and a corner is behind the eye only when the sprite is.
-  let dClip = u.cam.viewProj * vec4<f32>(offsetWorld, 0.0);
-  var kClip = vec4<f32>(cClip.xy + dClip.xy, cClip.z, cClip.w);
-
-  // 0.16-NDC screen-size clamp, ported verbatim from the tool's dust pass.
-  if (cClip.w > 0.0 && kClip.w > 0.0) {
-    let cN = cClip.xy / cClip.w;
-    var d = kClip.xy / kClip.w - cN;
-    let l = length(d);
-    if (l > 0.16) { d = d * (0.16 / l); kClip = vec4<f32>((cN + d) * kClip.w, kClip.z, kClip.w); }
-  }
+  // Apparent size is ANGULAR — see stars.wesl's vertex stage for the full
+  // rationale (a per-face projected size kinks a sprite straddling a dome
+  // seam). distWorld: model-space distance through the model's uniform
+  // scale (params0.z).
+  let distWorld = length(inPos - u.camPosModel.xyz) * modelScale;
+  let halfRad = worldHalfExtent / max(distWorld, 1e-30);
+  let lPx = halfRad * u.cam.pxPerRad;
+  let apparent = lPx * 2.0 * length(vec2<f32>(1.0 / u.cam.viewportPx.x, 1.0 / u.cam.viewportPx.y));
+  let k = min(1.0, DUST_NDC_CAP / max(apparent, 1e-30));
+  // Every corner projected exactly: the rasteriser clips a corner behind the
+  // eye in homogeneous space, and exact projection is what makes two faces
+  // draw one world quad.
+  var kClip = worldToClip(u.cam, center + offsetWorld * k);
 
   // Survive the adaptive NEAR0 far plane: on a deep descent (or a tight orbit
   // of another local-volume body) the foreground far plane pulls inside the
