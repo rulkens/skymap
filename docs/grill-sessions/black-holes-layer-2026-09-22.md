@@ -419,8 +419,44 @@ named contract member. The `zoneOfAvoidance` card move is part of the prep PR.
 - `docs/backlog/2026-09-03-s-star-analytic-lensing.md` — the S-stars become a rider on
   the hole's slab row (Q7), no contract field needed.
 
+## Post-merge reconcile (main `b1e453e02`: #802 starCatalog PR2, #805 planners, #807)
+
+No ruling is contradicted. Corrections and new facts the spec must carry:
+
+- **Ruling 5 splits.** The caption was never drawn by the star pass: it is a core
+  `ForegroundCaption` from `presentation/sceneBodyLabels.ts:105-111` (kind
+  `'sgrAStar'`, `captionFadeRules.ts:133-142`, `captionPriority.ts`). The star pass
+  owns only the **pick stamp** hanging off it — and PR2 moved that pass into
+  `layers/starCatalog/passes/starPointsPass.ts` (`:132-134`, `:175-186`, `:325-360`,
+  importing core `sgrAStarCaptionTarget.ts` and `SGR_A_STAR`). So: caption out of
+  `sceneBodyLabels` (core), pick out of the *star Layer's* pass.
+- **Ruling 9 premise moved.** `body-<id>` now decodes through `BODY_PICK_ROWS` via
+  `utils/scene/isRegistryBodyId.ts` (PR2 deleted `isSceneBodyId`); `rankPaletteMatches`
+  scores `SCENE_BODIES.filter(isRegistryBodyId)` (`:97`).
+- **Ruling 3 has an unpriced cost.** `docs/backlog/2026-09-22-stars-still-in-the-body-tables.md`
+  (filed by PR2) names six `findByIdOrThrow`-style readers of `SCENE_BODIES` —
+  `cameraDrivers.ts:166`, `bodyHomePose.ts:77`, `selectionHaloTable.ts:101`,
+  `focusFraming.ts:109`, `approachTiltedPose.ts:48`, `watchFlyToLonLatSaga.ts:73` —
+  that a non-body Sgr A\* trips exactly as the stars do. The `Layer.slabs` row (Q7) is
+  the natural host for what they read (radius, standoff, position); `refactor-ground`
+  prices whether they move onto it in the prep or the backlog item stays.
+- **Ruling 6 has a competitor.** `docs/backlog/2026-09-22-captures-as-views.md`
+  proposes modelling a capture face as a view rather than a third step kind — a
+  reshape of the machinery the `Layer.captures` prep would build on. Sequence the
+  prep after that ruling as well as after #800.
+- **`Layer.frame` is gone** (#805): per-frame work is a `planners?` row
+  (`FrameContentPlanner`, `scope: 'once' | 'perView'`, result via
+  `snapshot.plans.get`). The Layer's band gating and slab activity target that.
+- **A seventh `SCENE_ANCHOR_POINT_BODIES` consumer:** `utils/meshBodies/meshBodySlabHostId.ts:19`
+  — a mesh body may name the Sgr A\* row as its slab host; the `slabs` row must stay
+  nameable as a host.
+- `layers/body/state/slices.ts` still holds `bodies`, `earth`, `sgrAStarLensingTuning`;
+  PR2 took nothing out. `Source.SgrAStar` row is still core (`data/sources.ts:86`).
+- The starCatalog spec is under `specs/completed/` with :27/:174 unamended — the note
+  is still owed.
+
 ## Next
 
-`refactor-ground` over the prep list once PR2 has merged, then the spec, then
-`writing-plans`. Worktree `black-holes-layer` (branch `worktree-black-holes-layer`,
-`public/data` linked to main).
+`refactor-ground` over the prep list, then the spec, then `writing-plans`. Worktree
+`black-holes-layer` (branch `worktree-black-holes-layer`, `public/data` linked to
+main).
