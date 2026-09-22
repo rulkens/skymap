@@ -1,7 +1,8 @@
 /**
- * VIEW_RIGS — every `ViewRigKey`'s roster. `mono` is today's frame: one view,
- * identically the main context, over the four sections in their authored
- * order.
+ * VIEW_RIGS — every `ViewRigKey`'s roster. `mono` is one view, identically
+ * the main context, over the four sections in their authored order. `dome`
+ * is five views, one per cube face, resampled into the same canvas `mono`
+ * draws to.
  */
 
 import type { ViewRig } from '../../@types/engine/frame/ViewRig';
@@ -18,8 +19,8 @@ export const VIEW_RIGS: Readonly<Record<ViewRigKey, ViewRig>> = {
   },
   // Five dome-cube faces, no canvas draw of its own: the resample step reads
   // them back into `hdr`, which `POST` composites to the canvas like mono's
-  // own. No `OVERLAYS` — a dome has no single cursor ray for a caption to clip
-  // against, which is also why picking is off.
+  // own. No `OVERLAYS` — see `docs/backlog/2026-09-23-dome-output-space-overlays.md`
+  // for why labels are off and what wiring restoring them needs.
   dome: {
     views: domeFaceSpecs,
     program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST],

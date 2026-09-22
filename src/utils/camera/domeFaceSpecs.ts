@@ -13,17 +13,20 @@ import { DOME_PARAMS } from '../../data/rendering/domeParams';
 import { domeFaceRotations } from '../dome/domeFaceRotations';
 import { symmetricFrustum } from './symmetricFrustum';
 
+// Frame-invariant: every face keeps the same tilt and the same square 90°
+// frustum, so both are hoisted rather than rebuilt on every call.
+const ROTATIONS = domeFaceRotations(DOME_PARAMS.tiltDeg);
+const FRUSTUM = symmetricFrustum(Math.PI / 2, 1);
+
 export function domeFaceSpecs(canvas: FrameView, _state: EngineState): readonly ViewSpec[] {
-  const rotations = domeFaceRotations(DOME_PARAMS.tiltDeg);
-  const frustum = symmetricFrustum(Math.PI / 2, 1);
   const eyeOffsetMpc: Vec3 = [0, 0, 0];
   const specs: ViewSpec[] = [];
   for (let i = 0; i < DOME_FACE_COUNT; i++) {
     specs.push({
       id: `dome:${DOME_FACE_NAMES[i]}`,
-      rotation: rotations[i]!,
+      rotation: ROTATIONS[i]!,
       eyeOffsetMpc,
-      frustum,
+      frustum: FRUSTUM,
       sizePx: canvas.canvasSize,
       slot: DOME_PARAMS.viewSlotBase + i,
       kind: 'frame',

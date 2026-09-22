@@ -198,9 +198,9 @@ describe('createRenderTargets', () => {
     const desc = create.mock.calls.find((c) => c[0].label === 'render-target-layered-canvas')![0];
     expect(desc.size).toEqual({ width: 64, height: 64, depthOrArrayLayers: 5 });
 
-    // The default view spans the whole array (P4: `viewOf` of a non-6-layer
-    // row is still the WHOLE 2d-array view, not a per-layer one) — Task 3's
-    // cube sampling depends on this for any layer count, not just 6.
+    // The default view spans the whole array (`viewOf` of a non-6-layer row
+    // is still the WHOLE 2d-array view, not a per-layer one) — cube sampling
+    // depends on this for any layer count, not just 6.
     expect(targets.viewOf('layered-canvas')).toBeDefined();
     // One single-layer view per layer, all distinct.
     const layerViews = [0, 1, 2, 3, 4].map((layer) => targets.layerViewOf('layered-canvas', layer));

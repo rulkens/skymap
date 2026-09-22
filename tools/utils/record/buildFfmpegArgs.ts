@@ -29,9 +29,7 @@
  * `dome` switches to a separate, pinned libx264 argv: a 4096² dome frame is
  * 65 536 macroblocks, over H.264 level 5.2's limit, so it needs level 6.1 —
  * which VideoToolbox does not support, hence software `libx264` here instead
- * of the hardware encoder above. `-r 30` is the pinned Wisdome delivery rate,
- * not `opts.fps` (record.ts's `--dome` validation already requires them equal).
- * The frames arrive as JPEG, which is full-range, and libx264 passes that
+ * of the hardware encoder above. The frames arrive as JPEG, which is full-range, and libx264 passes that
  * range flag through untouched: `-pix_fmt yuv420p` alone yields a file
  * ffprobe reports as `yuvj420p` / `color_range=pc`, which a player that
  * assumes broadcast range shows with crushed blacks. The scale filter
@@ -62,7 +60,7 @@ export function buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean 
       '-pix_fmt',
       'yuv420p',
       '-r',
-      '30',
+      String(opts.fps),
       '-y',
       opts.out,
     ];

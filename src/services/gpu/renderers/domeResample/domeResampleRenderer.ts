@@ -1,7 +1,7 @@
 /**
  * domeResampleRenderer — a covering triangle that fisheye-resamples the five
  * `dome-cube` faces into `hdr` (`shaders/domeResample`). One sampled texture,
- * no uniforms: the tilt lives only in the face rotations Task 4 bakes into
+ * no uniforms: the tilt lives only in the face rotations baked into
  * `dome-cube`'s layers. Bind group rebuilt per draw, same reason as
  * `cubeFaceBlitRenderer`: a cached group could bind a view `reconcile()` replaced.
  */

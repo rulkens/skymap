@@ -1,9 +1,8 @@
 /**
  * schwarzschildLutDomain — the Schwarzschild deflection LUT's impact-parameter
- * domain, in r_s. Shared by `buildSchwarzschildDeflectionLut` (which samples
- * the domain) and `sgrAStarLensEnvelopeM` (which needs the SAME max as the
- * lens's slab-envelope floor — a second copy could drift and reopen the
- * near-plane clip the envelope exists to close).
+ * domain in r_s. `sgrAStarLensEnvelopeM` reads the same MAX for its
+ * slab-envelope floor; a second copy could drift and reopen the near-plane
+ * clip that envelope exists to close.
  */
-export const MIN_IMPACT_PARAM_RS = 1; // below b_c throughout: exercises the capture sentinel
-export const MAX_IMPACT_PARAM_RS = 50; // deep weak-field: 2/b ~ 0.04 rad, matches the asymptotic formula closely
+export const MIN_IMPACT_PARAM_RS = 1; // below b_c: exercises the capture sentinel
+export const MAX_IMPACT_PARAM_RS = 50; // deep weak field, matches the asymptotic formula

@@ -103,8 +103,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // UV units per screen pixel at this fragment, from the rasteriser's own
   // derivatives — exact for any projection, so the band is RING_PX_WIDTH
   // wide in whichever view draws it. Capped at 1: a sub-pixel ring fills
-  // its quad instead of aliasing to one fragment (the old max(sizePx, 1)
-  // guard's replacement).
+  // its quad instead of aliasing to one fragment.
   let uvPerPx = min(length(vec2<f32>(dpdx(d), dpdy(d))), 1.0);
   let bandHalfUv = RING_PX_WIDTH * 0.5 * uvPerPx;
   let aaUv = RING_AA_WIDTH * uvPerPx;

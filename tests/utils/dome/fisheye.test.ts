@@ -1,7 +1,7 @@
 /**
- * Dome-maths tests: the WGSL fisheye port (Task 3) copies this TS twin
- * byte-for-byte, so a sign error here would otherwise show up only as a
- * mirrored face at the venue.
+ * Dome-maths tests: the WGSL fisheye port copies this TS twin byte-for-byte,
+ * so a sign error here would otherwise show up only as a mirrored face at
+ * the venue.
  */
 import { describe, it, expect } from 'vitest';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -15,19 +15,12 @@ import { dot3 } from '../../../src/utils/math/dot3';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3T } from '../../../src/utils/math/rotateVec3ByTightMat3T';
+import { mat3Columns } from '../../../src/utils/math/mat3Columns';
 
 const DEG = Math.PI / 180;
 
-function axesOf(m: Readonly<Mat3>): { right: Vec3; up: Vec3; forward: Vec3 } {
-  return {
-    right: [m[0], m[1], m[2]],
-    up: [m[3], m[4], m[5]],
-    forward: [m[6], m[7], m[8]],
-  };
-}
-
 function expectOrthonormalRightHanded(m: Readonly<Mat3>): void {
-  const { right, up, forward } = axesOf(m);
+  const { right, up, forward } = mat3Columns(m);
   for (const axis of [right, up, forward]) {
     expect(Math.hypot(...axis)).toBeCloseTo(1, 12);
   }
@@ -129,7 +122,7 @@ describe('fisheyeDirection + domeFaceUv', () => {
       const t = 1 - 2 * v;
       expect(Math.abs(s)).toBeLessThanOrEqual(1 + 1e-9);
       expect(Math.abs(t)).toBeLessThanOrEqual(1 + 1e-9);
-      const { right, up, forward } = axesOf(DOME_FACES[face]!);
+      const { right, up, forward } = mat3Columns(DOME_FACES[face]!);
       const reconstructed = normalize3([
         right[0] * s + up[0] * t + forward[0],
         right[1] * s + up[1] * t + forward[1],

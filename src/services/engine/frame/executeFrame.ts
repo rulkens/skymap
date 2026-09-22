@@ -390,9 +390,6 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'copy': {
-        // Skip unless the source was drawn into this frame — same gate as
-        // 'composite'.
-        if (!touched.has(step.source)) break;
         // A copy writes THIS view's own output (a dome face's `dome-cube`
         // layer) and has no other destination — a missing `ctx.output` is a
         // wiring bug, not a frame-skippable condition.
@@ -410,12 +407,22 @@ export function executeFrame(args: ExecuteFrameArgs): void {
             },
           ],
         });
+        // A source untouched this frame skips the draw but keeps the clear
+        // above, so the face holds black rather than its own stale image
+        // from the previous frame.
+        if (!touched.has(step.source)) {
+          pass.end();
+          break;
+        }
         const compositor = state.gpu.compositor;
         if (!compositor) {
           throw new Error('executeFrame: compositor missing for copy step');
         }
-        const dstFormat = ctx.snapshot.renderTargets.specOf(step.source).format;
-        compositor.draw(pass, viewFor(step.source, ctx, swapView), 'replace', null, dstFormat);
+        // A view output has no target-row id to look up its own format, so
+        // this reads the source row's on the invariant that a view output's
+        // row must share the source's format.
+        const outputFormat = ctx.snapshot.renderTargets.specOf(step.source).format;
+        compositor.draw(pass, viewFor(step.source, ctx, swapView), 'replace', null, outputFormat);
         pass.end();
         break;
       }

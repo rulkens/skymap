@@ -11,9 +11,9 @@
  * precedent for locating/parsing the struct and computing WGSL alignment;
  * the embedded `cam: CameraUniforms` prefix is treated as an opaque 80-byte
  * block, its own byte-for-byte parity living in `cameraUniforms.test.ts`.
- * `mat3x3<f32>` gets its own column-by-column check (dome-fisheye fix A2's
- * `viewBasis`): std140 pads each column to 16 bytes, so a flat `lanes`
- * count would misplace the 2nd/3rd columns.
+ * `mat3x3<f32>` gets its own column-by-column check (`viewBasis`): std140
+ * pads each column to 16 bytes, so a flat `lanes` count would misplace the
+ * 2nd/3rd columns.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -122,7 +122,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const emissionStrength = 704;
     const edgeFadeEndRs = 705;
     const emissionTint: Vec3 = [801, 802, 803];
-    // dome-fisheye fix A2: this view's camera basis + frustum tangents.
+    // This view's camera basis + frustum tangents.
     const viewBasis: Mat3 = [901, 902, 903, 904, 905, 906, 907, 908, 909];
     const frustum = { tanLeft: 910, tanRight: 911, tanDown: 912, tanUp: 913 };
 
@@ -175,10 +175,9 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       emissionStrength,
       edgeFadeEndRs,
     };
-    // `_pad0`/`_pad1` are unwritten — `_pad0` because flickerTimescaleS moved
+    // `_pad0`/`_pad1` are unwritten — `_pad0` because flickerTimescaleS lives
     // CPU-side (sgrAStarLensingPass.ts's flickerPhase precompute) and is
-    // never sampled by the shader; `_pad1` is the old flat-quad half-size
-    // slot, gone with fix A2 (dome-fisheye).
+    // never sampled by the shader; `_pad1` is unread.
     const zeroPadFields = new Set<string>(['_pad0', '_pad1']);
 
     for (const field of layout) {

@@ -19,6 +19,7 @@ import { assembleOrbitCamera } from '../../../src/services/engine/camera/assembl
 import { multiply3x3 } from '../../../src/utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../src/utils/math/rotateVec3ByTightMat3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
+import { mat3Columns } from '../../../src/utils/math/mat3Columns';
 import { DOME_FACES, DOME_FACE_COUNT } from '../../../src/data/rendering/domeFaces';
 import { DOME_PARAMS } from '../../../src/data/rendering/domeParams';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
@@ -66,14 +67,6 @@ const C = Math.cos(0.4);
 const S = Math.sin(0.4);
 const BASIS: Mat3 = [C, 0, -S, 0, 1, 0, S, 0, C];
 
-function faceAxes(face: Readonly<Mat3>): { right: Vec3; up: Vec3; forward: Vec3 } {
-  return {
-    right: [face[0], face[1], face[2]],
-    up: [face[3], face[4], face[5]],
-    forward: [face[6], face[7], face[8]],
-  };
-}
-
 describe('domeFaceSpecs — direction projected through a face view lands where domeFaceUv says', () => {
   const cam = assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS);
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
@@ -108,7 +101,7 @@ describe('domeFaceSpecs — direction projected through a face view lands where 
   it.each(DOME_FACES.map((face, i) => [i, face] as const))(
     'face %i centre and 0.9-to-edge samples',
     (_i, face) => {
-      const { right, up, forward } = faceAxes(face);
+      const { right, up, forward } = mat3Columns(face);
       checkDirection(forward);
       for (const [s, t] of [
         [0.9, 0],

@@ -13,21 +13,7 @@
 // renderer-agnostic expansion helper ('expandBillboardScreen') for the
 // screen-pixel-sized billboard pattern that points uses.
 //
-// ## Why these five exports and no more
-//
-// A VIEW-aligned world-sized quad (camera-right + camera-up basis
-// extracted from a 'view' matrix) was considered and rejected: none of
-// 'quads' / 'texturedDisks' / 'proceduralDisks' / 'points' want it —
-// 'quads' aligns to sky-north, the disk renderers to the galaxy's own
-// position angle, 'points' to the screen — and the shared
-// CameraUniforms struct carries no 'view' matrix to extract a basis
-// from. We omit that flavour entirely.
-//
-// 'expandBillboardWorld' below is a DIFFERENT beast, not the rejected
-// one: an EYE-facing basis built from '(eye, centre)' alone, reading no
-// view matrix, so it is identical in every view of a multi-view rig (a
-// dome face, a VR eye). structureMarker's ring/halo need exactly that —
-// see the function's own doc.
+// No view-aligned flavour: CameraUniforms carries no view matrix.
 //
 // ## Screen-aligned vs view-aligned world-sized billboards
 //

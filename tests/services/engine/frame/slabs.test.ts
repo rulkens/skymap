@@ -353,16 +353,16 @@ describe('deriveSlabs', () => {
     expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
   });
 
-  it("clears the Sgr A* lens envelope's near side with its slab's near plane when the hole is off-axis (fix A/A2)", () => {
-    // Before fix A, bodyDrawRadiusM(body) ignored the lens pass's reach
-    // entirely, so the row's margin was PROXY_SCALE·r_s — a few percent of
-    // r_s — while the lensed sphere the pass actually classifies rays over
-    // reaches many r_s off the view axis at this distance. θ=30° puts that
-    // sphere's near side well behind the OLD near plane, which is exactly
-    // the dark-strip clip the fix closes. Since fix A2, the envelope
-    // (`sgrAStarLensEnvelopeM`) is exactly the impact-parameter sphere of
-    // radius `edgeFadeEndRs` the fullscreen pass discards outside of — no
-    // separate billboard geometry or close-orbit cap to reason about.
+  it("clears the Sgr A* lens envelope's near side with its slab's near plane when the hole is off-axis", () => {
+    // If bodyDrawRadiusM(body) ignored the lens pass's reach entirely, the
+    // row's margin would be PROXY_SCALE·r_s — a few percent of r_s — while
+    // the lensed sphere the pass actually classifies rays over reaches many
+    // r_s off the view axis at this distance. θ=30° puts that sphere's near
+    // side well behind a margin that small, clipping a dark strip across the
+    // lens. The envelope (`sgrAStarLensEnvelopeM`) is exactly the
+    // impact-parameter sphere of radius `edgeFadeEndRs` the fullscreen pass
+    // discards outside of — no separate billboard geometry or close-orbit
+    // cap to reason about.
     //
     // distRs = 1000 stays deep in the lensing band (goneAt ≈ 5900 r_s) with
     // the envelope's near corner in FRONT of the camera, where the

@@ -159,7 +159,7 @@ export function packSgrAStarLensingUniforms(input: {
   out[40] = emissionTint[0]; // byte 160 — vec3
   out[41] = emissionTint[1]; // byte 164
   out[42] = emissionTint[2]; // byte 168
-  // out[43] (byte 172) stays 0 — _pad1, the old flat-quad half-size slot.
+  // out[43] (byte 172) stays 0 — _pad1, unread.
   out[44] = viewBasis[0]; // byte 176 — viewBasis column 0 (right)
   out[45] = viewBasis[1]; // byte 180
   out[46] = viewBasis[2]; // byte 184
