@@ -117,12 +117,12 @@ export function runPlanSteps(
 
 **The proving row:** `structureMarkersPlanner: ContentPlanner<readonly StructureMarkerDescriptor[]>` (`scope: 'perView'`, `plan: (view, state) => ({ value: runMarkerProducers(state, view), awake: false, settling: false })`) in `CORE_PLANNERS`; `SCENE` gets `{ kind: 'plan', name: 'structure-markers' }` as its first line. `structureMarkersPass` reads `ctx.snapshot.plans.get(structureMarkersPlanner, ctx)` and uploads via `structureMarkerRenderer.setMarkers(...)` before its draw — one instance buffer is correct because each perView view is its own submit (the same contract the compositor's per-key uniform rides; say so in the pass comment). Delete the call at `runFrame.ts:356-358`.
 
-- [ ] Types + `createPlans` + test `createPlans.test.ts`: `get throws for a planner never put`, `get throws for a view another view planned`, `once value is view-independent`, `awake/settling OR-fold across puts`.
-- [ ] `runPlanSteps` + wiring in `renderFrame` per the semantics; `expandFrameOrder.plan`; `EngineState.planners` folded in `createLayers` (`concatUniqueRows`, as computes at `createLayers.ts:131-134`).
-- [ ] `checkFrameOrder` over sections + the three rules; tests in `checkFrameOrder.test.ts`: `perView planner in a once section throws`, `once compute in a perView section throws`, `plan row after a render row throws`, `planner on two lines throws`, `unlisted planner throws`; adapt `frameOrderBoot.test.ts` to pass `VIEW_RIGS.mono.program` sections + `CORE_PLANNERS`.
-- [ ] `renderFrame.plans.test.ts`: with a stub once planner and a stub perView planner and two views, assert (a) the once planner ran once, before `scheduleCubemapCaptures` was invoked (spy call order), (b) the perView planner ran once per view with that view, before that view's encoder was created, (c) `snapshot.plans.get(perViewPlanner, views[1])` returns the second run's value.
-- [ ] Structure-markers row + pass read + `runFrame` deletion; `ContentCompute.scope` on the three computes; `frameFilePurity` rows for the new frame files (budget 0); `docs/RENDERER.md` frame-program section gains a paragraph on plan rows (scope, head-of-section, `Plans` throws).
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `refactor(frame): plan rows and the Plans store`.
+- [x] Types + `createPlans` + test `createPlans.test.ts`: `get throws for a planner never put`, `get throws for a view another view planned`, `once value is view-independent`, `awake/settling OR-fold across puts`.
+- [x] `runPlanSteps` + wiring in `renderFrame` per the semantics; `expandFrameOrder.plan`; `EngineState.planners` folded in `createLayers` (`concatUniqueRows`, as computes at `createLayers.ts:131-134`).
+- [x] `checkFrameOrder` over sections + the three rules; tests in `checkFrameOrder.test.ts`: `perView planner in a once section throws`, `once compute in a perView section throws`, `plan row after a render row throws`, `planner on two lines throws`, `unlisted planner throws`; adapt `frameOrderBoot.test.ts` to pass `VIEW_RIGS.mono.program` sections + `CORE_PLANNERS`.
+- [x] `renderFrame.plans.test.ts`: with a stub once planner and a stub perView planner and two views, assert (a) the once planner ran once, before `scheduleCubemapCaptures` was invoked (spy call order), (b) the perView planner ran once per view with that view, before that view's encoder was created, (c) `snapshot.plans.get(perViewPlanner, views[1])` returns the second run's value.
+- [x] Structure-markers row + pass read + `runFrame` deletion; `ContentCompute.scope` on the three computes; `frameFilePurity` rows for the new frame files (budget 0); `docs/RENDERER.md` frame-program section gains a paragraph on plan rows (scope, head-of-section, `Plans` throws).
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `refactor(frame): plan rows and the Plans store`.
 
 ### Task 2: Layers contribute planner rows; the `frame` hook retires
 
@@ -140,10 +140,10 @@ export function flowPlanner(runtime: FlowRuntime): ContentPlanner<void>;        
 
 **Why once, not perView, for the catalog:** the disk walk touches the whole visible catalog (~2.5M rows); per face it is a 5× CPU cost for a threshold nudge. The once row plans over the rig's views: `pxPerRad = max(view.drawPxPerRad over views)`, `cam = views[0].cam` (the anchor contract `computeStarCut.ts:44-47` already states). The implementer confirms `diskPlannerWalk` does not frustum-cull against one view (if it does, report — the union frusta is a follow-up, not this task). Every other piece of `frame.ts:36-122` (alias index, member count, bias mode, hi-res famous planner, disk walk) moves verbatim into the row's `plan`; the vote at `frame.ts:124-134` becomes the `PlanResult` bits with `value: undefined`.
 
-- [ ] Types, `instantiateLayer`, `createLayers` fold (`[CORE_PLANNERS, ...instances.map((i) => i.planners)]`).
-- [ ] galaxyCatalog + flow rows; PRELUDE lines; adapt the four `frame.*.test.ts` to call the planner's `plan(snapshot, [view], state)` — no new tests (the reconcile assertions are unchanged).
-- [ ] `runFrame` hook loop deleted; scheduler fold reads `plans`; `layersSettling` deleted end to end; `scheduleSkyCaptures` reads `plans.settling`. `runFrame.test.ts` / `renderFrame.cubemapCaptures.test.ts` adapt (a settling planner still marks a capture stale — keep that assertion if it exists, else add it to `renderFrame.plans.test.ts`).
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `refactor(layers): planner rows replace the frame hook`.
+- [x] Types, `instantiateLayer`, `createLayers` fold (`[CORE_PLANNERS, ...instances.map((i) => i.planners)]`).
+- [x] galaxyCatalog + flow rows; PRELUDE lines; adapt the four `frame.*.test.ts` to call the planner's `plan(snapshot, [view], state)` — no new tests (the reconcile assertions are unchanged).
+- [x] `runFrame` hook loop deleted; scheduler fold reads `plans`; `layersSettling` deleted end to end; `scheduleSkyCaptures` reads `plans.settling`. `runFrame.test.ts` / `renderFrame.cubemapCaptures.test.ts` adapt (a settling planner still marks a capture stale — keep that assertion if it exists, else add it to `renderFrame.plans.test.ts`).
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `refactor(layers): planner rows replace the frame hook`.
 
 ### Task 3: Views are named; timing slots derive from the name
 
@@ -161,10 +161,10 @@ export function timingSlotForView(base: string, viewId: string): string;
 
 The compute slot takes the suffix too (a perView compute would otherwise claim one slot per view under one name — Task 4 depends on this). `disabledPasses[slot]` keys follow the new names; no migration of persisted settings (they are debug toggles).
 
-- [ ] `ViewSpec.id` / `FrameView.id`, minting sites, `deriveView`.
-- [ ] `timingSlotForView` + test (`canvas gives the bare base`, `a capture face gets @key:face`); `slabs.ts` + `computeTimingSlotName` rewired; `foldCaptureFaceRows` regex + test updated (fold still groups six faces onto one row; a `@dome:front` row is NOT folded).
-- [ ] `renderFrame.timing.test.ts` / `renderFrame.cubemapCaptures.test.ts` expectations updated to the new slot text.
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `refactor(timing): slot names derive from the view id`.
+- [x] `ViewSpec.id` / `FrameView.id`, minting sites, `deriveView`.
+- [x] `timingSlotForView` + test (`canvas gives the bare base`, `a capture face gets @key:face`); `slabs.ts` + `computeTimingSlotName` rewired; `foldCaptureFaceRows` regex + test updated (fold still groups six faces onto one row; a `@dome:front` row is NOT folded).
+- [x] `renderFrame.timing.test.ts` / `renderFrame.cubemapCaptures.test.ts` expectations updated to the new slot text.
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `refactor(timing): slot names derive from the view id`.
 
 ### Task 4: `aerial-perspective` is a per-view compute
 
@@ -172,9 +172,9 @@ The compute slot takes the suffix too (a perView compute would otherwise claim o
 
 `encodeAtmosphereAerialPerspective` is unchanged: it already reads the `ctx` it is handed (`encodeAtmosphereAerialPerspective.ts:25-32`); under a perView section that `ctx` is the view. The froxel volume and `shellUniformBuffer` (`aerialPerspectiveRenderer.ts:235-244`) stay one per body: each perView view is its own submit, so the bake for view N lands before view N's apply and after view N−1's — state that contract in the compute's header comment.
 
-- [ ] Scope + line move; boot test passes (the scope rule from Task 1 would reject the old placement — add the negative case to `checkFrameOrder.test.ts` if Task 1's `once compute in a perView section` doesn't already cover the mirror).
-- [ ] Mono eye-check note for the PR body: Søndermarken and the Mars/Perseverance pose render as before.
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `refactor(atmosphere): aerial-perspective bakes per view`.
+- [x] Scope + line move; boot test passes (the scope rule from Task 1 would reject the old placement — add the negative case to `checkFrameOrder.test.ts` if Task 1's `once compute in a perView section` doesn't already cover the mirror).
+- [x] Mono eye-check note for the PR body: Søndermarken and the Mars/Perseverance pose render as before.
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `refactor(atmosphere): aerial-perspective bakes per view`.
 
 ### Task 5: `pxPerRad` in the camera prefix; `worldLenToPx` reads it — **review: yes**
 
@@ -191,10 +191,10 @@ The compute slot takes the suffix too (a perView compute would otherwise claim o
 
 Any further `worldLenToPx` caller the implementer finds gets the same treatment and is listed in the report. After this task sizes scale correctly with the fov slider (they did not before); that is the intended behaviour change and goes in the PR body.
 
-- [ ] Prefix field + writer + 20 callers; `worldLenToPx` rewrite. No TS twin test (it would restate the formula — same ruling as the spec's P5).
-- [ ] Retune per the table; each folded constant carries its comment.
-- [ ] Eye-check list for the user (PR body): mono 60° — structure rings, cosmo labels, famous-galaxy labels, star aggregates, a near star's sprite→sphere hand-off all as before; fov slider 90° — ring bands thinner, labels smaller, consistently.
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `fix(shaders): worldLenToPx takes the focal term from the camera prefix`.
+- [x] Prefix field + writer + 20 callers; `worldLenToPx` rewrite. No TS twin test (it would restate the formula — same ruling as the spec's P5).
+- [x] Retune per the table; each folded constant carries its comment.
+- [x] Eye-check list for the user (PR body): mono 60° — structure rings, cosmo labels, famous-galaxy labels, star aggregates, a near star's sprite→sphere hand-off all as before; fov slider 90° — ring bands thinner, labels smaller, consistently.
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `fix(shaders): worldLenToPx takes the focal term from the camera prefix`.
 
 ### Task 6: Milky Way sprites face the eye — **review: yes**
 
@@ -202,8 +202,8 @@ Any further `worldLenToPx` caller the implementer finds gets the same treatment 
 
 **Basis contract (mirror `bodies/sgrAStarLensing/vertex.wesl:24-31`):** `forward = normalize(centerModel − camPosModel)`; `right = normalize(cross(ref, forward))`, `up = cross(forward, right)`, with `ref` the cloud's model-space disk normal and a fallback axis when `|cross(ref, forward)|` is tiny, so the basis is defined for every viewing direction. The basis depends only on the instance-to-eye direction, never on a view's axes — that is what makes a blob identical on both sides of a dome seam. Mono: sprites gain a position-dependent roll (they were screen-aligned); the blobs are near-radial, so the look holds — eye-check, and say so in the PR body.
 
-- [ ] Uniform layout + pack + both passes; both shaders. (No test: the contract is visual; the existing renderer layout test, if any, updates its byte table.)
-- [ ] `npm run typecheck:fast`, `npm test` green. Commit `fix(milkyWay): sprites build an eye-facing basis per instance`.
+- [x] Uniform layout + pack + both passes; both shaders. (No test: the contract is visual; the existing renderer layout test, if any, updates its byte table.)
+- [x] `npm run typecheck:fast`, `npm test` green. Commit `fix(milkyWay): sprites build an eye-facing basis per instance`.
 
 ### Task 7: Backlog the adjacent findings
 
@@ -213,7 +213,7 @@ Any further `worldLenToPx` caller the implementer finds gets the same treatment 
 - **field-uniforms-per-view** — `packFieldUniforms.ts:132-158` packs its own camera (eye, basis, `tanHalfFov`, aspect, `lensShift`) and `field/fieldSplat/vertex.wesl:24-38` builds NDC itself; must become a view-slot uniform before the v2 field joins the frame order.
 - **off-axis-fovy-reconstruction** — `turnedOrbitCamera.ts:31` synthesises an exact `fovYRad` from frustum extents; `horizonShellRenderer.ts:156` / `zoneOfAvoidanceRenderer.ts:161` depend on it; an off-axis (VR) frustum breaks it the way `worldLenToPx` was broken.
 
-- [ ] Files + index lines. Commit `docs(backlog): three per-view findings from the dome smoke`.
+- [x] Files + index lines. Commit `docs(backlog): three per-view findings from the dome smoke`.
 
 ---
 
@@ -244,3 +244,7 @@ Any further `worldLenToPx` caller the implementer finds gets the same treatment 
 - The five per-renderer `pxPerRad` uniform copies stay for the feature's deletion audit.
 - Per-view disk LOD (walk per view) is explicitly not done; the once row over the views is the shape.
 - The dome rig, `DOME_PARAMS`, and dome view ids live on #800; the merge adds their `id`s.
+
+---
+
+Completed 2026-09-22 on PR #805. Names ruled at the eye-check: `Plans` → `FramePlannerResultStore`, `PlanStepSpec` → `PlannerStepSpec`, `PlanTarget` → `PlannerScopeTarget`, `PlanResult` → `PlannerResult`, `ContentPlanner` → `FrameContentPlanner`, `createPlans` → `createFramePlannerResultStore`. Task 5's ring row and label row were wrong (band widths invariant; `worldEmMpc` physical) — see the PR body.
