@@ -383,6 +383,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     distance: '26,700 light-years',
     wikiTitle: 'Sagittarius_A*',
     description:
-      "The supermassive black hole at the centre of the Milky Way: about four million Suns packed inside a region smaller than Mercury's orbit. Its mass was pinned down by tracking the S-stars that whip around it — S2 passes within 120 AU at more than 7,000 km/s — work that earned the 2020 Nobel Prize in Physics. The radius shown is its event horizon.",
+      "The supermassive black hole at the centre of the Milky Way, with the mass of about four million Suns inside a region smaller than Mercury's orbit. Its mass comes from tracking the S-stars in orbit around it. S2 passes within 120 AU at more than 7,000 km/s, and that work shared the 2020 Nobel Prize in Physics. The radius shown is the event horizon.",
   },
 };
