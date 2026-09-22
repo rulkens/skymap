@@ -59,3 +59,18 @@ it('tints a 1-band mono source without throwing and applies the per-channel mult
   expect(means[2]).toBeGreaterThan(GRAY * TINT[2] - 2);
   expect(means[2]).toBeLessThan(GRAY * TINT[2] + 2);
 });
+
+it('applies an additive lift after the tint multiply (tint*in + lift*255), the Enceladus path', async () => {
+  const outPath = join(dir, 'mono-lifted-8.jpg');
+  const LIFT = 0.05;
+
+  await expect(writeTintedMonoTier(srcPath, [...TINT], 8, outPath, LIFT)).resolves.toBeUndefined();
+
+  const means = (await sharp(outPath).stats()).channels.map((ch) => ch.mean);
+  expect(means).toHaveLength(3);
+  TINT.forEach((t, i) => {
+    const expected = GRAY * t + LIFT * 255;
+    expect(means[i]).toBeGreaterThan(expected - 2);
+    expect(means[i]).toBeLessThan(expected + 2);
+  });
+});

@@ -216,7 +216,7 @@ _(pending — filled by the fetch task)_.
 https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif
 ```
 
-## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
+## USGS Astrogeology — moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF
 directly). Full pull only — no dev variant. Base:
@@ -228,6 +228,7 @@ directly). Full pull only — no dev variant. Base:
 | Europa   | `Europa_Voyager_GalileoSSI_global_mosaic_500m.tif`       | 19631×9816 | gray  | tinted in build (no global colour; S-pole gap below −83° acceptable) |
 | Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
+| Enceladus | `Enceladus_Cassini_mosaic_global_110m.tif`              | 14401×7201 | gray  | tinted + lifted in build (relief-shading mosaic, no albedo; blurred wedge NW and smeared N pole acceptable) |
 
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or

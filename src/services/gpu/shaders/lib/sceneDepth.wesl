@@ -9,6 +9,8 @@
 // hdr' OVER composite already multiplies the foreground by, so any cutoff
 // over it gives one number two meanings.
 
+import package::lib::camera::CameraUniforms;
+import package::lib::camera::worldToClip;
 import package::lib::math::saturate;
 import package::lib::sceneDepthRay::FAR_DEPTH;
 import package::lib::sceneDepthRay::sceneRayDistance;
@@ -68,4 +70,29 @@ fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
     depthFrame.camPosKm,
   );
   return select(0.0, 1.0, sceneKm < nearKm);
+}
+
+/**
+ * Shared 'vsOcclude' body for labels and marker-line leaders: projects
+ * 'worldPos', flips NDC into 'depthFrame's framebuffer space (y points
+ * DOWN, ndc.y points UP), then calls 'sceneDepthOccludes'. Guarded
+ * explicitly rather than leaning on textureLoad's out-of-bounds return:
+ * FAR_DEPTH is 0 and so is an out-of-bounds load on the backends this
+ * targets, a coincidence nothing should lean on — WGSL does not pin
+ * what an out-of-bounds load returns.
+ */
+fn subjectDepthVerdict(cam: CameraUniforms, worldPos: vec3<f32>, nearKm: f32) -> f32 {
+  let clip = worldToClip(cam, worldPos);
+  if (clip.w <= 0.0) {
+    return 0.0;
+  }
+  let ndc = clip.xy / clip.w;
+  let anchorXY = vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * depthFrame.viewportPx;
+  if (
+    anchorXY.x < 0.0 || anchorXY.x >= depthFrame.viewportPx.x ||
+    anchorXY.y < 0.0 || anchorXY.y >= depthFrame.viewportPx.y
+  ) {
+    return 0.0;
+  }
+  return sceneDepthOccludes(anchorXY, nearKm);
 }

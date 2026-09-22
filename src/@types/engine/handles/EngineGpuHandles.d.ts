@@ -42,7 +42,7 @@ import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
-import type { OrbitTrailRenderer } from '../../rendering/OrbitTrailRenderer';
+import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';

@@ -31,6 +31,8 @@ import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { BodyId } from '../../../src/@types/data/body/BodyId';
 
 vi.mock('../../../src/utils/url/isPerfMode', () => ({
   isPerfMode: vi.fn<() => boolean>(() => false),
@@ -42,15 +44,16 @@ function buildStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// A minimal fake engine handle: only `debug.timingService.subscribe` is
-// reachable from the installer's gate, so that is the only member the fake
-// needs. `subscribe` is a vi.fn returning a no-op unsubscribe.
+// A minimal fake engine handle: only `debug.timingService.subscribe` and
+// `debug.requestRender` are reachable from the installer's gate, so those are
+// the only members the fake needs. `subscribe` is a vi.fn returning a no-op
+// unsubscribe.
 function fakeEngine(): EngineHandle {
   const timingService = {
     enabled: true,
     subscribe: vi.fn<(listener: (frame: GpuTimingFrame) => void) => () => void>(() => () => {}),
   };
-  return { debug: { timingService } } as unknown as EngineHandle;
+  return { debug: { timingService, requestRender: vi.fn() } } as unknown as EngineHandle;
 }
 
 describe('installPerfHook', () => {
@@ -141,7 +144,7 @@ describe('installPerfHook', () => {
       () => () => {},
     );
     const engine = {
-      debug: { timingService: { enabled: false, subscribe } },
+      debug: { timingService: { enabled: false, subscribe }, requestRender: vi.fn() },
     } as unknown as EngineHandle;
 
     installPerfHook(buildStore(), engine);
@@ -172,6 +175,7 @@ describe('installPerfHook', () => {
             };
           }),
         },
+        requestRender: vi.fn(),
       },
     } as unknown as EngineHandle;
 
@@ -215,5 +219,65 @@ describe('installPerfHook', () => {
     // so the frame tags run 0…FRAMES-1 in arrival order.
     const expectedFrames = Array.from({ length: FRAMES }, (_, i) => i);
     expect(samples.map((s) => s.frame)).toEqual(expectedFrames);
+  });
+
+  it('collectTimings requests the next render on every delivered frame', async () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    // Nothing else wakes the render-on-demand loop at a body- or site-arm hold:
+    // auto-rotate drives the world arm only. If sampling stops pumping the
+    // scheduler the loop sleeps mid-window and `collectTimings` never settles —
+    // a silent hang inside `page.evaluate`, which is how this defect presented.
+    let listener: ((frame: GpuTimingFrame) => void) | undefined;
+    const requestRender = vi.fn();
+    const engine = {
+      debug: {
+        timingService: {
+          enabled: true,
+          subscribe: vi.fn((l: (frame: GpuTimingFrame) => void) => {
+            listener = l;
+            return () => {
+              listener = undefined;
+            };
+          }),
+        },
+        requestRender,
+      },
+    } as unknown as EngineHandle;
+
+    installPerfHook(buildStore(), engine);
+
+    const FRAMES = 2;
+    const promise = getHook()!.collectTimings(FRAMES);
+    const total = PERF_WARMUP_FRAMES + FRAMES;
+    for (let i = 0; i < total; i++) listener?.({ frameIndex: i, perPassMs: new Map([['hdr', 1]]) });
+    await promise;
+
+    // Warmup frames pump too — the loop must stay awake through them or the
+    // measured window never starts.
+    expect(requestRender).toHaveBeenCalledTimes(total);
+  });
+
+  it('setPose commits the framed arm it was given, body arm included', async () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    // The defect: every pose was re-spelled through `absoluteArm`, so a
+    // body-parented vantage landed at the right world coordinates in the wrong
+    // frame — Earth's atmosphere while parked over Mars.
+    const framed: FramedCameraPose = {
+      frame: { body: 'mars' as BodyId },
+      pose: {
+        bodyId: 'mars' as BodyId,
+        anchorLocalM: [711639.0023079902, 3140420.910021869, 1073467.4616577267],
+        eyeRelAnchorM: [22764.552087539458, 95693.15918994322, -107497.79259981122],
+        basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      },
+    };
+
+    const store = buildStore();
+    installPerfHook(store, fakeEngine());
+    await getHook()!.setPose({ framed });
+
+    expect(store.getState().camera.base).toEqual(framed);
   });
 });
