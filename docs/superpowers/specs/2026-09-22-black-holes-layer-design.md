@@ -12,7 +12,7 @@ Three things change beyond a move:
 
 - **A black hole is not a body.** `sgr-a-star` becomes a `blackHole` `SelectionRef` arm with its own `blackhole-` URL prefix; `AnchorPointBody`, `SCENE_ANCHOR_POINT_BODIES` and the `'sgr-a-star'` key in `BODY_PICK_ROWS` are deleted (grill Q3, Q9).
 - **The galactic centre is a place, not the hole.** `'galactic-centre'` is a core `SCENE_ANCHORS` row that the milkyWay pass, the S-star orbits, `BODY_REGIONS` and the fade bands read; the Layer contributes the object sitting there (grill Q2, R15).
-- **Five contract seams open**, each a named member a future Layer honours the same way: `search`, `sourceCounts` (async iterables), `slabs` (static rows), `SelectionKindRow.driver?`, and a `detailCard` `ui` slot (grill Q4, Q7, Q12; R13, R14).
+- **Five contract seams open**, each a named member a future Layer honours the same way: `search`, `sourceCounts` (async iterables), `slabs` (static rows), `SelectionRow.driver`, and a `detailCard` `ui` slot (grill Q4, Q7, Q12; R13, R14).
 
 Packaging (grill Q11, R16): **two PRs**. PR 1 is ground preparation, six behaviour-neutral commits (§3). PR 2 is the Layer (§4–§7). Each gets its own plan. No deletion audit on PR 1; one at PR 2's `/feature-done`.
 
@@ -31,7 +31,7 @@ export type BlackHoleRow = {
   readonly id: BlackHoleId;
   readonly anchorId: PlaceId;                 // where it sits — a core place
   readonly massSolar: number;                 // r_s = schwarzschildRadiusM(massSolar)
-  readonly band: ScaleFadeBandId;             // lens open / marker fading, one band
+  readonly band: FadeBand;                    // lens open / marker fading, one band (SCALE_FADE_BANDS.sgrAStarLensing)
   readonly glintTint: Vec3;
   readonly standoffRadii: number;             // 2.0
   readonly focusDistanceRadii: number;        // 30.4
@@ -61,11 +61,12 @@ export const GALACTIC_CENTRE_ANCHOR: AnchorBody = { id: 'galactic-centre', posit
 The Layer's `SelectionKindRow` (`present/blackHoleSelectionRow.ts`): `pickSources: [Source.SgrAStar]`; `resolvePick` maps `localIdx` → `BLACK_HOLES[i]`; `extractRow` poses from `deriveBodyStates(simDays).get(row.anchorId)`; `focusId` = `{ claims: startsWith('blackhole-'), decode, encode }` giving `#focus=blackhole-sgr-a-star`, no legacy `body-sgr-a-star` alias (grill Q9); and
 
 ```ts
-driver: (row) => ({ poseId: row.anchorId, footprintRadiusM: blackHoleFootprintRadiusM(row),
-                    datumRadiusM: rS, standoffRadii: row.standoffRadii, focusDistanceRadii: row.focusDistanceRadii }),
+// on the extracted SelectionRow:
+driver: { poseId: row.anchorId, boundingRadiusM: rS, footprintRadiusM: blackHoleFootprintRadiusM(row),
+          groundRadiusM: rS, standoffRadii: row.standoffRadii, focusDistanceRadii: row.focusDistanceRadii },
 ```
 
-`poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string`, not `SlabHostId`; whether the camera engages a metre frame is the slab table's answer, not the driver's. `blackHoleFootprintRadiusM(row)` (= `LENS_QUAD_MAX_RS × rS`) is the one home for the quad's extent; the slab row (§2.5) reads the same helper.
+`driver` travels on the extracted row rather than as a `SelectionKindRow` method so the five focus-generic camera readers (`cameraDrivers`, `approachTiltedPose`, `focusFraming`, `selectionHaloTable`, `pivotRadiusMpc`) stay pure functions of the row — no resolver threaded through them. The three readers that take a *body id* by contract (`bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung`: go-home, fly-to-lon/lat, surface rung) keep reading `SCENE_BODIES`. `poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string`, not `SlabHostId`; whether the camera engages a metre frame is the slab table's answer, not the driver's. `blackHoleFootprintRadiusM(row)` (= `LENS_QUAD_MAX_RS × rS`) is the one home for the quad's extent; the slab row (§2.5) reads the same helper.
 
 Core gains one row each in `URL_HASH_FOR`, `targetIdentityKey` and `focusFraming` (the `blackHole` case delegates to `bodyLikeFraming` with `radiusM` + `focusDistanceRadii`, as `star` does). The 39 S-stars' `focusId: 'sgr-a-star'` (`makers/sStar.ts:57`) becomes `'blackhole-sgr-a-star'`; the two featured cards (`featuredTabs.ts:153-157, 418-422`) follow.
 
@@ -78,19 +79,25 @@ search?(runtime: Runtime): AsyncIterable<readonly LayerSearchEntry[]>;
 /** Per-source counts on the same terms; replaces `LayerCoreDeps.reportSourceCount`. */
 sourceCounts?(runtime: Runtime): AsyncIterable<SourceCountReport>;
 /** Metre-frame hosts this Layer draws on. Static data: nothing in a row needs runtime (R13). */
-readonly slabs?: readonly LayerSlabRow[];
+readonly slabs?: readonly SlabRow[];
 
 // src/@types/engine/layer/LayerSearchEntry.d.ts
 export type LayerSearchEntry = { id: string; names: readonly string[]; ref: SelectionRef; class: 'primary' | 'catalog' };
 // src/@types/engine/layer/SourceCountReport.d.ts
 export type SourceCountReport = { source: SourceType; count: number };
 
-// src/@types/engine/layer/SelectionKindRow.d.ts — addition (R14)
-/** The camera-host geometry behind a focus on this arm; null = the arm never drives the camera. */
-driver?(row: SelectionRow): DriverGeometry | null;
+// src/@types/engine/SelectionRow.d.ts — every arm gains the field, filled by its `extractRow` (R14)
+/** The camera-host geometry behind this focus; null = this arm never drives the camera. */
+readonly driver: DriverGeometry | null;
 // src/@types/engine/camera/DriverGeometry.d.ts
-export type DriverGeometry = { poseId: string; footprintRadiusM: number; datumRadiusM: number;
-                               standoffRadii: number; focusDistanceRadii?: number };
+export type DriverGeometry = {
+  poseId: string;               // deriveBodyStates key; a SlabHostId when a slab row names it
+  boundingRadiusM: number;      // pivot floor for a groundless driver (mesh hull, hole)
+  footprintRadiusM: number;     // framing / halo / approach distance
+  groundRadiusM: number | null; // null = no surface to taper against (mesh bodies)
+  standoffRadii: number;
+  focusDistanceRadii?: number;
+};
 
 // src/@types/engine/layer/LayerUiSlots.d.ts — fourth slot (grill Q12)
 detailCard: { readonly type: FocusableTargetType; readonly Detail: DetailCard; readonly Compact: CompactCard };
@@ -104,12 +111,12 @@ detailCard: { readonly type: FocusableTargetType; readonly Detail: DetailCard; r
 ### 2.5 The slab row
 
 ```ts
-// src/@types/engine/frame/LayerSlabRow.d.ts
-export type LayerSlabRow = {
+// src/@types/engine/frame/SlabRow.d.ts — core builds these too (bodySlabRowOf), so no "Layer" prefix
+export type SlabRow = {
   readonly anchorId: SlabHostId;      // pose = ctx.bodyPose(anchorId); also the row's host identity
   readonly boundingRadiusM: number;   // bracket, pick, apparent size (today bodyDrawRadiusM)
   readonly footprintRadiusM: number;  // widest thing drawn (today bodyFootprintRadiusM)
-  readonly activeBand?: ScaleFadeBandId;   // row exists only while fadeBand(...) > 0
+  readonly activeBand?: FadeBand;     // row exists only while fadeBand(activeBand, |cam − anchor|) > 0
   readonly cullFloorMpc?: number;          // inside this distance the sub-pixel/frustum culls are bypassed
   readonly source: 'foreground' | 'lens';  // which frame-graph line consumes the row
 };
@@ -121,7 +128,7 @@ export type SlabHostId = BodyId | PlaceId;
 
 Camera fields are deliberately absent: driving the camera (§2.4 `driver`) and hosting a metre frame vary independently — seeded stars drive without a slab, S-star riders draw on a slab without driving (R14, amending grill Q7's seven-field row). Core keeps: the frame-graph lines and their order, painter order, the capacity ceiling. A Layer needing a new *line* edits core frame data, as every pass name does. Riders (the backlogged S-star lensing, a landing site) are passes on the consuming line filtering `view.slab.frame.hostId`; no contract field.
 
-The Layer's row: `{ anchorId: 'galactic-centre', boundingRadiusM: rS, footprintRadiusM: blackHoleFootprintRadiusM(row), activeBand: 'sgrAStarLensing', cullFloorMpc: SCALE_FADE_BANDS.sgrAStarLensing.goneAt, source: 'lens' }`, one per `BLACK_HOLES` row. `activeBand` is the **only** gate on the lens step: the row exists iff the band is open, so the pass drops today's own `skyCaptureBandAlpha('sgrAStar') > 0` check (`sgrAStarLensingPass.ts:45`) — one fact, one reader. The core capture row keys on the same `SCALE_FADE_BANDS.sgrAStarLensing` (`cubemapCaptures.ts:32`), by reference, not a copy.
+The Layer's row: `{ anchorId: 'galactic-centre', boundingRadiusM: rS, footprintRadiusM: blackHoleFootprintRadiusM(row), activeBand: SCALE_FADE_BANDS.sgrAStarLensing, cullFloorMpc: SCALE_FADE_BANDS.sgrAStarLensing.goneAt, source: 'lens' }`, one per `BLACK_HOLES` row. `activeBand` is the **only** gate on the lens step: the row exists iff the band is open, so the pass drops today's own `skyCaptureBandAlpha('sgrAStar') > 0` check (`sgrAStarLensingPass.ts:45`) — one fact, one reader. The core capture row holds the same band object (`cubemapCaptures.ts:32`), by reference, not a copy.
 
 ### 2.6 Store
 
@@ -132,8 +139,8 @@ The Layer's row: `{ anchorId: 'galactic-centre', boundingRadiusM: rS, footprintR
 Six commits, behaviour-neutral, in this order (R16). Each names its ratchet.
 
 1. **`search` + `sourceCounts`.** `runLayerFeed` saga (`call(next)` loop, `put` per yield, `it.return()` on cancel; one instance per member per Layer, started beside `Layer.sagas` in `createLayers`, cancelled with them at `engine.ts:459`); `utils/async/callbackIterable.ts` (callback → async iterator, ≈10 lines, own test); `layerSearch` slice key, reducer and selector; `rankPaletteMatches` gains a fifth input scored by `class`; `wireGalaxyCatalogSourceSlot.ts:65`, `starCatalogSlot.ts:41` and `starCatalog/create.ts:88` migrate to `sourceCounts`; `reportSourceCount` deleted; `layerImportBoundary.test.ts:194`'s message updated. Zero `search` tenants until PR 2. Plan-time check: the saga `put` is a microtask later than today's synchronous dispatch — assert the three pulse sagas see the same ordering (`project_landmines_state`: saga puts late).
-2. **`Layer.slabs`.** `LayerSlabRow`, `SlabHostId`, `hostId` rename (`npm run refactor rename`, 19 files); `bodySlabRowOf(body)` adapter so store-fed Earth/planets/hostless meshes stay per-frame; composed candidates `[...storeBodies.map(bodySlabRowOf), ...composedLayerRows]` with Sgr A*'s row still in core; `bodySlabRow` reads the row; `visibleSlabBodies.ts:70-77` reads `cullFloorMpc`; `bodyRowSlabs.lens` = active rows naming `'lens'`; `SLAB_HOST_IDS` composed at boot; `BODY_SLAB_CAPACITY`/`MAX_GLINTS` become a ceiling constant (the GPU query set is sized before Layers exist, `gpuTimingService.ts:113`) + a boot assert in `createLayers`.
-3. **`SelectionKindRow.driver?`.** Core `body` and `starCatalog` arms answer from their tables; `driverGeometry(focus)` composed over the rows; the eight readers (`cameraDrivers.ts:166`, `bodyHomePose.ts:77`, `selectionHaloTable.ts:101`, `focusFraming.ts:109-115`, `approachTiltedPose.ts:48`, `watchFlyToLonLatSaga.ts:73`, `pivotRadiusMpc.ts:24,39`, `bodyRung.ts:64`) call it; `focusDriverId.ts` deleted. Amends `docs/backlog/2026-09-22-stars-still-in-the-body-tables.md` (reader half resolved; the `SCENE_BODIES` listing half stays).
+2. **`Layer.slabs`.** `SlabRow`, `SlabHostId`, `hostId` rename (`npm run refactor rename`, 19 files); `bodySlabRowOf(body)` adapter so store-fed Earth/planets/hostless meshes stay per-frame; composed candidates `[...storeBodies.map(bodySlabRowOf), ...activeLayerRows]` with Sgr A*'s row still in core (`CORE_SLAB_ROWS`); `bodySlabRow` reads the row; `visibleSlabBodies.ts:70-77` reads `cullFloorMpc`; `bodyRowSlabs.lens` = active rows naming `'lens'`; `SLAB_HOST_IDS` stays a module-load set (read by `HOSTLESS_MESH_BODIES` at module load — Layer rows cannot host a mesh until the body Layer forms); `BODY_SLAB_CAPACITY`/`MAX_GLINTS` become a ceiling constant (the GPU query set is sized before Layers exist, `gpuTimingService.ts:113`) + a boot assert in `createLayers`.
+3. **`SelectionRow.driver`.** Every arm's `extractRow` fills it (`body` from `SCENE_BODIES` via `bodyDriverGeometry`, `starCatalog` from `radiusM`, the rest `null`); the five focus-generic readers (`cameraDrivers.ts:111,166`, `approachTiltedPose.ts:45-57`, `focusFraming.ts:109-115`, `selectionHaloTable.ts:101`, `pivotRadiusMpc.ts:24-60`) read `row.driver`; `focusDriverId.ts` deleted. `bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung` take a body id by contract and stay on `SCENE_BODIES`. Amends `docs/backlog/2026-09-22-stars-still-in-the-body-tables.md` (reader half resolved; the `SCENE_BODIES` listing half stays).
 4. **`'galactic-centre'` + `PlaceId`.** `GALACTIC_CENTRE_ANCHOR` in core, `SCENE_ANCHORS`/`BODY_REGIONS`/`galacticCenter.ts`/`scaleFadeBands.ts` re-pointed, the core Sgr A* slab row's `anchorId` and `sgrAStarLensingPass.ts:29,42,52`'s filter flipped. After 2 so the pose key changes at one field.
 5. **`detailCard` slot.** `LayerUiSlots.detailCard` + the generic fold (`layerUiContents`); `DETAIL_CARD` becomes five core arms + composed Layer entries, asserted total at boot; `ZoneOfAvoidanceDetailCard/` and `CompactZoneOfAvoidanceCard/` move to `layers/zoneOfAvoidance/ui/` via `move-files`, the ZoA Layer contributes them.
 6. **Docs.** Amendment note on the starCatalog spec :27/:174; backlog amendments (§8); `src/layers/README.md` table rows for the new members.
