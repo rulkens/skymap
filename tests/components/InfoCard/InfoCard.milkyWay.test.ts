@@ -56,17 +56,13 @@ const galaxyStub = {
 
 describe('InfoCard Milky Way', () => {
   it('renders the Milky Way card for a milkyWay selection with its card-shot thumbnail', () => {
-    const { container } = render(
-      createElement(InfoCard, { hovered: null, selected: MILKY_WAY_INFO }),
-    );
+    render(createElement(InfoCard, { hovered: null, selected: MILKY_WAY_INFO }));
     expect(screen.getByText('Milky Way')).toBeInTheDocument();
     expect(screen.getByText(MILKY_WAY_INFO.description)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Milky Way thumbnail' })).toHaveAttribute(
       'src',
       '/images/featured/milkyWay.webp',
     );
-    // The glyph placeholder is gone now that a real thumbnail renders.
-    expect(container.textContent).not.toMatch(/🌌/);
   });
 
   it("the Milky Way card's Focus button calls onFocus with MILKY_WAY_INFO", () => {

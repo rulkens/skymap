@@ -11,9 +11,8 @@
  * When `href` is set, the image is wrapped in a link to an external 2D sky
  * viewer framed the same as the thumbnail, opened in a new tab.
  *
- * The card that hosts this stays mounted across target changes (palette
- * search), so `src`/`errored` are derived from `url` in-render rather than
- * seeded once — see the `forUrl` guard below.
+ * The host card stays mounted across target changes (palette search), so the
+ * state is reset in-render whenever `url` differs from the one it was seeded for.
  */
 
 import { useState } from 'react';
@@ -29,10 +28,8 @@ export type ThumbnailProps = {
   alt: string;
 };
 
-type ThumbnailState = { forUrl: string; src: string; errored: boolean };
-
 function Thumbnail({ url, fallbackUrl, href, alt }: ThumbnailProps): ReactNode {
-  const [state, setState] = useState<ThumbnailState>({ forUrl: url, src: url, errored: false });
+  const [state, setState] = useState({ forUrl: url, src: url, errored: false });
 
   if (state.forUrl !== url) {
     setState({ forUrl: url, src: url, errored: false });

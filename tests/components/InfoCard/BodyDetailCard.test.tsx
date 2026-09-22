@@ -150,7 +150,7 @@ describe('BodyDetailCard', () => {
     ).toHaveLength(1);
     // The live camera-distance value (not Mars's fixed "Distance from Sun"
     // fact-sheet row, which stays put) must appear exactly once.
-    expect(screen.getAllByText(new RegExp(formatDistance(1)))).toHaveLength(1);
+    expect(screen.getAllByText(formatDistance(1))).toHaveLength(1);
     // The summary column beside the shot holds four lines: radius, distance,
     // then mass and gravity — which therefore leave the row list below.
     const topRow = img.parentElement!.textContent;
@@ -199,6 +199,33 @@ describe('BodyDetailCard', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText('Callisto')).toBeInTheDocument();
     expect(screen.getByText('Distance')).toBeInTheDocument();
+  });
+
+  it('renders no img for a famous star with no sidecar entry yet, even when it has a shot', () => {
+    // Rigel is in SHOT_CARD_IDS, but with famousStarsMeta empty the sidecar
+    // hasn't resolved — the card must keep the headline-only fallback rather
+    // than pairing a shot with an empty summary column.
+    render(createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [] }));
+
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('renders no empty card section for a shot body with no fact sheet (S2)', () => {
+    // S2 has a captured shot (body-s2), is not a famous star, and has no
+    // BODY_FACTS entry — its lead rows move to the top row, leaving nothing
+    // for the first non-star `cardSection` to render.
+    const target = buildFocusable({
+      type: 'body',
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0, 0, 0],
+    }) as BodyInfo;
+
+    const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
+
+    for (const section of container.querySelectorAll('div[class*="cardSection"]')) {
+      expect(section.children.length > 0 || section.textContent!.trim() !== '').toBe(true);
+    }
   });
 
   it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {

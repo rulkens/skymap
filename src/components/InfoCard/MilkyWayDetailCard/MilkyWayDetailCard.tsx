@@ -15,7 +15,7 @@ import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
-import { CARD_IMAGE_DIR } from '../../../data/palette/cardImageDir';
+import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
 import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
@@ -55,7 +55,7 @@ function MilkyWayDetailCard({
       <CardRow type="headline">{target.displayName}</CardRow>
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        <Thumbnail url={`${CARD_IMAGE_DIR}/${MILKY_WAY_FOCUS_ID}.webp`} alt="Milky Way thumbnail" />
+        <Thumbnail url={cardShotUrl(MILKY_WAY_FOCUS_ID)} alt="Milky Way thumbnail" />
         <div className={styles.cardSummary}>
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>

@@ -55,7 +55,7 @@ import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
-import { CARD_IMAGE_DIR } from '../../../data/palette/cardImageDir';
+import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
@@ -112,7 +112,10 @@ function BodyDetailCard({
   // row (the absent-row pattern below), not a render-time throw.
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
   const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
-  const hasShot = SHOT_CARD_IDS.has(shotId);
+  // A famous star with a shot but no sidecar entry yet keeps the
+  // headline-only fallback rather than showing an image above an empty
+  // summary column.
+  const hasShot = SHOT_CARD_IDS.has(shotId) && (!isFamousStar || entry !== undefined);
 
   // The four lead rows — the "where / how big" facts — sit beside the card
   // shot as summary lines (the galaxy card's layout, one line per 20 px of the
@@ -162,6 +165,9 @@ function BodyDetailCard({
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
+  // Shared between the non-star and famous-star branches below, so the
+  // shot-vs-no-shot choice is made once rather than duplicated per branch.
+  const leadCardRows = hasShot ? null : leadRows.map((row, i) => <CardRow key={i} {...row} />);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
@@ -177,7 +183,7 @@ function BodyDetailCard({
 
       {hasShot && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={`${CARD_IMAGE_DIR}/${shotId}.webp`} alt={`${target.label} thumbnail`} />
+          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
           <div className={styles.cardSummary}>
             {leadRows.map((row, i) => (
               <div key={i} className={styles.cardDistLine}>
@@ -197,56 +203,61 @@ function BodyDetailCard({
       */}
       {!isFamousStar && (
         <>
-          <div className={styles.cardSection}>
-            {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
-            {facts?.dayLength && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}
-                value={facts.dayLength}
-              />
-            )}
-            {facts?.yearLength && (
-              <CardRow
-                label={
-                  <InfoTip {...TIPS.bodyYearLength!}>
-                    {facts.parent ? 'Orbital period' : 'Year length'}
-                  </InfoTip>
-                }
-                value={facts.yearLength}
-              />
-            )}
-            {facts?.distance && (
-              <CardRow
-                label={
-                  <InfoTip {...TIPS.bodyDistance!}>
-                    {facts.parent ? `Distance from ${facts.parent}` : 'Distance from Sun'}
-                  </InfoTip>
-                }
-                value={facts.distance}
-              />
-            )}
-            {facts?.meanTemp && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyMeanTemp!}>Mean temperature</InfoTip>}
-                value={facts.meanTemp}
-              />
-            )}
-            {facts?.moons && (
-              <CardRow label={<InfoTip {...TIPS.bodyMoons!}>Moons</InfoTip>} value={facts.moons} />
-            )}
-            {facts?.axialTilt && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyAxialTilt!}>Axial tilt</InfoTip>}
-                value={facts.axialTilt}
-              />
-            )}
-            {facts?.atmosphere && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyAtmosphere!}>Atmosphere</InfoTip>}
-                value={facts.atmosphere}
-              />
-            )}
-          </div>
+          {(!hasShot || facts) && (
+            <div className={styles.cardSection}>
+              {leadCardRows}
+              {facts?.dayLength && (
+                <CardRow
+                  label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}
+                  value={facts.dayLength}
+                />
+              )}
+              {facts?.yearLength && (
+                <CardRow
+                  label={
+                    <InfoTip {...TIPS.bodyYearLength!}>
+                      {facts.parent ? 'Orbital period' : 'Year length'}
+                    </InfoTip>
+                  }
+                  value={facts.yearLength}
+                />
+              )}
+              {facts?.distance && (
+                <CardRow
+                  label={
+                    <InfoTip {...TIPS.bodyDistance!}>
+                      {facts.parent ? `Distance from ${facts.parent}` : 'Distance from Sun'}
+                    </InfoTip>
+                  }
+                  value={facts.distance}
+                />
+              )}
+              {facts?.meanTemp && (
+                <CardRow
+                  label={<InfoTip {...TIPS.bodyMeanTemp!}>Mean temperature</InfoTip>}
+                  value={facts.meanTemp}
+                />
+              )}
+              {facts?.moons && (
+                <CardRow
+                  label={<InfoTip {...TIPS.bodyMoons!}>Moons</InfoTip>}
+                  value={facts.moons}
+                />
+              )}
+              {facts?.axialTilt && (
+                <CardRow
+                  label={<InfoTip {...TIPS.bodyAxialTilt!}>Axial tilt</InfoTip>}
+                  value={facts.axialTilt}
+                />
+              )}
+              {facts?.atmosphere && (
+                <CardRow
+                  label={<InfoTip {...TIPS.bodyAtmosphere!}>Atmosphere</InfoTip>}
+                  value={facts.atmosphere}
+                />
+              )}
+            </div>
+          )}
           {/*
             Orbital block — present only for a body carrying elements (the
             S-stars today), absent for Earth, the planets and the moons, whose
@@ -300,7 +311,7 @@ function BodyDetailCard({
             '~' affordance — unlike the field star's derived estimates.
           */}
           <div className={styles.cardSection}>
-            {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
+            {leadCardRows}
             <CardRow
               label={<InfoTip {...TIPS.spectralType!}>Spectral type</InfoTip>}
               value={entry.spectralType}
