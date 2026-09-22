@@ -18,6 +18,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
@@ -42,7 +43,7 @@ export const surfaceTilesPass: ContentPass = {
     if (view.slab.frame.kind !== 'body-m') return false;
     // Cast: the registry stays a literal (a row typo is a compile error), which
     // makes it non-indexable by the wider `BodyId`.
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[
+    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<SlabHostId, SurfaceTileSpec>>)[
       view.slab.frame.hostId
     ];
     if (spec === undefined || state.gpu.surfaceTileRenderer === null) return false;
@@ -65,7 +66,7 @@ export const surfaceTilesPass: ContentPass = {
     const surfaceTiles = state.subsystems.surfaceTiles;
     if (tileRenderer === null || view.slab.frame.kind !== 'body-m') return;
     if (surfaceTiles === undefined || surfaceTiles === null) return;
-    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[
+    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<SlabHostId, SurfaceTileSpec>>)[
       view.slab.frame.hostId
     ];
     if (spec === undefined) return;

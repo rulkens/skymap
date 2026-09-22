@@ -35,7 +35,7 @@ import { narrowMat4 } from '../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../src/utils/star/starExposureRamp';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
-import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
@@ -515,7 +515,7 @@ describe('the Galactic Centre pick stamp', () => {
 
   // A camera sitting on the anchor: the caption's own distance is ~0, so the
   // approach band reads full.
-  const AT_GALACTIC_CENTRE = SGR_A_STAR_ANCHOR.positionMpc as Vec3;
+  const AT_GALACTIC_CENTRE = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
   // Displaced far enough that the whole S-star cluster still collapses inside
   // one pick footprint, but the anchor's caption is at full alpha.
   const NEAR_GALACTIC_CENTRE: Vec3 = [

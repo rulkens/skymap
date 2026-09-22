@@ -9,8 +9,8 @@
  */
 
 import type { SlabRow } from '../../@types/engine/frame/SlabRow';
-import type { BodyId } from '../../@types/data/body/BodyId';
 import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
+import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 import { SGR_A_STAR } from './sceneSgrAStar';
 
 // r_s: the datum IS the Schwarzschild radius, and the row draws nothing wider
@@ -26,7 +26,9 @@ const SGR_A_STAR_RADIUS_M = SGR_A_STAR.surface.datumRadiusM;
 // footprint can span most of the view, so no disc-based cull is conservative.
 export const CORE_SLAB_ROWS: readonly SlabRow[] = [
   {
-    anchorId: SGR_A_STAR.id as BodyId,
+    // The PLACE, not the body: the row is posed from the Galactic Centre, so
+    // the pose key does not move when the Layer takes the black hole over.
+    anchorId: GALACTIC_CENTRE_ANCHOR.id,
     boundingRadiusM: SGR_A_STAR_RADIUS_M,
     footprintRadiusM: SGR_A_STAR_RADIUS_M,
     activeBand: SCALE_FADE_BANDS.sgrAStarLensing,

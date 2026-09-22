@@ -8,8 +8,8 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
@@ -281,17 +281,17 @@ describe('visibleSlabBodies', () => {
     // sub-pixel AND behind the camera: both culls must be bypassed inside
     // the floor, since the lensed footprint isn't the disc. The real core row
     // is the fixture, so its floor and the band it is keyed to stay pinned.
-    const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === SGR_A_STAR.id);
-    if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no Sgr A* row');
+    const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id);
+    if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no galactic-centre row');
     const insideFloorMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideFloorMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 
     for (const [distanceMpc, expected] of [
-      [insideFloorMpc, [SGR_A_STAR.id]],
+      [insideFloorMpc, [GALACTIC_CENTRE_ANCHOR.id]],
       [outsideFloorMpc, []],
     ] as const) {
       const bodyStates = new Map<string, BodyState>([
-        [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
       ]);
       const visible = visibleSlabBodies({
         rows: [lensRow],

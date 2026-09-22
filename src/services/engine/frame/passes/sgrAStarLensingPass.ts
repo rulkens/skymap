@@ -15,6 +15,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { BLACK_HOLES } from '../../../../data/blackHoles';
 import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../data/places/galacticCentre';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar';
 import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
@@ -39,7 +40,7 @@ export const sgrAStarLensingPass: ContentPass = {
   name: 'sgr-a-star-lensing',
 
   enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== SGR_A_STAR.id) {
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== GALACTIC_CENTRE_ANCHOR.id) {
       return false;
     }
     return state.gpu.sgrAStarLensingRenderer !== null;
@@ -48,7 +49,7 @@ export const sgrAStarLensingPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.sgrAStarLensingRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    if (view.slab.frame.hostId !== SGR_A_STAR.id) return;
+    if (view.slab.frame.hostId !== GALACTIC_CENTRE_ANCHOR.id) return;
 
     // The SAME pose-provider closure `deriveSlabs` built this row's
     // `view.slab.vp` from — see `planetsPass`'s identical seam.

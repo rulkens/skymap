@@ -40,7 +40,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PlanetRenderer } from '../../../../@types/rendering/PlanetRenderer';
-import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import {
   BODY_SPHERE_RINGS,
@@ -189,11 +189,11 @@ export function createPlanetRenderer(
   // `draw` once per row, all inside one submit (see the module header's
   // writeBuffer-vs-submit note). A body-m row draws exactly one planet, so
   // each buffer is a fixed one-instance allocation, created once and reused.
-  const bodies = new Map<BodyId, GPUBuffer>();
+  const bodies = new Map<SlabHostId, GPUBuffer>();
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, bodyId: BodyId, instance: Float32Array): void {
+  function draw(pass: GPURenderPassEncoder, bodyId: SlabHostId, instance: Float32Array): void {
     let buffer = bodies.get(bodyId);
     if (buffer === undefined) {
       buffer = device.createBuffer({

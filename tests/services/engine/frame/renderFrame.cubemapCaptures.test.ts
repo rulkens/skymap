@@ -59,7 +59,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
-import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
   ALL_CUBE_FACES,
@@ -257,9 +257,9 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
     // Offset 50 AU from the anchor — inside the lensing band (fullAt = 100 AU).
     const camPos: readonly [number, number, number] = [
-      SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
-      SGR_A_STAR_ANCHOR.positionMpc[1],
-      SGR_A_STAR_ANCHOR.positionMpc[2],
+      GALACTIC_CENTRE_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
+      GALACTIC_CENTRE_ANCHOR.positionMpc[1],
+      GALACTIC_CENTRE_ANCHOR.positionMpc[2],
     ];
     const ctx = makeCtx(camPos);
     renderFrame(makeInput(ctx, makeState()));
@@ -376,7 +376,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   it('omits every face from the hand-off map when cubemapCaptureFrame is not ready, and leaves bakedSettings unset so the next frame retries', () => {
     cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
     const state = makeState();
-    const ctx = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    const ctx = makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc);
     renderFrame(makeInput(ctx, state));
 
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
@@ -388,7 +388,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // Next frame retries the full sweep, since nothing was ever baked.
     cubemapCaptureFrameMock.mockClear();
     cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
   });
 
@@ -408,13 +408,13 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   // reconciled away again when the band closes.
   it('reconciles the render targets on the band edge, and only on the edge', () => {
     const state = makeState();
-    const inBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    const inBand = makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc);
     renderFrame(makeInput(inBand, state));
     expect(inBand.snapshot.renderTargets.reconcile).toHaveBeenCalledTimes(1);
     expect(state.cubemapCaptures.sgrAStar.lastBandActive).toBe(true);
 
     // Still in-band: nothing about the row's existence changed.
-    const stillInBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
+    const stillInBand = makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc);
     renderFrame(makeInput(stillInBand, state));
     expect(stillInBand.snapshot.renderTargets.reconcile).not.toHaveBeenCalled();
 
@@ -432,9 +432,9 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
     const state = makeState();
     const firstEye: readonly [number, number, number] = [
-      SGR_A_STAR_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
-      SGR_A_STAR_ANCHOR.positionMpc[1],
-      SGR_A_STAR_ANCHOR.positionMpc[2],
+      GALACTIC_CENTRE_ANCHOR.positionMpc[0] + 50 * SCALE_UNITS.AU_TO_MPC,
+      GALACTIC_CENTRE_ANCHOR.positionMpc[1],
+      GALACTIC_CENTRE_ANCHOR.positionMpc[2],
     ];
     renderFrame(makeInput(makeCtx(firstEye), state)); // band entry ⇒ full sweep, bakes.
     deriveViewMock.mockClear();
@@ -464,22 +464,22 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       subsystems: { fades: { isAnyAnimating: () => fadesAnimating } },
     } as unknown as Partial<EngineState>);
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes (settling).
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state)); // band entry ⇒ bakes (settling).
     deriveViewMock.mockClear();
 
     // Still settling, same settings ref ⇒ sweeps again.
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
     deriveViewMock.mockClear();
 
     // Settles THIS frame ⇒ one more sweep (the settled bake `bakedSettings` records).
     fadesAnimating = false;
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
     deriveViewMock.mockClear();
 
     // Settled, same settings ref ⇒ no further sweep.
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     expect(deriveViewMock).not.toHaveBeenCalled();
   });
 
@@ -495,10 +495,10 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);
     const settling = { settling: true };
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, settling), state)); // band entry ⇒ bakes.
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state)); // band entry ⇒ bakes.
     deriveViewMock.mockClear();
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, settling), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state));
 
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
   });
@@ -516,11 +516,11 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);
     const awake = { awake: true };
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, awake), state)); // band entry ⇒ bakes.
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, awake), state)); // band entry ⇒ bakes.
     expect(state.cubemapCaptures.sgrAStar.bakedSettings).not.toBeNull();
     deriveViewMock.mockClear();
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, awake), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, awake), state));
 
     expect(deriveViewMock).not.toHaveBeenCalled();
   });
@@ -532,13 +532,13 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     );
 
     const state = makeState();
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     deriveViewMock.mockClear();
 
     // Same contents, new reference — mirrors a real store write replacing
     // the settings slice wholesale.
     state.settings = { ...state.settings };
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
 
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
   });
@@ -550,11 +550,11 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     );
 
     const state = makeState();
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
     deriveViewMock.mockClear();
 
     state.contentVersion += 1;
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state));
 
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
   });
@@ -590,11 +590,11 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     );
 
     const state = makeState();
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
     renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close ⇒ resets bakedSettings.
     deriveViewMock.mockClear();
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // re-entry.
+    renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc), state)); // re-entry.
 
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
   });

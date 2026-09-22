@@ -1,11 +1,12 @@
 /**
  * SlabHostId — what a `body-m` slab row is posed from and identified by.
  *
- * A body id today; the blackHoles Layer's PR widens it to `BodyId | PlaceId`
- * so an authored place (the galactic centre) can host a row without being
- * seeded into the body tables.
+ * A place as well as a body: the lens row hangs off the Galactic Centre's
+ * location, not off whichever object sits there, so the pose key stays the
+ * same when Sgr A* becomes a Layer's own row.
  */
 
 import type { BodyId } from '../../data/body/BodyId';
+import type { PlaceId } from '../../scene/PlaceId';
 
-export type SlabHostId = BodyId;
+export type SlabHostId = BodyId | PlaceId;

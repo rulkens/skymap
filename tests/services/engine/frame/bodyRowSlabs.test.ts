@@ -20,12 +20,11 @@ import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starS
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
-import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -37,9 +36,9 @@ const SIM_DAYS = 0;
 const LENS_SLAB_INDEX = 4;
 
 /** The real anchor position, so the band is exercised at its authored edges. */
-function camAtAuFromSgrAStar(au: number): Vec3 {
-  const anchor = deriveBodyStates(SIM_DAYS).get(SGR_A_STAR.id);
-  if (anchor === undefined) throw new Error('deriveBodyStates carries no Sgr A* row');
+function camAtAuFromGalacticCentre(au: number): Vec3 {
+  const anchor = deriveBodyStates(SIM_DAYS).get(GALACTIC_CENTRE_ANCHOR.id);
+  if (anchor === undefined) throw new Error('deriveBodyStates carries no galactic-centre row');
   const [x, y, z] = anchor.positionMpc;
   return [x + au * SCALE_UNITS.AU_TO_MPC, y, z];
 }
@@ -63,20 +62,20 @@ function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
 
 const STATE = {} as unknown as EngineState;
 
-const SGR_A_STAR_SLAB = makeSlab({
+const LENS_SLAB = makeSlab({
   index: LENS_SLAB_INDEX,
-  frame: { kind: 'body-m', hostId: SGR_A_STAR.id as BodyId },
+  frame: { kind: 'body-m', hostId: GALACTIC_CENTRE_ANCHOR.id },
 });
 
 describe('bodyRowSlabs', () => {
-  it("resolves Sgr A*'s body-m slab index inside the lensing band", () => {
-    const ctx = makeCtx(camAtAuFromSgrAStar(120), [makeSlab(), SGR_A_STAR_SLAB]);
+  it("resolves the Galactic Centre's body-m slab index inside the lensing band", () => {
+    const ctx = makeCtx(camAtAuFromGalacticCentre(120), [makeSlab(), LENS_SLAB]);
 
     expect(bodyRowSlabs(STATE, ctx).lens).toEqual([LENS_SLAB_INDEX]);
   });
 
   it('resolves nothing outside the band, so the two hdr·NEAR0 lines still merge', () => {
-    const ctx = makeCtx(camAtAuFromSgrAStar(900), [makeSlab(), SGR_A_STAR_SLAB]);
+    const ctx = makeCtx(camAtAuFromGalacticCentre(900), [makeSlab(), LENS_SLAB]);
 
     const slabs = bodyRowSlabs(STATE, ctx);
     expect(slabs.lens).toEqual([]);
@@ -109,7 +108,7 @@ describe('bodyRowSlabs', () => {
   });
 
   it('resolves nothing when the row is active but its slab missed this frame', () => {
-    const ctx = makeCtx(camAtAuFromSgrAStar(120), [makeSlab()]);
+    const ctx = makeCtx(camAtAuFromGalacticCentre(120), [makeSlab()]);
 
     expect(bodyRowSlabs(STATE, ctx).lens).toEqual([]);
   });

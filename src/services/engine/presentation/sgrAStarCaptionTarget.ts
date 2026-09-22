@@ -19,7 +19,7 @@
  */
 
 import { CAPTION_FADE_RULES } from './captionFadeRules';
-import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -32,7 +32,7 @@ export function sgrAStarCaptionTarget(
   const rule = CAPTION_FADE_RULES.sgrAStar;
   if (!rule.labelEnabled(settings) || !rule.subjectVisible(settings)) return 0;
   return rule.fadeTarget(
-    distanceMpc(camPosMpc, SGR_A_STAR_ANCHOR.positionMpc),
+    distanceMpc(camPosMpc, GALACTIC_CENTRE_ANCHOR.positionMpc),
     camOrbitDistanceMpc,
   );
 }

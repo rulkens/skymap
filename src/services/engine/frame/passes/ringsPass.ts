@@ -63,6 +63,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -86,7 +87,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
 function ringDrawForBody(
   state: PassState,
   ctx: FrameView,
-  bodyId: BodyId,
+  bodyId: SlabHostId,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {
   const ring = SCENE_RINGS.find((r) => r.bodyId === bodyId);
   if (ring === undefined) return null;

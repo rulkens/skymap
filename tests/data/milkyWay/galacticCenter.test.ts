@@ -15,10 +15,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCenter';
-import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 
 describe('MILKY_WAY_CENTER_WORLD', () => {
   it('is the Sgr A* anchor itself, not a second transcription of its coordinates', () => {
-    expect([...MILKY_WAY_CENTER_WORLD]).toEqual([...SGR_A_STAR_ANCHOR.positionMpc]);
+    expect([...MILKY_WAY_CENTER_WORLD]).toEqual([...GALACTIC_CENTRE_ANCHOR.positionMpc]);
   });
 });
