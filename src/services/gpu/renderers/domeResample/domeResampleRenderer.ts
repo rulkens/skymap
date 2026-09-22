@@ -8,7 +8,8 @@
 
 import type { DomeResampleRenderer } from '../../../../@types/rendering/DomeResampleRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import resampleCode from '../../shaders/domeResample/domeResample.wesl?static';
+import vsCode from '../../shaders/domeResample/vertex.wesl?static';
+import fsCode from '../../shaders/domeResample/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 
 export function createDomeResampleRenderer(init: {
@@ -37,16 +38,17 @@ export function createDomeResampleRenderer(init: {
     ],
   });
 
-  const module = createShaderModuleWithDevLog(device, resampleCode, 'domeResample');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'domeResample.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'domeResample.fragment');
   const pipeline = device.createRenderPipeline({
     label: 'domeResample-pipeline',
     layout: device.createPipelineLayout({
       label: 'domeResample-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
     }),
-    vertex: { module, entryPoint: 'vs' },
+    vertex: { module: vsModule, entryPoint: 'vs' },
     // No blend and no depth: the resample replaces every hdr pixel outright.
-    fragment: { module, entryPoint: 'fs', targets: [{ format: targetFormat }] },
+    fragment: { module: fsModule, entryPoint: 'fs', targets: [{ format: targetFormat }] },
     primitive: { topology: 'triangle-list' },
   });
 

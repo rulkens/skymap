@@ -1,7 +1,8 @@
 /**
  * domeResampleRenderer — structural tests against a mocked GPUDevice
- * (`cubeFaceBlitRenderer.test.ts`'s pattern), plus the real `?static` import
- * so wesl-plugin's link of `domeResample.wesl` runs under Vitest.
+ * (`cubeFaceBlitRenderer.test.ts`'s pattern), plus the real `?static` imports
+ * so wesl-plugin's link of `domeResample/vertex.wesl` and `fragment.wesl`
+ * runs under Vitest.
  */
 
 import { describe, it, expect, vi } from 'vitest';
