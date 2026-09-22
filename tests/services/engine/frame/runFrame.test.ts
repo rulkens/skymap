@@ -84,6 +84,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
@@ -113,8 +114,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
-import type { LayerInstance } from '../../../../src/@types/engine/layer/LayerInstance';
-import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
@@ -1098,22 +1098,16 @@ describe('runFrame — the label-director wake fold', () => {
   });
 });
 
-describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
+describe('runFrame — the planner keep-ticking fold', () => {
   /**
-   * A fully READY fixture, mirroring the label-director block's shape, plus
-   * a spy'd `structureFocus` whose `produceFocusUniforms` returns a distinct
-   * sentinel object — so a hook's captured `ctx.snapshot.focus` can be checked
-   * for reference equality against it, proving the hook runs AFTER the
-   * `snapshot.focus = focusUniforms` assignment, not before.
+   * A fully READY fixture, mirroring the label-director block's shape.
+   * `renderFrame` is mocked at module scope; a test that needs a planner to
+   * have voted `awake`/`settling` mutates `input.canvas.snapshot.plans`
+   * from inside that mock, the way the real `renderFrame` would via
+   * `runPlanSteps` — `runFrame` itself no longer runs any planner, only
+   * folds the result afterward (`snapshot.plans.awake`).
    */
-  const SENTINEL_FOCUS: FocusUniformsValue = {
-    center: [1, 2, 3],
-    apparentRadiusMpc: 1,
-    physicalRadiusMpc: 1,
-    blend: 0.5,
-  };
-
-  function makeLayerState(layers: readonly LayerInstance[]): EngineState {
+  function makeReadyState(): EngineState {
     const base = makeCamState();
     return {
       ...base,
@@ -1125,7 +1119,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
       },
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
-      layers,
+      layers: [],
       cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
         ...base.gpu,
@@ -1140,8 +1134,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
       subsystems: {
         ...base.subsystems,
         // At rest, keepTicking is false and the still-live sim clock falls
-        // through to the idle-tick arm — the label-director block's fixture
-        // never reaches it (one of its two tests always votes true).
+        // through to the idle-tick arm.
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
         texturedDisks: { hasInFlightWork: () => false },
         proceduralDisks: null,
@@ -1150,7 +1143,12 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
         earthTiles: null,
         structureFocus: {
           update: vi.fn(),
-          produceFocusUniforms: vi.fn(() => SENTINEL_FOCUS),
+          produceFocusUniforms: vi.fn(() => ({
+            center: [1, 2, 3],
+            apparentRadiusMpc: 1,
+            physicalRadiusMpc: 1,
+            blend: 0.5,
+          })),
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
@@ -1160,75 +1158,30 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     } as unknown as EngineState;
   }
 
-  const AT_REST = { awake: false, settling: false } as const;
+  it('a frame otherwise at rest, with no planner voting awake, does not keep the loop ticking', () => {
+    const state = makeReadyState();
+    runFrame(state, makeCamDeps(state), 0);
+    expect(state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
+  });
 
-  function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
-    return {
-      name,
-      passes: [],
-      computes: [],
-      assets: [],
-      fades: [],
-      screenLabels: [],
-      worldLabels: [],
-      orbitTrails: [],
-      selection: [],
-      frame,
-      destroy: () => {},
+  it('keeps the loop ticking off `snapshot.plans.awake`, read AFTER renderFrame ran', () => {
+    const state = makeReadyState();
+    const wakingPlanner: FrameContentPlanner<void> = {
+      name: 'test-awake',
+      scope: 'once',
+      plan: () => ({ value: undefined, awake: true, settling: false }),
     };
-  }
-
-  it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {
-    const order: string[] = [];
-    const focusSeenByA: { current: unknown } = { current: undefined };
-    const layerA = makeLayer('a', (ctx) => {
-      order.push('a');
-      focusSeenByA.current = ctx.snapshot.focus;
-      return AT_REST;
+    vi.mocked(renderFrame).mockImplementationOnce((input) => {
+      input.canvas.snapshot.plans.put(wakingPlanner, undefined, {
+        value: undefined,
+        awake: true,
+        settling: false,
+      });
     });
-    const layerB = makeLayer('b', () => {
-      order.push('b');
-      return AT_REST;
-    });
-    const state = makeLayerState([layerA, layerB]);
-    const deps = makeCamDeps(state);
 
-    runFrame(state, deps, 0);
-
-    expect(order).toEqual(['a', 'b']);
-    expect(focusSeenByA.current).toBe(SENTINEL_FOCUS);
-  });
-
-  it('an awake vote keeps the loop ticking; a Layer-free frame with everything else at rest does not', () => {
-    const stillState = makeLayerState([]);
-    runFrame(stillState, makeCamDeps(stillState), 0);
-    expect(stillState.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
-
-    const wakingLayer = makeLayer('wakes', () => ({ awake: true, settling: false }));
-    const wakingState = makeLayerState([wakingLayer]);
-    runFrame(wakingState, makeCamDeps(wakingState), 0);
-    expect(wakingState.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('a settling vote keeps the loop ticking too — the fold, not the Layer, owns the implication', () => {
-    const settlingLayer = makeLayer('settles', () => ({ awake: false, settling: true }));
-    const state = makeLayerState([settlingLayer]);
     runFrame(state, makeCamDeps(state), 0);
+
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('a second hook still runs when the first voted awake — no short-circuit', () => {
-    const secondCalled = { value: false };
-    const layerA = makeLayer('a', () => ({ awake: true, settling: false }));
-    const layerB = makeLayer('b', () => {
-      secondCalled.value = true;
-      return AT_REST;
-    });
-    const state = makeLayerState([layerA, layerB]);
-
-    runFrame(state, makeCamDeps(state), 0);
-
-    expect(secondCalled.value).toBe(true);
   });
 });
 

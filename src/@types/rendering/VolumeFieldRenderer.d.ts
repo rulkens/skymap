@@ -57,6 +57,7 @@ export type VolumeFieldRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
+    pxPerRad: number,
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined,
     fadeOpacityOf: (id: VolumeFieldId) => number,

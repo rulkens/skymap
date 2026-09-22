@@ -56,6 +56,7 @@ export const markerLinesPass: ContentPass = {
       pass,
       view.vp,
       view.viewportPx,
+      ctx.drawPxPerRad,
       overlaySceneOcclusion(ctx, view),
     );
   },

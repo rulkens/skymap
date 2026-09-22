@@ -13,6 +13,7 @@ import { slotReady } from '../../../services/loading/slotReady';
 export function flowCompute(runtime: FlowRuntime): ContentCompute {
   return {
     name: 'flow',
+    scope: 'once',
     encode(encoder, ctx, state, claimTimestampWrites) {
       const flow = state.settings.flow;
       if (!flow.enabled || !slotReady(runtime.slot)) return;

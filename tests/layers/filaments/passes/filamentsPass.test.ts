@@ -25,7 +25,6 @@ function makeCtx(focusBlend: number): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend,
-      layersSettling: false,
       visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -85,8 +84,8 @@ describe('filamentsPass draw focus recession', () => {
     const ctx = makeCtx(0);
     filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
-    expect(drawSpy.mock.calls[0]![5]).toBe(1);
+    // Args: (pass, vp, viewport, pxPerRad, halfwidth, intensity, opacity).
+    expect(drawSpy.mock.calls[0]![6]).toBe(1);
   });
 
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
@@ -94,7 +93,7 @@ describe('filamentsPass draw focus recession', () => {
     const ctx = makeCtx(1);
     filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
+    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
 
   it('threads the SlabView vp/viewport rather than ctx.vp/ctx.canvasSize', () => {
@@ -111,8 +110,9 @@ describe('filamentsPass draw focus recession', () => {
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(view.vp);
     expect(args[2]).toEqual(view.viewportPx);
-    expect(args[3]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
-    expect(args[4]).toBe(0.7);
+    expect(args[3]).toBe(ctx.drawPxPerRad);
+    expect(args[4]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
+    expect(args[5]).toBe(0.7);
   });
 });
 

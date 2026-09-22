@@ -66,6 +66,7 @@ const gpt = (packedId: number, x: number, bandClass: number): BodyGlintPick => (
 
 const VP = new Float32Array(16);
 const VIEWPORT: Vec2 = [1920, 1080];
+const PX_PER_RAD = 1000;
 
 describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
   it('two same-pass calls bind DIFFERENT instance buffers + bind groups (no last-write-wins clobber)', () => {
@@ -74,10 +75,16 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     const pass = mockPass();
 
     // Caller A: one point (the scene stars). Caller B: two points (the glints).
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(100, 1)] });
     renderer.drawPoints(pass, {
       vp: VP,
       viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(100, 1)],
+    });
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
       points: [pt(200, 2), pt(300, 3)],
     });
 
@@ -122,12 +129,22 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     const renderer = createBodyPickRenderer(device, false);
 
     const passOne = mockPass();
-    renderer.drawPoints(passOne, { vp: VP, viewportPx: VIEWPORT, points: [pt(100, 1)] });
+    renderer.drawPoints(passOne, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(100, 1)],
+    });
     const firstVbo = (passOne.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1];
 
     const passTwo = mockPass();
-    renderer.drawPoints(passTwo, { vp: VP, viewportPx: VIEWPORT, points: [pt(999, 9)] });
+    renderer.drawPoints(passTwo, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(999, 9)],
+    });
     const secondVbo = (passTwo.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1];
 
@@ -139,7 +156,12 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     const renderer = createBodyPickRenderer(device, false);
 
     const passOne = mockPass();
-    renderer.drawPoints(passOne, { vp: VP, viewportPx: VIEWPORT, points: [pt(100, 1)] });
+    renderer.drawPoints(passOne, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(100, 1)],
+    });
     const firstVbo = (passOne.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1];
 
@@ -148,7 +170,12 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     // buffers (same count ≤ capacity → no realloc).
     renderer.beginSubmit();
     const passTwo = mockPass();
-    renderer.drawPoints(passTwo, { vp: VP, viewportPx: VIEWPORT, points: [pt(999, 9)] });
+    renderer.drawPoints(passTwo, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(999, 9)],
+    });
     const reusedVbo = (passTwo.setVertexBuffer as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1];
 
@@ -161,11 +188,17 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     const pass = mockPass();
 
     // Default variant → scene-star point pipeline (clamps true depth).
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(1, 1)] });
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(1, 1)],
+    });
     // Explicit glint variant → the glint pipeline (forces the shallow glint band).
     renderer.drawPoints(pass, {
       vp: VP,
       viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
       points: [gpt(2, 2, 1)],
       variant: 'glint',
     });
@@ -198,6 +231,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     renderer.drawPoints(passOne, {
       vp: VP,
       viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
       points: [pt(1, 1), pt(2, 2)],
     });
 
@@ -213,6 +247,7 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     renderer.drawPoints(passTwo, {
       vp: VP,
       viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
       points: glintPoints,
       variant: 'glint',
     });
@@ -241,7 +276,13 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
       { posRelCamMpc: [1, 0, 0] as Vec3, packedId: 10, bandClass: 0 }, // earth
       { posRelCamMpc: [2, 0, 0] as Vec3, packedId: 20, bandClass: 2 }, // moon
     ];
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points, variant: 'glint' });
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points,
+      variant: 'glint',
+    });
 
     // The glint pipeline was selected.
     const setPipeline = pass.setPipeline as unknown as ReturnType<typeof vi.fn>;
@@ -272,7 +313,12 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
     const renderer = createBodyPickRenderer(device, false);
     const pass = mockPass();
 
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(7, 1)] });
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(7, 1)],
+    });
 
     const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
     const instWrite = writeBuffer.mock.calls.find(([buffer]) =>
@@ -288,8 +334,13 @@ describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
 
     // Empty first call must NOT advance the cursor, so the following non-empty
     // call still lands in slot 0 (a fresh renderer's first real slot).
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [] });
-    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, points: [pt(1, 1)] });
+    renderer.drawPoints(pass, { vp: VP, viewportPx: VIEWPORT, pxPerRad: PX_PER_RAD, points: [] });
+    renderer.drawPoints(pass, {
+      vp: VP,
+      viewportPx: VIEWPORT,
+      pxPerRad: PX_PER_RAD,
+      points: [pt(1, 1)],
+    });
 
     const draw = pass.draw as unknown as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);

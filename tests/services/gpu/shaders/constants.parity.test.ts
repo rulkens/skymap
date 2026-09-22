@@ -38,6 +38,7 @@ import {
   HEIGHT_POSTS_PER_TILE,
 } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.
@@ -83,6 +84,24 @@ describe('flow/constants.wesl ↔ flowFieldConstants.ts parity', () => {
         true,
       );
     }
+  });
+});
+
+/**
+ * The label em-to-pixel retune is the same hand-mirror problem one file over:
+ * the shader folds it into `pxPerEm`, and `labelScreenRect` /
+ * `liftedLabelPlacement` fold the TS twin into the rects the declutter and the
+ * pick derive from. A drift makes labels clickable somewhere they aren't drawn.
+ */
+describe('labels/vertex.wesl EM_PX_RETUNE ↔ LABEL_EM_PX_RETUNE parity', () => {
+  it('the shader constant equals the TS export the CPU twins apply', () => {
+    const text = readFileSync(
+      join(process.cwd(), 'src/services/gpu/shaders/labels/vertex.wesl'),
+      'utf-8',
+    );
+    const m = /const\s+EM_PX_RETUNE\s*:\s*f32\s*=\s*([0-9]*\.?[0-9]+)f?\s*;/.exec(text);
+    expect(m, 'labels/vertex.wesl declares no EM_PX_RETUNE').not.toBeNull();
+    expect(parseFloat(m![1]!)).toBe(LABEL_EM_PX_RETUNE);
   });
 });
 

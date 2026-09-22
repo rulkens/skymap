@@ -102,6 +102,7 @@ describe('createConstellationRenderer.draw camera-relative write', () => {
       pass,
       mat4.identity() as Float32Array,
       [1920, 1080],
+      1000,
       0.9,
       1,
       1,

@@ -188,6 +188,90 @@ times and a per-view `renderedTargets` fold in `renderFrame` — P6 pays the
 rename instead (view fields keep `ctx.x`; only frame fields move). Backlog
 _frame-view-record_ is consumed by it.
 
+## Ground preparation 2 — per-view planning (2026-09-22)
+
+The first dome smoke (#800, T1–T6 landed) found five defects that all trace to
+one gap outside the dome diff: `FrameSection.scope` decides where a step
+**runs**, but nothing decides where the data a step **consumes** is planned.
+Every producer `runFrame` or `PRELUDE` calls once with the canvas view publishes
+a canvas-shaped answer into a single shared slot that all five faces then read.
+Ran `refactor-ground` again; greenfield cross-check by a fresh agent agreed on
+planners as scoped program lines with one view-keyed store, and disagreed on
+three points that were priced and not adopted (captures modelled as views with
+a role; once-scope steps with no view; per-view post) — the first two go to
+`docs/backlog/`, the third is a spec ruling above.
+
+**Ideal shape (data delta first):**
+
+```ts
+// A CPU planner is a program line, like a compute. Scope is the ONLY discriminant
+// and matches the section scopes; checkFrameOrder rejects a mismatch at boot.
+export type PlanStepSpec = { readonly kind: 'plan'; readonly name: string };   // FrameStepSpec |= PlanStepSpec
+export type PlanResult<T> = { readonly value: T; readonly animating: boolean }; // vote OR-ed by runFrame
+export type ContentPlanner<T> =
+  | { readonly name: string; readonly scope: 'once';
+      plan(snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState): PlanResult<T> }
+  | { readonly name: string; readonly scope: 'perView';
+      plan(view: FrameView, state: PassState): PlanResult<T> };
+// ContentCompute gains the same `scope`; `aerial-perspective` declares 'perView'.
+
+// ONE home for planned data, on the frame. A miss THROWS — no silent canvas-shaped fallback.
+export type Plans = { get<T>(planner: ContentPlanner<T>, view?: FrameView): T };
+// FrameView.snapshot.plans; a perView value is keyed (planner.name, view), a once value (planner.name).
+
+// Layers contribute planner rows the way they contribute passes and computes.
+// LayerInstance.planners: readonly ContentPlanner<unknown>[]; LayerInstance.frame RETIRED.
+
+// Views are named by their rig; timing derives from the name, no hand-added suffix.
+// ViewSpec.id / FrameView.id: 'canvas' | 'sky:+x' | 'dome:front' …;  slot = `${work}@${view.id}` off-canvas.
+
+// CameraUniforms prefix gains pxPerRad (in `_pad0`); worldLenToPx = lenWorld / depth * pxPerRad.
+// MW sprite cloud uniform loses camRight/camUp; the basis is eye-facing per instance.
+```
+
+**Planning precedes encoding.** Plan rows lead their section (a boot rule):
+`renderFrame` runs every once-scope plan row before it schedules captures
+(they read the settling vote) and before any encoder exists; a view's
+perView plan rows run before that view's encoder opens. The disk LOD plan is
+a **once** row over the rig's views (max `drawPxPerRad`, `views[0]` anchor):
+the catalog walk touches ~2.5M rows, and per face it would be a 5× CPU cost
+for a threshold nudge. Program after the prep (mono; the dome rig is unchanged):
+
+```
+PRELUDE  once    [ plan galaxy-catalog, plan flow, compute flow, compute sky-view, captures…, probe ]
+SCENE    perView [ plan structure-markers, compute aerial-perspective, render … ]
+POST     once    [ bloom, tonemap ]
+OVERLAYS once    [ render … ]      // label directors + 3-D labels stay in runFrame until dome text lands,
+                                   // then they become rows and OVERLAYS becomes perView (one view in mono)
+```
+
+Star cut and surface-tile cut stay in `runFrame` (already unioned over the
+views); the star Layer PR owns its once-scope row.
+
+| Touchpoint                                               | Verdict                 | Blocker                                                                                                            |
+| -------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Structure markers, label directors, 3-D labels, disk LOD | bolt-on                 | `runFrame.ts` calls each once with `canvas` and writes one slot (`layer.frame`, director `runFrame`, `setMarkers`) |
+| Aerial-perspective compute                               | bolt-on → growth after  | `PRELUDE` once; froxels + shell uniform baked from the canvas `invMvp`                                              |
+| Ring/label size (`worldLenToPx`)                         | growth                  | `lib/billboard.wesl` reconstructs from the viewport, no focal term in `CameraUniforms`                             |
+| Timing identity                                          | second special case     | `slabs.ts` bakes the slab row index; captures hand-append `·FACE[n]`                                               |
+| MW sprite basis                                          | shader fix, not a joint | view-plane `camRight/camUp` differ per face                                                                        |
+
+**Prep (own PR, before #800 finishes; each its own commit; mono renders as today):**
+
+- **P1** plan step + `ContentPlanner` + `Plans` + `LayerInstance.planners`
+  (hook retired) + `scope` on computes + the boot rule; migrate every
+  once-with-canvas producer into a row. Mono bit-identical.
+- **P2** `aerial-perspective` declares `perView`, line moves to the head of
+  `SCENE`; one shared volume (each view is its own submit).
+- **P3** `pxPerRad` in the camera prefix; `worldLenToPx` rewrite; marker and
+  label size constants **retuned** so mono at 60° looks as today (ruled
+  2026-09-22). The five per-renderer `pxPerRad` copies are left for the
+  deletion audit at `/feature-done`.
+- **P4** MW sprites eye-facing per instance; `camRight/camUp` dropped.
+- **P5** `ViewSpec.id`; timing slot by view name; `foldCaptureFaceRows` follows.
+
+Plan: `docs/superpowers/plans/2026-09-22-per-view-planning-prep.md`.
+
 ## Risks and eye-checks
 
 - **Pixel floors:** galaxy dot and star glow minimums are in face pixels;

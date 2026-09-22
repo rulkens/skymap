@@ -90,13 +90,15 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  *
  *   bytes  0..63 : viewProj      mat4x4<f32>  (CameraUniforms.viewProj)
  *   bytes 64..71 : viewportPx    vec2<f32>    (CameraUniforms.viewportPx)
- *   bytes 72..79 : reserved pad  f32 × 2      (CameraUniforms reserved)
+ *   bytes 72..75 : pxPerRad      f32          (CameraUniforms focal term)
+ *   bytes 76..79 : reserved pad   f32          (CameraUniforms reserved)
  *   bytes 80..91 : camPosWorld   vec3<f32>
- *   bytes 92..95 : pxPerRad      f32          (or padding for disks)
+ *   bytes 92..95 : pxPerRad      f32          (consumer-specific copy)
  *
- * The 'pxPerRad' slot is consumer-specific — TexturedQuadRenderer +
- * ProceduralDiskRenderer use it for pixel-radius computation; the
- * TexturedDiskRenderer leaves it as zero padding.
+ * The byte-92 'pxPerRad' slot is the consumer-specific copy —
+ * TexturedQuadRenderer + ProceduralDiskRenderer read it for pixel-radius
+ * computation, the TexturedDiskRenderer ignores it. It duplicates the
+ * prefix's byte-72 term and is queued for the feature's deletion audit.
  */
 export const UNIFORM_BYTES = 96;
 
@@ -339,7 +341,7 @@ export function createInstancedQuadRenderer(
     instanceBytes: Float32Array;
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
-    pxPerRad?: number;
+    pxPerRad: number;
     /** Shared cluster-focus bind group (bound at @group(1)). Built once by
      *  the engine against the canonical focusBgl; the same group serves
      *  every impostor pipeline. */
@@ -370,18 +372,18 @@ export function createInstancedQuadRenderer(
     // Pack uniforms:
     //   f32[ 0..15] viewProj         (CameraUniforms.viewProj)
     //   f32[16..17] viewport         (CameraUniforms.viewportPx)
-    //   f32[18..19] reserved pad     (must stay zero)
+    //   f32[18]     pxPerRad         (CameraUniforms.pxPerRad)
+    //   f32[19]     reserved pad     (must stay zero)
     //   f32[20..22] camPosWorld
-    //   f32[23]     pxPerRad
-    writeCameraPrefix(uniformScratch, args.viewProj, args.viewport);
+    //   f32[23]     pxPerRad          (consumer-specific copy)
+    writeCameraPrefix(uniformScratch, args.viewProj, args.viewport, args.pxPerRad);
     // Explicit pad zeroing — this scratch is reused across frames, so the
-    // pads can't rely on zero-init the way a fresh Float32Array can.
-    uniformScratch[18] = 0;
+    // pad can't rely on zero-init the way a fresh Float32Array can.
     uniformScratch[19] = 0;
     uniformScratch[20] = args.camPosWorld?.[0] ?? 0;
     uniformScratch[21] = args.camPosWorld?.[1] ?? 0;
     uniformScratch[22] = args.camPosWorld?.[2] ?? 0;
-    uniformScratch[23] = args.pxPerRad ?? 0;
+    uniformScratch[23] = args.pxPerRad;
     // THIS call's own slot's buffer — a sky-cubemap capture sweep's several
     // `draw()` calls (different faces, one submit) each carry a different
     // viewProj/viewport/camPos, so a shared buffer would keep only the last

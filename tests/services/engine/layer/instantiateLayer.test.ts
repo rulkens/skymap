@@ -6,18 +6,18 @@ import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCor
 const STUB_DEPS = {} as LayerCoreDeps<undefined>;
 
 describe('instantiateLayer', () => {
-  it('binds frame and selection to the runtime create returned', () => {
+  it('binds planners and selection to the runtime create returned', () => {
     const runtime = { tag: 'stub-runtime' };
-    const frameSpy = vi.fn(() => ({ awake: true, settling: false }));
+    const plannerSpy = vi.fn(() => ({ value: undefined, awake: true, settling: false }));
     const layer: Layer<'stub', typeof runtime, readonly [], readonly [], undefined> = {
       name: 'stub',
       create: () => runtime,
       destroy: vi.fn(),
       passes: () => [],
       selection: () => [{ type: 'milkyWay' } as never],
-      frame: (r) => {
+      planners: (r) => {
         expect(r).toBe(runtime);
-        return frameSpy;
+        return [{ name: 'stub-planner', scope: 'once', plan: plannerSpy }];
       },
     };
 
@@ -25,9 +25,19 @@ describe('instantiateLayer', () => {
 
     expect(instance.name).toBe('stub');
     expect(instance.selection).toHaveLength(1);
-    const ctx = {} as never;
+    expect(instance.planners).toHaveLength(1);
+    const snapshot = {} as never;
+    const views = [] as never;
     const passState = {} as never;
-    expect(instance.frame?.(ctx, passState)).toEqual({ awake: true, settling: false });
-    expect(frameSpy).toHaveBeenCalledWith(ctx, passState);
+    const planner = instance.planners[0]!;
+    // Narrowed to the `once` arm: calling the unnarrowed union widens each
+    // parameter position to the INTERSECTION of both arms, which no value satisfies.
+    if (planner.scope !== 'once') throw new Error('expected a once-scope planner');
+    expect(planner.plan(snapshot, views, passState)).toEqual({
+      value: undefined,
+      awake: true,
+      settling: false,
+    });
+    expect(plannerSpy).toHaveBeenCalledWith(snapshot, views, passState);
   });
 });

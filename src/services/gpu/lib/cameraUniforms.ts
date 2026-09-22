@@ -28,16 +28,17 @@
  * - It does not `writeBuffer`.  Upload cadence, target buffer, and byte
  *   offset are per-renderer decisions (some upload the prefix alone,
  *   some upload it as the head of a bigger struct in one write).
- * - It does not touch floats 18/19 — the struct's two named pads.
+ * - It does not touch float 19 — the struct's remaining named pad.
  *   Pure-prefix callers rely on Float32Array zero-init; larger-struct
- *   callers that reuse scratch across frames zero the pads explicitly
+ *   callers that reuse scratch across frames zero the pad explicitly
  *   themselves, because a reused view has no zero-init guarantee.
  *
  * ## Byte layout (must stay byte-exact with `shaders/lib/camera.wesl`)
  *
  *   f32[ 0..15]  viewProj    mat4x4<f32>  bytes  0..63
  *   f32[16..17]  viewportPx  vec2<f32>    bytes 64..71
- *   f32[18..19]  _pad0/_pad1 two reserved f32s, bytes 72..79 — NOT
+ *   f32[18]      pxPerRad    f32          bytes 72..75
+ *   f32[19]      _pad0       one reserved f32, bytes 76..79 — NOT
  *                written here (see above).
  *
  * The 80-byte total is what pure-prefix renderers size their uniform
@@ -57,7 +58,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 
 /**
  * Byte size of the shared `CameraUniforms` prefix:
- * viewProj (64) + viewportPx (8) + two pad f32s (8) = 80.
+ * viewProj (64) + viewportPx (8) + pxPerRad (4) + one pad f32 (4) = 80.
  * Pure-prefix renderers use it as their whole uniform-buffer size;
  * larger-struct renderers' own byte tables start at this offset.
  */
@@ -65,21 +66,27 @@ export const CAMERA_UNIFORM_BYTES = 80;
 
 /**
  * Write the CameraUniforms prefix into `target`: viewProj at floats
- * 0..15, viewportPx at 16..17.  Floats 18..19 (the named pads) are left
- * untouched — see the module header for why, and for why this neither
- * allocates nor uploads.
+ * 0..15, viewportPx at 16..17, pxPerRad at 18.  Float 19 (the named pad)
+ * is left untouched — see the module header for why, and for why this
+ * neither allocates nor uploads.
  *
  * `viewProj` is `Float32Array | Mat4` because renderer draw signatures
  * split along exactly that line (most take a rebased `Float32Array`;
  * filaments and the volume field take wgpu-matrix's `Mat4`) — both are
  * 16-float array-likes that `TypedArray.set` accepts directly.
+ *
+ * `pxPerRad` is the DRAWN view's pixels per radian along y
+ * (`FrameView.drawPxPerRad`), not the canvas's: it is the focal term
+ * `worldLenToPx` needs, and a dome face or VR eye has its own.
  */
 export function writeCameraPrefix(
   target: Float32Array,
   viewProj: Float32Array | Mat4,
   viewportPx: Vec2,
+  pxPerRad: number,
 ): void {
   target.set(viewProj, 0);
   target[16] = viewportPx[0];
   target[17] = viewportPx[1];
+  target[18] = pxPerRad;
 }

@@ -30,7 +30,7 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
@@ -38,7 +38,7 @@ import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 
 export function produceStructureMarkers(
-  state: EngineState,
+  state: PassState,
   ctx: FrameView,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];

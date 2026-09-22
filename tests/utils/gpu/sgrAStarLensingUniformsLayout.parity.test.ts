@@ -94,6 +94,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     // values will do.
     const viewProj = Float32Array.from({ length: 16 }, (_, i) => i + 1); // 1..16
     const viewportPx: Vec2 = [17, 18];
+    const pxPerRad = 19;
     const schwarzschildRadiusM = 501;
     const innerRs = 502;
     const outerRs = 503;
@@ -118,6 +119,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const rec = packSgrAStarLensingUniforms({
       viewProj,
       viewportPx,
+      pxPerRad,
       schwarzschildRadiusM,
       innerRs,
       outerRs,

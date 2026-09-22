@@ -129,6 +129,7 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
       pass,
       new Float32Array(16) as never,
       [800, 600],
+      1000,
       [0, 0, 0],
       FOCUS_BIND_GROUP,
       instances,
@@ -196,6 +197,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
       pass,
       new Float32Array(16) as never,
       [512, 512],
+      1000,
       [0, 0, 0],
       FOCUS_BIND_GROUP,
       instances,
@@ -205,6 +207,7 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
       pass,
       new Float32Array(16) as never,
       [512, 512],
+      1000,
       [0, 0, 0],
       FOCUS_BIND_GROUP,
       instances,
@@ -246,8 +249,17 @@ describe('texturedDiskRenderer.draw — viewSlot (Task 13b)', () => {
     const vpA = Float32Array.from({ length: 16 }, (_unused, i) => i);
     const vpB = Float32Array.from({ length: 16 }, (_unused, i) => 100 - i);
 
-    renderer.draw(pass, vpA as never, [512, 512], [0, 0, 0], FOCUS_BIND_GROUP, instances, 1);
-    renderer.draw(pass, vpB as never, [800, 600], [7, -3, 11], FOCUS_BIND_GROUP, instances, 2);
+    renderer.draw(pass, vpA as never, [512, 512], 1000, [0, 0, 0], FOCUS_BIND_GROUP, instances, 1);
+    renderer.draw(
+      pass,
+      vpB as never,
+      [800, 600],
+      1000,
+      [7, -3, 11],
+      FOCUS_BIND_GROUP,
+      instances,
+      2,
+    );
 
     const instanceWrites = writeBufferCalls.filter(
       (c) => c.data.length === instances.length * FLOATS_PER_INSTANCE,

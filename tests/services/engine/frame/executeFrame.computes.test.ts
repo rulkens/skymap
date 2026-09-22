@@ -24,6 +24,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCompute {
   return {
     name: 'flow',
+    scope: 'once',
     encode: (_encoder, _ctx, _state, claimTimestampWrites) => {
       if (!dispatches) return;
       claimTimestampWrites();
@@ -34,6 +35,7 @@ function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCom
 
 function makeCtx(): FrameView {
   return {
+    id: 'canvas',
     snapshot: { nowMs: 12345, renderedTargets: new Set<string>() },
   } as unknown as FrameView;
 }

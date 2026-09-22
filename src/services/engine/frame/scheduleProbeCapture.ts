@@ -70,7 +70,7 @@ export function scheduleProbeCapture(input: {
     const faceCtx = deriveView(
       capture.snapshot,
       capture.cam,
-      faceViewSpec(face, row.faceSizePx, row.viewSlotBase),
+      faceViewSpec('probe', face, row.faceSizePx, row.viewSlotBase),
     );
     // The host's row is looked up in the FACE's own slab table — its painter
     // index there has nothing to do with the frame's. A face the host falls

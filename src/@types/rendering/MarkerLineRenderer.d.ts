@@ -43,6 +43,7 @@ export type MarkerLineRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     scene?: OverlaySceneOcclusion,
   ): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */

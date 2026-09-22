@@ -1,12 +1,12 @@
 /**
- * The Layer's `frame` structureMemberCount reconcile: recomputes and
- * republishes the InfoCard's "N galaxies" figure only when the (selected row,
- * visible mask, catalogsVersion) key changes — never once per frame — and
- * publishes `null` for anything that isn't a structure selection.
+ * The Layer's `galaxyCatalogPlanner` structureMemberCount reconcile:
+ * recomputes and republishes the InfoCard's "N galaxies" figure only when the
+ * (selected row, visible mask, catalogsVersion) key changes — never once per
+ * frame — and publishes `null` for anything that isn't a structure selection.
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { frame } from '../../../src/layers/galaxyCatalog/frame';
+import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
@@ -14,6 +14,7 @@ import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -34,13 +35,11 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
   return makeGalaxyCatalog(positions.length, { positions: flat });
 }
 
-function makeCtx(visibleSourceMask: number): FrameView {
-  return {
-    snapshot: { visibleSourceMask, nowMs: 0 },
-    cam: {},
-    drawPxPerRad: 100,
-  } as unknown as FrameView;
+function makeSnapshot(visibleSourceMask: number): ReadyFrameContext {
+  return { visibleSourceMask, nowMs: 0 } as unknown as ReadyFrameContext;
 }
+
+const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 function makeState(select: SelectionRow | null): PassState {
   return {
@@ -81,13 +80,14 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
   it('recomputes only when the key changes', () => {
     const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
     const { runtime, publish } = makeRuntime(catalogs);
-    const tick = frame(runtime);
+    const tick = galaxyCatalogPlanner(runtime);
 
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER)); // primes the key — not asserted
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
     publish.mockClear();
 
-    for (let i = 0; i < 9; i += 1) tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(null)); // the one selection change
+    for (let i = 0; i < 9; i += 1)
+      tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(null)); // the one selection change
 
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
@@ -96,10 +96,10 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
   it('publishes null when the selected row is not a structure', () => {
     const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]);
     const { runtime, publish } = makeRuntime(catalogs);
-    const tick = frame(runtime);
+    const tick = galaxyCatalogPlanner(runtime);
 
     const milkyWay: SelectionRow = { type: 'milkyWay' };
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(milkyWay));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
   });
@@ -110,14 +110,14 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       [Source.TwoMRS, catalogAt([])], // loaded, no members
     ]);
     const { runtime, publish } = makeRuntime(catalogs);
-    const tick = frame(runtime);
+    const tick = galaxyCatalogPlanner(runtime);
 
-    tick(makeCtx(maskWith(0, Source.SDSS)), makeState(CLUSTER));
+    tick.plan(makeSnapshot(maskWith(0, Source.SDSS)), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Same selection, same catalogsVersion — only the visible source swapped,
     // which is exactly what the renderer draws and the focus fade tracks.
-    tick(makeCtx(maskWith(0, Source.TwoMRS)), makeState(CLUSTER));
+    tick.plan(makeSnapshot(maskWith(0, Source.TwoMRS)), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
   });
 
@@ -146,9 +146,9 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       pgcAlias: { committed: () => null },
       publish,
     } as unknown as GalaxyCatalogRuntime;
-    const tick = frame(runtime);
+    const tick = galaxyCatalogPlanner(runtime);
 
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Tier swap: same selection, same visible mask, but this source's array
@@ -164,7 +164,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       ],
     ]);
     catalogsVersion = 1;
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });

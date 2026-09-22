@@ -148,7 +148,13 @@ describe('milkyWay/pick/io.wesl ↔ milkyWayPickRenderer uniform parity', () => 
     expect(observedF32Offset(image, SENTINEL.camPosWorldX)).toBe(camPos);
     expect(observedF32Offset(image, SENTINEL.camPosWorldX + 1)).toBe(camPos + 4);
     expect(observedF32Offset(image, SENTINEL.camPosWorldX + 2)).toBe(camPos + 8);
-    expect(observedF32Offset(image, SENTINEL.pxPerRad)).toBe(at(uniforms, 'pxPerRad'));
+    // pxPerRad is written twice: once into the shared camera prefix and once
+    // into this renderer's own tail copy (queued for the deletion audit), so
+    // the sentinel is located by both ends rather than by uniqueness.
+    const pxPerRadInCam = camera.offsets.get('pxPerRad');
+    expect(pxPerRadInCam).toBeDefined();
+    expect(image.indexOf(SENTINEL.pxPerRad) * 4).toBe(at(uniforms, 'cam') + pxPerRadInCam!);
+    expect(image.lastIndexOf(SENTINEL.pxPerRad) * 4).toBe(at(uniforms, 'pxPerRad'));
   });
 
   it('MilkyWayPickUniforms places minSizePx at byte 20 in a 32-byte struct', () => {

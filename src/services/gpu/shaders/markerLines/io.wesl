@@ -34,7 +34,7 @@ import package::lib::camera::CameraUniforms;
 struct Uniforms {
   // 80-byte universal camera prefix.  Bytes 0..63 = viewProj,
   // 64..71 = viewportPx (drives the screen-space half-width math),
-  // 72..79 = the two reserved pad floats (CPU writer must zero them).
+  // 72..75 = pxPerRad; 76..79 = the reserved pad (CPU writer zeroes it).
   cam: CameraUniforms,
 };
 

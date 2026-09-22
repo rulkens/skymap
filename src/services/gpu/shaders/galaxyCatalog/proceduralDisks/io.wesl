@@ -44,7 +44,7 @@ import package::lib::camera::CameraUniforms;
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
 // 96-byte uniform buffer.  The first 80 bytes are the shared
-// 'CameraUniforms' prefix (viewProj + viewportPx + 8B reserved pad);
+// 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // the renderer-specific 'camPosWorld + pxPerRad' pair sits AFTER it
 // starting at offset 80, matching the disks / quads layout.
 //
