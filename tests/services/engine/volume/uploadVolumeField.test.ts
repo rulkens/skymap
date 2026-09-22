@@ -9,7 +9,7 @@ import type { AppStore } from '../../../../src/store/types';
 import { addCosmicWebDensityField } from '../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { ApplyIntentState } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { uploadVolumeField } from '../../../../src/services/engine/volume/uploadVolumeField';
-import { MCPM_ENTRY } from '../../../../src/data/sources/mcpm';
+import { MCPM_ENTRY } from '../../../../src/layers/cosmicWebDensity/sources/mcpm';
 
 const fieldId = MCPM_ENTRY.id;
 

@@ -44,7 +44,7 @@
 import { memo } from 'react';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
+import type { VolumeFieldRowData } from '../../layers/cosmicWebDensity/@types/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
@@ -86,7 +86,10 @@ export type CosmicWebSectionProps = {
   onVolumeFieldDensityScaleChange: (id: CosmicWebDensityFieldId, value: number) => void;
   onVolumeFieldTrimChange: (id: CosmicWebDensityFieldId, trim: number) => void;
   onVolumeFieldExposureChange: (id: CosmicWebDensityFieldId, exposure: number) => void;
-  onVolumeFieldPaletteChange: (id: CosmicWebDensityFieldId, paletteId: ScalarFieldPaletteId) => void;
+  onVolumeFieldPaletteChange: (
+    id: CosmicWebDensityFieldId,
+    paletteId: ScalarFieldPaletteId,
+  ) => void;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

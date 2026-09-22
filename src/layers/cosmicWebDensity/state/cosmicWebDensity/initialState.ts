@@ -5,8 +5,8 @@
  * `intensity` are literals here — the app-state half no row provides.
  */
 
-import { buildVolumeFieldSettings } from '../../../../data/volume/volumeFieldDefaults';
-import type { CosmicWebDensitySettings } from '../../../../@types/settings/CosmicWebDensitySettings';
+import { buildVolumeFieldSettings } from '../defaults';
+import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySettings';
 
 const items: CosmicWebDensitySettings['items'] = {
   mcpm: { ...buildVolumeFieldSettings('mcpm'), enabled: true, intensity: 1.0 },

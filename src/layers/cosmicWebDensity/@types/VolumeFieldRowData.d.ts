@@ -20,8 +20,8 @@
  * deep-import a single source of truth.
  */
 
-import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
-import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
+import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 
 export type VolumeFieldRowData = {
   /** Stable id matching the field registered via `addVolumeField`. */

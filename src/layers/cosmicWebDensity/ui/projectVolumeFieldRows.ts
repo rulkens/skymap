@@ -15,17 +15,13 @@
  * the React side feed it the value of `selectVolumeFieldItems(state)` through a
  * `useMemo`: the array is rebuilt exactly when the stable `items` reference
  * changes, keeping `useSyncExternalStore`'s snapshot stable.
- *
- * The `debug-*` fixture filter is NOT applied here — it's the consumer's
- * concern, so the projection stays a faithful view of the items Record.
- * Callers that want the filtered view apply it on the way out.
  */
 
-import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
-import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
-import { getVolumeFieldDefaults } from '../../data/volume/volumeFieldDefaults';
-import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../data/defaults';
+import type { VolumeFieldRowData } from '../@types/VolumeFieldRowData';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import { getVolumeFieldDefaults } from '../state/defaults';
+import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../../data/defaults';
 
 export function projectVolumeFieldRows(
   items: Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>>,

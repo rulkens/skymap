@@ -1,5 +1,5 @@
-import type { CosmicWebDensitySourceEntry } from '../../@types/data/volume/CosmicWebDensitySourceEntry';
-import { Source } from '../source';
+import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
+import { Source } from '../../../data/source';
 
 export const MCPM_ENTRY = {
   type: 'cosmicWebDensity',

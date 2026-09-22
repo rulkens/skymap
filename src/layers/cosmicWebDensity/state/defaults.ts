@@ -2,10 +2,11 @@
  * Per-volume-field presentation defaults — palette, contrast, densityScale,
  * envelope, exposure, trim — keyed by `CosmicWebDensityFieldId`.
  *
- * All volumes live in `SOURCE_REGISTRY` with `type: 'cosmicWebDensity'`, so
- * this module is a thin lookup helper rather than a separate registry.
- * Boot visibility and intensity are NOT here — those are app-state decisions
- * the owning Layer's `initialState` literal makes, not asset presentation.
+ * This module filters `SOURCE_REGISTRY` down to `type: 'cosmicWebDensity'`
+ * rows, so it's the `cosmicWebDensity` Layer's own thin lookup helper rather
+ * than a separate registry — no tool imports it. Boot visibility and
+ * intensity are NOT here — those are app-state decisions the Layer's
+ * `initialState` literal makes, not asset presentation.
  *
  * Two exports, layered:
  *   - `getVolumeFieldDefaults`   — presentation defaults for one id.
@@ -13,12 +14,12 @@
  *     settings row shares; the caller supplies `enabled` and `intensity`.
  */
 
-import { SOURCE_REGISTRY } from '../sources';
-import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
-import type { SourceEntry } from '../../@types/data/SourceEntry';
-import type { VolumeFieldDefaults } from '../../@types/data/volume/VolumeFieldDefaults';
-import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
+import { SOURCE_REGISTRY } from '../../../data/sources';
+import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import type { SourceEntry } from '../../../@types/data/SourceEntry';
+import type { VolumeFieldDefaults } from '../../../@types/data/volume/VolumeFieldDefaults';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 
 /** A `SourceEntry` narrowed to the volume discriminant. */
 type VolumeEntry = Extract<SourceEntry, { type: 'cosmicWebDensity' }>;

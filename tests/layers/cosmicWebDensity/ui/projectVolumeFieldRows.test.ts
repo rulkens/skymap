@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
-import { projectVolumeFieldRows } from '../../../src/state/settings/projectVolumeFieldRows';
-import { getVolumeFieldDefaults } from '../../../src/data/volume/volumeFieldDefaults';
-import { makeSettingsFixture } from './makeSettingsFixture';
+import { projectVolumeFieldRows } from '../../../../src/layers/cosmicWebDensity/ui/projectVolumeFieldRows';
+import { getVolumeFieldDefaults } from '../../../../src/layers/cosmicWebDensity/state/defaults';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 describe('projectVolumeFieldRows', () => {
   it('projects each items row to a complete VolumeFieldRowData', () => {

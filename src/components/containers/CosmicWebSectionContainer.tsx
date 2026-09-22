@@ -35,12 +35,15 @@ import {
   selectCosmicWebFilamentsEnabled,
   selectCosmicWebFilamentsIntensity,
 } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
-import { setCosmicWebDensityEnabled, writeCosmicWebDensityField } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import {
+  setCosmicWebDensityEnabled,
+  writeCosmicWebDensityField,
+} from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import {
   setCosmicWebFilamentsEnabled,
   setCosmicWebFilamentsIntensity,
 } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
-import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
+import { projectVolumeFieldRows } from '../../layers/cosmicWebDensity/ui/projectVolumeFieldRows';
 import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 
@@ -73,7 +76,8 @@ function CosmicWebSectionContainer(): React.ReactElement {
   );
 
   const onVolumeFieldEnabledChange = useCallback(
-    (id: CosmicWebDensityFieldId, enabled: boolean) => dispatch(writeCosmicWebDensityField({ id, patch: { enabled } })),
+    (id: CosmicWebDensityFieldId, enabled: boolean) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { enabled } })),
     [dispatch],
   );
 
@@ -96,7 +100,8 @@ function CosmicWebSectionContainer(): React.ReactElement {
   );
 
   const onVolumeFieldTrimChange = useCallback(
-    (id: CosmicWebDensityFieldId, trim: number) => dispatch(writeCosmicWebDensityField({ id, patch: { trim } })),
+    (id: CosmicWebDensityFieldId, trim: number) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { trim } })),
     [dispatch],
   );
 

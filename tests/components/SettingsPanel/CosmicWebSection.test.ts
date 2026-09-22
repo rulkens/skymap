@@ -36,7 +36,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import CosmicWebSection from '../../../src/components/SettingsPanel/CosmicWebSection';
 import type { CosmicWebSectionProps } from '../../../src/components/SettingsPanel/CosmicWebSection';
-import type { VolumeFieldRowData } from '../../../src/@types/settings/VolumeFieldRowData';
+import type { VolumeFieldRowData } from '../../../src/layers/cosmicWebDensity/@types/VolumeFieldRowData';
 import type { CosmicWebDensityFieldId } from '../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/ScalarFieldPaletteId';
 
@@ -195,7 +195,8 @@ describe('CosmicWebSection', () => {
 
   describe('VolumeFieldRow intensity callback', () => {
     it('calls onVolumeFieldIntensityChange with the field id and stepped value on a keyboard nudge', () => {
-      const onVolumeFieldIntensityChange = vi.fn<(id: CosmicWebDensityFieldId, intensity: number) => void>();
+      const onVolumeFieldIntensityChange =
+        vi.fn<(id: CosmicWebDensityFieldId, intensity: number) => void>();
       const { container } = render(
         createElement(
           CosmicWebSection,
@@ -213,7 +214,10 @@ describe('CosmicWebSection', () => {
       fireEvent.keyDown(intensitySlider, { key: 'ArrowRight' });
 
       expect(onVolumeFieldIntensityChange).toHaveBeenCalledOnce();
-      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith('mcpm' as CosmicWebDensityFieldId, 0.51);
+      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith(
+        'mcpm' as CosmicWebDensityFieldId,
+        0.51,
+      );
     });
   });
 
