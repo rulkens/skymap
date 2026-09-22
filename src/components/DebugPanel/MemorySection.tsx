@@ -3,13 +3,16 @@
  * plus JS heap, polled at 1 Hz. Measure-only: no controls, nothing here can
  * change what's resident. `gc'd` flags an owner whose objects were reclaimed
  * by GC without an explicit `destroy()` — the leak signal the ledger exists
- * to surface.
+ * to surface. An owner allocating both a buffer and a texture (e.g.
+ * `volumeFieldRenderer`) gets two rows, told apart by the owner name's colour.
  */
 
+import cx from 'classnames';
 import { Fragment, useEffect, useState, type ReactElement } from 'react';
 import type { GpuMemorySnapshot } from '../../@types/gpu/memory/GpuMemorySnapshot';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import DebugSection from './DebugSection';
+import { gpuResourceKindColorClass } from './gpuResourceKindColorClass';
 import styles from './MemorySection.module.css';
 
 export type MemorySectionProps = {
@@ -40,20 +43,28 @@ function MemorySection({ gpuMemory }: MemorySectionProps): ReactElement {
       {snap.owners.length === 0 ? (
         <div className={styles.notice}>No GPU allocations tracked yet.</div>
       ) : (
-        <div className={styles.table}>
-          <span className={styles.head}>owner</span>
-          <span className={styles.head}>count</span>
-          <span className={styles.head}>MB</span>
-          <span className={styles.head}>gc&apos;d</span>
-          {snap.owners.map((row) => (
-            <Fragment key={row.owner}>
-              <span className={styles.name}>{row.owner}</span>
-              <span className={styles.number}>{row.count}</span>
-              <span className={styles.number}>{mb(row.bytes)}</span>
-              <span className={styles.number}>{row.gcReclaimed > 0 ? row.gcReclaimed : ''}</span>
-            </Fragment>
-          ))}
-        </div>
+        <>
+          <div className={styles.legend}>
+            <span className={gpuResourceKindColorClass('buffer')}>■</span> buffer{'  '}
+            <span className={gpuResourceKindColorClass('texture')}>■</span> texture
+          </div>
+          <div className={styles.table}>
+            <span className={styles.head}>owner</span>
+            <span className={styles.head}>count</span>
+            <span className={styles.head}>MB</span>
+            <span className={styles.head}>gc&apos;d</span>
+            {snap.owners.map((row) => (
+              <Fragment key={`${row.owner}-${row.kind}`}>
+                <span className={cx(styles.name, gpuResourceKindColorClass(row.kind))}>
+                  {row.owner}
+                </span>
+                <span className={styles.number}>{row.count}</span>
+                <span className={styles.number}>{mb(row.bytes)}</span>
+                <span className={styles.number}>{row.gcReclaimed > 0 ? row.gcReclaimed : ''}</span>
+              </Fragment>
+            ))}
+          </div>
+        </>
       )}
     </DebugSection>
   );

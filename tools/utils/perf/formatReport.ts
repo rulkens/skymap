@@ -284,14 +284,15 @@ function pushMemory(lines: string[], palette: Palette, report: ScenarioReport): 
   if (gpu.owners.length === 0) return;
 
   const top = gpu.owners.slice(0, MEMORY_TOP_OWNERS);
-  const header: readonly string[] = ['owner', 'count', 'MB', "gc'd"];
+  const header: readonly string[] = ['owner', 'kind', 'count', 'MB', "gc'd"];
   const bodyRows = top.map((row: GpuMemoryOwnerRow) => [
     row.owner,
+    row.kind === 'texture' ? 'tex' : 'buf',
     String(row.count),
     mb(row.bytes),
     row.gcReclaimed > 0 ? String(row.gcReclaimed) : '—',
   ]);
-  const cells = table([header, ...bodyRows], ['left', 'right', 'right', 'right']);
+  const cells = table([header, ...bodyRows], ['left', 'left', 'right', 'right', 'right']);
   const headerLine = cells[0]!.join('  ');
   lines.push('    ' + headerLine);
   lines.push('    ' + '─'.repeat(headerLine.length));

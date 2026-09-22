@@ -1,5 +1,6 @@
-/** `trackGpuMemory`'s live per-owner accumulator — `GpuMemoryOwnerRow` minus
- *  the `owner` key, which the Map this lives in already carries as its key. */
+/** `trackGpuMemory`'s live per-(owner, kind) accumulator — `GpuMemoryOwnerRow`
+ *  minus `owner` and `kind`, which the ledger's nested Map already carries
+ *  as its keys. */
 export type GpuMemoryOwnerTally = {
   bytes: number;
   count: number;

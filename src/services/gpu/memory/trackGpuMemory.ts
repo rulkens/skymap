@@ -17,6 +17,7 @@
 import type { GpuMemoryLedger } from '../../../@types/gpu/memory/GpuMemoryLedger';
 import type { GpuMemorySnapshot } from '../../../@types/gpu/memory/GpuMemorySnapshot';
 import type { GpuMemoryOwnerTally } from '../../../@types/gpu/memory/GpuMemoryOwnerTally';
+import type { GpuResourceKind } from '../../../@types/gpu/memory/GpuResourceKind';
 import { ownerFromStack } from '../../../utils/gpu/memory/ownerFromStack';
 import { textureByteSize } from '../../../utils/gpu/memory/textureByteSize';
 
@@ -27,31 +28,40 @@ const LEDGER_BASENAME = 'trackGpuMemory';
 export const EMPTY_GPU_MEMORY_SNAPSHOT: GpuMemorySnapshot = { totalBytes: 0, owners: [] };
 
 export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
-  const owners = new Map<string, GpuMemoryOwnerTally>();
+  // owner -> kind -> tally: an owner using both buffers and textures (e.g.
+  // volumeFieldRenderer) gets two independent accumulators, later two rows.
+  const owners = new Map<string, Map<GpuResourceKind, GpuMemoryOwnerTally>>();
 
-  function rowFor(owner: string): GpuMemoryOwnerTally {
-    let row = owners.get(owner);
+  function rowFor(owner: string, kind: GpuResourceKind): GpuMemoryOwnerTally {
+    let byKind = owners.get(owner);
+    if (!byKind) {
+      byKind = new Map();
+      owners.set(owner, byKind);
+    }
+    let row = byKind.get(kind);
     if (!row) {
       row = { bytes: 0, count: 0, gcReclaimed: 0 };
-      owners.set(owner, row);
+      byKind.set(kind, row);
     }
     return row;
   }
 
-  function release(owner: string, bytes: number, gc: boolean): void {
-    const row = owners.get(owner);
+  function release(owner: string, kind: GpuResourceKind, bytes: number, gc: boolean): void {
+    const row = owners.get(owner)?.get(kind);
     if (!row) return;
     row.bytes -= bytes;
     row.count -= 1;
     if (gc) row.gcReclaimed += 1;
   }
 
-  // Held value carries owner+bytes so the callback can subtract without a
-  // second lookup; the registry unregisters on explicit destroy (below) so a
-  // destroyed object's GC never double-subtracts.
-  const registry = new FinalizationRegistry<{ owner: string; bytes: number }>(({ owner, bytes }) =>
-    release(owner, bytes, true),
-  );
+  // Held value carries owner+kind+bytes so the callback can subtract without
+  // a second lookup; the registry unregisters on explicit destroy (below) so
+  // a destroyed object's GC never double-subtracts.
+  const registry = new FinalizationRegistry<{
+    owner: string;
+    kind: GpuResourceKind;
+    bytes: number;
+  }>(({ owner, kind, bytes }) => release(owner, kind, bytes, true));
 
   function ownerOf(label: string | undefined): string {
     if (label) return label;
@@ -61,8 +71,13 @@ export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
   // `T extends GPUBuffer | GPUTexture`: both wrappers below share this
   // record/destroy-patch/register sequence, differing only in how bytes and
   // the create call are produced.
-  function track<T extends GPUBuffer | GPUTexture>(resource: T, owner: string, bytes: number): T {
-    const row = rowFor(owner);
+  function track<T extends GPUBuffer | GPUTexture>(
+    resource: T,
+    owner: string,
+    kind: GpuResourceKind,
+    bytes: number,
+  ): T {
+    const row = rowFor(owner, kind);
     row.bytes += bytes;
     row.count += 1;
 
@@ -75,31 +90,33 @@ export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
       if (destroyed) return undefined;
       destroyed = true;
       registry.unregister(resource);
-      release(owner, bytes, false);
+      release(owner, kind, bytes, false);
       originalDestroy();
       return undefined;
     };
-    registry.register(resource, { owner, bytes }, resource);
+    registry.register(resource, { owner, kind, bytes }, resource);
     return resource;
   }
 
   const originalCreateBuffer = device.createBuffer.bind(device);
   device.createBuffer = (descriptor: GPUBufferDescriptor): GPUBuffer =>
-    track(originalCreateBuffer(descriptor), ownerOf(descriptor.label), descriptor.size);
+    track(originalCreateBuffer(descriptor), ownerOf(descriptor.label), 'buffer', descriptor.size);
 
   const originalCreateTexture = device.createTexture.bind(device);
   device.createTexture = (descriptor: GPUTextureDescriptor): GPUTexture =>
     track(
       originalCreateTexture(descriptor),
       ownerOf(descriptor.label),
+      'texture',
       textureByteSize(descriptor),
     );
 
   return {
     snapshot(): GpuMemorySnapshot {
-      const rows = [...owners.entries()]
-        .map(([owner, row]) => ({ owner, ...row }))
-        .sort((a, b) => b.bytes - a.bytes);
+      const rows = [...owners.entries()].flatMap(([owner, byKind]) =>
+        [...byKind.entries()].map(([kind, row]) => ({ owner, kind, ...row })),
+      );
+      rows.sort((a, b) => b.bytes - a.bytes);
       return { totalBytes: rows.reduce((sum, row) => sum + row.bytes, 0), owners: rows };
     },
   };

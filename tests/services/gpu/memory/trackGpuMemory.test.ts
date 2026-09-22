@@ -42,7 +42,9 @@ describe('trackGpuMemory', () => {
 
     const snap = ledger.snapshot();
     expect(snap.totalBytes).toBe(1024);
-    expect(snap.owners).toEqual([{ owner: 'test-buffer', bytes: 1024, count: 1, gcReclaimed: 0 }]);
+    expect(snap.owners).toEqual([
+      { owner: 'test-buffer', kind: 'buffer', bytes: 1024, count: 1, gcReclaimed: 0 },
+    ]);
   });
 
   it('sizes a labeled texture via textureByteSize and adds it to the total', () => {
@@ -57,7 +59,53 @@ describe('trackGpuMemory', () => {
 
     const snap = ledger.snapshot();
     expect(snap.totalBytes).toBe(4 * 4 * 4);
-    expect(snap.owners[0]).toEqual({ owner: 'test-texture', bytes: 64, count: 1, gcReclaimed: 0 });
+    expect(snap.owners[0]).toEqual({
+      owner: 'test-texture',
+      kind: 'texture',
+      bytes: 64,
+      count: 1,
+      gcReclaimed: 0,
+    });
+  });
+
+  it('splits one owner into two rows when it creates both a buffer and a texture', () => {
+    const device = makeFakeDevice();
+    const ledger = trackGpuMemory(device);
+    device.createBuffer({ label: 'volumeFieldRenderer', size: 100, usage: 0 });
+    device.createTexture({
+      label: 'volumeFieldRenderer',
+      size: { width: 4, height: 4 },
+      format: 'rgba8unorm',
+      usage: 0,
+    } as GPUTextureDescriptor);
+
+    const snap = ledger.snapshot();
+    expect(snap.totalBytes).toBe(100 + 64);
+    expect(snap.owners).toEqual([
+      { owner: 'volumeFieldRenderer', kind: 'buffer', bytes: 100, count: 1, gcReclaimed: 0 },
+      { owner: 'volumeFieldRenderer', kind: 'texture', bytes: 64, count: 1, gcReclaimed: 0 },
+    ]);
+  });
+
+  it('destroy() on one kind subtracts only that owner+kind row, not the sibling kind', () => {
+    const device = makeFakeDevice();
+    const ledger = trackGpuMemory(device);
+    const buffer = device.createBuffer({ label: 'volumeFieldRenderer', size: 100, usage: 0 });
+    device.createTexture({
+      label: 'volumeFieldRenderer',
+      size: { width: 4, height: 4 },
+      format: 'rgba8unorm',
+      usage: 0,
+    } as GPUTextureDescriptor);
+
+    buffer.destroy();
+
+    const snap = ledger.snapshot();
+    expect(snap.totalBytes).toBe(64);
+    expect(snap.owners).toEqual([
+      { owner: 'volumeFieldRenderer', kind: 'texture', bytes: 64, count: 1, gcReclaimed: 0 },
+      { owner: 'volumeFieldRenderer', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
+    ]);
   });
 
   it('falls back to a stack-derived owner when no label is given', () => {
@@ -77,11 +125,15 @@ describe('trackGpuMemory', () => {
     buffer.destroy();
     let snap = ledger.snapshot();
     expect(snap.totalBytes).toBe(0);
-    expect(snap.owners).toEqual([{ owner: 'owner-a', bytes: 0, count: 0, gcReclaimed: 0 }]);
+    expect(snap.owners).toEqual([
+      { owner: 'owner-a', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
+    ]);
 
     buffer.destroy(); // idempotent — must not go negative
     snap = ledger.snapshot();
-    expect(snap.owners).toEqual([{ owner: 'owner-a', bytes: 0, count: 0, gcReclaimed: 0 }]);
+    expect(snap.owners).toEqual([
+      { owner: 'owner-a', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
+    ]);
   });
 
   it('sorts owners by bytes descending and keeps per-owner totals independent', () => {
@@ -94,6 +146,12 @@ describe('trackGpuMemory', () => {
     const snap = ledger.snapshot();
     expect(snap.totalBytes).toBe(1020);
     expect(snap.owners.map((o) => o.owner)).toEqual(['big', 'small']);
-    expect(snap.owners[1]).toEqual({ owner: 'small', bytes: 20, count: 2, gcReclaimed: 0 });
+    expect(snap.owners[1]).toEqual({
+      owner: 'small',
+      kind: 'buffer',
+      bytes: 20,
+      count: 2,
+      gcReclaimed: 0,
+    });
   });
 });
