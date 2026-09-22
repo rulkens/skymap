@@ -72,7 +72,7 @@ describe('installFadeOnArrival', () => {
     notifyReady();
 
     expect(fadeTo).toHaveBeenCalledTimes(1);
-    expect(fadeTo).toHaveBeenCalledWith({ kind: 'filament' }, 1, FADE_IN_DURATION_MS);
+    expect(fadeTo).toHaveBeenCalledWith({ kind: 'cosmicWebFilaments' }, 1, FADE_IN_DURATION_MS);
   });
 
   it('does not re-fire when an already-ready slot re-notifies', () => {

@@ -262,7 +262,7 @@ describe('syncVisibilityFades', () => {
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
       structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
       cosmicWebDensity: { kind: 'cosmicWebDensity' },
-      cosmicWebFilaments: { kind: 'filament' },
+      cosmicWebFilaments: { kind: 'cosmicWebFilaments' },
       orbitTrails: { kind: 'orbitTrails' },
       milkyWayDisk: { kind: 'milkyWay' },
       milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },

@@ -71,8 +71,8 @@ function serializeFadeId(h: FadeId): string {
       return `cosmicWebDensityField:${h.id}`;
     case 'milkyWay':
       return 'milkyWay';
-    case 'filament':
-      return 'filament';
+    case 'cosmicWebFilaments':
+      return 'cosmicWebFilaments';
     case 'localBubble':
       return 'localBubble';
     case 'flow':

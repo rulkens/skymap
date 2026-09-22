@@ -10,12 +10,14 @@ import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
 import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRuntime';
 
-export function filamentsFadeRows(runtime: CosmicWebFilamentsRuntime): readonly FadeLayer<unknown>[] {
+export function filamentsFadeRows(
+  runtime: CosmicWebFilamentsRuntime,
+): readonly FadeLayer<unknown>[] {
   return [
     fadeLayerRow({
       key: 'cosmicWebFilaments',
       expand: () => [undefined],
-      handle: () => ({ kind: 'filament' }),
+      handle: () => ({ kind: 'cosmicWebFilaments' }),
       seed: () => 0,
       intent: (s) => s.cosmicWebFilaments.enabled,
       // Unguarded, a tour reveal whose download is still in flight starts the fade

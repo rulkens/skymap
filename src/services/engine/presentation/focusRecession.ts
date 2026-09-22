@@ -49,7 +49,7 @@ const RECESSION_BY_LABEL_LAYER = {
 } satisfies Record<LabelLayerId, number | undefined>;
 
 const RECESSION_BY_KIND = {
-  filament: FILAMENT_RECESSION,
+  cosmicWebFilaments: FILAMENT_RECESSION,
   localBubble: FILAMENT_RECESSION,
   cosmicWebDensity: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede

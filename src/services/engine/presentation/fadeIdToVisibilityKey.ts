@@ -79,7 +79,7 @@ const VISIBILITY_KEY_BY_KIND = {
   // uniformly across all active volume fields.
   cosmicWebDensityField: 'cosmicWebDensityField',
   milkyWay: 'milkyWayDisk',
-  filament: 'cosmicWebFilaments',
+  cosmicWebFilaments: 'cosmicWebFilaments',
   localBubble: 'localBubble',
   flow: 'flow',
   constellations: 'constellations',

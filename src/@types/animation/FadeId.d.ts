@@ -84,7 +84,7 @@ export type FadeId =
   | { readonly kind: 'structure'; readonly id: StructureId }
   | { readonly kind: 'cosmicWebDensityField'; readonly id: CosmicWebDensityFieldId }
   | { readonly kind: 'milkyWay' }
-  | { readonly kind: 'filament' }
+  | { readonly kind: 'cosmicWebFilaments' }
   | { readonly kind: 'localBubble' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'constellations' }
