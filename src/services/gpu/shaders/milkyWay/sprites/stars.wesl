@@ -1,7 +1,7 @@
 // milkyWay/sprites/stars.wesl — shader-math derivation file (exceeds the
 // usual header budget on that basis): the star billboard pass. Each
 // generated star is one instanced point expanded on the GPU into a
-// camera-facing quad, shaded as a soft radial glow, and drawn with ADDITIVE
+// eye-facing quad, shaded as a soft radial glow, and drawn with ADDITIVE
 // blending (pipeline-side) so overlapping stars sum their light — the
 // physically-correct model for unresolved point sources.
 //
@@ -37,6 +37,7 @@
 // rescales the corner delta.
 
 import package::milkyWay::sprites::io::u;
+import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
@@ -67,9 +68,9 @@ fn vs(@location(0) corner: vec2<f32>,
   let worldHalfExtent = inSB.x * modelScale * u.params1.z;
 
   // Place the particle center through the model transform, then push the
-  // billboard corner out along the camera-facing basis in world space.
+  // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + (u.camRight.xyz * corner.x + u.camUp.xyz * corner.y) * worldHalfExtent;
+  let cornerWorld = center + spriteBillboardOffset(inPos, corner) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
   var kClip = worldToClip(u.cam, cornerWorld);

@@ -29,18 +29,11 @@
  *
  * ## Where the billboard basis comes from
  *
- * `camRight`/`camUp` are the camera's WORLD-space right/up axes, needed
- * because each instance is expanded on the GPU into a screen-facing quad
- * (`center + right * corner.x + up * corner.y`). Re-deriving that basis in the
- * vertex stage would mean inverting a projected matrix per vertex; the view
- * matrix already holds it, transposed. `lookAt` builds a view matrix whose
- * rotation block's ROWS are the camera's world-space axes (the standard
- * change-of-basis construction: world-to-camera is the inverse of an
- * orthonormal rotation, i.e. its transpose). wgpu-matrix stores `mat4`
- * column-major, so those rows are a stride-4 gather: `view[0], view[4],
- * view[8]` is row 0 (right), `view[1], view[5], view[9]` is row 1 (up). The
- * app reaches the same two vectors through `cameraBillboardBasis`, which reads
- * them off its `OrbitCamera` rather than off a matrix.
+ * Nowhere here any more: each instance builds its own eye-facing basis in the
+ * vertex stage (`io.wesl`'s `spriteBillboardOffset`), so the uniform carries
+ * only the EYE, in the cloud's model space. This tool's `model` is the
+ * identity, so the camera's world position goes in unchanged; the app converts
+ * through `milkyWayCamPosModel`.
  *
  * ## Why the caller passes viewportPx
  *
@@ -57,6 +50,7 @@ import { writeCameraPrefix } from '../../../../../src/services/gpu/lib/cameraUni
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /** Float count of `io.wesl`'s `Uniforms` — 208 bytes / 4. */
 export const CLOUD_UNIFORM_FLOATS = MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE / 4;
@@ -81,8 +75,8 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  * of a fresh `Float32Array`'s zero-init guarantee.
  *
  * @param viewProj   Combined view-projection matrix, 16 floats column-major.
- * @param view       View matrix, 16 floats column-major — the billboard basis
- *                   is read off its rotation rows (see the module header).
+ * @param camPosModel The camera position in the cloud's model space — here the
+ *                   same as world space (see the module header).
  * @param viewportPx Pixel size of the TARGET this pass draws into, not the
  *                   canvas (see the module header).
  * @param pxPerRad   The target's pixels per radian along y — the camera
@@ -93,7 +87,7 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  */
 export function packCloudUniforms(
   viewProj: Float32Array,
-  view: Float32Array,
+  camPosModel: Vec3,
   viewportPx: Vec2,
   pxPerRad: number,
   tuning: MilkyWayTuning,
@@ -111,17 +105,16 @@ export function packCloudUniforms(
   // model 20..35 — identity: this tool has no scene to place the cloud into.
   out.set(IDENTITY_MODEL, 20);
 
-  // camRight 36..39, camUp 40..43 — vec4 (xyz + 0 pad) so each lands on a
-  // clean 16-byte slot. `view` is a fixed 16-float column-major Mat4, so these
-  // indices are provably in bounds — non-null assertion per the project's
-  // noUncheckedIndexedAccess convention.
-  out[36] = view[0]!;
-  out[37] = view[4]!;
-  out[38] = view[8]!;
+  // camPosModel 36..39 — a vec4 (the eye point + an unused w) on a clean
+  // 16-byte slot; 40..43 is the slot the second basis vector used to hold,
+  // written zero because `dst` is a reused scratch.
+  out[36] = camPosModel[0];
+  out[37] = camPosModel[1];
+  out[38] = camPosModel[2];
   out[39] = 0;
-  out[40] = view[1]!;
-  out[41] = view[5]!;
-  out[42] = view[9]!;
+  out[40] = 0;
+  out[41] = 0;
+  out[42] = 0;
   out[43] = 0;
 
   // params0 44..47 = (fadeAlpha, exposure, modelScale, softness).

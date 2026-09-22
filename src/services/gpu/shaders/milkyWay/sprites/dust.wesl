@@ -1,4 +1,4 @@
-// milkyWay/sprites/dust.wesl — the dust-lane pass. Same camera-facing billboard
+// milkyWay/sprites/dust.wesl — the dust-lane pass. Same eye-facing billboard
 // as stars.wesl, but shaded and blended completely differently: dust does not
 // EMIT light, it ABSORBS it. Each dust sprite outputs a per-channel
 // transmittance and is drawn with a src*dst (multiplicative) blend so it
@@ -26,6 +26,7 @@
 // consumers.
 
 import package::milkyWay::sprites::io::u;
+import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::dustTransmittance;
 
@@ -52,9 +53,9 @@ fn vs(@location(0) corner: vec2<f32>,
   let worldHalfExtent = inSize * modelScale;
 
   // Place the particle center through the model transform, then push the
-  // billboard corner out along the camera-facing basis in world space.
+  // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + (u.camRight.xyz * corner.x + u.camUp.xyz * corner.y) * worldHalfExtent;
+  let cornerWorld = center + spriteBillboardOffset(inPos, corner) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
   var kClip = worldToClip(u.cam, cornerWorld);

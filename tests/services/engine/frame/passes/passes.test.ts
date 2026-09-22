@@ -254,10 +254,10 @@ describe('milkyWayPass.draw', () => {
     expect(args.fadeAlpha).toBe(1.0);
     // The generated buffer snapshot is forwarded verbatim.
     expect(args.buffers).toBe(MW_CLOUD_BUFFERS);
-    // Billboard basis (from cameraBillboardBasis(ctx.cam)) + the fixed model
-    // matrix are packed as plain vectors / a 16-float column-major matrix.
-    expect(args.camRight).toHaveLength(3);
-    expect(args.camUp).toHaveLength(3);
+    // The model-space eye (from milkyWayCamPosModel(ctx.drawCamPos)) + the
+    // fixed model matrix are packed as a plain vector / a 16-float
+    // column-major matrix.
+    expect(args.camPosModel).toHaveLength(3);
     expect(args.model).toHaveLength(16);
   });
 });

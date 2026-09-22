@@ -5,9 +5,9 @@
  *
  * Every field the renderer needs to pack its shared uniform buffer, plus the
  * generated instance buffers to draw. The camera-derived values
- * (`vp`/`viewportPx`/`camRight`/`camUp`) and the per-cloud `model` matrix are
- * threaded in by the caller each frame, as is `tuning` — the live look knobs
- * off `settings.milkyWay`.
+ * (`vp`/`viewportPx`/`pxPerRad`/`camPosModel`) and the per-cloud `model` matrix
+ * are threaded in by the caller each frame, as is `tuning` — the live look
+ * knobs off `settings.milkyWay`.
  *
  * `tuning` rides the payload rather than being read straight off the
  * calibration module because the DebugPanel's sliders write it live: a
@@ -42,10 +42,12 @@ export type MilkyWayCloudDrawArgs = {
    * `viewportPx[1] / canvasHeight` when the target is smaller than the canvas.
    */
   readonly pxPerRad: number;
-  /** Camera-facing billboard right axis (world space) — `cameraBillboardBasis(ctx.cam)`. */
-  readonly camRight: Vec3;
-  /** Camera-facing billboard up axis (world space). */
-  readonly camUp: Vec3;
+  /**
+   * The eye in the cloud's model space (`milkyWayCamPosModel(ctx.drawCamPos)`)
+   * — each sprite builds its own eye-facing basis from it, so a blob looks the
+   * same from every view of one rig rather than tilting per view plane.
+   */
+  readonly camPosModel: Vec3;
   /** Per-cloud world placement matrix (16 floats) — `milkyWayModelMatrix()`. */
   readonly model: Float32Array;
   /** Distance-fade × toggle-opacity, already composed, in [0, 1]. */

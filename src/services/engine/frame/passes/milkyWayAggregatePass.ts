@@ -31,7 +31,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
-import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
+import { milkyWayCamPosModel } from '../../galaxyGenerator/v1/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
 export const milkyWayAggregatePass: ContentPass = {
@@ -62,16 +62,14 @@ export const milkyWayAggregatePass: ContentPass = {
     // load-bearing rather than cosmetic.
     const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('mw-aggregate');
 
-    const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
-
     cloudRenderer.drawStars(pass, {
       vp: view.vp,
       viewportPx: [vw, vh],
       // A target spanning the same frustum in fewer rows scales the focal
       // term with its height (as `drawStarStream` does for its half-res row).
       pxPerRad: ctx.drawPxPerRad * (vh / ctx.canvasSize.height),
-      camRight,
-      camUp,
+      // The eye, not a view plane — see `milkyWayPass`.
+      camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
       model: milkyWayModelCached(),
       fadeAlpha,
       // The live look knobs — `MilkyWaySettings` widens to `MilkyWayTuning`,

@@ -100,8 +100,7 @@ function drawArgs(withDust: boolean): MilkyWayCloudDrawArgs {
     vp: new Float32Array(16).fill(7),
     viewportPx: [1920, 1080],
     pxPerRad: 1000,
-    camRight: [1, 0, 0],
-    camUp: [0, 1, 0],
+    camPosModel: [11, 22, 33],
     model: Float32Array.from({ length: 16 }, (_, i) => i + 100),
     fadeAlpha: 0.5,
     tuning: TUNING,
@@ -238,8 +237,9 @@ describe('createMilkyWayCloudRenderer — uniform packing', () => {
 
     // model matrix occupies f32 20..35.
     expect(Array.from(f32.slice(20, 36))).toEqual(Array.from(args.model));
-    // camRight.xyz at 36..38 (39 is the vec4 pad).
-    expect(Array.from(f32.slice(36, 39))).toEqual([1, 0, 0]);
+    // camPosModel.xyz at 36..38 (39 is the vec4 pad); 40..43 is the reserved
+    // slot the retired camUp basis used to hold, and must stay zero.
+    expect(Array.from(f32.slice(36, 44))).toEqual([11, 22, 33, 0, 0, 0, 0, 0]);
     // params0 = (fadeAlpha, exposure, modelScale, softness). The four tuning
     // lanes carry the caller's LIVE settings values, not calibration
     // constants — that is what makes a DebugPanel slider take effect.
