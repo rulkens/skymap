@@ -55,10 +55,16 @@ fn vs(@location(0) corner: vec2<f32>,
   // Place the particle center through the model transform, then push the
   // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
+  let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
-  var kClip = worldToClip(u.cam, cornerWorld);
+  // The quad is tilted against the view plane, so its corners sit at
+  // different depths; projecting them independently draws a trapezoid
+  // and spikes a corner that crosses behind the eye across the screen.
+  // Sharing the centre's depth keeps the image a parallelogram on the
+  // centre and a corner is behind the eye only when the sprite is.
+  let dClip = u.cam.viewProj * vec4<f32>(offsetWorld, 0.0);
+  var kClip = vec4<f32>(cClip.xy + dClip.xy, cClip.z, cClip.w);
 
   // 0.16-NDC screen-size clamp, ported verbatim from the tool's dust pass.
   if (cClip.w > 0.0 && kClip.w > 0.0) {
