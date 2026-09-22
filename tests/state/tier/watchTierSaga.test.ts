@@ -62,7 +62,6 @@ const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as Galaxy
 
 const EMPTY_DEPS: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
@@ -160,7 +159,6 @@ describe('watchTierSaga', () => {
 
     const resolveDeps = (): ResolveDeps => ({
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.
@@ -213,7 +211,6 @@ describe('watchTierSaga', () => {
     let currentCloud = buildCloud(objIDsOld);
     const resolveDeps = (): ResolveDeps => ({
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     });
     // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
     // cloud in place and the re-anchor must resolve against the NEW one.

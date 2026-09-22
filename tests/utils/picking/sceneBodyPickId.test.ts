@@ -3,8 +3,7 @@
  * from four different seed tables. The invariant is the routing: a packed id
  * carries an index that means nothing without the source code naming the table
  * it indexes, so stamping the right index under the wrong code resolves to a
- * plausible, silently wrong body — the same failure `starPickId`'s own test
- * pins for its two star tables.
+ * plausible, silently wrong body.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,14 +11,12 @@ import { sceneBodyPickId } from '../../../src/utils/picking/sceneBodyPickId';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SGR_A_STAR } from '../../../src/data/bodies/sceneSgrAStar';
 import { unpackPick } from '../../../src/data/selectionEncoding';
 import { Source } from '../../../src/data/sources';
 
 const resolver = selectionResolverOver({
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 });
 
 describe('sceneBodyPickId', () => {
@@ -38,12 +35,12 @@ describe('sceneBodyPickId', () => {
     const planet = unpackPick(sceneBodyPickId('moon')!)!;
     expect(planet.sourceCode).toBe(Source.Planet);
     expect(SCENE_PLANETS[planet.localIdx]?.id).toBe('moon');
+  });
 
-    // The Sun rides the star table, not a Sun-specific code — its caption must
-    // decode the same way its dot does.
-    const sun = unpackPick(sceneBodyPickId('sun')!)!;
-    expect(sun.sourceCode).toBe(Source.FamousStar);
-    expect(SCENE_STARS[sun.localIdx]?.id).toBe('sun');
+  it('yields no id for a star — a star caption packs its own source and seed index', () => {
+    expect(sceneBodyPickId('sun')).toBeNull();
+    expect(sceneBodyPickId('sirius')).toBeNull();
+    expect(sceneBodyPickId('s2')).toBeNull();
   });
 
   it('yields no id for an unseeded body', () => {
@@ -55,7 +52,7 @@ describe('sceneBodyPickId', () => {
   it('a packed caption id resolves back to the body it was packed for', () => {
     // One id per BODY_PICK_ROWS row: this is the test that fails the day pack
     // and unpack read different tables.
-    for (const id of [SCENE_EARTH.id, 'moon', SGR_A_STAR.id, 's2', 'sirius']) {
+    for (const id of [SCENE_EARTH.id, 'moon', SGR_A_STAR.id, 'phobos']) {
       expect(resolver.resolvePick(unpackPick(sceneBodyPickId(id)!))).toEqual({
         type: 'body',
         id,

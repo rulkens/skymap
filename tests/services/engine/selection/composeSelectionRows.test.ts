@@ -11,11 +11,12 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../../support/selectionResolverOver';
+import type { GalaxyRowFixture, StarRowFixture } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/sources';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
@@ -92,10 +93,19 @@ const deps: ResolveDeps = {
     byId: (id) => (id === 'virgo' ? virgo : null),
     byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
   },
-  stars: { current: () => null },
 };
 
-const resolver = selectionResolverOver(deps, galaxies);
+/** The starCatalog Layer's slice of the composed resolver — its own live read. */
+function starsFixture(catalog: StarCatalog | null): StarRowFixture {
+  return {
+    renderer: {
+      loadedCatalogs: () =>
+        (catalog ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
+    },
+  } as unknown as StarRowFixture;
+}
+
+const resolver = selectionResolverOver(deps, galaxies, starsFixture(null));
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -136,25 +146,28 @@ describe('resolvePick, composed', () => {
     }
   });
 
-  it('maps a Gaia-star pick to a positional star ref', () => {
+  it('maps every star code to the one positional star ref', () => {
+    // The seeded codes used to resolve to a BODY ref (spec §7 reverses that):
+    // identity follows the physics, so all four codes land on the star arm.
     expect(resolver.resolvePick({ sourceCode: Source.GaiaStars, localIdx: 42 })).toEqual({
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 42,
     });
-  });
-
-  it('the famous-star code resolves to a body ref', () => {
     const idx = SCENE_STARS.length - 1;
     expect(resolver.resolvePick({ sourceCode: Source.FamousStar, localIdx: idx })).toEqual({
-      type: 'body',
-      id: SCENE_STARS[idx]!.id,
+      type: 'starCatalog',
+      source: Source.FamousStar,
+      index: idx,
+    });
+    expect(resolver.resolvePick({ sourceCode: Source.Sun, localIdx: 0 })).toEqual({
+      type: 'starCatalog',
+      source: Source.Sun,
+      index: 0,
     });
   });
 
   it('an out-of-range body pick index resolves to null', () => {
-    expect(
-      resolver.resolvePick({ sourceCode: Source.FamousStar, localIdx: SCENE_STARS.length }),
-    ).toBeNull();
     expect(
       resolver.resolvePick({ sourceCode: Source.Planet, localIdx: SCENE_PLANETS.length }),
     ).toBeNull();
@@ -215,25 +228,57 @@ describe('extractRow, composed', () => {
     expect(resolver.extractRow({ type: 'body', id: 'krypton' }, SIM_DAYS)).toBeNull();
   });
 
-  it('star ref resolves against the loaded catalog', async () => {
+  it('survey star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
-    const starResolver = selectionResolverOver(
-      { ...deps, stars: { current: () => catalog } },
-      galaxies,
-    );
+    const starResolver = selectionResolverOver(deps, galaxies, starsFixture(catalog));
     const record = resolveStarRecord(catalog, 1)!;
-    expect(starResolver.extractRow({ type: 'star', index: 1 }, SIM_DAYS)).toEqual({
-      type: 'star',
+    expect(
+      starResolver.extractRow(
+        { type: 'starCatalog', source: Source.GaiaStars, index: 1 },
+        SIM_DAYS,
+      ),
+    ).toEqual({
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 1,
+      id: null,
+      label: 'Field star',
       positionMpc: record.positionMpc,
+      radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
       absMag: record.absMag,
       bpRp: record.bpRp,
-      radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     });
   });
 
-  it('star ref against no loaded catalog → null', () => {
-    expect(resolver.extractRow({ type: 'star', index: 0 }, SIM_DAYS)).toBeNull();
+  it('survey star ref against no loaded catalog → null', () => {
+    expect(
+      resolver.extractRow({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }, SIM_DAYS),
+    ).toBeNull();
+  });
+
+  it('a seeded star ref carries its durable id, label and photosphere, with no bin loaded', () => {
+    const idx = SCENE_STARS.findIndex((star) => star.id === 'sirius');
+    const sirius = SCENE_STARS[idx]!;
+    expect(
+      resolver.extractRow({ type: 'starCatalog', source: Source.FamousStar, index: idx }, SIM_DAYS),
+    ).toEqual({
+      type: 'starCatalog',
+      source: Source.FamousStar,
+      index: idx,
+      id: 'sirius',
+      label: sirius.label,
+      positionMpc: [...deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc],
+      radiusM: sirius.surface.datumRadiusM,
+    });
+  });
+
+  it('an out-of-range seeded star index → null', () => {
+    expect(
+      resolver.extractRow(
+        { type: 'starCatalog', source: Source.FamousStar, index: SCENE_STARS.length },
+        SIM_DAYS,
+      ),
+    ).toBeNull();
   });
 });
 
@@ -318,19 +363,53 @@ describe('resolveFocusId, composed', () => {
 
   it('body-<unknownSeed> → null; round-trips a known body ref', () => {
     expect(resolver.resolveFocusId('body-krypton')).toBeNull();
+    // A star is not a body id any more (spec §6), so its old link decodes to nothing.
+    expect(resolver.resolveFocusId('body-sirius')).toBeNull();
     const id = resolver.focusIdOf({ type: 'body', id: 'earth' });
     expect(id).toBe('body-earth');
     expect(resolver.resolveFocusId(id!)).toEqual({ type: 'body', id: 'earth' });
   });
 
-  it('round-trips star-<index> and rejects a malformed suffix', () => {
-    expect(resolver.resolveFocusId('star-42')).toEqual({ type: 'star', index: 42 });
-    expect(resolver.focusIdOf({ type: 'star', index: 42 })).toBe('star-42');
-    expect(resolver.resolveFocusId('star-abc')).toBeNull();
-    expect(resolver.resolveFocusId('star--1')).toBeNull();
-    expect(resolver.resolveFocusId('star-1e3')).toBeNull();
-    expect(resolver.resolveFocusId('star-1.5')).toBeNull();
-    expect(resolver.resolveFocusId('star-0')).toEqual({ type: 'star', index: 0 });
+  it('round-trips a seeded star id from every seeded table', async () => {
+    const siriusIdx = SCENE_STARS.findIndex((star) => star.id === 'sirius');
+    const cases: readonly (readonly [string, SelectionRef])[] = [
+      ['star-sirius', { type: 'starCatalog', source: Source.FamousStar, index: siriusIdx }],
+      ['star-sun', { type: 'starCatalog', source: Source.Sun, index: 0 }],
+      [
+        'star-s2',
+        {
+          type: 'starCatalog',
+          source: Source.SStar,
+          index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
+        },
+      ],
+    ];
+    for (const [id, ref] of cases) {
+      // Seeded ids decode with no bin loaded at all — only a survey index defers.
+      expect(resolver.resolveFocusId(id)).toEqual(ref);
+      expect(resolver.focusIdOf(ref)).toBe(id);
+    }
+    expect(resolver.resolveFocusId('star-krypton')).toBeNull();
+  });
+
+  it('star-<index> defers until a survey catalog is loaded, then round-trips', async () => {
+    // D6'1: the link defers at the REF stage, so the deep link lands when the
+    // bin commits instead of resolving to a record nothing can extract.
+    expect(resolver.resolveFocusId('star-42')).toBeNull();
+
+    const loaded = selectionResolverOver(deps, galaxies, starsFixture(await makeStarCatalog()));
+    const ref: SelectionRef = { type: 'starCatalog', source: Source.GaiaStars, index: 42 };
+    expect(loaded.resolveFocusId('star-42')).toEqual(ref);
+    expect(loaded.focusIdOf(ref)).toBe('star-42');
+    expect(loaded.resolveFocusId('star-0')).toEqual({
+      type: 'starCatalog',
+      source: Source.GaiaStars,
+      index: 0,
+    });
+    expect(loaded.resolveFocusId('star-abc')).toBeNull();
+    expect(loaded.resolveFocusId('star--1')).toBeNull();
+    expect(loaded.resolveFocusId('star-1e3')).toBeNull();
+    expect(loaded.resolveFocusId('star-1.5')).toBeNull();
   });
 
   it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it and malformed → null', () => {
@@ -466,7 +545,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
-        star: true,
+        starCatalog: true,
       }),
     );
     expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
@@ -479,7 +558,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
-        star: true,
+        starCatalog: true,
       }),
     );
     expect(structureDisabled.resolvePick(pick)).toBeNull();
@@ -494,7 +573,7 @@ describe('composeSelectionRows — picking gate', () => {
         milkyWay: true,
         zoneOfAvoidance: true,
         body: true,
-        star: true,
+        starCatalog: true,
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);

@@ -49,6 +49,12 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
+import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
+import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
+import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/passes/starAggregateUpsamplePass';
+import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
+import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
@@ -65,11 +71,26 @@ import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
 const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+
+// The starCatalog Layer's own passes join core's in the real program
+// (`createLayers`) — folded in here too, since the sky-capture roster names
+// `star-aggregates` / `star-catalog` among its near0Passes.
+const STAR_RUNTIME = {} as StarCatalogRuntime;
+const PASSES = [
+  ...CONTENT_PASSES,
+  starAggregatesPass(STAR_RUNTIME),
+  starPointsPass(STAR_RUNTIME),
+  starCatalogPass(STAR_RUNTIME),
+  starAggregateUpsamplePass(STAR_RUNTIME),
+  starSpheresPass(STAR_RUNTIME),
+  fieldStarSpherePass(STAR_RUNTIME),
+];
 
 // PRELUDE/SCENE's `plan` rows name these by string — inert stubs satisfy
 // `runPlanSteps` without either Layer's own state; the "a Layer still
@@ -88,6 +109,11 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   },
   {
     name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'star-catalog',
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),
   },
@@ -135,7 +161,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     subsystems: { fades: { isAnyAnimating: () => false } },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     contentVersion: 0,
-    passes: CONTENT_PASSES,
+    passes: PASSES,
     planners: STUB_PLANNERS,
     ...overrides,
   } as unknown as EngineState;

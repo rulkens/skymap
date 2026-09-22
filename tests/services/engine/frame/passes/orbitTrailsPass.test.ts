@@ -45,7 +45,7 @@ import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodyS
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
@@ -205,12 +205,18 @@ function makeState(
     // through `sceneBodyPartition` / `visibleStars` — everything on, so the
     // occluder set is decided by apparent size alone.
     data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS, meshBodies: [] },
+      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies: [] },
     },
     settings: {
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
-      starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
-      bodies: { items: { sun: { enabled: true }, 's-star': { enabled: true } } },
+      starCatalogs: {
+        enabled: true,
+        items: {
+          famousStar: { enabled: true },
+          sun: { enabled: true },
+          sStar: { enabled: true },
+        },
+      },
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
       },
@@ -408,7 +414,7 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[36]).toBeCloseTo((first.centerMpc[2] - cam[2]) * kmPerMpc, 0);
 
     expect(occluders.count).toBe(1);
-    const sunRadiusM = innerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface);
+    const sunRadiusM = innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface);
     expect(occluders.spheresKm[0]).toBeCloseTo(-cam[0] * kmPerMpc, 0);
     expect(occluders.spheresKm[1]).toBeCloseTo(0, 3);
     expect(occluders.spheresKm[2]).toBeCloseTo(0, 3);

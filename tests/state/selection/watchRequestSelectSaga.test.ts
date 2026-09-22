@@ -51,7 +51,6 @@ describe('watchRequestSelectSaga', () => {
     } as unknown as GalaxyRowFixture;
     const deps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     };
     mw.run(watchRequestSelectSaga);
     mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps, galaxies) });

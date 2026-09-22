@@ -89,7 +89,6 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
-  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({
@@ -204,7 +203,6 @@ describe('visitBeatSaga', () => {
 
     const lazyDeps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     };
     // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
     const lazyGalaxies = {

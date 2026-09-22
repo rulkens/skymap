@@ -23,17 +23,11 @@ import { surfaceTilesPass } from './surfaceTilesPass';
 import { terrainPickMarkerPass } from './terrainPickMarkerPass';
 import { contactShadowsPass } from './contactShadowsPass';
 import { cloudShellPass } from './cloudShellPass';
-import { starSpheresPass } from './starSpheresPass';
-import { fieldStarSpherePass } from './fieldStarSpherePass';
 import { planetsPass } from './planetsPass';
 import { texturedBodiesPass } from './texturedBodiesPass';
 import { meshBodiesPass } from './meshBodiesPass';
 import { ringsPass } from './ringsPass';
-import { starPointsPass } from './starPointsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
-import { starCatalogPass } from './starCatalogPass';
-import { starAggregatesPass } from './starAggregatesPass';
-import { starAggregateUpsamplePass } from './starAggregateUpsamplePass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
@@ -53,10 +47,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   milkyWayAggregatePass,
   milkyWayUpsamplePass,
   milkyWayPass,
-  starPointsPass,
-  starAggregatesPass,
-  starCatalogPass,
-  starAggregateUpsamplePass,
   sgrAStarLensingPass,
   orbitTrailsPass,
   bodyGlintsPass,
@@ -69,8 +59,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   terrainPickMarkerPass,
   contactShadowsPass,
   cloudShellPass,
-  starSpheresPass,
-  fieldStarSpherePass,
   planetsPass,
   texturedBodiesPass,
   meshBodiesPass,

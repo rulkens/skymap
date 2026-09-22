@@ -1,4 +1,5 @@
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 
 /**
  * SelectionRef — the identity Intent for a selectable thing. The single
@@ -6,7 +7,7 @@ import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalo
  * key off. Galaxy refs are POSITIONAL (`index`, drifts on a tier swap — the
  * tier saga re-anchors them by durable id); structure refs carry the durable
  * instance `id`; the Milky Way and the zone of avoidance are both singletons
- * needing no per-instance data; a scene body (Earth, and later stars/planets)
+ * needing no per-instance data; a scene body (Earth, a planet, a mesh body)
  * carries the durable seed `id`
  * that keys the static `SCENE_BODIES` table — the body's data is re-looked-up
  * from that table when the ref is resolved, mirroring the structure arm.
@@ -24,8 +25,13 @@ export type SelectionRef =
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
   | { readonly type: 'body'; readonly id: string }
-  // Star refs are POSITIONAL like the galaxy ref: `index` is the bin-stable
-  // global star-record index the pick texture names. It is tier-scoped, so a
-  // stale index after a tier swap warns+nulls rather than mis-resolving —
-  // unlike the durable `id` a structure or body carries.
-  | { readonly type: 'star'; readonly index: number };
+  // One arm for all four star catalogs, the pair the pick texture already packs:
+  // `index` is the bin-stable global record index for the Gaia survey (tier-
+  // scoped, so a stale index after a tier swap warns+nulls rather than
+  // mis-resolving) and the seed-table index for a seeded catalog, where the
+  // durable id lives on the row and in the URL rather than in the ref.
+  | {
+      readonly type: 'starCatalog';
+      readonly source: StarCatalogSourceType;
+      readonly index: number;
+    };

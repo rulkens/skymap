@@ -56,7 +56,6 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
 // Default deps resolve nothing — fine for focus-free clips like flyout.
 const EMPTY_DEPS: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 const RUNTIME: LiveCameraRuntime = {
@@ -156,7 +155,6 @@ describe('watchClipSaga', () => {
     };
     const deps: ResolveDeps = {
       structures: { byId: (id) => groups[id] ?? null, byCategory: () => [] },
-      stars: { current: () => null },
     };
 
     const seam = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);

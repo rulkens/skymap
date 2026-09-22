@@ -89,7 +89,6 @@ function makeFakePicker(): {
 // all these scheduling tests need: (e) only checks the null-decode dispatch.
 const emptyResolver = selectionResolverOver({
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 });
 
 // Pointer positions for tests.

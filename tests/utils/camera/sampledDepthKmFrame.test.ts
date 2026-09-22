@@ -48,7 +48,7 @@ describe('sampledDepthKmFrame', () => {
     expect(sampledDepthKmFrame(makeSlab(), POSE_OF as never)).toBeNull();
     expect(
       sampledDepthKmFrame(
-        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', bodyId: 'sun' } }),
+        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', bodyId: 'planet' } }),
         POSE_OF as never,
       ),
     ).toBeNull();

@@ -25,11 +25,7 @@ import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
-import {
-  engineStatusChanged,
-  engineSourceCountReported,
-  engineStructureCountsChanged,
-} from '../engine/engineSlice';
+import { engineStatusChanged, engineStructureCountsChanged } from '../engine/engineSlice';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -59,27 +55,21 @@ export function* watchFocusTweenSaga() {
         return;
       }
 
-      // A star or structure deep link resolves its ref statically at bootstrap
-      // (index-based / a durable id), before its backing store is fed, so the
-      // row comes back null until that store's first commit. `NOT_YET_LOADED`
-      // states the one rule ("is this ref's store still empty?") once, keyed on
-      // `ref.type`, rather than a second `type === 'structure'` arm bolted onto
-      // the star check below — each entry pairs the store-empty predicate with
-      // the action that pulses the instant the store is fed, so the loop stays
-      // a single generic shape. A garbage id/index (row null with the store
-      // already fed) falls through to the no-op below rather than waiting for a
-      // pulse that never recurs. `takeLatest` discards this waiter if a newer
-      // focus supersedes it.
+      // A structure deep link resolves its ref statically at bootstrap (a
+      // durable id), before its backing store is fed, so the row comes back
+      // null until that store's first commit. `NOT_YET_LOADED` states the one
+      // rule ("is this ref's store still empty?") once, keyed on `ref.type` —
+      // each entry pairs the store-empty predicate with the action that
+      // pulses the instant the store is fed. A garbage id/index (row null
+      // with the store already fed) falls through to the no-op below rather
+      // than waiting for a pulse that never recurs. `takeLatest` discards this
+      // waiter if a newer focus supersedes it.
       type Deferral = {
         empty(): boolean;
-        pulse: typeof engineSourceCountReported | typeof engineStructureCountsChanged;
+        pulse: typeof engineStructureCountsChanged;
       };
       const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
         {
-          star: {
-            empty: () => resolveDeps().stars.current() === null,
-            pulse: engineSourceCountReported,
-          },
           structure: {
             empty: () => resolveDeps().structures.loaded?.() === false,
             pulse: engineStructureCountsChanged,
@@ -120,12 +110,10 @@ export function* watchFocusTweenSaga() {
 
       // A body the follow rows WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-      // moves. But 'body row' is BROADER than 'followed body': famous stars are
-      // scene bodies too (star-body presence), yet they are static, so the follow
-      // driver leaves them and they must fall through to the tween. Gate on the
-      // SAME predicate the follow driver activates on, rather than a bare
-      // `row.type === 'body'` that would swallow a famous-star focus into a no-op
-      // neither mechanism honours.
+      // moves. Gate on `bodyMovesThisFrame` rather than a bare `row.type ===
+      // 'body'`: a focused S-star is a `starCatalog` row, not a body row, but
+      // the sim clock still moves it, so a type-only gate would miss it and
+      // tween a moving target instead of following it.
       if (bodyMovesThisFrame(row)) return;
 
       // Known ready since the wait above; re-read rather than reuse, since a

@@ -43,26 +43,6 @@
  * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
  * cannot drift.
  *
- * ### Why the star-aggregate row renders at half scale
- *
- * The survey (Gaia bin) star pass splits into two streams. Leaf stars (real
- * point-source dots, ~1.5 px) stay full-resolution in the HDR accumulation.
- * The AGGREGATE stream — interior octree nodes whose glow fills the box
- * footprint × the glow-overlap spread — is the fill-bound half: measured at
- * tens-to-hundreds of full screens of additive overdraw at kpc-scale zoom.
- * That glow field is low-frequency (a smooth summed-flux haze, not sharp
- * dots), so rendering it into a half-res target and bilinearly upsampling is
- * invisible while quartering its fragment cost. The `star-aggregates` row
- * matches the HDR precision (rgba16float) so the additive flux sum keeps its
- * dynamic range across the upsample. Its `scale` is the downsample divisor —
- * total fragment reduction is its square (2 → 1/4 the fragments). Like the
- * volume row it clears to a=0 so the composite's additive blend adds nothing
- * for fragments the aggregates didn't reach. Unlike the volume row, the
- * upsample composite is NOT a plain blit: it re-applies the star pass's
- * hue-preserving knee to the SUMMED aggregate field (the offscreen alpha
- * carries the pre-knee scalar), fixing the LOD compression asymmetry between
- * a concentrated bright leaf and a stack of sub-knee aggregate quads.
- *
  * ### Why the mw-aggregate row renders at reduced resolution
  *
  * The Milky Way cloud stands in for ~1e11 stars with a budget in the hundreds
@@ -73,10 +53,11 @@
  * the baseline sprite area the frame rate collapses while the instance count is
  * going DOWN.
  *
- * That is the same shape the `star-aggregates` row exists for, and the same
- * remedy applies: a smooth summed-glow field is low-frequency, so rendering it
- * at 1/scale and bilinearly upsampling is visually free while the fragment cost
- * drops by the square of the divisor. The DUST pass stays full-res in HDR — its
+ * That is the same shape the starCatalog Layer's `star-aggregates` target
+ * exists for (`render/starAggregatesTarget.ts`), and the same remedy applies:
+ * a smooth summed-glow field is low-frequency, so rendering it at 1/scale and
+ * bilinearly upsampling is visually free while the fragment cost drops by the
+ * square of the divisor. The DUST pass stays full-res in HDR — its
  * multiplicative transmittance has to land on the real cosmological
  * accumulation, and it is not the fill-bound half.
  *
@@ -138,14 +119,6 @@ import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
 
-/**
- * Downsample divisor for the half-res `star-aggregates` row — total fragment
- * reduction is its square (2 → 1/4 the fragments). Named here beside the
- * target table (the volume row's divisor is inline `scale: 3`) so raising it
- * to 4 to shed more fill is a one-line change.
- */
-const STAR_AGGREGATE_DIVISOR = 2;
-
 /** `farDepthView`'s placeholder texture — 1 texel is enough, every read is the same far value. */
 const FAR_DEPTH_PLACEHOLDER_PX = 1;
 
@@ -195,16 +168,10 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // Same reason as `volume`.
-    {
-      id: 'star-aggregates',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: STAR_AGGREGATE_DIVISOR,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
-    // Same reason as `volume` and `star-aggregates`: the Milky Way's star
-    // billboards draw additively into this row.
+    // The starCatalog Layer's own `star-aggregates` target composes in here
+    // (see `layers/starCatalog/render/starAggregatesTarget.ts`). Same reason
+    // as `volume`: the Milky Way's star billboards draw additively into
+    // this row.
     {
       id: 'mw-aggregate',
       format: HDR_TARGET_FORMAT,

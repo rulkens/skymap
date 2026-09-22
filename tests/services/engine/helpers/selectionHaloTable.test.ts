@@ -80,11 +80,12 @@ describe('selectionHalo', () => {
   // the writeBuffer/submit race with no compiler or other test to catch it.
   it('tags Mpc-scale kinds (galaxy, Milky Way) COSMO and a survey star NEAR0', () => {
     const star: SelectionRow = {
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 3,
+      id: null,
+      label: 'Field star',
       positionMpc: [0.001, -0.002, 0.0005],
-      absMag: 4.8,
-      bpRp: 0.65,
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);

@@ -212,7 +212,7 @@ export const Source = {
    * the solar neighbourhood — and their own CODE because the packed pick id is
    * an index INTO a seed table: sharing FamousStar's code would renumber every
    * famous star. The star layers draw both sets and stamp whichever code the
-   * star's table dictates (`starPickId`). Not persisted. Appended at 28.
+   * star's table dictates. Not persisted. Appended at 28.
    *
    * BUDGET: the pick texture's source field is 6 bits with 63 reserved as the
    * all-ones sentinel (`selectionEncoding.ts`), so after this row codes

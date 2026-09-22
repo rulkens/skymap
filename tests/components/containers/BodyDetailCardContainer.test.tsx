@@ -9,10 +9,6 @@
 // and assert the rendered distance row tracks the pub while the identity rows
 // (Radius, label) stay put. Asserting on rendered text keeps the contract stable
 // against CSS-modules class mangling.
-//
-// No sidecar stubbing is needed: the container selects `famousStarsMeta` off the
-// engine slice, which a fresh store initialises empty, and Jupiter's id misses
-// FAMOUS_STAR_IDS anyway. The card takes the planet branch either way.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';

@@ -1,36 +1,39 @@
 /**
- * The S-star registry row: a body row that draws but never captions.
+ * The S-star registry row: a seeded star catalog that draws but never captions.
  *
  * What can actually break here is not the row's field values (a compiler-checked
  * literal) but its CONSEQUENCES in the derived key domains — the settings row it
- * seeds, the label domain it must stay out of, and the pick-code budget it eats
- * into. Each of those is a separate file that reads the registry and would fail
- * silently, not loudly.
+ * seeds, the cluster it seeds it in, the label domain it must stay out of, and
+ * the pick-code budget it eats into. Each of those is a separate file that reads
+ * the registry and would fail silently, not loudly.
  */
 
 import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
-import { S_STAR_ENTRY } from '../../../src/data/sources/s-star';
+import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
+import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
-import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
+import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
-  it('seeds a body settings row whose default follows the registry', () => {
-    // `visibleStars` gates all 39 on `bodies.items['s-star'].enabled`. The row is
-    // derived, not authored, so the failure mode is an ABSENT key — an undefined
-    // read that throws on the first frame rather than a wrong boolean.
-    expect(BODY_IDS).toContain(S_STAR_ENTRY.id);
-    expect(INITIAL_SETTINGS.bodies.items[S_STAR_ENTRY.id]?.enabled).toBe(S_STAR_ENTRY.visible);
+  it('seeds a STAR-catalog settings row whose default follows the registry', () => {
+    // `visibleStars` gates all 39 on `starCatalogs.items.sStar.enabled`. The row
+    // is derived, not authored, so the failure mode is an ABSENT key — an
+    // undefined read that throws on the first frame rather than a wrong boolean.
+    expect(STAR_CATALOG_IDS).toContain(S_STAR_ENTRY.id);
+    expect(INITIAL_SETTINGS.starCatalogs.items[S_STAR_ENTRY.id]?.enabled).toBe(
+      S_STAR_ENTRY.visible,
+    );
   });
 
-  it('stays out of the label domain, so nothing budgets it a caption', () => {
-    // `bearsLabel: false` is what keeps 39 names out of `LABEL_CATEGORIES` — the
-    // set the SettingsPanel's label rows, `projectLabelCategoryVisibility` and
-    // the `bodyLabel` fade row all iterate. Flipping the flag would register a
-    // caption handle for a caption `sceneBodyLabels` never emits.
-    expect(LABEL_CATEGORIES).not.toContain(S_STAR_ENTRY.id);
+  it('the Sun joins it in the star cluster, and neither is a body any more', () => {
+    // Both moved clusters at once: a half-migration would leave one of them
+    // gated by a `bodies.items` row nothing writes.
+    expect(STAR_CATALOG_IDS).toContain(SUN_ENTRY.id);
+    expect(BODY_IDS).not.toContain(S_STAR_ENTRY.id);
+    expect(BODY_IDS).not.toContain(SUN_ENTRY.id);
   });
 
   it('every registry code fits the pick texture’s source field, uniquely', () => {

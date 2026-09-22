@@ -22,7 +22,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { GALAXY_CATALOG_SOURCES, Source } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -65,10 +65,10 @@ function makeState(): EngineState {
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
-    data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+    data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-      bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+      bodies: { items: {} },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
   } as unknown as EngineState;
@@ -375,10 +375,10 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         galaxyCatalogs: { items },
         orientation: 'equatorial',
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+        bodies: { items: {} },
       },
       selectionRows: { hover: null, select: null, focus: null },
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+      data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },
         outputs: { projection: CAPTURE_PROJECTION, simDays: CAPTURE_LAST_SIM_DAYS },
@@ -603,11 +603,12 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // A star half the capture distance across: the subtraction, if applied,
     // halves the altitude and with it the bracket.
     const halfWayStar = {
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 0,
+      id: null,
+      label: 'Field star',
       positionMpc: [0, 0, 0],
-      absMag: 0,
-      bpRp: 0,
       radiusM: 0.05 * SCALE_UNITS.AU_TO_MPC * SCALE_UNITS.MPC_TO_M,
     };
     const focused = faceAt(halfWayStar);

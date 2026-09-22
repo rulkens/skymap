@@ -2,13 +2,13 @@
  * decodeFramedPose — the inverse of `encodeFramedPose`. The `#pose=` value is
  * external input (hand-edited, truncated, or from a session that added a scene
  * body since), so every failure — a wrong tag, a wrong field count, a
- * non-finite number, or an id outside `SCENE_BODIES` / `SURFACE_FIXED_SITES` —
- * returns null rather than throwing or guessing.
+ * non-finite number, or an id no body source seeds / outside
+ * `SURFACE_FIXED_SITES` — returns null rather than throwing or guessing.
  */
 
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { BodyId } from '../../@types/data/body/BodyId';
-import { isSceneBodyId } from '../scene/isSceneBodyId';
+import { isRegistryBodyId } from '../scene/isRegistryBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';
 import { MIN_DISTANCE_MPC } from '../camera/clampDistance';
@@ -20,7 +20,7 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
   if (tag === 'b') {
     if (fields.length !== 17) return null;
     const bodyId = fields[1]!;
-    if (!isSceneBodyId(bodyId)) return null;
+    if (!isRegistryBodyId(bodyId)) return null;
     const n = parseFiniteNumbers(fields.slice(2));
     if (n === null) return null;
     return {

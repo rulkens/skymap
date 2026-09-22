@@ -12,6 +12,8 @@ import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
+import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
@@ -19,6 +21,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -68,7 +71,16 @@ describe('bodyRowSlabs', () => {
     expect(slabs.lens).toEqual([]);
 
     const tone: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
-    const program = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+    // The starCatalog Layer's own foreground rows join core's in the real
+    // program (`createLayers`) — folded in here too, or the `foreground:0`
+    // step this test locates via its name comes back empty and drops.
+    const starRuntime = {} as StarCatalogRuntime;
+    const passes = [
+      ...CONTENT_PASSES,
+      starSpheresPass(starRuntime),
+      fieldStarSpherePass(starRuntime),
+    ];
+    const program = expandFrameOrder(FRAME_ORDER, passes, {
       tone,
       bloomEnabled: true,
       foregroundChain: [NEAR0],

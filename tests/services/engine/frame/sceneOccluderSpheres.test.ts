@@ -11,7 +11,7 @@ import { sceneOccluderSpheres } from '../../../../src/services/engine/frame/scen
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -29,11 +29,17 @@ function makeState(meshBodies: readonly MeshBody[]): EngineState {
   return {
     gpu: { texturedBodyRenderer: null, meshBodyRenderer: { hasMesh: () => true } },
     data: {
-      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS, meshBodies },
+      bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, meshBodies },
     },
     settings: {
-      starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
-      bodies: { items: { sun: { enabled: true }, 's-star': { enabled: true } } },
+      starCatalogs: {
+        enabled: true,
+        items: {
+          famousStar: { enabled: true },
+          sun: { enabled: true },
+          sStar: { enabled: true },
+        },
+      },
     },
   } as unknown as EngineState;
 }
@@ -99,7 +105,7 @@ describe('sceneOccluderSpheres', () => {
     // The Sun subtends ~1.6 px from Jupiter: drawn as an additive point by
     // starPointsPass, so it is no longer an opaque sphere.
     const sunRadiusKm =
-      innerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
+      innerBoundRadiusM(findByIdOrThrow(SCENE_SUN, 'sun', 'test').surface) * SCALE_UNITS.M_TO_KM;
     const radii = occluderRadiiKm(makeCtx('jupiter', 1e7));
     expect(radii.some((r) => Math.abs(r - sunRadiusKm) < 1)).toBe(false);
     expect(has(radii, 'jupiter')).toBe(true);

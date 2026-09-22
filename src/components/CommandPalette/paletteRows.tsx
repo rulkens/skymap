@@ -27,9 +27,9 @@ import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
 /**
- * A milkyWay/body/structure row's leading visual: the captured card shot
- * when `actionForRow` resolves to a focus id in `SHOT_CARD_IDS` (the same id
- * grammar the URL deep-link layer uses), else today's letter glyph.
+ * A milkyWay/body/star/structure row's leading visual: the captured card shot
+ * of the featured card that names the same focus id `actionForRow` resolves to
+ * (the id grammar the URL deep-link layer uses), else today's letter glyph.
  */
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
@@ -53,6 +53,35 @@ type RowView = {
 };
 
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
+
+/**
+ * Shared render for the `body` and `starCatalog` arms below — they differ
+ * only in which `ScoredRow` field they read the id/label from, everything
+ * else (aliases, constellation/scale chip, captured-shot leading visual) is
+ * identical, so one row shape serves both kinds.
+ */
+function namedRowView(
+  m: ScoredRow,
+  keyPrefix: string,
+  testidPrefix: string,
+  id: string,
+  label: string,
+): RowView {
+  const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
+  const chip = bodyRowChip(id, label);
+  return {
+    key: `${keyPrefix}:${id}`,
+    testid: `${testidPrefix}-${id}`,
+    leading: shotOrGlyph(m, label),
+    primary: label,
+    secondary: (
+      <>
+        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+        {chip && <span className={styles.source}>{chip}</span>}
+      </>
+    ),
+  };
+}
 
 /**
  * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
@@ -121,24 +150,16 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   // over, so a row shows exactly the names it can be found by; the chip is
   // the body's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre").
-  body: (m) => {
-    if (m.kind !== 'body') return EMPTY_ROW_VIEW;
-    const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
-    const chip = bodyRowChip(m.body.id, m.body.label);
-    return {
-      key: `body:${m.body.id}`,
-      testid: `body-row-${m.body.id}`,
-      leading: shotOrGlyph(m, m.body.label),
-      primary: m.body.label,
-      secondary: (
-        <>
-          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-          {chip && <span className={styles.source}>{chip}</span>}
-        </>
-      ),
-    };
-  },
+  // Centre"). A seeded star's row renders identically — same lookups, same
+  // chip — off its own star identity.
+  body: (m) =>
+    m.kind !== 'body'
+      ? EMPTY_ROW_VIEW
+      : namedRowView(m, 'body', 'body-row', m.body.id, m.body.label),
+  starCatalog: (m) =>
+    m.kind !== 'starCatalog'
+      ? EMPTY_ROW_VIEW
+      : namedRowView(m, 'starCatalog', 'star-row', m.star.id, m.star.label),
   // Structure row — captured card shot when one exists (see `shotOrGlyph`),
   // else a glyph placeholder, + a category chip (Cluster / Supercluster /
   // Void / Group) from the per-category display copy, plus the Abell

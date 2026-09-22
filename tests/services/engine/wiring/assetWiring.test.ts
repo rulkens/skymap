@@ -155,24 +155,6 @@ describe('ASSET_WIRING demand predicates', () => {
     ).toBe(true);
   });
 
-  it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
-    // The star-catalog cluster mirrors the galaxy-catalog cluster: a coarse
-    // master gate (`starCatalogs.enabled`) AND a per-catalog `items[id].enabled`
-    // bit must BOTH be true for the layer to load — the source-type-cluster
-    // convention. Exercised as a predicate over ctx variations, not a
-    // restatement of the row literal.
-    const gaia = rowFor(Source.GaiaStars);
-    const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
-    // Master on + item on ⇒ demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
-    // Master off overrides an enabled item ⇒ not demanded.
-    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
-    // Item off under an on master ⇒ not demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
-    // Absent item row (nothing seeded) ⇒ not demanded.
-    expect(on({ enabled: true, items: {} })).toBe(false);
-  });
-
   it('body-texture rows encode load/evict hysteresis via demand vs release', () => {
     // Hand-place the camera along +x from a known body's position at three
     // distances relative to its load radius. `demand` fires inside X, `release`
@@ -222,14 +204,5 @@ describe('ASSET_WIRING demand predicates', () => {
     // Same camera, but the gate reading J2000 would place the body a full orbit
     // arc away ⇒ NOT demanded. Passing the live simDays is what makes it fire.
     expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
-  });
-});
-
-describe('ASSET_WIRING req builders', () => {
-  it("the famous-stars-meta row's request is undefined at every tier", () => {
-    const row = rowFor('famousStarsMeta');
-    for (const tier of ['small', 'medium', 'large'] as const) {
-      expect(row.req(tier)).toBeUndefined();
-    }
   });
 });

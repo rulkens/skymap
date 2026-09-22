@@ -129,23 +129,18 @@ const SEED_PATH = fileURLToPath(
 );
 
 describe.skipIf(!existsSync(SEED_PATH))('famousStarsSeed — real committed seed', () => {
-  it('every parsed entry carries gaiaDr3, and the Sun is null', () => {
+  it('every parsed entry carries gaiaDr3', () => {
     const entries = parseFamousStarsSeed(readFileSync(SEED_PATH, 'utf8'));
     for (const e of entries) {
       expect(Object.prototype.hasOwnProperty.call(e, 'gaiaDr3')).toBe(true);
     }
-    const sun = entries.find((e) => e.id === 'sun');
-    expect(sun).toBeDefined();
-    expect(sun!.gaiaDr3).toBeNull();
   });
 
-  it('every entry carries hip, the Sun is null, and hip matches any HIP alias', () => {
+  it('every entry carries hip, and hip matches any HIP alias', () => {
     const entries = parseFamousStarsSeed(readFileSync(SEED_PATH, 'utf8'));
     for (const e of entries) {
       expect(Object.prototype.hasOwnProperty.call(e, 'hip')).toBe(true);
     }
-    const sun = entries.find((e) => e.id === 'sun');
-    expect(sun!.hip).toBeNull();
     // Every entry whose names[] carries a "HIP n" alias must have hip === n —
     // catches drift between the two hand-authored fields across the real seed.
     for (const e of entries) {

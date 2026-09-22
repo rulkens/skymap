@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { Source } from '../../../../src/data/sources';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
 import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
@@ -66,6 +67,19 @@ describe('actionForRow', () => {
       kind: 'focus',
       focusId: `body-${SCENE_EARTH.id}`,
     });
+  });
+
+  it('a star row → the seed id under the star focus prefix', () => {
+    const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
+    expect(
+      actionForRow({
+        kind: 'starCatalog',
+        source: Source.FamousStar,
+        index,
+        star: SCENE_STARS[index]!,
+        score: 0,
+      }),
+    ).toEqual({ kind: 'focus', focusId: 'star-sirius' });
   });
 
   it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {
