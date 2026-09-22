@@ -43,10 +43,6 @@ import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
 
-// Depth epsilon: pull the clamped clip-z this far inside the far plane so a
-// sprite sitting exactly ON it still passes the clip test.
-const CLIP_Z_EPS: f32 = 1e-4;
-
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -99,19 +95,16 @@ fn vs(@location(0) corner: vec2<f32>,
   // nearly inside really is blinding — the tone mapper and bloom exist for
   // that, so no ceiling is imposed on the boost).
   let clampFluxScale = 1.0 / (k * k);
-  // Every corner projected exactly: the rasteriser clips a corner behind the
-  // eye in homogeneous space, and exact projection is what makes two faces
-  // draw one world quad.
-  var kClip = worldToClip(u.cam, center + offsetWorld * k);
-
-  // Survive the adaptive NEAR0 far plane: on a deep descent (or a tight orbit
-  // of another local-volume body) the foreground far plane pulls inside the
-  // disc's far edge, and without this the distant half of the cloud is
-  // frustum-clipped while the approach fade still shows it. Clamp clip-z just
-  // inside the far plane instead — identical to starCatalog/vertex.wesl. Safe
-  // ONLY because this is a depthless pass (no depth test/write in the
-  // pipeline), so the clamped depth perturbs no depth compare.
-  kClip.z = min(kClip.z, kClip.w * (1.0 - CLIP_Z_EPS));
+  // Every corner projected exactly and handed to the rasteriser UNTOUCHED.
+  // Exact projection is what makes two faces draw one world quad, and the
+  // hardware clip is what cuts a corner behind a view's eye plane AT that
+  // plane. Never add the clip-z clamp (min(z, w - eps), the far-plane
+  // survival idiom) here: NEAR0 is reversed-Z with an infinite far plane, so
+  // there is nothing to survive, and the clamp moves a behind-the-eye corner
+  // onto the z = 0 plane at the wrong parameter, discarding most of a big
+  // sprite that straddles the eye plane. A view then loses a different set
+  // of sprites than its neighbour and the seam shows as a brightness step.
+  let kClip = worldToClip(u.cam, center + offsetWorld * k);
 
   // Flux-conserving LOD — the band math and its tuning rationale live in
   // lib/cloudSprite.wesl. It is independent of the clamp correction above and
