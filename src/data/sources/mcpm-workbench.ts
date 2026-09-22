@@ -7,12 +7,6 @@ export const MCPM_WORKBENCH_ENTRY = {
   id: 'mcpm-workbench',
   label: 'MCPM Workbench (promoted)',
   allSky: true, // same physical field as MCPM/Polyphorm2MRS, whatever footprint the promoted run covers
-  // Hidden pending a promotion decision, not a known defect: the workbench's
-  // total trace mass sits a uniform ~9.28x below the reference VAC, ruled a
-  // documented offset (see docs/research/mcpm-trace-mass-offset.md) after
-  // quirks/structure/f16 were eliminated as causes. No UI toggle ships with
-  // this row; flipping this is a separate call.
-  visible: false,
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'mcpm-workbench',
@@ -28,5 +22,4 @@ export const MCPM_WORKBENCH_ENTRY = {
   envelope: { inner: 0.85, outer: 1.05 },
   exposure: 18.0,
   trim: 0.3,
-  intensity: 1.0,
 } as const satisfies CosmicWebDensitySourceEntry;

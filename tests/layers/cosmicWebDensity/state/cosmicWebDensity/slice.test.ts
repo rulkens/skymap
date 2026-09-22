@@ -1,13 +1,13 @@
 /**
- * Two guarantees the type system cannot express: re-adding a removed field
- * keeps its tuning, and a write against an unknown id is a no-op, not a throw.
+ * A guarantee the type system cannot express: re-adding an already-seeded
+ * field keeps its tuning, and a write against an unknown id is a no-op, not
+ * a throw.
  */
 import { describe, it, expect } from 'vitest';
 
 import {
   cosmicWebDensitySlice,
   addCosmicWebDensityField,
-  removeCosmicWebDensityField,
   writeCosmicWebDensityField,
 } from '../../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { CosmicWebDensityFieldId } from '../../../../../src/@types/data/volume/CosmicWebDensityFieldId';
@@ -30,11 +30,6 @@ describe('volumesSlice', () => {
     expect(readded.items[seededVolumeId]?.intensity).toBe(0.123);
   });
 
-  it('removeVolumeField deletes the row', () => {
-    const next = cosmicWebDensitySlice.reducer(initial, removeCosmicWebDensityField(seededVolumeId));
-    expect(next.items[seededVolumeId]).toBeUndefined();
-  });
-
   it('writeVolumeField patches a row; unknown id is a no-op', () => {
     const patched = cosmicWebDensitySlice.reducer(
       initial,
@@ -44,7 +39,10 @@ describe('volumesSlice', () => {
 
     const after = cosmicWebDensitySlice.reducer(
       initial,
-      writeCosmicWebDensityField({ id: 'no-such-volume' as CosmicWebDensityFieldId, patch: { intensity: 1 } }),
+      writeCosmicWebDensityField({
+        id: 'no-such-volume' as CosmicWebDensityFieldId,
+        patch: { intensity: 1 },
+      }),
     );
     expect(after.items).toEqual(initial.items);
   });

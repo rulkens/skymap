@@ -6,7 +6,6 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import { buildVolumeFieldSettings } from '../../../../data/volume/volumeFieldDefaults';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 
@@ -19,19 +18,13 @@ export const cosmicWebDensitySlice = createSlice({
       volumes.enabled = action.payload;
     },
     addCosmicWebDensityField: (volumes, action: PayloadAction<CosmicWebDensityFieldId>) => {
-      // Re-registering a seeded field is a no-op: the early return keeps an
-      // existing row (and its tuned sliders) untouched. Only a genuinely-new id
-      // seeds a fresh row from registry defaults.
+      // `items` is a total record now — every id is already present at
+      // boot, so this early return always fires. Kept only until Task 4
+      // deletes the reducer entirely.
       if (volumes.items[action.payload]) return;
-      // Freshly built, stored as-is — sound to re-type as Immer's Draft (no
-      // clone needed), same posture as selectionRowsSlice's `setSelectionRow`.
-      // `bands`' readonly array is what trips the plain assignment.
-      volumes.items[action.payload] = buildVolumeFieldSettings(
-        action.payload,
-      ) as Draft<VolumeFieldSettings>;
-    },
-    removeCosmicWebDensityField: (volumes, action: PayloadAction<CosmicWebDensityFieldId>) => {
-      delete volumes.items[action.payload];
+      volumes.items[action.payload] = initialState.items[
+        action.payload
+      ] as Draft<VolumeFieldSettings>;
     },
     writeCosmicWebDensityField: (
       volumes,
@@ -46,5 +39,5 @@ export const cosmicWebDensitySlice = createSlice({
   },
 });
 
-export const { setCosmicWebDensityEnabled, addCosmicWebDensityField, removeCosmicWebDensityField, writeCosmicWebDensityField } =
+export const { setCosmicWebDensityEnabled, addCosmicWebDensityField, writeCosmicWebDensityField } =
   cosmicWebDensitySlice.actions;

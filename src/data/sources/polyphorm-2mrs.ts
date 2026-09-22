@@ -7,8 +7,6 @@ export const POLYPHORM_2MRS_ENTRY = {
   id: 'polyphorm-2mrs',
   label: 'Polyphorm (2MRS)',
   allSky: true, // 2MRS footprint run, same all-sky framing as MCPM
-  // Default-off: a test field the user toggles on from the Volumes panel.
-  visible: false,
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'polyphorm-2mrs',
@@ -26,5 +24,4 @@ export const POLYPHORM_2MRS_ENTRY = {
   envelope: { inner: 0.85, outer: 1.05 },
   exposure: 18.0,
   trim: 0.3,
-  intensity: 1.0,
 } as const satisfies CosmicWebDensitySourceEntry;

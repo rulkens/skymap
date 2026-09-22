@@ -23,7 +23,6 @@ import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCat
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
@@ -242,13 +241,12 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * subscribers don't NPE), the per-source slot map is empty (the test
  * populates it per-case), the galaxy catalogs are seeded all-enabled via
  * `GALAXY_CATALOG_IDS` — a uniform all-on scenario, deliberately BROADER than
- * the engine's boot seed, which derives each `enabled` from the registry's
- * `visible` field and so leaves default-off catalogs (desiDeep) out. All-on
- * keeps the demand loop — which reads
+ * the engine's boot seed, which leaves default-off catalogs (desiDeep) out.
+ * All-on keeps the demand loop — which reads
  * `settings.galaxyCatalogs.items[id].enabled` — demanding every catalog whose
- * slot a test provides. The volume fields are seeded via
- * `settings.cosmicWebDensity.items: seedVolumeFields()` (so the MCPM demand
- * predicate reads true at boot, as wireSlots expects).
+ * slot a test provides. The volume fields are seeded to match the boot
+ * literal (so the MCPM demand predicate reads true at boot, as wireSlots
+ * expects).
  */
 function makeState(
   overrides: Partial<{
@@ -297,9 +295,9 @@ function makeState(
   // `settings.constellations.enabled` / `settings.starCatalogs.enabled` reads
   // resolve instead of throwing on an undefined slice (which reevaluateDemand
   // would swallow as a per-row warn). Flow + constellations default OFF, so no
-  // overlay load fires. starCatalogs is forced OFF here (its Gaia row is
-  // registry-visible, so leaving the master gate on would demand a real
-  // star-bin fetch this fixture provides no slot for).
+  // overlay load fires. starCatalogs is forced OFF here (Gaia boots enabled,
+  // so leaving the master gate on would demand a real star-bin fetch this
+  // fixture provides no slot for).
   return {
     // Top-level data tier — its own root field on EngineState; the source
     // expression `req(state.tier)` reads it.
@@ -311,11 +309,10 @@ function makeState(
         brightness: 1.0,
         depthFade: true,
         provenance: DEFAULT_GALAXY_PROVENANCE,
-        // All galaxy catalogs enabled (a uniform test scenario; the real boot
-        // seed derives `enabled` from each registry entry's `visible`, so
-        // desiDeep boots off) — galaxy catalog demand reads these `enabled`
-        // bits (not `sources.drawMask`), so the boot-load expectations for
-        // sdss/2mrs/glade hang off this seed.
+        // All galaxy catalogs enabled (a uniform test scenario; the real
+        // boot literal leaves desiDeep off) — galaxy catalog demand reads
+        // these `enabled` bits (not `sources.drawMask`), so the boot-load
+        // expectations for sdss/2mrs/glade hang off this seed.
         items: Object.fromEntries(
           GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
@@ -331,7 +328,14 @@ function makeState(
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
-      cosmicWebDensity: { enabled: true, items: seedVolumeFields() },
+      cosmicWebDensity: {
+        enabled: true,
+        items: {
+          mcpm: { enabled: true },
+          'polyphorm-2mrs': { enabled: false },
+          'mcpm-workbench': { enabled: false },
+        },
+      },
       // seedFades registers a caption handle per body row, so these must exist.
       bodies: {
         items: Object.fromEntries(

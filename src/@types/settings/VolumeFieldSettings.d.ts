@@ -19,7 +19,7 @@ import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 import type { FadeBand } from '../math/FadeBand';
 
 export type VolumeFieldSettings = DataItemSettings & {
-  /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
+  /** Linear mix-in weight in [0, 1].  Seeded by the owning Layer's `initialState` literal. */
   intensity: number;
   /**
    * LUT-coordinate contrast around the 0.5 pivot (gamma-style remap).

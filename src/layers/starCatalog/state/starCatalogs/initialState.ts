@@ -1,7 +1,7 @@
 /**
  * Rows are DERIVED from the star-catalog registry entries (mirroring
- * `galaxyCatalogs`) so they can't drift from the star-catalog set; each row's
- * `enabled` is that entry's `visible`.
+ * `galaxyCatalogs`) so they can't drift from the star-catalog set; every
+ * row boots `enabled: true` — no star catalog ships hidden today.
  */
 
 import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
@@ -33,7 +33,7 @@ export const initialState: StarCatalogSettings = {
   items: Object.fromEntries(
     SOURCE_ENTRIES.filter((e) => e.type === 'starCatalog').map((e) => [
       e.id,
-      { enabled: e.visible, labelEnabled: true },
+      { enabled: true, labelEnabled: true },
     ]),
   ) as Record<StarCatalogId, StarCatalogItemSettings>,
 };

@@ -6,9 +6,10 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
  * registered with the scalar-volume renderer.
  *
  * Each volume lives as a registry entry so its presentation defaults
- * (palette, contrast, exposure, …) sit next to its `binBaseName` and
- * visibility default. Covers every production cube (MCPM, Polyphorm
- * 2MRS, …), each loaded from its own `.scfd` file.
+ * (palette, contrast, exposure, …) sit next to its `binBaseName`. Boot
+ * visibility lives in the owning Layer's `initialState`, not here. Covers
+ * every production cube (MCPM, Polyphorm 2MRS, …), each loaded from its
+ * own `.scfd` file.
  */
 export type CosmicWebDensitySourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {

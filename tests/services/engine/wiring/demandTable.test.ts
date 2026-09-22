@@ -35,21 +35,18 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads
- * `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`. The engine seeds that record
- * at construction from the shippable volume registry entries (`seedVolumeFields`),
- * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
- * with the `galaxyCatalogs.items[id].enabled` seed that galaxy catalog demand reads.
- * MCPM therefore IS in the boot
- * demand set — `polyphorm-2mrs` is NOT (registry visible:false → seeded
- * enabled:false). `makeState` injects the same `seedVolumeFields` record into
- * `settings.cosmicWebDensity.items` so the test exercises the real defaults rather than
- * a hand-rolled set.
+ * `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`. The Layer's `initialState`
+ * literal seeds that record from boot, so `mcpm`'s enabled bit is `true` at
+ * boot — symmetric with the `galaxyCatalogs.items[id].enabled` seed that
+ * galaxy catalog demand reads. MCPM therefore IS in the boot demand set —
+ * `polyphorm-2mrs` is NOT (seeded `enabled: false`). `makeState` injects the
+ * same boot literal into `settings.cosmicWebDensity.items` so the test
+ * exercises the real defaults rather than a hand-rolled set.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
-import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
@@ -156,16 +153,18 @@ const BOOT_SETTINGS: SettingsLeaves = {
 };
 
 /**
- * Default-at-boot volume fields: seeded from the shippable volume registry via
- * the same `seedVolumeFields` the engine runs at construction (mcpm enabled,
- * polyphorm-2mrs disabled).
+ * Default-at-boot volume fields, matching the Layer's `initialState` literal:
+ * mcpm enabled, the other two disabled.
  */
-const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
+const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = {
+  mcpm: { enabled: true },
+  'polyphorm-2mrs': { enabled: false },
+  'mcpm-workbench': { enabled: false },
+};
 
 /**
- * Default-at-boot galaxy catalog items, matching the engine's construction
- * seed: each row's `enabled` comes from its SOURCE_REGISTRY entry's `visible`
- * field — true for every galaxy catalog except the DESI patches
+ * Default-at-boot galaxy catalog items, matching the Layer's `initialState`
+ * literal: every catalog enabled except the DESI patches
  * (DesiDeep / DesiWedge / DesiSgw).
  */
 const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
@@ -174,12 +173,10 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   glade: { enabled: true },
   famousGalaxy: { enabled: true },
   milliquas: { enabled: true },
-  // DesiDeep + DesiWedge + DesiSgw boot hidden (SOURCE_REGISTRY
-  // visible:false — specialist DESI drill patches, not part of the default
-  // all-sky scene), so the construction seed lands their enabled bits false and
-  // their ASSET_WIRING point rows are NOT demanded at boot. Symmetric with
-  // polyphorm-2mrs among the volume fields: registry visible:false → seeded
-  // enabled:false → absent from the boot set.
+  // DesiDeep + DesiWedge + DesiSgw boot hidden — specialist DESI drill
+  // patches, not part of the default all-sky scene — so their ASSET_WIRING
+  // point rows are NOT demanded at boot. Symmetric with polyphorm-2mrs among
+  // the volume fields: boots `enabled: false` → absent from the boot set.
   desiDeep: { enabled: false },
   desiWedge: { enabled: false },
   desiSgw: { enabled: false },
@@ -197,7 +194,7 @@ type NamedSlotOverrides = Partial<{
 
 type MakeStateOptions = {
   settings?: SettingsLeaves;
-  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (registry `visible` seed). */
+  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot. */
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
   /** Volume-field params; injected into `settings.cosmicWebDensity.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
@@ -373,18 +370,16 @@ afterEach(() => {
 
 describe('reevaluateDemand demand-table regression', () => {
   /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible in
-   * SOURCE_REGISTRY. DesiDeep + DesiWedge + DesiSgw are the galaxy catalogs with
-   * visible:false, so their enabled bits seed false and their point rows are
-   * NOT demanded at boot — symmetric with polyphorm-2mrs among the volume fields.
-   * Famous slot is modelled
+   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all boot enabled.
+   * DesiDeep + DesiWedge + DesiSgw boot `enabled: false`, so their point
+   * rows are NOT demanded at boot — symmetric with polyphorm-2mrs among the
+   * volume fields. Famous slot is modelled
    * as 'loading' (it was just triggered by its own demand row before
    * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
    * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`,
-   * which the construction seed lands as true (registry visible:true).
-   * polyphorm-2mrs is NOT (seeded enabled:false). pgcAlias: palette closed.
-   * `hiResFamous` demands
+   * which boots true. polyphorm-2mrs is NOT (seeded enabled:false).
+   * pgcAlias: palette closed. `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {

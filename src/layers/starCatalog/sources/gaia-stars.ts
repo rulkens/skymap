@@ -21,11 +21,6 @@ export const GAIA_STARS_ENTRY = {
   // allSky:true matches the other non-catalog rows (the coverage-mask logic
   // only consults this flag for galaxy-catalog footprints).
   allSky: true,
-  // On by default: the star bin is the real-data middle of the descent, part
-  // of the baseline near-field scene. The flag never reaches ALL_VISIBLE_MASK
-  // (galaxy-catalog rows only), so it's a scene-intent marker, not a bitmask
-  // contributor — the stars gate through the star renderer's crossfade band.
-  visible: true,
   // Stars bypass the COSMO label/marker systems entirely — no per-star names
   // or rings — so neither capability flag is set.
   bearsLabel: false,

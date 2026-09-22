@@ -19,13 +19,6 @@ export type SourceEntryBase = {
    */
   readonly allSky: boolean;
   /**
-   * Whether the source is rendered by default. Drives `ALL_VISIBLE_MASK`
-   * (bitwise-OR of every `type: 'galaxyCatalog'` entry whose `visible` is true)
-   * and the engine's startup `drawMask`. Users can toggle a galaxy catalog on or
-   * off at runtime — this is purely the default.
-   */
-  readonly visible: boolean;
-  /**
    * True if this source carries toggleable on-screen text labels.
    * Drives the label-visibility record and the fade-layer routing in the
    * label subsystem. Bulk galaxy catalogs (sdss, glade, 2mrs, milliquas,

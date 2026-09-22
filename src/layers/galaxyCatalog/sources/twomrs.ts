@@ -8,7 +8,6 @@ export const TWOMRS_ENTRY = {
   label: '2MRS',
   binBaseName: '2mrs',
   allSky: true,
-  visible: true,
   bearsLabel: false,
   bearsMarker: false,
   // Flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.

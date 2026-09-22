@@ -108,16 +108,6 @@ export type VolumeFieldDefaults = {
    *     breakdown that motivates this value.
    */
   trim: number;
-  /**
-   * Optional per-cube starting Intensity (overall opacity multiplier in
-   * [0, 1]).  When omitted, the slot seeds with the global
-   * `DEFAULT_VOLUME_FIELD_INTENSITY`.  Per-cube override exists because
-   * a heavy-tailed log-normalised cube (MCPM) wants intensity=1.0 by
-   * default to read at full saturation, while a cube already
-   * calibrated against its cosmic mean can sit comfortably at the
-   * global default.
-   */
-  intensity?: number;
   /** Optional human-readable label override (renderer falls back to id). */
   label?: string;
   /**

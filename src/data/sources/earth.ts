@@ -10,11 +10,6 @@ export const EARTH_ENTRY = {
   // allSky:true matches the other non-catalog rows (the coverage-mask logic
   // only consults this flag for galaxy-catalog footprints).
   allSky: true,
-  // On by default: the body is part of the baseline near-field scene, resolved
-  // only on close approach through its content-layer. The flag never reaches
-  // ALL_VISIBLE_MASK (galaxy-catalog rows only), so it's a scene-intent marker,
-  // not a bitmask contributor.
-  visible: true,
   // Earth captions itself on the final descent, so it bears labels like any
   // other named source — the foreground-labels layer draws the caption on the
   // NEAR0 slab rather than the COSMO one, which is a routing detail.
