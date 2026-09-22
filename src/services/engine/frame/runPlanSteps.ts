@@ -22,24 +22,24 @@ export function runPlanSteps(
     if (planner === undefined) {
       throw new Error(`runPlanSteps: no registered ContentPlanner named '${step.name}'`);
     }
+    // `checkFrameOrder` rejects a scope mismatch at boot; the two branches
+    // below are what narrow planner and target to each other, and the throw is
+    // the leftover pairing no narrowing can rule out.
     if (target.scope === 'once') {
-      if (planner.scope !== 'once') {
-        throw new Error(
-          `runPlanSteps: planner '${step.name}' is 'perView', run against a 'once' target`,
+      if (planner.scope === 'once') {
+        target.snapshot.plans.put(
+          planner,
+          undefined,
+          planner.plan(target.snapshot, target.views, state),
         );
+        continue;
       }
-      target.snapshot.plans.put(
-        planner,
-        undefined,
-        planner.plan(target.snapshot, target.views, state),
-      );
-    } else {
-      if (planner.scope !== 'perView') {
-        throw new Error(
-          `runPlanSteps: planner '${step.name}' is 'once', run against a 'perView' target`,
-        );
-      }
+    } else if (planner.scope === 'perView') {
       target.view.snapshot.plans.put(planner, target.view, planner.plan(target.view, state));
+      continue;
     }
+    throw new Error(
+      `runPlanSteps: planner '${step.name}' is '${planner.scope}', run against a '${target.scope}' target`,
+    );
   }
 }

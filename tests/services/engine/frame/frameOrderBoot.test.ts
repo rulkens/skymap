@@ -25,7 +25,8 @@ import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderS
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
 // optional (Global Constraints), so PRELUDE's two Layer-owned rows need a
 // stand-in here — this file checks core's artifacts alone, never the full
-// `createLayers` composition.
+// `createLayers` composition. The names mirror PRELUDE's plan lines in
+// `frameSections.ts`, where a rename shows up first.
 const LAYER_PLANNER_STUBS: readonly ContentPlanner<unknown>[] = [
   {
     name: 'galaxy-catalog',

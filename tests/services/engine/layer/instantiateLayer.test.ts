@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { instantiateLayer } from '../../../../src/services/engine/layer/instantiateLayer';
-import { planOnce } from '../../../helpers/engine/planOnce';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 
@@ -30,7 +29,11 @@ describe('instantiateLayer', () => {
     const snapshot = {} as never;
     const views = [] as never;
     const passState = {} as never;
-    expect(planOnce(instance.planners[0]!, snapshot, views, passState)).toEqual({
+    const planner = instance.planners[0]!;
+    // Narrowed to the `once` arm: calling the unnarrowed union widens each
+    // parameter position to the INTERSECTION of both arms, which no value satisfies.
+    if (planner.scope !== 'once') throw new Error('expected a once-scope planner');
+    expect(planner.plan(snapshot, views, passState)).toEqual({
       value: undefined,
       awake: true,
       settling: false,

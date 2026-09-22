@@ -7,7 +7,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { planOnce } from '../../helpers/engine/planOnce';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
@@ -59,10 +58,10 @@ describe('galaxyCatalog frame — bias reconcile', () => {
     const { runtime, setMode } = makeRuntime(0);
     const tick = galaxyCatalogPlanner(runtime);
 
-    for (let i = 0; i < 3; i += 1) planOnce(tick, SNAPSHOT, VIEWS, makeState(0));
+    for (let i = 0; i < 3; i += 1) tick.plan(SNAPSHOT, VIEWS, makeState(0));
     expect(setMode).not.toHaveBeenCalled();
 
-    for (let i = 0; i < 2; i += 1) planOnce(tick, SNAPSHOT, VIEWS, makeState(3));
+    for (let i = 0; i < 2; i += 1) tick.plan(SNAPSHOT, VIEWS, makeState(3));
     expect(setMode).toHaveBeenCalledTimes(1);
     expect(setMode).toHaveBeenCalledWith(3);
   });

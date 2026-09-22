@@ -19,7 +19,9 @@ import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { structureMemberCount } from '../../utils/structure/structureMemberCount';
 
-export function galaxyCatalogPlanner(runtime: GalaxyCatalogRuntime): ContentPlanner<void> {
+export function galaxyCatalogPlanner(
+  runtime: GalaxyCatalogRuntime,
+): Extract<ContentPlanner<void>, { scope: 'once' }> {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.

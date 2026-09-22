@@ -34,7 +34,9 @@ export function createPlans(): Plans {
       return result.value as T;
     },
     put<T>(planner: ContentPlanner<T>, view: FrameView | undefined, result: PlanResult<T>): void {
-      if (view === undefined) {
+      // Keyed on the PLANNER's own scope, the same discriminant `get` reads —
+      // the view only supplies the `perView` key.
+      if (planner.scope === 'once') {
         once.set(planner.name, result);
       } else {
         let byView = perView.get(planner.name);
@@ -42,9 +44,13 @@ export function createPlans(): Plans {
           byView = new WeakMap();
           perView.set(planner.name, byView);
         }
-        byView.set(view, result);
+        // A `perView` row is only ever put against its own view; a missing one
+        // throws on the WeakMap key rather than landing where no `get` looks.
+        byView.set(view!, result);
       }
-      awake ||= result.awake;
+      // A settling vote keeps the loop ticking too — `awake ⊇ settling` is
+      // PlanResult's convention, and this fold is what owns the implication.
+      awake ||= result.awake || result.settling;
       settling ||= result.settling;
     },
     get awake() {

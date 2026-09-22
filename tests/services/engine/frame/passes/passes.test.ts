@@ -15,12 +15,15 @@ import { horizonShellPass } from '../../../../../src/services/engine/frame/passe
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starAggregateUpsamplePass } from '../../../../../src/services/engine/frame/passes/starAggregateUpsamplePass';
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
+import { structureMarkersPlanner } from '../../../../../src/services/engine/frame/planners/structureMarkersPlanner';
+import { createPlans } from '../../../../../src/services/engine/frame/createPlans';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
@@ -75,6 +78,7 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
       renderTargets,
       cursorTexPx: null,
       renderedTargets: new Set<string>(),
+      plans: createPlans(),
     },
     viewSlot: 0,
     viewKind: 'frame',
@@ -302,21 +306,72 @@ describe('horizonShellPass.draw', () => {
   });
 });
 
+/** Plan `count` markers for `ctx`, the way SCENE's own plan row does. */
+function planMarkers(ctx: FrameView, count: number): FrameView {
+  ctx.snapshot.plans.put(structureMarkersPlanner, ctx, {
+    value: Array.from({ length: count }, () => ({}) as StructureMarkerDescriptor),
+    awake: false,
+    settling: false,
+  });
+  return ctx;
+}
+
+// The renderer has uploaded nothing: `setMarkers` runs inside `draw`, which
+// this gate is what admits, so a gate reading `markerCount()` would be false
+// on every frame and the markers would never appear.
+const EMPTY_RENDERER_STATE = {
+  ...STATE_STUB,
+  gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 0 } },
+} as unknown as EngineState;
+
 describe('structureMarkersPass.enabled', () => {
+  it('gates on the PLANNED markers, not on what the renderer last uploaded', () => {
+    const ctx = planMarkers(makeCtx(), 3);
+    expect(structureMarkersPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO))).toBe(
+      true,
+    );
+  });
+
+  it('an empty planned list leaves the pass plan', () => {
+    const ctx = planMarkers(makeCtx(), 0);
+    expect(structureMarkersPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO))).toBe(
+      false,
+    );
+  });
+
   it('disables once the surveyDeepZoom fade completes (opacity-zero principle)', () => {
     // Every marker fragment resolves to alpha 0 past the goneAt edge, so the
-    // layer must leave the pass plan entirely — the executor drops the
-    // render step, and the pick program (which runs this same gate) stops
-    // the rings claiming hits.
+    // layer must leave the pass plan entirely — the executor drops the render
+    // step, and `pickEnabled` applies the same band so the rings stop claiming
+    // hits.
     const state = {
       ...STATE_STUB,
       gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
     } as unknown as EngineState;
     // Default fixture camera: 5 Mpc from origin, far outside the band.
-    const farCtx = makeCtx();
+    const farCtx = planMarkers(makeCtx(), 3);
     expect(structureMarkersPass.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
-    const nearCtx = makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> });
+    const nearCtx = planMarkers(
+      makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
+      3,
+    );
     expect(structureMarkersPass.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
+  });
+});
+
+describe('structureMarkersPass.pickEnabled', () => {
+  // The pick program derives its own context, whose `plans` no plan row has
+  // filled — reading the planned list there would throw, so the pick gate
+  // reads the renderer's own upload instead.
+  it('reads the renderer, never the plan the pick context never ran', () => {
+    const ctx = makeCtx();
+    const view = slabViewOf(ctx, COSMO);
+    expect(structureMarkersPass.pickEnabled!(EMPTY_RENDERER_STATE, ctx, view)).toBe(false);
+    const uploaded = {
+      ...STATE_STUB,
+      gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
+    } as unknown as EngineState;
+    expect(structureMarkersPass.pickEnabled!(uploaded, ctx, view)).toBe(true);
   });
 });

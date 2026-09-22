@@ -7,7 +7,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { planOnce } from '../../helpers/engine/planOnce';
 import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
@@ -83,12 +82,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
     publish.mockClear();
 
     for (let i = 0; i < 9; i += 1)
-      planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
-    planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(null)); // the one selection change
+      tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(null)); // the one selection change
 
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
@@ -100,7 +99,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const tick = galaxyCatalogPlanner(runtime);
 
     const milkyWay: SelectionRow = { type: 'milkyWay' };
-    planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(milkyWay));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
   });
@@ -113,12 +112,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    planOnce(tick, makeSnapshot(maskWith(0, Source.SDSS)), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(maskWith(0, Source.SDSS)), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Same selection, same catalogsVersion — only the visible source swapped,
     // which is exactly what the renderer draws and the focus fade tracks.
-    planOnce(tick, makeSnapshot(maskWith(0, Source.TwoMRS)), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(maskWith(0, Source.TwoMRS)), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
   });
 
@@ -149,7 +148,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = galaxyCatalogPlanner(runtime);
 
-    planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Tier swap: same selection, same visible mask, but this source's array
@@ -165,7 +164,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       ],
     ]);
     catalogsVersion = 1;
-    planOnce(tick, makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });

@@ -38,7 +38,7 @@
 //   offset 80  : model: mat4x4<f32>   (64 B; per-cloud world placement)
 //   offset 144 : camPosModel: vec4<f32> (the eye in the cloud's model
 //                                     space, xyz; w unused)
-//   offset 160 : _reserved: vec4<f32>  (zero; was the camUp basis)
+//   offset 160 : _reserved: vec4<f32>  (zero, unused)
 //   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale,
 //                                       softness)
 //   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale,
@@ -49,7 +49,7 @@
 // embedded CameraUniforms ends at 80 (a 16-byte boundary), so 'model' lands
 // at 80 with no implicit padding. The CPU-side Float32Array must write each
 // field at the matching f32 index (viewProj 0..15, viewportPx 16..17,
-// model 20..35, camRight 36..39, camUp 40..43, params0 44..47,
+// model 20..35, camPosModel 36..39, _reserved 40..43, params0 44..47,
 // params1 48..51) or the uniforms are silently garbage.
 
 import package::lib::camera::CameraUniforms;

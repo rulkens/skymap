@@ -44,6 +44,12 @@ describe('createPlans', () => {
     expect(plans.get(oncePlanner, viewA)).toBe(42);
   });
 
+  it('a settling vote keeps the loop ticking too — the fold owns the implication', () => {
+    const plans = createPlans();
+    plans.put(oncePlanner, undefined, { value: 1, awake: false, settling: true });
+    expect(plans.awake).toBe(true);
+  });
+
   it('awake/settling OR-fold across puts', () => {
     const plans = createPlans();
     expect(plans.awake).toBe(false);

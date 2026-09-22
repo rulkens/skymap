@@ -10,7 +10,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { planOnce } from '../../helpers/engine/planOnce';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
@@ -53,7 +52,7 @@ const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 describe('galaxyCatalog frame — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {
     const tick = galaxyCatalogPlanner(makeRuntime(true));
-    expect(planOnce(tick, SNAPSHOT, VIEWS, STATE)).toEqual({
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
       value: undefined,
       awake: true,
       settling: true,
@@ -65,7 +64,7 @@ describe('galaxyCatalog frame — work votes', () => {
   // fixture has no `hasInFlightWork` at all — reading it here would throw.
   it('votes neither while a fetch is merely outstanding', () => {
     const tick = galaxyCatalogPlanner(makeRuntime(false));
-    expect(planOnce(tick, SNAPSHOT, VIEWS, STATE)).toEqual({
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
       value: undefined,
       awake: false,
       settling: false,

@@ -6,6 +6,7 @@
 import type { FrameStep } from '../../../../@types/engine/frame/FrameStep';
 import type { TimedSlotRow } from '../../../../@types/engine/frame/TimedSlotRow';
 import { groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from '../slabs';
+import { captureFaceViewId } from '../../../../utils/camera/captureFaceViewId';
 import { computeTimingSlotName } from './computeTimingSlotName';
 
 export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSlotRow[] {
@@ -14,12 +15,15 @@ export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSl
     if (step.kind === 'render') {
       // `groupKeyOf` is the executor's own definition (slabs.ts) — shared so the two can't drift.
       const groupKey = groupKeyOf(step);
-      // This walk has no real `FrameView` to read `.id` off — a capture face's id
-      // is reconstructed from the step's own `CaptureFaceRef`, the same
-      // `<key>:<face>` `faceViewSpec` mints; an ordinary step draws the canvas
-      // (mono's only rig view today).
+      // This walk has no real `FrameView` to read `.id` off, so a capture
+      // face's id comes from the step's own `CaptureFaceRef` through the same
+      // minting `faceViewSpec` uses. The walk hardcodes `'canvas'` otherwise:
+      // a multi-view rig's extra views have no allocated slot yet (the dome PR
+      // adds them).
       const viewId =
-        step.capture === undefined ? 'canvas' : `${step.capture.key}:${step.capture.face}`;
+        step.capture === undefined
+          ? 'canvas'
+          : captureFaceViewId(step.capture.key, step.capture.face);
       for (const contentPass of step.passes) {
         // Row + face ride in the slot NAME so two body rows sharing one pass, or a roster pass
         // drawn per capture face, don't collide — see passTimingSlotName (slabs.ts).
