@@ -95,7 +95,7 @@ export type ReadyFrameContext = {
   focusBlend: number;
   /**
    * This frame's `plan` rows' answers, one store shared by every `FrameView`
-   * (`createPlans()`, minted once by `deriveFrameContext`). `runPlanSteps`
+   * (`createFramePlannerResultStore()`, minted once by `deriveFrameContext`). `runPlanSteps`
    * writes it before any GPU step of its target reads it; a miss throws.
    */
   plans: FramePlannerResultStore;

@@ -16,7 +16,7 @@ import { starAggregatesPass } from '../../../../../src/services/engine/frame/pas
 import { starAggregateUpsamplePass } from '../../../../../src/services/engine/frame/passes/starAggregateUpsamplePass';
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { structureMarkersPlanner } from '../../../../../src/services/engine/frame/planners/structureMarkersPlanner';
-import { createPlans } from '../../../../../src/services/engine/frame/createPlans';
+import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -78,7 +78,7 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
       renderTargets,
       cursorTexPx: null,
       renderedTargets: new Set<string>(),
-      plans: createPlans(),
+      plans: createFramePlannerResultStore(),
     },
     viewSlot: 0,
     viewKind: 'frame',

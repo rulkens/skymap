@@ -47,7 +47,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { createPlans } from '../../../../src/services/engine/frame/createPlans';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
@@ -166,7 +166,7 @@ function makeCtx(
   // A Layer's vote, seeded straight into the store the way `runPlanSteps`
   // would fold a real planner's `PlannerResult` in — `scheduleSkyCaptures` reads
   // the OR-fold (`plans.settling`), not any one planner's own row.
-  const plans = createPlans();
+  const plans = createFramePlannerResultStore();
   const layerVotePlanner: FrameContentPlanner<void> = {
     name: '__test-layer-vote',
     scope: 'once',

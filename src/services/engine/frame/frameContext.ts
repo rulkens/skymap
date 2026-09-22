@@ -26,7 +26,7 @@ import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
-import { createPlans } from './createPlans';
+import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 import { visibleStars } from './visibleStars';
 
@@ -123,7 +123,7 @@ export function deriveFrameContext(
     focusBlend: 0,
     // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
     // run, ahead of every GPU step and every other planner reader this frame.
-    plans: createPlans(),
+    plans: createFramePlannerResultStore(),
     // Forwarded by reference, not copied: the listener allocates a fresh pair
     // per pointermove and only while the debug overlay that reads it is on.
     cursorTexPx: state.picking.cursorTexPx,

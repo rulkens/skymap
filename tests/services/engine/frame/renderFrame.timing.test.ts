@@ -15,7 +15,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { createPlans } from '../../../../src/services/engine/frame/createPlans';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
@@ -283,7 +283,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // Frame-wide: which targets hold this frame's content — the executor
     // unions into this as it opens each render step; a later pass reads it.
     renderedTargets,
-    plans: createPlans(),
+    plans: createFramePlannerResultStore(),
   };
   const ctx = {
     id: 'canvas',

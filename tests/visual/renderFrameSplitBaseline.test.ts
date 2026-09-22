@@ -15,7 +15,7 @@ import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../src/layers/galaxyCatalog/state/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
-import { createPlans } from '../../src/services/engine/frame/createPlans';
+import { createFramePlannerResultStore } from '../../src/services/engine/frame/createFramePlannerResultStore';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
@@ -397,7 +397,7 @@ describe('renderFrame visual baseline', () => {
     const ctx = {
       snapshot: {
         isReady: true as const,
-        plans: createPlans(),
+        plans: createFramePlannerResultStore(),
         nowMs: 0,
         // resolveLayerOpacity's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.

@@ -1,5 +1,5 @@
 /**
- * createPlans — one `FramePlannerResultStore` per frame. A `'once'` value keys on the
+ * createFramePlannerResultStore — one `FramePlannerResultStore` per frame. A `'once'` value keys on the
  * planner's name alone; a `'perView'` value keys additionally by `FrameView`
  * identity (a `WeakMap`, the idiom `atmosphereDrawListCache`/`readStarCut`
  * already use) — there is no view whose plan a DIFFERENT view can read.
@@ -10,7 +10,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PlannerResult } from '../../../@types/engine/frame/PlannerResult';
 import type { FramePlannerResultStore } from '../../../@types/engine/frame/FramePlannerResultStore';
 
-export function createPlans(): FramePlannerResultStore {
+export function createFramePlannerResultStore(): FramePlannerResultStore {
   const once = new Map<string, PlannerResult<unknown>>();
   const perView = new Map<string, WeakMap<FrameView, PlannerResult<unknown>>>();
   let awake = false;

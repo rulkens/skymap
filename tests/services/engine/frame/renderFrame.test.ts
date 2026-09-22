@@ -11,7 +11,7 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { createPlans } from '../../../../src/services/engine/frame/createPlans';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
@@ -455,7 +455,7 @@ function makeInput(
     meshBodies: [] as never[],
     positionedStars: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
-    plans: createPlans(),
+    plans: createFramePlannerResultStore(),
     cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
