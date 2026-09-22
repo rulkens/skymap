@@ -84,6 +84,19 @@ const s2Row: StarRow = {
   radiusM: 4.2e9,
 };
 
+const sunMeta: FamousStarMetaEntry = {
+  id: 'sun',
+  names: ['Sun', 'Sol'],
+  constellation: 'None',
+  spectralType: 'G2V',
+  distancePc: 0,
+  magV: -26.74,
+  absMag: 4.83,
+  radiusSolar: 1,
+  temperatureK: 5772,
+  description: 'The star at the heart of the Solar System.',
+};
+
 const sunRow: StarRow = {
   type: 'starCatalog',
   source: Source.Sun,
@@ -126,7 +139,9 @@ describe('buildFocusable', () => {
     ['survey photometry', gaiaRow, [siriusMeta], 'photometry'],
     ['a curated sidecar entry', siriusRow, [siriusMeta], 'curated'],
     ['a compiled-in orbit', s2Row, [siriusMeta], 'orbit'],
-    ['nothing of its own', sunRow, [siriusMeta], 'none'],
+    // The Sun rides the same sidecar off its own seed file, so it is curated
+    // like any other seeded star — no arm of its own.
+    ['a curated entry from a second seed', sunRow, [sunMeta], 'curated'],
     // Same star, sidecar not landed: the fail-soft path, not a loading state.
     ['a curated star before its sidecar lands', siriusRow, NO_META, 'none'],
   ] as const)('star row with %s → detail.kind %s', (_label, row, meta, kind) => {

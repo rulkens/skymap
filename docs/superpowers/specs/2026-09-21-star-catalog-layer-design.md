@@ -90,7 +90,7 @@ export type StarInfoDetail =
   | { readonly kind: 'none' };
 ```
 
-One `buildFocusable` arm, one `StarDetailCard` (plus its compact twin) replacing `FieldStarDetailCard`; `BodyDetailCard` loses its famous eyebrow, meta-sidecar lookup, S-star orbit block and `FAMOUS_STAR_IDS` import (grill Q10). The Sun uses `detail.kind: 'none'` until it has something of its own.
+One `buildFocusable` arm, one `StarDetailCard` (plus its compact twin) replacing `FieldStarDetailCard`; `BodyDetailCard` loses its famous eyebrow, meta-sidecar lookup, S-star orbit block and `FAMOUS_STAR_IDS` import (grill Q10). The Sun's curated entry rides the same sidecar, built from its own seed file (`data/seeds/sun.seed.json`), so it is `detail.kind: 'curated'` like any other seeded star.
 
 ### 2.4 The contract
 
@@ -169,7 +169,7 @@ Folder layout per `src/layers/README.md`; `galaxyCatalog` is the template at eve
 | `selection` | one `SelectionKindRow` for `type: 'starCatalog'`, `pickSources: [gaiaStars, famousStar, sun, sStar]` |
 | `@types/` | `StarCatalogRuntime`, `StarInfo`, `StarInfoDetail`, `StarCatalogFacts`, and the star-only types moved from `src/@types/` (the `rendering/Star*` and `starCatalog*Renderer` families, `PreparedStarCut`, `PreparedStarSource`, `PositionedStar`, `SStarSeed`, `FamousStarsPayload`, …). `StarCatalogId`, `StarCatalog`, `StarCatalogReq`, `FamousStarMetaEntry` and `StarBody` keep core homes while core imports them |
 
-Shaders stay under `src/services/gpu/shaders/`. Seed tables (`sceneStars`, `sceneSStars`, the new Sun table, `sStarElements`, `famousStars.generated`) stay under `src/data/`; `orbitalElements.ts` keeps importing the S-star rows from data for `POSITION_DRIVERS`, so no `data/ → layers/` edge exists. The rows are declared once (in data) and read twice (positions at import time, trails via the guide) **until the body Layer forms** and positions compose at boot too (grill Q6). That is body's ground prep; the rows will already sit where it needs them.
+Shaders stay under `src/services/gpu/shaders/`. Seed tables (`sceneStars`, `sceneSStars`, `sceneSun`, `sStarElements`, `famousStars.generated`, `sun.generated`) stay under `src/data/`; `orbitalElements.ts` keeps importing the S-star rows from data for `POSITION_DRIVERS`, so no `data/ → layers/` edge exists. The rows are declared once (in data) and read twice (positions at import time, trails via the guide) **until the body Layer forms** and positions compose at boot too (grill Q6). That is body's ground prep; the rows will already sit where it needs them.
 
 `ResolveDeps.stars` dissolves into a runtime argument of the moved selection row, as constellations did for its slot. `engine.meta.famousStars`, `engineFamousStarsMetaReported` and the `meta` member (if the star entry was its last) are deleted; `selectFamousStarsMeta` reads `state.engine.starCatalog.famousStarsMeta ?? []` (grill Q3).
 

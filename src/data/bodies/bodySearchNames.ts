@@ -2,15 +2,15 @@
  * BODY_SEARCH_NAMES — the one per-body search-name lookup: the names the palette
  * scores a query against, and the aliases a row shows in its secondary slot.
  *
- * Two contributors, one map: every generated famous-star row's `names[]`, plus
- * an authored table for bodies that have no famous-star row. `names[0]` is the
- * display label. Authoring here rather than in `famous_stars.seed.json` is
- * load-bearing — a seed row would make its body a DRAWN famous star and a
- * `solar-neighbourhood` member, which for Sgr A* would take that region's
- * extent to 8 kpc and drag the NEAR0 far plane with it.
+ * One map over every seeded star table's `names[]` plus an authored table for
+ * bodies with no seed row at all. `names[0]` is the display label. Authoring
+ * here rather than in a star seed is load-bearing — a seed row would make its
+ * body a DRAWN star and a `solar-neighbourhood` member, which for Sgr A* would
+ * take that region's extent to 8 kpc and drag the NEAR0 far plane with it.
  */
 
 import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
+import { SUN_GENERATED } from './sun.generated';
 import { SGR_A_STAR_ENTRY } from '../sources/sgr-a-star';
 
 // The place name now leads (it IS the row's label — see the registry row), with
@@ -22,9 +22,6 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
     SGR_A_STAR_ENTRY.id,
     [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
   ],
-  // The Sun is its own star catalog now, so it has no famous-star seed row to
-  // carry these — and one authored line is the whole cost of that.
-  ['sun', ['Sun', 'Sol']],
   // Petunias' aliases are what a reader who knows the joke will actually type;
   // the whale needs none — its label alone already scores the match.
   ['petunias', ['petunias', 'bowl of petunias', 'oh no not again']],
@@ -40,5 +37,6 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
 
 export const BODY_SEARCH_NAMES: ReadonlyMap<string, readonly string[]> = new Map([
   ...FAMOUS_STARS_GENERATED.map((row) => [row.id, row.names] as const),
+  ...SUN_GENERATED.map((row) => [row.id, row.names] as const),
   ...AUTHORED,
 ]);
