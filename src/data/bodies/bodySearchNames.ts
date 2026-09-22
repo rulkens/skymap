@@ -22,6 +22,9 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
     SGR_A_STAR_ENTRY.id,
     [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
   ],
+  // The Sun is its own star catalog now, so it has no famous-star seed row to
+  // carry these — and one authored line is the whole cost of that.
+  ['sun', ['Sun', 'Sol']],
   // Petunias' aliases are what a reader who knows the joke will actually type;
   // the whale needs none — its label alone already scores the match.
   ['petunias', ['petunias', 'bowl of petunias', 'oh no not again']],

@@ -15,6 +15,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../../src/services/gpu/renderers/bodies/starPointRenderer';
 import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
+import { Source } from '../../../../../src/data/sources';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
@@ -49,6 +50,8 @@ const SUN: PositionedStar = {
   absMag: 4.83,
   color: [1, 0.95, 0.85],
   surface: { datumRadiusM: 695700000, reliefM: [0, 0] },
+  source: Source.Sun,
+  seedIndex: 0,
 };
 
 const SIRIUS: PositionedStar = {
@@ -58,6 +61,8 @@ const SIRIUS: PositionedStar = {
   absMag: 1.43,
   color: [0.75, 0.85, 1],
   surface: { datumRadiusM: 1189600000, reliefM: [0, 0] },
+  source: Source.FamousStar,
+  seedIndex: 6,
 };
 
 describe('createStarPointRenderer', () => {

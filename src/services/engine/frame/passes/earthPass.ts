@@ -47,11 +47,9 @@ import { sceneBodyStates } from '../sceneBodyStates';
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
 function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null {
-  const { earth, planets, stars } = state.data.bodies;
+  const { earth, planets } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
-  const planet = planets.find((p) => p.id === bodyId);
-  if (planet !== undefined) return planet;
-  return stars.find((s) => s.id === bodyId) ?? null;
+  return planets.find((p) => p.id === bodyId) ?? null;
 }
 
 /**

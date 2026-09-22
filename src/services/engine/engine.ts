@@ -22,8 +22,9 @@ import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCa
 import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createEngineData } from './data/createEngineData';
-import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { Source } from '../../data/source';
+import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
+import { SOURCE_ENTRIES } from '../../data/sourceEntries';
+import type { SeededStarCatalogId } from '../../@types/data/starCatalog/SeededStarCatalogId';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
@@ -124,13 +125,15 @@ export function createEngine(
 
   const store = cb.store;
 
-  // Famous stars are seeded at construction, not fetched, so there is no async slot
-  // commit to carry the usual `engineSourceCountReported` pulse — report it here so
-  // the Stars panel's count chip lights up for the curated row too.
+  // The seeded star catalogs are built at construction, not fetched, so there is
+  // no async slot commit to carry the usual `engineSourceCountReported` pulse —
+  // report each here so the Stars panel's count chips light up for them too.
   const engineData = createEngineData();
-  store.dispatch(
-    engineSourceCountReported({ source: Source.FamousStar, count: SCENE_STARS.length }),
-  );
+  for (const entry of SOURCE_ENTRIES) {
+    if (entry.type !== 'starCatalog' || entry.binBaseName !== null) continue;
+    const count = SEEDED_STAR_CATALOGS[entry.id as SeededStarCatalogId].length;
+    store.dispatch(engineSourceCountReported({ source: entry.code, count }));
+  }
 
   const state: EngineState = {
     // These getters delegate straight to the store: sagas and sub-handle

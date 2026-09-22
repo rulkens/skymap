@@ -32,11 +32,12 @@ import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { starExposureRamp } from '../../../../../src/utils/star/starExposureRamp';
-import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
+import { SEEDED_STAR_CATALOGS } from '../../../../../src/data/bodies/seededStarCatalogs';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
 import { starPickId } from '../../../../../src/utils/picking/starPickId';
+import { visibleStars } from '../../../../../src/services/engine/frame/visibleStars';
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/data/famousStarPickRadiusPx';
@@ -52,7 +53,8 @@ import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { StarBody } from '../../../../../src/@types/scene/StarBody';
+import type { SeededStarCatalogId } from '../../../../../src/@types/data/starCatalog/SeededStarCatalogId';
+import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
 import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -60,9 +62,46 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // The record + the position this frame resolves for it — the pairing
 // `positionedVisibleStars` builds. A star is an anchor, so the resolved
 // position IS the anchor's array, by reference.
+/**
+ * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
+ * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
+ * values so the ramp fold is observable (a raw-brightness bug would show).
+ */
+const STAR_CATALOG_SETTINGS = {
+  sizePx: 3.25,
+  brightness: 0.8,
+  exposureNearX: 15,
+  exposureMidX: 57,
+  exposureFarX: 70,
+};
+
+/**
+ * Which seeded catalogs this fixture's star cluster has switched on. Each
+ * source gates itself, so a roster is now a set of item bits rather than a
+ * hand-passed star array.
+ */
+type Catalogs = Partial<Record<SeededStarCatalogId, boolean>>;
+const MAP_AND_SUN: Catalogs = { famousStar: true, sun: true };
+const EVERY_SEEDED: Catalogs = { famousStar: true, sun: true, sStar: true };
+
+function starSettings(catalogs: Catalogs): StarCatalogSettings {
+  // Cast: the pass reads only these knobs, so the fixture states only these.
+  return {
+    ...STAR_CATALOG_SETTINGS,
+    // The cluster master is on: `visibleStars` requires it AND the row's own
+    // bit, so omitting it would draw nothing at all.
+    enabled: true,
+    items: {
+      famousStar: { enabled: catalogs.famousStar ?? false },
+      sun: { enabled: catalogs.sun ?? false },
+      sStar: { enabled: catalogs.sStar ?? false },
+    },
+  } as unknown as StarCatalogSettings;
+}
+
 const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
 const positioned = (id: string): PositionedStar => {
-  const star = SCENE_STARS.find((s) => s.id === id)!;
+  const star = visibleStars(starSettings(EVERY_SEEDED)).find((s) => s.id === id)!;
   return { ...star, positionMpc: ANCHOR_POS.get(id)! };
 };
 
@@ -159,42 +198,15 @@ function makeRenderer() {
   };
 }
 
-/**
- * The `starCatalogs` appearance slice the layer reads: the shared sizePx slider,
- * the brightness trim, and the three exposure-ramp anchors. Concrete non-default
- * values so the ramp fold is observable (a raw-brightness bug would show).
- */
-const STAR_CATALOG_SETTINGS = {
-  sizePx: 3.25,
-  brightness: 0.8,
-  exposureNearX: 15,
-  exposureMidX: 57,
-  exposureFarX: 70,
-};
-
-/** State with a `starPointRenderer` handle, a seeded star list, and settings. */
+/** State with a `starPointRenderer` handle and the star-catalog settings. */
 function makeState(
   starPointRenderer: unknown,
-  stars: readonly StarBody[],
-  famousStarMapEnabled = true,
+  catalogs: Catalogs = MAP_AND_SUN,
   bodyItems: Record<string, unknown> = makeBodyItems(),
 ): EngineState {
   return {
     gpu: { starPointRenderer, bodyPickRenderer: { drawPoints: vi.fn() } },
-    data: { bodies: { stars } },
-    settings: {
-      starCatalogs: {
-        ...STAR_CATALOG_SETTINGS,
-        // The cluster master is on: `visibleStars` requires it AND the row's own
-        // bit, so omitting it would silently drive the Sun-alone path.
-        enabled: true,
-        items: { famousStar: { enabled: famousStarMapEnabled } },
-      },
-      // The Sun and the S-stars each answer to their own body row, so
-      // `visibleStars` reads them here rather than exempting ids from the map's
-      // gate. Derived from BODY_IDS: a missing row throws inside the gate.
-      bodies: { items: bodyItems },
-    },
+    settings: { starCatalogs: starSettings(catalogs), bodies: { items: bodyItems } },
   } as unknown as EngineState;
 }
 
@@ -217,13 +229,14 @@ describe('starPointsPass.enabled', () => {
     ).toBe(false);
     // Renderer + the Sun alone with the camera half an AU off it: the Sun
     // resolves to a sphere, so the points branch is empty.
-    const sunOnly = SCENE_STARS.filter((star) => star.id === 'sun');
     const onSunCtx = makeCtx(halfAuFrom(SUN.positionMpc));
-    expect(starPointsPass.enabled(makeState(renderer, sunOnly), onSunCtx, VIEW_STUB)).toBe(false);
+    expect(starPointsPass.enabled(makeState(renderer, { sun: true }), onSunCtx, VIEW_STUB)).toBe(
+      false,
+    );
     // Renderer + the full seed inside the gate at 5 kpc: every star — the
     // Sun included — is a sub-pixel point.
     const nearCtx = makeCtx(NEAR_FIELD_CAM);
-    expect(starPointsPass.enabled(makeState(renderer, SCENE_STARS), nearCtx, VIEW_STUB)).toBe(true);
+    expect(starPointsPass.enabled(makeState(renderer, MAP_AND_SUN), nearCtx, VIEW_STUB)).toBe(true);
   });
 
   it('is disabled beyond the foreground gate even with point stars present', () => {
@@ -231,7 +244,7 @@ describe('starPointsPass.enabled', () => {
     // below a pixel: the shared gate turns the backdrop off before the
     // partition is even computed, so the (hdr, NEAR0) step can be skipped
     // wholesale. Derived from the gate so a farther seed growing it carries.
-    const state = makeState(makeRenderer(), SCENE_STARS);
+    const state = makeState(makeRenderer(), MAP_AND_SUN);
     expect(
       starPointsPass.enabled(state, makeCtx([0, 0, FOREGROUND_MAX_DISTANCE_MPC * 10]), VIEW_STUB),
     ).toBe(false);
@@ -245,7 +258,7 @@ describe('starPointsPass.enabled', () => {
     // Derived from the band + gate so a roster growth carries both edges.
     const beyondBand = SCALE_FADE_BANDS.starBackdrop.goneAt * 1.01;
     expect(beyondBand).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC); // still inside the gate
-    const state = makeState(makeRenderer(), SCENE_STARS);
+    const state = makeState(makeRenderer(), MAP_AND_SUN);
     expect(starPointsPass.enabled(state, makeCtx([0, 0, beyondBand]), VIEW_STUB)).toBe(false);
   });
 });
@@ -270,7 +283,6 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         bodyGlintRenderer: null,
         starCatalogRenderer: null,
       },
-      data: { bodies: { stars: SCENE_STARS } },
       // The milky-way impostor also rides this group now (its slab moved to
       // NEAR0), but its visibility window is far WIDER than the foreground
       // gate — at galaxy scale it legitimately draws while the star rows
@@ -283,7 +295,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
       // star-points.
       settings: {
         milkyWay: { enabled: false },
-        starCatalogs: { enabled: true, items: { famousStar: { enabled: true } } },
+        starCatalogs: starSettings(MAP_AND_SUN),
         bodies: { items: makeBodyItems() },
         constellations: { enabled: false, intensity: 1 },
         orbitTrails: { enabled: true },
@@ -321,7 +333,7 @@ describe('starPointsPass.draw', () => {
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, 5];
     const view = makeNear0View(camPos);
-    const state = makeState(renderer, SCENE_STARS);
+    const state = makeState(renderer, MAP_AND_SUN);
 
     starPointsPass.draw(PASS_STUB, view, makeCtx(camPos), state);
 
@@ -344,14 +356,16 @@ describe('starPointsPass.draw', () => {
     // anchors handed to the renderer must be their positions MINUS the eye.
     const camPos: Vec3 = [0, 0, 5];
     const view = makeNear0View(camPos);
-    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    const state = makeState(renderer, MAP_AND_SUN);
 
     starPointsPass.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
-    // Same membership + order as the raw points branch — parsecs from
-    // everything, the Sun is a sub-pixel point like its neighbours.
-    expect(uploaded.map((star) => star.id)).toEqual([SUN.id, PROXIMA.id, SIRIUS.id]);
+    // Parsecs from everything, so the whole roster rides the points branch —
+    // the Sun is a sub-pixel point like its neighbours.
+    expect(uploaded.map((star) => star.id)).toEqual(
+      expect.arrayContaining([SUN.id, PROXIMA.id, SIRIUS.id]),
+    );
     // Each anchor is rebased: pos − camPos, computed in f64 before narrowing.
     // A raw upload would leave positionMpc equal to PROXIMA.positionMpc.
     const uploadedProxima = uploaded.find((star) => star.id === PROXIMA.id)!;
@@ -372,21 +386,20 @@ describe('starPointsPass.draw', () => {
     // point stars. Disjoint + covering by construction: the structural XOR.
     const camPos = halfAuFrom(SIRIUS.positionMpc);
     const view = makeNear0View(camPos);
-    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    const state = makeState(renderer, MAP_AND_SUN);
 
     starPointsPass.draw(PASS_STUB, view, makeCtx(camPos), state);
 
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([
-      SUN.id,
-      PROXIMA.id,
-    ]);
+    const uploadedIds = renderer.setStars.mock.calls[0]![0].map((star) => star.id);
+    expect(uploadedIds).toEqual(expect.arrayContaining([SUN.id, PROXIMA.id]));
+    expect(uploadedIds).not.toContain(SIRIUS.id);
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });
 
   it('re-uploads every frame (rebased anchors) and drops a star the frame it resolves', () => {
     const renderer = makeRenderer();
-    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    const state = makeState(renderer, MAP_AND_SUN);
 
     // Two galaxy-scale frames with identical membership: because the anchors
     // are rebased per frame there is no membership cache — each draw re-uploads.
@@ -394,11 +407,7 @@ describe('starPointsPass.draw', () => {
     starPointsPass.draw(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
     starPointsPass.draw(PASS_STUB, makeNear0View(farCam), makeCtx(farCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(2);
-    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([
-      SUN.id,
-      PROXIMA.id,
-      SIRIUS.id,
-    ]);
+    expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toContain(SIRIUS.id);
 
     // The camera closes on Sirius: it resolves, so it must LEAVE the
     // uploaded point set — otherwise it would draw as point AND sphere. The
@@ -406,10 +415,9 @@ describe('starPointsPass.draw', () => {
     const nearCam = halfAuFrom(SIRIUS.positionMpc);
     starPointsPass.draw(PASS_STUB, makeNear0View(nearCam), makeCtx(nearCam), state);
     expect(renderer.setStars).toHaveBeenCalledTimes(3);
-    expect(renderer.setStars.mock.calls[2]![0].map((star) => star.id)).toEqual([
-      SUN.id,
-      PROXIMA.id,
-    ]);
+    const afterClose = renderer.setStars.mock.calls[2]![0].map((star) => star.id);
+    expect(afterClose).toEqual(expect.arrayContaining([SUN.id, PROXIMA.id]));
+    expect(afterClose).not.toContain(SIRIUS.id);
     expect(renderer.draw).toHaveBeenCalledTimes(3);
   });
 
@@ -426,7 +434,7 @@ describe('starPointsPass.draw', () => {
 
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState(renderer, [SUN, PROXIMA, SIRIUS]);
+    const state = makeState(renderer, MAP_AND_SUN);
     starPointsPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
 
     const uploaded = renderer.setStars.mock.calls[0]![0];
@@ -449,7 +457,7 @@ describe('starPointsPass.draw', () => {
       (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState(renderer, SCENE_STARS);
+    const state = makeState(renderer, MAP_AND_SUN);
 
     starPointsPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
 
@@ -477,7 +485,7 @@ describe('starPointsPass.draw', () => {
       (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
     const renderer = makeRenderer();
     const camPos: Vec3 = [0, 0, camDistMpc];
-    const state = makeState(renderer, SCENE_STARS, false);
+    const state = makeState(renderer, { sun: true });
 
     starPointsPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state);
 
@@ -513,8 +521,6 @@ describe('the Galactic Centre pick stamp', () => {
     AT_GALACTIC_CENTRE[2],
   ];
 
-  const ALL_SEEDED_STARS = [...SCENE_STARS, ...SCENE_S_STARS];
-
   /**
    * A NEAR0 view whose `slab.vp` is a REAL perspective·lookAt aimed at the
    * anchor, unlike the synthetic counting matrix the rebase-seam tests use. The
@@ -547,10 +553,10 @@ describe('the Galactic Centre pick stamp', () => {
     // The caption is at full alpha from Earth (`SCALE_FADE_BANDS.sgrAStarCaption`
     // opens at R₀), and pick follows the affordance — so the click target is
     // there for the whole approach, not only on arrival.
-    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), [0, 0, 5e-3] as Vec3)).toContain(
+    expect(stampedIds(makeState(makeRenderer(), MAP_AND_SUN), [0, 0, 5e-3] as Vec3)).toContain(
       ANCHOR_ID,
     );
-    expect(stampedIds(makeState(makeRenderer(), SCENE_STARS), AT_GALACTIC_CENTRE)).toContain(
+    expect(stampedIds(makeState(makeRenderer(), MAP_AND_SUN), AT_GALACTIC_CENTRE)).toContain(
       ANCHOR_ID,
     );
   });
@@ -560,15 +566,14 @@ describe('the Galactic Centre pick stamp', () => {
     // empty sky would be a trap. Derived from the band so a retune carries.
     const farMpc = SCALE_FADE_BANDS.sgrAStarCaption.goneAt * 2;
     expect(
-      stampedIds(makeState(makeRenderer(), SCENE_STARS), [0, 0, farMpc] as Vec3),
+      stampedIds(makeState(makeRenderer(), MAP_AND_SUN), [0, 0, farMpc] as Vec3),
     ).not.toContain(ANCHOR_ID);
   });
 
   it('follows the label toggle — pick tracks the affordance, not the anchor', () => {
     const labelsOff = makeState(
       makeRenderer(),
-      SCENE_STARS,
-      true,
+      MAP_AND_SUN,
       makeBodyItems((id) => (id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {})),
     );
     expect(stampedIds(labelsOff, AT_GALACTIC_CENTRE)).not.toContain(ANCHOR_ID);
@@ -580,7 +585,7 @@ describe('the Galactic Centre pick stamp', () => {
     // unclickable exactly where it is the only thing you could mean. Suppressing
     // them there is what makes the anchor's stamp reachable at all.
     const zoomedOut = stampedIds(
-      makeState(makeRenderer(), ALL_SEEDED_STARS),
+      makeState(makeRenderer(), EVERY_SEEDED),
       NEAR_GALACTIC_CENTRE,
       makeProjectedView(NEAR_GALACTIC_CENTRE),
     );
@@ -590,7 +595,7 @@ describe('the Galactic Centre pick stamp', () => {
     // Zoomed in, the orbits clear the footprint and their stars are aimable
     // again — the suppression is a screen-separation fact, not a blanket ban.
     const zoomedIn = stampedIds(
-      makeState(makeRenderer(), ALL_SEEDED_STARS),
+      makeState(makeRenderer(), EVERY_SEEDED),
       INSIDE_THE_CLUSTER,
       makeProjectedView(INSIDE_THE_CLUSTER),
     );
@@ -611,7 +616,7 @@ describe('the Galactic Centre pick stamp', () => {
       SIRIUS.positionMpc[2] + 0.5 * (SIRIUS.positionMpc[2] - AT_GALACTIC_CENTRE[2]),
     ];
     const view = makeProjectedView(behindSirius);
-    const stamped = stampedIds(makeState(makeRenderer(), ALL_SEEDED_STARS), behindSirius, view);
+    const stamped = stampedIds(makeState(makeRenderer(), EVERY_SEEDED), behindSirius, view);
 
     // The overlap is real: both project inside one footprint of each other.
     const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
@@ -638,12 +643,7 @@ describe('the Galactic Centre pick stamp', () => {
     // visual step must not carry a zero-star row), but the caption is still on
     // screen — so `pickEnabled` must admit the layer anyway or the stamp never
     // reaches the pick texture.
-    const allStarsMuted = makeState(
-      makeRenderer(),
-      SCENE_STARS,
-      false,
-      makeBodyItems((id) => (id === 'sun' || id === 's-star' ? { enabled: false } : {})),
-    );
+    const allStarsMuted = makeState(makeRenderer(), {});
     const ctx = makeCtx(AT_GALACTIC_CENTRE);
     expect(starPointsPass.enabled(allStarsMuted, ctx, VIEW_STUB)).toBe(false);
     expect(starPointsPass.pickEnabled!(allStarsMuted, ctx, VIEW_STUB)).toBe(true);

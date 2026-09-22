@@ -19,6 +19,8 @@ import { constructGpuHandles } from '../../../../src/services/engine/gpuHandles/
 import { destroyGpuHandles } from '../../../../src/services/engine/gpuHandles/destroyGpuHandles';
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { createStarPointRenderer } from '../../../../src/services/gpu/renderers/bodies/starPointRenderer';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
+import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -101,7 +103,11 @@ describe('GPU_HANDLE_ROWS — starPointRenderer boot seed', () => {
     const row = GPU_HANDLE_ROWS.find((r) => r.key === 'starPointRenderer') as
       | GpuHandleRow
       | undefined;
-    const state = { data: createEngineData(), gpu: {} } as unknown as EngineState;
+    const state = {
+      data: createEngineData(),
+      gpu: {},
+      settings: { starCatalogs: INITIAL_SETTINGS.starCatalogs },
+    } as unknown as EngineState;
     const realDeps = { ctx: { device: {} } } as unknown as GpuHandleConstructDeps;
 
     row!.construct(state, realDeps);
@@ -119,9 +125,9 @@ describe('GPU_HANDLE_ROWS — starPointRenderer boot seed', () => {
     // closure) — a wrong epoch, a dropped star, or a forgotten setStars call
     // would each show up as a mismatch here.
     const bootStates = deriveBodyStates(CONST_J2000);
-    const seededStars = state.data.bodies.stars;
+    const seededStars = visibleStars(INITIAL_SETTINGS.starCatalogs);
     expect(uploaded.map((s) => s.id)).toEqual(seededStars.map((s) => s.id));
-    expect(seededStars.map((s) => s.id)).toContain('sun');
+    expect(uploaded.map((s) => s.id)).toContain('sun');
     for (const star of uploaded) {
       expect(star.positionMpc).toEqual(bootStates.get(star.id)!.positionMpc);
     }

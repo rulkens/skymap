@@ -56,7 +56,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/frame/passes/earthPass.ts',
   'src/services/engine/frame/passes/fieldStarSpherePass.ts',
   'src/services/engine/frame/pickProgram.ts',
-  'src/services/engine/frame/visibleStars.ts',
   'src/services/engine/galaxyGenerator/shared/galaxyLightDecomposition.ts',
   'src/services/engine/galaxyGenerator/shared/generationUboLayout.ts',
   'src/services/engine/galaxyGenerator/v1/carveDustLayout.ts',

@@ -355,6 +355,7 @@ import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFo
 // reads `state.data.bodies` (the far-star partition for setStars; the seeded
 // planet list drives planetsPass), so the state fixture carries the real
 // construction-time seeds.
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 // The registry itself: derives the expected non-null / null key sets for the
 // phase-split assertion below, rather than a hand-written key list that
@@ -405,8 +406,7 @@ function makeState(): EngineState {
       orbitTrailRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
-    // planetRenderer fed by bodies.planets, and initGpu partitions
-    // bodies.stars for setStars.
+    // planetRenderer fed by bodies.planets.
     data: createEngineData(),
     // Read by the `renderTargets` row's construct closure via
     // `composeRenderTargetRows`; no Layer targets in this fixture.
@@ -430,7 +430,8 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    settings: {},
+    // The star-point boot seed walks the seeded catalogs behind these gates.
+    settings: { starCatalogs: INITIAL_SETTINGS.starCatalogs },
     // Both families are minted in wireSlots, not initGpu; declared here (empty,
     // untouched by this phase) only because EngineState requires them.
     assetSlots: {

@@ -33,6 +33,8 @@ function items(gaiaEnabled: boolean): Record<StarCatalogId, StarCatalogItemSetti
   return {
     famousStar: { enabled: true, labelEnabled: true },
     gaiaStars: { enabled: gaiaEnabled, labelEnabled: true },
+    sun: { enabled: true, labelEnabled: true },
+    sStar: { enabled: true, labelEnabled: false },
   };
 }
 

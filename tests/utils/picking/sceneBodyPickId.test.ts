@@ -12,7 +12,7 @@ import { sceneBodyPickId } from '../../../src/utils/picking/sceneBodyPickId';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../src/data/bodies/sceneSun';
 import { SGR_A_STAR } from '../../../src/data/bodies/sceneSgrAStar';
 import { unpackPick } from '../../../src/data/selectionEncoding';
 import { Source } from '../../../src/data/sources';
@@ -39,11 +39,11 @@ describe('sceneBodyPickId', () => {
     expect(planet.sourceCode).toBe(Source.Planet);
     expect(SCENE_PLANETS[planet.localIdx]?.id).toBe('moon');
 
-    // The Sun rides the star table, not a Sun-specific code — its caption must
-    // decode the same way its dot does.
+    // The Sun packs its OWN source now — it is its own one-row star catalog, so
+    // its caption decodes the same way its dot does.
     const sun = unpackPick(sceneBodyPickId('sun')!)!;
-    expect(sun.sourceCode).toBe(Source.FamousStar);
-    expect(SCENE_STARS[sun.localIdx]?.id).toBe('sun');
+    expect(sun.sourceCode).toBe(Source.Sun);
+    expect(SCENE_SUN[sun.localIdx]?.id).toBe('sun');
   });
 
   it('yields no id for an unseeded body', () => {

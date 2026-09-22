@@ -94,10 +94,9 @@ function makeState(
   const named: Record<string, boolean> =
     typeof bodyLabels === 'boolean' ? {} : { ...bodyLabels, sun: bodyLabels.sun ?? true };
   const unnamed = typeof bodyLabels === 'boolean' ? bodyLabels : true;
-  const bodyItems = makeBodyItems((id) => ({
-    ...(id === 'sun' ? { enabled: sunVisible } : {}),
-    labelEnabled: named[id] ?? unnamed,
-  }));
+  const bodyItems = makeBodyItems((id) => ({ labelEnabled: named[id] ?? unnamed }));
+  // The Sun is a star catalog now: both its axes live in that cluster's row.
+  const sunLabelEnabled = named.sun ?? unnamed;
   return {
     // `sceneOccluderBodies` (the per-caption depth gate) reads the real seed
     // tables off the state, so the fixture carries them rather than a stub:
@@ -115,7 +114,11 @@ function makeState(
       bodies: { items: bodyItems },
       starCatalogs: {
         enabled: starCatalogsMasterEnabled,
-        items: { famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled } },
+        items: {
+          famousStar: { enabled: starMapEnabled, labelEnabled: starMapLabelsEnabled },
+          sun: { enabled: sunVisible, labelEnabled: sunLabelEnabled },
+          sStar: { enabled: true, labelEnabled: false },
+        },
       },
     },
     subsystems: {
@@ -124,6 +127,7 @@ function makeState(
           const item = handle.item;
           if (item !== undefined && item in registryOverrides) return registryOverrides[item]!;
           if (item === 'famousStar') return starMapLabelsEnabled ? 1 : 0;
+          if (item === 'sun') return sunLabelEnabled ? 1 : 0;
           return item !== undefined && (bodyItems[item]?.labelEnabled ?? true) ? 1 : 0;
         },
       },
@@ -192,17 +196,18 @@ describe('produceSceneBodyCaptions', () => {
     expect(fadeAlphaOf(offOut.labels, EARTH_LABEL_ID)).toBeGreaterThan(0);
   });
 
-  it('mutes the star map when the cluster master is off, even with the row and label on', () => {
-    // `subjectVisible` for the star row is `starCatalogs.enabled &&
-    // items.famousStar.enabled` — a caption must not survive the cluster
-    // master that hid the dot it names.
+  it('mutes every star caption when the cluster master is off, even with rows and labels on', () => {
+    // `subjectVisible` for a star row is `starCatalogs.enabled && items[id]
+    // .enabled` — a caption must not survive the cluster master that hid the dot
+    // it names. The Sun is one of those rows now, so it goes with the master;
+    // Earth is a body and stays.
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const out = produceSceneBodyCaptions(
       makeState(true, true, true, true, /* starCatalogsMasterEnabled */ false),
       makeCtx(camPos),
     );
     expect(fadeAlphaOf(out.labels, PROXIMA_LABEL_ID)).toBe(0);
-    expect(fadeAlphaOf(out.labels, SUN_LABEL_ID)).toBeGreaterThan(0);
+    expect(fadeAlphaOf(out.labels, SUN_LABEL_ID)).toBe(0);
     expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBeGreaterThan(0);
   });
 

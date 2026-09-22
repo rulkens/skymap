@@ -7,7 +7,7 @@
  * the descent toward the solar system — and the hop to the stellar
  * neighbourhood — something to aim at.
  *
- * Sourced from the full seed set (`SCENE_EARTH` + `SCENE_STARS` +
+ * Sourced from the full seed set (`SCENE_EARTH` + `SCENE_STARS` + `SCENE_SUN` +
  * `SCENE_PLANETS` + `SGR_A_STAR` + `SCENE_MESH_BODIES`), each tinted by its own
  * authored colour: a star's spectral-class `color`, a planet's or mesh body's
  * `albedo`, and fixed tints for the two records that carry no colour (Earth,
@@ -42,12 +42,12 @@ import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import { SUN_ENTRY } from '../../../data/sources/sun';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
@@ -96,10 +96,10 @@ export function sceneBodyLabelId(bodyId: string): string {
 }
 
 /**
- * The caption ids of the local star map (the Sun included). The foreground
- * layer reads this to fade + declutter the dense star captions WITHOUT touching
- * the Earth / planet captions, which always show at full alpha. Derived from
- * `SCENE_STARS` so it can never drift from the seeded star set.
+ * The caption ids of the curated local star map — the Sun is its own source and
+ * its own caption kind, so it is not among them. The dense star captions fade +
+ * declutter as a set WITHOUT touching the Earth / planet captions, which always
+ * show at full alpha. Derived from `SCENE_STARS` so it can never drift.
  */
 export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
   SCENE_STARS.map((star) => sceneBodyLabelId(star.id)),
@@ -181,18 +181,14 @@ function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
     bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
-    // The Sun rides the star seed table but is its own registry row, so it gets
-    // its own caption kind: the kind is what routes the caption to that row's
-    // label gate, and it must out-rank every other caption in a declutter
-    // collision (CAPTION_PRIORITY). The seed table carries no per-star source
-    // tag, so the row's `id` is the lookup key that tells the two apart.
     ...SCENE_STARS.map((star) =>
-      bodyLabel(
-        star,
-        bodyStates.get(star.id)!.positionMpc,
-        star.color,
-        star.id === SUN_ENTRY.id ? 'sun' : 'star',
-      ),
+      bodyLabel(star, bodyStates.get(star.id)!.positionMpc, star.color, 'star'),
+    ),
+    // The Sun's own caption kind: the kind routes the caption to its own row's
+    // label gate, and it must out-rank every other caption in a declutter
+    // collision (CAPTION_PRIORITY).
+    ...SCENE_SUN.map((star) =>
+      bodyLabel(star, bodyStates.get(star.id)!.positionMpc, star.color, 'sun'),
     ),
     ...SCENE_PLANETS.map((planet) =>
       bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),

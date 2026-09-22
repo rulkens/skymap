@@ -100,7 +100,14 @@ function makeState(): EngineState {
     settings: {
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },
-      starCatalogs: { enabled: true, items: { famousStar: { enabled: true, labelEnabled: true } } },
+      starCatalogs: {
+        enabled: true,
+        items: {
+          famousStar: { enabled: true, labelEnabled: true },
+          sun: { enabled: true, labelEnabled: true },
+          sStar: { enabled: true, labelEnabled: false },
+        },
+      },
     },
     // Fail-safe pass-throughs (the real registry's unregistered-id default,
     // the real clip player's no-clip-playing default): every row here is

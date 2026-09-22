@@ -53,7 +53,7 @@
  *
  * ### Why option B (a thin sphere layer), NOT option A (a transient scene star)
  *
- * Appending the resolved star to `visibleStars(state)` so
+ * Appending the resolved star to `visibleStars`' result so
  * `partitionStarsByResolution` / `starSpheresPass` pick it up "for free" reads
  * tidy but braids two independent things: it makes the authored SCENE-BODY star
  * set (a static seed table + one settings toggle) depend on the RUNTIME star cut,

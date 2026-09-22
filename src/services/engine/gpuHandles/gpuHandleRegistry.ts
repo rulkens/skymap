@@ -42,6 +42,7 @@ import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/s
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
+import { visibleStars } from '../frame/visibleStars';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
@@ -274,7 +275,7 @@ export const GPU_HANDLE_ROWS = [
       const bootBodyStates = deriveBodyStates(CONST_J2000);
       const starPointRenderer = createStarPointRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
       starPointRenderer.setStars(
-        state.data.bodies.stars.map((star) => ({
+        visibleStars(state.settings.starCatalogs).map((star) => ({
           ...star,
           positionMpc: bootBodyStates.get(star.id)!.positionMpc,
         })),
