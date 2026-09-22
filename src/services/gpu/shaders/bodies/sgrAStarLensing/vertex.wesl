@@ -10,8 +10,10 @@ import package::lib::billboard::quadCorner;
 @group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
 
 // Slack on the exact fade-covering radius, so the fragment's fade always
-// reaches 0 strictly inside the quad.
-const BILLBOARD_MARGIN: f32 = 1.1;
+// reaches 0 strictly inside the quad. Mirrors 'SGR_A_STAR_LENS_QUAD_MARGIN'
+// in 'data/bodies/sgrAStarLensQuad.ts' (parity-tested), the same slack a
+// body's drawn envelope carries so the quad clears its own slab's near plane.
+const LENS_QUAD_MARGIN: f32 = 1.1;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
@@ -33,7 +35,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   // Half-size arrives finished from the CPU ('lensQuadPlaneRadiusRs', f64):
   // in f32 HERE the b = R·d/sqrt(R^2+d^2) inversion degenerates close-in into
   // a ~5e4x-oversized quad whose interpolation shakes every ray.
-  let worldRadiusM = u.schwarzschildRadiusM * u.quadPlaneRadiusRs * BILLBOARD_MARGIN;
+  let worldRadiusM = u.schwarzschildRadiusM * u.quadPlaneRadiusRs * LENS_QUAD_MARGIN;
   let corner = quadCorner(vi);
   let posRelCamM = toAnchor + right * (corner.x * worldRadiusM) + up * (corner.y * worldRadiusM);
 

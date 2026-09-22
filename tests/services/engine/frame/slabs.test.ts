@@ -36,6 +36,10 @@ import {
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { sgrAStarLensQuadRadiusM } from '../../../../src/data/bodies/sgrAStarLensQuad';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
+import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -347,6 +351,52 @@ describe('deriveSlabs', () => {
     // about the scenario's geometry, not the fix, so it holds either way.
     const oldRadialNear = dM - ringOuterM;
     expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
+  });
+
+  it("clears the Sgr A* lens quad's near side with its slab's near plane when the hole is off-axis (fix A)", () => {
+    // Before fix A, bodyDrawRadiusM(body) ignored the lens pass's quad
+    // entirely, so the row's margin was PROXY_SCALE·r_s — a few percent of
+    // r_s — while the quad the pass actually paints reaches many r_s off the
+    // view axis at this distance. θ=30° puts that quad's near side well
+    // behind the OLD near plane, which is exactly the dark-strip clip the
+    // fix closes.
+    //
+    // distRs = 1000, not the ~30 r_s arrival distance: below ~50 r_s (the
+    // LUT's own max impact parameter, `MAX_IMPACT_PARAM_RS`) edgeFadeEndRs
+    // is pinned to that floor REGARDLESS of distance, so lensQuadPlaneRadiusRs
+    // hits its close-orbit CAP (8×distRs) and the quad's off-axis corner
+    // swings behind the camera — a real, harmless case (the fallback near
+    // plane collapses to near-zero there, clipping nothing of scale) but not
+    // one 'viewZ − R·sinθ' describes. 1000 r_s stays deep in the lensing
+    // band (goneAt ≈ 5900 r_s) while keeping the quad's near corner in FRONT
+    // of the camera, where that formula is exact.
+    const rS = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
+    const dM = 1000 * rS;
+    const thetaRad = (30 * Math.PI) / 180;
+    const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
+    // Same derivation as the Saturn pose-B case above.
+    const bodyRelEye: Vec3 = [dM * Math.sin(thetaRad), 0, -dM * Math.cos(thetaRad)];
+    const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
+    const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
+
+    const cam = makeCam(100);
+    const frustum = symmetricFrustum(cam.fovYRad, cam.aspect);
+    const viewportPx: Vec2 = [1920, 1080];
+    const pxPerRad = viewportPx[1] / (frustum.tanUp - frustum.tanDown);
+
+    const slabs = deriveSlabs(baseInput({ cam, pose, visibleBodies: [SGR_A_STAR], viewportPx }));
+    const row = slabs[2]!;
+
+    const viewZ = dM * Math.cos(thetaRad);
+    const quadRadiusM = sgrAStarLensQuadRadiusM(dM, pxPerRad);
+    const quadNearFaceM = viewZ - quadRadiusM * Math.sin(thetaRad);
+    expect(row.near).toBeLessThanOrEqual(quadNearFaceM);
+
+    // Documents the bug: the OLD margin (PROXY_SCALE·r_s, no envelope) sits
+    // in FRONT of the quad's true near face at this θ — i.e. it clipped the
+    // quad. This assertion is about the scenario's geometry, not the fix.
+    const oldNearFaceM = viewZ - PROXY_SCALE * rS;
+    expect(oldNearFaceM).toBeGreaterThan(quadNearFaceM);
   });
 
   it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {

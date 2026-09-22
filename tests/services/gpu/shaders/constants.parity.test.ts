@@ -38,6 +38,7 @@ import {
   HEIGHT_POSTS_PER_TILE,
 } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { SGR_A_STAR_LENS_QUAD_MARGIN } from '../../../../src/data/bodies/sgrAStarLensQuad';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 
 /**
@@ -349,6 +350,24 @@ describe('PROXY_SCALE parity (proxyScale.ts ↔ analyticSphere.wesl)', () => {
       weslValue,
       `${file}: WESL PROXY_SCALE (${weslValue}) does not match TS PROXY_SCALE (${PROXY_SCALE})`,
     ).toBe(PROXY_SCALE);
+  });
+});
+
+/**
+ * SGR_A_STAR_LENS_QUAD_MARGIN (sgrAStarLensQuad.ts) mirrors the shader's own
+ * billboard slack — `bodyDrawRadiusM`'s envelope must cover the SAME quad the
+ * vertex stage actually draws, or a margin drift reopens the near-plane clip
+ * fix A closes.
+ */
+describe('LENS_QUAD_MARGIN parity (sgrAStarLensQuad.ts ↔ sgrAStarLensing/vertex.wesl)', () => {
+  it("vertex.wesl's LENS_QUAD_MARGIN equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/sgrAStarLensing/vertex.wesl';
+    const weslValue = readWeslConst(file, 'LENS_QUAD_MARGIN');
+    expect(weslValue, `LENS_QUAD_MARGIN is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL LENS_QUAD_MARGIN (${weslValue}) does not match TS SGR_A_STAR_LENS_QUAD_MARGIN (${SGR_A_STAR_LENS_QUAD_MARGIN})`,
+    ).toBe(SGR_A_STAR_LENS_QUAD_MARGIN);
   });
 });
 
