@@ -395,6 +395,8 @@ describe('renderFrame visual baseline', () => {
         // resolveLayerOpacity's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
         focusBlend: 0,
+        // No body rows in this scene: the two slabs above are cosmological.
+        slabBodyCandidates: [],
         // The executor resolves hdr/volume attachments — and
         // volumeUpsamplePass its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,
