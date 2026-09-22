@@ -26,10 +26,10 @@ describe('ROW_VIEW body leading visual', () => {
 });
 
 describe('ROW_VIEW star rows', () => {
-  it("renders a featured star's captured shot, found by card id, not focus id", () => {
-    // A star card's focus id ('star-sirius') and the id its thumbnail is filed
-    // under ('body-sirius') differ, so the row resolves the shot through
-    // CARD_SHOT_BY_FOCUS_ID; a plain focus-id path would render a 404'ing img.
+  it("renders a featured star's captured shot off its focus id", () => {
+    // A star row's focus id is what the card is filed under, so the shot comes
+    // straight from `cardShotUrl` — the same path bodies take. A row that fell
+    // back to the body focus id would render a 404'ing img.
     const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
     const row: ScoredRow = {
       kind: 'starCatalog',
@@ -40,8 +40,8 @@ describe('ROW_VIEW star rows', () => {
     };
     const leading = ROW_VIEW.starCatalog(row).leading;
     expect(isValidElement(leading) && leading.type).toBe('img');
-    expect(isValidElement(leading) && (leading.props as { src: string }).src).toContain(
-      'body-sirius',
+    expect(isValidElement(leading) && (leading.props as { src: string }).src).toBe(
+      '/images/featured/star-sirius.webp',
     );
   });
 });
