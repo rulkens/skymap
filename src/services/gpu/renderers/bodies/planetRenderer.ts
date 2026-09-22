@@ -30,7 +30,7 @@
  * one row, but `planetsPass` calls `draw` once PER BODY-M SLAB ROW, all
  * inside ONE submit (Task 7's per-body slabs) — a single shared instance
  * buffer would let a later row's `writeBuffer` clobber an earlier row's bytes
- * before the GPU ran either draw. Fix: each `bodyId` gets its OWN instance
+ * before the GPU ran either draw. Fix: each `hostId` gets its OWN instance
  * buffer (`texturedBodyRenderer`'s own-buffer-per-body precedent, keyed here
  * by the caller's id instead of a bind group), so two same-submit rows never
  * touch the same bytes.
@@ -184,7 +184,7 @@ export function createPlanetRenderer(
     },
   });
 
-  // Own instance buffer per `bodyId` — the caller's own per-body-m-slab-row
+  // Own instance buffer per `hostId` — the caller's own per-body-m-slab-row
   // identity — rather than one shared buffer, because `planetsPass` calls
   // `draw` once per row, all inside one submit (see the module header's
   // writeBuffer-vs-submit note). A body-m row draws exactly one planet, so
@@ -193,15 +193,15 @@ export function createPlanetRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(pass: GPURenderPassEncoder, bodyId: SlabHostId, instance: Float32Array): void {
-    let buffer = bodies.get(bodyId);
+  function draw(pass: GPURenderPassEncoder, hostId: SlabHostId, instance: Float32Array): void {
+    let buffer = bodies.get(hostId);
     if (buffer === undefined) {
       buffer = device.createBuffer({
-        label: `planet-instance-vbo-${bodyId}`,
+        label: `planet-instance-vbo-${hostId}`,
         size: INSTANCE_STRIDE,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
-      bodies.set(bodyId, buffer);
+      bodies.set(hostId, buffer);
     }
 
     device.queue.writeBuffer(buffer, 0, instance, 0, INSTANCE_FLOATS);

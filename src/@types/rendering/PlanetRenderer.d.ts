@@ -13,7 +13,7 @@
  * Each body's MVP + albedo + sun direction rides in a per-instance
  * vertex-buffer record, needing neither a per-body bind nor a per-draw
  * uniform — but `draw` is called once per body-m slab row (own instance
- * buffer per `bodyId`), not once for the whole roster; see `planetRenderer`'s
+ * buffer per `hostId`), not once for the whole roster; see `planetRenderer`'s
  * header for the per-body-buffer race and its fix.
  */
 
@@ -22,16 +22,18 @@ import type { SlabHostId } from '../engine/frame/SlabHostId';
 
 export type PlanetRenderer = Renderer & {
   /**
-   * Draw the one planet belonging to `bodyId` into the current (opaque,
-   * depth-tested) pass. `instance` is a packed Float32Array of 28 floats:
+   * Draw the one planet belonging to the slab's host into the current
+   * (opaque, depth-tested) pass; `hostId` is always a planet id for this
+   * renderer (a place never reaches it). `instance` is a packed Float32Array
+   * of 28 floats:
    * floats 0..15 the body's column-major MVP (model T·R·S + view +
    * projection), 16..18 linear-RGB albedo (+ pad at 19), 20..22 the sun
    * direction in the body's local frame (+ pad at 23), 24..26 camPosLocal (+
    * pad at 27). `planetsPass` calls `draw` once per body-m slab row, all
-   * inside one submit, so each `bodyId` gets its OWN instance buffer (the
+   * inside one submit, so each `hostId` gets its OWN instance buffer (the
    * `texturedBodyRenderer` own-buffer-per-body precedent): two same-submit
    * calls for different ids never share a write target, so neither can
    * clobber the other before the GPU runs either draw.
    */
-  draw(pass: GPURenderPassEncoder, bodyId: SlabHostId, instance: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, hostId: SlabHostId, instance: Float32Array): void;
 };

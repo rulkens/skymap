@@ -14,9 +14,9 @@ import type { SlabHostId } from './SlabHostId';
 export type SlabRow = {
   /** Pose = `ctx.bodyPose(anchorId)`; also the row's `SlabFrame.hostId`. */
   readonly anchorId: SlabHostId;
-  /** Outermost drawn shell, metres — bracket, pick, apparent size. */
+  /** Outermost drawn extent, metres (`bodyDrawRadiusM`) — drives the far edge. */
   readonly boundingRadiusM: number;
-  /** The sphere the row occupies, metres — what the culls inflate. */
+  /** Solid-sphere occupied radius, metres (`bodyFootprintRadiusM`) — drives the near edge / cull. */
   readonly footprintRadiusM: number;
   /** The row exists only while `fadeBand(activeBand, |cam − anchor|) > 0`. */
   readonly activeBand?: FadeBand;
