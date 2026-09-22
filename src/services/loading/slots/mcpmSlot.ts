@@ -24,8 +24,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
     name: 'mcpm',
     fetch: mcpmFetcher,
     commit: async (cube) => {
-      const id = SOURCE_REGISTRY[Source.Mcpm].id;
-      uploadVolumeField(state, cb.store, id, cube);
+      uploadVolumeField(state, cb.store, SOURCE_REGISTRY[Source.Mcpm], cube);
     },
   });
   slot.subscribe((s) => {

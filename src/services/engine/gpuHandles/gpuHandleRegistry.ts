@@ -53,6 +53,7 @@ import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
 import type { GpuHandleConstructDeps } from '../../../@types/engine/handles/GpuHandleConstructDeps';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 
 // `as const satisfies`, not a plain `: readonly GpuHandleRow[]` annotation:
 // `satisfies` checks every row against its `GpuHandleRow` union member;
@@ -210,7 +211,11 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'volumeFieldRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
+      createVolumeFieldRenderer<CosmicWebDensityFieldId>(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        deps.fadeBgl,
+      ),
   },
   {
     key: 'volumeUpsample',

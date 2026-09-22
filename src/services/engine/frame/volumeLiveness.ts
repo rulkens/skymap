@@ -2,7 +2,10 @@
  * volumeLiveness — the one home for "is there live scalar-volume work this
  * frame?". Both volume layers gate on `deriveVolumeLiveness(...) !== null` — the
  * half-res raymarch producer and the upsample consumer that reads its offscreen
- * — so they cannot drift into drawing into a target nobody samples.
+ * — so they cannot drift into drawing into a target nobody samples. The state
+ * reads (renderer handle, master toggle/fade, recession, camera distance) live
+ * here; the clamp, the per-field band fold and the `hasActiveFields` check are
+ * `src/utils/volume/deriveVolumeLiveness.ts`'s pure core.
  *
  * Pure projection: reads live state, allocates fresh closures per call, caches
  * nothing, so the several calls per frame are safe by construction.
@@ -11,21 +14,16 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import type { VolumeFieldLiveness } from '../../../@types/rendering/VolumeFieldLiveness';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
-import { clampVolumeFieldSettings } from '../../../utils/clampVolumeFieldSettings';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
+import { deriveVolumeLiveness as deriveVolumeFieldLiveness } from '../../../utils/volume/deriveVolumeLiveness';
 
 // `null` = no live volume work: renderer missing, master off AND fully faded, or
 // no field active.
 export function deriveVolumeLiveness(
   state: PassState,
   ctx: FrameView,
-): {
-  settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined;
-  fadeOpacityOf: (id: CosmicWebDensityFieldId) => number;
-} | null {
+): VolumeFieldLiveness<CosmicWebDensityFieldId> | null {
   const renderer = state.gpu.volumeFieldRenderer;
   if (renderer === null) return null;
 
@@ -39,20 +37,11 @@ export function deriveVolumeLiveness(
   // Mpc from the heliocentric render origin — the key every field's `bands` are
   // measured against.
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  const settingsOf = (id: CosmicWebDensityFieldId) => {
-    const raw = state.settings.cosmicWebDensity.items[id];
-    return raw === undefined ? undefined : clampVolumeFieldSettings(raw);
-  };
-  const fadeOpacityOf = (id: CosmicWebDensityFieldId) => {
-    // No store row at all (id never seeded) gets the same default a stale
-    // row would via clampVolumeFieldSettings — see that function's header.
-    const bands = settingsOf(id)?.bands ?? [SCALE_FADE_BANDS.surveyDeepZoom];
-    const bandFactor = bands.reduce((factor, band) => factor * fadeBand(band, camDistMpc), 1);
-    return (
-      resolveLayerOpacity(state, ctx, { kind: 'cosmicWebDensityField', id }) * recessedMaster * bandFactor
-    );
-  };
 
-  if (!renderer.hasActiveFields(settingsOf, fadeOpacityOf)) return null;
-  return { settingsOf, fadeOpacityOf };
+  return deriveVolumeFieldLiveness(
+    renderer,
+    (id) => state.settings.cosmicWebDensity.items[id],
+    (id) => resolveLayerOpacity(state, ctx, { kind: 'cosmicWebDensityField', id }) * recessedMaster,
+    camDistMpc,
+  );
 }

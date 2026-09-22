@@ -5,13 +5,13 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
-import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { AppStore } from '../../../../src/store/types';
 import { addCosmicWebDensityField } from '../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { ApplyIntentState } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { uploadVolumeField } from '../../../../src/services/engine/volume/uploadVolumeField';
+import { MCPM_ENTRY } from '../../../../src/data/sources/mcpm';
 
-const fieldId = 'mcpm' as CosmicWebDensityFieldId;
+const fieldId = MCPM_ENTRY.id;
 
 function fakeCube(): ScalarCube {
   return { dims: [4, 4, 4] } as unknown as ScalarCube;
@@ -34,10 +34,10 @@ describe('uploadVolumeField', () => {
     const store = { dispatch: vi.fn() } as unknown as AppStore;
     const cube = fakeCube();
 
-    uploadVolumeField(state, store, fieldId, cube);
+    uploadVolumeField(state, store, MCPM_ENTRY, cube);
 
     expect(store.dispatch).toHaveBeenCalledWith(addCosmicWebDensityField(fieldId));
-    expect(upload).toHaveBeenCalledWith(fieldId, cube);
+    expect(upload).toHaveBeenCalledWith(fieldId, cube, MCPM_ENTRY);
     const dispatchOrder = (store.dispatch as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
     const uploadOrder = upload.mock.invocationCallOrder[0]!;
     expect(dispatchOrder).toBeLessThan(uploadOrder);

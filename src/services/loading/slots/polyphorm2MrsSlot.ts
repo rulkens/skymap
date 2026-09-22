@@ -21,8 +21,7 @@ export const createPolyphorm2MrsSlot: SlotFactory<ScalarCube, Polyphorm2MRSReq> 
     name: 'polyphorm2Mrs',
     fetch: polyphorm2MrsFetcher,
     commit: async (cube) => {
-      const id = SOURCE_REGISTRY[Source.Polyphorm2MRS].id;
-      uploadVolumeField(state, cb.store, id, cube);
+      uploadVolumeField(state, cb.store, SOURCE_REGISTRY[Source.Polyphorm2MRS], cube);
     },
   });
   slot.subscribe((s) => {

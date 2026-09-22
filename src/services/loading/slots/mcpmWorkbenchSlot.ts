@@ -25,8 +25,7 @@ export const createMcpmWorkbenchSlot: SlotFactory<ScalarCube, void> = (state, cb
     name: 'mcpmWorkbench',
     fetch: mcpmWorkbenchFetcher,
     commit: async (cube) => {
-      const id = SOURCE_REGISTRY[Source.McpmWorkbench].id;
-      uploadVolumeField(state, cb.store, id, cube);
+      uploadVolumeField(state, cb.store, SOURCE_REGISTRY[Source.McpmWorkbench], cube);
     },
   });
   slot.subscribe((s) => {

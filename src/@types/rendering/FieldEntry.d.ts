@@ -4,13 +4,14 @@
  *
  * Holds the things the renderer genuinely owns: GPU resources (textures,
  * buffers, bind groups), the cube's model / inverse-model matrices, the
- * per-cube STATIC presentation config (contrastCenter, envelope), and a
- * `residentPaletteId` GPU-residency fact.  The user-tunable knobs
- * (enabled, intensity, contrast, densityScale, paletteId, trim, exposure)
- * are NOT mirrored here — they live in `state.settings.cosmicWebDensity.items`
- * and are read per frame in `draw` via the `settingsOf` projection.
- * Mirroring them here would re-introduce the very entanglement the
- * settings unification removes (two sources of truth that can drift).
+ * per-cube STATIC presentation config (contrastCenter, envelope) supplied
+ * by the caller's `upload(id, cube, statics)`, and a `residentPaletteId`
+ * GPU-residency fact.  The user-tunable knobs (enabled, intensity,
+ * contrast, densityScale, paletteId, trim, exposure) are NOT mirrored
+ * here — the caller's settings store owns them and they are read per
+ * frame in `draw` via the `settingsOf` projection.  Mirroring them here
+ * would re-introduce the very entanglement the settings unification
+ * removes (two sources of truth that can drift).
  *
  * Lives in @types/rendering because the renderer's `.d.ts` needs the
  * shape.
@@ -18,11 +19,10 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 
-import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  id: CosmicWebDensityFieldId;
+  id: string;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
    * coordinate space [0, 1].  Divergent palettes (coolwarm)
@@ -30,8 +30,8 @@ export type FieldEntry = {
    * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
    * the deadband suppresses the void floor (LUT t=0) and the stretch
    * pushes mid-density values toward the bright end.  Per-cube
-   * static — read once at registration time from the per-id
-   * registry, not user-tunable.  See `applyContrastWindow` in
+   * static — read once at registration time from `upload`'s `statics`
+   * argument, not user-tunable.  See `applyContrastWindow` in
    * `fragment.wesl` for the math.
    */
   contrastCenter: number;
@@ -42,14 +42,14 @@ export type FieldEntry = {
    * `envelopeOuter` are fully suppressed; values in between cross-fade.
    * Setting both to a value ≥ √3 (the cube-corner distance) disables
    * the envelope.  Per-cube static — read once at registration from
-   * the per-id registry.
+   * `upload`'s `statics` argument.
    */
   envelopeInner: number;
   envelopeOuter: number;
   /**
    * GPU-RESIDENCY fact: the palette id currently uploaded into
-   * `paletteTexture`.  NOT a user setting (that's
-   * `state.settings.cosmicWebDensity.items[id].paletteId`); this just tracks
+   * `paletteTexture`.  NOT a user setting (that's owned by the caller's
+   * settings store, keyed by field id); this just tracks
    * what's resident on the GPU.  `draw` compares it against the field's
    * live setting and re-uploads the LUT in place when they differ —
    * palette is the one knob with a GPU side effect, so it's the one knob

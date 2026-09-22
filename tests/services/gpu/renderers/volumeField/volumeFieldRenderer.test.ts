@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { createVolumeFieldRenderer } from '../../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer';
-import { getVolumeFieldDefaults } from '../../../../../src/data/volume/volumeFieldDefaults';
+import { MCPM_ENTRY } from '../../../../../src/data/sources/mcpm';
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 
@@ -76,7 +76,7 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
     intensity: 0.9,
     contrast: 4,
     densityScale: 2,
-    paletteId: getVolumeFieldDefaults('mcpm').paletteId,
+    paletteId: MCPM_ENTRY.paletteId,
     trim: 0.1,
     exposure: 3,
     ...overrides,
@@ -101,7 +101,7 @@ describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
       pass,
@@ -125,7 +125,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // state for that field and must not issue any GPU work.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
       pass,
@@ -140,13 +140,13 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(uniformScratch(device)).toBeUndefined();
   });
 
-  it('upload seeds contrastCenter / envelope from the registry', () => {
-    // Per-cube static config read from the registry once at upload;
-    // user-tunable knobs are absent from the entry and arrive per draw
-    // via settingsOf.
+  it('upload seeds contrastCenter / envelope from statics', () => {
+    // Per-cube static config taken from `upload`'s `statics` argument;
+    // user-tunable knobs are absent from it and arrive per draw via
+    // settingsOf.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     r.draw(
       makeFakePass(),
       new Float32Array(16) as unknown as Mat4,
@@ -157,31 +157,30 @@ describe('createVolumeFieldRenderer draw', () => {
       () => 1,
     );
     const s = uniformScratch(device);
-    const defs = getVolumeFieldDefaults('mcpm');
-    expect(s?.[58]).toBeCloseTo(defs.contrastCenter); // contrastCenter
-    expect(s?.[59]).toBeCloseTo(defs.envelope.inner); // envelopeInner
-    expect(s?.[60]).toBeCloseTo(defs.envelope.outer); // envelopeOuter
+    expect(s?.[58]).toBeCloseTo(MCPM_ENTRY.contrastCenter); // contrastCenter
+    expect(s?.[59]).toBeCloseTo(MCPM_ENTRY.envelope.inner); // envelopeInner
+    expect(s?.[60]).toBeCloseTo(MCPM_ENTRY.envelope.outer); // envelopeOuter
   });
 
   it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
-    // First draw with the registry-default palette — no extra upload
+    // First draw with the statics-seeded default palette — no extra upload
     // (the LUT was already seeded in upload).  Second draw with a
     // different palette — exactly one writeTexture.  Third draw with
     // the same changed palette — no further writeTexture (resident
     // now tracks the new id).
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock
       .calls.length;
-    // Draw with the registry-default palette (already resident).
+    // Draw with the statics-seeded default palette (already resident).
     r.draw(
       makeFakePass(),
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       1000,
       [0, 0, 5],
-      () => fullSettings({ paletteId: getVolumeFieldDefaults('mcpm').paletteId }),
+      () => fullSettings({ paletteId: MCPM_ENTRY.paletteId }),
       () => 1,
     );
     expect(
@@ -221,7 +220,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // `enabled` override a zero opacity and drew anyway.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     const pass = makeFakePass();
     r.draw(
       pass,
@@ -234,6 +233,23 @@ describe('createVolumeFieldRenderer draw', () => {
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
     expect(uniformScratch(device)).toBeUndefined();
+  });
+
+  it('uploads a field whose id no registry row names, palette seeded from statics', () => {
+    // The renderer names no registry — any id is valid as long as the
+    // caller supplies statics, which is what makes a second caller (a
+    // future dust volume on its own ids) possible without widening this
+    // renderer's id union.
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    expect(() =>
+      r.upload('dust', fixture(), {
+        paletteId: 'viridis',
+        contrastCenter: 0.5,
+        envelope: { inner: 2.0, outer: 2.0 },
+      }),
+    ).not.toThrow();
+    expect(r.listIds()).toContain('dust');
   });
 });
 
@@ -259,7 +275,7 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("unload destroys the field's four GPU resources and drops it from the map", () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     // upload() creates textures [volumeTexture, paletteTexture] (the only
     // createTexture calls) and, last among buffers, [uniformBuffer, fadeBuffer]
     // — the factory itself already created cornerBuffer/indexBuffer, so the
@@ -277,10 +293,10 @@ describe('createVolumeFieldRenderer unload / re-upload', () => {
   it("re-uploading the same id destroys the previous field's resources first", () => {
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     const [volumeTexture, paletteTexture] = createdTextures(device);
     const [uniformBuffer, fadeBuffer] = createdBuffers(device).slice(-2);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     expect(volumeTexture!.destroy).toHaveBeenCalledTimes(1);
     expect(paletteTexture!.destroy).toHaveBeenCalledTimes(1);
     expect(uniformBuffer!.destroy).toHaveBeenCalledTimes(1);
@@ -297,7 +313,7 @@ describe('createVolumeFieldRenderer hasActiveFields', () => {
     // layers disable), while a disabled field mid-fade-out stays ACTIVE so
     // its tail draws to completion — both from the single opacity test.
     const r = createVolumeFieldRenderer(mockDevice(), 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
     expect(
       r.hasActiveFields(
         () => fullSettings({ enabled: true }),

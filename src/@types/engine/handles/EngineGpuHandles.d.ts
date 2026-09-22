@@ -21,6 +21,7 @@ import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
+import type { CosmicWebDensityFieldId } from '../../data/volume/CosmicWebDensityFieldId';
 import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
@@ -294,7 +295,7 @@ export type EngineGpuHandles = {
    * per-field GPU buffer (3D volume textures, palette LUTs, uniform
    * buffers, corner / index VBOs).
    */
-  volumeFieldRenderer: VolumeFieldRenderer | null;
+  volumeFieldRenderer: VolumeFieldRenderer<CosmicWebDensityFieldId> | null;
   /**
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
