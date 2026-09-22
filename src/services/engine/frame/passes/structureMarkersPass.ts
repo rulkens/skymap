@@ -57,6 +57,7 @@ export const structureMarkersPass: ContentPass = {
       view.vp,
       view.viewportPx,
       ctx.drawPxPerRad,
+      view.camPos,
       surveyFade,
     );
   },
@@ -68,6 +69,12 @@ export const structureMarkersPass: ContentPass = {
     // edge, so they must not claim pick hits there either.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     if (fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc) === 0) return;
-    state.gpu.structureMarkerRenderer!.pickRing(pass, view.vp, view.viewportPx, ctx.drawPxPerRad);
+    state.gpu.structureMarkerRenderer!.pickRing(
+      pass,
+      view.vp,
+      view.viewportPx,
+      ctx.drawPxPerRad,
+      view.camPos,
+    );
   },
 };

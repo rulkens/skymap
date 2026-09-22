@@ -55,6 +55,7 @@ import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsB
 import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../../data/structure/structureIds';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import haloVsCode from '../../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../../shaders/structureMarker/ring.wesl?static';
@@ -87,6 +88,16 @@ const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
+
+/**
+ * The 80-byte CameraUniforms prefix plus a 16-byte camPosMpc tail (the eye,
+ * absolute Mpc — vec3 + one unused pad float) — see structureMarker/io.wesl's
+ * `Uniforms` struct, which the ring/halo vertex stage needs to build its
+ * eye-facing world basis (`expandBillboardWorld`).
+ */
+export const MARKER_UNIFORM_BYTES = CAMERA_UNIFORM_BYTES + 16;
+/** Float index of camPosMpc.xyz — right after the 80-byte (20-float) prefix. */
+export const CAM_POS_FLOAT_OFFSET = CAMERA_UNIFORM_BYTES / 4;
 
 /** A per-category bag seeded to `init` — a new structure source can't leave a bucket unset. */
 function byCategory<T>(init: T): Record<StructureId, T> {
@@ -352,7 +363,7 @@ export function createStructureMarkerRenderer(
 
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
-      size: CAMERA_UNIFORM_BYTES,
+      size: MARKER_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     pickCameraBindGroup = device.createBindGroup({
@@ -363,7 +374,7 @@ export function createStructureMarkerRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
-      size: CAMERA_UNIFORM_BYTES,
+      size: MARKER_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -502,6 +513,7 @@ export function createStructureMarkerRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    camPosMpc: Vec3,
     fadeOpacity: number,
   ): void {
     if (
@@ -517,10 +529,13 @@ export function createStructureMarkerRenderer(
       return;
     if (currentMarkerCount === 0) return;
 
-    // Write the 80-byte CameraUniforms prefix.  Same shape as markerLineRenderer.
-    // The reserved pad (float 19) stays zero via Float32Array zero-init.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    // Write the 80-byte CameraUniforms prefix, then the eye at floats
+    // 20..22 (byte 80..91) — the ring/halo vertex stage's eye-facing world
+    // basis.  The reserved pad (float 19) and camPosMpc.w (float 23) stay
+    // zero via Float32Array zero-init.
+    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
+    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Per-frame fade.opacity write — same pattern as filamentRenderer.
@@ -600,14 +615,17 @@ export function createStructureMarkerRenderer(
     viewProj: Float32Array,
     viewportPx: Vec2,
     pxPerRad: number,
+    camPosMpc: Vec3,
   ): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    // Same prefix write as `draw`, into the pick buffer: the pad (float 19)
-    // stays zero via Float32Array zero-init.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    // Same prefix + eye write as `draw`, into the pick buffer: the pad
+    // (float 19) and camPosMpc.w (float 23) stay zero via Float32Array
+    // zero-init.
+    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
+    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);
