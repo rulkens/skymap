@@ -78,6 +78,13 @@ describe('SCENE_ORBIT_CONICS', () => {
     expect(SCENE_ORBIT_CONICS.some((c) => c.id === 'whale')).toBe(false);
   });
 
+  it("holds no S-star conic — those are the star Layer's", () => {
+    // The 39 S-star trails moved to the star Layer's `guides.orbitTrails`;
+    // this table is core's half of the roster (spec §5) and must not grow a
+    // duplicate conic for a row the Layer already draws.
+    expect(SCENE_ORBIT_CONICS.some((c) => c.id === 's1')).toBe(false);
+  });
+
   it("resolves the Moon's centre to Earth (within the lunar a·e offset)", () => {
     const moonConic = SCENE_ORBIT_CONICS.find((c) => c.id === 'moon');
     expect(moonConic).toBeDefined();

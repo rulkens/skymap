@@ -1,14 +1,9 @@
 /**
  * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth, the
- * local star map, the planets, and Sgr A*. Declutter, envelope, and lift run
- * in `label2DDirector`; every candidate emits even at target 0 (the
- * director's exponential envelope drops only genuinely absent ids, easing an
- * emitted-0 id instead of popping it). `prominencePx` (composed declutter
- * rank) and `lift.subjectSizePx` (raw apparent size) stay distinct facts.
- * Sgr A*'s target falls out of the generic per-kind loop below, not a
- * separate `sgrAStarCaptionTarget` call: both read the same `SCENE_ANCHORS`
- * position by reference and the zero `RENDER_ORIGIN_MPC`, ending in the same
- * `CAPTION_FADE_RULES.sgrAStar.fadeTarget` — identical by construction.
+ * planets, Sgr A*, and the mesh bodies (the seeded stars and the Sun caption
+ * through the star Layer's own `produceStarCaptions` now). Declutter, envelope
+ * and lift run in `label2DDirector`; every candidate emits even at target 0
+ * (dropped ids ease in/out instead of popping).
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
@@ -57,12 +52,11 @@ export function produceSceneBodyCaptions(
 
   const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
-  // Hoisted, not resolved per-caption: every 'star' kind shares the
-  // starCatalogLabel clip key and every other kind shares bodyLabel, so each
-  // is a single frame-constant literal (the `produceStructureMarkers.ts:65` /
-  // `produceFamousGalaxyLabels.ts:218` idiom).
+  // Hoisted, not resolved per-caption: every kind this producer emits shares
+  // the bodyLabel clip key (the star Layer's own producer owns starCatalogLabel
+  // now), so it is a single frame-constant literal (the
+  // `produceStructureMarkers.ts:65` / `produceFamousGalaxyLabels.ts:218` idiom).
   const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
-  const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf('starCatalogLabel', now);
 
   // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
   // FRONT of a body from one behind it. Deciding that per caption here is what
@@ -92,7 +86,6 @@ export function produceSceneBodyCaptions(
     // emits (see `CAPTION_FADE_RULES.constellation`'s docblock) — the ternary
     // exists for the type, not because this branch runs.
     const registryOpacity = handle === null ? 1 : fades.opacityOf(handle, now);
-    const clipFactor = label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody;
     // Keep-emitting gate: a toggled-off caption stays gated OPEN while its
     // registry ramp still has opacity to give, so the ramp's multiply carries
     // the fade-out to completion instead of the boolean truncating it (the
@@ -115,7 +108,7 @@ export function produceSceneBodyCaptions(
       revealAlpha *
       overflowFade(subjectSizePx, viewportShortSidePx) *
       registryOpacity *
-      clipFactor;
+      clipFactorBody;
 
     const prominencePx =
       CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +

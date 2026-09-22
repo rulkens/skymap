@@ -169,9 +169,10 @@ export type EngineGpuHandles = {
    * captions project through the NEAR0 slab view — whose near plane scales
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
-   * view-projection.  Seeded at construction with the `sceneBodyLabels(<body
-   * snapshot>)` caption set (Earth, the local star map, the planets), which
-   * `foregroundLabelsPass` then re-uploads camera-relative each frame.  Null until
+   * view-projection.  Shared by core's `sceneBodyLabels` set (Earth, the
+   * planets, Sgr A*, the mesh bodies) and the star Layer's own producer (the
+   * curated map, the Sun); `foregroundLabelsPass` re-uploads both, merged,
+   * camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
    * `isEngineReady` and null-checked at use, like `labelRenderer`.
    * Released and re-nulled by `destroy()`.

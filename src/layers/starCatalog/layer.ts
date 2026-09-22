@@ -7,6 +7,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { NEAR0 } from '../../services/engine/frame/slabs';
 import { starCatalogLayerSettings } from './state/slices';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 import { create } from './create';
@@ -21,7 +22,9 @@ import { starSpheresPass } from './passes/starSpheresPass';
 import { fieldStarSpherePass } from './passes/fieldStarSpherePass';
 import { starCatalogFadeRows } from './present/starCatalogFadeRows';
 import { starCatalogSelectionRow } from './present/starCatalogSelectionRow';
+import { produceStarCaptions } from './present/produceStarCaptions';
 import { STAR_AGGREGATES_TARGET } from './render/starAggregatesTarget';
+import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './ui/StarsSectionContainer';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 
@@ -43,6 +46,12 @@ export const starCatalogLayer = defineLayer({
   ],
   assets: starCatalogAssetRows,
   fades: starCatalogFadeRows,
+  guides: (runtime) => ({
+    screenLabels: [
+      { slab: NEAR0, id: 'starCaptions', produceLabels: produceStarCaptions(runtime) },
+    ],
+    orbitTrails: S_STAR_ORBITAL_ELEMENTS,
+  }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
   frame,
   ui: [{ slot: 'main', content: StarsSectionContainer }],
