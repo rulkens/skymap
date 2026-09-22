@@ -146,6 +146,16 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'usgs',
     treatment: { kind: 'monoTint', tint: [0.6, 0.58, 0.56] },
   },
+  // Cassini's global mosaic is relief SHADING (mean 104/255), not albedo, of the
+  // most reflective body in the solar system: the tint alone compresses the
+  // relief, so `lift` adds the missing brightness (mean lands ≈227/255, ~5%
+  // highlight clip).
+  enceladus: {
+    bodyId: 'enceladus',
+    kinds: { surface: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.5, 0.5, 0.5], lift: 0.686 },
+  },
 };
 
 // Takes `string`, not `BodyTextureId`, so a caller holding an arbitrary body id can

@@ -56,6 +56,7 @@ export const TEXTURE_SOURCES = {
   // `RAW_DATA` row); the `panSharpen` calibration undoes that stretch.
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
+  enceladus: { surface: { native: 'textures.usgsEnceladus' } },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },

@@ -38,6 +38,9 @@ import { writeLinearTier } from './writeLinearTier';
 /** Output JPEG quality for the spherical body textures (spec §10, ~80). */
 const JPEG_QUALITY = 80;
 
+/** 8-bit channel full scale — `monoTint`'s `lift` is a 0-1 fraction of this. */
+const EIGHT_BIT_FULL_SCALE = 255;
+
 /**
  * Endpoints of the material map's R channel: perceptual roughness in [0,1]
  * (0 = mirror, 1 = fully diffuse), ramped linearly in the mask's land fraction
@@ -106,9 +109,11 @@ async function sourceWidth(srcPath: string): Promise<number> {
 }
 
 /**
- * Multiply a tint into a mono source and write the JPEG — the path for a body
- * whose only map is panchromatic AND has no colour source to recover hue from
- * (Europa, Callisto, Charon). The tint is a stand-in, not a measurement. A mono
+ * Multiply a tint into a mono source, add an optional lift, and write the
+ * JPEG — the path for a body whose only map is panchromatic AND has no
+ * colour source to recover hue from (Europa, Callisto, Charon, Enceladus).
+ * The tint is a stand-in, not a measurement; `lift` (default 0) restores
+ * brightness a relief-shading mosaic has none of to scale (Enceladus). A mono
  * body that DOES have a colour source takes `panSharpen` (Pluto) and never
  * reaches here.
  *
@@ -123,14 +128,16 @@ export async function writeTintedMonoTier(
   tint: Vec3,
   widthPx: number,
   outPath: string,
+  lift = 0,
 ): Promise<void> {
   const rgb = await sharp(srcPath, { limitInputPixels: false })
     .resize({ width: widthPx })
     .toColourspace('srgb')
     .raw()
     .toBuffer({ resolveWithObject: true });
+  const liftedChannel = lift * EIGHT_BIT_FULL_SCALE;
   await sharp(rgb.data, { raw: rgb.info })
-    .linear([tint[0], tint[1], tint[2]], [0, 0, 0])
+    .linear([tint[0], tint[1], tint[2]], [liftedChannel, liftedChannel, liftedChannel])
     .jpeg({ quality: JPEG_QUALITY })
     .toFile(outPath);
 }
@@ -194,7 +201,7 @@ async function writeBodyTier(
       return;
     }
     case 'monoTint': {
-      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath);
+      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath, treatment.lift);
       return;
     }
     case 'panSharpen': {
