@@ -211,12 +211,14 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [COSMO, 'solarSystem', 1],
       [NEAR0, 'solarSystem', 1],
     ]);
-    // Ahead of every other render step, so a same-frame lensing draw can
-    // sample a cubemap this frame actually wrote.
+    // The captures ride the PRELUDE compute pair, ahead of every other render
+    // step, so a same-frame lensing draw can sample a cubemap this frame
+    // actually wrote. `aerial-perspective` is SCENE's own compute now (a
+    // perView row) and so lands after every PRELUDE step, including these.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
-    expect(steps[2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
-    expect(steps[3]).toBe(capture[0]);
+    expect(steps[2]).toBe(capture[0]);
+    expect(steps[capture.length + 2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
