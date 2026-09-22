@@ -378,4 +378,10 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       'Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. It fell silent in a planet-wide dust storm in 2018 in Perseverance Valley, on the rim of Endeavour crater, and the marker stands there, about 25 km from the landing site.',
   },
+  'sgr-a-star': {
+    mass: '4.3 million M☉',
+    wikiTitle: 'Sagittarius_A*',
+    description:
+      "The supermassive black hole at the centre of the Milky Way, about 26,700 light-years from the Sun, with the mass of about four million Suns inside a region smaller than Mercury's orbit. Its mass comes from tracking the S-stars in orbit around it. S2 passes within 120 AU at more than 7,000 km/s, and that work shared the 2020 Nobel Prize in Physics. The radius shown is the event horizon.",
+  },
 };
