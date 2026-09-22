@@ -19,7 +19,6 @@ import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar
 import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packSgrAStarLensingUniforms } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
-import { lensQuadPlaneRadiusRs } from '../../../../utils/lensing/lensQuadPlaneRadiusRs';
 import { lensEdgeFadeEndRs } from '../../../../utils/lensing/lensEdgeFadeEndRs';
 import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 
@@ -91,9 +90,6 @@ export const sgrAStarLensingPass: ContentPass = {
       ctx.drawPxPerRad,
       renderer.lut.maxImpactParamRs,
     );
-    // Billboard half-size in f64 HERE, not in the vertex shader — see
-    // `lensQuadPlaneRadiusRs`'s docblock.
-    const quadPlaneRadiusRs = lensQuadPlaneRadiusRs(edgeFadeEndRs, distRs);
 
     const uniforms = packSgrAStarLensingUniforms({
       viewProj: view.vp,
@@ -117,7 +113,8 @@ export const sgrAStarLensingPass: ContentPass = {
       emissionStrength: tuning.emissionStrength,
       edgeFadeEndRs,
       emissionTint: tuning.emissionTint,
-      quadPlaneRadiusRs,
+      viewBasis: pose.basisM,
+      frustum: ctx.frustum,
     });
 
     // Named by the CAPTURE the lens samples, not by the texture that capture

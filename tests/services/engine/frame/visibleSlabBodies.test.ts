@@ -275,8 +275,9 @@ describe('visibleSlabBodies', () => {
     // Fix A (dome-fisheye): the culls used to bypass entirely for any
     // position inside the lens band (BAND_SLAB_FLOOR_MPC), which kept a
     // hole directly behind the camera. Now both culls read
-    // `bodyDrawRadiusM`'s lens-quad envelope like any other body's shell, so
-    // candidacy tracks where the QUAD actually reaches, not just the band.
+    // `bodyDrawRadiusM`'s lens envelope like any other body's shell, so
+    // candidacy tracks where the LENSED SPHERE actually reaches, not just
+    // the band.
     const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 

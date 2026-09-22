@@ -37,7 +37,7 @@ import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { sgrAStarLensQuadRadiusM } from '../../../../src/data/bodies/sgrAStarLensQuad';
+import { sgrAStarLensEnvelopeM } from '../../../../src/data/bodies/sgrAStarLensEnvelope';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
 import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -353,23 +353,20 @@ describe('deriveSlabs', () => {
     expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
   });
 
-  it("clears the Sgr A* lens quad's near side with its slab's near plane when the hole is off-axis (fix A)", () => {
-    // Before fix A, bodyDrawRadiusM(body) ignored the lens pass's quad
+  it("clears the Sgr A* lens envelope's near side with its slab's near plane when the hole is off-axis (fix A/A2)", () => {
+    // Before fix A, bodyDrawRadiusM(body) ignored the lens pass's reach
     // entirely, so the row's margin was PROXY_SCALE·r_s — a few percent of
-    // r_s — while the quad the pass actually paints reaches many r_s off the
-    // view axis at this distance. θ=30° puts that quad's near side well
-    // behind the OLD near plane, which is exactly the dark-strip clip the
-    // fix closes.
+    // r_s — while the lensed sphere the pass actually classifies rays over
+    // reaches many r_s off the view axis at this distance. θ=30° puts that
+    // sphere's near side well behind the OLD near plane, which is exactly
+    // the dark-strip clip the fix closes. Since fix A2, the envelope
+    // (`sgrAStarLensEnvelopeM`) is exactly the impact-parameter sphere of
+    // radius `edgeFadeEndRs` the fullscreen pass discards outside of — no
+    // separate billboard geometry or close-orbit cap to reason about.
     //
-    // distRs = 1000, not the ~30 r_s arrival distance: below ~50 r_s (the
-    // LUT's own max impact parameter, `MAX_IMPACT_PARAM_RS`) edgeFadeEndRs
-    // is pinned to that floor REGARDLESS of distance, so lensQuadPlaneRadiusRs
-    // hits its close-orbit CAP (8×distRs) and the quad's off-axis corner
-    // swings behind the camera — a real, harmless case (the fallback near
-    // plane collapses to near-zero there, clipping nothing of scale) but not
-    // one 'viewZ − R·sinθ' describes. 1000 r_s stays deep in the lensing
-    // band (goneAt ≈ 5900 r_s) while keeping the quad's near corner in FRONT
-    // of the camera, where that formula is exact.
+    // distRs = 1000 stays deep in the lensing band (goneAt ≈ 5900 r_s) with
+    // the envelope's near corner in FRONT of the camera, where the
+    // 'viewZ − R·sinθ' formula below is exact.
     const rS = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
     const dM = 1000 * rS;
     const thetaRad = (30 * Math.PI) / 180;
@@ -388,15 +385,16 @@ describe('deriveSlabs', () => {
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
-    const quadRadiusM = sgrAStarLensQuadRadiusM(dM, pxPerRad);
-    const quadNearFaceM = viewZ - quadRadiusM * Math.sin(thetaRad);
-    expect(row.near).toBeLessThanOrEqual(quadNearFaceM);
+    const envelopeM = sgrAStarLensEnvelopeM(dM, pxPerRad);
+    const envelopeNearFaceM = viewZ - envelopeM * Math.sin(thetaRad);
+    expect(row.near).toBeLessThanOrEqual(envelopeNearFaceM);
 
     // Documents the bug: the OLD margin (PROXY_SCALE·r_s, no envelope) sits
-    // in FRONT of the quad's true near face at this θ — i.e. it clipped the
-    // quad. This assertion is about the scenario's geometry, not the fix.
+    // in FRONT of the envelope's true near face at this θ — i.e. it clipped
+    // the lensed sphere. This assertion is about the scenario's geometry,
+    // not the fix.
     const oldNearFaceM = viewZ - PROXY_SCALE * rS;
-    expect(oldNearFaceM).toBeGreaterThan(quadNearFaceM);
+    expect(oldNearFaceM).toBeGreaterThan(envelopeNearFaceM);
   });
 
   it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {

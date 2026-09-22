@@ -1,46 +1,39 @@
-// bodies/sgrAStarLensing/vertex.wesl — camera-facing billboard covering
-// Sgr A*'s lensing halo. Not a fullscreen triangle: the uniform carries no
-// inverse-viewProj, so the quad's perspective-interpolated plane position
-// stands in for an unprojected ray (the fragment normalizes it).
+// bodies/sgrAStarLensing/vertex.wesl — fullscreen triangle per view: the
+// lensed region is a solid angle around the hole that a flat billboard
+// cannot cover once the camera sits inside the escape-fade radius. Each
+// fragment's ray is built from the view's own frustum, so five dome faces
+// and the mono canvas share one rule.
 
 import package::lib::sgrAStarLensing::SgrAStarLensingUniforms;
-import package::lib::camera::worldToClip;
-import package::lib::billboard::quadCorner;
 
 @group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
 
-// Slack on the exact fade-covering radius, so the fragment's fade always
-// reaches 0 strictly inside the quad. Mirrors 'SGR_A_STAR_LENS_QUAD_MARGIN'
-// in 'data/bodies/sgrAStarLensQuad.ts' (parity-tested), the same slack a
-// body's drawn envelope carries so the quad clears its own slab's near plane.
-const LENS_QUAD_MARGIN: f32 = 1.1;
-
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
-  // Camera-relative plane position; the fragment renormalizes it.
+  // Camera-relative ray position, unnormalised; the fragment renormalizes it.
   @location(0) posRelCamM: vec3<f32>,
 };
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
-  let toAnchor = u.anchorPosRelCamM;
-  let anchorDistM = length(toAnchor);
-  // Look-at basis from the anchor direction alone; degenerate only along
-  // world +Y, unreachable while the camera looks toward the hole.
-  let forward = toAnchor / max(anchorDistM, 1e-6);
-  let worldUp = vec3<f32>(0.0, 1.0, 0.0);
-  let right = normalize(cross(worldUp, forward));
-  let up = cross(forward, right);
+  // A triangle overshooting the [-1,1] clip square, covering every pixel.
+  var ndc = vec2<f32>(-1.0, -1.0);
+  if (vi == 1u) {
+    ndc = vec2<f32>(3.0, -1.0);
+  } else if (vi == 2u) {
+    ndc = vec2<f32>(-1.0, 3.0);
+  }
 
-  // Half-size arrives finished from the CPU ('lensQuadPlaneRadiusRs', f64):
-  // in f32 HERE the b = R·d/sqrt(R^2+d^2) inversion degenerates close-in into
-  // a ~5e4x-oversized quad whose interpolation shakes every ray.
-  let worldRadiusM = u.schwarzschildRadiusM * u.quadPlaneRadiusRs * LENS_QUAD_MARGIN;
-  let corner = quadCorner(vi);
-  let posRelCamM = toAnchor + right * (corner.x * worldRadiusM) + up * (corner.y * worldRadiusM);
+  // A constant-depth plane interpolates affinely, so this ray is exact at
+  // every pixel, not just the three corners.
+  let tx = mix(u.frustumTan.x, u.frustumTan.y, (ndc.x + 1.0) * 0.5);
+  let ty = mix(u.frustumTan.z, u.frustumTan.w, (ndc.y + 1.0) * 0.5);
+  // Scaled by the anchor distance to stay metres-order; the fragment
+  // renormalizes it, so any positive scale is exact.
+  let posRelCamM = (u.viewBasis * vec3<f32>(tx, ty, 1.0)) * length(u.anchorPosRelCamM);
 
   var out: VsOut;
-  out.clip = worldToClip(u.cam, posRelCamM);
+  out.clip = vec4<f32>(ndc, 0.5, 1.0);
   out.posRelCamM = posRelCamM;
   return out;
 }

@@ -5,7 +5,7 @@ import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { CLOUD_SHELL_PARAMS } from '../../../src/data/bodies/cloudShellParams';
 import { SGR_A_STAR } from '../../../src/data/bodies/sceneSgrAStar';
-import { sgrAStarLensQuadRadiusM } from '../../../src/data/bodies/sgrAStarLensQuad';
+import { sgrAStarLensEnvelopeM } from '../../../src/data/bodies/sgrAStarLensEnvelope';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
 import { schwarzschildRadiusM } from '../../../src/utils/physics/schwarzschildRadiusM';
@@ -52,13 +52,13 @@ describe('bodyDrawRadiusM', () => {
     expect(result).toBeGreaterThan(cloudShellM);
   });
 
-  it('returns the lens quad radius for Sgr A* inside the lens band, the bare r_s outside it', () => {
+  it('returns the lens envelope radius for Sgr A* inside the lens band, the bare r_s outside it', () => {
     const rS = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
     const insideBandM = (SCALE_FADE_BANDS.sgrAStarLensing.goneAt / 2) * SCALE_UNITS.MPC_TO_M;
     const outsideBandM = SCALE_FADE_BANDS.sgrAStarLensing.goneAt * 2 * SCALE_UNITS.MPC_TO_M;
 
     const inside = bodyDrawRadiusM(SGR_A_STAR, insideBandM, PX_PER_RAD);
-    expect(inside).toBe(sgrAStarLensQuadRadiusM(insideBandM, PX_PER_RAD));
+    expect(inside).toBe(sgrAStarLensEnvelopeM(insideBandM, PX_PER_RAD));
     expect(inside).toBeGreaterThan(rS);
 
     const outside = bodyDrawRadiusM(SGR_A_STAR, outsideBandM, PX_PER_RAD);
