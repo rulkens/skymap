@@ -52,6 +52,8 @@ import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
+import { Source } from '../../../data/source';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 
 /**
@@ -110,23 +112,24 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
  * `SceneBody` arm carries one — so this reads it as a parameter. The colour is
  * the caller's per-type derivation (spectral colour / albedo / Earth blue), widened
  * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
- * which seed table the body came from.
+ * which seed table the body came from. A star's caption packs its own identity
+ * (source + seed index) because only its caller knows which table it walked;
+ * every body id resolves through the shared default.
  */
 function bodyLabel(
   body: SceneBody,
   positionMpc: Readonly<Vec3>,
   tint: Readonly<Vec3>,
   kind: CaptionKind,
+  pickId: number | undefined = sceneBodyPickId(body.id) ?? undefined,
 ): ForegroundCaption {
   const o = RENDER_ORIGIN_MPC;
   const p = positionMpc;
   const worldPos: Vec3 = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
-  // The caption carries its subject's pick id so clicking the NAME selects the
-  // body — the affordance a sub-pixel body's glint footprint can only
-  // approximate. `?? undefined` keeps an unseeded id (impossible from these
-  // seed tables, but the −1 contract is the helper's) out of the pick set
-  // rather than aliasing body 0.
-  const pickId = sceneBodyPickId(body.id) ?? undefined;
+  // The caption carries its subject's pick id so clicking the NAME selects it —
+  // the affordance a sub-pixel body's glint footprint can only approximate. An
+  // unseeded id (impossible from these seed tables, but the −1 contract is the
+  // helper's) stays out of the pick set rather than aliasing body 0.
   return {
     id: sceneBodyLabelId(body.id),
     kind,
@@ -181,14 +184,26 @@ function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
     bodyLabel(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
-    ...SCENE_STARS.map((star) =>
-      bodyLabel(star, bodyStates.get(star.id)!.positionMpc, star.color, 'star'),
+    ...SCENE_STARS.map((star, seedIndex) =>
+      bodyLabel(
+        star,
+        bodyStates.get(star.id)!.positionMpc,
+        star.color,
+        'star',
+        packSelection(Source.FamousStar, seedIndex + PICK_SENTINEL_OFFSET),
+      ),
     ),
     // The Sun's own caption kind: the kind routes the caption to its own row's
     // label gate, and it must out-rank every other caption in a declutter
     // collision (CAPTION_PRIORITY).
-    ...SCENE_SUN.map((star) =>
-      bodyLabel(star, bodyStates.get(star.id)!.positionMpc, star.color, 'sun'),
+    ...SCENE_SUN.map((star, seedIndex) =>
+      bodyLabel(
+        star,
+        bodyStates.get(star.id)!.positionMpc,
+        star.color,
+        'sun',
+        packSelection(Source.Sun, seedIndex + PICK_SENTINEL_OFFSET),
+      ),
     ),
     ...SCENE_PLANETS.map((planet) =>
       bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),

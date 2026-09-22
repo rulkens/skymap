@@ -1,10 +1,12 @@
+import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+
 /**
  * FieldStarInfo — a picked survey star as a resolved focusable target, parallel
  * to `GalaxyInfo`, `StructureInfo`, `MilkyWayInfo`, and the seeded-body
  * `BodyInfo`.  All are arms of the FocusableTarget union and flow through the
  * same hover / select / focus slots; every dispatch table and type-guard keys
- * on the `type` discriminant (`'star'` here — the anonymous Gaia/SKST survey
- * star, distinct from the named-scene-body `'body'` arm).
+ * on the `type` discriminant (`'starCatalog'` here — the anonymous Gaia/SKST
+ * survey star, distinct from the named-scene-body `'body'` arm).
  *
  * Like `MilkyWayInfo` (and unlike the galaxy arm's engine-baked `GalaxyInfo`),
  * this is a small self-derived card view-model: `buildFocusable` computes it
@@ -20,7 +22,9 @@
  */
 export type FieldStarInfo = {
   /** Union tag — what every FocusableTarget table / guard keys on. */
-  readonly type: 'star';
+  readonly type: 'starCatalog';
+  /** Which catalog the star came from, for `refOf` / the identity key. */
+  readonly source: StarCatalogSourceType;
   /** The bin-stable global star-record index, for `refOf` / URL round-trip. */
   readonly index: number;
   /** Headline shown in the InfoCard — 'Field star' (SKST v1 carries no identity). */

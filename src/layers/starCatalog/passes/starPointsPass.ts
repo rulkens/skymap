@@ -91,7 +91,6 @@ import {
 } from '../../../services/engine/frame/partitionStarsByResolution';
 import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
-import { starPickId } from '../../../utils/picking/starPickId';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -290,10 +289,10 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
     // (see `bodyPickRenderer`'s module header). This layer calls it exactly once
     // per `drawPick`.
     //
-    // Each point's packed id carries its STABLE seed-table index, NOT its slot in
-    // the point partition (which shifts as a star crosses `STAR_RESOLVE_PX` — see
-    // `seedIndexOfBody`); `starPickId` picks the table and drops an id in neither
-    // (a packed id from −1 would alias body 0). Anchors are rebased
+    // Each point's packed id carries the source + STABLE seed-table index its
+    // drawn row was tagged with, NOT its slot in the point partition (which
+    // shifts as a star crosses `STAR_RESOLVE_PX`). One table per source, never
+    // merged: the index means nothing without the code beside it. Anchors are rebased
     // into the camera-relative frame in f64 before narrowing, the SAME seam
     // `draw` uses — the backdrop-dissolve colour scale is a visual-only concern
     // the pick omits (pick has no opacity; the `enabled` gate already drops the
@@ -343,8 +342,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       }
 
       for (const star of points) {
-        const packedId = starPickId(star.id);
-        if (packedId === null) continue; // in neither seed table — see starPickId.
+        const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
         const posRelCamMpc = relToCam(star.positionMpc);
         // A satellite inside its own anchor's click target is not separately
         // aimable, so it must not take the anchor's click. Zoomed out, all 39

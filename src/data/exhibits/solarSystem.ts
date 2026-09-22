@@ -39,16 +39,16 @@ export const solarSystem: Exhibit = {
   // gets them here, and `runTakeover`'s snapshot hands their choice back on exit.
   // Only bodies stay pickable — at 42 AU the subject is the orrery, so the
   // survey stars, the galaxy field, and the dust band shouldn't take clicks.
-  // `body` also covers the famous stars: the Sun's own dot picks as
-  // `Source.FamousStar` (see `src/data/source.ts` code 21/26), and the two
-  // aren't separable at pick level.
+  // That now costs the Sun's own dot its click too: every star, the Sun
+  // included, resolves as `starCatalog`, and the kind gate is per kind, not
+  // per source.
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
     picking: {
       kinds: {
         body: true,
-        star: false,
+        starCatalog: false,
         galaxyCatalog: false,
         structure: false,
         milkyWay: false,

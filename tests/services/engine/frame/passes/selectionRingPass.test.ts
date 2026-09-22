@@ -119,11 +119,12 @@ const BODY_ROW: SelectionRow = {
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
 // it and the NEAR0 sibling must own it.
 const STAR_ROW: SelectionRow = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 7,
+  id: null,
+  label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
-  absMag: 4.8,
-  bpRp: 0.65,
   radiusM: 696340000,
 };
 

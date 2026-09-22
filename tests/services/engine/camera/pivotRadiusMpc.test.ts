@@ -22,6 +22,7 @@ import {
 } from '../../../../src/utils/camera/clampDistance';
 import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { Source } from '../../../../src/data/sources';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -42,11 +43,12 @@ describe('pivotRadiusMpc', () => {
 
   it('gives a star row its stamped radius too — same near-field discrete case', () => {
     const star: SelectionRow = {
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 7,
+      id: null,
+      label: 'Field star',
       positionMpc: [1, 2, 3],
-      absMag: 4,
-      bpRp: 0.6,
       radiusM: 696340000,
     };
     expect(pivotRadiusMpc(star)).toBeCloseTo(696340 * SCALE_UNITS.KM_TO_MPC, 30);
@@ -107,11 +109,12 @@ describe('pivotFraming', () => {
 
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {
     const star: SelectionRow = {
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 7,
+      id: null,
+      label: 'Field star',
       positionMpc: [1, 2, 3],
-      absMag: 4,
-      bpRp: 0.6,
       radiusM: 696340000,
     };
     expect(pivotFraming(star).floorMpc).toBeCloseTo(

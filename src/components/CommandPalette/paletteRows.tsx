@@ -19,7 +19,7 @@ import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { CARD_IMAGE_DIR } from '../../data/palette/cardImageDir';
-import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
+import { CARD_SHOT_BY_FOCUS_ID } from '../../data/palette/cardShotByFocusId';
 import { bodyRowChip } from './utils/bodyRowChip';
 import { actionForRow } from './utils/actionForRow';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
@@ -27,20 +27,16 @@ import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
 /**
- * A milkyWay/body/structure row's leading visual: the captured card shot
- * when `actionForRow` resolves to a focus id in `SHOT_CARD_IDS` (the same id
- * grammar the URL deep-link layer uses), else today's letter glyph.
+ * A milkyWay/body/star/structure row's leading visual: the captured card shot
+ * of the featured card that names the same focus id `actionForRow` resolves to
+ * (the id grammar the URL deep-link layer uses), else today's letter glyph.
  */
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
-  if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
+  const shot = action.kind === 'focus' ? CARD_SHOT_BY_FOCUS_ID.get(action.focusId) : undefined;
+  if (shot !== undefined) {
     return (
-      <img
-        className={styles.thumb}
-        src={`${CARD_IMAGE_DIR}/${action.focusId}.webp`}
-        alt=""
-        loading="lazy"
-      />
+      <img className={styles.thumb} src={`${CARD_IMAGE_DIR}/${shot}.webp`} alt="" loading="lazy" />
     );
   }
   return (
@@ -128,7 +124,8 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
   // over, so a row shows exactly the names it can be found by; the chip is
   // the body's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre").
+  // Centre"). A seeded star's row renders identically — same lookups, same
+  // chip — off its own star identity.
   body: (m) => {
     if (m.kind !== 'body') return EMPTY_ROW_VIEW;
     const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
@@ -138,6 +135,23 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       testid: `body-row-${m.body.id}`,
       leading: shotOrGlyph(m, m.body.label),
       primary: m.body.label,
+      secondary: (
+        <>
+          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+          {chip && <span className={styles.source}>{chip}</span>}
+        </>
+      ),
+    };
+  },
+  starCatalog: (m) => {
+    if (m.kind !== 'starCatalog') return EMPTY_ROW_VIEW;
+    const aliases = (BODY_SEARCH_NAMES.get(m.star.id) ?? []).slice(1);
+    const chip = bodyRowChip(m.star.id, m.star.label);
+    return {
+      key: `starCatalog:${m.star.id}`,
+      testid: `star-row-${m.star.id}`,
+      leading: shotOrGlyph(m, m.star.label),
+      primary: m.star.label,
       secondary: (
         <>
           {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}

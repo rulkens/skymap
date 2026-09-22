@@ -29,6 +29,19 @@ import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
+  // `star-<id>` splits seeded from survey on the all-digits test
+  // (`decodeStarFocusId`), so an all-digits seed id would silently deep-link to
+  // a Gaia bin index instead of the star it names.
+  for (const stars of Object.values(SEEDED_STAR_CATALOGS)) {
+    for (const star of stars) {
+      if (/^\d+$/.test(star.id)) {
+        throw new Error(
+          `starCatalog: seed id "${star.id}" is all digits, which a star- link reads as a survey index`,
+        );
+      }
+    }
+  }
+
   const device = deps.ctx.device;
 
   const renderer = createStarCatalogRenderer(device, HDR_TARGET_FORMAT);

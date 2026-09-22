@@ -37,7 +37,6 @@ import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCata
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
-import { starPickId } from '../../../../src/utils/picking/starPickId';
 import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
@@ -105,6 +104,10 @@ const positioned = (id: string): PositionedStar => {
   const star = visibleStars(starSettings(EVERY_SEEDED)).find((s) => s.id === id)!;
   return { ...star, positionMpc: ANCHOR_POS.get(id)! };
 };
+
+/** The pick identity a pass packs for a drawn star: its source + seed index. */
+const packedIdOf = (star: PositionedStar): number =>
+  packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
 
 const SUN = positioned('sun');
 const PROXIMA = positioned('proxima-centauri');
@@ -560,7 +563,9 @@ describe('the Galactic Centre pick stamp', () => {
   };
 
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
-    SCENE_S_STARS.filter((star) => stamped.includes(starPickId(star.id)!)).map((star) => star.id);
+    SCENE_S_STARS.filter((star, seedIndex) =>
+      stamped.includes(packSelection(Source.SStar, seedIndex + PICK_SENTINEL_OFFSET)),
+    ).map((star) => star.id);
 
   it('stamps the anchor from the solar system, where its name is already readable', () => {
     // The caption is at full alpha from Earth (`SCALE_FADE_BANDS.sgrAStarCaption`
@@ -642,7 +647,7 @@ describe('the Galactic Centre pick stamp', () => {
     expect(Math.hypot(sx - ax, sy - ay)).toBeLessThan(FAMOUS_STAR_PICK_RADIUS_PX);
 
     expect(stamped).toContain(ANCHOR_ID);
-    expect(stamped).toContain(starPickId(SIRIUS.id)!);
+    expect(stamped).toContain(packedIdOf(SIRIUS));
   });
 
   it('keeps the row in the pick pass when the star partition is empty', () => {

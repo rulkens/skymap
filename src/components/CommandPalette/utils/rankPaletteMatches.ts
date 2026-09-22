@@ -11,8 +11,8 @@
  * An empty query yields no rows — the featured grid owns browsing
  * (`FeaturedGrid` over `FEATURED_TABS`), so this only scores non-empty queries.
  *
- * Famous rows, seeded scene bodies (Earth, the planets, the stars), and Earth
- * places are one class of "primary named object" and share a single
+ * Famous rows, seeded scene bodies (Earth, the planets), the seeded stars, and
+ * Earth places are one class of "primary named object" and share a single
  * score-sorted list, so an exact body match like "earth" outranks a famous
  * row that only matched "earth" in its description. The alias and structure
  * lists are scored, capped, and appended after.
@@ -21,7 +21,9 @@ import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../../data/bodies/bodySearchNames';
+import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
 import { exhibitRegistry } from '../../../data/exhibits/exhibitRegistry';
 import { tourRegistry } from '../../../data/animation/tours/tourRegistry';
 import { EARTH_PLACES } from '../../../data/palette/earthPlaces';
@@ -79,7 +81,7 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  // Seeded scene bodies (Earth, the stars, the planets) are scored like a
+  // Seeded scene bodies (Earth, the planets, the mesh bodies) are scored like a
   // famous row. The wheel-zoom floor (clampDistance.ts) is derived from the
   // focused body's own radius, so a picked body always resolves to a
   // reachable, non-sub-pixel focus target.
@@ -88,11 +90,35 @@ export function rankPaletteMatches(
   // designation ("Alpha Canis Majoris") surfaces the same row as the common
   // name ("Sirius"). Earth/planets aren't in the map and fall back to their
   // single label.
-  const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => {
-    const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
-    const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
-    return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
-  }).filter((s) => s.score > 0);
+  //
+  // `SCENE_BODIES` still lists the seeded stars for the camera and occluder
+  // readers, so the body rows are narrowed to the ids a body source actually
+  // seeds; the stars get their own rows below, carrying star identity.
+  const bodyScored: ScoredRow[] = SCENE_BODIES.filter((body) => isRegistryBodyId(body.id))
+    .map<ScoredRow>((body) => {
+      const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
+      const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
+      return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  // The seeded stars, scored the same way off the same alias map — the row that
+  // results carries the source + seed index its `starCatalog` ref needs.
+  const starScored: ScoredRow[] = [...SEEDED_STAR_CATALOGS_BY_SOURCE]
+    .flatMap<ScoredRow>(([source, stars]) =>
+      stars.map((star, index) => {
+        const names = BODY_SEARCH_NAMES.get(star.id) ?? [star.label];
+        const raw = scoreFamousMatch({ id: star.id, names, description: '' }, query);
+        return {
+          kind: 'starCatalog',
+          source,
+          index,
+          star,
+          score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0,
+        };
+      }),
+    )
+    .filter((s) => s.score > 0);
 
   // Exhibits and tours are scored on their registry label alone — only a
   // registry row gets a search row (spec §7.4), so a focus card never
@@ -133,6 +159,7 @@ export function rankPaletteMatches(
   const primaryScored = [
     ...famousScored,
     ...bodyScored,
+    ...starScored,
     ...placeScored,
     ...exhibitScored,
     ...tourScored,

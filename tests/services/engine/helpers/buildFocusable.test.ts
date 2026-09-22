@@ -105,12 +105,15 @@ describe('buildFocusable', () => {
     const absMag = 4.83;
     const bpRp = 0.82;
     const info = buildFocusable({
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 7,
+      id: null,
+      label: 'Field star',
       positionMpc: [10 * SCALE_UNITS.PC_TO_MPC, 0, 0],
+      radiusM: 696340000,
       absMag,
       bpRp,
-      radiusM: 696340000,
     }) as FieldStarInfo;
 
     expect(info.distancePc).toBeCloseTo(10, 9);

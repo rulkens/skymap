@@ -131,9 +131,9 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
     Compact: ({ target }) =>
       target.type === 'body' ? createElement(CompactBodyCard, { target }) : null,
   },
-  star: {
+  starCatalog: {
     Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'star') return null;
+      if (target.type !== 'starCatalog') return null;
       return createElement(FieldStarDetailCard, {
         target,
         pinned,
@@ -143,7 +143,7 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
       });
     },
     Compact: ({ target }) =>
-      target.type === 'star' ? createElement(CompactFieldStarCard, { info: target }) : null,
+      target.type === 'starCatalog' ? createElement(CompactFieldStarCard, { info: target }) : null,
   },
   zoneOfAvoidance: {
     // No `onFocus` destructured: the band has no x/y/z (see ZoneOfAvoidanceInfo),

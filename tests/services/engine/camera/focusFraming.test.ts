@@ -15,6 +15,7 @@ import { galaxyFocusDistance } from '../../../../src/services/engine/camera/gala
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { Source } from '../../../../src/data/sources';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
@@ -195,7 +196,15 @@ describe('focusFraming', () => {
     const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
     const bodyResult = focusFraming({ type: 'body', id: 'sun', label: 'Sun', positionMpc }, FOVY);
     const starResult = focusFraming(
-      { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusM },
+      {
+        type: 'starCatalog',
+        source: Source.GaiaStars,
+        index: 3,
+        id: null,
+        label: 'Field star',
+        positionMpc,
+        radiusM,
+      },
       FOVY,
     );
     expect(starResult).toEqual(bodyResult);

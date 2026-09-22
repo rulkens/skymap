@@ -70,9 +70,9 @@ import {
   STAR_RESOLVE_PX,
 } from '../../../services/engine/frame/partitionStarsByResolution';
 import { positionedVisibleStars } from '../../../services/engine/frame/positionedVisibleStars';
-import { starPickId } from '../../../utils/picking/starPickId';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { drawFlooredSpherePick } from '../../../services/engine/helpers/drawFlooredSpherePick';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 
 export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
   return {
@@ -129,10 +129,10 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
     // exactly when it draws as a sphere (its complement rides `starPointsPass`'s
     // point pick), never both and never neither.
     //
-    // The packed id carries each star's STABLE seed-table index, NOT its slot in
-    // the sphere partition (which shifts as a star crosses `STAR_RESOLVE_PX` —
-    // see `seedIndexOfBody`). `starPickId` picks the table and drops an id in
-    // neither: a packed id from −1 would alias body 0. The MVP folds
+    // The packed id carries the source + STABLE seed-table index the drawn row
+    // was tagged with, NOT its slot in the sphere partition (which shifts as a
+    // star crosses `STAR_RESOLVE_PX`); one table per source, never merged, so the
+    // index means nothing without the code beside it. The MVP folds
     // `oblateness` the same way `draw` does, so the pick silhouette matches.
     //
     // This row self-binds its own @group(0) pick camera inside `drawSphere` (the
@@ -149,13 +149,12 @@ export function starSpheresPass(runtime: StarCatalogRuntime): ContentPass {
       });
 
       for (const star of spheres) {
-        const packedId = starPickId(star.id);
-        if (packedId === null) continue; // in neither seed table — see starPickId.
+        const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
         // Floor the PICK radius to the shared min footprint (visual sphere
         // untouched) via the shared `drawFlooredSpherePick` recipe: a just-resolved
         // star near STAR_RESOLVE_PX is only a few pixels across. A resolved star is
         // a rotation-invariant emissive sphere (IDENTITY_MAT3) that carries its
-        // measured `oblateness`; its identity is the stable seed-table index.
+        // measured `oblateness`.
         drawFlooredSpherePick(pickRenderer, pass, {
           vp: view.slab.vp,
           positionMpc: star.positionMpc,

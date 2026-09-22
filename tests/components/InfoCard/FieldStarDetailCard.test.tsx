@@ -12,11 +12,13 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import FieldStarDetailCard from '../../../src/components/InfoCard/FieldStarDetailCard/FieldStarDetailCard';
+import { Source } from '../../../src/data/sources';
 import type { FieldStarInfo } from '../../../src/@types/engine/FieldStarInfo';
 
 // A Sun-like dwarf: absMag 4.67, BP−RP 0.82 (in range → no '~').
 const sunLike: FieldStarInfo = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 0,
   displayName: 'Field star',
   x: 0,

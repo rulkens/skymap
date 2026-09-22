@@ -51,9 +51,12 @@ describe('decodeFramedPose', () => {
     expect(decodeFramedPose('b,earth,0,0,0')).toBeNull();
   });
 
-  it('rejects a body id outside SCENE_BODIES', () => {
+  it('rejects a body id no body source seeds, a star id included', () => {
     const junk = encodeFramedPose(EVEREST_ARM).replace('earth', 'not-a-body');
     expect(decodeFramedPose(junk)).toBeNull();
+    // A star is not a body id any more (spec §6): a hand-edited `#pose=b,sirius`
+    // names no frame the body-state table can put the camera in.
+    expect(decodeFramedPose(encodeFramedPose(EVEREST_ARM).replace('earth', 'sirius'))).toBeNull();
   });
 
   it('rejects a site id outside SURFACE_FIXED_SITES', () => {

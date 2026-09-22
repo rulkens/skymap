@@ -183,7 +183,9 @@ describe('watchSelectionRowsSaga', () => {
     // that pulse or the star focus row stays null forever (the camera arrives
     // via watchFocusTweenSaga, but no InfoCard/body).
     starCatalog = null;
-    store.dispatch(updateSelectionFocus({ type: 'star', index: 0 }));
+    store.dispatch(
+      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }),
+    );
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
@@ -191,7 +193,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
-      type: 'star',
+      type: 'starCatalog',
       index: 0,
     });
   });

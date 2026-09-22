@@ -46,26 +46,27 @@ const BUILD_FOCUSABLE: {
     // would be re-serialized into RTK state on every selection for no gain.
     orbit: sStarOrbitInfo(row.id),
   }),
-  // A picked star has no per-star identity on the bin (SKST v1 quantises
+  // A picked survey star has no per-star identity on the bin (SKST v1 quantises
   // position + Gaia photometry only), so the card is a small self-derived
   // view-model built here from the row's raw fields via the Task-1 helpers:
   // distance is |positionMpc| converted Mpc to pc, apparent magnitude follows
   // from the distance modulus, and the spectral class is binned off BP-RP.
-  star: (row): FieldStarInfo => {
+  starCatalog: (row): FieldStarInfo => {
     const [x, y, z] = row.positionMpc;
     const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;
     return {
-      type: 'star',
+      type: 'starCatalog',
+      source: row.source,
       index: row.index,
       displayName: 'Field star',
       x,
       y,
       z,
       distancePc,
-      absMag: row.absMag,
-      apparentMag: apparentMagnitudeFromAbs(row.absMag, distancePc),
-      bpRp: row.bpRp,
-      spectralClass: spectralClassFromBpRp(row.bpRp),
+      absMag: row.absMag!,
+      apparentMag: apparentMagnitudeFromAbs(row.absMag!, distancePc),
+      bpRp: row.bpRp!,
+      spectralClass: spectralClassFromBpRp(row.bpRp!),
     };
   },
 };

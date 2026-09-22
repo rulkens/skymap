@@ -11,6 +11,8 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { SceneBody } from '../../@types/scene/SceneBody';
+import type { StarBody } from '../../@types/scene/StarBody';
+import type { StarCatalogSourceType } from '../../@types/data/starCatalog/StarCatalogSourceType';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { EarthPlace } from '../../@types/palette/EarthPlace';
@@ -32,8 +34,9 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * `ROW_VIEW` dispatches on it for the rendered text and `utils/actionForRow`
  * for the resulting `PaletteAction`.  `milkyWay` carries no payload — it's the singleton
  * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
- * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
- * the shared `id`/`label` fields); it's scored and ranked in like a famous
+ * (Earth, a planet, a mesh body — the `SceneBody` union; the row only reads
+ * the shared `id`/`label` fields) and `starCatalog` a seeded star with the
+ * source + index its ref needs; both are scored and ranked in like a famous
  * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
  * (`exhibitRegistry`, `tourRegistry`); `place` carries an `EarthPlace` — a
  * search-only point, not a focusable ref — ranked the same way. Those three
@@ -45,6 +48,13 @@ export type ScoredRow =
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number }
   | { kind: 'body'; body: SceneBody; score: number }
+  | {
+      kind: 'starCatalog';
+      source: StarCatalogSourceType;
+      index: number;
+      star: StarBody;
+      score: number;
+    }
   | { kind: 'exhibit'; exhibit: Exhibit; score: number }
   | { kind: 'tour'; tour: Tour; score: number }
   | { kind: 'place'; entry: EarthPlace; score: number };
