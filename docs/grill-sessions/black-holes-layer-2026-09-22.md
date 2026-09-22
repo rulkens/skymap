@@ -455,8 +455,76 @@ No ruling is contradicted. Corrections and new facts the spec must carry:
 - The starCatalog spec is under `specs/completed/` with :27/:174 unamended — the note
   is still owed.
 
+## Refactor-ground checkpoint (2026-09-22, four surveys + blind greenfield cross-check)
+
+Greenfield and sketch agreed on: the anchor stays core (`SCENE_ANCHORS`,
+`sceneAnchors.ts:21`, is already that table — `AnchorBody.id: string`), per-Layer
+snapshot-replace store keys, one saga helper shared by `search`/`sourceCounts` with
+separate members, `detailCard` as a `ui` slot variant. Four divergences were ruled
+one by one:
+
+**R13 — `slabs` is static data** (`slabs?: readonly LayerSlabRow[]`, like `targets`),
+not `(runtime) =>`. Nothing in a row needs runtime; `footprintRadiusM` is the quad's
+design maximum, and `createLayers` calls runtime-bound members once at boot anyway.
+Caveat carried, not acted on: hostless mesh rows are store-fed
+(`frameContext.ts:59-61`), so the body Layer will need a load-aware feed here later.
+
+**R14 — the camera-driver joint: `SelectionKindRow.driver?(row): DriverGeometry | null`**
+with `DriverGeometry = { hostId, footprintRadiusM, datumRadiusM, standoffRadii,
+focusDistanceRadii? }`. `focusDriverId.ts:8-12` is a two-arm switch and eight readers
+`findByIdOrThrow(SCENE_BODIES, …)` behind it (`cameraDrivers.ts:166`,
+`bodyHomePose.ts:77`, `selectionHaloTable.ts:101`, `focusFraming.ts:109-115`,
+`approachTiltedPose.ts:48`, `watchFlyToLonLatSaga.ts:73`, `pivotRadiusMpc.ts:24,39`,
+`bodyRung.ts:64` — all size reads, none reads position). A `blackHole` arm either throws
+there or, returning null, loses the 2 r_s descent floor. The arm's owner answers
+instead; `focusDriverId` is deleted; the star arm answering its own geometry is the
+reader half of `2026-09-22-stars-still-in-the-body-tables.md`. **Amends ruling 7:** the
+slab row keeps render facts only — `anchorId, boundingRadiusM, footprintRadiusM,
+activeBand?, cullFloorMpc?, source` — because driving the camera and hosting a metre
+frame vary independently (seeded stars drive without a slab; S-star riders draw on a
+slab without driving). Rejected: the greenfield `slab?(row) => hostId` link, which keeps
+a `SCENE_BODIES` fallback for stars — a second producer.
+
+**R15 — `SlabFrame.body-m.bodyId: BodyId` → `hostId: SlabHostId`**, with
+`SlabHostId = BodyId | PlaceId` and `PlaceId = 'galactic-centre'` (core,
+`src/@types/scene/PlaceId.d.ts` — authored place anchors that are not bodies; seeded-star
+anchors stay `string`). The type must widen regardless; the union makes every stale
+`=== 'sgr-a-star'` a compile error. `body-m` hosts today: `earth`, the 24 planets and
+moons, `sgr-a-star`, the hostless mesh bodies; after the prep the third is
+`galactic-centre`, hosted by the Layer's row. The `'body-m'` tag itself stays (it names
+the unit). Rename via `npm run refactor rename`, 19 files.
+
+**R16 — packaging re-confirmed: prep PR + feature PR** (ruling 11), now six commits:
+
+1. `search`/`sourceCounts` async iterables, `runLayerFeed` saga, `callbackIterable`
+   helper, `layerSearch` slice key + `selectLayerSearchRows`, `rankPaletteMatches` gains a
+   fifth input, 3 call sites migrated, `reportSourceCount` deleted, the
+   `layerImportBoundary.test.ts:194` message updated. The `engineSourceCountReported`
+   action stays (three sagas pulse on it).
+2. `Layer.slabs`: `LayerSlabRow`, `bodySlabRowOf(body)` adapter for store-fed bodies,
+   composed candidates, `hostId: SlabHostId`, `bodyRowSlabs.lens` = active rows naming
+   `'lens'`, `SLAB_HOST_IDS` composed, capacity ceiling + boot assert (the GPU query set
+   is sized before Layers exist, `gpuTimingService.ts:113`). Sgr A*'s row still core.
+3. `SelectionKindRow.driver?` + the eight readers; `focusDriverId.ts` deleted.
+4. `'galactic-centre'` anchor + `PlaceId` — after 2, so the pose key flips at
+   `row.anchorId` and the lens-pass filter only.
+5. `detailCard` slot + fold; core table 5 arms + composed entries; ZoA's two card
+   folders → `layers/zoneOfAvoidance/ui/`.
+6. Docs: starCatalog spec :27/:174 note, backlog amendments.
+
+Growth verdicts needing no prep: selection arm + `URL_HASH_FOR` + `targetIdentityKey`
+rows (as `star`); the `sky-cubemap` target moves onto **`Layer.targets`** (exists), so
+no Layer→core tuning read is needed — better than Q6 assumed; marker, caption, capture
+row per rulings 8, 5, 6.
+
+Adjacent (backlog, not prep): `SCENE_ANCHORS`/`AnchorBody` is the place table under a
+body name in `data/bodies/`; `URL_HASH_FOR` beside `SelectionKindRow.focusId.encode`
+looks duplicated (unverified); `rankPaletteMatches`' six static inputs are future
+`search` tenants.
+
 ## Next
 
-`refactor-ground` over the prep list, then the spec, then `writing-plans`. Worktree
-`black-holes-layer` (branch `worktree-black-holes-layer`, `public/data` linked to
-main).
+Spec (`docs/superpowers/specs/2026-09-22-black-holes-layer-design.md`) against the
+post-prep architecture, Ground preparation = R16's six commits; then `writing-plans`.
+Worktree `black-holes-layer` (branch `worktree-black-holes-layer`, `public/data` linked
+to main).
