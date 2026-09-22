@@ -41,6 +41,7 @@ import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/B
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -130,6 +131,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
+    driver: bodyDriverGeometry(bodyId),
   } as SelectionRow;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();

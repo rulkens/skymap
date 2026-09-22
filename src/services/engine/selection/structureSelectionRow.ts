@@ -37,7 +37,11 @@ export function structureSelectionRow(
       });
       return record ? { type: 'structure', id: record.id } : null;
     },
-    extractRow: (ref) => deps().structures.byId(ref.id),
+    extractRow: (ref) => {
+      const record = deps().structures.byId(ref.id);
+      // A volume is flown INTO, never orbited or floored: no camera host here.
+      return record === null ? null : { ...record, driver: null };
+    },
     focusId: {
       claims: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
       decode: (id) => (SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),

@@ -12,7 +12,7 @@ export function milkyWaySelectionRow(): SelectionKindRow<MilkyWayRef> {
     type: 'milkyWay',
     pickSources: [Source.MilkyWay],
     resolvePick: () => ({ type: 'milkyWay' }),
-    extractRow: () => ({ type: 'milkyWay' }),
+    extractRow: () => ({ type: 'milkyWay', driver: null }),
     focusId: {
       claims: (id) => id === MILKY_WAY_FOCUS_ID,
       decode: () => ({ type: 'milkyWay' }),

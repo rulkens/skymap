@@ -42,7 +42,7 @@ import type { SelectionKindRow } from '../../../../src/@types/engine/layer/Selec
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
 
-const virgo: StructureInfo = {
+const virgo: StructureInfo & { readonly driver: null } = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
@@ -50,6 +50,7 @@ const virgo: StructureInfo = {
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
+  driver: null,
 };
 
 function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {

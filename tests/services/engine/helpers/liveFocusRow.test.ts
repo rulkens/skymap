@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { liveFocusRow } from '../../../../src/services/engine/helpers/liveFocusRow';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
 // A live "now" far enough past J2000 that Earth has visibly moved along its
@@ -24,6 +25,7 @@ describe('liveFocusRow', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [stalePositionMpc[0], stalePositionMpc[1], stalePositionMpc[2]],
+      driver: bodyDriverGeometry('earth'),
     };
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
@@ -39,6 +41,7 @@ describe('liveFocusRow', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [0, 0, 0],
+      driver: bodyDriverGeometry('earth'),
     };
 
     const out = liveFocusRow(focus, LIVE_SIM_DAYS);
@@ -47,7 +50,7 @@ describe('liveFocusRow', () => {
   });
 
   it('passes a non-body row through unchanged (already live-resolved)', () => {
-    const focus: SelectionRow = { type: 'milkyWay' };
+    const focus: SelectionRow = { type: 'milkyWay', driver: null };
     expect(liveFocusRow(focus, LIVE_SIM_DAYS)).toBe(focus);
   });
 
@@ -61,6 +64,14 @@ describe('liveFocusRow', () => {
       id: 'not-a-real-body',
       label: 'Ghost',
       positionMpc: [1, 2, 3],
+      // Hand-built: no seed to read, which is the point of this row.
+      driver: {
+        poseId: 'not-a-real-body',
+        boundingRadiusM: 1,
+        footprintRadiusM: 1,
+        groundRadiusM: 1,
+        standoffRadii: 1,
+      },
     };
     expect(liveFocusRow(focus, LIVE_SIM_DAYS)).toBe(focus);
   });

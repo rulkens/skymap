@@ -42,6 +42,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -221,6 +222,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
           id: 'earth',
           label: 'Earth',
           positionMpc: [0, 0, 0],
+          driver: bodyDriverGeometry('earth'),
         },
       }),
     );

@@ -32,8 +32,16 @@ export function galaxyCatalogSelectionRow(runtime: Catalogs): SelectionKindRow<G
       source: pick.sourceCode as GalaxyCatalogSourceType,
       index: pick.localIdx,
     }),
-    extractRow: (ref) =>
-      extractGalaxyRow(runtime.catalogs.get(ref.source), ref.index, ref.source, runtime.famousMeta),
+    extractRow: (ref) => {
+      const row = extractGalaxyRow(
+        runtime.catalogs.get(ref.source),
+        ref.index,
+        ref.source,
+        runtime.famousMeta,
+      );
+      // A galaxy frames on its catalogue diameter, not on a camera host.
+      return row === null ? null : { ...row, driver: null };
+    },
     focusId: {
       claims: (id) =>
         id.startsWith('pgc-') ||

@@ -27,6 +27,7 @@ const CLUSTER: SelectionRow = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 10,
+  driver: null,
 };
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
@@ -98,7 +99,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    const milkyWay: SelectionRow = { type: 'milkyWay' };
+    const milkyWay: SelectionRow = { type: 'milkyWay', driver: null };
     tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });

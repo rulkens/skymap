@@ -10,12 +10,8 @@
  */
 
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { hOverR } from './hOverR';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -42,13 +38,12 @@ export function approachTiltedPose(
 ): FramedCameraPose {
   if (!isWorldArm(framed)) return framed;
   if (!pivotsOnFocusedBody || rememberedTiltRad === 0) return framed;
-  const focusId = focusDriverId(focusRow);
-  if (focusId === null || !bodyMovesThisFrame(focusRow)) return framed;
+  const driver = focusRow?.driver ?? null;
+  if (driver === null || driver.poseId === null || !bodyMovesThisFrame(focusRow)) return framed;
   // No ground, no nadir to tilt off: a mesh body's radius is a hull.
-  const body = findByIdOrThrow(SCENE_BODIES, focusId, 'approachTiltedPose');
-  if (isMeshBody(body)) return framed;
+  if (driver.groundRadiusM === null) return framed;
   // `hOverR` is the sanctioned Mpc↔metre seam for the altitude.
-  const bodyState = bodies.get(focusId);
+  const bodyState = bodies.get(driver.poseId);
   if (bodyState === undefined) return framed;
   const centreMpc = bodyState.positionMpc;
 
@@ -56,7 +51,7 @@ export function approachTiltedPose(
   const eye = eyeMpcOf(pose, poseBasis);
   const rel: Vec3 = [eye[0] - centreMpc[0], eye[1] - centreMpc[1], eye[2] - centreMpc[2]];
   if (Math.hypot(...rel) === 0) return framed;
-  const hr = hOverR(eye, bodyState, body.surface.datumRadiusM);
+  const hr = hOverR(eye, bodyState, driver.groundRadiusM);
   const tau = mappedTiltRad(rememberedTiltRad, hr, tuning);
   if (tau < 1e-12) return framed; // at/above the band top — inert, by reference
 

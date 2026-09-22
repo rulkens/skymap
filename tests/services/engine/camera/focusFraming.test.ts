@@ -21,6 +21,7 @@ import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -30,12 +31,13 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { starRowDriver } from '../../../fixtures/starRowDriver';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
 const FOVY = 0.8;
 
-const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
+const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
     source: 1,
     index: 7,
@@ -49,14 +51,15 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
     ...over,
   });
 
-const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
+const structureRow = (over: Partial<StructureInfo> = {}) =>
   ({
     type: 'structure',
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
+    driver: null,
     ...over,
-  }) as StructureInfo;
+  }) as StructureInfo & { readonly driver: null };
 
 describe('focusFraming', () => {
   it('galaxy arm — targets galaxy position and frames on its diameter', () => {
@@ -90,7 +93,7 @@ describe('focusFraming', () => {
   });
 
   it('milkyWay arm — targets galactic centre at the fixed view distance', () => {
-    const result = focusFraming({ type: 'milkyWay' }, FOVY);
+    const result = focusFraming({ type: 'milkyWay', driver: null }, FOVY);
     expect(result.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -126,6 +129,7 @@ describe('focusFraming', () => {
     id: 'earth',
     label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
+    driver: bodyDriverGeometry(over.id ?? 'earth'),
     ...over,
   });
 
@@ -186,15 +190,18 @@ describe('focusFraming', () => {
   // ── shared body/star framing (bodyLikeFraming) ───────────────────────────────
 
   it('frames a star and a body identically for equal position + radius', () => {
-    // Star and body rows differ in shape (the essential asymmetry the switch
-    // keeps), but both delegate their framing to the one bodyLikeFraming helper.
-    // Given the same position + physical radius they must yield the same pose —
-    // pinning that the two arms share a single framing body, not two drifting copies.
+    // Star and body rows differ in shape, but each stamps its own driver and the
+    // one case frames off that. Given the same position + physical radius they
+    // must yield the same pose — pinning that the two arms share a single
+    // framing body, not two drifting copies.
     const positionMpc: Vec3 = [4.8481e-12, 0, 0];
     // The Sun is the one seeded body whose radius is the star arm's stamped
     // nominal radius, so the two arms are comparable without a fabricated row.
     const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
-    const bodyResult = focusFraming({ type: 'body', id: 'sun', label: 'Sun', positionMpc }, FOVY);
+    const bodyResult = focusFraming(
+      { type: 'body', id: 'sun', label: 'Sun', positionMpc, driver: bodyDriverGeometry('sun') },
+      FOVY,
+    );
     const starResult = focusFraming(
       {
         type: 'starCatalog',
@@ -204,6 +211,7 @@ describe('focusFraming', () => {
         label: 'Field star',
         positionMpc,
         radiusM,
+        driver: starRowDriver(null, radiusM),
       },
       FOVY,
     );

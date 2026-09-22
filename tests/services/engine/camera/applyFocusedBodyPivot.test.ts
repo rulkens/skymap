@@ -15,6 +15,7 @@ import { applyFocusedBodyPivot } from '../../../../src/services/engine/camera/ap
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
@@ -31,6 +32,7 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 // A drag-style pose whose target is a FROZEN point (what orbitDrag produced from
@@ -97,8 +99,14 @@ describe('applyFocusedBodyPivot', () => {
 
   it('is a pass-through when the focus is not a body', () => {
     expect(applyFocusedBodyPivot(DRAG_FRAMED, true, null, BODIES_A, NO_PAN)).toBe(DRAG_FRAMED);
-    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, { type: 'milkyWay' }, BODIES_A, NO_PAN)).toBe(
-      DRAG_FRAMED,
-    );
+    expect(
+      applyFocusedBodyPivot(
+        DRAG_FRAMED,
+        true,
+        { type: 'milkyWay', driver: null },
+        BODIES_A,
+        NO_PAN,
+      ),
+    ).toBe(DRAG_FRAMED);
   });
 });

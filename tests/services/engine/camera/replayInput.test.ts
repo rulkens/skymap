@@ -33,6 +33,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../fixtures/earthArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
@@ -55,6 +56,7 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 /** The replay's frame context with the store snapshot taken NOW. */

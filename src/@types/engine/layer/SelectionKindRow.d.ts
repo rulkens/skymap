@@ -13,6 +13,7 @@ export type SelectionKindRow<Ref extends SelectionRef = SelectionRef> = {
   readonly type: Ref['type'];
   readonly pickSources: readonly SourceType[];
   resolvePick(entry: SourceEntry, pick: PickResult): Ref | null;
+  /** Fills `SelectionRow.driver` too: the arm owns its camera-host geometry. */
   extractRow(ref: Ref, simDays: number): SelectionRow | null;
   readonly focusId?: {
     /** Exact knowledge: a prefix, a literal, or a loaded set. Never a catch-all. */

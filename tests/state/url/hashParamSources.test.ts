@@ -27,6 +27,7 @@ import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/camera
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
@@ -40,7 +41,7 @@ const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 
-const virgoRow: StructureInfo = {
+const virgoRow: StructureInfo & { readonly driver: null } = {
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
@@ -48,6 +49,7 @@ const virgoRow: StructureInfo = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
+  driver: null,
 };
 
 const earthRow: SelectionRow = {
@@ -55,6 +57,7 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 function focusedOn(row: SelectionRow): RootState {

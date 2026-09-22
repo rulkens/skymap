@@ -19,7 +19,7 @@ const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 
 const FOVY = 0.8;
 const FRAME = 'galactic';
 
-const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
+const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
     source: 1,
     index: 7,
@@ -33,14 +33,15 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
     ...over,
   });
 
-const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
+const structureRow = (over: Partial<StructureInfo> = {}) =>
   ({
     type: 'structure',
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
+    driver: null,
     ...over,
-  }) as StructureInfo;
+  }) as StructureInfo & { readonly driver: null };
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose, FOCUS_TWEEN_MS, easeOutCubic, and the caller-stamped frame', () => {
@@ -81,7 +82,7 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, FRAME);
+    const d = focusTweenDescriptor({ type: 'milkyWay', driver: null }, FROM, FOVY, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
