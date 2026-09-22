@@ -57,6 +57,9 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -189,7 +192,6 @@ type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
   pgcAlias: StubSlot;
-  mcpm: StubSlot;
 }>;
 
 type MakeStateOptions = {
@@ -254,6 +256,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     pgcAlias: layerSlots.get('pgcAlias'),
     hiResFamous: layerSlots.get('hiResFamous'),
   } as unknown as GalaxyCatalogRuntime;
+  // The density Layer's slots, keyed by `Source` code as its rows key them.
+  const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
+  for (const [code, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+    densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
+    layerSlots.set(code, densitySlots[entry.id]!);
+  }
+  const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
 
   return {
     // tier feeds `req(state.tier)`; it lives in its own root field on EngineState.
@@ -286,7 +295,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
         unknown,
         unknown
       > as never,
-      mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       // Empty keyed family: the body-texture rows resolve to undefined slots
       // (far resting pose ⇒ none demanded anyway), so none fires.
       bodyTextures: new Map(),
@@ -299,7 +307,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // The composed lists `createLayers` would have written: core's authored
     // registry plus the galaxyCatalog Layer's, folded once, with that Layer's
     // slots in the map `slotFor` consults first.
-    assetRows: expandCompanionRows([...ASSET_WIRING, ...galaxyCatalogAssetRows(galaxyRuntime)]),
+    assetRows: expandCompanionRows([
+      ...ASSET_WIRING,
+      ...galaxyCatalogAssetRows(galaxyRuntime),
+      ...cosmicWebDensityAssetRows(densityRuntime),
+    ]),
     layerSlots,
   } as unknown as EngineState;
 }
@@ -314,13 +326,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
-  // The Layer's slots — point sources plus its two sidecars.
+  // The Layers' slots — point sources, sidecars and density cubes.
   for (const [key, slot] of state.layerSlots) {
     if ((slot as StubSlot).load.mock.calls.length) fired.add(key);
   }
 
   // Core's named slots — the ones that might have fired.
-  const namedKeys = ['structureCatalog', 'mcpm'] as const;
+  const namedKeys = ['structureCatalog'] as const;
   for (const key of namedKeys) {
     const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
@@ -400,7 +412,7 @@ describe('reevaluateDemand demand-table regression', () => {
         'famousGalaxiesMeta',
         'hiResFamous',
         'structureCatalog',
-        'mcpm',
+        Source.Mcpm,
       ]),
     );
   });

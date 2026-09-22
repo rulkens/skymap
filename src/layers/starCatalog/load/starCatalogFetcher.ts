@@ -36,7 +36,7 @@
  * code, so there is no filename to assemble and nothing to fetch.
  *
  * On 404 the slot machinery's error path leaves the catalog unregistered;
- * the star layer simply doesn't draw. Mirrors the mcpmFetcher fallback.
+ * the star layer simply doesn't draw.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';

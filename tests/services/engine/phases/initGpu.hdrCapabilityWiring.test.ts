@@ -176,10 +176,6 @@ vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', 
   createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer', () => ({
-  createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
   createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
@@ -345,8 +341,6 @@ function makeState(): EngineState {
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      volumeFieldRenderer: null,
-      volumeUpsample: null,
       pickDebugOverlay: null,
       earthRenderer: null,
       planetRenderer: null,

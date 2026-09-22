@@ -2,8 +2,8 @@
  * structureMarkersPass — halo + ring draws for every structure category
  * (cluster / supercluster / void / group), into the hdr layer, NOT the swap
  * target: halos are additive emissive content that tone-maps alongside the
- * point sprites. After volumeUpsamplePass so halos composite over the cosmic
- * web.
+ * point sprites. After the cosmic-web-density upsample so halos composite over
+ * the cosmic web.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

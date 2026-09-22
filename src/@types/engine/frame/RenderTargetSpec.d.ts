@@ -12,7 +12,7 @@
 import type { EngineState } from '../state/EngineState';
 
 export type RenderTargetSpec = {
-  /** e.g. 'hdr' | 'volume' | 'foreground:0' | 'swap' | 'pick:cosmo' | 'pick:near0'. */
+  /** e.g. 'hdr' | 'cosmic-web-density' | 'foreground:0' | 'swap' | 'pick:cosmo' | 'pick:near0'. */
   id: string;
   /** rgba16float offscreen / swap format / r32uint for pick. */
   format: GPUTextureFormat;

@@ -17,6 +17,9 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
@@ -113,7 +116,7 @@ function makeLoggingRenderer() {
 
 /**
  * Mock the offscreen render-target table. The backing `views` record is
- * shared by reference so a test can swap the volume row's view.
+ * shared by reference so a test can swap the density row's view.
  */
 function makeRenderTargets(views: Record<string, GPUTextureView>) {
   // Clear values match production; `specOf` is what `executeFrame` reads.
@@ -126,7 +129,7 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
     {
-      id: 'volume',
+      id: 'cosmic-web-density',
       format: 'rgba16float',
       depth: null,
       scale: 3,
@@ -157,7 +160,7 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumePass / milkyWayAggregatePass read this for their
+    // the density raymarch / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720
     // `makeMinimalInputWithTiming` builds `ctx` with.
     sizeOf: (id: string) => {
@@ -232,6 +235,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   encoder: GPUCommandEncoder;
   device: GPUDevice;
   renderTargetViews: Record<string, GPUTextureView>;
+  densityRuntime: CosmicWebDensityRuntime;
 } {
   const env = makeEncoderEnv();
   const device = makeFakeDevice(env.encoder);
@@ -245,10 +249,16 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const texturedDiskRenderer = makeLoggingRenderer();
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
-    volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+    'cosmic-web-density': { __id: 'density-view' } as unknown as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeRenderTargets(renderTargetViews);
+  // No active field ⇒ the density passes stay gated off unless a test revives
+  // this renderer in place (the raymarch row captured it at construction).
+  const densityRuntime = {
+    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    upsample: null,
+  } as unknown as CosmicWebDensityRuntime;
 
   const cam = makeCam();
   const canvasWidth = 1280;
@@ -322,7 +332,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         markerLineRenderer: null,
         debugLineRenderer: null,
         selectionRingRenderer: null,
-        volumeFieldRenderer: null,
         structureMarkerRenderer: null,
         // Near-field handles null → the (hdr, NEAR0) render, the
         // foreground:0 render, and the NEAR0 caption render all select
@@ -409,13 +418,15 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // renderFrame.test.ts.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
       // The COMPOSED list `createLayers` writes: core's registry plus the
-      // galaxyCatalog Layer's pass, which bills the `point-sprites` timed slot
-      // this suite asserts.
+      // galaxyCatalog Layer's pass (the `point-sprites` timed slot) and the
+      // cosmicWebDensity Layer's two, which this suite asserts.
       passes: [
         ...CONTENT_PASSES,
         galaxyPointSpritesPass({
           pointRenderer: galaxyPointRenderer,
         } as unknown as GalaxyCatalogRuntime),
+        cosmicWebDensityPass(densityRuntime),
+        cosmicWebDensityUpsamplePass(densityRuntime),
       ],
       computes: CORE_COMPUTES,
       planners: STUB_PLANNERS,
@@ -432,6 +443,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     encoder: env.encoder,
     device,
     renderTargetViews,
+    densityRuntime,
   };
 }
 
@@ -520,40 +532,32 @@ describe('renderFrame — timing service hookup', () => {
     }
   });
 
-  it('bills the volume raymarch pass against the scalar-volume slot when timings are active', () => {
+  it('bills the density raymarch pass against its own slot when timings are active', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
-    const { input, beginCalls, renderTargetViews } = makeMinimalInputWithTiming(svc);
+    const { input, beginCalls, renderTargetViews, densityRuntime } =
+      makeMinimalInputWithTiming(svc);
 
-    // Force volumes on with an active volumeFieldRenderer. The scalar-volume
-    // layer gates on `deriveVolumeLiveness`, which reads the renderer straight
-    // off `state.gpu.volumeFieldRenderer`.
+    // Force the master on with an active field: both density passes gate on
+    // the shared liveness, which reads the Layer's renderer.
     (input.state as any).settings.cosmicWebDensity = { enabled: true, items: {} };
-    const drawSpy = vi.fn();
-    (input.state as any).gpu.volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-      listIds: () => [],
-    };
-    // The volume render step resolves its attachment via
-    // ctx.renderTargets.viewOf('volume'); swap the backing row.
-    const halfView = { __id: 'half' } as unknown as GPUTextureView;
-    renderTargetViews.volume = halfView;
-    // volume-upsample draw self-guards on a null volumeUpsample; null it so the
-    // upsample layer draws nothing (its enabled() still tracks the same gate).
-    (input.state as any).gpu.volumeUpsample = null;
+    Object.assign(densityRuntime.renderer, { hasActiveFields: () => true });
+    // The density render step resolves its attachment via
+    // ctx.renderTargets.viewOf('cosmic-web-density'); swap the backing row.
+    const reducedView = { __id: 'reduced' } as unknown as GPUTextureView;
+    renderTargetViews['cosmic-web-density'] = reducedView;
 
     renderFrame(input);
 
     const slots = descriptorFor.mock.calls.map((c) => c[0]);
-    expect(slots).toContain('scalar-volume');
-    // The volume render step precedes the hdr step, and there is no dedicated
-    // clear pass in the unified path, so the volume pass is the FIRST
-    // beginRenderPass (index 0) — carrying the scalar-volume descriptor.
+    expect(slots).toContain('cosmic-web-density');
+    // The density render step precedes the hdr step, and there is no dedicated
+    // clear pass in the unified path, so the density pass is the FIRST
+    // beginRenderPass (index 0) — carrying its own descriptor.
     const preDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {
       timestampWrites?: GPURenderPassTimestampWrites;
     };
     expect(preDesc.timestampWrites).toBeDefined();
     const tag = (preDesc.timestampWrites!.querySet as unknown as { _stub: string })._stub;
-    expect(tag).toBe('scalar-volume');
+    expect(tag).toBe('cosmic-web-density');
   });
 });

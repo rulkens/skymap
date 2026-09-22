@@ -3,7 +3,7 @@
  * master gate plus per-field params, and the reducers that write them.
  */
 
-import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
 import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
@@ -16,15 +16,6 @@ export const cosmicWebDensitySlice = createSlice({
   reducers: {
     setCosmicWebDensityEnabled: (volumes, action: PayloadAction<boolean>) => {
       volumes.enabled = action.payload;
-    },
-    addCosmicWebDensityField: (volumes, action: PayloadAction<CosmicWebDensityFieldId>) => {
-      // `items` is a total record now — every id is already present at
-      // boot, so this early return always fires. Kept only until Task 4
-      // deletes the reducer entirely.
-      if (volumes.items[action.payload]) return;
-      volumes.items[action.payload] = initialState.items[
-        action.payload
-      ] as Draft<VolumeFieldSettings>;
     },
     writeCosmicWebDensityField: (
       volumes,
@@ -39,5 +30,5 @@ export const cosmicWebDensitySlice = createSlice({
   },
 });
 
-export const { setCosmicWebDensityEnabled, addCosmicWebDensityField, writeCosmicWebDensityField } =
+export const { setCosmicWebDensityEnabled, writeCosmicWebDensityField } =
   cosmicWebDensitySlice.actions;

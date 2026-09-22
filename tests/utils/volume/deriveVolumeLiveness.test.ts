@@ -2,7 +2,7 @@
  * deriveVolumeLiveness (pure core) — the clamp, the per-field band fold, and
  * the `hasActiveFields` gate, isolated from any state/settings/fade read. A
  * stub renderer + plain closures + a camera distance stand in for the
- * `PassState`/`FrameView` a Layer's wrapper (e.g. `volumeLiveness.ts`) reads.
+ * `PassState`/`FrameView` a Layer's wrapper (e.g. `deriveCosmicWebDensityLiveness`) reads.
  */
 
 import { describe, it, expect } from 'vitest';

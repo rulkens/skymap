@@ -44,7 +44,7 @@ export const milkyWayAggregatePass: ContentPass = {
   },
 
   draw(pass, view, ctx, state) {
-    // Defensive re-derivation, mirroring `scalarVolumePass`: `enabled` already
+    // Defensive re-derivation, mirroring `createScalarVolumePass`: `enabled` already
     // proved liveness, but re-deriving keeps this a pure function of
     // (state, ctx) with no reliance on gate ordering.
     const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);

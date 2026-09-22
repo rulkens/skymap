@@ -2,7 +2,7 @@
  * flowFieldFetcher — `Fetcher<ScalarCube, void>` against the prebuilt
  * `flowfield.scfd` on R2 (or `public/data/` in local dev).
  *
- * Mirrors `mcpmWorkbenchFetcher`'s shape: one URL, no per-request branching,
+ * One URL, no per-request branching,
  * decode via the format module. The request payload is `void` — there is
  * one and only one CF4++ velocity cube. Unlike the galaxy catalog catalogs (and
  * unlike MCPM), the flow field is NOT tier-gated: it ships as a single

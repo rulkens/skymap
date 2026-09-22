@@ -11,11 +11,7 @@
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
-import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
-import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
@@ -43,14 +39,6 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
  * adding `group` here would fetch the catalog whenever group visibility toggles.
  */
 const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['cluster', 'supercluster', 'void'];
-
-/**
- * Read from the registry, not re-spelled, so the demand predicates cannot drift
- * from the strings the renderer and settings key on.
- */
-const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
-const POLYPHORM_2MRS_FIELD = SOURCE_REGISTRY[Source.Polyphorm2MRS].id;
-const MCPM_WORKBENCH_FIELD = SOURCE_REGISTRY[Source.McpmWorkbench].id;
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
@@ -149,46 +137,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: () => true,
     priority: 0,
-  },
-
-  // ── Volume overlays: mcpm / polyphorm2Mrs / mcpmWorkbench ─────────
-  // All three are load-once and deliberately declare no `release`: adding one
-  // requires an `onRelease` that calls `volumeFieldRenderer.unload(id)`, or the
-  // GPU resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
-  // Optional-chained `demand` because `settings.cosmicWebDensity.items` has no
-  // entry for a field until it is seeded.
-
-  // ── MCPM Cosmic Web volume ───────────────────────────────────────
-  {
-    key: 'mcpm',
-    factory: (deps) => createMcpmSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.cosmicWebDensity.items[MCPM_FIELD]?.enabled === true,
-    priority: 70, // the largest single boot payload, and it only reads at the widest rung
-  },
-
-  // ── Polyphorm 2MRS density volume ─────────────────────────────────
-  // Tier-aware like MCPM (same physical quantity, same per-tier `.scfd`
-  // variants), unlike the workbench export below's void request.
-  {
-    key: 'polyphorm2Mrs',
-    factory: (deps) => createPolyphorm2MrsSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.cosmicWebDensity.items[POLYPHORM_2MRS_FIELD]?.enabled === true,
-    priority: 82, // last of the cosmic-web overlays; default-off, so it rarely competes at boot
-  },
-
-  // ── MCPM workbench promoted-export volume ─────────────────────────
-  // Void request: one cube, no tier variants. Hidden (`visible: false`)
-  // pending a promotion decision — no UI toggle exists yet, so this demand
-  // predicate never fires in production, but it exists so the slot
-  // machinery is symmetric with every other shippable volume.
-  {
-    key: 'mcpmWorkbench',
-    factory: (deps) => createMcpmWorkbenchSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.cosmicWebDensity.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
-    priority: 82, // same rung as polyphorm2Mrs above; default-off, so it rarely competes at boot
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

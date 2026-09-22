@@ -42,22 +42,11 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 //
 // Replace every fetcher with a no-op resolved Promise.  None of our
 // tests trigger an actual network request — the slots whose `.load()`
-// fires inside wireSlots (famousGalaxiesMeta, filaments, polyphorm2Mrs) need a
+// fires inside wireSlots (famousGalaxiesMeta, filaments, the density cubes) need a
 // fetcher that resolves quickly so the slot transitions to `ready`
 // without timing out the test.  We don't care about the value because
 // no commit step (here) reads it; the slots that have a commit are
 // the per-source point slots, which we inject as fakes (see below).
-
-vi.mock('../../../../src/services/loading/fetchers/polyphorm2MrsFetcher', () => ({
-  polyphorm2MrsFetcher: vi.fn(async () => ({
-    dims: [4, 4, 4],
-    voxels: new Float32Array(64),
-    valueMin: 0,
-    valueMax: 1,
-    frame: 'supergalactic',
-    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-  })),
-}));
 
 vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
@@ -105,8 +94,8 @@ vi.mock('../../../../src/services/loading/fetchers/bodyAtlasFetcher', () => ({
 
 // MCPM is default-on, so the demand loop fires its load at boot.  Mock the
 // fetcher so the slot resolves without networking.
-vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
-  mcpmFetcher: vi.fn(async () => ({
+vi.mock('../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher', () => ({
+  cosmicWebDensityFetcher: vi.fn(async () => ({
     dims: [4, 4, 4],
     voxels: new Float32Array(64),
     valueMin: 0,
@@ -148,9 +137,13 @@ import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
-import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
+import { cosmicWebDensityFetcher } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher';
+import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
+import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
+import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
-import { polyphorm2MrsFetcher } from '../../../../src/services/loading/fetchers/polyphorm2MrsFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -220,6 +213,10 @@ function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
   ]);
 }
 
+/** The `binBaseName` of every density cube the mocked fetcher was asked for. */
+const fetchedCubes = (): string[] =>
+  vi.mocked(cosmicWebDensityFetcher).mock.calls.map(([req]) => req.binBaseName);
+
 /** A `ready` payload shaped enough for the all-arrivals gate's `count > 0` check. */
 const readyValue = (count: number): LoadState<unknown> => ({
   kind: 'ready',
@@ -273,6 +270,21 @@ function makeState(
     hiResFamous: layerSlots.get('hiResFamous'),
     pointRenderer: { hasCatalog: () => true },
   } as unknown as GalaxyCatalogRuntime;
+  // The density Layer's real slots over a stub renderer; `listIds` is the
+  // arrival-fade guard `installFadeOnArrival` reads.
+  const densityRenderer = { upload: vi.fn(), listIds: () => [] } as never;
+  const densityRuntime = {
+    renderer: densityRenderer,
+    slots: Object.fromEntries(
+      COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => [
+        entry.id,
+        createCosmicWebDensitySlot(entry, densityRenderer),
+      ]),
+    ),
+  } as unknown as CosmicWebDensityRuntime;
+  for (const [code, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+    layerSlots.set(code, densityRuntime.slots[entry.id] as never);
+  }
   const allVisible: Record<string, boolean> = {
     cluster: true,
     supercluster: true,
@@ -358,18 +370,11 @@ function makeState(
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
-      // optional-chain through them.  The scalar volume renderer is stubbed so
-      // volume commits can land.
+      // optional-chain through them.
       renderTargets: null,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
-      // `listIds` is an arrival-fade guard: `installFadeOnArrival` calls it on a
-      // present renderer, where `seedFades` never did.
-      volumeFieldRenderer: {
-        upload: vi.fn(),
-        listIds: () => [],
-      } as never,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() } as never,
@@ -416,7 +421,6 @@ function makeState(
       starCatalogs: new Map(),
       filaments: null,
       structureCatalog: null,
-      mcpm: null,
       // Real (empty) map: installLoadProgress walks it, and the body-texture
       // rows are `built: 'external'` so the construction pass skips them.
       bodyTextures: new Map(),
@@ -425,8 +429,16 @@ function makeState(
     // The composed lists `createLayers` would have written: core's registries
     // plus the galaxyCatalog Layer's rows, with its slots in `layerSlots` —
     // wireSlots itself no longer mints any of them.
-    assetRows: expandCompanionRows([...ASSET_WIRING, ...galaxyCatalogAssetRows(galaxyRuntime)]),
-    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(galaxyRuntime)],
+    assetRows: expandCompanionRows([
+      ...ASSET_WIRING,
+      ...galaxyCatalogAssetRows(galaxyRuntime),
+      ...cosmicWebDensityAssetRows(densityRuntime),
+    ]),
+    fadeRows: [
+      ...FADE_LAYERS,
+      ...galaxyCatalogFadeRows(galaxyRuntime),
+      ...cosmicWebDensityFadeRows(densityRuntime),
+    ],
     layerSlots,
   } as unknown as EngineState;
 }
@@ -528,7 +540,7 @@ describe('wireSlots', () => {
       resolveManifest = resolve;
     });
     vi.mocked(loadDataManifest).mockReturnValueOnce(deferred);
-    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(cosmicWebDensityFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
 
     const sdssSlot = makeFakeSlot('sdss-points');
@@ -554,7 +566,7 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).not.toHaveBeenCalled();
     expect(gladeSlot.load).not.toHaveBeenCalled();
     expect(famousSlot.load).not.toHaveBeenCalled();
-    expect(mcpmFetcher).not.toHaveBeenCalled();
+    expect(cosmicWebDensityFetcher).not.toHaveBeenCalled();
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
 
     resolveManifest();
@@ -568,7 +580,7 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
-    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(fetchedCubes()).toContain('mcpm');
     expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
@@ -620,10 +632,9 @@ describe('wireSlots', () => {
     // come from reevaluateDemand reading the construction-seeded state. Each
     // sidecar's load is observable through its (mocked) fetcher; clear them
     // first since the module-scoped mocks persist across tests.
-    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(cosmicWebDensityFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
-    vi.mocked(polyphorm2MrsFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
@@ -634,12 +645,12 @@ describe('wireSlots', () => {
 
     // Default-on / structures-visible ⇒ fetched. The famous-meta sidecar is
     // the Layer's slot now, so its load is observed on the stub, not its fetcher.
-    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(fetchedCubes()).toContain('mcpm');
     expect(structureCatalogFetcher).toHaveBeenCalled();
     expect(state.layerSlots.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
-    expect(polyphorm2MrsFetcher).not.toHaveBeenCalled();
+    expect(fetchedCubes()).not.toContain('polyphorm-2mrs');
     expect(state.layerSlots.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 

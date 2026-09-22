@@ -25,11 +25,18 @@ import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibi
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
 const GALAXY_RUNTIME = {
   pointRenderer: { hasCatalog: () => true },
 } as unknown as GalaxyCatalogRuntime;
+
+/** No cube resident: the density rows' guards read the renderer, their seeds do not. */
+const DENSITY_RUNTIME = {
+  renderer: { listIds: () => [] },
+} as unknown as CosmicWebDensityRuntime;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -97,9 +104,9 @@ function makeState(
     subsystems: {
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
-    // `seedFades` walks the COMPOSED rows; over an empty layer tuple that is
-    // the core manifest these tests are written against.
-    fadeRows: FADE_LAYERS,
+    // `seedFades` walks the COMPOSED rows: the core manifest plus the density
+    // Layer's, whose master and per-cube seeds are pinned below.
+    fadeRows: [...FADE_LAYERS, ...cosmicWebDensityFadeRows(DENSITY_RUNTIME)],
   } as unknown as EngineState;
 }
 
@@ -251,6 +258,7 @@ describe('FADE_LAYERS intent subset', () => {
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...zoneOfAvoidanceFadeRows(),
+      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
@@ -266,18 +274,5 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.seed(makeSettings({ orbitTrailsEnabled: true }), undefined)).toBe(1);
     // And no guard — the conic table is always present (unlike flow/filaments).
     expect(row.guard).toBeUndefined();
-  });
-
-  it('volume-field row guard gates on the renderer holding the field', () => {
-    const row = rowFor('cosmicWebDensityField');
-    const state = {
-      gpu: { volumeFieldRenderer: { listIds: () => ['mcpm'] } },
-    } as unknown as EngineState;
-    // Not in the renderer's map → suppressed; present → fades.
-    expect(row.guard?.(state, 'polyphorm-2mrs')).toBe(false);
-    expect(row.guard?.(state, 'mcpm')).toBe(true);
-    // No renderer yet (mid-bootstrap): demand-loaded ids suppressed.
-    const bare = { gpu: {} } as unknown as EngineState;
-    expect(row.guard?.(bare, 'mcpm')).toBe(false);
   });
 });

@@ -92,12 +92,12 @@ export const SCENE: FrameSection = {
     // lands before that view's apply and after the previous view's — no line
     // among the once-scope PRELUDE computes could give it that ordering.
     { kind: 'compute', name: 'aerial-perspective' },
-    // The half-res scalar-volume raymarch into its own offscreen. It is merged
-    // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
-    // never by a whole-texture composite — so there is no `volume→hdr` line here,
-    // and this render must precede that step.
-    { kind: 'render', target: 'volume', slab: COSMO, passes: ['scalar-volume'] },
-    // The zone-of-avoidance band raymarch — the twin of the volume render above,
+    // The reduced-res cosmic-web density raymarch into its own offscreen. It is
+    // merged into HDR by the `cosmic-web-density-upsample` pass inside the hdr
+    // COSMO step below, never by a whole-texture composite — so there is no
+    // `cosmic-web-density→hdr` line here, and this render must precede that step.
+    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // The zone-of-avoidance band raymarch — the twin of the density render above,
     // into its own 1/5-res offscreen, merged the same way by
     // `zone-of-avoidance-upsample` inside the hdr COSMO step. That layer also
     // draws the band's full-res curved lettering straight into HDR, since MSDF
@@ -117,7 +117,7 @@ export const SCENE: FrameSection = {
         'textured-disks',
         'cosmic-web-filaments',
         'flow',
-        'volume-upsample',
+        'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
         'horizon-shell',
         'structure-markers',
