@@ -20,7 +20,8 @@ export function plainPassGroupKeys(program: readonly FrameStep[]): ReadonlyMap<s
   const map = new Map<string, string>();
   for (const step of program) {
     if (step.kind === 'compute') {
-      map.set(computeTimingSlotName(step.name), 'compute');
+      // 'canvas': see timedSlotRowsOf.ts's identical note.
+      map.set(computeTimingSlotName(step.name, 'canvas'), 'compute');
       continue;
     }
     if (step.kind !== 'render') continue;

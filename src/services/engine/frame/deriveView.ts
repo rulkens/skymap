@@ -35,7 +35,7 @@ export function deriveView(
   spec: ViewSpec,
 ): FrameView {
   const { bodyStates, slabBodyCandidates, meshBodies, positionedStars } = snapshot;
-  const { rotation, eyeOffsetMpc, frustum, sizePx } = spec;
+  const { id, rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
   const vp = computeViewProj(cam, frustum, viewFromCamEye, spec.clipYFlip);
@@ -144,6 +144,7 @@ export function deriveView(
   });
 
   return {
+    id,
     snapshot,
     cam: viewCam,
     vp,

@@ -28,9 +28,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // only the dome rig draws must still pass boot before the user ever
   // switches to it.
   checkFrameOrder(
-    Object.values(VIEW_RIGS).map((rig) => rig.program.flatMap((section) => section.steps)),
+    Object.values(VIEW_RIGS).map((rig) => rig.program),
     state.passes,
     state.computes,
+    state.planners,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
     state.gpu.renderTargets!.specs,
   );

@@ -27,6 +27,7 @@ export type ConstellationRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
     halfWidthPx: number,
     intensity: number,
     fadeOpacity: number,

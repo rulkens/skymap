@@ -186,7 +186,12 @@ export function createDebugLineRenderer(
     }
   }
 
-  function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: Vec2,
+    pxPerRad: number,
+  ): void {
     if (
       !device ||
       !pipeline ||
@@ -200,7 +205,7 @@ export function createDebugLineRenderer(
     if (currentLineCount === 0) return;
 
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize);
+    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setPipeline(pipeline);

@@ -67,7 +67,13 @@ export const labelsPass: ContentPass = {
     // the joint decides anything here — the depth half is bound because the
     // pipeline layout demands it, and reads as a no-op against the labels'
     // zero cutoff.
-    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, overlaySceneOcclusion(ctx, view));
+    state.gpu.labelRenderer!.draw(
+      pass,
+      view.vp,
+      view.viewportPx,
+      ctx.drawPxPerRad,
+      overlaySceneOcclusion(ctx, view),
+    );
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with

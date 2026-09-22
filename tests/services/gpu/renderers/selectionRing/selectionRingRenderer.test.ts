@@ -68,7 +68,7 @@ describe('SelectionRingRenderer.draw', () => {
   it('is a no-op when selection is null', () => {
     const { renderer } = newMockDeviceRenderer();
     const pass = newPassSpy();
-    renderer.draw(pass, new Float32Array(16), [1280, 720], null);
+    renderer.draw(pass, new Float32Array(16), [1280, 720], 1000, null);
     expect(pass.setPipeline).not.toHaveBeenCalled();
     expect(pass.draw).not.toHaveBeenCalled();
   });
@@ -76,7 +76,7 @@ describe('SelectionRingRenderer.draw', () => {
   it('writes the selection uniform and issues the 6-vertex draw', () => {
     const { renderer, writeBuffer } = newMockDeviceRenderer();
     const pass = newPassSpy();
-    renderer.draw(pass, new Float32Array(16), [1280, 720], {
+    renderer.draw(pass, new Float32Array(16), [1280, 720], 1000, {
       worldPos: [1, 2, 3],
       ringRadiusPx: 40,
       alpha: 0.25,

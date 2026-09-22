@@ -11,7 +11,7 @@ import { galaxyCatalogLayerSettings } from './state/slices';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { frame } from './frame';
+import { galaxyCatalogPlanner } from './frame';
 import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
 import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from './passes/proceduralDisksPass';
@@ -49,6 +49,6 @@ export const galaxyCatalogLayer = defineLayer({
     ],
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
-  frame,
+  planners: (runtime) => [galaxyCatalogPlanner(runtime)],
   ui: [{ slot: 'main', content: GalaxiesSectionContainer }],
 });

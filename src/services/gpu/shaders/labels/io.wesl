@@ -42,10 +42,11 @@
 import package::lib::camera::CameraUniforms;
 
 struct Uniforms {
-  // 80-byte universal camera prefix. Bytes 64..71 (viewportPx) carry
-  // the screen pixel dimensions used by the hybrid sizing math; bytes
-  // 72..79 (the pad slots) stay reserved — the CPU writer must zero
-  // them so future fields don't surprise existing label buffers.
+  // 80-byte universal camera prefix. Bytes 64..71 (viewportPx) carry the
+  // screen pixel dimensions used by the hybrid sizing math; 72..75 the
+  // 'pxPerRad' focal term the em projection reads; 76..79 stay reserved —
+  // the CPU writer must zero them so future fields don't surprise existing
+  // label buffers.
   cam: CameraUniforms,
 };
 

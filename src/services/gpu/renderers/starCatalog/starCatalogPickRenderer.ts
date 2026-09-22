@@ -221,6 +221,7 @@ export function createStarCatalogPickRenderer(
       source,
       vp,
       viewportPx,
+      pxPerRad,
       drawCount,
       firstRecord,
       recordCount,
@@ -236,7 +237,7 @@ export function createStarCatalogPickRenderer(
     // Own uniform: camera prefix + sizePx + the already-set pickPass = 1 /
     // brightness / glowOverlap. Written to this renderer's OWN buffer — the
     // visual pass's buffer is never touched.
-    writeCameraPrefix(uniformF32, vp, viewportPx);
+    writeCameraPrefix(uniformF32, vp, viewportPx, pxPerRad);
     uniformF32[SIZE_PX_FLOAT_INDEX] = sizePx;
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 

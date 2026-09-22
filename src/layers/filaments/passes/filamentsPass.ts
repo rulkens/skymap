@@ -29,6 +29,7 @@ export function filamentsPass(runtime: FilamentsRuntime): ContentPass {
         pass,
         view.vp,
         view.viewportPx,
+        ctx.drawPxPerRad,
         FILAMENT_LINE_HALFWIDTH_PX,
         state.settings.filaments.intensity,
         // Focus recession is applied HERE (on the drawn opacity), not on the

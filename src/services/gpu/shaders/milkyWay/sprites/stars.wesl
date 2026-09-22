@@ -1,7 +1,7 @@
 // milkyWay/sprites/stars.wesl — shader-math derivation file (exceeds the
 // usual header budget on that basis): the star billboard pass. Each
 // generated star is one instanced point expanded on the GPU into a
-// camera-facing quad, shaded as a soft radial glow, and drawn with ADDITIVE
+// eye-facing quad, shaded as a soft radial glow, and drawn with ADDITIVE
 // blending (pipeline-side) so overlapping stars sum their light — the
 // physically-correct model for unresolved point sources.
 //
@@ -37,6 +37,7 @@
 // rescales the corner delta.
 
 import package::milkyWay::sprites::io::u;
+import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
@@ -67,12 +68,23 @@ fn vs(@location(0) corner: vec2<f32>,
   let worldHalfExtent = inSB.x * modelScale * u.params1.z;
 
   // Place the particle center through the model transform, then push the
-  // billboard corner out along the camera-facing basis in world space.
+  // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + (u.camRight.xyz * corner.x + u.camUp.xyz * corner.y) * worldHalfExtent;
+  let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
+  // The LOD below culls by apparent size and parks a culled VERTEX off
+  // screen, so all four vertices of one sprite must measure the same size
+  // or a sprite on the cull threshold tears into a triangle. A tilted
+  // quad's corners differ slightly; measure one fixed corner for all four.
+  let diagWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, vec2<f32>(1.0, 1.0)) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
-  var kClip = worldToClip(u.cam, cornerWorld);
+  // The quad is tilted against the view plane, so its corners sit at
+  // different depths; projecting them independently draws a trapezoid
+  // and spikes a corner that crosses behind the eye across the screen.
+  // Sharing the centre's depth keeps the image a parallelogram on the
+  // centre and a corner is behind the eye only when the sprite is.
+  let dClip = u.cam.viewProj * vec4<f32>(offsetWorld, 0.0);
+  var kClip = vec4<f32>(cClip.xy + dClip.xy, cClip.z, cClip.w);
 
   // Pixel-space screen-size clamp (replaces the tool's 0.11-NDC cap). Only
   // meaningful when both center and corner are in front of the camera.
@@ -90,7 +102,7 @@ fn vs(@location(0) corner: vec2<f32>,
     // NDC apparent half-extent for the flux-conserving LOD below, captured
     // BEFORE the px clamp rescales 'd' — the LOD band was tuned in NDC
     // units in the tool, while the clamp works in pixels.
-    apparent = length(d);
+    apparent = length((u.cam.viewProj * vec4<f32>(diagWorld, 0.0)).xy / cClip.w);
     // NDC spans [-1, 1] across viewportPx, so a delta 'd' in NDC is
     // 'd * viewportPx * 0.5' in pixels. Its length is the sprite's on-screen
     // half-extent in pixels.

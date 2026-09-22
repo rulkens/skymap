@@ -250,6 +250,16 @@ const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5; // 7 px diameter
 //                            (services/engine/frame/partitionStarsByResolution.ts)
 const SOLAR_RADIUS_MPC: f32 = 2.25668425e-14;
 const STAR_SPHERE_RESOLVE_PX: f32 = 4.0;
+// The threshold in the SHADER's scale. 'worldLenToPx' now reports the TRUE
+// apparent size (lib/camera.wesl's pxPerRad), where it used to under-report
+// it by tan(fovY/2); folding 1/tan(30 degrees) in keeps the hand-off at the
+// distance it had before pxPerRad, at the app's 60 degree fov. The TS twin
+// above stays the bare resolve threshold, unscaled.
+const STAR_SPHERE_FADE_START_PX: f32 = STAR_SPHERE_RESOLVE_PX * 1.73205;
+// Aggregate glow radius per unit of box footprint: 0.5 turns the box edge's
+// full on-screen span into a dot RADIUS, and tan(30 degrees) preserves the
+// pre-pxPerRad glow size at the app's 60 degree fov.
+const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // Fade width: the sprite starts dissolving when the estimated sphere size
 // crosses the resolve threshold and is fully gone at 4x it. Wide enough that
 // the dissolve spans many frames of a focus descent (no visible pop), narrow
@@ -327,15 +337,15 @@ fn vs(
   // Radius (px). A leaf is a POINT source -> the legibility floor. An aggregate
   // is an EXTENDED source -> its glow fills the box's on-screen footprint so
   // neighbouring far aggregates blend into a continuous field, not a lattice.
-  // 'worldLenToPx' of the box edge gives its full on-screen span; half of that
-  // is the dot radius (diameter == box edge), and the Gaussian's soft tail
-  // spills a little past the box so adjacent glows overlap. 'select' picks the
+  // 'worldLenToPx' of the box edge gives its full on-screen span;
+  // AGGREGATE_BOX_RADIUS_FACTOR turns that into the dot radius, and the
+  // Gaussian's soft tail spills a little past the box so adjacent glows overlap. 'select' picks the
   // box extent only for aggregates ('node.isAggregate' != 0); a leaf gets
   // extent 0 -> floor. All scaled by the user's size slider (spread control;
   // luminance is invariant to radius -- header fact 2).
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
   let extentMpc = select(0.0, node.cellScaleMpc, node.isAggregate != 0u);
-  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * 0.5;
+  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
   // Glow overlap spreads AGGREGATE glows past their box footprint so the lattice
   // dissolves; leaves (point sources) select 1.0 and are untouched. Folded into
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
@@ -399,13 +409,13 @@ fn vs(
   // no sphere to replace it -- AU-proximity is reached essentially only by
   // focus-framing, so the transient gap is unobtrusive.
   //
-  // 'worldLenToPx' under-reports the true apparent size by tan(fovY/2) (it has
-  // no access to the fov, only clip.w + viewport; at the app's fixed 60-degree
-  // fov that is x0.58), so the fade begins only once the TRUE sphere size is
+  // 'sphereDiamPx' is now the TRUE apparent diameter (lib/camera.wesl's
+  // pxPerRad), so the band is keyed on STAR_SPHERE_FADE_START_PX, which folds
+  // the old fov-blind scale back in: the fade still begins once the sphere is
   // ~1.7x the resolve threshold -- the sphere is always resolved BEFORE the
-  // sprite starts dissolving (the safe direction for any fov below 90 degrees).
-  // At a 1080 px viewport the band runs from ~1.3 AU (fade start) to ~0.3 AU
-  // (sprite gone), well outside the ~0.02 AU focus-framing distance.
+  // sprite starts dissolving (the safe direction). At a 1080 px viewport the
+  // band runs from ~1.3 AU (fade start) to ~0.3 AU (sprite gone), well outside
+  // the ~0.02 AU focus-framing distance.
   //
   // The peak intensity above stays on the UNFADED 'rPx': deposited light then
   // falls as spriteFade^2 (fixed peak, shrinking area) -- a smooth dim-out.
@@ -416,8 +426,8 @@ fn vs(
   // unconditionally, so a near star stays clickable at close range.
   let sphereDiamPx = worldLenToPx(u.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
   let fadeIn = smoothstep(
-    STAR_SPHERE_RESOLVE_PX,
-    STAR_SPHERE_RESOLVE_PX * STAR_SPRITE_FADE_END_RATIO,
+    STAR_SPHERE_FADE_START_PX,
+    STAR_SPHERE_FADE_START_PX * STAR_SPRITE_FADE_END_RATIO,
     sphereDiamPx
   );
   let spriteFade = select(1.0 - fadeIn, 1.0, u.pickPass == 1u);

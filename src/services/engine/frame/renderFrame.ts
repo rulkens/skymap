@@ -19,6 +19,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { bodyRowSlabs } from './bodyRowSlabs';
+import { runPlanSteps } from './runPlanSteps';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
@@ -56,6 +57,22 @@ export function renderFrame(input: RenderFrameInput): void {
   // The master bloom toggle is the ONLY bloom value that shapes the step
   // list; strength/threshold are read live by the bloom passes each draw.
   const bloomEnabled = state.settings.bloom.enabled;
+
+  // Every once-scope section's plan rows, in program order, ahead of the
+  // capture scheduler below (it reads the settling vote) and before any
+  // encoder exists. A perView section's own plan rows run per-view, inside
+  // the section loop, ahead of that view's first GPU step.
+  const program = VIEW_RIGS[state.viewRig].program;
+  for (const section of program) {
+    if (section.scope === 'once') {
+      runPlanSteps(
+        section.steps,
+        state.planners,
+        { scope: 'once', snapshot: canvas.snapshot, views },
+        state,
+      );
+    }
+  }
 
   const captureContexts = scheduleCubemapCaptures({ state, ctx: canvas });
   // Derived from the one map, so the step list and the per-face cameras
@@ -126,10 +143,10 @@ export function renderFrame(input: RenderFrameInput): void {
     pending.push(...steps);
   };
 
-  for (const section of VIEW_RIGS[state.viewRig].program) {
+  for (const section of program) {
     if (section.scope === 'once') {
-      const program = expand(section.steps, canvas);
-      const { faces, frame } = partitionCaptureSteps(program);
+      const steps = expand(section.steps, canvas);
+      const { faces, frame } = partitionCaptureSteps(steps);
       if (faces.length > 0) {
         // A capture face always gets its own encoder and submit, ahead of
         // the running batch — flush that out of the way first so a body
@@ -146,7 +163,10 @@ export function renderFrame(input: RenderFrameInput): void {
       }
       accumulate(canvas, frame);
     } else {
-      for (const view of views) accumulate(view, expand(section.steps, view));
+      for (const view of views) {
+        runPlanSteps(section.steps, state.planners, { scope: 'perView', view }, state);
+        accumulate(view, expand(section.steps, view));
+      }
     }
   }
 

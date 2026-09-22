@@ -27,6 +27,7 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
         pass,
         view.vp,
         view.viewportPx,
+        ctx.drawPxPerRad,
         view.camPos,
         state.gpu.focusUniform!.bindGroup,
         disks,

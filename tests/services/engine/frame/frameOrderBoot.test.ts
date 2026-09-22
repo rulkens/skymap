@@ -15,10 +15,30 @@ import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
+
+// Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
+// optional (Global Constraints), so PRELUDE's two Layer-owned rows need a
+// stand-in here — this file checks core's artifacts alone, never the full
+// `createLayers` composition. The names mirror PRELUDE's plan lines in
+// `frameSections.ts`, where a rename shows up first.
+const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+];
 
 describe('checkFrameOrder — boot', () => {
   it('every ViewRig’s program passes the boot check', () => {
@@ -31,10 +51,15 @@ describe('checkFrameOrder — boot', () => {
       'bgra8unorm',
       APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
     );
-    const programs = Object.values(VIEW_RIGS).map((rig) =>
-      rig.program.flatMap((section) => section.steps),
-    );
-    expect(() => checkFrameOrder(programs, CONTENT_PASSES, CORE_COMPUTES, targets)).not.toThrow();
+    expect(() =>
+      checkFrameOrder(
+        Object.values(VIEW_RIGS).map((rig) => rig.program),
+        CONTENT_PASSES,
+        CORE_COMPUTES,
+        [...CORE_PLANNERS, ...LAYER_PLANNER_STUBS],
+        targets,
+      ),
+    ).not.toThrow();
   });
 
   // Dropping the declaration costs the overlays nothing loud: `sampledDepth`

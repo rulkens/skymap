@@ -61,6 +61,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import { labelLeaderLine } from '../../../utils/camera/labelLeaderLine';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
+import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
 import {
   LEADER_LIFT_FACTOR,
   LEADER_LINE_PADDING_PX,
@@ -80,6 +81,8 @@ export function liftedLabelPlacement(input: {
   vp: Float32Array | Float64Array;
   /** Backing-store viewport size in pixels, `[width, height]`. */
   viewportPx: Vec2;
+  /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
+  pxPerRad: number;
   /** The subject's apparent size (px) — drives the proportional lift. */
   subjectSizePx: number;
   /** The caption's measured ink bbox (`labelRenderer.measure`), or null. */
@@ -113,7 +116,7 @@ export function liftedLabelPlacement(input: {
   // sized at the LIFTED anchor — and, being a property of the DOT's depth, it
   // is identical at any lift, so it is safe to derive from the proposed-lift
   // projection even when the lift is raised below.
-  const pxPerEm = (input.worldEmMpc / proposed.anchorClipW) * (input.viewportPx[1] * 0.5);
+  const pxPerEm = (input.worldEmMpc / proposed.anchorClipW) * input.pxPerRad * LABEL_EM_PX_RETUNE;
   const displayEmPx = Math.min(Math.max(pxPerEm, input.minPixelSize), input.maxPixelSize);
   const atlasToScreen = displayEmPx / ATLAS_FONT_SIZE;
 

@@ -25,9 +25,9 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 const STATES = deriveBodyStates(CONST_J2000);
 
-function makeState(meshBodies: readonly MeshBody[], meshResident = true): EngineState {
+function makeState(meshBodies: readonly MeshBody[]): EngineState {
   return {
-    gpu: { texturedBodyRenderer: null, meshBodyRenderer: { hasMesh: () => meshResident } },
+    gpu: { texturedBodyRenderer: null, meshBodyRenderer: { hasMesh: () => true } },
     data: {
       bodies: { earth: SCENE_EARTH, planets: SCENE_PLANETS, stars: SCENE_STARS, meshBodies },
     },
@@ -80,23 +80,19 @@ describe('sceneOccluderSpheres', () => {
     expect(has(resolved, 'io')).toBe(true);
   });
 
-  // A mesh body is as opaque as any sphere the foreground draws, and it is the
-  // one occluder an orbit trail routinely crosses: the Moon's trail sweeps the
-  // whole sky from a 400 km orbit.
-  it('includes a resolved mesh body, at its bake bounding radius', () => {
+  // A mesh body occludes trails through the sampled `foreground:0` depth (its
+  // true silhouette), never through this set: its bounding sphere hid the trail
+  // across a disc far wider than a slender model like Hubble.
+  it('excludes a resident mesh body', () => {
     const whaleRadiusKm =
       findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test').boundingRadiusM * SCALE_UNITS.M_TO_KM;
     const hasWhale = (radiiKm: readonly number[]): boolean =>
       radiiKm.some((r) => Math.abs(r - whaleRadiusKm) < 1e-8);
 
     // 20 m out the whale spans ~600 px, so nothing but its presence in
-    // `data.bodies.meshBodies` decides the outcome.
+    // `data.bodies.meshBodies` could put it in the set.
     const ctx = makeCtx('whale', 20 * SCALE_UNITS.M_TO_KM);
-    expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(true);
-    expect(hasWhale(occluderRadiiKm(ctx))).toBe(false);
-    // Inside the load radius but not yet decoded: it draws nothing, and an
-    // occluder that draws nothing cuts a hole in the trail crossing it.
-    expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES, false)))).toBe(false);
+    expect(hasWhale(occluderRadiiKm(ctx, makeState(SCENE_MESH_BODIES)))).toBe(false);
   });
 
   it('drops the Sun once it demotes to a point at Jupiter-range', () => {

@@ -54,6 +54,9 @@ function merge(
  * frame's only switch, and an eight-arm sibling would make that false.
  */
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
+  // `runPlanSteps` runs a `plan` row directly, ahead of `expandFrameOrder`'s
+  // call — it contributes no GPU step at all, the lens's zero-dispatch shape.
+  plan: () => [],
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
     spec.captures.flatMap((key) =>

@@ -35,6 +35,7 @@ export function drawStarPick(
       source: d.source,
       vp: rebasedVp,
       viewportPx: view.viewportPx,
+      pxPerRad,
       drawCount: d.drawCount,
       firstRecord: d.firstRecord,
       recordCount: d.recordCount,

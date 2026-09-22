@@ -433,6 +433,17 @@ All public domain; NASA asks that credit go to the named observatory / program.
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain. Credit: "NASA / USGS".
 
+#### USGS Astrogeology — Enceladus mosaic (Cassini)
+
+- **Use:** Global surface mosaic for Enceladus (Cassini), 110 m/px. It ships
+  single-channel and is a relief-shading mosaic rather than an albedo map, so
+  the build applies both the `monoTint` hue and an additive brightness `lift`
+  (Enceladus is near-uniform bright ice).
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain. Credit: "NASA/JPL/Space Science Institute",
+  publisher USGS Astrogeology.
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

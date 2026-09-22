@@ -29,7 +29,6 @@ function makeCtx(camPos: readonly [number, number, number]): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      layersSettling: false,
       visibleSourceMask: 0xffffffff,
       cursorTexPx: null,
       renderedTargets: new Set<string>(),

@@ -4,19 +4,12 @@
  *
  *   forward, roll, upRef  →  (this module)  →  { rolledUp, right, up }
  *
- * Two per-frame sites need this basis and used to inline it identically:
- *
- *   - `computeViewProj.ts` — its Rodrigues roll block (the `const roll =
- *     cam.roll` line onward) rotates world-up about the view direction, then
- *     hands the result to `mat4.lookAt` as the up vector. That site wants
- *     `rolledUp`.
- *   - `cameraBillboardBasis.ts` — the same roll block, followed by the two
- *     cross products that turn `rolledUp` into world-space `right`/`up` axes
- *     for expanding point-cloud billboards. That site wants `right`/`up`.
- *
- * Copying the roll math into both meant a change to one had to be mirrored in
- * the other by hand. Extracting it here makes the roll convention live in ONE
- * place, so the later orientation-frame switch reroutes a single formula.
+ * `computeViewProj.ts` inlined this Rodrigues roll block (the `const roll =
+ * cam.roll` line onward) to rotate world-up about the view direction before
+ * handing the result to `mat4.lookAt`; it wants `rolledUp`. The two cross
+ * products that turn `rolledUp` into world-space screen `right`/`up` axes ride
+ * along here so the roll convention lives in ONE place, and the later
+ * orientation-frame switch reroutes a single formula.
  *
  * ### The math
  *

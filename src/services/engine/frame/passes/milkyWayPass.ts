@@ -48,7 +48,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
-import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
+import { milkyWayCamPosModel } from '../../galaxyGenerator/v1/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
 
 /**
@@ -106,18 +106,16 @@ export const milkyWayPass: ContentPass = {
     const cloudRenderer = state.gpu.milkyWayCloudRenderer;
     if (cloudRenderer === null) return;
 
-    // Camera-facing billboard axes for the dust sprites (world space),
-    // derived from the live camera each frame.
-    const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
-
     cloudRenderer.drawDust(pass, {
       vp: view.vp,
       // Full-res into HDR, so the canvas viewport is the target viewport. (The
       // dust pass's own size clamp is in NDC, not pixels, so this only feeds
       // the shared camera prefix — but keeping it honest costs nothing.)
       viewportPx: view.viewportPx,
-      camRight,
-      camUp,
+      pxPerRad: ctx.drawPxPerRad,
+      // The eye, not a view plane: every sprite builds its own basis from it,
+      // so a dust blob reads the same from every view of one rig.
+      camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
       model: milkyWayModelCached(),
       fadeAlpha,
       // The live look knobs, same as the aggregate row. The dust pass reads

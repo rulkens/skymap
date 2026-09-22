@@ -15,6 +15,7 @@ import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../src/layers/galaxyCatalog/state/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
+import { createFramePlannerResultStore } from '../../src/services/engine/frame/createFramePlannerResultStore';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
@@ -28,6 +29,7 @@ import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
+import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -242,6 +244,26 @@ function makeCompositor(records: DrawRecord[]): any {
 // ── Domain fixture helpers (camera, point cloud) ───────────────────────────
 
 // Fixture camera optics — the ctx built in the test body mirrors these.
+// SCENE's `plan` row names 'structure-markers' by string — a stub with an
+// empty result satisfies `runPlanSteps` without the marker producers' state.
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+];
+
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
 const FIXTURE_CANVAS_HEIGHT_PX = 720;
 
@@ -375,7 +397,7 @@ describe('renderFrame visual baseline', () => {
     const ctx = {
       snapshot: {
         isReady: true as const,
-        layersSettling: false,
+        plans: createFramePlannerResultStore(),
         nowMs: 0,
         // resolveLayerOpacity's recession factor lerps on this; production
         // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
@@ -532,6 +554,7 @@ describe('renderFrame visual baseline', () => {
           filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
         ],
         computes: CORE_COMPUTES,
+        planners: STUB_PLANNERS,
       } as never,
       device,
       context,
@@ -554,7 +577,7 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],function,function",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function",
           "renderer": "scalar-volume",
         },
         {
@@ -566,11 +589,11 @@ describe('renderFrame visual baseline', () => {
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],object,Array[1],undefined",
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3]",
           "renderer": "filaments",
         },
         {
@@ -594,11 +617,11 @@ describe('renderFrame visual baseline', () => {
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
           "renderer": "labels",
         },
       ]

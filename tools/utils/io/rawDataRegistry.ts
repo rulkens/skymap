@@ -879,6 +879,16 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.usgsEnceladus': {
+    path: 'data/raw/textures/Enceladus_Cassini_mosaic_global_110m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Enceladus Cassini global mosaic, 110 m/px, 14401x7201, single-band 8-bit GeoTIFF (public domain, credit NASA/JPL/Space Science Institute, publisher USGS Astrogeology). Grayscale relief mosaic — build-tinted and lifted; ~104 MB.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Enceladus_Cassini_mosaic_global_110m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   // ─── Pluto derived colour — chroma source + calibration reference ─────
   //
   // PIA11707 carries NO colour-type label of its own. That it is enhanced

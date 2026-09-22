@@ -21,4 +21,5 @@ export type BodyTextureId =
   | 'ganymede'
   | 'callisto'
   | 'pluto'
-  | 'charon';
+  | 'charon'
+  | 'enceladus';

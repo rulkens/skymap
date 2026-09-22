@@ -87,6 +87,6 @@ export const clipPathDebugPass: ContentPass = {
 
     const renderer = state.gpu.debugLineRenderer!;
     renderer.setLines(rebased);
-    renderer.draw(pass, rebasedVp, view.viewportPx);
+    renderer.draw(pass, rebasedVp, view.viewportPx, ctx.drawPxPerRad);
   },
 };

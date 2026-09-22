@@ -294,6 +294,7 @@ export function produceFamousGalaxyLabels(
         anchorWorldPos: p.worldPos,
         vp,
         viewportPx,
+        pxPerRad: ctx.drawPxPerRad,
         subjectSizePx: sizePx,
         textBbox: labelRenderer?.measure(label) ?? null,
         worldEmMpc: p.labelWorldEmMpc,

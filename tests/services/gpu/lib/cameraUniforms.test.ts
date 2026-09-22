@@ -14,22 +14,22 @@ import { describe, it, expect } from 'vitest';
 import { writeCameraPrefix } from '../../../../src/services/gpu/lib/cameraUniforms';
 
 describe('writeCameraPrefix', () => {
-  it('writes viewProj to floats 0..15 and viewportPx to floats 16/17', () => {
+  it('writes viewProj to floats 0..15, viewportPx to 16/17 and pxPerRad to 18', () => {
     // 16 distinct values so any transposition or offset shift is caught.
     const viewProj = new Float32Array(16);
     for (let i = 0; i < 16; i++) viewProj[i] = i + 1; // 1..16, all distinct
 
     const target = new Float32Array(20);
-    writeCameraPrefix(target, viewProj, [800, 600]);
+    writeCameraPrefix(target, viewProj, [800, 600], 519.6);
 
     for (let i = 0; i < 16; i++) {
       expect(target[i]).toBe(viewProj[i]);
     }
     expect(target[16]).toBe(800);
     expect(target[17]).toBe(600);
-    // Pads untouched on a zero-init target — the writer must not stray
-    // past float 17.
-    expect(target[18]).toBe(0);
+    expect(target[18]).toBeCloseTo(519.6, 3);
+    // Pad untouched on a zero-init target — the writer must not stray past
+    // float 18.
     expect(target[19]).toBe(0);
   });
 });

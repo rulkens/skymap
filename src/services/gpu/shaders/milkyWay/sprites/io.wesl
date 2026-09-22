@@ -34,10 +34,11 @@
 // ## Byte layout (canonical — the offset authority for the CPU packer)
 //
 //   offset 0   : cam: CameraUniforms  (80 B; viewProj 0..63, viewportPx
-//                                       64..71, _pad0 72..75, _pad1 76..79)
+//                                       64..71, pxPerRad 72..75, _pad0 76..79)
 //   offset 80  : model: mat4x4<f32>   (64 B; per-cloud world placement)
-//   offset 144 : camRight: vec4<f32>  (xyz billboard right + 0)
-//   offset 160 : camUp: vec4<f32>     (xyz billboard up + 0)
+//   offset 144 : camPosModel: vec4<f32> (the eye in the cloud's model
+//                                     space, xyz; w unused)
+//   offset 160 : _reserved: vec4<f32>  (zero, unused)
 //   offset 176 : params0: vec4<f32>   (fadeAlpha, exposure, modelScale,
 //                                       softness)
 //   offset 192 : params1: vec4<f32>   (starPxMin, starPxMax, starSizeScale,
@@ -48,7 +49,7 @@
 // embedded CameraUniforms ends at 80 (a 16-byte boundary), so 'model' lands
 // at 80 with no implicit padding. The CPU-side Float32Array must write each
 // field at the matching f32 index (viewProj 0..15, viewportPx 16..17,
-// model 20..35, camRight 36..39, camUp 40..43, params0 44..47,
+// model 20..35, camPosModel 36..39, _reserved 40..43, params0 44..47,
 // params1 48..51) or the uniforms are silently garbage.
 
 import package::lib::camera::CameraUniforms;
@@ -60,17 +61,16 @@ struct Uniforms {
   cam: CameraUniforms,
   // Per-cloud world placement. The generation pass emits particles in the
   // cloud's own local space; 'model' positions + orients + scales that
-  // local space into the scene. Applied to each particle CENTER only — the
-  // billboard corner offset is added in world space along camRight/camUp
-  // AFTER the model transform, so the sprites always face the camera
-  // regardless of the model's rotation.
+  // local space into the scene. Applied to each particle CENTER, and (as a
+  // direction) to the per-instance billboard basis built below.
   model: mat4x4<f32>,
-  // Camera-facing billboard basis (world space), xyz in .xyz, .w unused.
-  // Precomputed CPU-side from the view matrix so every particle expands its
-  // quad along the same screen-aligned axes without a per-vertex basis
-  // build. vec4 (not vec3) so the two vectors occupy clean 16-byte slots.
-  camRight: vec4<f32>,
-  camUp: vec4<f32>,
+  // The eye in the cloud's MODEL space (a point; 'w' unused), from which
+  // every instance builds its own eye-facing basis — see
+  // 'spriteBillboardOffset'. vec4 so it occupies a clean 16-byte slot.
+  camPosModel: vec4<f32>,
+  // Zero. Was the second half of the CPU-precomputed view-plane basis; kept
+  // as padding so the struct stays 208 bytes and every later offset holds.
+  _reserved: vec4<f32>,
   // params0 = (fadeAlpha, exposure, modelScale, softness).
   //   fadeAlpha  — visibility fade in [0, 1] (apparent-size fade x toggle
   //                opacity, composed CPU-side). Stars multiply it into EMISSION
@@ -110,3 +110,47 @@ struct Uniforms {
 // re-declared). Its type 'Uniforms' travels with it through the linker, so
 // consumers import only 'u'.
 @group(0) @binding(0) var<uniform> u: Uniforms;
+
+// spriteBillboardOffset — the unit-scale world offset of one billboard
+// corner for one sprite, on a basis facing THE EYE rather than the view
+// plane. A view-plane basis differs per dome face or VR eye, so one blob on a
+// seam tilted two ways; an eye-facing basis depends only on the instance-
+// to-eye direction, so every view of one blob agrees. Mirrors
+// bodies/sgrAStarLensing/vertex.wesl.
+//
+// Built in MODEL space, where the eye is 'camPosModel' and the disk normal is
+// the +y the generator emits into, then rotated to world where the corner is
+// added. 'model' carries a uniform scale, so the rotated axes come back
+// scaled: renormalising AFTER the transform keeps the offset unit-length.
+//
+// Looking straight down the disk axis collapses the first cross product; an
+// in-disk fallback axis then takes over so the basis is defined for every
+// viewing direction. Its roll there is arbitrary and costs nothing: both
+// sprite fragments are radially symmetric about the centre.
+
+const DISK_NORMAL_MODEL: vec3<f32> = vec3<f32>(0.0, 1.0, 0.0);
+const DISK_AXIS_FALLBACK: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
+// Below this the cross product's direction is noise, not a basis.
+const BASIS_DEGENERATE_EPS: f32 = 1e-4;
+
+fn spriteBillboardOffset(
+  model: mat4x4<f32>,
+  camPosModel: vec3<f32>,
+  centerModel: vec3<f32>,
+  corner: vec2<f32>,
+) -> vec3<f32> {
+  let toCenter = centerModel - camPosModel;
+  let dist = length(toCenter);
+  // dist == 0 leaves the view direction undefined; the disk normal keeps the
+  // basis finite rather than NaN.
+  let forward = select(DISK_NORMAL_MODEL, toCenter / dist, dist > 0.0);
+  var rightModel = cross(DISK_NORMAL_MODEL, forward);
+  if (length(rightModel) < BASIS_DEGENERATE_EPS) {
+    rightModel = cross(DISK_AXIS_FALLBACK, forward);
+  }
+  rightModel = normalize(rightModel);
+  let upModel = cross(forward, rightModel);
+  let right = normalize((model * vec4<f32>(rightModel, 0.0)).xyz);
+  let up = normalize((model * vec4<f32>(upModel, 0.0)).xyz);
+  return right * corner.x + up * corner.y;
+}

@@ -29,7 +29,6 @@ function makeCtx(): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      layersSettling: false,
       visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -84,7 +83,7 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
-  it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {
+  it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 8th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();
     const state = {
@@ -95,6 +94,6 @@ describe('texturedDisksPass', () => {
     texturedDisksPass(runtime).draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
     expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = texturedDiskRenderer.draw.mock.calls[0]!;
-    expect(call[6]).toBe(3);
+    expect(call[7]).toBe(3);
   });
 });

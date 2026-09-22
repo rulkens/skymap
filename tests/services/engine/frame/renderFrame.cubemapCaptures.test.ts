@@ -47,8 +47,10 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
@@ -68,6 +70,28 @@ import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureK
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
 const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+
+// PRELUDE/SCENE's `plan` rows name these by string — inert stubs satisfy
+// `runPlanSteps` without either Layer's own state; the "a Layer still
+// settling/awake" cases below seed their vote straight into `ctx.snapshot.plans`
+// instead (`makeCtx`), which OR-folds with these no-op votes fine.
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+];
 
 /** Every program `executeFrame` walked this frame: one per scheduled face, then the frame's own. */
 function programs(): readonly (readonly FrameStep[])[] {
@@ -112,6 +136,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     contentVersion: 0,
     passes: CONTENT_PASSES,
+    planners: STUB_PLANNERS,
     ...overrides,
   } as unknown as EngineState;
 }
@@ -138,10 +163,23 @@ function makeCtx(
       throw new Error(`mock renderTargets: no allocated size for '${id}'`);
     },
   };
+  // A Layer's vote, seeded straight into the store the way `runPlanSteps`
+  // would fold a real planner's `PlannerResult` in — `scheduleSkyCaptures` reads
+  // the OR-fold (`plans.settling`), not any one planner's own row.
+  const plans = createFramePlannerResultStore();
+  const layerVotePlanner: FrameContentPlanner<void> = {
+    name: '__test-layer-vote',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  };
+  plans.put(layerVotePlanner, undefined, {
+    value: undefined,
+    awake: layers.awake ?? false,
+    settling: layers.settling ?? false,
+  });
   return {
     snapshot: {
       isReady: true,
-      layersSettling: layers.settling ?? false,
       simDays: 0,
       nowMs: 1000,
       focus: {},
@@ -149,6 +187,7 @@ function makeCtx(
       // Frame-wide: which targets hold this frame's content — the executor
       // unions into this as it opens each render step.
       renderedTargets: new Set<string>(),
+      plans,
     },
     drawCamPos,
     // Past the foreground cull, so `bodyRowSlabs`' insideAtmosphere lookup
@@ -434,7 +473,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
         ({ __face: spec.slot }) as unknown as FrameView,
     );
 
-    // A Layer still settling — the vote `runFrame` stamps on the ctx.
+    // A Layer still settling — seeded straight into `ctx.snapshot.plans` the
+    // way a real planner's vote would OR-fold in.
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);

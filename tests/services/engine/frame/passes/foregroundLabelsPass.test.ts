@@ -195,6 +195,7 @@ describe('foregroundLabelsPass.draw', () => {
       PASS_STUB,
       projection.vpF32,
       projection.viewportPx,
+      projection.pxPerRad,
       SCENE_STUB,
     ]);
   });
@@ -221,6 +222,7 @@ describe('foregroundLabelsPass.draw', () => {
       PASS_STUB,
       projection.vpF32,
       projection.viewportPx,
+      projection.pxPerRad,
       SCENE_STUB,
     ]);
     expect(order).toEqual(['line', 'label']);

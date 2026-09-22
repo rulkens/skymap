@@ -81,7 +81,6 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { DepthSampleSource } from '../../../@types/engine/frame/DepthSampleSource';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import {
@@ -222,7 +221,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // a dispatch the row's own gate declined. Toggle key and timing slot
         // are ONE string (see `computeTimingSlotName` for why it is suffixed —
         // `'flow'` names both this integrator and the ribbon that draws it).
-        const slot = computeTimingSlotName(step.name);
+        const slot = computeTimingSlotName(step.name, ctx.id);
         if (state.settings.debug.disabledPasses[slot] === true) break;
         // The claim is LAZY on purpose: `descriptorFor` marks the slot live for
         // this frame, and these rows carry their own gates (an empty atmosphere
@@ -278,13 +277,14 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
         // `descriptorFor(groupKey)` resolves exactly that slot.
-        // `renderStepTimingSlotName` appends the capture face when present — a
+        // `renderStepTimingSlotName` appends the drawing view's id — a
         // capture's 6 faces all share one `(row, NEAR0)` group, so the bare
         // groupKey would look up the SAME slot for all 6 (see its doc,
-        // slabs.ts). The authored `slot` separates the several `FRAME_ORDER`
-        // lines sharing `(hdr, NEAR0)` the same way; for a line with neither
-        // this is a no-op passthrough of `groupKey`.
-        const groupKey = renderStepTimingSlotName(groupKeyOf(step), step.capture?.face, step.slot);
+        // slabs.ts); `stepCtx.id` is that face's own `<key>:<face>`, minted at
+        // `faceViewSpec`. The authored `slot` separates the several
+        // `FRAME_ORDER` lines sharing `(hdr, NEAR0)` the same way; for a
+        // canvas line with neither this is a no-op passthrough of `groupKey`.
+        const groupKey = renderStepTimingSlotName(groupKeyOf(step), stepCtx.id, step.slot);
         // The destination, resolved once — the executor's only branch on what a
         // step writes into. An ordinary step names a render-target row; a
         // capture step names a capture ROW, which owns the texture its faces
@@ -338,7 +338,6 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           label: destination.label,
           dest: destination.dest,
           depth: destination.depth,
-          capture: step.capture,
           group,
           view,
           groupKey,
@@ -448,28 +447,14 @@ function renderGroup(
     dest: { readonly view: GPUTextureView; readonly clearValue: GPUColor };
     /** The destination's depth view and its load-op; absent for a depthless destination. */
     depth?: { readonly view: GPUTextureView; readonly loadOp: GPULoadOp };
-    /** The face this step writes, when it is a capture step — it keys the slot names. */
-    capture?: CaptureFaceRef;
     group: readonly ContentPass[];
     view: SlabView;
     groupKey: string;
     alreadyTouched: boolean;
   },
 ): void {
-  const {
-    encoder,
-    ctx,
-    state,
-    timing,
-    label,
-    dest,
-    depth,
-    capture,
-    group,
-    view,
-    groupKey,
-    alreadyTouched,
-  } = p;
+  const { encoder, ctx, state, timing, label, dest, depth, group, view, groupKey, alreadyTouched } =
+    p;
 
   if (strategy === 'merged') {
     // Tile-local: one pass holds the whole group, so OVER blends read coherent
@@ -505,7 +490,7 @@ function renderGroup(
   // others' timestamps (see `passTimingSlotName`'s doc, slabs.ts).
   group.forEach((contentPass, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = passTimingSlotName(contentPass.name, view.slab.index, capture);
+    const slot = passTimingSlotName(contentPass.name, view.slab.index, ctx.id);
     const pass = encoder.beginRenderPass({
       label: `render-${label}-${slot}`,
       colorAttachments: [colorAttachment(dest.view, dest.clearValue, touchedBefore)],

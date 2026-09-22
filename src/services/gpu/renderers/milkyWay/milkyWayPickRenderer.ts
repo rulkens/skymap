@@ -210,12 +210,12 @@ export function createMilkyWayPickRenderer(
       return;
     }
     // Pack the 96-byte @group(0) image into our own buffer and bind it
-    // ourselves: the shared prefix at floats 0..17 (the pads stay zero via
+    // ourselves: the shared prefix at floats 0..18 (the pad stays zero via
     // Float32Array zero-init), then the two sizing facts at 20..23.
     // @group(2) stays static; the apparent size is derived in the vertex
     // shader from these camera uniforms.
     const uni = new Float32Array(MILKY_WAY_PICK_CAMERA_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportPx);
+    writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
     uni[CAMERA_UNIFORM_BYTES / 4] = camPosWorld[0];
     uni[CAMERA_UNIFORM_BYTES / 4 + 1] = camPosWorld[1];
     uni[CAMERA_UNIFORM_BYTES / 4 + 2] = camPosWorld[2];

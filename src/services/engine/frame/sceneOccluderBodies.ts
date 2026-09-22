@@ -8,8 +8,10 @@
  * (`ctx.drawCamPos`, `ctx.drawPxPerRad`). "Drawn" would be
  * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
  * nothing. Radii are the INNER bound — an occluder must under-occlude; an
- * atmosphere, ring or lens quad is not opaque. For a mesh body it is the bake's
- * BOUNDING sphere, so the whale's elongated silhouette hides more than it covers.
+ * atmosphere, ring or lens quad is not opaque. Mesh bodies are deliberately
+ * NOT in this set: they occlude trails through the sampled `foreground:0`
+ * depth, their real silhouette, and a bounding sphere would over-occlude
+ * (hide the trail across a disc around the mesh).
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
@@ -28,7 +30,7 @@ export function sceneOccluderBodies(
   ctx: FrameView,
 ): readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[] {
   const states = sceneBodyStates(state, ctx);
-  const { flat, textured, meshes } = sceneBodyPartition(state, ctx);
+  const { flat, textured } = sceneBodyPartition(state, ctx);
   const { spheres } = partitionStarsByResolution({
     stars: positionedVisibleStars(state, ctx),
     camPosMpc: ctx.drawCamPos,
@@ -47,17 +49,6 @@ export function sceneOccluderBodies(
     occluders.push({
       positionMpc: states.get(body.id)!.positionMpc,
       radiusM: innerBoundRadiusM(body.surface),
-    });
-  }
-  // Mesh bodies carry a second gate `drawableMeshBodies` also applies: inside
-  // the load radius but not yet decoded, the body draws nothing, and an
-  // occluder that draws nothing punches a hole in whatever crosses it.
-  const meshRenderer = state.gpu.meshBodyRenderer;
-  for (const body of meshes) {
-    if (!(meshRenderer?.hasMesh(body.id) ?? false)) continue;
-    occluders.push({
-      positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: body.boundingRadiusM,
     });
   }
   for (const star of spheres) {
