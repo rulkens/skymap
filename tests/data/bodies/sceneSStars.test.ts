@@ -57,12 +57,12 @@ describe('SCENE_S_STARS', () => {
     // over, so this is the reachable end of the same registration. The second
     // half is the cost side: 40 short, digit-bearing labels are exactly the
     // shape that pollutes unrelated queries.
-    const s2Rows = rankPaletteMatches([], [], [], 'S2').filter(
+    const s2Rows = rankPaletteMatches([], [], [], [], 'S2').filter(
       (row) => row.kind === 'starCatalog' && row.star.id === 's2',
     );
     expect(s2Rows).toHaveLength(1);
 
-    const siriusRows = rankPaletteMatches([], [], [], 'Sirius');
+    const siriusRows = rankPaletteMatches([], [], [], [], 'Sirius');
     expect(siriusRows[0]).toMatchObject({ kind: 'starCatalog', star: { id: 'sirius' } });
   });
 });

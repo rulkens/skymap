@@ -77,6 +77,7 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
 
 const DEFAULTS: CommandPaletteProps = {
   entries: [],
+  layerRows: [],
   tabs: FIXTURE_TABS,
   tab: 'highlights',
   onTabChange: () => {},

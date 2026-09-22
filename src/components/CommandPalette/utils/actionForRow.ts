@@ -1,10 +1,10 @@
 /**
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
  * container dispatches on. Six kinds resolve to a focus id via the same
- * scheme the URL deep-link layer uses. Three do not: `exhibit` and `tour`
+ * scheme the URL deep-link layer uses. Four do not: `exhibit` and `tour`
  * resolve to their own action kinds, since picking one is a takeover rather
- * than a focus, and `place` to a `flyTo` — an Earth place is a camera command,
- * not a focusable ref.
+ * than a focus, `place` to a `flyTo` — an Earth place is a camera command,
+ * not a focusable ref — and `layer` to the ref it already carries.
  *
  * The six focus kinds route through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
@@ -30,6 +30,9 @@
  *   - exhibit  → `{ kind: 'exhibit', exhibitId }`, the row's own registry id.
  *   - tour     → `{ kind: 'tour', tourId }`, the row's own registry id.
  *   - place    → the entry's own lon/lat/alt, verbatim, as a `flyTo`.
+ *   - layer    → `{ kind: 'focusRef', ref }`, the ref the publishing Layer put on
+ *                the row — the one kind with no id to resolve, so it is also the
+ *                one that does not wait on the catalog-landed pulse.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
  * one row here, not a new predicate branch. The fallback arms are unreachable —
@@ -86,6 +89,8 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
   exhibit: (row) =>
     row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),
   tour: (row) => (row.kind === 'tour' ? { kind: 'tour', tourId: row.tour.id } : unreachableRow()),
+  layer: (row) =>
+    row.kind === 'layer' ? { kind: 'focusRef', ref: row.entry.ref } : unreachableRow(),
   place: (row) =>
     row.kind === 'place'
       ? {

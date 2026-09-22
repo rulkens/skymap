@@ -12,11 +12,13 @@ import {
   selectFamousGalaxiesMeta,
   selectAliasIndex,
   selectStructureSearchList,
+  selectLayerSearchRows,
 } from '../../state/engine/selectors';
 import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
+import { updateSelectionSelect, updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { openExhibit } from '../../state/exhibits/exhibitActions';
 import { startTour } from '../../state/tour/tourActions';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
@@ -32,6 +34,13 @@ const RUN_ACTION: Record<
     if (action.kind !== 'focus') return;
     dispatch(requestSelect(action.focusId));
     dispatch(requestFocus(action.focusId));
+  },
+  // The same pinned-card-plus-fly pair, minus the id round-trip: a Layer's
+  // search row hands over the resolved ref, so there is nothing to defer on.
+  focusRef: (dispatch, action) => {
+    if (action.kind !== 'focusRef') return;
+    dispatch(updateSelectionSelect(action.ref));
+    dispatch(updateSelectionFocus(action.ref));
   },
   exhibit: (dispatch, action) => {
     if (action.kind !== 'exhibit') return;
@@ -61,11 +70,13 @@ function CommandPaletteContainer(): React.ReactElement {
   const famousGalaxiesMeta = useAppSelector(selectFamousGalaxiesMeta);
   const aliasIndex = useAppSelector(selectAliasIndex);
   const structures = useAppSelector(selectStructureSearchList);
+  const layerRows = useAppSelector(selectLayerSearchRows);
   return (
     <CommandPalette
       entries={famousGalaxiesMeta}
       aliasIndex={aliasIndex}
       structures={structures}
+      layerRows={layerRows}
       tabs={FEATURED_TABS}
       tab={paletteTab}
       onTabChange={(id) => dispatch(setPaletteTab(id))}

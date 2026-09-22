@@ -191,7 +191,7 @@ describe('no file under src/layers dispatches (outside ui/sagas)', () => {
     expect(
       offenders,
       `${offenders.join(', ')} dispatches from under src/layers. A Layer reports ` +
-        'through a `deps` callback core owns (reportSourceCount) or publishes a ' +
+        'through a feed core consumes (sourceCounts, search) or publishes a ' +
         'fact (deps.publish) — core decides what the pulse means.',
     ).toEqual([]);
   });

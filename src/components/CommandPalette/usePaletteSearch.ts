@@ -17,6 +17,7 @@ import type { ScoredRow } from './paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { PaletteCard } from '../../@types/palette/PaletteCard';
 
@@ -26,6 +27,7 @@ type UsePaletteSearchInput = {
   entries: readonly FamousGalaxyMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
+  layerRows: readonly LayerSearchEntry[];
   /** The shown tab's cards — drives the grid navigator and its Enter target. */
   cards: readonly PaletteCard[];
   /** ⌥←/⌥→ in the grid navigator; the parent maps it to the next/previous shown tab. */
@@ -56,6 +58,7 @@ export function usePaletteSearch({
   entries,
   aliasIndex,
   structures,
+  layerRows,
   cards,
   onTabStep,
   open,
@@ -69,8 +72,8 @@ export function usePaletteSearch({
   const gridRef = useRef<HTMLUListElement | null>(null);
 
   const matches = useMemo(
-    () => rankPaletteMatches(entries, aliasIndex, structures, query),
-    [entries, aliasIndex, structures, query],
+    () => rankPaletteMatches(entries, aliasIndex, structures, layerRows, query),
+    [entries, aliasIndex, structures, layerRows, query],
   );
 
   // Reset highlight when the query changes — otherwise we'd point past the

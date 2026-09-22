@@ -212,6 +212,25 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
+  // Layer-published row — letter glyph and the row's own remaining names; the
+  // publishing Layer owns no thumbnail vocabulary, so there is nothing to look up.
+  layer: (m) => {
+    if (m.kind !== 'layer') return EMPTY_ROW_VIEW;
+    const primary = m.entry.names[0] ?? '(unnamed)';
+    const aliases = m.entry.names.slice(1);
+    return {
+      key: `layer:${m.entry.id}`,
+      testid: `layer-row-${m.entry.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
+      primary,
+      secondary:
+        aliases.length > 0 ? <span className={styles.secondary}>{aliases.join(' · ')}</span> : null,
+    };
+  },
   // Earth-place row — letter glyph (no captured shot for these) + a fixed
   // 'Earth' chip, since every row here is on the one body.
   place: (m) => {

@@ -16,6 +16,7 @@ import type { StarCatalogSourceType } from '../../@types/data/starCatalog/StarCa
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { EarthPlace } from '../../@types/palette/EarthPlace';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * Fixed search terms for the always-present Milky Way row.  The matcher
@@ -40,7 +41,9 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
  * (`exhibitRegistry`, `tourRegistry`); `place` carries an `EarthPlace` — a
  * search-only point, not a focusable ref — ranked the same way. Those three
- * are the kinds that resolve to something other than a focus.
+ * are the kinds that resolve to something other than a focus. `layer` carries a
+ * row a Layer published through its `search` feed, which already names the ref
+ * it selects, so it is the one kind that needs no id grammar.
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }
@@ -57,4 +60,5 @@ export type ScoredRow =
     }
   | { kind: 'exhibit'; exhibit: Exhibit; score: number }
   | { kind: 'tour'; tour: Tour; score: number }
-  | { kind: 'place'; entry: EarthPlace; score: number };
+  | { kind: 'place'; entry: EarthPlace; score: number }
+  | { kind: 'layer'; entry: LayerSearchEntry; score: number };
