@@ -1,9 +1,11 @@
 /**
- * Plans — the ONE home for this frame's planned data, on
- * `ReadyFrameContext.plans`, minted once per frame (`createPlans`) and shared
- * by every `FrameView` the same way `snapshot` itself is. A `'once'` value is
- * keyed by planner name alone; a `'perView'` value additionally by `FrameView`
- * identity — there is no canvas-shaped fallback a face could misread as its own.
+ * FramePlannerResultStore — this frame's store of planner results, minted per
+ * frame on `ReadyFrameContext.plans`. A pass reads the data planned for its
+ * view with `get(planner, view)`. A `'once'` result is filed by planner name;
+ * a `'perView'` result also by the `FrameView` it was planned for. Reading
+ * something never planned THROWS by design: there is no canvas-shaped
+ * fallback a dome face could silently read as its own. `awake` and
+ * `settling` OR every result put this frame.
  */
 
 import type { FrameContentPlanner } from './FrameContentPlanner';

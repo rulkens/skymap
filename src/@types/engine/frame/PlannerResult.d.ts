@@ -1,10 +1,9 @@
 /**
- * PlannerResult — what a `FrameContentPlanner.plan` call hands back: the planned
- * value plus two independent votes, `awake` ⊇ `settling` by convention (never
- * the converse — content that animates forever keeps the loop awake without
- * ever staling a bake). `runFrame` ORs every result's bits into the
- * scheduler's keep-ticking vote; `scheduleSkyCaptures` reads the settling
- * fold alone.
+ * PlannerResult — what a planner returns: the planned `value` a pass reads
+ * back, plus two scheduler votes. `awake`: keep the render loop ticking next
+ * frame, something is animating. `settling`: the planned content is still
+ * converging (thumbnails fading in), so cached sky captures of it are stale.
+ * `settling` implies `awake`; the store's fold enforces it.
  */
 
 export type PlannerResult<T> = {

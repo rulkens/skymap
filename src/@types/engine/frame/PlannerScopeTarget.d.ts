@@ -1,7 +1,7 @@
 /**
- * PlannerScopeTarget — what `runPlanSteps` runs a section's `plan` rows against: the
- * frame-wide snapshot plus every view for a `once` section, or one view for
- * a `perView` section. Mirrors `FrameContentPlanner`'s own scope discriminant.
+ * PlannerScopeTarget — what `runPlanSteps` hands each planner, shaped by its
+ * scope: a `'once'` planner gets the frame snapshot and every view; a
+ * `'perView'` planner gets the one view it plans for.
  */
 
 import type { FrameView } from './FrameView';

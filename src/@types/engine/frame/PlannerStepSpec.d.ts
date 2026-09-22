@@ -1,7 +1,8 @@
 /**
- * PlannerStepSpec — one `FRAME_ORDER` line that runs a `FrameContentPlanner` by name.
- * Carries no `scope` of its own: `checkFrameOrder` reads it off the named
- * planner and compares it to the line's own section (`FrameSection.scope`).
+ * PlannerStepSpec — a `{ kind: 'plan', name }` line in a section's program:
+ * run the planner registered under `name` at this point. Plan lines lead
+ * their section, and `checkFrameOrder` checks at boot that the planner's
+ * scope matches the section's.
  */
 
 export type PlannerStepSpec = {

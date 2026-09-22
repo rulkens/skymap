@@ -1,9 +1,13 @@
 /**
- * ContentPlanner — one CPU planning step and its own scope. WHERE it runs is
- * not here: `FRAME_ORDER` names the row on the `{ kind: 'plan' }` line that
- * states its place, mirroring `ContentCompute`. `scope` is the ONLY
- * discriminant, and it decides the shape of `plan` itself: a `'once'` row
- * plans over every view of the frame, a `'perView'` row plans one.
+ * FrameContentPlanner — a CPU step in the frame program that prepares the data
+ * a later GPU pass consumes: `structureMarkersPlanner` decides which marker
+ * rings a view draws and returns their descriptors; `galaxyCatalogPlanner`
+ * walks the disk LOD. Runs before any encoder opens, from a `{ kind: 'plan' }`
+ * line in a section's program. `scope: 'once'` plans once for the whole frame
+ * with every view in hand; `'perView'` plans once per view (a dome face, a VR
+ * eye) so what a view consumes was planned for it. The result lands in the
+ * frame's `FramePlannerResultStore`; a pass reads it back through
+ * `snapshot.plans.get(planner, view)`.
  */
 
 import type { FrameView } from './FrameView';
