@@ -31,6 +31,12 @@
  * which VideoToolbox does not support, hence software `libx264` here instead
  * of the hardware encoder above. `-r 30` is the pinned Wisdome delivery rate,
  * not `opts.fps` (record.ts's `--dome` validation already requires them equal).
+ * The frames arrive as JPEG, which is full-range, and libx264 passes that
+ * range flag through untouched: `-pix_fmt yuv420p` alone yields a file
+ * ffprobe reports as `yuvj420p` / `color_range=pc`, which a player that
+ * assumes broadcast range shows with crushed blacks. The scale filter
+ * converts the samples to limited range and `-color_range tv` tags them so,
+ * matching what VideoToolbox emits on the flat path.
  */
 export function buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[] {
   if (opts.dome) {
@@ -49,6 +55,10 @@ export function buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean 
       '6.1',
       '-crf',
       '20',
+      '-vf',
+      'scale=in_range=full:out_range=limited',
+      '-color_range',
+      'tv',
       '-pix_fmt',
       'yuv420p',
       '-r',
