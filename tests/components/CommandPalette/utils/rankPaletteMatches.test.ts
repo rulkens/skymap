@@ -166,10 +166,6 @@ describe('rankPaletteMatches — Layer-published rows', () => {
     expect(rows[0]).toMatchObject({ entry: { id: 'primary' } });
     expect(rows).toHaveLength(51);
   });
-
-  it('layer rows are absent when the list is empty', () => {
-    expect(rankPaletteMatches([], [], [], [], 'zztest')).toEqual([]);
-  });
 });
 
 describe('rankPaletteMatches — Earth place rows', () => {

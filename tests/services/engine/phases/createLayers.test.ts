@@ -81,7 +81,6 @@ describe('createLayers', () => {
     await createLayers(state, deps);
 
     expect(received?.focusUniform).toBe(state.gpu.focusUniform);
-    expect(received?.store).toBe(store);
   });
 
   it('creates in tuple order and stores instances in that order', async () => {

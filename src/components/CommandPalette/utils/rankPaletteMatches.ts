@@ -164,6 +164,9 @@ export function rankPaletteMatches(
       return { kind: 'layer', entry, score: raw > 0 ? raw + boost : 0 };
     })
     .filter((s) => s.score > 0);
+  const layerPrimaryScored = layerScored.filter(
+    (s) => s.kind === 'layer' && s.entry.class === 'primary',
+  );
   const layerCatalogScored = layerScored.filter(
     (s) => s.kind === 'layer' && s.entry.class === 'catalog',
   );
@@ -180,7 +183,7 @@ export function rankPaletteMatches(
     ...placeScored,
     ...exhibitScored,
     ...tourScored,
-    ...layerScored.filter((s) => s.kind === 'layer' && s.entry.class === 'primary'),
+    ...layerPrimaryScored,
   ].sort((a, b) => b.score - a.score);
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])

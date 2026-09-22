@@ -42,8 +42,8 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * (`exhibitRegistry`, `tourRegistry`); `place` carries an `EarthPlace` — a
  * search-only point, not a focusable ref — ranked the same way. Those three
  * are the kinds that resolve to something other than a focus. `layer` carries a
- * row a Layer published through its `search` feed, which already names the ref
- * it selects, so it is the one kind that needs no id grammar.
+ * row a Layer published through its `search` feed, whose `id` is the durable
+ * focus id that Layer's own `SelectionKindRow.focusId` claims.
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }

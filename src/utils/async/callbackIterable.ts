@@ -7,6 +7,10 @@
  * on `return()` — which is what `runLayerFeed` calls when core cancels the feed
  * at teardown. Values emitted before the consumer asks are BUFFERED: a slot that
  * commits between two `next()` calls would otherwise drop its report.
+ *
+ * SINGLE CONSUMER per iterator: one pending `next()` at a time, which is what a
+ * `runLayerFeed` pull loop does. A second concurrent `next()` would orphan the
+ * first. `return()` settles a pending `next()` rather than leaving it hanging.
  */
 
 export function callbackIterable<T>(
@@ -42,6 +46,9 @@ export function callbackIterable<T>(
           if (!closed) {
             closed = true;
             unsubscribe();
+            const pending = waiting;
+            waiting = null;
+            pending?.({ value: undefined, done: true });
           }
           return Promise.resolve({ value: undefined, done: true });
         },
