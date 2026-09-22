@@ -281,9 +281,8 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       structureCatalog: null,
-      cf4Density: null,
-      // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
-      // when the tier changes.
+      // Tier-aware: the demand loop's drift edge reloads it when the tier
+      // changes.
       mcpm: null,
       // Tier-aware like mcpm.
       polyphorm2Mrs: null,

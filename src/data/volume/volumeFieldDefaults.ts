@@ -1,14 +1,13 @@
 /**
  * Per-volume-field presentation defaults — palette, contrast, densityScale,
- * envelope, exposure, trim — keyed by `VolumeFieldId`.
+ * envelope, exposure, trim — keyed by `CosmicWebDensityFieldId`.
  *
- * All volumes (production + DEV-only synthetic fixtures) live in
- * `SOURCE_REGISTRY` with `type: 'volume'`, so this module is a thin
- * lookup helper rather than a separate registry.  Keeping the helpers
- * here lets call sites stay decoupled from the registry's iteration
- * shape and gives a single place to add cross-cutting fallbacks if a
- * future producer wants to ship a brand-new field without registering
- * it first.
+ * All volumes live in `SOURCE_REGISTRY` with `type: 'cosmicWebDensity'`, so
+ * this module is a thin lookup helper rather than a separate registry.
+ * Keeping the helpers here lets call sites stay decoupled from the
+ * registry's iteration shape and gives a single place to add cross-cutting
+ * fallbacks if a future producer wants to ship a brand-new field without
+ * registering it first.
  *
  * Three exports, layered:
  *   - `getVolumeFieldDefaults`  — presentation defaults for one id.
@@ -22,23 +21,25 @@ import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../defaults';
 import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 import type { SourceEntry } from '../../@types/data/SourceEntry';
 import type { VolumeFieldDefaults } from '../../@types/data/volume/VolumeFieldDefaults';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 
 /** A `SourceEntry` narrowed to the volume discriminant. */
-type VolumeEntry = Extract<SourceEntry, { type: 'volume' }>;
+type VolumeEntry = Extract<SourceEntry, { type: 'cosmicWebDensity' }>;
 
 /**
  * Look up the full volume registry entry for an id. The id is
- * closed over `VolumeFieldId`, so callers cannot ask for an unknown id
- * — every value in the union has a registry entry.
+ * closed over `CosmicWebDensityFieldId`, so callers cannot ask for an
+ * unknown id — every value in the union has a registry entry.
  */
-function volumeEntry(id: VolumeFieldId): VolumeEntry {
-  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.id === id);
-  // The `VolumeFieldId` union is derived from SOURCE_REGISTRY entries,
-  // so a missing entry would mean the registry has drifted from the
-  // type — surface that loudly rather than papering over it.
-  if (!entry || entry.type !== 'volume') {
+function volumeEntry(id: CosmicWebDensityFieldId): VolumeEntry {
+  const entry = Object.values(SOURCE_REGISTRY).find(
+    (e) => e.type === 'cosmicWebDensity' && e.id === id,
+  );
+  // The `CosmicWebDensityFieldId` union is derived from SOURCE_REGISTRY
+  // entries, so a missing entry would mean the registry has drifted from
+  // the type — surface that loudly rather than papering over it.
+  if (!entry || entry.type !== 'cosmicWebDensity') {
     throw new Error(`volumeFieldDefaults: no registry entry for ${id}`);
   }
   return entry;
@@ -48,7 +49,7 @@ function volumeEntry(id: VolumeFieldId): VolumeEntry {
  * Look up presentation defaults for a registered volume field id —
  * palette, contrast, densityScale, envelope, exposure, trim.
  */
-export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
+export function getVolumeFieldDefaults(id: CosmicWebDensityFieldId): VolumeFieldDefaults {
   return volumeEntry(id);
 }
 
@@ -65,7 +66,7 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
  * `intensity` falls back to the global default for any field that omits a
  * per-cube override.
  */
-export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings {
+export function buildVolumeFieldSettings(id: CosmicWebDensityFieldId): VolumeFieldSettings {
   const entry = volumeEntry(id);
   return {
     enabled: entry.visible,
@@ -81,25 +82,18 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 
 /**
  * Build the construction-time volume-field seed record. The engine seeds
- * `state.settings.volumes.items` from this at construction so every
+ * `state.settings.cosmicWebDensity.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
- * loads — the demand predicate `settings.volumes.items[id]?.enabled` then
- * reads pure state, fully symmetric with the galaxy catalog items read
+ * loads — the demand predicate `settings.cosmicWebDensity.items[id]?.enabled`
+ * then reads pure state, fully symmetric with the galaxy catalog items read
  * (`settings.galaxyCatalogs.items[id]?.enabled`). Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.
- *
- * DEV-only debug fixtures (`binBaseName: null`) are excluded: they have
- * no on-disk payload, register only under `import.meta.env.DEV`, and
- * would clutter production state with ids that never load.
  */
-export function seedVolumeFields(): Partial<Record<VolumeFieldId, VolumeFieldSettings>> {
-  // Partial, not total: DEV-only debug ids are skipped below, so they
-  // are absent from the result — the type reflects that rather than lying
-  // about a complete mapping.
-  const seeded: Partial<Record<VolumeFieldId, VolumeFieldSettings>> = {};
+export function seedVolumeFields(): Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>> {
+  const seeded: Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>> = {};
   for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'volume' || entry.binBaseName === null) continue;
+    if (entry.type !== 'cosmicWebDensity') continue;
     seeded[entry.id] = buildVolumeFieldSettings(entry.id);
   }
   return seeded;

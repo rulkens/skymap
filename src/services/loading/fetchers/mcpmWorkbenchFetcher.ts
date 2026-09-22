@@ -2,9 +2,9 @@
  * mcpmWorkbenchFetcher — `Fetcher<ScalarCube, void>` against the promoted
  * `mcpm-workbench.scfd` on R2 (or `public/data/` in local dev).
  *
- * Mirrors `cf4DensityFetcher`'s shape: one URL, void request — the
- * workbench promotes one cube at a time (`tools/volumes/promoteWorkbenchExport.ts`
- * overwrites the single filename), so tier doesn't apply.
+ * One URL, void request, no per-request branching — the workbench promotes
+ * one cube at a time (`tools/volumes/promoteWorkbenchExport.ts` overwrites
+ * the single filename), so tier doesn't apply.
  *
  * On 404 the slot machinery's error path leaves the field unregistered;
  * the Volumes panel simply doesn't show it — moot while the entry ships

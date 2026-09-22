@@ -23,7 +23,7 @@ import { captureScene } from '../../../src/state/scene/captureScene';
 
 const SNAPSHOT_SETTINGS_KEYS = [
   'bodies',
-  'filaments',
+  'cosmicWebFilaments',
   'flow',
   'localBubble',
   'constellations',
@@ -35,7 +35,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'camera',
   'starCatalogs',
   'structures',
-  'volumes',
+  'cosmicWebDensity',
   'zoneOfAvoidance',
 ].sort();
 
@@ -51,8 +51,8 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
     settings: {
       galaxyCatalogs: { enabled: true, sizePx: 4, brightness: 1 },
       structures: { enabled: true, items: {} },
-      volumes: { enabled: false, items: {} },
-      filaments: { enabled: true, intensity: 0.5 },
+      cosmicWebDensity: { enabled: false, items: {} },
+      cosmicWebFilaments: { enabled: true, intensity: 0.5 },
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
       orbitTrails: { enabled: true },

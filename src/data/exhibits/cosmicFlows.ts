@@ -9,7 +9,7 @@ import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyC
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { GALAXIES_OFF } from './utils/galaxiesOff';
-import { VOLUMES_OFF } from './utils/volumesOff';
+import { COSMIC_WEB_DENSITY_OFF } from './utils/cosmicWebDensityOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The Milky Way stays ON here, label included: that label IS the "you are
@@ -35,7 +35,7 @@ export const cosmicFlows: Exhibit = {
     flow: { ...flowInitialState, enabled: true },
     galaxyCatalogs: GALAXIES_OFF,
     milkyWay: MILKY_WAY_WITH_MARKER,
-    volumes: VOLUMES_OFF,
+    cosmicWebDensity: COSMIC_WEB_DENSITY_OFF,
   },
   // Same world bearing the shipped `cosmicFlows` clip's `start` frames the
   // Local Group with — copied, not imported, since that field's type is

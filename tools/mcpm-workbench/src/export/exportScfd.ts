@@ -32,9 +32,10 @@ export function exportScfd(values: Float32Array, box: GridBox): ArrayBuffer {
     voxelSize: box.voxelSizeMpc,
     // Box tilt, not frame conversion — frameKind is 'equatorial-cartesian'
     // (FRAME_TO_WORLD identity), so buildCubeModelMatrix composes box.rotation
-    // on top of nothing. This is the field's documented per-cube-tilt use
-    // (buildCf4Density.ts:197-207); shipping identity here would silently
-    // axis-align every rotated box on import.
+    // on top of nothing. `rotation` is reserved for exactly this per-cube
+    // tilt (composed ON TOP of FRAME_TO_WORLD for a non-identity frame);
+    // shipping identity here would silently axis-align every rotated box
+    // on import.
     rotation: [box.rotation[0], box.rotation[1], box.rotation[2], box.rotation[3]] as Vec4,
     valueMin,
     valueMax,

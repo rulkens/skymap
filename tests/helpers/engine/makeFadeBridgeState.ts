@@ -12,14 +12,14 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
+import { filamentsFadeRows } from '../../../src/layers/cosmicWebFilaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
 import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../src/layers/filaments/@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
@@ -31,7 +31,7 @@ const GALAXY_RUNTIME = {
 
 const FILAMENTS_RUNTIME = {
   renderer: { hasCloud: () => true },
-} as unknown as FilamentsRuntime;
+} as unknown as CosmicWebFilamentsRuntime;
 
 /** `fieldLoaded` true, so the `flow` row's demand-loaded guard passes. */
 const FLOW_RUNTIME = {
@@ -75,11 +75,10 @@ export function makeFadeBridgeState(): {
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
     zoneOfAvoidance: { enabled: true },
-    // Empty volume items: the volumeField intent reads items[id]?.enabled (→
-    // false here) and its post no-ops because assetSlots.syntheticVolumes is
-    // absent — neither throws, which is all this fixture needs.
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
+    // Empty volume items: the cosmicWebDensityField intent reads
+    // items[id]?.enabled (→ false here), which is all this fixture needs.
+    cosmicWebDensity: { enabled: true, items: {} },
+    cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: true },
   } as unknown as EngineSettingsState;
@@ -88,7 +87,10 @@ export function makeFadeBridgeState(): {
     settings,
     gpu: {
       galaxyPointRenderer: { hasCatalog: () => true },
-      volumeFieldRenderer: { listIds: () => [] },
+      // MCPM is default-on and loads first, so by the time a real sync runs
+      // the renderer already holds it — the volumeField row's guard needs at
+      // least one resident id for the fan-out to have anything to fade.
+      volumeFieldRenderer: { listIds: () => ['mcpm'] },
     },
     subsystems: {
       fades: { fadeTo, setImmediate, targetOf },

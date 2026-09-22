@@ -5,7 +5,7 @@
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { VOLUMES_OFF } from '../exhibits/utils/volumesOff';
+import { COSMIC_WEB_DENSITY_OFF } from '../exhibits/utils/cosmicWebDensityOff';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
 
@@ -13,14 +13,14 @@ import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture
 // Both mirror their tour's opening scene strip rather than the default sky, so
 // the thumbnail is a frame the viewer will actually see.
 const GRAND_TOUR_CAPTURE: PaletteCardCapture = {
-  settings: { volumes: VOLUMES_OFF },
+  settings: { cosmicWebDensity: COSMIC_WEB_DENSITY_OFF },
   pose: { target: [0, 0, 0], yaw: 0.9, pitch: 0.55, distance: 1500 },
 };
 // Volumes off is webShowcase's beat-1 `hide()` sweep in settings form: the tour
 // reads the NAMED web — structure rings and their labels — not the density
 // field the Cosmic Web card already shows.
 const WEB_SHOWCASE_CAPTURE: PaletteCardCapture = {
-  settings: { volumes: VOLUMES_OFF },
+  settings: { cosmicWebDensity: COSMIC_WEB_DENSITY_OFF },
   pose: { target: [0, 0, 0], yaw: 2.1, pitch: 0.35, distance: 220 },
 };
 

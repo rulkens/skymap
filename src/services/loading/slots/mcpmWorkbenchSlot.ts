@@ -4,8 +4,8 @@
  *
  * On commit, hands the decoded `ScalarCube` to `uploadVolumeField` under
  * the id `'mcpm-workbench'` — the shared ingest path every volume slot
- * commits through. Untiered like cf4DensitySlot (void request): one
- * cube, no per-tier variants.
+ * commits through. Untiered (void request): one cube, no per-tier
+ * variants.
  *
  * **Lazy fetch.** Hidden pending a promotion decision (see
  * `mcpm-workbench.ts`'s registry entry), so its construction seed lands

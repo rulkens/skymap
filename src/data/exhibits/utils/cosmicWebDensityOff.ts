@@ -1,0 +1,9 @@
+/**
+ * COSMIC_WEB_DENSITY_OFF — the `cosmicWebDensity` cluster with the master
+ * gate shut. MCPM is default-on, so any exhibit whose subject is not the
+ * cosmic web has to say so explicitly or the filaments read as part of it.
+ */
+
+import { initialState as volumesInitialState } from '../../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
+
+export const COSMIC_WEB_DENSITY_OFF = { ...volumesInitialState, enabled: false };

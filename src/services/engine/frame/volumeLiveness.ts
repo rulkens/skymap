@@ -10,7 +10,7 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { clampVolumeFieldSettings } from '../../../utils/clampVolumeFieldSettings';
@@ -23,33 +23,33 @@ export function deriveVolumeLiveness(
   state: PassState,
   ctx: FrameView,
 ): {
-  settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined;
-  fadeOpacityOf: (id: VolumeFieldId) => number;
+  settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined;
+  fadeOpacityOf: (id: CosmicWebDensityFieldId) => number;
 } | null {
   const renderer = state.gpu.volumeFieldRenderer;
   if (renderer === null) return null;
 
   const nowMs = ctx.snapshot.nowMs;
-  const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
-  if (!state.settings.volumes.enabled && masterOpacity <= 0) return null;
+  const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'cosmicWebDensity' }, nowMs);
+  if (!state.settings.cosmicWebDensity.enabled && masterOpacity <= 0) return null;
 
   // Recession lands on the master MULTIPLIER only: `recessedMaster ∈
   // [VOLUME_RECESSION, 1]` can't zero the layer, so the gate reads the pure toggle.
-  const recessedMaster = resolveLayerOpacity(state, ctx, { kind: 'volumesMaster' });
+  const recessedMaster = resolveLayerOpacity(state, ctx, { kind: 'cosmicWebDensity' });
   // Mpc from the heliocentric render origin — the key every field's `bands` are
   // measured against.
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  const settingsOf = (id: VolumeFieldId) => {
-    const raw = state.settings.volumes.items[id];
+  const settingsOf = (id: CosmicWebDensityFieldId) => {
+    const raw = state.settings.cosmicWebDensity.items[id];
     return raw === undefined ? undefined : clampVolumeFieldSettings(raw);
   };
-  const fadeOpacityOf = (id: VolumeFieldId) => {
+  const fadeOpacityOf = (id: CosmicWebDensityFieldId) => {
     // No store row at all (id never seeded) gets the same default a stale
     // row would via clampVolumeFieldSettings — see that function's header.
     const bands = settingsOf(id)?.bands ?? [SCALE_FADE_BANDS.surveyDeepZoom];
     const bandFactor = bands.reduce((factor, band) => factor * fadeBand(band, camDistMpc), 1);
     return (
-      resolveLayerOpacity(state, ctx, { kind: 'volumeField', id }) * recessedMaster * bandFactor
+      resolveLayerOpacity(state, ctx, { kind: 'cosmicWebDensityField', id }) * recessedMaster * bandFactor
     );
   };
 

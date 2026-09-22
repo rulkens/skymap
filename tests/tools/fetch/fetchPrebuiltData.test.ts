@@ -10,10 +10,10 @@ import type { DataManifest } from '../../../src/@types/data/DataManifest';
 /** Narrow fixture carrying only the fields `volumeVisibilityByFileName` reads. */
 function volumeEntry(opts: {
   visible: boolean;
-  binBaseName: string | null;
+  binBaseName: string;
   tiered: boolean;
 }): SourceEntry {
-  return { type: 'volume', ...opts } as unknown as SourceEntry;
+  return { type: 'cosmicWebDensity', ...opts } as unknown as SourceEntry;
 }
 
 function flowEntry(opts: { visible: boolean; binBaseName: string }): SourceEntry {
@@ -32,9 +32,9 @@ describe('volumeVisibilityByFileName', () => {
 
   it('maps the single file of an untiered volume', () => {
     const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: 'cf4_density', tiered: false }),
+      volumeEntry({ visible: false, binBaseName: 'mcpm-workbench', tiered: false }),
     ]);
-    expect(map.get('cf4_density.scfd')).toBe(false);
+    expect(map.get('mcpm-workbench.scfd')).toBe(false);
   });
 
   it('maps a flow entry (no tiered field at all)', () => {
@@ -42,13 +42,6 @@ describe('volumeVisibilityByFileName', () => {
       flowEntry({ visible: false, binBaseName: 'flowfield' }),
     ]);
     expect(map.get('flowfield.scfd')).toBe(false);
-  });
-
-  it('skips a procedural fixture with no on-disk file (binBaseName null)', () => {
-    const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: null, tiered: false }),
-    ]);
-    expect(map.size).toBe(0);
   });
 
   it('ignores non-volume, non-flow entries entirely', () => {

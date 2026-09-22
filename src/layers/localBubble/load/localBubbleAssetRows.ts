@@ -20,7 +20,7 @@ export function localBubbleAssetRows(runtime: LocalBubbleRuntime): readonly Asse
       demand: (ctx) =>
         ctx.settings.localBubble.enabled && Math.hypot(...ctx.cameraPosMpc) < DEMAND_DISTANCE_MPC,
       release: (ctx) => Math.hypot(...ctx.cameraPosMpc) > RELEASE_DISTANCE_MPC,
-      priority: 83, // next free rung after filaments (80) / flow (81) / cf4Density et al. (82)
+      priority: 83, // next free rung after filaments (80) / flow (81) / the volume overlays (82)
     },
   ];
 }

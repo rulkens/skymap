@@ -1,6 +1,6 @@
 /**
  * flowFieldSlot — factory for the CF4++ velocity flow field's asset slot.
- * Lazy / default-off (mirrors `cf4DensitySlot`); the 'ready' transition
+ * Lazy / default-off (mirrors `mcpmWorkbenchSlot`); the 'ready' transition
  * (`slotReady`) IS "uploaded to the renderer", since this commit returns
  * only after `upload` does.
  */

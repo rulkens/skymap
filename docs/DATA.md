@@ -38,7 +38,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
 - `star-catalog/v1/`: `stars-{small,medium,large}.bin`
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
-- `scalar-field/v3/`: `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
+- `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
 
@@ -176,14 +176,15 @@ For real-scale runs the canonical builder is the Rust port, `npm run build-stars
 
 ## Cosmic-web volumes
 
-All four share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
+All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
 
-- **CF-4 DM density** (`cf4-density`) and **CF4++ flow field** (`flow`): both derived from the same Courtois 2025 CF4++ ensemble, full fetch/build/maintainer flow in [`data/raw/cf4/README.md`](../data/raw/cf4/README.md). `npm run build-cf4-density` / `npm run build-flow-field`.
 - **MCPM Cosmic Web** (`mcpm`): three tiered `.scfd` from the SDSS DR17 Cosmic Slime VAC. The Python extraction happens once per VAC release; contributors curl the pre-extracted `.npy` tiers and run `npm run build-mcpm`. Full flow in [`data/raw/mcpm/README.md`](../data/raw/mcpm/README.md).
 - **Polyphorm (2MRS)** (`polyphorm-2mrs`, hidden by default): a locally-run Polyphorm export converted by `tools/volumes/extractPolyphormExport.py` into d8/d4/d2 tiers, then imported per tier with `buildRhizomeVolume.ts --clamp 0.2`. The clamp zeroes packed voxels below that log-normalised threshold; 0.2 sits below the renderer's default visibility deadband and shrinks the large tier's gzipped size by two orders of magnitude at no visible cost.
 - **MCPM workbench** (`mcpm-workbench`, hidden, no UI toggle): a durable home for cubes promoted from the `tools/mcpm-workbench/` dev tool. Export in the workbench UI, drop the `.npy`+`.json` pair into `data/raw/mcpm-workbench/`, then `npm run promote-mcpm-workbench -- --stem <stem>`, which imports it via the same `buildRhizomeVolume()` and copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json`. Its trace-mass total sits a uniform ~9.28× below the reference VAC; a three-stage investigation ruled this a documented provenance offset in the reference VAC itself, after eliminating every ported quirk, structural cause, and f16-accumulation explanation. See [`docs/research/mcpm-trace-mass-offset.md`](research/mcpm-trace-mass-offset.md).
 
 An **Edenhofer parsec-scale dust volume** already ships three tiered `.scfd` files (`edenhofer-dust-{small,medium,large}.scfd`, tracked by `allowDataFile`) with no `SOURCE_REGISTRY` row yet. The data pipeline landed ahead of its renderer wiring, so don't be surprised to find the files without a UI toggle.
+
+The **CF4++ flow field** (`flow`) shares the same SCFD wrapper format but is a velocity overlay, not a density volume (`type: 'flow'`, not `'volume'`): `flowfield.scfd`, built from the Courtois 2025 CF4++ ensemble via `npm run build-flow-field`. Full fetch/build/maintainer flow in [`data/raw/cf4/README.md`](../data/raw/cf4/README.md).
 
 ## Solar system & Earth imagery
 

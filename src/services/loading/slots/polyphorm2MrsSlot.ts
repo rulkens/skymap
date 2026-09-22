@@ -1,8 +1,8 @@
 /**
  * polyphorm2MrsSlot — factory for the Polyphorm 2MRS volume's asset slot.
  *
- * Tier-aware (unlike cf4DensitySlot's void request), mirroring mcpmSlot. Hands
- * the decoded `ScalarCube` to `uploadVolumeField` under the registry id
+ * Tier-aware, mirroring mcpmSlot. Hands the decoded `ScalarCube` to
+ * `uploadVolumeField` under the registry id
  * `'polyphorm-2mrs'` on commit — the shared ingest path every volume slot
  * commits through. Lazy fetch: registry-visible:false seeds `enabled: false`;
  * toggling dispatches `writeVolumeField` to load on demand.

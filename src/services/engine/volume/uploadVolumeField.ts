@@ -6,22 +6,22 @@
  * different renderer/arity/fade key; see decision #14.
  */
 
-import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { AppStore } from '../../../store/types';
-import { addVolumeField } from '../../../layers/volume/state/volumes/slice';
+import { addCosmicWebDensityField } from '../../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function uploadVolumeField(
   state: ApplyIntentState,
   store: AppStore,
-  id: VolumeFieldId,
+  id: CosmicWebDensityFieldId,
   cube: ScalarCube,
 ): void {
   // Race guard, re-read per call — do not hoist into a closure (engine.ts:490-492).
   const renderer = state.gpu.volumeFieldRenderer;
   if (!renderer) return;
-  store.dispatch(addVolumeField(id));
+  store.dispatch(addCosmicWebDensityField(id));
   renderer.upload(id, cube);
   // Wake rides the settings-row dispatch; watchWakeSaga's route table renders it (#14 D2).
 }

@@ -116,8 +116,8 @@ function makeState(): EngineState {
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
-      filaments: { enabled: false, intensity: 1.0 },
-      volumes: { enabled: true },
+      cosmicWebFilaments: { enabled: false, intensity: 1.0 },
+      cosmicWebDensity: { enabled: true },
       structures: {
         enabled: true,
         items: {
@@ -185,7 +185,6 @@ function makeState(): EngineState {
       filaments: null,
       famousGalaxiesMeta: null,
       pgcAlias: null,
-      cf4Density: null,
     },
   } as unknown as EngineState;
 }

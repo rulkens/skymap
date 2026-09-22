@@ -7,7 +7,7 @@
  *   - `FadeId` kinds are the *registry* vocabulary. They key the fade
  *     controller map and are shaped for the renderer: one `kind` per
  *     subsystem, with discriminators (`GalaxyCatalogId`, `StructureId`,
- *     `VolumeFieldId`) where a subsystem owns many controllers.
+ *     `CosmicWebDensityFieldId`) where a subsystem owns many controllers.
  *
  *   - `VisibilityLayerKey` (this type) is the *intent-addressing*
  *     vocabulary. These are the friendly names a caller reaches for when
@@ -54,7 +54,7 @@ export type VisibilityLayerKey =
   | 'milkyWayDisk'
   | 'proceduralDisks'
   | 'texturedDisks'
-  | 'volumesMaster'
+  | 'cosmicWebDensity'
   | 'milkyWayLabel'
   | 'surveyLabel'
   | 'starCatalogLabel'
@@ -63,10 +63,10 @@ export type VisibilityLayerKey =
   | 'structureRing'
   | 'structureLabel'
   | 'survey'
-  | 'filaments'
+  | 'cosmicWebFilaments'
   | 'localBubble'
   | 'flow'
   | 'constellations'
   | 'orbitTrails'
-  | 'volumeField'
+  | 'cosmicWebDensityField'
   | 'zoneOfAvoidance';

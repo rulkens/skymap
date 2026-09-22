@@ -2,8 +2,8 @@
  * f16BitsToFloat — decode a single IEEE-754 f16 raw bit pattern back
  * into a JS number.  The inverse of `f32ToF16Bits`.
  *
- * Used offline by the SCFD verifiers (`verifyCf4Scfd`, `verifyFlowField`)
- * to decode stored voxel bits for comparison against known cosmography.
+ * Used offline by the SCFD verifiers (e.g. `verifyFlowField`) to decode
+ * stored voxel bits for comparison against known cosmography.
  *
  * Layout reminder: f16 is 1 sign + 5 exp (bias 15) + 10 mantissa.  Zero,
  * subnormals, normals, ±Inf and NaN are all handled.
