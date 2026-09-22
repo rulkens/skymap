@@ -236,9 +236,9 @@ fn expandBillboardScreen(
 // lib/camera.wesl's 'pxPerRad' section. Every eye-tuned constant on
 // the consumer side was retuned once against the corrected scale.
 //
-// This is one of the two primitives the original instance of the
-// pattern in 'labels/vertex.wesl' computed inline; extracting it lets
-// halo / ring / labels all share the same canonical derivation.
+// Shared by halo / ring / labels / star sprites so every consumer sizes
+// against the same focal term; a size tuned by eye in one lives beside
+// that consumer as a named px constant, never in here.
 
 fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
   return (worldLen / clipW) * cam.pxPerRad;

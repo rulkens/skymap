@@ -1,8 +1,12 @@
 /**
- * galaxyCatalogPlanner — the Layer's once-scope planning row, in order: the
- * aliasIndex reconcile, the structureMemberCount reconcile, the bias-mode
- * reconcile, the hi-res famous planner, then the ONE catalog walk feeding
- * both disk planners. Both result bits are the textured planner's LANDED
+ * galaxyCatalogPlanner — the galaxy catalog Layer's once-per-frame CPU
+ * planning row: reconciles the alias index, the structure member counts and
+ * the bias mode against the live settings, runs the hi-res famous-galaxy
+ * planner, then does the ONE catalog walk that feeds both disk planners
+ * (procedural and textured). Once, not per view: the walk touches the whole
+ * visible catalog, so it plans over the rig's views (anchor camera `views[0]`,
+ * `pxPerRad` = the max over views) rather than five times per dome frame.
+ * Its `awake`/`settling` votes report the textured planner's LANDED
  * thumbnail work — never its outstanding fetches; see the result at the tail.
  */
 

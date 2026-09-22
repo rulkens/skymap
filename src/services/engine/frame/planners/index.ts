@@ -1,7 +1,10 @@
 /**
- * CORE_PLANNERS — core's half of the contributed-planner registry;
- * `createLayers` appends each Layer's own rows. Order lives in `FRAME_ORDER`,
- * not this array (mirrors `CORE_COMPUTES`).
+ * CORE_PLANNERS — the planners the engine core contributes to the frame
+ * program; `createLayers` appends each Layer's own rows (`Layer.planners`)
+ * to form `EngineState.planners`, the registry `runPlanSteps` and
+ * `checkFrameOrder` resolve `plan` lines against. Order is NOT this array:
+ * a planner runs where its `{ kind: 'plan', name }` line sits in
+ * `frameSections.ts`, mirroring `CORE_COMPUTES`.
  */
 
 import type { FrameContentPlanner } from '../../../../@types/engine/frame/FrameContentPlanner';

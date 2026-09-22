@@ -111,18 +111,26 @@ struct Uniforms {
 // consumers import only 'u'.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// spriteBillboardOffset — unit-scale world offset for one billboard corner,
-// off a basis facing THE EYE, not a view plane (which differs per dome face or
-// VR eye, tilting one blob two ways across a seam). Built in MODEL space, then
-// rotated to world; 'model' scales uniformly, so the renormalise AFTER that
-// transform is what keeps the offset unit-length. Mirrors
+// spriteBillboardOffset — the unit-scale world offset of one billboard
+// corner for one sprite, on a basis facing THE EYE rather than the view
+// plane. A view-plane basis differs per dome face or VR eye, so one blob on a
+// seam tilted two ways; an eye-facing basis depends only on the instance-
+// to-eye direction, so every view of one blob agrees. Mirrors
 // bodies/sgrAStarLensing/vertex.wesl.
+//
+// Built in MODEL space, where the eye is 'camPosModel' and the disk normal is
+// the +y the generator emits into, then rotated to world where the corner is
+// added. 'model' carries a uniform scale, so the rotated axes come back
+// scaled: renormalising AFTER the transform keeps the offset unit-length.
+//
+// Looking straight down the disk axis collapses the first cross product; an
+// in-disk fallback axis then takes over so the basis is defined for every
+// viewing direction. Its roll there is arbitrary and costs nothing: both
+// sprite fragments are radially symmetric about the centre.
 
-// The generator emits its disk in the y = 0 plane; the fallback axis covers the
-// down-the-axis view where the first cross collapses (its roll is arbitrary,
-// and invisible on a radially symmetric sprite).
 const DISK_NORMAL_MODEL: vec3<f32> = vec3<f32>(0.0, 1.0, 0.0);
 const DISK_AXIS_FALLBACK: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
+// Below this the cross product's direction is noise, not a basis.
 const BASIS_DEGENERATE_EPS: f32 = 1e-4;
 
 fn spriteBillboardOffset(

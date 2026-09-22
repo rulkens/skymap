@@ -1,7 +1,9 @@
 /**
- * flowPlanner — reconcile the renderer's mode/count against the live settings
- * (arms a reseed on either change, mirroring `milkyWayCloud.reconcile`), then
- * vote. `once`-scope: nothing here reads a per-view value.
+ * flowPlanner — the flow Layer's once-per-frame CPU planning row: reconciles
+ * the flow renderer's mode and particle count against the live settings and
+ * arms a reseed when either changed (mirroring `milkyWayCloud.reconcile`),
+ * then votes `awake` while the field animates. Once-scope because nothing
+ * here reads a per-view value.
  */
 
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';

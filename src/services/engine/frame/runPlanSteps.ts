@@ -1,8 +1,13 @@
 /**
- * runPlanSteps — run one section's `plan` rows for one scope target, writing
- * each result into the `FramePlannerResultStore` before any GPU step of that target runs. A step
- * naming a planner absent from `planners` throws: unlike a pass or compute
- * row, a hand-authored `plan` line always names a row the composition owns.
+ * runPlanSteps — runs the `{ kind: 'plan' }` lines at the head of one frame
+ * section, for one scope target (the whole frame with every view, or one
+ * view), and files each planner's result in the frame's
+ * `FramePlannerResultStore` before any GPU step of that target encodes.
+ * `renderFrame` calls it once per once-scope section before captures are
+ * scheduled, and once per view for each perView section before that view's
+ * encoder opens. A line naming a planner absent from `planners` throws:
+ * every `plan` line is hand-authored in `frameSections.ts` against a row the
+ * composition registers, so a miss is a wiring error, never a soft skip.
  */
 
 import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';

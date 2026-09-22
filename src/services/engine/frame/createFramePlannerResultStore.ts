@@ -1,8 +1,13 @@
 /**
- * createFramePlannerResultStore — one `FramePlannerResultStore` per frame. A `'once'` value keys on the
- * planner's name alone; a `'perView'` value keys additionally by `FrameView`
- * identity (a `WeakMap`, the idiom `atmosphereDrawListCache`/`readStarCut`
- * already use) — there is no view whose plan a DIFFERENT view can read.
+ * createFramePlannerResultStore — mints the frame's `FramePlannerResultStore`:
+ * where `runPlanSteps` files each planner's result and where a pass reads
+ * the data planned for its view. A `'once'` result is filed by planner name;
+ * a `'perView'` result by planner name AND the `FrameView` it was planned
+ * for (a `WeakMap` on view identity, the idiom `atmosphereDrawListCache`
+ * and `readStarCut` use), so no view can read another view's plan. `get`
+ * on something never planned throws rather than hand back a canvas-shaped
+ * default. `awake` and `settling` OR every result put this frame, and
+ * settling implies awake here so a settling planner keeps the loop ticking.
  */
 
 import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
