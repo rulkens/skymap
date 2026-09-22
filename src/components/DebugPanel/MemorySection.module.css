@@ -14,6 +14,11 @@
   text-align: right;
 }
 
+/* The owner header sits over left-aligned names. */
+.head:first-child {
+  text-align: left;
+}
+
 .name {
   overflow-wrap: anywhere;
 }
