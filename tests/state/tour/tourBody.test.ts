@@ -35,7 +35,7 @@ import { selectTourActive } from '../../../src/state/tour/selectors';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
-import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
@@ -248,7 +248,7 @@ describe('tourBody', () => {
     };
 
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
     const task = runTour(sagaMiddleware, makeTour([cueBeat, plainBeat]));
 
     await flush();
@@ -346,7 +346,7 @@ describe('tourBody', () => {
 
     vi.useFakeTimers();
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
     const task = runTour(sagaMiddleware, makeTour([cueBeat, plainBeat]), { from: 1, to: 1 });
 
     // The reconstruction fold dispatches synchronously on entry — beat 0's
@@ -438,11 +438,11 @@ describe('tourBody', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     // Seed a known baseline so the mid-run flip (→ false) is observable.
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
     runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
+    store.dispatch(setCosmicWebDensityEnabled(false));
     expect(store.getState().settings.volumes.enabled).toBe(false);
 
     await vi.runAllTimersAsync();
@@ -469,11 +469,11 @@ describe('tourBody', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
     runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
+    store.dispatch(setCosmicWebDensityEnabled(false));
 
     // Advance to the dwell race inside beat 1 (fly resolved, drift blocking).
     await flush();
@@ -506,12 +506,12 @@ describe('tourBody', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
     runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — must survive the camera-input action below
     // (only exitTakeover triggers the restore).
-    store.dispatch(setVolumesEnabled(false));
+    store.dispatch(setCosmicWebDensityEnabled(false));
 
     // Advance to the dwell race inside beat 1.
     await flush();

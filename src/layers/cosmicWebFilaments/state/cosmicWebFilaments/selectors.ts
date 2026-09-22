@@ -1,23 +1,23 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { FilamentsSettings } from '../../../../@types/settings/FilamentsSettings';
+import type { CosmicWebFilamentsSettings } from '../../../../@types/settings/CosmicWebFilamentsSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
   [selectSettings],
-  (settings): FilamentsSettings => settings.filaments,
+  (settings): CosmicWebFilamentsSettings => settings.filaments,
 );
 
 /** The whole cluster, under the slice's own name. */
-export const selectFilaments = selectRoute;
+export const selectCosmicWebFilaments = selectRoute;
 
-export const selectFilamentsEnabled = createSelector(
+export const selectCosmicWebFilamentsEnabled = createSelector(
   [selectRoute],
-  (route: FilamentsSettings): boolean => route.enabled,
+  (route: CosmicWebFilamentsSettings): boolean => route.enabled,
 );
 
-export const selectFilamentIntensity = createSelector(
+export const selectCosmicWebFilamentsIntensity = createSelector(
   [selectRoute],
-  (route: FilamentsSettings): number => route.intensity,
+  (route: CosmicWebFilamentsSettings): number => route.intensity,
 );

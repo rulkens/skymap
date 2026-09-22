@@ -52,7 +52,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import { getVolumeFieldDefaults } from '../../../../data/volume/volumeFieldDefaults';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
@@ -206,7 +206,7 @@ export function createVolumeFieldRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  const fields = new Map<VolumeFieldId, FieldEntry>();
+  const fields = new Map<CosmicWebDensityFieldId, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
   // the fragment shader as a temporal seed for the ray-march jitter
   // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise

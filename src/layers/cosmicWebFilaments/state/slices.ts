@@ -4,6 +4,6 @@
  * reason `galaxyCatalogLayerSettings`'s header spells out.
  */
 
-import { filamentsSlice } from './cosmicWebFilaments/slice';
+import { cosmicWebFilamentsSlice } from './cosmicWebFilaments/slice';
 
-export const filamentsLayerSettings = [filamentsSlice] as const;
+export const cosmicWebFilamentsLayerSettings = [cosmicWebFilamentsSlice] as const;

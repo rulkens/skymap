@@ -74,7 +74,7 @@
 
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
@@ -82,7 +82,7 @@ import type { OverlayId } from './OverlayId';
 export type FadeId =
   | { readonly kind: 'galaxyCatalog'; readonly id: GalaxyCatalogId }
   | { readonly kind: 'structure'; readonly id: StructureId }
-  | { readonly kind: 'volumeField'; readonly id: VolumeFieldId }
+  | { readonly kind: 'volumeField'; readonly id: CosmicWebDensityFieldId }
   | { readonly kind: 'milkyWay' }
   | { readonly kind: 'filament' }
   | { readonly kind: 'localBubble' }

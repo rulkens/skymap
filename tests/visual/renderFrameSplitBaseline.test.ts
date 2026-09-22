@@ -37,7 +37,7 @@ import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proce
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -541,7 +541,7 @@ describe('renderFrame visual baseline', () => {
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
-          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
+          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as CosmicWebFilamentsRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,

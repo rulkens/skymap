@@ -6,13 +6,13 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { FilamentsRuntime } from './@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from './@types/CosmicWebFilamentsRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createFilamentRenderer } from './render/filamentRenderer';
 import { createFilamentSlot } from './load/filamentSlot';
 
-export function create(deps: LayerCoreDeps): FilamentsRuntime {
+export function create(deps: LayerCoreDeps): CosmicWebFilamentsRuntime {
   const renderer = createFilamentRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl);
   return { renderer, slot: createFilamentSlot(renderer) };
 }

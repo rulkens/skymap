@@ -9,7 +9,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * has one place to look — visibility default + intensity multiplier come
  * from here, the .bin lives on disk under `binBaseName`.
  */
-export type FilamentSourceEntry = SourceEntryBase & {
+export type CosmicWebFilamentsSourceEntry = SourceEntryBase & {
   readonly type: 'filament';
   /** Stable numeric tag; not persisted, only used as the registry key. */
   readonly code: number;

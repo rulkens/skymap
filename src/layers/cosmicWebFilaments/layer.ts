@@ -6,7 +6,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { filamentsLayerSettings } from './state/slices';
+import { cosmicWebFilamentsLayerSettings } from './state/slices';
 import { FILAMENTS_SOURCE_ROWS } from './sources/filamentsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
@@ -14,9 +14,9 @@ import { filamentsAssetRows } from './load/filamentsAssetRows';
 import { filamentsPass } from './passes/filamentsPass';
 import { filamentsFadeRows } from './present/filamentsFadeRows';
 
-export const filamentsLayer = defineLayer({
+export const cosmicWebFilamentsLayer = defineLayer({
   name: 'filaments',
-  settings: filamentsLayerSettings,
+  settings: cosmicWebFilamentsLayerSettings,
   sources: FILAMENTS_SOURCE_ROWS,
   create,
   destroy,

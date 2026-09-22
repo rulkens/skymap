@@ -10,4 +10,4 @@ type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
  * at runtime), so unlike `GalaxyCatalogId` / `StructureId` it has no
  * runtime-array companion.
  */
-export type VolumeFieldId = Extract<AnyEntry, { readonly type: 'volume' }>['id'];
+export type CosmicWebDensityFieldId = Extract<AnyEntry, { readonly type: 'volume' }>['id'];

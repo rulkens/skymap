@@ -14,10 +14,10 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 
-const FIELD_ID = 'mcpm' as VolumeFieldId;
+const FIELD_ID = 'mcpm' as CosmicWebDensityFieldId;
 
 /**
  * A raw (unclamped) VolumeFieldSettings whose intensity is out of range.
@@ -143,7 +143,7 @@ describe('deriveVolumeLiveness', () => {
     // exemption exists for volumes.
     const state = makeState({
       hasActiveFields: (_settingsOf, fadeOpacityOf) =>
-        (fadeOpacityOf as (id: VolumeFieldId) => number)(FIELD_ID) > 0,
+        (fadeOpacityOf as (id: CosmicWebDensityFieldId) => number)(FIELD_ID) > 0,
       items: { [FIELD_ID]: rawSettings() },
     });
     const deepCtx = makeCtx({

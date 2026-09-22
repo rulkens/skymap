@@ -7,9 +7,9 @@
  */
 
 import { seedVolumeFields } from '../../../../data/volume/volumeFieldDefaults';
-import type { VolumeSettings } from '../../../../@types/settings/VolumeSettings';
+import type { CosmicWebDensitySettings } from '../../../../@types/settings/CosmicWebDensitySettings';
 
-export const initialState: VolumeSettings = {
+export const initialState: CosmicWebDensitySettings = {
   enabled: true,
   items: seedVolumeFields(),
 };

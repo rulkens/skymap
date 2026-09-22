@@ -5,46 +5,46 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  volumesSlice,
-  addVolumeField,
-  removeVolumeField,
-  writeVolumeField,
+  cosmicWebDensitySlice,
+  addCosmicWebDensityField,
+  removeCosmicWebDensityField,
+  writeCosmicWebDensityField,
 } from '../../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import type { VolumeFieldId } from '../../../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 
 // A seeded volume id (the boot value records every shippable volume).
-const initial = volumesSlice.getInitialState();
-const seededVolumeId = Object.keys(initial.items)[0] as VolumeFieldId;
+const initial = cosmicWebDensitySlice.getInitialState();
+const seededVolumeId = Object.keys(initial.items)[0] as CosmicWebDensityFieldId;
 
 describe('volumesSlice', () => {
   it('addVolumeField preserves an existing (tuned) row', () => {
-    const tuned = volumesSlice.reducer(
+    const tuned = cosmicWebDensitySlice.reducer(
       initial,
-      writeVolumeField({ id: seededVolumeId, patch: { intensity: 0.123 } }),
+      writeCosmicWebDensityField({ id: seededVolumeId, patch: { intensity: 0.123 } }),
     );
     expect(tuned.items[seededVolumeId]?.intensity).toBe(0.123);
 
     // Re-registering the seeded id is an identity no-op — sliders survive.
-    const readded = volumesSlice.reducer(tuned, addVolumeField(seededVolumeId));
+    const readded = cosmicWebDensitySlice.reducer(tuned, addCosmicWebDensityField(seededVolumeId));
     expect(readded.items[seededVolumeId]).toEqual(tuned.items[seededVolumeId]);
     expect(readded.items[seededVolumeId]?.intensity).toBe(0.123);
   });
 
   it('removeVolumeField deletes the row', () => {
-    const next = volumesSlice.reducer(initial, removeVolumeField(seededVolumeId));
+    const next = cosmicWebDensitySlice.reducer(initial, removeCosmicWebDensityField(seededVolumeId));
     expect(next.items[seededVolumeId]).toBeUndefined();
   });
 
   it('writeVolumeField patches a row; unknown id is a no-op', () => {
-    const patched = volumesSlice.reducer(
+    const patched = cosmicWebDensitySlice.reducer(
       initial,
-      writeVolumeField({ id: seededVolumeId, patch: { intensity: 0.77 } }),
+      writeCosmicWebDensityField({ id: seededVolumeId, patch: { intensity: 0.77 } }),
     );
     expect(patched.items[seededVolumeId]?.intensity).toBe(0.77);
 
-    const after = volumesSlice.reducer(
+    const after = cosmicWebDensitySlice.reducer(
       initial,
-      writeVolumeField({ id: 'no-such-volume' as VolumeFieldId, patch: { intensity: 1 } }),
+      writeCosmicWebDensityField({ id: 'no-such-volume' as CosmicWebDensityFieldId, patch: { intensity: 1 } }),
     );
     expect(after.items).toEqual(initial.items);
   });

@@ -19,7 +19,7 @@ import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
@@ -31,7 +31,7 @@ const GALAXY_RUNTIME = {
 
 const FILAMENTS_RUNTIME = {
   renderer: { hasCloud: () => true },
-} as unknown as FilamentsRuntime;
+} as unknown as CosmicWebFilamentsRuntime;
 
 /** `fieldLoaded` true, so the `flow` row's demand-loaded guard passes. */
 const FLOW_RUNTIME = {

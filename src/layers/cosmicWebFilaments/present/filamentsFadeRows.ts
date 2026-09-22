@@ -8,9 +8,9 @@
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { FilamentsRuntime } from '../@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRuntime';
 
-export function filamentsFadeRows(runtime: FilamentsRuntime): readonly FadeLayer<unknown>[] {
+export function filamentsFadeRows(runtime: CosmicWebFilamentsRuntime): readonly FadeLayer<unknown>[] {
   return [
     fadeLayerRow({
       key: 'filaments',

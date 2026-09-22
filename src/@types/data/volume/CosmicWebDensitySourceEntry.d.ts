@@ -10,7 +10,7 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
  * visibility default. Covers every production cube (MCPM, Polyphorm
  * 2MRS, …), each loaded from its own `.scfd` file.
  */
-export type VolumeSourceEntry = SourceEntryBase &
+export type CosmicWebDensitySourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {
     readonly type: 'volume';
     /** Stable numeric tag; not persisted, only used as the registry key. */

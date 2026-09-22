@@ -1,4 +1,4 @@
-import type { VolumeSourceEntry } from '../../@types/data/volume/VolumeSourceEntry';
+import type { CosmicWebDensitySourceEntry } from '../../@types/data/volume/CosmicWebDensitySourceEntry';
 import { Source } from '../source';
 
 export const POLYPHORM_2MRS_ENTRY = {
@@ -27,4 +27,4 @@ export const POLYPHORM_2MRS_ENTRY = {
   exposure: 18.0,
   trim: 0.3,
   intensity: 1.0,
-} as const satisfies VolumeSourceEntry;
+} as const satisfies CosmicWebDensitySourceEntry;

@@ -10,7 +10,7 @@
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
@@ -18,8 +18,8 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
-function volumeFieldIds(): readonly VolumeFieldId[] {
-  const ids: VolumeFieldId[] = [];
+function volumeFieldIds(): readonly CosmicWebDensityFieldId[] {
+  const ids: CosmicWebDensityFieldId[] = [];
   for (const entry of Object.values(SOURCE_REGISTRY)) {
     if (entry.type !== 'volume') continue;
     ids.push(entry.id);
@@ -108,7 +108,7 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
-  fadeLayerRow<VolumeFieldId, 'volumeField'>({
+  fadeLayerRow<CosmicWebDensityFieldId, 'volumeField'>({
     key: 'volumeField',
     expand: () => volumeFieldIds(),
     handle: (id) => ({ kind: 'volumeField', id }),

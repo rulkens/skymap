@@ -50,7 +50,7 @@
  */
 import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
 import Slider from '../common/Slider/Slider';
 import styles from './VolumeFieldRow.module.css';
@@ -104,7 +104,7 @@ const DENSITY_STEP = 0.1;
 
 export type VolumeFieldRowProps = {
   /** Stable id (not displayed; passed back to change callbacks). */
-  id: VolumeFieldId;
+  id: CosmicWebDensityFieldId;
   /** Display label; defaults to the id when none was provided at registration. */
   label: string;
   enabled: boolean;
@@ -114,11 +114,11 @@ export type VolumeFieldRowProps = {
   trim: number;
   exposure: number;
   paletteId: ScalarFieldPaletteId;
-  onEnabledChange: (id: VolumeFieldId, enabled: boolean) => void;
-  onIntensityChange: (id: VolumeFieldId, intensity: number) => void;
-  onContrastChange: (id: VolumeFieldId, contrast: number) => void;
-  onTrimChange?: (id: VolumeFieldId, trim: number) => void;
-  onExposureChange?: (id: VolumeFieldId, exposure: number) => void;
+  onEnabledChange: (id: CosmicWebDensityFieldId, enabled: boolean) => void;
+  onIntensityChange: (id: CosmicWebDensityFieldId, intensity: number) => void;
+  onContrastChange: (id: CosmicWebDensityFieldId, contrast: number) => void;
+  onTrimChange?: (id: CosmicWebDensityFieldId, trim: number) => void;
+  onExposureChange?: (id: CosmicWebDensityFieldId, exposure: number) => void;
   /**
    * Optional — when omitted, the Density slider still renders but its
    * onChange becomes a no-op.  Letting the slider render even without
@@ -126,9 +126,9 @@ export type VolumeFieldRowProps = {
    * configurations; future callers that DO want the knob just pass
    * the handler.
    */
-  onDensityScaleChange?: (id: VolumeFieldId, value: number) => void;
+  onDensityScaleChange?: (id: CosmicWebDensityFieldId, value: number) => void;
   /** Optional — when omitted, the palette dropdown is hidden. */
-  onPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
+  onPaletteChange?: (id: CosmicWebDensityFieldId, paletteId: ScalarFieldPaletteId) => void;
 };
 
 /**

@@ -30,10 +30,10 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import CosmicWebSectionContainer from '../../../src/components/containers/CosmicWebSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { selectVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
-import { selectFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
-import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import { setFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { selectCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
+import { selectCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
+import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -45,8 +45,8 @@ describe('CosmicWebSectionContainer', () => {
     it('dispatches setVolumesEnabled(true) and setFilamentsEnabled(false) when master is toggled from OFF', () => {
       const { store } = createAppStore();
       // Ensure master starts OFF (both underlying masters off)
-      store.dispatch(setVolumesEnabled(false));
-      store.dispatch(setFilamentsEnabled(false));
+      store.dispatch(setCosmicWebDensityEnabled(false));
+      store.dispatch(setCosmicWebFilamentsEnabled(false));
 
       const { container } = render(createElement(CosmicWebSectionContainer, null), {
         wrapper: makeWrapper(store),
@@ -59,8 +59,8 @@ describe('CosmicWebSectionContainer', () => {
       // Click turns the master ON → restores to Smooth (volumes on, filaments off)
       fireEvent.click(headerCheckbox);
 
-      expect(selectVolumesEnabled(store.getState())).toBe(true);
-      expect(selectFilamentsEnabled(store.getState())).toBe(false);
+      expect(selectCosmicWebDensityEnabled(store.getState())).toBe(true);
+      expect(selectCosmicWebFilamentsEnabled(store.getState())).toBe(false);
     });
   });
 
@@ -68,8 +68,8 @@ describe('CosmicWebSectionContainer', () => {
     it('dispatches setVolumesEnabled(false) and setFilamentsEnabled(false) when master is toggled from ON', () => {
       const { store } = createAppStore();
       // Ensure master starts ON via volumes
-      store.dispatch(setVolumesEnabled(true));
-      store.dispatch(setFilamentsEnabled(false));
+      store.dispatch(setCosmicWebDensityEnabled(true));
+      store.dispatch(setCosmicWebFilamentsEnabled(false));
 
       const { container } = render(createElement(CosmicWebSectionContainer, null), {
         wrapper: makeWrapper(store),
@@ -82,8 +82,8 @@ describe('CosmicWebSectionContainer', () => {
       // Click turns the master OFF → both disabled
       fireEvent.click(headerCheckbox);
 
-      expect(selectVolumesEnabled(store.getState())).toBe(false);
-      expect(selectFilamentsEnabled(store.getState())).toBe(false);
+      expect(selectCosmicWebDensityEnabled(store.getState())).toBe(false);
+      expect(selectCosmicWebFilamentsEnabled(store.getState())).toBe(false);
     });
   });
 });

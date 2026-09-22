@@ -21,11 +21,11 @@
  */
 
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 
 export type VolumeFieldRowData = {
   /** Stable id matching the field registered via `addVolumeField`. */
-  id: VolumeFieldId;
+  id: CosmicWebDensityFieldId;
   /** Human-readable display name; defaults to the id if not provided. */
   label: string;
   /** Whether this field is currently included in the render pass. */

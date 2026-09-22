@@ -7,18 +7,18 @@ import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
 import { buildVolumeFieldSettings } from '../../../../data/volume/volumeFieldDefaults';
-import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 
-export const volumesSlice = createSlice({
+export const cosmicWebDensitySlice = createSlice({
   name: 'settings/volumes',
   reducerPath: 'volumes',
   initialState,
   reducers: {
-    setVolumesEnabled: (volumes, action: PayloadAction<boolean>) => {
+    setCosmicWebDensityEnabled: (volumes, action: PayloadAction<boolean>) => {
       volumes.enabled = action.payload;
     },
-    addVolumeField: (volumes, action: PayloadAction<VolumeFieldId>) => {
+    addCosmicWebDensityField: (volumes, action: PayloadAction<CosmicWebDensityFieldId>) => {
       // Re-registering a seeded field is a no-op: the early return keeps an
       // existing row (and its tuned sliders) untouched. Only a genuinely-new id
       // seeds a fresh row from registry defaults.
@@ -30,12 +30,12 @@ export const volumesSlice = createSlice({
         action.payload,
       ) as Draft<VolumeFieldSettings>;
     },
-    removeVolumeField: (volumes, action: PayloadAction<VolumeFieldId>) => {
+    removeCosmicWebDensityField: (volumes, action: PayloadAction<CosmicWebDensityFieldId>) => {
       delete volumes.items[action.payload];
     },
-    writeVolumeField: (
+    writeCosmicWebDensityField: (
       volumes,
-      action: PayloadAction<{ id: VolumeFieldId; patch: Partial<VolumeFieldSettings> }>,
+      action: PayloadAction<{ id: CosmicWebDensityFieldId; patch: Partial<VolumeFieldSettings> }>,
     ) => {
       // Shallow per-field merge via Immer's `Object.assign`. An unknown id
       // is a silent no-op.
@@ -46,5 +46,5 @@ export const volumesSlice = createSlice({
   },
 });
 
-export const { setVolumesEnabled, addVolumeField, removeVolumeField, writeVolumeField } =
-  volumesSlice.actions;
+export const { setCosmicWebDensityEnabled, addCosmicWebDensityField, removeCosmicWebDensityField, writeCosmicWebDensityField } =
+  cosmicWebDensitySlice.actions;

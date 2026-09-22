@@ -18,11 +18,11 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  id: VolumeFieldId;
+  id: CosmicWebDensityFieldId;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
    * coordinate space [0, 1].  Divergent palettes (coolwarm)

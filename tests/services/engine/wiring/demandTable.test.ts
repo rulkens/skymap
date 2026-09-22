@@ -59,7 +59,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -127,7 +127,7 @@ type SettingsLeaves = {
  * `ctx.settings.volumes.items[id]?.enabled`, so `makeState` injects this
  * record directly into the settings bag.
  */
-type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
+type VolumeFieldLeaves = Partial<Record<CosmicWebDensityFieldId, { enabled: boolean }>>;
 
 /**
  * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads

@@ -1,4 +1,4 @@
-import type { FilamentSourceEntry } from '../../../@types/data/filament/FilamentSourceEntry';
+import type { CosmicWebFilamentsSourceEntry } from '../../../@types/data/filament/CosmicWebFilamentsSourceEntry';
 import { Source } from '../../../data/source';
 
 export const FILAMENTS_ENTRY = {
@@ -17,4 +17,4 @@ export const FILAMENTS_ENTRY = {
   // 1.0 is the unit baseline; user scales it down for a subtler overlay
   // or up for emphasis via the (future) Filaments slider.
   intensity: 1.0,
-} as const satisfies FilamentSourceEntry;
+} as const satisfies CosmicWebFilamentsSourceEntry;

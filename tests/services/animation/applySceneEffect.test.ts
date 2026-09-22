@@ -35,7 +35,7 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { setFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import {
   setGalaxyCatalogVisible,
@@ -45,7 +45,7 @@ import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
 } from '../../../src/layers/structure/state/structures/slice';
-import { writeVolumeField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { writeCosmicWebDensityField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
@@ -297,8 +297,8 @@ describe('applySceneEffect — hide', () => {
     applySceneEffect({ kind: 'hide', layers: ['filaments'] }, { state, store });
 
     const filamentAction = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setFilamentsEnabled>)
-      .find((a) => a.type === setFilamentsEnabled.type);
+      .map(([a]) => a as ReturnType<typeof setCosmicWebFilamentsEnabled>)
+      .find((a) => a.type === setCosmicWebFilamentsEnabled.type);
 
     expect(filamentAction).toBeDefined();
     expect(filamentAction!.payload).toBe(false);
@@ -407,7 +407,7 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(
       true,
       settingsWithVolume,
-    ) as ReturnType<typeof writeVolumeField>[];
+    ) as ReturnType<typeof writeCosmicWebDensityField>[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'mcpm', patch: { enabled: true } });
   });

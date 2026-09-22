@@ -18,7 +18,7 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { FilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from '../../../helpers/engine/FadeBridgeState';
 
@@ -64,7 +64,7 @@ describe('installFadeOnArrival', () => {
     // transition under test is the one an upload actually opens.
     (state as FadeBridgeState).fadeRows = filamentsFadeRows({
       renderer: { hasCloud: () => hasCloud },
-    } as unknown as FilamentsRuntime) as FadeBridgeState['fadeRows'];
+    } as unknown as CosmicWebFilamentsRuntime) as FadeBridgeState['fadeRows'];
     const { slots, notifyReady } = makeStubSlot();
 
     installFadeOnArrival(state as EngineState, slots);

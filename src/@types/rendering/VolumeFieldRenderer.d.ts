@@ -17,7 +17,7 @@ import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 
 export type VolumeFieldRenderer = {
   /**
@@ -25,8 +25,8 @@ export type VolumeFieldRenderer = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  upload(id: VolumeFieldId, cube: ScalarCube): void;
-  unload(id: VolumeFieldId): void;
+  upload(id: CosmicWebDensityFieldId, cube: ScalarCube): void;
+  unload(id: CosmicWebDensityFieldId): void;
   /**
    * True iff any field is currently producing visible output. The live
    * per-field settings come from `settingsOf` (the renderer no longer
@@ -42,10 +42,10 @@ export type VolumeFieldRenderer = {
    * `settingsOf` / `fadeOpacityOf` are keyed by volume-field id.
    */
   hasActiveFields(
-    settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined,
-    fadeOpacityOf?: (id: VolumeFieldId) => number,
+    settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined,
+    fadeOpacityOf?: (id: CosmicWebDensityFieldId) => number,
   ): boolean;
-  listIds(): VolumeFieldId[];
+  listIds(): CosmicWebDensityFieldId[];
   /**
    * Dispatch one raymarch per active field, additively blended.  The
    * per-field tunables are read each frame from `settingsOf`; a field
@@ -59,8 +59,8 @@ export type VolumeFieldRenderer = {
     viewportPx: Vec2,
     pxPerRad: number,
     cameraPosWorld: Readonly<Vec3>,
-    settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined,
-    fadeOpacityOf: (id: VolumeFieldId) => number,
+    settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined,
+    fadeOpacityOf: (id: CosmicWebDensityFieldId) => number,
   ): void;
   destroy(): void;
 };

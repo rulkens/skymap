@@ -3,7 +3,7 @@
  * intensity scale that is meaningless while the toggle is off.
  */
 
-export type FilamentsSettings = {
+export type CosmicWebFilamentsSettings = {
   enabled: boolean;
   intensity: number;
 };

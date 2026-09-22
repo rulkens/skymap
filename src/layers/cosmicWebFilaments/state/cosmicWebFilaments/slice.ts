@@ -7,18 +7,18 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
 
-export const filamentsSlice = createSlice({
+export const cosmicWebFilamentsSlice = createSlice({
   name: 'settings/filaments',
   reducerPath: 'filaments',
   initialState,
   reducers: {
-    setFilamentsEnabled: (filaments, action: PayloadAction<boolean>) => {
+    setCosmicWebFilamentsEnabled: (filaments, action: PayloadAction<boolean>) => {
       filaments.enabled = action.payload;
     },
-    setFilamentIntensity: (filaments, action: PayloadAction<number>) => {
+    setCosmicWebFilamentsIntensity: (filaments, action: PayloadAction<number>) => {
       filaments.intensity = action.payload;
     },
   },
 });
 
-export const { setFilamentsEnabled, setFilamentIntensity } = filamentsSlice.actions;
+export const { setCosmicWebFilamentsEnabled, setCosmicWebFilamentsIntensity } = cosmicWebFilamentsSlice.actions;

@@ -9,7 +9,7 @@
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
 import { constellationsLayer } from '../layers/constellations/layer';
-import { filamentsLayer } from '../layers/cosmicWebFilaments/layer';
+import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
@@ -20,7 +20,7 @@ export const APP_COMPOSITION = {
   layers: [
     galaxyCatalogLayer,
     starCatalogLayer,
-    filamentsLayer,
+    cosmicWebFilamentsLayer,
     flowLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
@@ -31,7 +31,7 @@ export const APP_COMPOSITION = {
   readonly [
     typeof galaxyCatalogLayer,
     typeof starCatalogLayer,
-    typeof filamentsLayer,
+    typeof cosmicWebFilamentsLayer,
     typeof flowLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
