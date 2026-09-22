@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // InfoCard — Milky Way routing tests.  A milkyWay selection renders the MW
-// detail card (glyph, no thumbnail) and the CardHeader "Focus" pill focuses
+// detail card (card-shot thumbnail) and the CardHeader "Focus" pill focuses
 // MILKY_WAY_INFO; a milkyWay hover renders the compact preview.  A galaxy
 // selection still renders the galaxy card (the table dispatch didn't
 // mis-route).
@@ -55,13 +55,18 @@ const galaxyStub = {
 } as unknown as GalaxyInfo;
 
 describe('InfoCard Milky Way', () => {
-  it('renders the Milky Way card for a milkyWay selection (no thumbnail)', () => {
+  it('renders the Milky Way card for a milkyWay selection with its card-shot thumbnail', () => {
     const { container } = render(
       createElement(InfoCard, { hovered: null, selected: MILKY_WAY_INFO }),
     );
     expect(screen.getByText('Milky Way')).toBeInTheDocument();
     expect(screen.getByText(MILKY_WAY_INFO.description)).toBeInTheDocument();
-    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Milky Way thumbnail' })).toHaveAttribute(
+      'src',
+      '/images/featured/milkyWay.webp',
+    );
+    // The glyph placeholder is gone now that a real thumbnail renders.
+    expect(container.textContent).not.toMatch(/🌌/);
   });
 
   it("the Milky Way card's Focus button calls onFocus with MILKY_WAY_INFO", () => {

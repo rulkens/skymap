@@ -21,6 +21,8 @@ import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStar
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
+import { MARS_DATUM_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams';
+import { formatDistance } from '../../../src/utils/format/formatDistance';
 
 const rigelTarget: BodyInfo = {
   type: 'body',
@@ -120,6 +122,60 @@ describe('BodyDetailCard', () => {
     );
 
     expect(container.textContent).not.toMatch(/Eccentricity|Pericentre|Orbits/);
+  });
+
+  it("renders Mars's card-shot thumbnail with its Radius and Distance relocated into the summary", () => {
+    // Mars is in SHOT_CARD_IDS (public/images/featured/body-mars.webp exists),
+    // so the top row swaps in for the old radius/distance CardRow positions —
+    // both must appear exactly once, not duplicated.
+    const marsTarget: BodyInfo = {
+      type: 'body',
+      id: 'mars',
+      label: 'Mars',
+      positionMpc: [0, 0, 0],
+    };
+
+    render(
+      createElement(BodyDetailCard, {
+        target: marsTarget,
+        famousStarsMeta: [],
+        distanceMpc: 1,
+      }),
+    );
+
+    expect(screen.getByRole('img', { name: 'Mars thumbnail' })).toHaveAttribute(
+      'src',
+      '/images/featured/body-mars.webp',
+    );
+    expect(
+      screen.getAllByText(`${(MARS_DATUM_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
+    ).toHaveLength(1);
+    // The live camera-distance value (not Mars's fixed "Distance from Sun"
+    // fact-sheet row, which stays put) must appear exactly once.
+    expect(screen.getAllByText(new RegExp(formatDistance(1)))).toHaveLength(1);
+  });
+
+  it('keeps the pre-thumbnail layout for a body with no card shot (Callisto)', () => {
+    // Callisto has no captured shot, so the top row must not appear at all —
+    // the rows stay exactly where they were before this feature.
+    const callistoTarget: BodyInfo = {
+      type: 'body',
+      id: 'callisto',
+      label: 'Callisto',
+      positionMpc: [0, 0, 0],
+    };
+
+    const { container } = render(
+      createElement(BodyDetailCard, {
+        target: callistoTarget,
+        famousStarsMeta: [],
+        distanceMpc: 1,
+      }),
+    );
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('Callisto')).toBeInTheDocument();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
   });
 
   it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {

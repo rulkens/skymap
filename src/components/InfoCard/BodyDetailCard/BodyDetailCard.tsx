@@ -55,8 +55,12 @@ import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
+import { CARD_IMAGE_DIR } from '../../../data/palette/cardImageDir';
+import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
+import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
+import Thumbnail from '../Thumbnail/Thumbnail';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
@@ -106,6 +110,10 @@ function BodyDetailCard({
   // decides whether a radius row means anything at all. A miss just drops the
   // row (the absent-row pattern below), not a render-time throw.
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
+  // A captured card shot swaps the "where / how big" rows into a thumbnail +
+  // summary row (matching GalaxyDetailCard); with none, those rows stay put.
+  const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
+  const hasShot = SHOT_CARD_IDS.has(shotId);
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
@@ -131,18 +139,38 @@ function BodyDetailCard({
         distance / orbital-period rows relabel for a moon (`facts.parent`), which
         orbits its planet rather than the Sun.
       */}
+      {!isFamousStar && hasShot && (
+        <div className={cx(styles.cardSection, styles.cardTopRow)}>
+          <Thumbnail url={`${CARD_IMAGE_DIR}/${shotId}.webp`} alt={`${target.label} thumbnail`} />
+          <div className={styles.cardSummary}>
+            {seed !== undefined && !isMeshBody(seed) && (
+              <div className={styles.cardTypeLine}>
+                <InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>{' '}
+                {formatRadiusM(seed.surface.datumRadiusM)}
+              </div>
+            )}
+            {distanceMpc != null && (
+              <div className={styles.cardDistLine}>
+                <span>Distance</span> {formatDistance(distanceMpc)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {!isFamousStar && (
         <>
           <div className={styles.cardSection}>
             {/* A mesh body's only radius is its bake hull, not a physical
-                fact about the object — so it gets no radius row at all. */}
-            {seed !== undefined && !isMeshBody(seed) && (
+                fact about the object — so it gets no radius row at all.
+                Dropped here when the top row already shows it. */}
+            {!hasShot && seed !== undefined && !isMeshBody(seed) && (
               <CardRow
                 label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
                 value={formatRadiusM(seed.surface.datumRadiusM)}
               />
             )}
-            {distanceMpc != null && (
+            {!hasShot && distanceMpc != null && (
               <CardRow label="Distance" value={formatDistance(distanceMpc)} />
             )}
             {facts?.mass && (
@@ -244,6 +272,21 @@ function BodyDetailCard({
         the sidecar): headline only — the fail-soft path.  The properties +
         description fill in the instant the sidecar resolves.
       */}
+      {entry && hasShot && (
+        <div className={cx(styles.cardSection, styles.cardTopRow)}>
+          <Thumbnail url={`${CARD_IMAGE_DIR}/${shotId}.webp`} alt={`${target.label} thumbnail`} />
+          <div className={styles.cardSummary}>
+            <div className={styles.cardTypeLine}>
+              <InfoTip {...TIPS.constellation!}>Constellation</InfoTip> {entry.constellation}
+            </div>
+            <div className={styles.cardDistLine}>
+              <InfoTip {...TIPS.starDistance!}>Distance</InfoTip>{' '}
+              {formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
+            </div>
+          </div>
+        </div>
+      )}
+
       {entry && (
         <>
           {/*
@@ -252,17 +295,22 @@ function BodyDetailCard({
             temperature → luminosity → radius → famous-only extras (mass, age,
             variability).  Constellation heads the block as the star's "where",
             not part of that physical sequence.  Measured famous values, so no
-            '~' affordance — unlike the field star's derived estimates.
+            '~' affordance — unlike the field star's derived estimates.  Both
+            rows are dropped here when the top row above already shows them.
           */}
           <div className={styles.cardSection}>
-            <CardRow
-              label={<InfoTip {...TIPS.constellation!}>Constellation</InfoTip>}
-              value={entry.constellation}
-            />
-            <CardRow
-              label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
-              value={formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
-            />
+            {!hasShot && (
+              <CardRow
+                label={<InfoTip {...TIPS.constellation!}>Constellation</InfoTip>}
+                value={entry.constellation}
+              />
+            )}
+            {!hasShot && (
+              <CardRow
+                label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
+                value={formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
+              />
+            )}
             <CardRow
               label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag (V)</InfoTip>}
               value={entry.magV.toFixed(2)}

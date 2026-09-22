@@ -2,12 +2,12 @@
  * MilkyWayDetailCard — rich panel for the Milky Way singleton.
  *
  * Mirrors the shared galaxy/structure layout (headline row, then image slot +
- * summary in a cardTopRow): there's no external thumbnail to fetch (we're
- * inside the galaxy), so a spiral glyph sits in the image slot rather than an
- * <img>.  Shows the name, morphological type (`typeString` — distinct from the
- * union `type` tag), a distance note (we're inside the galaxy, so the usual
- * catalog distance is undefined), and the description.  The focus action lives
- * in the shared CardHeader (the "Focus" pill, shown when the card is pinned).
+ * summary in a cardTopRow): the image slot shows the card-shot thumbnail
+ * captured under the Milky Way's own focus id, same as a body's.  Shows the
+ * name, morphological type (`typeString` — distinct from the union `type`
+ * tag), a distance note (we're inside the galaxy, so the usual catalog
+ * distance is undefined), and the description.  The focus action lives in
+ * the shared CardHeader (the "Focus" pill, shown when the card is pinned).
  */
 
 import type { ReactNode } from 'react';
@@ -15,8 +15,11 @@ import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
+import { CARD_IMAGE_DIR } from '../../../data/palette/cardImageDir';
+import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
+import Thumbnail from '../Thumbnail/Thumbnail';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
@@ -52,10 +55,7 @@ function MilkyWayDetailCard({
       <CardRow type="headline">{target.displayName}</CardRow>
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        {/* Spiral glyph in place of a thumbnail — we're inside the galaxy. */}
-        <div className={mw.glyph} aria-hidden="true">
-          🌌
-        </div>
+        <Thumbnail url={`${CARD_IMAGE_DIR}/${MILKY_WAY_FOCUS_ID}.webp`} alt="Milky Way thumbnail" />
         <div className={styles.cardSummary}>
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>

@@ -1,5 +1,5 @@
 /**
- * Thumbnail — 80×80 px galaxy image shown in GalaxyDetailCard.
+ * Thumbnail — 80×80 px image shown in a detail card (galaxy, body, Milky Way).
  * `loading="lazy"` defers fetch until the card is in the viewport.  On a load
  * error (404, CORS, network) we try `fallbackUrl` once, then swap to a
  * same-size placeholder so the surrounding layout doesn't reflow.
@@ -17,16 +17,15 @@ import type { ReactNode } from 'react';
 import styles from './Thumbnail.module.css';
 
 export type ThumbnailProps = {
-  ra: number;
-  dec: number;
   url: string;
   /** Tried once if `url` fails to load (e.g. a missing curated tile). */
   fallbackUrl?: string;
   /** External sky-viewer link; wraps the image when present. */
   href?: string;
+  alt: string;
 };
 
-function Thumbnail({ url, fallbackUrl, href }: ThumbnailProps): ReactNode {
+function Thumbnail({ url, fallbackUrl, href, alt }: ThumbnailProps): ReactNode {
   const [src, setSrc] = useState(url);
   const [errored, setErrored] = useState(false);
 
@@ -38,7 +37,7 @@ function Thumbnail({ url, fallbackUrl, href }: ThumbnailProps): ReactNode {
     <img
       className={styles.root}
       src={src}
-      alt="Galaxy thumbnail"
+      alt={alt}
       width={80}
       height={80}
       loading="lazy"

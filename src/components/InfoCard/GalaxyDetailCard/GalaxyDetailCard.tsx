@@ -70,11 +70,10 @@ function GalaxyDetailCard({
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
         <Thumbnail
           key={info.thumbnailUrl}
-          ra={info.ra}
-          dec={info.dec}
           url={info.thumbnailUrl}
           fallbackUrl={info.thumbnailFallbackUrl}
           href={info.skyViewUrl}
+          alt="Galaxy thumbnail"
         />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
