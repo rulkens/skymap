@@ -5,7 +5,7 @@
  * whole on any state change, so no edge (tier flip while hidden, toggle mid-flight)
  * can be missed. `built: 'external'` rows are minted in `wireSlots` and appear here
  * only for demand + `req(tier)`; their `factory` throws if the construction pass
- * calls it. The DEV synthetic volumes are absent so Vite tree-shakes the generators.
+ * calls it.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -24,7 +24,6 @@ import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';

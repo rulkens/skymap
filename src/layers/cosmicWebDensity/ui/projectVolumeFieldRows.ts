@@ -1,45 +1,34 @@
 /**
- * projectVolumeFieldRows — pure projection from the per-field volume settings
- * Record to the `VolumeFieldRowData[]` the SettingsPanel renders.
+ * projectVolumeFieldRows — pure projection from the per-field volume
+ * settings Record to the `VolumeFieldRowData[]` the density sections render.
  *
- * Identity AND values come from the items Record (registry-seeded at engine
- * construction), so the panel shows every field's row from boot, before its cube
- * has loaded onto the GPU. The GPU handle list is not consulted. Missing leaves
- * fall back to the compile-time defaults from `volumeFieldDefaults` so a
- * newly-added field whose settings row predates a defaults change still produces
- * a complete row.
- *
- * ### Why a free function over the items Record (not over EngineState)
- *
- * Taking the items Record directly (rather than the whole `EngineState`) lets
- * the React side feed it the value of `selectVolumeFieldItems(state)` through a
- * `useMemo`: the array is rebuilt exactly when the stable `items` reference
- * changes, keeping `useSyncExternalStore`'s snapshot stable.
+ * Iterates `COSMIC_WEB_DENSITY_SOURCE_ROWS`, not `Object.keys(items)`, so row
+ * order is the registry's declared order rather than object key order, and
+ * takes `label` from the source row instead of a second registry lookup.
+ * `items` is a total Record from boot (`CosmicWebDensitySettings['items']`,
+ * seeded by the Layer's `initialState` literal), so no per-field fallback is
+ * needed.
  */
 
 import type { VolumeFieldRowData } from '../@types/VolumeFieldRowData';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
-import { getVolumeFieldDefaults } from '../state/defaults';
-import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../../data/defaults';
+import type { CosmicWebDensitySettings } from '../@types/CosmicWebDensitySettings';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
 
 export function projectVolumeFieldRows(
-  items: Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>>,
+  items: CosmicWebDensitySettings['items'],
 ): ReadonlyArray<VolumeFieldRowData> {
-  const ids = Object.keys(items) as CosmicWebDensityFieldId[];
-  return ids.map((id) => {
-    const field = items[id];
-    const defaults = getVolumeFieldDefaults(id);
+  return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => {
+    const field = items[entry.id];
     return {
-      id,
-      label: defaults.label ?? id,
-      enabled: field?.enabled ?? true,
-      intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
-      contrast: field?.contrast ?? defaults.contrast,
-      densityScale: field?.densityScale ?? defaults.densityScale,
-      paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
-      trim: field?.trim ?? defaults.trim,
-      exposure: field?.exposure ?? defaults.exposure,
+      id: entry.id,
+      label: entry.label,
+      enabled: field.enabled,
+      intensity: field.intensity,
+      contrast: field.contrast,
+      densityScale: field.densityScale,
+      paletteId: field.paletteId,
+      trim: field.trim,
+      exposure: field.exposure,
     };
   });
 }

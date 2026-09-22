@@ -15,7 +15,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/components/DebugPanel/GpuTimingsSection.tsx',
   'src/components/InfoCard/detailCardTable.ts',
   'src/components/InfoCard/tooltips.tsx',
-  'src/components/SettingsPanel/CosmicWebSection.tsx',
   'src/components/TimeBar/TimeBar.tsx',
   'src/components/common/Button/Button.tsx',
   'src/data/bodies/makers/meshBody.ts',

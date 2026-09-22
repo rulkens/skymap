@@ -2,7 +2,8 @@
  * The cosmicWebDensity Layer: the Physarum density cubes (MCPM, Polyphorm
  * 2MRS, the MCPM workbench export) — one renderer holding every cube, its
  * additive upsample, both passes, the `cosmic-web-density` render target, one
- * slot and asset row per source row, and the master + per-cube fade rows.
+ * slot and asset row per source row, the master + per-cube fade rows, and
+ * both its SettingsPanel and DebugPanel sections.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -15,6 +16,8 @@ import { cosmicWebDensityPass } from './passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from './passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './load/cosmicWebDensityAssetRows';
 import { cosmicWebDensityFadeRows } from './present/cosmicWebDensityFadeRows';
+import CosmicWebDensitySectionContainer from './ui/CosmicWebDensitySectionContainer';
+import CosmicWebDensityTuningSectionContainer from './ui/CosmicWebDensityTuningSectionContainer';
 
 export const cosmicWebDensityLayer = defineLayer({
   name: 'cosmicWebDensity',
@@ -36,4 +39,8 @@ export const cosmicWebDensityLayer = defineLayer({
   passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
   assets: cosmicWebDensityAssetRows,
   fades: cosmicWebDensityFadeRows,
+  ui: [
+    { slot: 'main', content: CosmicWebDensitySectionContainer },
+    { slot: 'debug', content: CosmicWebDensityTuningSectionContainer },
+  ],
 });
