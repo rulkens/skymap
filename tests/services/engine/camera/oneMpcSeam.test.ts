@@ -150,6 +150,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'src/services/engine/camera/pivotRadiusMpc.ts',
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
+  [
+    'src/layers/starCatalog/present/produceStarCaptions.ts',
+    "cull/fade precedent — converts a star caption's camera distance and radius to km for the label's occludeNearKm cutoff, the same shape as produceSceneBodyCaptions.ts's identical bridge (outside this sweep, under services/engine/presentation); no slab MVP involved",
+  ],
 ]);
 
 function scaleUnitsMembersUsed(file: string): string[] {

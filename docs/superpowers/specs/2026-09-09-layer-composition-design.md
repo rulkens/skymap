@@ -996,9 +996,11 @@ from, which still carried a `handle?(runtime)` hook.
    id collides with the static body set. The prefix drop rides the body Layer in (f).
 
 9. **D6'3 — a pick source is decoded by the Layer that owns the object's identity,** not by the one
-   that draws it, and a row returns only its own ref type. The body row therefore lists `famousStar`
-   in its `pickSources` and resolves it by static-table lookup to a body ref, while the star row
-   lists only `gaiaStars`. This lands in (e)/(f); in (d) all nine galaxy sources belong to the galaxy
+   that draws it, and a row returns only its own ref type. **Reversed for the seeded stars once (e)
+   landed:** the user ruled that identity follows the physics, so a seeded star's identity IS star
+   identity and the star row lists all four star sources (`gaiaStars`, `famousStar`, `sun`, `sStar`)
+   — the principle stands, only this example was wrong; see the star spec's §7
+   (`2026-09-21-star-catalog-layer-design.md`). In (d) all nine galaxy sources belong to the galaxy
    row and nothing is split.
 
 10. **D6'4 — the structure search list becomes a fact in (d).** `wireStructureProjection` publishes
@@ -1311,7 +1313,8 @@ Each item is one PR unless stated. (a)-(c) are §9's prep.
   PR-D forms a Layer.
 
 - **(e) One Layer per PR**, in this order and for these reasons: `starCatalog` (carries the
-  god-layer split, §6.4), then `milkyWay` (depends on §6.3's band having moved), then
+  god-layer split, §6.4) — **done, `2026-09-21-star-catalog-layer-design.md`** — then `milkyWay`
+  (depends on §6.3's band having moved), then
   `structure` (mints the focus producer seam, §6.1), then `volume` (the family with no
   family-level asset row, review finding 6, so its move collapses the four literal blocks at
   `assetWiring.ts:248-289` into rows), then `body` (the largest `Runtime`: fourteen renderers
@@ -1340,7 +1343,7 @@ item is rewritten down to its remainder rather than deleted.
 | `2026-08-20-point-source-double-registration.md` "De-duplicate point-source registration between `GALAXY_CATALOG_SOURCE_REGISTRY` and `ASSET_WIRING`" | (d) PR-C                                                                                  |
 | `2026-07-24-companion-asset-relation-three-homes.md` "The companion-asset relation has three homes"                                                   | (d) PR-C, as `companionOf` on the companion's row (§4.7)                                  |
 | `2026-09-11-layer-settings-tuple-seam.md` "`Layer.settings` erases the keys the composed settings type needs"                                         | (d) PR-B, by the const `Settings` type parameter (§13 A8)                                 |
-| `2026-07-30-meta-getters-belong-on-the-data-stores.md` "Sidecar-meta getters sit on `EngineState`, not on the data stores"                            | (d) PR-C, galaxy half; the item survives for its star twin, (e)                           |
+| `2026-07-30-meta-getters-belong-on-the-data-stores.md` "Sidecar-meta getters sit on `EngineState`, not on the data stores"                            | (d) PR-C, galaxy half; (e) `starCatalog` PR 2, star half — item deleted in full           |
 | `2026-08-20-star-catalog-layer-god-layer-split.md` "`starCatalogLayer` god-layer split (three owned concerns, layer-imports-layer)"                   | (e), `starCatalog`                                                                        |
 | `BACKLOG.md:48` "Derive `BULK_CATALOG_CATEGORIES` from a registry flag"                                                                               | (e), `structure`                                                                          |
 | `BACKLOG.md:54` "`LAYER_GROUPS.labels` totality is unchecked"                                                                                         | (c); label-group membership derives from present Layers' `labels()`                       |

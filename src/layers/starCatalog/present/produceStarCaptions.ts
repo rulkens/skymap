@@ -8,15 +8,14 @@
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { StarBody } from '../../../@types/scene/StarBody';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { StarCatalogSourceType } from '../../../@types/data/starCatalog/StarCatalogSourceType';
 import type { SeededStarCatalogId } from '../../../@types/data/starCatalog/SeededStarCatalogId';
-import type { CaptionKind } from '../../../services/engine/presentation/captionPriority';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
+import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
 import { SEEDED_STAR_CATALOGS } from '../../../data/bodies/seededStarCatalogs';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
@@ -34,12 +33,6 @@ import { subjectOccludedByBodies } from '../../../utils/occlusion/subjectOcclude
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from '../../../services/engine/presentation/leaderLineStyle';
-
-type CaptionSourceRow = {
-  readonly source: StarCatalogSourceType;
-  readonly kind: CaptionKind;
-  readonly stars: readonly StarBody[];
-};
 
 /**
  * The catalogs that caption, each carrying its own table — the star-Layer

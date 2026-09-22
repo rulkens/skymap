@@ -2,7 +2,8 @@
  * starCatalogSelectionRow — one selection kind for all four star catalogs. A
  * seeded pick names its table row (durable id, live position); a survey pick is
  * positional (the bin-stable record index), and a stale index after a tier swap
- * warns+nulls in `resolveStarRecord` rather than mis-resolving.
+ * warns+nulls in `resolveStarRecord` rather than mis-resolving. TWO seed tables,
+ * never merged: `ref.index` is a stable index into ONE of `SEEDED_STAR_CATALOGS_BY_SOURCE`.
  */
 
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';

@@ -65,7 +65,10 @@ Greenfield wanted two arms (a tier-scoped survey ref and a durable seeded ref). 
 ### 2.3 The InfoCard view-model
 
 ```ts
-// src/layers/starCatalog/@types/StarInfo.d.ts — replaces FieldStarInfo
+// src/@types/engine/StarInfo.d.ts — replaces FieldStarInfo. Core, not the Layer's own
+// @types/: FocusableTarget's core-wide union names it and core's buildFocusable/refOf
+// produce and consume it, so shelving it under layers/ would make core import a Layer
+// type — a boundary the Layer ratchet forbids.
 export type StarInfo = {
   readonly type: 'starCatalog';
   readonly source: StarCatalogSourceType;
@@ -74,7 +77,8 @@ export type StarInfo = {
   readonly displayName: string;
   readonly x: number; readonly y: number; readonly z: number;
   readonly distancePc: number;
-  readonly radiusM: number;
+  // No radiusM: a consumer that needs the star's size reads the SelectionRow's
+  // own field (the sphere-size input already lives there for every arm).
   readonly detail: StarInfoDetail;
 };
 
@@ -175,7 +179,7 @@ The seeded-star rows leave `sceneBodyLabels`; core keeps Earth, the planets, Sgr
 
 ## 6. Durable focus ids
 
-The `starCatalog` row claims the `star-` prefix. Decode: an all-digits remainder is a Gaia bin index; anything else is a seed id looked up across `SEEDED_STAR_CATALOGS`. Encode: `star-<index>` for Gaia, `star-<seedId>` for seeded stars (`star-sirius`, `star-S2`, `star-sun`). One boot assert: no seed id is all digits (grill Q9, checkpoint). Bare `sirius` links break; no authored tour or clip uses one.
+The `starCatalog` row claims the `star-` prefix. Decode: an all-digits remainder is a Gaia bin index; anything else is a seed id looked up across `SEEDED_STAR_CATALOGS`. Encode: `star-<index>` for Gaia, `star-<seedId>` for seeded stars (`star-sirius`, `star-s2`, `star-sun`). One boot assert: no seed id is all digits (grill Q9, checkpoint). Bare `sirius` links break; no authored tour or clip uses one.
 
 Parent D6'1 rides: a Gaia deep link defers via `focusId.decode` returning null until the bin lands, so the `NOT_YET_LOADED.star` probe in `watchFocusTweenSaga` is deleted and a star deep link selects when its bin commits, as a galaxy link does. Seeded ids decode immediately.
 
@@ -189,8 +193,9 @@ Everything else is pixel-identical. The user-visible changes, all ruled:
 
 - The Stars panel gains item toggles for the Sun (which had none) and the S-stars (whose toggle leaves the Bodies panel). Each source gates itself.
 - A click on a famous star, the Sun or an S-star opens `StarDetailCard` with the source-appropriate detail block, instead of `BodyDetailCard`.
-- Deep links: `star-sirius`, `star-S2`, `star-sun`; a Gaia link selects when its bin lands.
+- Deep links: `star-sirius`, `star-s2`, `star-sun`; a Gaia link selects when its bin lands.
 - The S-star orbit trails and the camera follow of a focused S-star are unchanged by construction (roster equals the old table; `focusDriverId` finds the same driver).
+- The Solar System exhibit's per-exhibit pickable-kinds gate now keeps every star pickable rather than only the survey bin: the Sun's dot is a `starCatalog` row like any other seeded star, so the gate has no way to admit `gaiaStars` while excluding `famousStar`/`sun`/`sStar` — one arm, one kind, no partial membership.
 
 ## 9. Testing
 
