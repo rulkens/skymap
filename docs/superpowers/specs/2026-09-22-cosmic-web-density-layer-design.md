@@ -194,7 +194,7 @@ Readers re-pointed (re-verified at `1eaf234df`):
 | `src/data/volume/volumeFieldDefaults.ts` `buildVolumeFieldSettings` (`visible`, `intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY`) | returns only the registry-borne look fields; `cosmicWebDensity/initialState.ts` spells `items` as a `Record<CosmicWebDensityFieldId, VolumeFieldSettings>` literal over it (`mcpm` on, the other two off, `intensity: 1.0` each), and `seedVolumeFields` deletes |
 | `src/data/exhibits/cosmicWeb.ts` (via `buildVolumeFieldSettings`) | spreads the initialState item instead |
 | `src/utils/allVisibleMask.ts` (`SOURCE_REGISTRY[src].visible`) | folds `INITIAL_SETTINGS.galaxyCatalogs.items`, so the startup `drawMask` / `pickMask` cannot diverge from boot state |
-| `tools/fetch/fetchPrebuiltData.ts` `volumeVisibilityByFileName` (`entry.visible`) | reads boot state for the density + flow `.scfd` files it decides (not galaxy catalogs, as the backlog item said) |
+| `tools/fetch/fetchPrebuiltData.ts` `volumeVisibilityByFileName` (`entry.visible`) | deleted with the `--volumes` flag and `selectManifestFiles`' volume filter: `fetch-data` downloads every file the manifest names; `docs/DATA.md:61` and the script header follow |
 
 The `Record<CosmicWebDensityFieldId, …>` literal is compiler-complete, so it is not a second list that can drift from the rows. Tests that build rows with `visible` (`fetchPrebuiltData`, `sStarSource`, `demandTable`, `GalaxiesSection`, the two catalog slice tests, `tour.integration`) drop it. Registry comments that explain `visible` (`SourceEntryBase`, `gaia-stars`, `famous-star`, `flow`, the three cube rows) go with the field.
 
@@ -303,7 +303,7 @@ Judged by "fails on a real bug nothing else catches":
 
 - `npm run build`, `npm run typecheck`, the suite green; `layerImportBoundary` and `frameFilePurity` ratchets green with the uploadVolumeField row gone.
 - Commit 1: `INITIAL_SETTINGS` dump unchanged; no `visible` on any source row, no `intensity` on the constellations / filaments entries or `VolumeFieldDefaults`; the backlog detail file and its index line gone.
-- Smoke eye-checks (user, main app): MCPM visible at boot; Polyphorm 2MRS tick fades in, untick fades out; "Cosmic web density" (all three cubes listed) and "Cosmic web filaments" both in the SettingsPanel, no Style picker; the per-cube sliders in the DebugPanel; `cosmic-web-density` toggleable in the DebugPanel pass list (it freezes like ZoA's, backlog `:185`); the default `npm run fetch-data` pulls the same `.scfd` files as before.
+- Smoke eye-checks (user, main app): MCPM visible at boot; Polyphorm 2MRS tick fades in, untick fades out; "Cosmic web density" (all three cubes listed) and "Cosmic web filaments" both in the SettingsPanel, no Style picker; the per-cube sliders in the DebugPanel; `cosmic-web-density` toggleable in the DebugPanel pass list (it freezes like ZoA's, backlog `:185`); `npm run fetch-data --dry-run` lists every manifest `.scfd` file.
 - No perf gate: same renderer, shader, passes and target scale; only ownership moves (grill Q15).
 - Deletion audit at `/feature-done`.
 
@@ -315,7 +315,4 @@ Judged by "fails on a real bug nothing else catches":
 4. The debug section has one identical slider row per cube and no enable checkbox (§7).
 5. One fetcher and one per-row slot factory driven by the source row; the per-cube request types collapse into `CosmicWebDensityReq` (§6).
 6. The whole registry `visible` / `intensity` backlog item lands as PR 2's first commit, gated on an unchanged `INITIAL_SETTINGS` dump (§5).
-
-## Remaining open questions
-
-1. **`fetchPrebuiltData`'s boot-state read.** `volumeVisibilityByFileName` decides density and flow `.scfd` downloads, so reading boot state means two shapes (`flow.enabled`, `cosmicWebDensity.items[id].enabled`) and a `tools/` → `INITIAL_SETTINGS` import that drags the settings graph into the fetch tool. The alternative, an explicit filename list, is a second source of truth that can drift from boot state. Which one?
+7. `fetch-data` stops filtering volumes: it downloads every file the manifest names, and the `--volumes` flag and `volumeVisibilityByFileName` delete (§5).
