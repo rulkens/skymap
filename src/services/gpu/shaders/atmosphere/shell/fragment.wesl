@@ -126,8 +126,13 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 // Rec. 709 luminance weights, for the ALPHA channel only (the rgb path is
 // per-channel). They sum to exactly 1.0, which is what makes
 // 'dot(mix(vec3(1), T, ringVis), LUMINANCE)' equal 'mix(1, luminance(T),
-// ringVis)' -- i.e. the coverage below is the old scalar opacity, unchanged.
+// ringVis)', so an opaque ring band in front leaves the coverage at zero.
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
+// How strongly displayed sky luminance suppresses the background behind it, in
+// 1/exposed-luminance. A look constant: the darkest noon sky measured (45 deg
+// up from 6.5 km, luminance ~0.006) passes ~7% of a star, a sky with the sun
+// 2 deg down (~0.002) ~18%, a night sky all of it.
+const SKY_ADAPTATION_GAIN: f32 = 2000.0;
 
 struct FsIn {
   // Framebuffer pixel position (y-down, half-pixel centres) -- the uv and texel
@@ -150,7 +155,7 @@ struct ShellSample {
   transmit: vec3<f32>,
   // In-scattered radiance to ADD, already exposed and ring-scaled.
   emission: vec3<f32>,
-  // 1 - luminance(transmit) — the compositor's single background weight.
+  // The compositor's single background weight: extinction and sky adaptation.
   coverage: f32,
   hit: bool,
 };
@@ -290,7 +295,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
 
   out.transmit = mix(vec3<f32>(1.0), segTransmittance, ringVis);
   out.emission = inScatter * u.exposure * ringVis;
-  out.coverage = 1.0 - dot(out.transmit, LUMINANCE);
+  // Extinction alone passes ~90% of a star through a noon zenith: stars vanish
+  // by day because the eye adapts to the sky's radiance, not because the air
+  // blocks them. The exposed in-scatter stands in for that adaptation level, so
+  // a dark sky reduces to pure extinction and twilight fades the stars in.
+  let adaptation = 1.0 + SKY_ADAPTATION_GAIN * dot(out.emission, LUMINANCE);
+  out.coverage = 1.0 - dot(out.transmit, LUMINANCE) / adaptation;
   out.hit = true;
   return out;
 }
