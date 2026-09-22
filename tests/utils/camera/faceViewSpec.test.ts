@@ -19,7 +19,7 @@ const FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
 describe('faceViewSpec', () => {
   it.each(FACES)('face %i turns the capture camera by a signed permutation', (face) => {
-    const { rotation } = faceViewSpec(face, 512, 0);
+    const { rotation } = faceViewSpec('probe', face, 512, 0);
     // Column-major: cell (row r, column c) is rotation[c * 3 + r]. One ±1 per
     // row and per column, zeros elsewhere — so |cell| sums to 1 both ways.
     for (let i = 0; i < 9; i++) expect([0, 1]).toContain(Math.abs(rotation[i]!));
@@ -59,7 +59,7 @@ describe('faceViewSpec', () => {
       // convention and `faceViewSpec`'s table — the two must never drift
       // apart.
       const captureBasis = cameraBasisWorld([0, 0, -1], 0, IDENTITY_MAT3);
-      const worldBasis = multiply3x3(captureBasis, faceViewSpec(face, 1, 0).rotation);
+      const worldBasis = multiply3x3(captureBasis, faceViewSpec('probe', face, 1, 0).rotation);
       const right: Vec3 = [worldBasis[0]!, worldBasis[1]!, worldBasis[2]!];
       const up: Vec3 = [worldBasis[3]!, worldBasis[4]!, worldBasis[5]!];
       const forward: Vec3 = [worldBasis[6]!, worldBasis[7]!, worldBasis[8]!];

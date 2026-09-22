@@ -474,6 +474,7 @@ function makeInput(
     renderedTargets,
   };
   const ctx = {
+    id: 'canvas',
     snapshot: snapshotFields,
     viewSlot: 0,
     viewKind: 'frame' as const,
@@ -1007,7 +1008,7 @@ describe('renderFrame', () => {
     // derives them (`rig.views(canvas, state)` → `deriveView` per spec), can
     // only ever produce views of THIS canvas's snapshot.
     (VIEW_RIGS as any).__snapshotIdentityTest = {
-      views: () => [faceViewSpec(0, 64, 0), faceViewSpec(1, 64, 1)],
+      views: () => [faceViewSpec('probe', 0, 64, 0), faceViewSpec('probe', 1, 64, 1)],
       program: [],
     };
     (fx.input.state as any).viewRig = '__snapshotIdentityTest';

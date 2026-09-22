@@ -11,6 +11,10 @@ import type { ViewFrustum } from '../../camera/ViewFrustum';
 import type { ViewKind } from './ViewKind';
 
 export type ViewSpec = {
+  /** This view's name, minted by whoever builds the spec — `'canvas'` for the
+   *  main view, `'<capture key>:<face>'` for a cubemap face. `FrameView.id`
+   *  copies it; `timingSlotForView` is the one place that reads it. */
+  readonly id: string;
   /** View right | up | forward as columns, in the camera's right | up | forward basis. */
   readonly rotation: Readonly<Mat3>;
   /** Eye offset from the camera eye, in the ROTATED view basis. */

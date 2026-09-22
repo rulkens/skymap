@@ -544,8 +544,9 @@ export function createEngine(
       // order is what says which pass that is.
       passOverrides: {
         allNames: [
+          // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
-            computeTimingSlotName(step.name),
+            computeTimingSlotName(step.name, 'canvas'),
           ),
           ...FRAME_ORDER_PASS_NAMES.filter(
             (name) =>

@@ -286,6 +286,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     plans: createPlans(),
   };
   const ctx = {
+    id: 'canvas',
     snapshot: snapshotFields,
     cam,
     vp: viewProj,

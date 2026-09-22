@@ -91,7 +91,7 @@ export function scheduleSkyCaptures(input: {
           ctx: deriveView(
             capture.snapshot,
             capture.cam,
-            faceViewSpec(face, faceSizePx, row.viewSlotBase),
+            faceViewSpec(key, face, faceSizePx, row.viewSlotBase),
           ),
           bodySlabs: [],
         });

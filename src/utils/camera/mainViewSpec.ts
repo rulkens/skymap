@@ -13,6 +13,7 @@ import { symmetricFrustum } from './symmetricFrustum';
 
 export function mainViewSpec(cam: OrbitCamera, sizePx: Size): ViewSpec {
   return {
+    id: 'canvas',
     rotation: IDENTITY_MAT3,
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(cam.fovYRad, cam.aspect),

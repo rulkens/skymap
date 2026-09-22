@@ -18,6 +18,8 @@ import type { Slab } from './Slab';
 import type { ViewKind } from './ViewKind';
 
 export type FrameView = {
+  /** This view's name, copied from `ViewSpec.id` — see that field's doc. */
+  readonly id: string;
   /** The frame context, BY REFERENCE — every view shares it. NOT `frame`:
    *  that word already means a rung tag and a coordinate frame elsewhere. */
   snapshot: ReadyFrameContext;
