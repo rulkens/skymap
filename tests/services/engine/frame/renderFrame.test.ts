@@ -23,7 +23,7 @@ import { foregroundChainOrder } from '../../../../src/services/engine/frame/slab
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -328,10 +328,10 @@ function makeCam(): OrbitCamera {
 
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
 // SCENE's `plan` row names 'structure-markers' by string, not by object
-// identity (`Plans` keys on `planner.name`) — a stub with an empty result is
+// identity (`FramePlannerResultStore` keys on `planner.name`) — a stub with an empty result is
 // enough to satisfy `runPlanSteps`'s "every plan row names a registered
 // planner" check without dragging in `produceStructureMarkers`'s own state.
-const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',

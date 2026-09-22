@@ -1,26 +1,26 @@
 /**
  * runPlanSteps — run one section's `plan` rows for one scope target, writing
- * each result into `Plans` before any GPU step of that target runs. A step
+ * each result into the `FramePlannerResultStore` before any GPU step of that target runs. A step
  * naming a planner absent from `planners` throws: unlike a pass or compute
  * row, a hand-authored `plan` line always names a row the composition owns.
  */
 
-import type { ContentPlanner } from '../../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { PlanTarget } from '../../../@types/engine/frame/PlanTarget';
+import type { PlannerScopeTarget } from '../../../@types/engine/frame/PlannerScopeTarget';
 
 export function runPlanSteps(
   steps: readonly FrameStepSpec[],
-  planners: readonly ContentPlanner<unknown>[],
-  target: PlanTarget,
+  planners: readonly FrameContentPlanner<unknown>[],
+  target: PlannerScopeTarget,
   state: PassState,
 ): void {
   for (const step of steps) {
     if (step.kind !== 'plan') continue;
     const planner = planners.find((p) => p.name === step.name);
     if (planner === undefined) {
-      throw new Error(`runPlanSteps: no registered ContentPlanner named '${step.name}'`);
+      throw new Error(`runPlanSteps: no registered FrameContentPlanner named '${step.name}'`);
     }
     // `checkFrameOrder` rejects a scope mismatch at boot; the two branches
     // below are what narrow planner and target to each other, and the throw is

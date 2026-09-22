@@ -50,7 +50,7 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
@@ -75,7 +75,7 @@ const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].t
 // `runPlanSteps` without either Layer's own state; the "a Layer still
 // settling/awake" cases below seed their vote straight into `ctx.snapshot.plans`
 // instead (`makeCtx`), which OR-folds with these no-op votes fine.
-const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
@@ -164,10 +164,10 @@ function makeCtx(
     },
   };
   // A Layer's vote, seeded straight into the store the way `runPlanSteps`
-  // would fold a real planner's `PlanResult` in — `scheduleSkyCaptures` reads
+  // would fold a real planner's `PlannerResult` in — `scheduleSkyCaptures` reads
   // the OR-fold (`plans.settling`), not any one planner's own row.
   const plans = createPlans();
-  const layerVotePlanner: ContentPlanner<void> = {
+  const layerVotePlanner: FrameContentPlanner<void> = {
     name: '__test-layer-vote',
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),

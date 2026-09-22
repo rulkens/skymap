@@ -19,7 +19,7 @@ import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
@@ -27,7 +27,7 @@ import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderS
 // stand-in here — this file checks core's artifacts alone, never the full
 // `createLayers` composition. The names mirror PRELUDE's plan lines in
 // `frameSections.ts`, where a rename shows up first.
-const LAYER_PLANNER_STUBS: readonly ContentPlanner<unknown>[] = [
+const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'galaxy-catalog',
     scope: 'once',

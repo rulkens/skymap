@@ -6,14 +6,18 @@
  * identity — there is no canvas-shaped fallback a face could misread as its own.
  */
 
-import type { ContentPlanner } from './ContentPlanner';
+import type { FrameContentPlanner } from './FrameContentPlanner';
 import type { FrameView } from './FrameView';
-import type { PlanResult } from './PlanResult';
+import type { PlannerResult } from './PlannerResult';
 
-export type Plans = {
+export type FramePlannerResultStore = {
   /** THROWS on a miss: an unplanned planner, or a view it never planned for. */
-  get<T>(planner: ContentPlanner<T>, view?: FrameView): T;
-  put<T>(planner: ContentPlanner<T>, view: FrameView | undefined, result: PlanResult<T>): void;
+  get<T>(planner: FrameContentPlanner<T>, view?: FrameView): T;
+  put<T>(
+    planner: FrameContentPlanner<T>,
+    view: FrameView | undefined,
+    result: PlannerResult<T>,
+  ): void;
   /** OR-fold of every `put` result's `awake` so far this frame. */
   readonly awake: boolean;
   /** OR-fold of every `put` result's `settling` so far this frame. */

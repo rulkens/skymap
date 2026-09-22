@@ -18,7 +18,7 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
@@ -215,7 +215,7 @@ function makeCam(): OrbitCamera {
 // SCENE's `plan` row names 'structure-markers' by string, not by object
 // identity — a stub with an empty result satisfies `runPlanSteps` without
 // dragging in `produceStructureMarkers`'s own state (see renderFrame.test.ts).
-const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',

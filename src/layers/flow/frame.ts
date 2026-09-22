@@ -4,13 +4,13 @@
  * vote. `once`-scope: nothing here reads a per-view value.
  */
 
-import type { ContentPlanner } from '../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { FlowRuntime } from './@types/FlowRuntime';
 import { slotReady } from '../../services/loading/slotReady';
 
 export function flowPlanner(
   runtime: FlowRuntime,
-): Extract<ContentPlanner<void>, { scope: 'once' }> {
+): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
   return {
     name: 'flow',
     scope: 'once',

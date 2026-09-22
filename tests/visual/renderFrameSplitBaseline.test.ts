@@ -29,7 +29,7 @@ import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
-import type { ContentPlanner } from '../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -246,7 +246,7 @@ function makeCompositor(records: DrawRecord[]): any {
 // Fixture camera optics — the ctx built in the test body mirrors these.
 // SCENE's `plan` row names 'structure-markers' by string — a stub with an
 // empty result satisfies `runPlanSteps` without the marker producers' state.
-const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',

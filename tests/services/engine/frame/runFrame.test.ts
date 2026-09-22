@@ -114,7 +114,7 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
@@ -1166,7 +1166,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
 
   it('keeps the loop ticking off `snapshot.plans.awake`, read AFTER renderFrame ran', () => {
     const state = makeReadyState();
-    const wakingPlanner: ContentPlanner<void> = {
+    const wakingPlanner: FrameContentPlanner<void> = {
       name: 'test-awake',
       scope: 'once',
       plan: () => ({ value: undefined, awake: true, settling: false }),

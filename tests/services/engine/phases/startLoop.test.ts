@@ -57,12 +57,12 @@ import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
 import { goLive } from '../../../../src/state/time/timeSlice';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
 // optional — PRELUDE's two Layer-owned rows need a stand-in here, since this
 // fixture's `passes`/`computes` are core's own registry alone too.
-const LAYER_PLANNER_STUBS: readonly ContentPlanner<unknown>[] = [
+const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'galaxy-catalog',
     scope: 'once',

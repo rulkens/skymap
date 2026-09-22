@@ -4,11 +4,11 @@
  * instance buffer is upload-only content, not motion.
  */
 
-import type { ContentPlanner } from '../../../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../@types/engine/frame/FrameContentPlanner';
 import type { StructureMarkerDescriptor } from '../../../../@types/rendering/StructureMarkerDescriptor';
 import { runMarkerProducers } from '../runMarkerProducers';
 
-export const structureMarkersPlanner: ContentPlanner<readonly StructureMarkerDescriptor[]> = {
+export const structureMarkersPlanner: FrameContentPlanner<readonly StructureMarkerDescriptor[]> = {
   name: 'structure-markers',
   scope: 'perView',
   plan: (view, state) => ({

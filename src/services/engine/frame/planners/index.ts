@@ -4,7 +4,7 @@
  * not this array (mirrors `CORE_COMPUTES`).
  */
 
-import type { ContentPlanner } from '../../../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../@types/engine/frame/FrameContentPlanner';
 import { structureMarkersPlanner } from './structureMarkersPlanner';
 
-export const CORE_PLANNERS: readonly ContentPlanner<unknown>[] = [structureMarkersPlanner];
+export const CORE_PLANNERS: readonly FrameContentPlanner<unknown>[] = [structureMarkersPlanner];

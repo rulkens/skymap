@@ -12,7 +12,7 @@ import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFram
 import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { FrameSection } from '../../../../src/@types/engine/frame/FrameSection';
 import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 import type { RenderTargetSpec } from '../../../../src/@types/engine/frame/RenderTargetSpec';
@@ -25,7 +25,7 @@ const TARGETS: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[] = [
   { id: 'swap', depth: null },
 ];
 const NO_COMPUTES: readonly ContentCompute[] = [];
-const NO_PLANNERS: readonly ContentPlanner<unknown>[] = [];
+const NO_PLANNERS: readonly FrameContentPlanner<unknown>[] = [];
 
 function fakePass(name: string): ContentPass {
   return {
@@ -39,7 +39,7 @@ function fakeCompute(name: string, scope: SectionScope = 'once'): ContentCompute
   return { name, scope, encode: vi.fn<ContentCompute['encode']>() };
 }
 
-function fakePlanner(name: string, scope: SectionScope = 'once'): ContentPlanner<unknown> {
+function fakePlanner(name: string, scope: SectionScope = 'once'): FrameContentPlanner<unknown> {
   return scope === 'once'
     ? {
         name,

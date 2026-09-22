@@ -15,7 +15,7 @@ import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
-import type { ContentPlanner } from '../frame/ContentPlanner';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerGuides } from './LayerGuides';
 import type { LayerUiEntry } from './LayerUiEntry';
@@ -88,5 +88,5 @@ export type Layer<
   selection?(runtime: Runtime): readonly SelectionKindRow[];
   /** Appended after `CORE_PLANNERS` in `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
-  planners?(runtime: Runtime): readonly ContentPlanner<unknown>[];
+  planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
 };

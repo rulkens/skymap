@@ -11,7 +11,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';
-import type { ContentPlanner } from '../../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
 import type { FrameSection } from '../../../@types/engine/frame/FrameSection';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { RenderTargetSpec } from '../../../@types/engine/frame/RenderTargetSpec';
@@ -71,7 +71,7 @@ export function checkFrameOrder(
   sections: readonly FrameSection[],
   passes: readonly ContentPass[],
   computes: readonly ContentCompute[],
-  planners: readonly ContentPlanner<unknown>[],
+  planners: readonly FrameContentPlanner<unknown>[],
   targets: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[],
 ): void {
   const drawCount = new Map<string, number>();
@@ -101,7 +101,7 @@ export function checkFrameOrder(
         const planner = plannerByName.get(spec.name);
         if (planner === undefined) {
           throw new Error(
-            `checkFrameOrder: plan row names '${spec.name}', which no registered ContentPlanner declares`,
+            `checkFrameOrder: plan row names '${spec.name}', which no registered FrameContentPlanner declares`,
           );
         }
         if (planner.scope !== section.scope) {

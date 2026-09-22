@@ -1,4 +1,4 @@
-import type { ContentPlanner } from '../frame/ContentPlanner';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
@@ -14,7 +14,7 @@ export type LayerInstance = {
   readonly name: string;
   readonly passes: readonly ContentPass[];
   readonly computes: readonly ContentCompute[];
-  readonly planners: readonly ContentPlanner<unknown>[];
+  readonly planners: readonly FrameContentPlanner<unknown>[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];

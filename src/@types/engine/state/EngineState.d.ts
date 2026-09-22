@@ -23,7 +23,7 @@ import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { LayerInstance } from '../layer/LayerInstance';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
-import type { ContentPlanner } from '../frame/ContentPlanner';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { AssetKey } from '../../loading/AssetKey';
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
@@ -104,7 +104,7 @@ export type EngineState = {
   /** `runPlanSteps` resolves a `'plan'` step's name against this; `checkFrameOrder`
    * asserts every row here is named on exactly one `plan` line, in a section
    * of the same scope — unlike `computes`, a `plan` line naming nothing here throws. */
-  planners: readonly ContentPlanner<unknown>[];
+  planners: readonly FrameContentPlanner<unknown>[];
   assetRows: readonly AssetWiringRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;

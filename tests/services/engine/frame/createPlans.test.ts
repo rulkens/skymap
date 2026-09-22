@@ -1,5 +1,5 @@
 /**
- * createPlans — the per-frame `Plans` store: a `get` miss throws, a `once`
+ * createPlans — the per-frame `FramePlannerResultStore`: a `get` miss throws, a `once`
  * value is view-independent, a `perView` value is keyed by view identity, and
  * the `awake`/`settling` bits OR-fold across every `put`.
  */
@@ -7,16 +7,16 @@
 import { describe, it, expect } from 'vitest';
 
 import { createPlans } from '../../../../src/services/engine/frame/createPlans';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
-const oncePlanner: ContentPlanner<number> = {
+const oncePlanner: FrameContentPlanner<number> = {
   name: 'once-planner',
   scope: 'once',
   plan: () => ({ value: 1, awake: false, settling: false }),
 };
 
-const perViewPlanner: ContentPlanner<string> = {
+const perViewPlanner: FrameContentPlanner<string> = {
   name: 'per-view-planner',
   scope: 'perView',
   plan: () => ({ value: 'x', awake: false, settling: false }),

@@ -22,7 +22,7 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
@@ -72,7 +72,7 @@ describe('renderFrame — plan rows', () => {
     const view2 = makeView(2);
 
     let perViewRuns = 0;
-    const oncePlanner: ContentPlanner<number> = {
+    const oncePlanner: FrameContentPlanner<number> = {
       name: 'once-stub',
       scope: 'once',
       plan: () => {
@@ -80,7 +80,7 @@ describe('renderFrame — plan rows', () => {
         return { value: 1, awake: false, settling: false };
       },
     };
-    const perViewPlanner: ContentPlanner<string> = {
+    const perViewPlanner: FrameContentPlanner<string> = {
       name: 'per-view-stub',
       scope: 'perView',
       plan: () => {

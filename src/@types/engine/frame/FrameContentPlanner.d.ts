@@ -8,10 +8,10 @@
 
 import type { FrameView } from './FrameView';
 import type { PassState } from './PassState';
-import type { PlanResult } from './PlanResult';
+import type { PlannerResult } from './PlannerResult';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 
-export type ContentPlanner<T> =
+export type FrameContentPlanner<T> =
   | {
       readonly name: string;
       readonly scope: 'once';
@@ -19,10 +19,10 @@ export type ContentPlanner<T> =
         snapshot: ReadyFrameContext,
         views: readonly FrameView[],
         state: PassState,
-      ): PlanResult<T>;
+      ): PlannerResult<T>;
     }
   | {
       readonly name: string;
       readonly scope: 'perView';
-      plan(view: FrameView, state: PassState): PlanResult<T>;
+      plan(view: FrameView, state: PassState): PlannerResult<T>;
     };

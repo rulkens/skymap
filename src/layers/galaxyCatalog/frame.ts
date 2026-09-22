@@ -11,7 +11,7 @@ import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
-import type { ContentPlanner } from '../../@types/engine/frame/ContentPlanner';
+import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 import { Source } from '../../data/sources';
@@ -21,7 +21,7 @@ import { structureMemberCount } from '../../utils/structure/structureMemberCount
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,
-): Extract<ContentPlanner<void>, { scope: 'once' }> {
+): Extract<FrameContentPlanner<void>, { scope: 'once' }> {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.

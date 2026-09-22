@@ -1,6 +1,6 @@
 /**
  * SectionScope — where a `FrameSection`, a `ContentCompute`, or a
- * `ContentPlanner` runs: `'once'` against the frame's main context, or
+ * `FrameContentPlanner` runs: `'once'` against the frame's main context, or
  * `'perView'` once per the rig's view. Lifted out of `FrameSection` so all
  * three can share one literal union instead of three copies drifting apart.
  */
