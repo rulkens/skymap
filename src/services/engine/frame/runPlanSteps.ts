@@ -7,17 +7,8 @@
 
 import type { ContentPlanner } from '../../../@types/engine/frame/ContentPlanner';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-
-type PlanTarget =
-  | {
-      readonly scope: 'once';
-      readonly snapshot: ReadyFrameContext;
-      readonly views: readonly FrameView[];
-    }
-  | { readonly scope: 'perView'; readonly view: FrameView };
+import type { PlanTarget } from '../../../@types/engine/frame/PlanTarget';
 
 export function runPlanSteps(
   steps: readonly FrameStepSpec[],
