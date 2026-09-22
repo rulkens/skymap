@@ -29,6 +29,8 @@ import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
+import { PRELUDE } from '../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
@@ -252,21 +254,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
+  ...stubPlannersFor(PRELUDE),
 ];
 
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;

@@ -19,6 +19,8 @@ import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { foregroundChainOrder } from '../../../../src/services/engine/frame/slabs';
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
@@ -337,21 +339,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
+  ...stubPlannersFor(PRELUDE),
 ];
 
 function makeInput(
