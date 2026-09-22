@@ -10,6 +10,10 @@
  *
  * When `href` is set, the image is wrapped in a link to an external 2D sky
  * viewer framed the same as the thumbnail, opened in a new tab.
+ *
+ * The card that hosts this stays mounted across target changes (palette
+ * search), so `src`/`errored` are derived from `url` in-render rather than
+ * seeded once — see the `forUrl` guard below.
  */
 
 import { useState } from 'react';
@@ -25,9 +29,15 @@ export type ThumbnailProps = {
   alt: string;
 };
 
+type ThumbnailState = { forUrl: string; src: string; errored: boolean };
+
 function Thumbnail({ url, fallbackUrl, href, alt }: ThumbnailProps): ReactNode {
-  const [src, setSrc] = useState(url);
-  const [errored, setErrored] = useState(false);
+  const [state, setState] = useState<ThumbnailState>({ forUrl: url, src: url, errored: false });
+
+  if (state.forUrl !== url) {
+    setState({ forUrl: url, src: url, errored: false });
+  }
+  const { src, errored } = state;
 
   const image = errored ? (
     <div className={styles.placeholder} aria-label="No image available">
@@ -42,8 +52,11 @@ function Thumbnail({ url, fallbackUrl, href, alt }: ThumbnailProps): ReactNode {
       height={80}
       loading="lazy"
       onError={() => {
-        if (fallbackUrl !== undefined && src !== fallbackUrl) setSrc(fallbackUrl);
-        else setErrored(true);
+        if (fallbackUrl !== undefined && src !== fallbackUrl) {
+          setState({ forUrl: url, src: fallbackUrl, errored: false });
+        } else {
+          setState({ forUrl: url, src, errored: true });
+        }
       }}
     />
   );

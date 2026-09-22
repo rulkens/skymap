@@ -69,7 +69,6 @@ function GalaxyDetailCard({
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
         <Thumbnail
-          key={info.thumbnailUrl}
           url={info.thumbnailUrl}
           fallbackUrl={info.thumbnailFallbackUrl}
           href={info.skyViewUrl}
