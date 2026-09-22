@@ -18,14 +18,8 @@ lands on NEAR0 with no new slab (see
 
 What remains of this item:
 
-1. **Clip-z clamp audit.** The four `CLIP_Z_EPS` clamps
-   (`starPoints/vertex.wesl:123`, `starCatalog/vertex.wesl:458`,
-   `labels/vertex.wesl:83`, `markerLines/vertex.wesl:56`) were written to
-   defeat far-plane clipping under classic depth. Under reversed-Z,
-   `min(clip.z, w·(1−ε))` guards the **near** side instead — they silently
-   changed meaning. Verify whether they're still load-bearing for close
-   flybys (anchor nearer than `dist·1e-4`) or deletable; the starCatalog one
-   is dual-purpose (pick depth-band force) and stays either way.
+1. The clamps on the reversed-Z slabs are gone; only `labels` and
+   `markerLines` keep theirs, load-bearing on the forward-Z COSMO slab.
 2. **The two folded-in knots below** — both slab-independent; do them
    whenever their files are next open.
 

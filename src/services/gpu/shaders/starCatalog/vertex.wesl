@@ -210,14 +210,6 @@ const STAR_COLORIDX_STEP: f32 = 0.078125;
 // In-cell 10-bit offset unit: reciprocal of 1024 (offset 0..1023 spans one box).
 const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 
-// Visual-pass depth epsilon: pull the clamped clip-z this far inside the far
-// plane so a point sitting exactly ON it still passes the clip test. Only the
-// VISUAL pass uses this min-clamp — that pass is depthless additive and needs
-// only the clip-survival property. The PICK pass instead FORCES the survey
-// depth band (PICK_BAND_SURVEY_STAR_EPS, imported) so survey stars rank by
-// importance, not distance — see the depth write at the end of 'vs'.
-const CLIP_Z_EPS: f32 = 1e-4;
-
 // Pick-pass clickable-footprint floor in px. A star sized honestly by the
 // flux-glow math (STAR_GLOW_MIN_PX = 1.5, before the user's sizeScale) can land
 // sub-pixel at deep zoom, so the visual dot may cover no pixel centre and the
@@ -449,10 +441,8 @@ fn vs(
 
   // Depth write — the two passes diverge here (header 'lib/pickDepthBands').
   //
-  // VISUAL pass: survive the adaptive foreground far plane on a deep descent by
-  // pulling clip-z just inside it. That pass is depthless additive (no depth
-  // test/write), so this min-clamp perturbs no depth compare; it only keeps a
-  // beyond-far sprite from being clipped away.
+  // VISUAL pass: writes the true clip-z untouched (depthless additive; reversed-Z
+  // infinite-far slab, no far plane to survive).
   //
   // PICK pass: this stage IS depth tested, and the user wants IMPORTANCE order,
   // not distance order — a Gaia field star a parsec in front of a famous star
@@ -465,11 +455,7 @@ fn vs(
   // order decides between them — acceptable because 'nearest of two overlapping
   // dots in a dense 7 px field' carries no user meaning, whereas 'famous star
   // beats the field behind it' does.
-  out.clip.z = select(
-    min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS)),
-    out.clip.w * PICK_BAND_SURVEY_STAR_EPS,
-    u.pickPass == 1u
-  );
+  out.clip.z = select(out.clip.z, out.clip.w * PICK_BAND_SURVEY_STAR_EPS, u.pickPass == 1u);
 
   out.uv = corner;
 
