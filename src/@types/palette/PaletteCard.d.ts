@@ -4,8 +4,8 @@ import type { PaletteCardCapture } from './PaletteCardCapture';
 /** One image-led card in a browse tab's grid. */
 export type PaletteCard = {
   /**
-   * Unique, and the name of the default image — so a card keeps its id across a
-   * focus-id rename, and `CARD_SHOT_BY_FOCUS_ID` maps the two.
+   * Unique, the name of the default image, and equal to a focus action's
+   * `focusId` — a search row finds the card's shot by that id alone.
    */
   id: string;
   /** Card face + tooltip title. */

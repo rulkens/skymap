@@ -129,7 +129,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         capture: WANING_GIBBOUS,
       },
       {
-        id: 'body-sun',
+        id: 'star-sun',
         label: 'Sun',
         blurb: "Our star, a middle-aged yellow dwarf that holds 99.8% of the Solar System's mass.",
         action: { kind: 'focus', focusId: 'star-sun' },
@@ -216,7 +216,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
     label: 'Solar System',
     cards: [
       {
-        id: 'body-sun',
+        id: 'star-sun',
         label: 'Sun',
         blurb: "Our star, a middle-aged yellow dwarf that holds 99.8% of the Solar System's mass.",
         action: { kind: 'focus', focusId: 'star-sun' },
@@ -422,62 +422,62 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'body-sgr-a-star' },
       },
       {
-        id: 'body-s2',
+        id: 'star-s2',
         label: 'S2',
         blurb:
           'A star that orbits Sgr A* every 16 years, passing about 120 times the Earth–Sun distance from it. Its orbit is how the black hole was weighed.',
         action: { kind: 'focus', focusId: 'star-s2' },
       },
       {
-        id: 'body-sirius',
+        id: 'star-sirius',
         label: 'Sirius',
         blurb:
           'The brightest star in the night sky, 8.6 light-years away. It has a white dwarf companion, Sirius B.',
         action: { kind: 'focus', focusId: 'star-sirius' },
       },
       {
-        id: 'body-betelgeuse',
+        id: 'star-betelgeuse',
         label: 'Betelgeuse',
         blurb:
           "A red supergiant in Orion, so large that in the Sun's place it would reach past the orbit of Mars. It will end as a supernova.",
         action: { kind: 'focus', focusId: 'star-betelgeuse' },
       },
       {
-        id: 'body-vega',
+        id: 'star-vega',
         label: 'Vega',
         blurb:
           'A bright blue-white star in Lyra, 25 light-years away. It was the pole star around 12,000 BC and will be again.',
         action: { kind: 'focus', focusId: 'star-vega' },
       },
       {
-        id: 'body-polaris',
+        id: 'star-polaris',
         label: 'Polaris',
         blurb:
           "The North Star, almost exactly above Earth's north pole. It is a yellow supergiant about 430 light-years away.",
         action: { kind: 'focus', focusId: 'star-polaris' },
       },
       {
-        id: 'body-alpha-centauri',
+        id: 'star-alpha-centauri',
         label: 'Alpha Centauri',
         blurb:
           'The nearest star system to the Sun, 4.4 light-years away: two Sun-like stars in orbit around each other, with Proxima Centauri further out.',
         action: { kind: 'focus', focusId: 'star-alpha-centauri' },
       },
       {
-        id: 'body-proxima-centauri',
+        id: 'star-proxima-centauri',
         label: 'Proxima Centauri',
         blurb:
           'A small red dwarf 4.2 light-years away, the closest star to the Sun. At least one planet orbits it in the zone where water could be liquid.',
         action: { kind: 'focus', focusId: 'star-proxima-centauri' },
       },
       {
-        id: 'body-rigel',
+        id: 'star-rigel',
         label: 'Rigel',
         blurb: "A blue supergiant at Orion's foot, around 100,000 times as luminous as the Sun.",
         action: { kind: 'focus', focusId: 'star-rigel' },
       },
       {
-        id: 'body-antares',
+        id: 'star-antares',
         label: 'Antares',
         blurb:
           "A red supergiant at the heart of Scorpius. Its name means 'rival of Mars', for its colour.",

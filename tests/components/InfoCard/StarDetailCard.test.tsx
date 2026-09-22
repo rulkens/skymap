@@ -96,8 +96,17 @@ describe('StarDetailCard', () => {
     expect(screen.getByText(/^~[\d,]+ K$/)).toBeInTheDocument();
   });
 
-  it('curated: aliases, the sidecar rows, the description and the Wikipedia link', () => {
+  it('curated: the card shot, aliases, the sidecar rows, description and Wikipedia link', () => {
     render(createElement(StarDetailCard, { target: rigel }));
+
+    // Rigel has a featured card, and its card id IS its focus id — so the shot
+    // resolves off the star's own id, with the lead rows beside it.
+    const img = screen.getByRole('img', { name: 'Rigel thumbnail' });
+    expect(img).toHaveAttribute('src', '/images/featured/star-rigel.webp');
+    const topRow = img.parentElement!.textContent;
+    expect(topRow).toContain('Orion');
+    expect(topRow).toContain(rigelMeta.magV.toFixed(2));
+    expect(screen.getAllByText(rigelMeta.magV.toFixed(2))).toHaveLength(1);
 
     expect(screen.getByText('Rigel')).toBeInTheDocument();
     // Aliases come from names.slice(1) — the primary name heads the card.
@@ -142,9 +151,11 @@ describe('StarDetailCard', () => {
     expect(container.textContent).toMatch(/7,69\d km\/s/);
   });
 
-  it('none: the headline alone, and no distance row at the origin', () => {
-    // The Sun: nothing of its own yet, and it sits at the frame's origin, so its
-    // own distance row would read "0 m" — a fact about the frame, not the star.
+  it('none: the headline alone — no shot over an empty column, no distance at the origin', () => {
+    // The Sun before its sidecar entry lands. It has a card shot, but with no
+    // curated rows to sit beside the image the card keeps the headline-only
+    // fallback. It also sits at the frame's origin, so its own distance row
+    // would read "0 m" — a fact about the frame, not about the star.
     const sun: StarInfo = {
       type: 'starCatalog',
       source: Source.Sun,
@@ -160,6 +171,7 @@ describe('StarDetailCard', () => {
     const { container } = render(createElement(StarDetailCard, { target: sun }));
 
     expect(screen.getByText('Sun')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).toBeNull();
     expect(container.textContent).not.toMatch(/Distance|Spectral|Temperature|Orbits/);
   });
 });
