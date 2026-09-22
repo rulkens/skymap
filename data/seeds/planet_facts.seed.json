@@ -371,5 +371,12 @@
     "dayLength": "24 h 39 m 35 s (1 sol)",
     "wikiTitle": "Opportunity_(rover)",
     "description": "Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. It fell silent in a planet-wide dust storm in 2018 in Perseverance Valley, on the rim of Endeavour crater, and the marker stands there, about 25 km from the landing site."
+  },
+  {
+    "id": "sgr-a-star",
+    "mass": "4.3 million M☉",
+    "distance": "26,700 light-years",
+    "wikiTitle": "Sagittarius_A*",
+    "description": "The supermassive black hole at the centre of the Milky Way: about four million Suns packed inside a region smaller than Mercury's orbit. Its mass was pinned down by tracking the S-stars that whip around it — S2 passes within 120 AU at more than 7,000 km/s — work that earned the 2020 Nobel Prize in Physics. The radius shown is its event horizon."
   }
 ]
