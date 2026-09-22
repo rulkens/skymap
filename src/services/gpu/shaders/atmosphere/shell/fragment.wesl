@@ -128,11 +128,17 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 // 'dot(mix(vec3(1), T, ringVis), LUMINANCE)' equal 'mix(1, luminance(T),
 // ringVis)', so an opaque ring band in front leaves the coverage at zero.
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
-// How strongly displayed sky luminance suppresses the background behind it, in
-// 1/exposed-luminance. A look constant: the darkest noon sky measured (45 deg
-// up from 6.5 km, luminance ~0.006) passes ~7% of a star, a sky with the sun
-// 2 deg down (~0.002) ~18%, a night sky all of it.
-const SKY_ADAPTATION_GAIN: f32 = 2000.0;
+// How strongly the sky's exposed luminance suppresses the background behind
+// it, in 1/luminance, at sea level. A look constant: from 6.5 km at noon the
+// darkest sky (45 deg up, ~0.006) hides a star; with the sun 2 deg down
+// (~0.002) ~18% of it shows; a night sky passes all of it.
+const SKY_ADAPTATION_GAIN: f32 = 5000.0;
+// The gain falls off with the camera's altitude as the air column above it
+// does, in shell-thickness units (Earth: 8 km of a 100 km shell). A sunlit
+// limb seen from orbit has the same per-pixel luminance as a noon zenith seen
+// from the ground, so only the viewer's own surroundings tell the two apart:
+// the eye under a daytime sky is adapted to it, the eye in space is not.
+const SKY_ADAPTATION_SCALE: f32 = 0.08;
 
 struct FsIn {
   // Framebuffer pixel position (y-down, half-pixel centres) -- the uv and texel
@@ -297,9 +303,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   out.emission = inScatter * u.exposure * ringVis;
   // Extinction alone passes ~90% of a star through a noon zenith: stars vanish
   // by day because the eye adapts to the sky's radiance, not because the air
-  // blocks them. The exposed in-scatter stands in for that adaptation level, so
-  // a dark sky reduces to pure extinction and twilight fades the stars in.
-  let adaptation = 1.0 + SKY_ADAPTATION_GAIN * dot(out.emission, LUMINANCE);
+  // blocks them. The exposed in-scatter stands in for that level, weighted by
+  // how much sky surrounds the camera, so a dark sky and a view from space both
+  // reduce to pure extinction and twilight fades the stars in.
+  let altitudeFrac = max(viewHeight - u.bottomRadius, 0.0) / (TOP_RADIUS - u.bottomRadius);
+  let gain = SKY_ADAPTATION_GAIN * exp(-altitudeFrac / SKY_ADAPTATION_SCALE);
+  let adaptation = 1.0 + gain * dot(out.emission, LUMINANCE);
   out.coverage = 1.0 - dot(out.transmit, LUMINANCE) / adaptation;
   out.hit = true;
   return out;
