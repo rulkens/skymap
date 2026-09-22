@@ -27,7 +27,7 @@ describe('instantiateLayer', () => {
     expect(instance.selection).toHaveLength(1);
     const ctx = {} as never;
     const passState = {} as never;
-    expect(instance.frame?.(ctx, passState)).toEqual({ awake: true, settling: false });
-    expect(frameSpy).toHaveBeenCalledWith(ctx, passState);
+    expect(instance.frame?.([ctx], passState)).toEqual({ awake: true, settling: false });
+    expect(frameSpy).toHaveBeenCalledWith([ctx], passState);
   });
 });

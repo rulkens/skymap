@@ -20,7 +20,7 @@ import { structureMemberCount } from '../../utils/structure/structureMemberCount
 
 export function frame(
   runtime: GalaxyCatalogRuntime,
-): (ctx: FrameView, state: PassState) => LayerFrameVote {
+): (views: readonly FrameView[], state: PassState) => LayerFrameVote {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.
@@ -32,7 +32,9 @@ export function frame(
   let memberCountMask = -1;
   let memberCountVersion = -1;
 
-  return (ctx, state) => {
+  return (views, state) => {
+    // The planners below are anchor-view work (one camera, one pixel scale).
+    const ctx = views[0]!;
     const pgcAliasCommitted = runtime.pgcAlias.committed();
     if (pgcAliasCommitted !== null && runtime.catalogsVersion !== aliasIndexVersion) {
       aliasIndexVersion = runtime.catalogsVersion;

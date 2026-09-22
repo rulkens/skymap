@@ -9,8 +9,10 @@ import type { LayerFrameVote } from '../../@types/engine/layer/LayerFrameVote';
 import type { FlowRuntime } from './@types/FlowRuntime';
 import { slotReady } from '../../services/loading/slotReady';
 
-export function frame(runtime: FlowRuntime): (ctx: FrameView, state: PassState) => LayerFrameVote {
-  return (_ctx, state) => {
+export function frame(
+  runtime: FlowRuntime,
+): (views: readonly FrameView[], state: PassState) => LayerFrameVote {
+  return (_views, state) => {
     runtime.renderer.reconcile(state.settings.flow);
     return {
       // The term `shouldKeepTicking` used to read off core

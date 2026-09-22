@@ -28,18 +28,18 @@ describe('flow frame', () => {
     const reconcile = vi.fn();
     const runtime = makeRuntime(true, reconcile);
     const state = stateStub(true);
-    frame(runtime)(ctxStub, state);
+    frame(runtime)([ctxStub], state);
     expect(reconcile).toHaveBeenCalledTimes(1);
     expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
   });
 
   it('votes awake exactly while enabled AND the cube is loaded', () => {
-    expect(frame(makeRuntime(true))(ctxStub, stateStub(true)).awake).toBe(true);
-    expect(frame(makeRuntime(false))(ctxStub, stateStub(true)).awake).toBe(false);
-    expect(frame(makeRuntime(true))(ctxStub, stateStub(false)).awake).toBe(false);
+    expect(frame(makeRuntime(true))([ctxStub], stateStub(true)).awake).toBe(true);
+    expect(frame(makeRuntime(false))([ctxStub], stateStub(true)).awake).toBe(false);
+    expect(frame(makeRuntime(true))([ctxStub], stateStub(false)).awake).toBe(false);
   });
 
   it('never votes settling — flow draws in no capture roster, so a sky bake stays valid', () => {
-    expect(frame(makeRuntime(true))(ctxStub, stateStub(true)).settling).toBe(false);
+    expect(frame(makeRuntime(true))([ctxStub], stateStub(true)).settling).toBe(false);
   });
 });

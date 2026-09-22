@@ -1181,9 +1181,9 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
   it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {
     const order: string[] = [];
     const focusSeenByA: { current: unknown } = { current: undefined };
-    const layerA = makeLayer('a', (ctx) => {
+    const layerA = makeLayer('a', (views) => {
       order.push('a');
-      focusSeenByA.current = ctx.snapshot.focus;
+      focusSeenByA.current = views[0]!.snapshot.focus;
       return AT_REST;
     });
     const layerB = makeLayer('b', () => {

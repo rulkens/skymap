@@ -23,6 +23,6 @@ export type LayerInstance = {
   readonly worldLabels: readonly Label3DProducer[];
   readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
-  readonly frame: ((ctx: FrameView, state: PassState) => LayerFrameVote) | null;
+  readonly frame: ((views: readonly FrameView[], state: PassState) => LayerFrameVote) | null;
   destroy(): void;
 };

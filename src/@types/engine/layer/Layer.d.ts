@@ -90,8 +90,10 @@ export type Layer<
   selection?(runtime: Runtime): readonly SelectionKindRow[];
   /**
    * Called from `runFrame` once a frame, after the focus uniform and before any pass.
-   * Returns two independent votes — keep the loop awake, and hold off sky captures;
-   * see `LayerFrameVote` for why answering one with the other is a defect.
+   * `views[0]` is the anchor view (its eye, viewSlot and `snapshot.nowMs`); the list is
+   * every view the rig derived this frame, never a capture face — mono rigs pass
+   * `[canvas]`. Returns two independent votes — keep the loop awake, and hold off sky
+   * captures; see `LayerFrameVote` for why answering one with the other is a defect.
    */
-  frame?(runtime: Runtime): (ctx: FrameView, state: PassState) => LayerFrameVote;
+  frame?(runtime: Runtime): (views: readonly FrameView[], state: PassState) => LayerFrameVote;
 };

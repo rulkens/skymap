@@ -53,7 +53,7 @@ const CTX = {
 describe('galaxyCatalog frame — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {
     const tick = frame(makeRuntime(true));
-    expect(tick(CTX, STATE)).toEqual({ awake: true, settling: true });
+    expect(tick([CTX], STATE)).toEqual({ awake: true, settling: true });
   });
 
   // The regression this file exists for: a thumbnail host that hangs for its
@@ -61,6 +61,6 @@ describe('galaxyCatalog frame — work votes', () => {
   // fixture has no `hasInFlightWork` at all — reading it here would throw.
   it('votes neither while a fetch is merely outstanding', () => {
     const tick = frame(makeRuntime(false));
-    expect(tick(CTX, STATE)).toEqual({ awake: false, settling: false });
+    expect(tick([CTX], STATE)).toEqual({ awake: false, settling: false });
   });
 });

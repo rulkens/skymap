@@ -234,13 +234,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   snapshot.focus = focusUniforms;
 
   // Each Layer's `frame` hook, in tuple order, right after the focus uniform
-  // and before any planner. No short-circuit: every hook runs every frame, so a
-  // later Layer's vote is never skipped by an earlier `true`.
+  // and before any planner. The hook gets the rig's whole view list (`views[0]`
+  // the anchor), so a Layer pruning against a frustum sees every eye. No
+  // short-circuit: every hook runs every frame, so a later Layer's vote is
+  // never skipped by an earlier `true`.
   let layersAwake = false;
   let layersSettling = false;
   for (const layer of state.layers) {
     if (layer.frame === null) continue;
-    const vote = layer.frame(canvas, state);
+    const vote = layer.frame(views, state);
     // `settling` is folded into `awake` here rather than trusted to each Layer,
     // so the implication holds structurally: content too unsettled to bake is
     // by definition still changing.

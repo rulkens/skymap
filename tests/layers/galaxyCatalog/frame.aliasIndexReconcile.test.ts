@@ -72,7 +72,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const { runtime, publish } = makeRuntime({ committed: () => null, catalogsVersion: () => 0 });
     const tick = frame(runtime);
 
-    for (let i = 0; i < 3; i += 1) tick(CTX, STATE);
+    for (let i = 0; i < 3; i += 1) tick([CTX], STATE);
     expect(aliasCalls(publish)).toHaveLength(0);
   });
 
@@ -85,14 +85,14 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     });
     const tick = frame(runtime);
 
-    tick(CTX, STATE); // sidecar still loading — no build yet
+    tick([CTX], STATE); // sidecar still loading — no build yet
     expect(aliasCalls(publish)).toHaveLength(0);
 
     // The one bump: the sidecar commits and the catalog it joins against lands.
     committed = { value: new Map([[100n, ['NGC 1']]]) };
     catalogsVersion = 1;
-    tick(CTX, STATE);
-    tick(CTX, STATE); // same version again — must not re-fire
+    tick([CTX], STATE);
+    tick([CTX], STATE); // same version again — must not re-fire
 
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(1);
@@ -137,7 +137,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = frame(runtime);
 
-    tick(CTX, STATE);
+    tick([CTX], STATE);
     expect(aliasCalls(publish)).toHaveLength(1);
     expect(aliasCalls(publish)[0]![0]).toEqual({
       aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
@@ -149,7 +149,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     catalogs.clear();
     catalogs.set(Source.Glade, { objIDs: new BigUint64Array([200n]) } as unknown as GalaxyCatalog);
     catalogsVersion = 2;
-    tick(CTX, STATE);
+    tick([CTX], STATE);
 
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(2);

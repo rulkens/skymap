@@ -60,10 +60,10 @@ describe('galaxyCatalog frame — bias reconcile', () => {
     const { runtime, setMode } = makeRuntime(0);
     const tick = frame(runtime);
 
-    for (let i = 0; i < 3; i += 1) tick(CTX, makeState(0));
+    for (let i = 0; i < 3; i += 1) tick([CTX], makeState(0));
     expect(setMode).not.toHaveBeenCalled();
 
-    for (let i = 0; i < 2; i += 1) tick(CTX, makeState(3));
+    for (let i = 0; i < 2; i += 1) tick([CTX], makeState(3));
     expect(setMode).toHaveBeenCalledTimes(1);
     expect(setMode).toHaveBeenCalledWith(3);
   });

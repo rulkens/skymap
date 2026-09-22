@@ -83,11 +83,11 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = frame(runtime);
 
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER)); // primes the key — not asserted
+    tick([makeCtx(ALL_VISIBLE_MASK)], makeState(CLUSTER)); // primes the key — not asserted
     publish.mockClear();
 
-    for (let i = 0; i < 9; i += 1) tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(null)); // the one selection change
+    for (let i = 0; i < 9; i += 1) tick([makeCtx(ALL_VISIBLE_MASK)], makeState(CLUSTER));
+    tick([makeCtx(ALL_VISIBLE_MASK)], makeState(null)); // the one selection change
 
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
@@ -99,7 +99,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const tick = frame(runtime);
 
     const milkyWay: SelectionRow = { type: 'milkyWay' };
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(milkyWay));
+    tick([makeCtx(ALL_VISIBLE_MASK)], makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
   });
@@ -112,12 +112,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = frame(runtime);
 
-    tick(makeCtx(maskWith(0, Source.SDSS)), makeState(CLUSTER));
+    tick([makeCtx(maskWith(0, Source.SDSS))], makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Same selection, same catalogsVersion — only the visible source swapped,
     // which is exactly what the renderer draws and the focus fade tracks.
-    tick(makeCtx(maskWith(0, Source.TwoMRS)), makeState(CLUSTER));
+    tick([makeCtx(maskWith(0, Source.TwoMRS))], makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
   });
 
@@ -148,7 +148,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = frame(runtime);
 
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    tick([makeCtx(ALL_VISIBLE_MASK)], makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Tier swap: same selection, same visible mask, but this source's array
@@ -164,7 +164,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       ],
     ]);
     catalogsVersion = 1;
-    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    tick([makeCtx(ALL_VISIBLE_MASK)], makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });
