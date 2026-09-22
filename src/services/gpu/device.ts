@@ -25,6 +25,7 @@
  */
 
 import type { GpuContext } from '../../@types/rendering/GpuContext';
+import { trackGpuMemory } from './memory/trackGpuMemory';
 
 /** Extra device-request hints beyond the `timestamp-query` mirror — see Step 2 below. */
 type InitGpuOptions = {
@@ -107,6 +108,10 @@ export async function initGpu(
     requiredLimits,
   });
 
+  // Always on — see `trackGpuMemory`'s module header for why an always-on
+  // stack capture per allocation is affordable (allocations, not frames).
+  const memory = trackGpuMemory(device);
+
   // Step 3 — Get the canvas context.
   // `getContext('webgpu')` returns null if the canvas already has a different
   // context type (e.g. '2d'). In practice this only happens if the same
@@ -162,7 +167,7 @@ export async function initGpu(
     alphaMode: 'premultiplied',
   });
 
-  return { device, context, format, canvas, hdrCapable };
+  return { device, context, format, canvas, hdrCapable, memory };
 }
 
 // ─── Live capability watch ──────────────────────────────────────────────────

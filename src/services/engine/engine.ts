@@ -59,6 +59,7 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -537,6 +538,7 @@ export function createEngine(
       assetPriorities: () => assetPriorityBySlotName(state),
       surfaceTiles: () =>
         state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      gpuMemory: () => state.gpu.uiCtx?.memory?.snapshot() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.

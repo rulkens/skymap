@@ -68,6 +68,7 @@ import { scalingExponent } from '../utils/perf/scalingExponent';
 import { classifyBound } from '../utils/perf/classifyBound';
 import { ansiPalette } from '../utils/cli/ansiPalette';
 import type { PerfSample } from '../../src/@types/perf/PerfSample';
+import type { MemorySnapshot } from '../../src/@types/perf/MemorySnapshot';
 import type { Tier } from '../../src/@types/data/Tier';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 
@@ -270,6 +271,17 @@ async function sampleStrategy(
 }
 
 /**
+ * sampleMemory — read the GPU-memory ledger + JS heap through the hook, once
+ * per scenario (not per strategy — the ledger doesn't care which encode path
+ * ran; it's a measure-only snapshot of what's resident right now).
+ */
+async function sampleMemory(page: Page): Promise<MemorySnapshot> {
+  return (await page.evaluate(() =>
+    (window as unknown as { __skymapPerf: { memory: () => MemorySnapshot } }).__skymapPerf.memory(),
+  )) as MemorySnapshot;
+}
+
+/**
  * Measure ONE scenario: boot the perf page in a fresh context, sample both
  * strategies, and assemble the report. The context is closed by the caller.
  */
@@ -305,6 +317,7 @@ async function measureScenario(
     const merged = statsByStrategy['merged'] ?? [];
     const perLayer = statsByStrategy['perLayerTimed'] ?? [];
     const zeroTotal = { median: 0, p90: 0 };
+    const memory = await sampleMemory(page);
     return {
       scenario: scenario.name,
       viewport: VIEWPORT,
@@ -319,6 +332,7 @@ async function measureScenario(
       perLayer,
       floors: floorsOf(merged, perLayer, slotGroups),
       pageErrors,
+      memory,
     };
   } finally {
     await context.close();

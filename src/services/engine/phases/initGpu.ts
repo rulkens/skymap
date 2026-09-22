@@ -43,7 +43,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Sync the backing store first — otherwise `getCurrentTexture()` may return a 300×150 default.
   resizeCanvasToDisplay(canvas);
 
-  const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
+  const { device, context, format, hdrCapable, memory } = await gpuInitGpu(canvas);
 
   // Assigned now, not at the end of this throw-capable phase, so a later
   // throw still lets `destroy()` remove the HDR listener rather than leak it.
@@ -68,12 +68,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   );
 
   // Sequenced here, before `constructGpuHandles`, exactly as it always ran.
-  state.gpu.uiCtx = { device, context, canvas, hdrCapable };
+  state.gpu.uiCtx = { device, context, canvas, hdrCapable, memory };
   state.gpu.fontAtlases = await loadFontAtlases();
   state.gpu.envBrdfLut = await loadEnvBrdfLut(device);
 
   const handleDeps: GpuHandleConstructDeps = {
-    ctx: { device, context, canvas, format, hdrCapable },
+    ctx: { device, context, canvas, format, hdrCapable, memory },
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,

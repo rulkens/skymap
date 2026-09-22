@@ -84,6 +84,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         format: phaseLocals.format,
         canvas: deps.canvas,
         hdrCapable: uiCtx.hdrCapable,
+        memory: uiCtx.memory,
       },
       fadeBgl,
       sourceBgl,

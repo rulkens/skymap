@@ -1,0 +1,24 @@
+.notice {
+  color: var(--color-fg-tertiary);
+}
+
+.table {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, auto);
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+}
+
+.head {
+  color: var(--color-fg-dim);
+  text-align: right;
+}
+
+.name {
+  overflow-wrap: anywhere;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
