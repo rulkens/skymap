@@ -52,10 +52,10 @@ readonly frame: ((views: readonly FrameView[], state: PassState) => LayerFrameVo
 
 - `galaxyCatalog/frame.ts` and `flow/frame.ts` bind `const ctx = views[0]!` where they read the view today (flow reads none). No new test: the compiler rejects every stale call shape, and the existing hook tests keep their assertions with `[ctx]` in place of `ctx`.
 
-- [ ] Widen the two contract files and the `runFrame` call (`layer.frame(views, state)`); the hook-loop comment says the list is the rig's views with `views[0]` the anchor.
-- [ ] Update the two Layer `frame.ts` files and the four test files' call shapes.
-- [ ] `npm run typecheck:fast && npx vitest run tests/services/engine/layer tests/services/engine/frame/runFrame.test.ts tests/layers/flow/frame.test.ts tests/layers/galaxyCatalog` → green.
-- [ ] Commit: `refactor(layer): the frame hook takes the rig's views`.
+- [x] Widen the two contract files and the `runFrame` call (`layer.frame(views, state)`); the hook-loop comment says the list is the rig's views with `views[0]` the anchor.
+- [x] Update the two Layer `frame.ts` files and the four test files' call shapes.
+- [x] `npm run typecheck:fast && npx vitest run tests/services/engine/layer tests/services/engine/frame/runFrame.test.ts tests/layers/flow/frame.test.ts tests/layers/galaxyCatalog` → green.
+- [x] Commit: `refactor(layer): the frame hook takes the rig's views`.
 
 ---
 
@@ -128,11 +128,11 @@ export function visibleStars(
 - `visibilityActionRow.ts:73-77` and the Stars panel derive over `starCatalogs.items` and grow with it; nothing to edit. `mergeSettingsSnapshot` spreads whole clusters, so a tour snapshot captured before this change restores a `bodies` cluster with a stale `sun` key — harmless (no reader) and self-healing on the next capture; no code or comment for it.
 - Tests worth writing (spec §9): `visibleStars` — `it('draws each seeded catalog iff the cluster master and its own item are on')` over the three ids with one star each, and `it('never draws a seeded star when the cluster master is off')`. `starPickId` — the Sun packs `Source.Sun` at index 0, Sirius packs `Source.FamousStar` at its `SCENE_STARS` index, S2 packs `Source.SStar`. Registry — `tests/data/sources/sStarSource.test.ts` asserts `STAR_CATALOG_IDS` contains `sStar` and `sun`, `INITIAL_SETTINGS.starCatalogs.items.sStar.enabled === S_STAR_ENTRY.visible`, and `BODY_IDS` contains neither.
 
-- [ ] Registry: retype the two rows, add the three derived types, re-derive `StarCatalogId`; `npm run typecheck:fast` lists every consumer that breaks — that list is the rest of this task.
-- [ ] Data: `SCENE_SUN`, `SEEDED_STAR_CATALOGS`, the seed-JSON edit + regenerate, `sceneAnchors`, `bodyPickRows`, `bodySearchNames`.
-- [ ] Engine: `visibleStars` / `positionedVisibleStars` / `frameContext` / `PositionedStar`, `BodyStore.stars` deleted, `starPickId`, `sceneBodyPickId`, the body row's seeded branch, `captionFadeRules.sun`, `sceneBodyLabels`, `engine.ts` source counts.
-- [ ] Tests as listed; `npm run typecheck:fast && npx vitest run tests/data tests/utils/picking tests/services/engine/frame tests/services/engine/presentation tests/services/engine/selection tests/components tests/hooks tests/layers/starCatalog` → green.
-- [ ] Commit: `feat(stars): the Sun and the S-stars are seeded star-catalog rows`.
+- [x] Registry: retype the two rows, add the three derived types, re-derive `StarCatalogId`; `npm run typecheck:fast` lists every consumer that breaks — that list is the rest of this task.
+- [x] Data: `SCENE_SUN`, `SEEDED_STAR_CATALOGS`, the seed-JSON edit + regenerate, `sceneAnchors`, `bodyPickRows`, `bodySearchNames`.
+- [x] Engine: `visibleStars` / `positionedVisibleStars` / `frameContext` / `PositionedStar`, `BodyStore.stars` deleted, `starPickId`, `sceneBodyPickId`, the body row's seeded branch, `captionFadeRules.sun`, `sceneBodyLabels`, `engine.ts` source counts.
+- [x] Tests as listed; `npm run typecheck:fast && npx vitest run tests/data tests/utils/picking tests/services/engine/frame tests/services/engine/presentation tests/services/engine/selection tests/components tests/hooks tests/layers/starCatalog` → green.
+- [x] Commit: `feat(stars): the Sun and the S-stars are seeded star-catalog rows`.
 
 ---
 
@@ -223,12 +223,12 @@ export function starCatalogSelectionRow(runtime: StarCatalogRuntime): SelectionK
 - Headers to rewrite: `computeStarCut.ts` (drop "sole owner" wording, point at `starSourcesInBand`), `advanceStarFades.ts` ("`runFrame` calls it" → the Layer's `frame`), `starCatalogVisible.ts`, `starAggregatesPass.ts:14-18`, `runFrame.ts`'s planner comment (the star paragraph goes), `shouldKeepTicking.ts`, `assetWiring.ts`/`fadeLayers.ts` where they name the star rows, `EngineAssetSlots.d.ts:32`.
 - Tests: `tests/layers/starCatalog/frame.test.ts` — `it('advances the ramps exactly once per call and hands the renderer one cut')` (a stub renderer with one loaded catalog: two `frame` calls at t=0 and t=50 ms leave one node's opacity at `50/NODE_FADE_MS`, and `setFrameCut` was called twice) and `it('votes settling: false even while a node is mid-fade')`. `starSourcesInBand.test.ts` — one loaded catalog inside its band, one outside: the result holds exactly the first, and an empty result when the master is off. The two `starCatalogVisible` reference-identity tests in `readStarCut.test.ts:575-587` are deleted (spec §9). `tests/state/engine/selectors.test.ts` (or the file that covers `selectFamousGalaxiesMeta`) gains `it('selectFamousStarsMeta is [] before the star Layer publishes and the list after')` — the facts bag is absent for the shell's first frames (memory landmine), so the `?? []` guard is what this test can catch. Every other moved test keeps its assertions — the identity check for the move.
 
-- [ ] `--dry` then real `move-files` for each group above (sources, render, passes, load, selection row, ui); grep `renderers/starCatalog`, `renderers/bodies/star`, `passes/star`, `slots/star`, `famousStarsMeta`, `StarsSection` for stragglers (string paths, `.mts` — `tools/perf/starCutCpuBench.mts` imports the cut).
-- [ ] Runtime, facts, `create`/`destroy`, `layer.ts`; the core rows leave (registry spread, passes index, render targets, gpu handles, engine.ts, asset wiring, fade rows, core selection rows, SettingsPanel mount, `ResolveDeps.stars`, the saga's `star` deferral row, `engine.meta.famousStars`).
-- [ ] `starSourcesInBand` + the three callers; `frame.ts`; `runFrame`'s star block and `shouldKeepTicking`'s term deleted.
-- [ ] Backlog file + index line deleted; README status.
-- [ ] `npm run typecheck:fast`, then `npx vitest run tests/layers tests/services/engine tests/services/gpu tests/state tests/components tests/conventions` → green; `npm run build` (the `?static` shader specifiers in the moved renderers are only checked here).
-- [ ] Commit: `refactor(stars): the starCatalog Layer forms`.
+- [x] `--dry` then real `move-files` for each group above (sources, render, passes, load, selection row, ui); grep `renderers/starCatalog`, `renderers/bodies/star`, `passes/star`, `slots/star`, `famousStarsMeta`, `StarsSection` for stragglers (string paths, `.mts` — `tools/perf/starCutCpuBench.mts` imports the cut).
+- [x] Runtime, facts, `create`/`destroy`, `layer.ts`; the core rows leave (registry spread, passes index, render targets, gpu handles, engine.ts, asset wiring, fade rows, core selection rows, SettingsPanel mount, `ResolveDeps.stars`, the saga's `star` deferral row, `engine.meta.famousStars`).
+- [x] `starSourcesInBand` + the three callers; `frame.ts`; `runFrame`'s star block and `shouldKeepTicking`'s term deleted.
+- [x] Backlog file + index line deleted; README status.
+- [x] `npm run typecheck:fast`, then `npx vitest run tests/layers tests/services/engine tests/services/gpu tests/state tests/components tests/conventions` → green; `npm run build` (the `?static` shader specifiers in the moved renderers are only checked here).
+- [x] Commit: `refactor(stars): the starCatalog Layer forms`.
 
 ---
 
@@ -242,10 +242,10 @@ Behaviour-neutral sweep; its own dispatch. Spec §4: the star-only `src/@types/`
 - Keep core homes (core imports them): `StarCatalog`, `StarCatalogId`, `StarCatalogSourceType`, `StarCatalogRegistryEntry`, `SeededStarCatalogId`, `StarCatalogNode`, `StarCatalogReq`, `FamousStarMetaEntry`, `FamousStarRow`, `StarBody`, `SStarSeed`, `PositionedStar`.
 - Modify: `src/@types/engine/handles/EngineGpuHandles.d.ts` no longer names any star renderer type after Task 3 — confirm, else the type stays core.
 
-- [ ] For each file: `grep -rl "<TypeName>" src tools` → if every importer is under `src/layers/starCatalog/` (or `tools/`), move it; otherwise it stays and is listed in the commit body as "kept core: imported by X".
-- [ ] `npm run move-files -- --manifest <moves.json>` (write the manifest to the scratchpad, `--dry` first), then the verification that actually works (memory landmine): a short script counting exported declarations per `src/layers/starCatalog/@types/*.d.ts` (one each) and grepping for plain value-imports of pure types the tool may have rewritten (`import {` of a `.d.ts` symbol).
-- [ ] `npm run typecheck:fast && npx vitest run tests/conventions tests/layers/starCatalog` → green. No new test.
-- [ ] Commit: `refactor(stars): star-only types live in the Layer`.
+- [x] For each file: `grep -rl "<TypeName>" src tools` → if every importer is under `src/layers/starCatalog/` (or `tools/`), move it; otherwise it stays and is listed in the commit body as "kept core: imported by X".
+- [x] `npm run move-files -- --manifest <moves.json>` (write the manifest to the scratchpad, `--dry` first), then the verification that actually works (memory landmine): a short script counting exported declarations per `src/layers/starCatalog/@types/*.d.ts` (one each) and grepping for plain value-imports of pure types the tool may have rewritten (`import {` of a `.d.ts` symbol).
+- [x] `npm run typecheck:fast && npx vitest run tests/conventions tests/layers/starCatalog` → green. No new test.
+- [x] Commit: `refactor(stars): star-only types live in the Layer`.
 
 ---
 
@@ -325,11 +325,11 @@ export function isRegistryBodyId(id: string): boolean;
 - `watchFocusTweenSaga.test.ts:187-222`: the star cases become "a `star-<index>` link with no bin loaded produces no row and no tween; after the bin commits it selects" — the galaxy-shaped deferral through `resolveFocusRefDeferring`.
 - `focusDriverId.test.ts`: the `starCatalog` row → its `id`; a Gaia row → null.
 
-- [ ] The two arms; `typecheck:fast` enumerates the consumers — fix each as listed, no new branches anywhere (every consumer renames its case).
-- [ ] The Layer's row (four sources), the body row (body only, `isRegistryBodyId`), the two URL helpers, the boot assert, `starPickId` deleted.
-- [ ] Palette rows + `featuredTabs` focus ids; camera / halo / identity-key / hash sites.
-- [ ] Tests as listed; `npm run typecheck:fast && npx vitest run tests/layers/starCatalog tests/services/engine tests/services/url tests/state tests/utils tests/components/CommandPalette` → green.
-- [ ] Commit: `feat(stars): seeded stars carry star identity — one starCatalog arm, star- deep links`.
+- [x] The two arms; `typecheck:fast` enumerates the consumers — fix each as listed, no new branches anywhere (every consumer renames its case).
+- [x] The Layer's row (four sources), the body row (body only, `isRegistryBodyId`), the two URL helpers, the boot assert, `starPickId` deleted.
+- [x] Palette rows + `featuredTabs` focus ids; camera / halo / identity-key / hash sites.
+- [x] Tests as listed; `npm run typecheck:fast && npx vitest run tests/layers/starCatalog tests/services/engine tests/services/url tests/state tests/utils tests/components/CommandPalette` → green.
+- [x] Commit: `feat(stars): seeded stars carry star identity — one starCatalog arm, star- deep links`.
 
 ---
 
@@ -381,10 +381,10 @@ export function buildFocusable(
 - `StarDetailCard` renders the header rows every star shares (name, distance, position) and then `detail` by `kind`: `photometry` = today's `FieldStarDetailCard` body; `curated` = the famous panel moved verbatim from `BodyDetailCard.tsx:247-320`; `orbit` = the orbit rows moved from `:212-228`; `none` = nothing. The compact twin shows name + distance only.
 - `buildFocusable.test.ts`: `it.each` over four rows (Gaia, Sirius with meta, S2, the Sun) asserting `detail.kind` in order `photometry`, `curated`, `orbit`, `none`; and Sirius with an empty meta list → `none`.
 
-- [ ] Types, `buildFocusable` + the three selectors, `refOf`, `FocusableTarget`.
-- [ ] `move-files` the two card folders, rewrite the cards, trim `BodyDetailCard` + its container, `detailCardTable`.
-- [ ] Tests; `npm run typecheck:fast && npx vitest run tests/components tests/services/engine/helpers tests/state/selection` → green.
-- [ ] Commit: `feat(stars): one StarInfo and one StarDetailCard for every star`.
+- [x] Types, `buildFocusable` + the three selectors, `refOf`, `FocusableTarget`.
+- [x] `move-files` the two card folders, rewrite the cards, trim `BodyDetailCard` + its container, `detailCardTable`.
+- [x] Tests; `npm run typecheck:fast && npx vitest run tests/components tests/services/engine/helpers tests/state/selection` → green.
+- [x] Commit: `feat(stars): one StarInfo and one StarDetailCard for every star`.
 
 ---
 
@@ -426,10 +426,10 @@ guides: (runtime) => ({
 - `produceStarCaptions.test.ts`: `it('captions every drawn famous star and the Sun with their kinds, and no S-star')` — one star per seeded table, all items on: two captions, kinds `star` and `sun`, pick ids `packSelection(Source.FamousStar, OFFSET)` and `packSelection(Source.Sun, OFFSET)`; and `it('drops a catalog's captions with its item toggle')`.
 - `sceneOrbitConics.test.ts`: `it('holds no S-star conic — those are the star Layer's')`.
 
-- [ ] `S_STAR_ORBITAL_ELEMENTS`, `orbitalElements.ts`, `coreTrailElements.ts`, `orbitReachByRegion.ts`.
-- [ ] `bodyCaption` extracted; `produceStarCaptions` + `STAR_CAPTION_KIND`; `sceneBodyLabels` trimmed; `layer.ts` guides.
-- [ ] Tests; `npm run typecheck:fast && npx vitest run tests/layers/starCatalog tests/services/engine/presentation tests/data/bodies tests/services/engine/frame/passes/orbitTrailsPass.test.ts tests/services/engine/phases` → green.
-- [ ] Commit: `feat(stars): captions and S-star trails come from the Layer's guides`.
+- [x] `S_STAR_ORBITAL_ELEMENTS`, `orbitalElements.ts`, `coreTrailElements.ts`, `orbitReachByRegion.ts`.
+- [x] `bodyCaption` extracted; `produceStarCaptions` + `STAR_CAPTION_KIND`; `sceneBodyLabels` trimmed; `layer.ts` guides.
+- [x] Tests; `npm run typecheck:fast && npx vitest run tests/layers/starCatalog tests/services/engine/presentation tests/data/bodies tests/services/engine/frame/passes/orbitTrailsPass.test.ts tests/services/engine/phases` → green.
+- [x] Commit: `feat(stars): captions and S-star trails come from the Layer's guides`.
 
 ---
 
@@ -445,9 +445,9 @@ Spec §10, §13. Docs ride the PR.
 - Create: `docs/backlog/2026-09-22-debug-reflective-sphere-sky-capture.md` + index line (`ready`, DebugPanel): a debug-only mirror sphere in Earth orbit that samples the sky cubemap, so the capture roster (stars, the Milky Way band, aggregates) can be eye-checked without flying to the Sgr A\* lens — today the lens is the cubemap's only consumer (`sgrAStarLensingRenderer.ts`, `skyCubemapBlitPass.ts`).
 - The memory landmine spec §13 names (seed-table ordering; the two tables are never merged) is restated in `starCatalogSelectionRow.ts`'s header, where `starPickId`'s header used to carry it.
 
-- [ ] README, parent spec, backlog deletions and the two new items.
-- [ ] `npx vitest run tests/conventions tests/services/engine/frame/frameFilePurity.test.ts` → green (the README edit is a `src/layers/` entry the purity sweep walks).
-- [ ] Commit: `docs(stars): starCatalog Layer formed — backlog and spec updates`.
+- [x] README, parent spec, backlog deletions and the two new items.
+- [x] `npx vitest run tests/conventions tests/services/engine/frame/frameFilePurity.test.ts` → green (the README edit is a `src/layers/` entry the purity sweep walks).
+- [x] Commit: `docs(stars): starCatalog Layer formed — backlog and spec updates`.
 
 ---
 
@@ -455,20 +455,20 @@ Spec §10, §13. Docs ride the PR.
 
 **Deliverable inventory**
 
-- `src/layers/starCatalog/` has `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `sources/` (four rows + `starCatalogSourceRows.ts`), `load/`, `passes/` (six), `render/` (four renderers, the upsample, `cut/`, `starAggregatesTarget.ts`), `present/` (fade rows, selection row, captions, caption kinds), `ui/`, `@types/` (`StarCatalogRuntime`, `StarCatalogFacts`, `StarInfo`, `StarInfoDetail` + the moved star-only types); `state/` unchanged in shape.
+- `src/layers/starCatalog/` has `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `sources/` (four rows + `starCatalogSourceRows.ts`), `load/`, `passes/` (six), `render/` (four renderers, the upsample, `cut/`, `starAggregatesTarget.ts`), `present/` (fade rows, selection row, captions, caption kinds), `ui/`, `@types/` (`StarCatalogRuntime`, `StarCatalogFacts` + the moved star-only types); `state/` unchanged in shape. Shipped as: `StarInfo` and `StarInfoDetail` live in `src/@types/engine/` because core's `buildFocusable`/`FocusableTarget` name them.
 - No `state.gpu.starCatalogRenderer` / `starCatalogPickRenderer` / `starRenderer` / `starPointRenderer` / `starAggregateUpsample`; no `EngineAssetSlots.starCatalogs` / `famousStarsMeta`; no `ResolveDeps.stars`; no `engine.meta.famousStars` / `engineFamousStarsMetaReported`; `runFrame` has no star block and `shouldKeepTicking` no `starFadeAnimating`.
 - `Layer.frame` receives `views: readonly FrameView[]`.
-- `SUN_ENTRY` and `S_STAR_ENTRY` are `SeededStarCatalogSourceEntry` rows with codes 26 and 28; `StarCatalogId` has four members; `BodyId` has neither `sun` nor `s-star`; `SEEDED_STAR_CATALOGS` is total over `SeededStarCatalogId`; `SCENE_SUN` exists and `SCENE_STARS` holds no Sun.
+- `SUN_ENTRY` and `S_STAR_ENTRY` are `SeededStarCatalogSourceEntry` rows with codes 26 and 28; `StarCatalogId` has four members; `BodyId` has neither `sun` nor `s-star`; `SEEDED_STAR_CATALOGS` is total over `SeededStarCatalogId`; `SCENE_SUN` exists and `SCENE_STARS` holds no Sun. Shipped as: `SCENE_SUN` is generated from its own seed file (`data/seeds/sun.seed.json` → `sun.generated.ts`) by the same registry-driven generator as the famous table, and the Sun's curated card rides the shared sidecar.
 - `SelectionRef`/`SelectionRow` have a `starCatalog` arm and no `star` arm; `starPickId`, `FieldStarInfo`, `FieldStarDetailCard`, `CompactFieldStarCard`, `GATE_BY_STAR_ID`, `isSceneBodyId`, `BodyStore.stars` do not exist.
 - `encodeStarFocusId` / `decodeStarFocusId` exist; the Layer's `create` throws on an all-digits seed id.
-- `S_STAR_ORBITAL_ELEMENTS` is imported by `orbitalElements.ts` and the Layer's `guides`, and by nothing else; `CORE_TRAIL_ELEMENTS` holds no S-star row.
+- `S_STAR_ORBITAL_ELEMENTS` is imported by `orbitalElements.ts`, the Layer's `guides`, and `coreTrailElements.ts` (which excludes the rows by reference); `CORE_TRAIL_ELEMENTS` holds no S-star row.
 - Backlog: the two consumed items deleted, the two new items filed; README and parent spec updated.
 
 **Observable behaviours (manual pass on the main app, user's eyes)**
 
 - Stars panel: four item rows — Gaia Stars, Famous Star, Sun, S-Star; each toggle hides exactly its own stars (the Sun stays when Famous Star is off; the S-star dots at Sgr A\* go with S-Star); the cluster master hides all four.
-- Clicking Sirius, the Sun, S2 and a Gaia field star each opens `StarDetailCard` with the eyebrow "Star" and, respectively, the curated panel, nothing, the orbit rows, the photometry rows; the compact card shows name + distance. Earth and Mars still open `BodyDetailCard` with no star rows.
-- Deep links `#focus=star-sirius`, `#focus=star-S2`, `#focus=star-sun` select and frame; `#focus=body-sirius` does nothing; a `#focus=star-<index>` link selects once the Gaia bin lands (and never before).
+- Clicking Sirius, the Sun, S2 and a Gaia field star each opens `StarDetailCard` with the eyebrow "Star" and, respectively, the curated panel, the curated panel (from its own seed), the orbit rows, the photometry rows; a seeded star with a featured card shot shows it beside its curated rows (S2 has a shot but no curated rows, so no image); the compact card shows name + distance. Earth and Mars still open `BodyDetailCard` with no star rows.
+- Deep links `#focus=star-sirius`, `#focus=star-s2`, `#focus=star-sun` select and frame; `#focus=body-sirius` does nothing; a `#focus=star-<index>` link selects once the Gaia bin lands (and never before).
 - The two Sun cards and the Sirius card in the featured palette tabs still focus their star; palette search "Sirius" / "Alpha Canis Majoris" / "Sol" / "S2" each returns the star row and focusing it opens the star card.
 - Camera: focusing S2 follows its orbit; the approach tilt does not engage on a star; the selection ring wraps a seeded star's photosphere on close approach.
 - Captions: famous-star names and "Sun" draw as before with their label toggles; S-stars stay uncaptioned; the Famous Star label toggle and the tour label cues still fade them.

@@ -8,7 +8,7 @@
 
 **Tech Stack:** TS, RTK slices, Vitest, WebGPU pass files (no shader changes).
 
-**Spec:** `docs/superpowers/specs/2026-09-21-star-catalog-layer-design.md` — §2.4 (contract), §2.5 (camera joint), §3 (this PR). Parent spec: `docs/superpowers/specs/2026-09-09-layer-composition-design.md`.
+**Spec:** `docs/superpowers/specs/completed/2026-09-21-star-catalog-layer-design.md` — §2.4 (contract), §2.5 (camera joint), §3 (this PR). Parent spec: `docs/superpowers/specs/2026-09-09-layer-composition-design.md`.
 
 ## Global Constraints
 
@@ -71,19 +71,19 @@ export const CORE_TRAIL_ELEMENTS: readonly OrbitalElements[];
 - `orbitTrailsPass.draw`: `const rows = state.orbitTrailRows;` replaces `TRAIL_ELEMENTS`; the module-level `staging` buffer is regrown when `rows.length * INSTANCE_FLOATS` exceeds its length (it was sized once from the static table). The header's "compile-time elements table" sentence is rewritten to say the roster is composed at boot.
 - With no Layer contributing, `state.orbitTrailRows` equals `CORE_TRAIL_ELEMENTS` — that is the pixel-identity argument.
 
-- [ ] `npm run move-files -- src/@types/engine/layer/LayerLabels.d.ts src/@types/engine/layer/LayerGuides.d.ts`, then rename the type to `LayerGuides` (`npm run refactor -- rename src/@types/engine/layer/LayerGuides.d.ts#LayerLabels LayerGuides`; if the CLI refuses a `.d.ts`, edit the four importers by hand: `Layer.d.ts`, `LayerInstance.d.ts`, `instantiateLayer.ts`, `createLayers.ts`). Reshape the type as above; keep the NEAR0/COSMO header note.
-- [ ] `npm run refactor -- rename src/data/bodies/trailElements.ts#TRAIL_ELEMENTS CORE_TRAIL_ELEMENTS` (file follows to `coreTrailElements.ts`). Grep `TRAIL_ELEMENTS\b` and `trailElements` afterwards; the test mirror moves with it.
-- [ ] `Layer.d.ts`: replace `labels?` with `guides?`; the doc comment names all three halves and where each lands (`screenLabels` → slab director, `worldLabels` → `state.label3DProducers`, `orbitTrails` → `state.orbitTrailRows`).
-- [ ] `instantiateLayer.ts`: `const guides = layer.guides?.(runtime);` feeding `screenLabels`, `worldLabels`, `orbitTrails` (each `?? []`).
-- [ ] `EngineState.d.ts` + `PassState.d.ts` Pick + `engine.ts:328` (`orbitTrailRows: []`) + `createLayers.ts` composition line and its header list.
-- [ ] `orbitTrailsPass.ts`: walk `state.orbitTrailRows`, regrow `staging` on demand, rewrite the header sentence.
-- [ ] The three Layers: `labels:` → `guides:`, `screen:` → `screenLabels:`, `world:` → `worldLabels:`.
-- [ ] `src/layers/README.md`: the `labels?` row becomes `guides?` (still `present/`); "Unsettled" item 2 says `guides?`.
-- [ ] Test `createLayers.composition.test.ts`: rename the fixture members (`labels` → `guides`, `screen` → `screenLabels`, `world` → `worldLabels`) and add
+- [x] `npm run move-files -- src/@types/engine/layer/LayerLabels.d.ts src/@types/engine/layer/LayerGuides.d.ts`, then rename the type to `LayerGuides` (`npm run refactor -- rename src/@types/engine/layer/LayerGuides.d.ts#LayerLabels LayerGuides`; if the CLI refuses a `.d.ts`, edit the four importers by hand: `Layer.d.ts`, `LayerInstance.d.ts`, `instantiateLayer.ts`, `createLayers.ts`). Reshape the type as above; keep the NEAR0/COSMO header note.
+- [x] `npm run refactor -- rename src/data/bodies/trailElements.ts#TRAIL_ELEMENTS CORE_TRAIL_ELEMENTS` (file follows to `coreTrailElements.ts`). Grep `TRAIL_ELEMENTS\b` and `trailElements` afterwards; the test mirror moves with it.
+- [x] `Layer.d.ts`: replace `labels?` with `guides?`; the doc comment names all three halves and where each lands (`screenLabels` → slab director, `worldLabels` → `state.label3DProducers`, `orbitTrails` → `state.orbitTrailRows`).
+- [x] `instantiateLayer.ts`: `const guides = layer.guides?.(runtime);` feeding `screenLabels`, `worldLabels`, `orbitTrails` (each `?? []`).
+- [x] `EngineState.d.ts` + `PassState.d.ts` Pick + `engine.ts:328` (`orbitTrailRows: []`) + `createLayers.ts` composition line and its header list.
+- [x] `orbitTrailsPass.ts`: walk `state.orbitTrailRows`, regrow `staging` on demand, rewrite the header sentence.
+- [x] The three Layers: `labels:` → `guides:`, `screen:` → `screenLabels:`, `world:` → `worldLabels:`.
+- [x] `src/layers/README.md`: the `labels?` row becomes `guides?` (still `present/`); "Unsettled" item 2 says `guides?`.
+- [x] Test `createLayers.composition.test.ts`: rename the fixture members (`labels` → `guides`, `screen` → `screenLabels`, `world` → `worldLabels`) and add
   `it('composes core's orbit-trail rows then every Layer's guides.orbitTrails, in tuple order')` — two Layers each contributing one `{ id: '<tag>-trail' } as unknown as OrbitalElements`; assert `state.orbitTrailRows` equals `[...CORE_TRAIL_ELEMENTS, aRow, bRow]` by reference. This is the one new test that can fail on a real bug (a Layer's rows dropped or misordered).
-- [ ] Test `orbitTrailsPass.test.ts`: `makeState` gains `orbitTrailRows: CORE_TRAIL_ELEMENTS`; the header's "conic table is a static module-level seed" sentence is rewritten. No other assertion changes — that is the identity check.
-- [ ] `npm run typecheck:fast && npm test -- createLayers orbitTrails sceneOrbitConics frameFilePurity` → green.
-- [ ] Commit: `refactor(layer): guides replaces labels; orbit trails walk a composed roster`.
+- [x] Test `orbitTrailsPass.test.ts`: `makeState` gains `orbitTrailRows: CORE_TRAIL_ELEMENTS`; the header's "conic table is a static module-level seed" sentence is rewritten. No other assertion changes — that is the identity check.
+- [x] `npm run typecheck:fast && npm test -- createLayers orbitTrails sceneOrbitConics frameFilePurity` → green.
+- [x] Commit: `refactor(layer): guides replaces labels; orbit trails walk a composed roster`.
 
 ---
 
@@ -100,11 +100,11 @@ export const CORE_TRAIL_ELEMENTS: readonly OrbitalElements[];
 
 **Behaviour:** the settings root keeps the same keys and the same values; only which tuple carries `orbitTrailsSlice` changes. The folder keeps its three-file Layer-cluster shape inside `core/` (the smallest diff; core's flat `<name>Slice.ts` files predate the cluster convention).
 
-- [ ] `npm run move-files -- --dry src/layers/body/state/orbitTrails src/state/settings/core/orbitTrails`, then without `--dry`. Grep `body/state/orbitTrails` afterwards (string-literal paths are the tool's blind spot).
-- [ ] `coreSettingsSlices.ts`: add `orbitTrailsSlice` after `labelsSlice`; `body/state/slices.ts`: remove it. Rewrite the moved `slice.ts` header ("the body Layer's …" → core's) and the `initialState.ts` header's `ORBITAL_ELEMENTS` reference to `CORE_TRAIL_ELEMENTS` if it names the table.
-- [ ] Fix any tuple-content assertion in the two tuple tests. No new test: the compiler and the existing tuple tests cover a dropped or duplicated slice.
-- [ ] `npm run typecheck:fast && npm test -- settings appSettingsSlices LabelsAndGuides visibilityActionRow` → green.
-- [ ] Commit: `refactor(settings): orbitTrails cluster moves from the body Layer to core`.
+- [x] `npm run move-files -- --dry src/layers/body/state/orbitTrails src/state/settings/core/orbitTrails`, then without `--dry`. Grep `body/state/orbitTrails` afterwards (string-literal paths are the tool's blind spot).
+- [x] `coreSettingsSlices.ts`: add `orbitTrailsSlice` after `labelsSlice`; `body/state/slices.ts`: remove it. Rewrite the moved `slice.ts` header ("the body Layer's …" → core's) and the `initialState.ts` header's `ORBITAL_ELEMENTS` reference to `CORE_TRAIL_ELEMENTS` if it names the table.
+- [x] Fix any tuple-content assertion in the two tuple tests. No new test: the compiler and the existing tuple tests cover a dropped or duplicated slice.
+- [x] `npm run typecheck:fast && npm test -- settings appSettingsSlices LabelsAndGuides visibilityActionRow` → green.
+- [x] Commit: `refactor(settings): orbitTrails cluster moves from the body Layer to core`.
 
 ---
 
@@ -140,10 +140,10 @@ Per site:
 - `stepCameraRuntime.ts:120`: `focusBodyId: focusDriverId(focus) as BodyId | null` — the `as BodyId` cast predates this task (an S-star row's id is not a `BodyId` today either) and is not widened here.
 - Not sites: `focusFraming`, `pivotFraming`, `logCameraState`, `urlHashFor`, `targetIdentityKey`, `hashParamSources`, `watchFlyToLonLatSaga`, `detailCardTable` — each reads an arm-specific field (seed radius, URL prefix, card), so the discriminant is the right dispatch there and PR 2 grows a `starCatalog` case.
 
-- [ ] Add `tests/utils/camera/focusDriverId.test.ts`: `it.each` over one row per `SelectionRow` arm (`galaxyCatalog`, `structure`, `milkyWay`, `zoneOfAvoidance`, `body`, `star`) plus `null`, asserting `body` → its id and everything else → `null`. It fails on a wrong arm mapping the compiler cannot see; it is also the table PR 2 extends.
-- [ ] Implement `focusDriverId` and rewrite the six sites as above; update `liveBodyPosition`'s header ("four callers share it" stays true) and `bodyMovesThisFrame`'s header wording only if it now reads wrong.
-- [ ] `npm run typecheck:fast && npm test -- camera focusDriverId liveBodyPosition bodyMovesThisFrame approachTiltedPose runFrame stepCameraRuntime` → green with no assertion changes elsewhere (the identity check: body rows still resolve, non-body rows still don't).
-- [ ] Commit: `refactor(camera): focusDriverId replaces the body-arm gates`.
+- [x] Add `tests/utils/camera/focusDriverId.test.ts`: `it.each` over one row per `SelectionRow` arm (`galaxyCatalog`, `structure`, `milkyWay`, `zoneOfAvoidance`, `body`, `star`) plus `null`, asserting `body` → its id and everything else → `null`. It fails on a wrong arm mapping the compiler cannot see; it is also the table PR 2 extends.
+- [x] Implement `focusDriverId` and rewrite the six sites as above; update `liveBodyPosition`'s header ("four callers share it" stays true) and `bodyMovesThisFrame`'s header wording only if it now reads wrong.
+- [x] `npm run typecheck:fast && npm test -- camera focusDriverId liveBodyPosition bodyMovesThisFrame approachTiltedPose runFrame stepCameraRuntime` → green with no assertion changes elsewhere (the identity check: body rows still resolve, non-body rows still don't).
+- [x] Commit: `refactor(camera): focusDriverId replaces the body-arm gates`.
 
 ---
 
@@ -204,8 +204,8 @@ export function frameStarCutFrustum(
 
 **Steps:**
 
-- [ ] Extract `frameStarCutFrustum.ts` from main's inline block; `computeStarCut` calls it (no behaviour change). `npx vitest run tests/services/gpu/renderers/starCatalog tests/services/engine/frame/passes/starAggregatesPass.test.ts` → green before the split.
-- [ ] Rework `readStarCut.test.ts` (fixtures at ~36-82 stay; `makeCtx` unchanged):
+- [x] Extract `frameStarCutFrustum.ts` from main's inline block; `computeStarCut` calls it (no behaviour change). `npx vitest run tests/services/gpu/renderers/starCatalog tests/services/engine/frame/passes/starAggregatesPass.test.ts` → green before the split.
+- [x] Rework `readStarCut.test.ts` (fixtures at ~36-82 stay; `makeCtx` unchanged):
   - the `advance(state, ctx)` helper (~line 80) becomes `advanceStarFades(state, [ctx]); return readStarCut(state, ctx);` — every simulated frame keeps its fresh ctx;
   - `f.anyNodeFading` assertions (~312-324, ~446-456) read the boolean `advanceStarFades` returned; the capture test at ~446 ("a capture result reports anyNodeFading === false…") is DELETED — its subject is the removed field;
   - the three `readStarCut partition` tests and `forwards the source-independent shader scalars` gain one `advanceStarFades(state, [ctx])` before the read (the first frame snaps to steady state, so counts are unchanged);
@@ -214,11 +214,11 @@ export function frameStarCutFrustum(
   - add `it('advanceStarFades steps a ramp once per call, whatever readStarCut does around it')` — advance at 0 ms (snap), advance at 50 ms, read twice on fresh ctxs, advance at 100 ms; assert the leaf opacity after the third advance is `crossfade × 100/250`, i.e. two steps, not four;
   - the `the frame star cut over several views` block (~460-545): `computeStarCut(state, [a, b], true)` frames become `advanceStarFades(state, [a, b]); computeStarCut(state, [a, b])`; the perf-cliff regression (~521, "a frame view NOT in the advance list still reads the frame cut, with no second walk") keeps its assertion shape against `setFrameCut`/`starCutFor`;
   - the `starCatalogVisible agrees with the cut it gates` tests, if present, stay as is (they leave with PR 2).
-- [ ] Implement `advanceStarFades.ts` and the reduced `computeStarCut.ts`; drop `anyNodeFading` from `PreparedStarCut` and from `starPickLeafDraws.test.ts`; rewire `runFrame.ts`; update the `starAggregatesPass.test.ts` helper to `advanceStarFades(state, [ctx]); const cut = computeStarCut(state, [ctx]); …setFrameCut(cut)`.
-- [ ] Reword any `advanceFades` / "the one advancing call" mentions in `readStarCut.ts`, `starCutFor.ts`, `starFadeState.ts`. Grep `advanceFades` and `anyNodeFading` → zero hits in `src/` and `tests/`.
-- [ ] Delete the backlog detail file and its `docs/BACKLOG.md` line.
-- [ ] `npm run typecheck:fast` (src clean) and `npx vitest run` (full suite) → green.
-- [ ] Commit: `refactor(stars): computeStarCut is pure; advanceStarFades steps the LOD ramps from runFrame`.
+- [x] Implement `advanceStarFades.ts` and the reduced `computeStarCut.ts`; drop `anyNodeFading` from `PreparedStarCut` and from `starPickLeafDraws.test.ts`; rewire `runFrame.ts`; update the `starAggregatesPass.test.ts` helper to `advanceStarFades(state, [ctx]); const cut = computeStarCut(state, [ctx]); …setFrameCut(cut)`.
+- [x] Reword any `advanceFades` / "the one advancing call" mentions in `readStarCut.ts`, `starCutFor.ts`, `starFadeState.ts`. Grep `advanceFades` and `anyNodeFading` → zero hits in `src/` and `tests/`.
+- [x] Delete the backlog detail file and its `docs/BACKLOG.md` line.
+- [x] `npm run typecheck:fast` (src clean) and `npx vitest run` (full suite) → green.
+- [x] Commit: `refactor(stars): computeStarCut is pure; advanceStarFades steps the LOD ramps from runFrame`.
 
 ---
 
