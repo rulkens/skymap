@@ -192,7 +192,7 @@ function declutterByBboxOverlap(
   projection: Label2DProjection,
   padPx: number,
 ): Label2D[] {
-  const viewportHeightPx = projection.viewportPx[1];
+  const { pxPerRad } = projection;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
@@ -206,7 +206,7 @@ function declutterByBboxOverlap(
       bbox,
       screenPx: p.screenPx,
       clipW: p.clipW,
-      viewportHeightPx,
+      pxPerRad,
     });
   });
 
@@ -674,6 +674,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         anchorWorldPos: liftAnchor,
         vp: projection.vp,
         viewportPx: projection.viewportPx,
+        pxPerRad: projection.pxPerRad,
         subjectSizePx: lift.subjectSizePx,
         textBbox: renderer.measure(label),
         worldEmMpc: liftEmMpc,

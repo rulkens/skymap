@@ -17,10 +17,10 @@ export function zoneOfAvoidanceUpsamplePass(runtime: ZoneOfAvoidanceRuntime): Co
     enabled(state, ctx) {
       return deriveZoneOfAvoidanceLiveness(state, ctx) !== null;
     },
-    postBlit(pass, view, _ctx, state) {
+    postBlit(pass, view, ctx, state) {
       const r = state.gpu.label3DRenderer;
       if (r === null || r.glyphCount() === 0) return;
-      r.draw(pass, view.vp, view.viewportPx);
+      r.draw(pass, view.vp, view.viewportPx, ctx.drawPxPerRad);
     },
   });
 }

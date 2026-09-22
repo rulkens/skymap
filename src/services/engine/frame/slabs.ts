@@ -11,7 +11,6 @@ import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
-import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -36,6 +35,7 @@ import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM'
 import { chainOverlapViolations } from '../../../utils/regions/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM';
+import { timingSlotForView } from '../../../utils/frame/timingSlotForView';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
@@ -70,29 +70,23 @@ export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string
 
 // Body rows and capture faces are appended because both draw the same pass more
 // than once per frame against one `(target, slab)` — without them the passes attach
-// the same query pair and the last silently overwrites the rest. The capture ROW
-// rides along with the face: two rows sharing a roster draw the same pass names.
-export function passTimingSlotName(
-  passName: string,
-  slabIndex: number,
-  capture?: CaptureFaceRef,
-): string {
+// the same query pair and the last silently overwrites the rest. `viewId` is the
+// drawing view's own name (`timingSlotForView`'s doc): the canvas contributes no
+// suffix, a capture face's `<key>:<face>` keeps its six faces apart.
+export function passTimingSlotName(passName: string, slabIndex: number, viewId: string): string {
   const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
-  return capture === undefined ? base : `${base}·${capture.key}·FACE[${capture.face}]`;
+  return timingSlotForView(base, viewId);
 }
 
 // The same disambiguation one level up, for the STEP's own slot: six capture steps
 // share one `(target, slab)` — the array layer they write is not part of that key —
 // so `groupKeyOf` alone collides across faces. `slot` is the authored suffix
 // (`RenderStepSpec.slot`) that separates several `FRAME_ORDER` lines sharing one
-// group; the line without one owns the bare key.
-export function renderStepTimingSlotName(
-  groupKey: string,
-  face: number | undefined,
-  slot?: string,
-): string {
-  if (face !== undefined) return `${groupKey}·FACE[${face}]`;
-  return slot === undefined ? groupKey : `${groupKey}·${slot}`;
+// group; the line without one owns the bare key. `viewId` rides on top of that,
+// same rule as `passTimingSlotName`.
+export function renderStepTimingSlotName(groupKey: string, viewId: string, slot?: string): string {
+  const withSlot = slot === undefined ? groupKey : `${groupKey}·${slot}`;
+  return timingSlotForView(withSlot, viewId);
 }
 
 /**

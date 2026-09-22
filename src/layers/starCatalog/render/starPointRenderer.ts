@@ -241,12 +241,12 @@ export function createStarPointRenderer(
     const starCount = starCounts[viewSlot]!;
     if (instanceBuffer === null || starCount === 0) return;
 
-    // uniformScratch[18..19] are CameraUniforms' named pads and [23] the tail's
+    // uniformScratch[19] is CameraUniforms' named pad and [23] the tail's
     // alignment pad — never written, so they hold their construction-time zeros
     // across frames. sizePx / brightness / pxPerRad ride the tail at floats
     // 20..22 (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
     // THIS call's own `viewSlot` buffer — see the ring's doc.
-    writeCameraPrefix(uniformScratch, viewProj, viewportPx);
+    writeCameraPrefix(uniformScratch, viewProj, viewportPx, opts.pxPerRad);
     uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
     uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
     uniformScratch[UNIFORM_PX_PER_RAD_INDEX] = opts.pxPerRad;

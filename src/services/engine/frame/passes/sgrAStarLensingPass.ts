@@ -103,6 +103,7 @@ export const sgrAStarLensingPass: ContentPass = {
     const uniforms = packSgrAStarLensingUniforms({
       viewProj: view.vp,
       viewportPx: view.viewportPx,
+      pxPerRad: ctx.drawPxPerRad,
       schwarzschildRadiusM: SCHWARZSCHILD_RADIUS_M,
       innerRs: tuning.innerRs,
       outerRs: tuning.outerRs,

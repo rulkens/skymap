@@ -1,10 +1,12 @@
 /** foldCaptureFaceRows — display-only merge of a capture's six per-face timing
- * slots (`…·FACE[n]`) into one row per name. The slots stay per face because
- * each face is its own command buffer and query pair (`slabs.ts`); only the
- * readout folds. Sparklines are summed newest-aligned, since a face that began
- * sampling later carries a shorter window. */
+ * slots (`…@<key>:<face>`, `timingSlotForView`'s rule) into one row per name.
+ * The slots stay per face because each face is its own command buffer and
+ * query pair (`slabs.ts`); only the readout folds. A dome face's `@dome:front`
+ * is NOT a capture and so not folded — the face digit is what marks one.
+ * Sparklines are summed newest-aligned, since a face that began sampling later
+ * carries a shorter window. */
 
-const FACE_SUFFIX = /·FACE\[\d+\]$/;
+const CAPTURE_FACE_SUFFIX = /@[^@]+:\d+$/;
 
 type SlotReading = {
   readonly avgMs: number;
@@ -26,7 +28,7 @@ export function foldCaptureFaceRows(
   const folded = new Map<string, { avgMs: number; spark: number[]; idle: boolean }>();
   for (const name of names) {
     const reading = readingOf(name);
-    const key = name.replace(FACE_SUFFIX, '');
+    const key = name.replace(CAPTURE_FACE_SUFFIX, '');
     const row = folded.get(key) ?? { avgMs: 0, spark: [], idle: true };
     row.avgMs += reading.avgMs;
     row.idle &&= reading.staleFrames > 0;

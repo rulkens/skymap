@@ -30,7 +30,6 @@ function makeCtx(overrides: Partial<FrameView> = {}): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend: 0,
-      layersSettling: false,
       visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,

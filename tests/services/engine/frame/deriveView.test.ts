@@ -9,7 +9,6 @@ import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveS
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
-import { cameraBillboardBasis } from '../../../../src/utils/camera/cameraBillboardBasis';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { mainViewSpec } from '../../../../src/utils/camera/mainViewSpec';
 import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
@@ -92,6 +91,7 @@ function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
 
 function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
   return {
+    id: 'test-view',
     rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
@@ -137,10 +137,7 @@ describe('deriveView', () => {
     const want = basisOf(v.vp);
     expectVec(orbitForwardOf(v.cam), want.forward);
     expectVec(basisOf(canvas.vp).right, want.forward);
-    // The billboard axes the Milky Way passes read, and the shells' target − eye.
-    const billboard = cameraBillboardBasis(v.cam);
-    expectVec(billboard.right, want.right);
-    expectVec(billboard.up, want.up);
+    // The shells' target − eye.
     const aim = [0, 1, 2].map((i) => v.cam.target[i]! - v.cam.position[i]!) as Vec3;
     expectVec(normalize3(aim), want.forward);
     const camVp = computeViewProj(v.cam, spec().frustum);
@@ -309,7 +306,7 @@ describe('deriveView — the canvas view is the pre-split one', () => {
 });
 
 // A capture face is `deriveView(capture.snapshot, capture.cam,
-// faceViewSpec(face, size, slotBase))` and nothing else.
+// faceViewSpec(key, face, size, slotBase))` and nothing else.
 describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpec)', () => {
   const CAPTURE_LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
   const CAPTURE_PROJECTION: CameraProjection = {
@@ -413,7 +410,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       const view = deriveView(
         capture.snapshot,
         capture.cam,
-        faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
+        faceViewSpec('sgrAStar', face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
       );
 
       expect(view.drawCamPos).toEqual(CAPTURE_EYE_MPC);
@@ -531,7 +528,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         const view = deriveView(
           capture.snapshot,
           capture.cam,
-          faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
+          faceViewSpec('sgrAStar', face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
         );
 
         const w = rotateVec3ByTightMat3(d as Vec3, axes);
@@ -567,7 +564,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const view = deriveView(
       capture.snapshot,
       capture.cam,
-      faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE),
+      faceViewSpec('sgrAStar', 0, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(view.cam.near).toBe(CAPTURE_NEAR_MPC);
   });
@@ -581,7 +578,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const view = deriveView(
       capture.snapshot,
       capture.cam,
-      faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE),
+      faceViewSpec('sgrAStar', 0, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(view.cam.distance).toBe(CAPTURE_NEAR_MPC);
   });
@@ -597,7 +594,11 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       const capture = captureFrame(state);
       return capture === null
         ? null
-        : deriveView(capture.snapshot, capture.cam, faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE));
+        : deriveView(
+            capture.snapshot,
+            capture.cam,
+            faceViewSpec('sgrAStar', 0, 256, CAPTURE_VIEW_SLOT_BASE),
+          );
     };
     // A star half the capture distance across: the subtraction, if applied,
     // halves the altitude and with it the bracket.
@@ -638,7 +639,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const view = deriveView(
       capture.snapshot,
       capture.cam,
-      faceViewSpec(4, 256, CAPTURE_VIEW_SLOT_BASE),
+      faceViewSpec('sgrAStar', 4, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
     expect(Array.from(view.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
@@ -652,7 +653,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const capture = captureFrame(makeCaptureState());
     expect(capture).not.toBeNull();
     if (capture === null) return;
-    const view = deriveView(capture.snapshot, capture.cam, faceViewSpec(2, 256, 7));
+    const view = deriveView(capture.snapshot, capture.cam, faceViewSpec('sgrAStar', 2, 256, 7));
     expect(view.viewSlot).toBe(9);
   });
 
@@ -698,7 +699,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       const view = deriveView(
         capture.snapshot,
         capture.cam,
-        faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
+        faceViewSpec('sgrAStar', face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
       );
       for (let i = 0; i < 16; i++) pin(view.vp[i]!, VP[face]![i]!);
       for (let i = 0; i < 9; i++) pin(view.cam.poseBasis![i]!, POSE_BASIS[face]![i]!);

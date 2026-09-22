@@ -26,7 +26,9 @@ fewer and better, not more.
 
 ## The budget
 
-- **Module header ≤ 5 lines.**
+- **Module header ≤ 10 lines.** Loosened from 5 on 2026-09-22: a type file's
+  header is the whole of its documentation, and five lines could not say what
+  the type is for and how a reader uses it.
 - **Comment lines ≤ half the code lines in the file.**
 - **No cross-file line-number citations.** Name the file and the symbol —
   `packEarthSurfaceUniforms`, not `packEarthSurfaceUniforms.ts:112-140`. Line

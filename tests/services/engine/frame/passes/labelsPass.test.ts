@@ -83,11 +83,17 @@ describe('labelsPass.draw', () => {
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     expect(depthViewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy).toHaveBeenCalledWith(PASS_STUB, VIEW_STUB.vp, VIEW_STUB.viewportPx, {
-      colorView: sentinelColorView,
-      depthView: FAR_DEPTH_VIEW,
-      frame: null,
-    });
+    expect(drawSpy).toHaveBeenCalledWith(
+      PASS_STUB,
+      VIEW_STUB.vp,
+      VIEW_STUB.viewportPx,
+      ctx.drawPxPerRad,
+      {
+        colorView: sentinelColorView,
+        depthView: FAR_DEPTH_VIEW,
+        frame: null,
+      },
+    );
   });
 
   it('passes undefined when the body pass did NOT run this frame (stale/uninitialised colour)', () => {
@@ -99,6 +105,6 @@ describe('labelsPass.draw', () => {
 
     expect(viewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy.mock.calls[0]![3]).toBeUndefined();
+    expect(drawSpy.mock.calls[0]![4]).toBeUndefined();
   });
 });

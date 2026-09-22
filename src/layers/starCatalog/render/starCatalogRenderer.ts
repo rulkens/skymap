@@ -429,7 +429,7 @@ export function createStarCatalogRenderer(
     // the module header), but NOT across view slots — a sky-cubemap capture
     // sweep's several `draw` calls (different faces, one submit) each carry
     // a different vp, so this call's bytes land in THIS `viewSlot`'s own
-    // buffer. floats 18/19 stay zero-init. `sizePx`, `brightness`,
+    // buffer. float 19 stays zero-init. `sizePx`, `brightness`,
     // `glowOverlap` and `aggregateIntensityCap` ride this buffer too — all
     // four are source-independent (the same base star-dot size + exposure
     // trim + glow spread + aggregate peak ceiling for every source this
@@ -437,7 +437,7 @@ export function createStarCatalogRenderer(
     // source's repeated write lands the identical values. Written here, ONCE
     // per source before its draw, so there is no mid-frame mutation for the
     // writeBuffer/submit ordering race to corrupt.
-    writeCameraPrefix(cameraScratch, vp, viewportPx);
+    writeCameraPrefix(cameraScratch, vp, viewportPx, pxPerRad);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = sizePx;
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;

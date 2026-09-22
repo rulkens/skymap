@@ -16,6 +16,7 @@ export type StructureMarkerRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     fadeOpacity: number,
   ): void;
   markerCount(): number;
@@ -27,7 +28,12 @@ export type StructureMarkerRenderer = {
    * which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
    * FadeUniforms, since every declared group must be bound.
    */
-  pickRing(passEncoder: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
+  pickRing(
+    passEncoder: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    pxPerRad: number,
+  ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;
 };

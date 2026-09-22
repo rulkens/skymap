@@ -25,7 +25,6 @@ import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
@@ -201,7 +200,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
-  // no stamp: focus/focusBlend/layersSettling live only on `snapshot`, reached
+  // no stamp: focus/focusBlend/plans live only on `snapshot`, reached
   // by reference from every view, so this can run ahead of them. It must
   // still run ahead of the view-dependent planner below (surface cut) and
   // every Layer's `frame` hook so they can walk every view's frustum without
@@ -230,24 +229,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
   snapshot.focus = focusUniforms;
-
-  // Each Layer's `frame` hook, in tuple order, right after the focus uniform
-  // and before any planner. The hook gets the rig's whole view list (`views[0]`
-  // the anchor), so a Layer pruning against a frustum sees every eye. No
-  // short-circuit: every hook runs every frame, so a later Layer's vote is
-  // never skipped by an earlier `true`.
-  let layersAwake = false;
-  let layersSettling = false;
-  for (const layer of state.layers) {
-    if (layer.frame === null) continue;
-    const vote = layer.frame(views, state);
-    // `settling` is folded into `awake` here rather than trusted to each Layer,
-    // so the implication holds structurally: content too unsettled to bake is
-    // by definition still changing.
-    if (vote.awake || vote.settling) layersAwake = true;
-    if (vote.settling) layersSettling = true;
-  }
-  snapshot.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -341,10 +322,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
-  if (state.gpu.structureMarkerRenderer !== null) {
-    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, canvas));
-  }
 
   renderFrame({
     canvas,
@@ -368,7 +345,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
-    layersAwake,
+    // Read AFTER `renderFrame`: every planner row — core's and every Layer's
+    // — ran inside it, so this is this frame's whole OR-fold, not a stale
+    // pre-render snapshot.
+    layersAwake: snapshot.plans.awake,
   });
 
   if (keepTicking) {

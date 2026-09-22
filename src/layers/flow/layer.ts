@@ -9,7 +9,7 @@ import { flowLayerSettings } from './state/slices';
 import { FLOW_SOURCE_ROWS } from './sources/flowSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { frame } from './frame';
+import { flowPlanner } from './frame';
 import { flowAssetRows } from './load/flowAssetRows';
 import { flowFieldPass } from './passes/flowFieldPass';
 import { flowCompute } from './computes/flowCompute';
@@ -27,7 +27,7 @@ export const flowLayer = defineLayer({
   computes: (runtime) => [flowCompute(runtime)],
   assets: flowAssetRows,
   fades: flowFadeRows,
-  frame,
+  planners: (runtime) => [flowPlanner(runtime)],
   ui: [
     { slot: 'main', content: FlowSectionContainer },
     { slot: 'debug', content: FlowTuningSectionContainer },

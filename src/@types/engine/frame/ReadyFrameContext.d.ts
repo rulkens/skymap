@@ -17,6 +17,7 @@ import type { SceneBody } from '../../scene/SceneBody';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
+import type { FramePlannerResultStore } from './FramePlannerResultStore';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -93,11 +94,11 @@ export type ReadyFrameContext = {
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
-   * The Layer `frame` votes of this frame, OR-folded by `runFrame` right after
-   * the hooks run, so core asks the question without reaching into a Layer's
-   * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
+   * This frame's `plan` rows' answers, one store shared by every `FrameView`
+   * (`createFramePlannerResultStore()`, minted once by `deriveFrameContext`). `runPlanSteps`
+   * writes it before any GPU step of its target reads it; a miss throws.
    */
-  layersSettling: boolean;
+  plans: FramePlannerResultStore;
   /**
    * Live pointer position in texture pixels — `state.picking.cursorTexPx`
    * forwarded, so a pass never reaches back into the picking bag `PassState`

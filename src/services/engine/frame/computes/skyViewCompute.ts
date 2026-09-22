@@ -11,5 +11,6 @@ import { encodeAtmosphereSkyView } from '../encodeAtmosphereSkyView';
 
 export const skyViewCompute: ContentCompute = {
   name: 'sky-view',
+  scope: 'once',
   encode: encodeAtmosphereSkyView,
 };

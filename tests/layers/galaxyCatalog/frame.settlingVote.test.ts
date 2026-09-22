@@ -1,16 +1,18 @@
 /**
- * The Layer's `frame` work votes. Both read the LANDED half of the textured
- * planner's thumbnail work, never the outstanding-fetch half: `tileStream`
- * calls `requestRender()` on every settle (success AND failure), so an arrival
- * wakes a frame by itself and neither vote has to hold the loop open for a
- * fetch. Measured at boot: alasky hips2fits requests run to the 30 s deadline,
- * and voting them kept the loop at ~45 fps for 32 s with nothing to show.
+ * The Layer's `galaxyCatalogPlanner` work votes. Both read the LANDED half of
+ * the textured planner's thumbnail work, never the outstanding-fetch half:
+ * `tileStream` calls `requestRender()` on every settle (success AND failure),
+ * so an arrival wakes a frame by itself and neither vote has to hold the loop
+ * open for a fetch. Measured at boot: alasky hips2fits requests run to the
+ * 30 s deadline, and voting them kept the loop at ~45 fps for 32 s with
+ * nothing to show.
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { frame } from '../../../src/layers/galaxyCatalog/frame';
+import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 // Same inert fixture as the other `frame` reconcile tests: nothing committed,
@@ -44,23 +46,28 @@ const STATE = {
   subsystems: { fades: { opacityOf: () => 1 } },
 } as unknown as PassState;
 
-const CTX = {
-  snapshot: { visibleSourceMask: 0xffffffff, nowMs: 0 },
-  cam: {},
-  drawPxPerRad: 100,
-} as unknown as FrameView;
+const SNAPSHOT = { visibleSourceMask: 0xffffffff, nowMs: 0 } as unknown as ReadyFrameContext;
+const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 describe('galaxyCatalog frame — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {
-    const tick = frame(makeRuntime(true));
-    expect(tick([CTX], STATE)).toEqual({ awake: true, settling: true });
+    const tick = galaxyCatalogPlanner(makeRuntime(true));
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
+      value: undefined,
+      awake: true,
+      settling: true,
+    });
   });
 
   // The regression this file exists for: a thumbnail host that hangs for its
   // whole 30 s deadline must cost neither a woken loop nor a sky re-bake. The
   // fixture has no `hasInFlightWork` at all — reading it here would throw.
   it('votes neither while a fetch is merely outstanding', () => {
-    const tick = frame(makeRuntime(false));
-    expect(tick([CTX], STATE)).toEqual({ awake: false, settling: false });
+    const tick = galaxyCatalogPlanner(makeRuntime(false));
+    expect(tick.plan(SNAPSHOT, VIEWS, STATE)).toEqual({
+      value: undefined,
+      awake: false,
+      settling: false,
+    });
   });
 });

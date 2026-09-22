@@ -33,6 +33,11 @@ const DISTANCE_RANGE_PX: f32 = 32.0;
 // Depth epsilon: pull the clamped clip-z this far inside the far plane (in
 // ndc-z terms) so an anchor sitting exactly ON it still passes the clip test.
 const CLIP_Z_EPS: f32 = 1e-4;
+// tan(30 degrees), preserving the pre-pxPerRad label size at the app's 60
+// degree fov: every producer's 'worldEmMpc' was tuned by eye when
+// 'worldLenToPx' still reconstructed the focal term from the viewport.
+// Must equal 'LABEL_EM_PX_RETUNE' in src/data/labels/labelSizingDefaults.ts.
+const EM_PX_RETUNE: f32 = 0.57735;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
@@ -54,8 +59,10 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   // Project anchor to clip space.
   let clip = worldToClip(u.cam, worldPos);
 
-  // Perspective-driven size.
-  let pxPerEm = worldLenToPx(u.cam, worldEmMpc, clip.w);
+  // Perspective-driven size.  EM_PX_RETUNE preserves the pre-pxPerRad label
+  // size at the app's 60 degree fov (see its declaration); the CPU twins
+  // 'labelScreenRect' and 'liftedLabelPlacement' apply the same factor.
+  let pxPerEm = worldLenToPx(u.cam, worldEmMpc, clip.w) * EM_PX_RETUNE;
   let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 

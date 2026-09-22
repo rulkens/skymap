@@ -1,4 +1,4 @@
-import type { LayerFrameVote } from './LayerFrameVote';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
@@ -8,14 +8,13 @@ import type { FadeLayer } from '../../animation/FadeLayer';
 import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { OrbitalElements } from '../../scene/OrbitalElements';
-import type { FrameView } from '../frame/FrameView';
-import type { PassState } from '../frame/PassState';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
 export type LayerInstance = {
   readonly name: string;
   readonly passes: readonly ContentPass[];
   readonly computes: readonly ContentCompute[];
+  readonly planners: readonly FrameContentPlanner<unknown>[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];
@@ -23,6 +22,5 @@ export type LayerInstance = {
   readonly worldLabels: readonly Label3DProducer[];
   readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
-  readonly frame: ((views: readonly FrameView[], state: PassState) => LayerFrameVote) | null;
   destroy(): void;
 };

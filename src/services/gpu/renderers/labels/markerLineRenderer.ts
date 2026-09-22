@@ -48,7 +48,8 @@
  *
  *   bytes  0..63  viewProj     mat4x4<f32>
  *   bytes 64..71  viewportPx   vec2<f32>
- *   bytes 72..79  _pad0, _pad1 two reserved f32s (must stay zero)
+ *   bytes 72..75  pxPerRad    f32 (CameraUniforms focal term)
+ *   bytes 76..79  _pad0       one reserved f32 (must stay zero)
  *
  * The size const and the prefix write both come from
  * `lib/cameraUniforms.ts`, the TS twin of the WESL struct — if
@@ -390,6 +391,7 @@ export function createMarkerLineRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     scene?: OverlaySceneOcclusion,
   ): void {
     if (
@@ -405,10 +407,10 @@ export function createMarkerLineRenderer(
     if (currentLineCount === 0) return;
 
     // Pack uniforms (80 bytes = CameraUniforms prefix only).  The pad
-    // floats 18..19 stay zero via Float32Array zero-init — the shared
-    // writer leaves them untouched by design.
+    // float 19 stays zero via Float32Array zero-init — the shared writer
+    // leaves it untouched by design.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize);
+    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion

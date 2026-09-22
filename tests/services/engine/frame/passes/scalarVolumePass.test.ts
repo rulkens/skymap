@@ -119,12 +119,12 @@ describe('scalarVolumePass.draw', () => {
     scalarVolumePass.draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
-    // draw(pass, vp, viewportPx, camPos, settingsOf, fadeOpacityOf)
+    // draw(pass, vp, viewportPx, pxPerRad, camPos, settingsOf, fadeOpacityOf)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(view.vp);
     // Downsampled viewport — matches the actual fragment count so the
     // raymarch's jitter dither frequency stays stable.
     expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
-    expect(args[3]).toEqual(view.camPos);
+    expect(args[4]).toEqual(view.camPos);
   });
 });

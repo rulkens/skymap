@@ -15,14 +15,12 @@ import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { LayerCoreDeps } from './LayerCoreDeps';
-import type { LayerFrameVote } from './LayerFrameVote';
 import type { LayerGuides } from './LayerGuides';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
-import type { FrameView } from '../frame/FrameView';
-import type { PassState } from '../frame/PassState';
 
 export type Layer<
   Name extends string,
@@ -88,12 +86,7 @@ export type Layer<
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
    * asserted at boot. */
   selection?(runtime: Runtime): readonly SelectionKindRow[];
-  /**
-   * Called from `runFrame` once a frame, after the focus uniform and before any pass.
-   * `views[0]` is the anchor view (its eye, viewSlot and `snapshot.nowMs`); the list is
-   * every view the rig derived this frame, never a capture face — mono rigs pass
-   * `[canvas]`. Returns two independent votes — keep the loop awake, and hold off sky
-   * captures; see `LayerFrameVote` for why answering one with the other is a defect.
-   */
-  frame?(runtime: Runtime): (views: readonly FrameView[], state: PassState) => LayerFrameVote;
+  /** Appended after `CORE_PLANNERS` in `createLayers`; a row's own `FrameSection`
+   * line is hand-authored, same as a compute row's. */
+  planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];
 };

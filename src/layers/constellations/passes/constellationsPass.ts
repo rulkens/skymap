@@ -46,6 +46,7 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass 
         pass,
         rebasedVp,
         view.viewportPx,
+        ctx.drawPxPerRad,
         CONSTELLATION_LINE_HALFWIDTH_PX,
         state.settings.constellations.intensity,
         layerOpacity,

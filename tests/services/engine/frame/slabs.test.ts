@@ -636,7 +636,6 @@ describe('slabViewOf', () => {
         nowMs: 0,
         simDays: 0,
         focusBlend: 0,
-        layersSettling: false,
         visibleSourceMask: 0xffffffff,
         focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
         renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],

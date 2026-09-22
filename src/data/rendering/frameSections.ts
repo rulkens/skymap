@@ -11,6 +11,12 @@ import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 export const PRELUDE: FrameSection = {
   scope: 'once',
   steps: [
+    // The section's plan rows, always first (`checkFrameOrder`'s boot rule):
+    // the galaxy catalog's disk-planner walk and the flow renderer's
+    // reconcile-and-vote, before any GPU step reads what they publish
+    // (`runPlanSteps`).
+    { kind: 'plan', name: 'galaxy-catalog' },
+    { kind: 'plan', name: 'flow' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
     // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
     // direction and so re-bakes every frame (unlike the once-baked transmittance
@@ -18,13 +24,10 @@ export const PRELUDE: FrameSection = {
     // the atmosphere shell samples this frame's table — WebGPU orders the compute
     // write before the later fragment read. Each step bills `<name>-compute` and
     // toggles under it (`computeTimingSlotName`); the suffix is what keeps `flow`
-    // here apart from the ribbon pass of that name.
-    //
-    // `aerial-perspective` bakes the froxel volume its apply row reads; its order
-    // among the computes is immaterial, so it sits beside its sibling.
+    // here apart from the ribbon pass of that name. `aerial-perspective` moved to
+    // `SCENE` — the froxel bake is per-view now, not once here.
     { kind: 'compute', name: 'flow' },
     { kind: 'compute', name: 'sky-view' },
-    { kind: 'compute', name: 'aerial-perspective' },
     // The sky captures, in the compute prelude's wake and ahead of every
     // other render step so a same-frame lensing draw can sample a cubemap this
     // frame actually wrote. The frame's face list for a key is empty most
@@ -78,6 +81,15 @@ export const PRELUDE: FrameSection = {
 export const SCENE: FrameSection = {
   scope: 'perView',
   steps: [
+    // The section's plan row, always first (`checkFrameOrder`'s boot rule):
+    // this view's markers, sized and culled from its own eye, before its
+    // first GPU step opens (`runPlanSteps`).
+    { kind: 'plan', name: 'structure-markers' },
+    // `aerial-perspective` bakes the froxel volume its apply row (below) reads,
+    // now once PER VIEW: each view is its own submit, so a view's bake always
+    // lands before that view's apply and after the previous view's — no line
+    // among the once-scope PRELUDE computes could give it that ordering.
+    { kind: 'compute', name: 'aerial-perspective' },
     // The half-res scalar-volume raymarch into its own offscreen. It is merged
     // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
     // never by a whole-texture composite — so there is no `volume→hdr` line here,
@@ -238,10 +250,11 @@ export const SCENE: FrameSection = {
     },
     // The aerial-perspective apply, on the enclosing body's own painter row — the
     // row that stamped the depth it samples, since `deriveSlabs`' deepest-inside
-    // tie-break puts that row last in the chain. It reads a froxel volume the
-    // compute prelude baked from THIS row's uniform record, so the two unproject
-    // through one `slab.vp`. AFTER the chain so every opaque row has stamped that
-    // depth; BEFORE the composite so the fog rides one curve.
+    // tie-break puts that row last in the chain. It reads a froxel volume this
+    // view's own `aerial-perspective` compute (above) baked from THIS row's
+    // uniform record, so the two unproject through one `slab.vp`. AFTER the
+    // chain so every opaque row has stamped that depth; BEFORE the composite
+    // so the fog rides one curve.
     // Never `foreground:0`'s first step: it attaches no depth yet marks the target
     // touched, which would cost the chain its colour clear.
     // `slot` keeps its timing row apart from the chain step for that same row.

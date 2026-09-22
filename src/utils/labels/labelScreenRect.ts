@@ -2,7 +2,7 @@
  * labelScreenRect — the screen rect a label's ink occupies, in device px.
  *
  * Reproduces the label vertex shader's sizing on the CPU: `pxPerEm = worldEmMpc
- * / clipW · viewportH/2`, clamped to [minPx, maxPx], then atlas px → screen px
+ * / clipW · pxPerRad · LABEL_EM_PX_RETUNE`, clamped to [minPx, maxPx], then atlas px → screen px
  * via `displayEmPx / ATLAS_FONT_SIZE` (+Y-down bbox already matches screen
  * space — the shader's atlas-Y and NDC→screen flips cancel). ONE derivation for
  * the two consumers that must agree — the COSMO declutter's overlap test and
@@ -15,6 +15,7 @@ import type { ScreenRectPx } from '../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { ATLAS_FONT_SIZE } from '../../data/fonts';
 import {
+  LABEL_EM_PX_RETUNE,
   LABEL_MAX_PX_DEFAULT,
   LABEL_MIN_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
@@ -27,7 +28,8 @@ export function labelScreenRect(args: {
   readonly screenPx: Readonly<Vec2>;
   /** The anchor's clip w — the depth the em clamp divides by. */
   readonly clipW: number;
-  readonly viewportHeightPx: number;
+  /** The drawn view's pixels per radian — the shader's `cam.pxPerRad`. */
+  readonly pxPerRad: number;
   /** Uniform outward inflation, device px. Defaults to 0 (the drawn ink). */
   readonly padPx?: number;
   /**
@@ -38,10 +40,10 @@ export function labelScreenRect(args: {
    */
   readonly includeOutline?: boolean;
 }): ScreenRectPx {
-  const { label, bbox, screenPx, clipW, viewportHeightPx } = args;
+  const { label, bbox, screenPx, clipW, pxPerRad } = args;
   const pad = args.padPx ?? 0;
   const pxPerEm =
-    ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / clipW) * (viewportHeightPx * 0.5);
+    ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / clipW) * pxPerRad * LABEL_EM_PX_RETUNE;
   const displayEmPx = Math.min(
     Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
     label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,

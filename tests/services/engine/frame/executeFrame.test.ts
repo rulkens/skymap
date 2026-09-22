@@ -226,6 +226,7 @@ function makeCtx(): FrameView {
     farDepthView: vi.fn(() => FAR_VIEW),
   };
   return {
+    id: 'canvas',
     snapshot: {
       renderTargets,
       // Frame-wide: which targets hold this frame's content, unioned into by

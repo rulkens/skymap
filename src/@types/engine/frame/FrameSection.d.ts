@@ -5,8 +5,9 @@
  */
 
 import type { FrameStepSpec } from './FrameStepSpec';
+import type { SectionScope } from './SectionScope';
 
 export type FrameSection = {
-  readonly scope: 'once' | 'perView';
+  readonly scope: SectionScope;
   readonly steps: readonly FrameStepSpec[];
 };
