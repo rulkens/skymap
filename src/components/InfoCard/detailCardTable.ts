@@ -31,12 +31,12 @@ import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
 import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
-import FieldStarDetailCard from './FieldStarDetailCard/FieldStarDetailCard';
+import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
 import CompactMilkyWayCard from './CompactMilkyWayCard/CompactMilkyWayCard';
 import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
-import CompactFieldStarCard from './CompactFieldStarCard/CompactFieldStarCard';
+import CompactStarCard from './CompactStarCard/CompactStarCard';
 import ZoneOfAvoidanceDetailCard from './ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
 import CompactZoneOfAvoidanceCard from './CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
 
@@ -134,7 +134,7 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
   starCatalog: {
     Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
       if (target.type !== 'starCatalog') return null;
-      return createElement(FieldStarDetailCard, {
+      return createElement(StarDetailCard, {
         target,
         pinned,
         chrome,
@@ -143,7 +143,7 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
       });
     },
     Compact: ({ target }) =>
-      target.type === 'starCatalog' ? createElement(CompactFieldStarCard, { info: target }) : null,
+      target.type === 'starCatalog' ? createElement(CompactStarCard, { info: target }) : null,
   },
   zoneOfAvoidance: {
     // No `onFocus` destructured: the band has no x/y/z (see ZoneOfAvoidanceInfo),

@@ -2,20 +2,18 @@
  * buildFocusable — the pure, React-side build of the FocusableTarget view-model
  * from a stored SelectionRow. Table-dispatched on the row tag: the galaxy arm
  * runs buildGalaxyInfo (the pure formatter); the structure arm IS already a
- * StructureInfo (a FocusableTarget arm) so it passes through; the Milky Way arm
- * is the singleton const; the body arm builds a `BodyInfo` for EVERY body row —
- * a famous star, Earth, a planet, an S-star — so any clicked/deep-linked scene
- * body drives the InfoCard and the `#focus=body-<id>` hash. (The card rows fill
- * in from the async famous-star meta only for the famous ids; a planet or Earth
- * renders BodyDetailCard's name + radius rows from the BodyInfo fields alone,
- * with no async lookup, and an S-star adds its orbital block from the
- * compiled-in seed table.) The star arm builds a
- * `FieldStarInfo` view-model for a picked survey star.
+ * StructureInfo so it passes through; the Milky Way arm is the singleton const;
+ * the body arm builds a `BodyInfo` for Earth, a planet or a mesh body; the star
+ * arm builds one `StarInfo` for every star, survey or seeded, whose `detail`
+ * block is chosen by what the star HAS rather than by its catalog.
  *
- * This imports only pure builders + a static const/set, so React can call it
- * inside a memoized selector without reaching the engine — the whole point of
- * the pure-store read. It is the inverse of today's engine-bakes-GalaxyInfo
- * flow.
+ * `famousStarsMeta` is joined in here rather than read by the card, the way the
+ * galaxy card's meta join happens at the selector: the card stays presentational
+ * and one fail-soft path covers both "sidecar still loading" and "no entry".
+ *
+ * This imports only pure builders + static tables, so React can call it inside a
+ * memoized selector without reaching the engine — the whole point of the
+ * pure-store read.
  */
 import { buildGalaxyInfo } from './buildGalaxyInfo';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
@@ -27,10 +25,41 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
-import type { FieldStarInfo } from '../../../@types/engine/FieldStarInfo';
+import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
+import type { StarInfo } from '../../../@types/engine/StarInfo';
+import type { StarInfoDetail } from '../../../@types/engine/StarInfoDetail';
+
+/**
+ * Which block the card renders, keyed on the row's own shape: catalogued
+ * photometry (the survey bin quantises position + Gaia photometry and nothing
+ * else), a curated sidecar entry, a compiled-in orbit, or nothing.
+ */
+function starDetail(
+  row: Extract<SelectionRow, { type: 'starCatalog' }>,
+  distancePc: number,
+  famousStarsMeta: readonly FamousStarMetaEntry[],
+): StarInfoDetail {
+  if (row.absMag !== undefined && row.bpRp !== undefined) {
+    return {
+      kind: 'photometry',
+      absMag: row.absMag,
+      apparentMag: apparentMagnitudeFromAbs(row.absMag, distancePc),
+      bpRp: row.bpRp,
+      spectralClass: spectralClassFromBpRp(row.bpRp),
+    };
+  }
+  if (row.id === null) return { kind: 'none' };
+  const meta = famousStarsMeta.find((entry) => entry.id === row.id);
+  if (meta) return { kind: 'curated', meta };
+  const orbit = sStarOrbitInfo(row.id);
+  return orbit ? { kind: 'orbit', orbit } : { kind: 'none' };
+}
 
 const BUILD_FOCUSABLE: {
-  [K in SelectionRow['type']]: (row: Extract<SelectionRow, { type: K }>) => FocusableTarget | null;
+  [K in SelectionRow['type']]: (
+    row: Extract<SelectionRow, { type: K }>,
+    famousStarsMeta: readonly FamousStarMetaEntry[],
+  ) => FocusableTarget | null;
 } = {
   galaxyCatalog: (row) => buildGalaxyInfo(row),
   structure: (row) => row,
@@ -41,37 +70,35 @@ const BUILD_FOCUSABLE: {
     id: row.id,
     label: row.label,
     positionMpc: row.positionMpc,
-    // Undefined for every body with no elements. Looked up here rather than
-    // carried on the stored row: five derived numbers off a compiled-in table
-    // would be re-serialized into RTK state on every selection for no gain.
-    orbit: sStarOrbitInfo(row.id),
   }),
-  // A picked survey star has no per-star identity on the bin (SKST v1 quantises
-  // position + Gaia photometry only), so the card is a small self-derived
-  // view-model built here from the row's raw fields via the Task-1 helpers:
-  // distance is |positionMpc| converted Mpc to pc, apparent magnitude follows
-  // from the distance modulus, and the spectral class is binned off BP-RP.
-  starCatalog: (row): FieldStarInfo => {
+  starCatalog: (row, famousStarsMeta): StarInfo => {
     const [x, y, z] = row.positionMpc;
     const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;
     return {
       type: 'starCatalog',
       source: row.source,
       index: row.index,
-      displayName: 'Field star',
+      id: row.id,
+      displayName: row.label,
       x,
       y,
       z,
       distancePc,
-      absMag: row.absMag!,
-      apparentMag: apparentMagnitudeFromAbs(row.absMag!, distancePc),
-      bpRp: row.bpRp!,
-      spectralClass: spectralClassFromBpRp(row.bpRp!),
+      radiusM: row.radiusM,
+      detail: starDetail(row, distancePc, famousStarsMeta),
     };
   },
 };
 
-export function buildFocusable(row: SelectionRow | null): FocusableTarget | null {
+export function buildFocusable(
+  row: SelectionRow | null,
+  famousStarsMeta: readonly FamousStarMetaEntry[],
+): FocusableTarget | null {
   if (row === null) return null;
-  return (BUILD_FOCUSABLE[row.type] as (r: SelectionRow) => FocusableTarget | null)(row);
+  return (
+    BUILD_FOCUSABLE[row.type] as (
+      r: SelectionRow,
+      meta: readonly FamousStarMetaEntry[],
+    ) => FocusableTarget | null
+  )(row, famousStarsMeta);
 }

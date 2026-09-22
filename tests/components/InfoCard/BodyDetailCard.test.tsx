@@ -2,35 +2,21 @@
 //
 // BodyDetailCard — rendering tests for the rich focused-body panel.
 //
-// The card resolves its narrative/physical rows by looking `target.id` up in the
-// `famousStarsMeta` prop its container supplies.  Each test passes that array
-// directly, so the cases under test are just values: a resolved entry, an empty
-// array (sidecar not settled, or a deployment without one), and an entry missing
-// its optional fields.  Asserting on rendered text keeps the contract stable
-// against CSS-modules class mangling.
+// The card resolves its physical rows from the compiled-in BODY_FACTS table and
+// the body's own seed, keyed on `target.id`. Asserting on rendered text keeps the
+// contract stable against CSS-modules class mangling. Stars are not bodies —
+// their rows live in StarDetailCard.test.tsx.
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import BodyDetailCard from '../../../src/components/InfoCard/BodyDetailCard/BodyDetailCard';
-import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
-import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
 
-const rigelTarget: BodyInfo = {
-  type: 'body',
-  id: 'rigel',
-  label: 'Rigel',
-  positionMpc: [0, 0, 0],
-};
-
-// Jupiter is a non-star body: its id misses FAMOUS_STAR_IDS, so the card takes
-// the lean branch (name + physical radius, no star-sidecar lookup).
 const JUPITER_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'jupiter', 'test'));
 
 const jupiterTarget: BodyInfo = {
@@ -40,59 +26,12 @@ const jupiterTarget: BodyInfo = {
   positionMpc: [0, 0, 0],
 };
 
-const rigelMeta: FamousStarMetaEntry = {
-  id: 'rigel',
-  names: ['Rigel', 'Beta Orionis', 'β Ori'],
-  constellation: 'Orion',
-  spectralType: 'B8Ia',
-  distancePc: 264.6,
-  magV: 0.13,
-  absMag: -7.84,
-  radiusSolar: 78.9,
-  temperatureK: 12100,
-  massSolar: 21,
-  luminositySolar: 120000,
-  ageGyr: 0.008,
-  description: 'Rigel is a blue supergiant and the brightest star in Orion.',
-};
-
 describe('BodyDetailCard', () => {
-  it('renders headline + also-known-as + description + Wikipedia link from resolved meta', () => {
-    render(createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [rigelMeta] }));
-
-    expect(screen.getByText('Rigel')).toBeInTheDocument();
-    // Aliases come from names.slice(1) — the primary name heads the card.
-    expect(screen.getByText(/Beta Orionis/)).toBeInTheDocument();
-    expect(screen.getByText(rigelMeta.description)).toBeInTheDocument();
-    // "Learn more" Wikipedia link — Rigel's primary name is the article slug.
-    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
-      'href',
-      'https://en.wikipedia.org/wiki/Rigel',
-    );
-  });
-
-  it('renders headline only before meta resolves', () => {
-    const { container } = render(
-      createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [] }),
-    );
-
-    // Headline still shows from BodyInfo.label — a body is always selectable.
-    expect(screen.getByText('Rigel')).toBeInTheDocument();
-    // No properties block resolved, no crash.
-    expect(container.textContent).not.toMatch(/Spectral/);
-    expect(container.textContent).not.toMatch(/Temperature/);
-  });
-
-  it("shows a planet's fact sheet + Wikipedia link and omits the stellar rows", () => {
-    // A non-star body must not consume the sidecar — even when a stellar entry
-    // is present, no meta rows leak onto a planet card.  Jupiter's rows come
-    // from the compiled-in BODY_FACTS table, not the star sidecar.
-    const { container } = render(
-      createElement(BodyDetailCard, { target: jupiterTarget, famousStarsMeta: [rigelMeta] }),
-    );
+  it("shows a planet's fact sheet + Wikipedia link", () => {
+    const { container } = render(createElement(BodyDetailCard, { target: jupiterTarget }));
 
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    // Radius stays first (straight off BodyInfo).
+    // Radius stays first (resolved off the seed, not the fact sheet).
     expect(
       screen.getByText(`${(JUPITER_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
     ).toBeInTheDocument();
@@ -106,43 +45,7 @@ describe('BodyDetailCard', () => {
       'href',
       'https://en.wikipedia.org/wiki/Jupiter',
     );
-    // No stellar / meta rows leak onto a planet card.
-    expect(container.textContent).not.toMatch(/Spectral/);
-    expect(container.textContent).not.toMatch(/Constellation/);
-    expect(container.textContent).not.toMatch(/R☉|L☉/);
-  });
-
-  it('renders no orbital rows for a body that carries no elements', () => {
-    // The optional field's absent path — every pre-existing body. A block that
-    // rendered unconditionally would print empty or NaN rows on every planet.
-    const { container } = render(
-      createElement(BodyDetailCard, { target: jupiterTarget, famousStarsMeta: [] }),
-    );
-
-    expect(container.textContent).not.toMatch(/Eccentricity|Pericentre|Orbits/);
-  });
-
-  it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {
-    // End to end through the real seam: a stored body row for S2 goes through
-    // buildFocusable's static seed lookup and out as rendered rows, so a missing
-    // lookup or an unwired card block fails here rather than only in the browser.
-    const target = buildFocusable({
-      type: 'body',
-      id: 's2',
-      label: 'S2',
-      positionMpc: [0, 0, 0],
-    }) as BodyInfo;
-
-    const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
-
-    // The focus the elements are fitted against, named rather than implied — as
-    // the reader sees it named everywhere else, off the registry row.
-    expect(screen.getByText(SGR_A_STAR_ENTRY.label)).toBeInTheDocument();
-    // Straight off the Gillessen row — wrong star ⇒ wrong period and eccentricity.
-    expect(screen.getByText('16.0 yr')).toBeInTheDocument();
-    expect(screen.getByText('0.884')).toBeInTheDocument();
-    // Derived rows: the AU/Schwarzschild pair and the speed the block exists for.
-    expect(container.textContent).toMatch(/119 AU \(1,40\d Schwarzschild radii\)/);
-    expect(container.textContent).toMatch(/7,69\d km\/s/);
+    // No stellar rows on a body card — those belong to StarDetailCard now.
+    expect(container.textContent).not.toMatch(/Spectral|Constellation|R☉|L☉|Eccentricity|Orbits/);
   });
 });

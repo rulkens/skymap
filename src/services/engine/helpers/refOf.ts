@@ -26,7 +26,7 @@ import type { StructureInfo } from '../../../@types/data/structure/StructureInfo
 import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
 import type { ZoneOfAvoidanceInfo } from '../../../@types/engine/ZoneOfAvoidanceInfo';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
-import type { FieldStarInfo } from '../../../@types/engine/FieldStarInfo';
+import type { StarInfo } from '../../../@types/engine/StarInfo';
 
 const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
@@ -34,7 +34,7 @@ const REF_OF: {
   milkyWay: (t: MilkyWayInfo) => SelectionRef;
   zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;
   body: (t: BodyInfo) => SelectionRef;
-  starCatalog: (t: FieldStarInfo) => SelectionRef;
+  starCatalog: (t: StarInfo) => SelectionRef;
 } = {
   galaxyCatalog: (t) => ({
     type: 'galaxyCatalog',

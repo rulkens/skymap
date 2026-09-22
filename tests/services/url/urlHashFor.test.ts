@@ -13,7 +13,7 @@ import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-import type { FieldStarInfo } from '../../../src/@types/engine/FieldStarInfo';
+import type { StarInfo } from '../../../src/@types/engine/StarInfo';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
 
@@ -84,7 +84,7 @@ describe('URL_HASH_FOR', () => {
       source: Source.FamousStar,
       index,
       displayName: 'Sirius',
-    } as unknown as FieldStarInfo;
+    } as unknown as StarInfo;
     expect(URL_HASH_FOR.starCatalog(sirius)).toBe('star-sirius');
   });
 });
