@@ -33,7 +33,7 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
 
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+    store.dispatch(writeVolumeField({ id: 'mcpm', patch: { contrast: 0.5 } }));
     expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(2);
 

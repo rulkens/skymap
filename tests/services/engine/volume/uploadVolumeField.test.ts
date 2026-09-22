@@ -11,7 +11,7 @@ import { addVolumeField } from '../../../../src/layers/volume/state/volumes/slic
 import type { ApplyIntentState } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { uploadVolumeField } from '../../../../src/services/engine/volume/uploadVolumeField';
 
-const fieldId = 'cf4-density' as VolumeFieldId;
+const fieldId = 'mcpm' as VolumeFieldId;
 
 function fakeCube(): ScalarCube {
   return { dims: [4, 4, 4] } as unknown as ScalarCube;

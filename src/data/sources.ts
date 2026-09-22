@@ -20,7 +20,6 @@ import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/filaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
-import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
 import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
@@ -72,7 +71,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.Cf4Density]: CF4_DENSITY_ENTRY,
   [Source.Mcpm]: MCPM_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Planet]: PLANET_ENTRY,

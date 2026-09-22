@@ -185,7 +185,6 @@ function makeState(): EngineState {
       filaments: null,
       famousGalaxiesMeta: null,
       pgcAlias: null,
-      cf4Density: null,
     },
   } as unknown as EngineState;
 }

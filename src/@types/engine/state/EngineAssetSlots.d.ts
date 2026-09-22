@@ -23,8 +23,6 @@ import type { MeshReq } from '../../loading/MeshReq';
 export type EngineAssetSlots = {
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
-  /** Valade 2024 256³ HAMLET cube, ~32 MB decoded — default-off, so that cost is opt-in only. */
-  cf4Density: AssetSlot<ScalarCube, void> | null;
   /**
    * SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` (Wilde et al. 2023), 712×1200×728
    * voxels native in three tiers. Tier-aware and default-on, so `setTier` reloads it.
@@ -37,8 +35,8 @@ export type EngineAssetSlots = {
   polyphorm2Mrs: AssetSlot<ScalarCube, Polyphorm2MRSReq> | null;
   /**
    * `mcpm-workbench.scfd` — cube promoted from the MCPM workbench dev tool via
-   * `tools/volumes/promoteWorkbenchExport.ts`. Untiered like CF-4 (void
-   * request), default-off, hidden pending a promotion decision.
+   * `tools/volumes/promoteWorkbenchExport.ts`. Untiered (void request),
+   * default-off, hidden pending a promotion decision.
    */
   mcpmWorkbench: AssetSlot<ScalarCube, void> | null;
   /**

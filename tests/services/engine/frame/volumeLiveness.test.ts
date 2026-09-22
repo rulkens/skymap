@@ -166,8 +166,8 @@ describe('deriveVolumeLiveness', () => {
 
   it('a field with no fadeBands entry behaves byte-identically to surveyDeepZoom today', () => {
     // Deep inside surveyDeepZoom's goneAt edge with the default band → 0,
-    // exactly the pre-Prep-1 behaviour every existing field (MCPM, CF-4,
-    // polyphorm) still gets.
+    // exactly the pre-Prep-1 behaviour every existing field (MCPM,
+    // polyphorm, MCPM workbench) still gets.
     const state = makeState({ items: { [FIELD_ID]: rawSettings() } });
     const liveness = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.0005] }))!;
     expect(liveness.fadeOpacityOf(FIELD_ID)).toBe(0);

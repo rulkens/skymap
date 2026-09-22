@@ -199,7 +199,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded by build-cf4-density.',
+      'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded when build-flow-field needs it.',
     upstream: 'https://edd.ifa.hawaii.edu/CF4calculator/',
   },
   'cf4.vfield-mean': {
@@ -216,11 +216,11 @@ export const RAW_DATA = {
     upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
   },
   'cf4.vfield-npz': {
-    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from —
-    // one file, two consumers. The density pipeline slices d_mean_CF4pp; the
-    // flow build slices v_mean_CF4pp + d_mean_CF4pp. Registering it once here
-    // (rather than under a parallel cf4pp/ dir) keeps a single source of truth
-    // for the npz. Maintainer-only: never committed, never synced to R2.
+    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from.
+    // The flow build slices v_mean_CF4pp + d_mean_CF4pp out of it. Registering
+    // it once here (rather than under a parallel cf4pp/ dir) keeps a single
+    // source of truth for the npz. Maintainer-only: never committed, never
+    // synced to R2.
     path: 'data/raw/cf4/CF4pp_mean_std_grids.npz',
     kind: 'file',
     source: 'gitignored',

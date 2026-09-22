@@ -40,7 +40,7 @@
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
  * with the `galaxyCatalogs.items[id].enabled` seed that galaxy catalog demand reads.
  * MCPM therefore IS in the boot
- * demand set — `cf4-density` is NOT (registry visible:false → seeded
+ * demand set — `polyphorm-2mrs` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
  * `settings.volumes.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
@@ -158,7 +158,7 @@ const BOOT_SETTINGS: SettingsLeaves = {
 /**
  * Default-at-boot volume fields: seeded from the shippable volume registry via
  * the same `seedVolumeFields` the engine runs at construction (mcpm enabled,
- * cf4-density disabled).
+ * polyphorm-2mrs disabled).
  */
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
@@ -178,7 +178,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   // visible:false — specialist DESI drill patches, not part of the default
   // all-sky scene), so the construction seed lands their enabled bits false and
   // their ASSET_WIRING point rows are NOT demanded at boot. Symmetric with
-  // cf4-density among the volume fields: registry visible:false → seeded
+  // polyphorm-2mrs among the volume fields: registry visible:false → seeded
   // enabled:false → absent from the boot set.
   desiDeep: { enabled: false },
   desiWedge: { enabled: false },
@@ -192,7 +192,6 @@ type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
   pgcAlias: StubSlot;
-  cf4Density: StubSlot;
   mcpm: StubSlot;
 }>;
 
@@ -290,7 +289,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
         unknown,
         unknown
       > as never,
-      cf4Density: (namedSlots.cf4Density ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       // Empty keyed family: the body-texture rows resolve to undefined slots
       // (far resting pose ⇒ none demanded anyway), so none fires.
@@ -325,7 +323,7 @@ function collectFired(state: EngineState): Set<AssetKey> {
   }
 
   // Core's named slots — the ones that might have fired.
-  const namedKeys = ['structureCatalog', 'cf4Density', 'mcpm'] as const;
+  const namedKeys = ['structureCatalog', 'mcpm'] as const;
   for (const key of namedKeys) {
     const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
@@ -378,14 +376,14 @@ describe('reevaluateDemand demand-table regression', () => {
    * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible in
    * SOURCE_REGISTRY. DesiDeep + DesiWedge + DesiSgw are the galaxy catalogs with
    * visible:false, so their enabled bits seed false and their point rows are
-   * NOT demanded at boot — symmetric with cf4-density among the volume fields.
+   * NOT demanded at boot — symmetric with polyphorm-2mrs among the volume fields.
    * Famous slot is modelled
    * as 'loading' (it was just triggered by its own demand row before
    * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
-   * which the construction seed lands as true (registry visible:true). cf4Density
-   * is NOT (seeded enabled:false). pgcAlias: palette closed.
+   * which the construction seed lands as true (registry visible:true).
+   * polyphorm-2mrs is NOT (seeded enabled:false). pgcAlias: palette closed.
    * `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */

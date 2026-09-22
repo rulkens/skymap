@@ -43,8 +43,8 @@ import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/Scala
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
 const MOCK_FIELD: VolumeFieldRowData = {
-  id: 'cf4-density' as VolumeFieldId,
-  label: 'CF-4 DM density',
+  id: 'mcpm' as VolumeFieldId,
+  label: 'MCPM Cosmic Web',
   enabled: true,
   intensity: 0.5,
   contrast: 1.2,
@@ -213,10 +213,7 @@ describe('CosmicWebSection', () => {
       fireEvent.keyDown(intensitySlider, { key: 'ArrowRight' });
 
       expect(onVolumeFieldIntensityChange).toHaveBeenCalledOnce();
-      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith(
-        'cf4-density' as VolumeFieldId,
-        0.51,
-      );
+      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith('mcpm' as VolumeFieldId, 0.51);
     });
   });
 

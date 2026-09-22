@@ -16,8 +16,8 @@
  *                    (cluster, supercluster, void, group). Discriminator:
  *                    `id: StructureId`. One controller per source so a
  *                    source's rings can fade independently of the others.
- *   - volumeField  — one volumetric scalar field (CF-4, rhizome-small,
- *                    rhizome-medium, rhizome-large). Discriminator:
+ *   - volumeField  — one volumetric scalar field (mcpm, polyphorm-2mrs,
+ *                    mcpm-workbench). Discriminator:
  *                    `id: VolumeFieldId` (the registry id the volume
  *                    renderer keys fields by).
  *   - milkyWay     — the Milky-Way star/dust point cloud

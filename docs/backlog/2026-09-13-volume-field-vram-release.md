@@ -11,7 +11,7 @@ drives the `volumeField` fade row (`fadeLayers.ts:207`). The cube stays resident
 `volumeFieldRenderer`'s field `Map` for the life of the engine — the only release is
 `destroy()` at teardown.
 
-The four volume slots in `assetWiring.ts:272` declare no `release` for exactly this
+The three volume slots in `assetWiring.ts` declare no `release` for exactly this
 reason, and the comment there says so.
 
 ## Why it matters
@@ -24,7 +24,6 @@ footprint. Large tier:
 | -------------- | ------ | ----------------------------------------- |
 | mcpm           | 155 MB | on (`sources/mcpm.ts:12` `visible: true`) |
 | polyphorm-2mrs | 217 MB | off                                       |
-| cf4-density    | 4 MB   | off                                       |
 | edenhofer-dust | 113 MB | not yet wired (renderer slice)            |
 
 Only mcpm is default-on, so this is not idle boot cost — it is the opt-in workflow:
@@ -51,7 +50,7 @@ The eviction mechanism already exists and has two users:
   all four per-field resources and leaves the fade handle registered, which is the
   correct split — `seedFades` owns the handle set across upload/unload.
 
-So the wiring is four `onRelease` lines plus four `release` predicates.
+So the wiring is three `onRelease` lines plus three `release` predicates.
 
 ## The blocker
 

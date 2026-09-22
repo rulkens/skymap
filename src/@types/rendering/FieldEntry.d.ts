@@ -25,7 +25,7 @@ export type FieldEntry = {
   id: VolumeFieldId;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
-   * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
+   * coordinate space [0, 1].  Divergent palettes (coolwarm)
    * want 0.5 so the deadband suppresses the cosmic-mean midpoint
    * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
    * the deadband suppresses the void floor (LUT t=0) and the stretch

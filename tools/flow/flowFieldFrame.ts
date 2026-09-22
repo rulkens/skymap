@@ -5,8 +5,8 @@
  *
  * Why a separate, parameterised helper instead of reusing
  * `tools/utils/math/sgToVoxelIndex.ts`?  That function bakes in
- * the CF-4 density box geometry (origin -500 Mpc, voxel 1000/128 Mpc) — its
- * docstring is explicit that it's coupled to that specific catalog.  The flow
+ * the CF4++ box geometry (origin -500 Mpc, voxel 1000/128 Mpc) — its
+ * docstring is explicit that it's coupled to that specific ensemble.  The flow
  * cube *happens* to share that geometry today, but the contract here is "given
  * a cube's own {origin, voxelSizeMpc, n}, locate this anchor" — a contract the
  * builder's frame self-check AND the frame-contract test both consume.  Sharing
@@ -35,7 +35,7 @@ import { eqToSg } from '../utils/math/eqToSg';
  *
  * The conversion mirrors `sgToVoxelIndex.ts` exactly —
  * `raDecDistToEqCart(anchor)` → `eqToSg(eq)` → linear rescale per axis —
- * but takes the box geometry from `meta` rather than hardcoded CF-4
+ * but takes the box geometry from `meta` rather than hardcoded CF4++
  * constants, so it works for any cube.
  *
  * `inBounds` is true iff every axis lands in `[0, meta.n)`.  We report it

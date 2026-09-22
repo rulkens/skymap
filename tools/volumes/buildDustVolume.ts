@@ -121,10 +121,9 @@ export async function buildDustVolume(args: {
     // `FRAME_TO_WORLD.galactic` (`src/data/frameToWorld.ts`) carries the
     // real GAL→EQ rotation, so this cube is drawn correctly once rendered.
     // `rotation` stays identity regardless — it's reserved for per-cube
-    // tilt on top of FRAME_TO_WORLD, and baking the frame rotation in here
-    // would compound with FRAME_TO_WORLD (the double-rotation bug
-    // buildCf4Density.ts's step 5 comment warns about for the
-    // supergalactic case).
+    // tilt ON TOP of FRAME_TO_WORLD's own rotation. Baking the frame
+    // rotation in here too would compound the two, placing cube features
+    // at FRAME_TO_WORLD²·X instead of FRAME_TO_WORLD·X.
     frameKind: 'galactic',
     origin,
     voxelSize: voxelSizeMpc,

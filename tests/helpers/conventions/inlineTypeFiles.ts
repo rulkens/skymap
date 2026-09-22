@@ -364,5 +364,4 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'tools/utils/wgsl/parseWgslStructFields.ts',
   'tools/utils/wgsl/wgslPrimitiveLayout.ts',
   'tools/volumes/renderCubeMips.ts',
-  'tools/volumes/verifyCf4Scfd.ts',
 ]);

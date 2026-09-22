@@ -4,7 +4,7 @@
  * this mints core's own and then lets the demand loop decide what loads:
  *
  *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows (sidecars: cluster catalog, CF-4 + MCPM volumes).
+ *      the composed rows (sidecars: cluster catalog, the volume overlays).
  *      Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
@@ -40,7 +40,7 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{structureCatalog,cf4Density,mcpm,flow,…}`
+ *   - `state.assetSlots.{structureCatalog,mcpm,flow,…}`
  *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
  *     `.meshBodies` (via `wireMeshBodySlots`).
  *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.
@@ -138,7 +138,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the
   // default-visible galaxy catalogs + famous-galaxies-meta + the default-on MCPM volume +
-  // the cluster catalog; filaments / CF-4 / PGC-alias stay idle until their
+  // the cluster catalog; filaments / polyphorm2Mrs / PGC-alias stay idle until their
   // demand flips.  The same loop re-runs on every state change.
   reevaluateDemand(state);
 }

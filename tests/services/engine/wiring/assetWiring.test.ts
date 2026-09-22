@@ -96,14 +96,14 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
-    const cf4 = rowFor('cf4Density');
+  it('polyphorm2Mrs demand follows its field-enabled flag (default-off ⇒ false)', () => {
+    const polyphorm = rowFor('polyphorm2Mrs');
     expect(
-      cf4.demand(
-        makeCtx({ settings: { volumes: { items: { 'cf4-density': { enabled: true } } } } }),
+      polyphorm.demand(
+        makeCtx({ settings: { volumes: { items: { 'polyphorm-2mrs': { enabled: true } } } } }),
       ),
     ).toBe(true);
-    expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
+    expect(polyphorm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {

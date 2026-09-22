@@ -32,9 +32,9 @@ describe('volumeVisibilityByFileName', () => {
 
   it('maps the single file of an untiered volume', () => {
     const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: 'cf4_density', tiered: false }),
+      volumeEntry({ visible: false, binBaseName: 'mcpm-workbench', tiered: false }),
     ]);
-    expect(map.get('cf4_density.scfd')).toBe(false);
+    expect(map.get('mcpm-workbench.scfd')).toBe(false);
   });
 
   it('maps a flow entry (no tiered field at all)', () => {

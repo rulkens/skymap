@@ -7,8 +7,8 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
  *
  * Each volume lives as a registry entry so its presentation defaults
  * (palette, contrast, exposure, …) sit next to its `binBaseName` and
- * visibility default. Covers every production cube (CF-4, MCPM, …),
- * each loaded from its own `.scfd` file.
+ * visibility default. Covers every production cube (MCPM, Polyphorm
+ * 2MRS, …), each loaded from its own `.scfd` file.
  */
 export type VolumeSourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {
@@ -23,8 +23,8 @@ export type VolumeSourceEntry = SourceEntryBase &
     /**
      * Whether this volume ships per-tier `.scfd` variants
      * (`<binBaseName>-<tier>.scfd`). False for tier-agnostic cubes whose
-     * single file is reused across every tier (CF-4 is full-volume; MCPM
-     * is per-tier).
+     * single file is reused across every tier (MCPM workbench is
+     * untiered; MCPM itself is per-tier).
      */
     readonly tiered: boolean;
   };

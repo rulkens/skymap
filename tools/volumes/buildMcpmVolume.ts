@@ -3,9 +3,9 @@
  * `tools/extractMcpmCube.py` into the runtime `mcpm-<tier>.scfd`
  * consumed by the scalar-volume renderer.
  *
- * Pure Node/TS — no Python required. Mirrors the conventions of
- * `tools/buildCf4Density.ts`; the log-normalise + f16-pack step is
- * shared via `src/utils/volume/packLogTraceVoxels.ts`.
+ * Pure Node/TS — no Python required. The log-normalise + f16-pack step is
+ * shared via `src/utils/volume/packLogTraceVoxels.ts` (also used by
+ * `buildRhizomeVolume.ts` and `buildDustVolume.ts`).
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
  *

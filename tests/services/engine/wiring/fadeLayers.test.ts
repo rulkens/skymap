@@ -273,11 +273,11 @@ describe('FADE_LAYERS intent subset', () => {
   it('volume-field row guard gates on the renderer holding the field', () => {
     const row = rowFor('volumeField');
     const state = {
-      gpu: { volumeFieldRenderer: { listIds: () => ['cf4-density'] } },
+      gpu: { volumeFieldRenderer: { listIds: () => ['mcpm'] } },
     } as unknown as EngineState;
     // Not in the renderer's map → suppressed; present → fades.
-    expect(row.guard?.(state, 'mcpm')).toBe(false);
-    expect(row.guard?.(state, 'cf4-density')).toBe(true);
+    expect(row.guard?.(state, 'polyphorm-2mrs')).toBe(false);
+    expect(row.guard?.(state, 'mcpm')).toBe(true);
     // No renderer yet (mid-bootstrap): demand-loaded ids suppressed.
     const bare = { gpu: {} } as unknown as EngineState;
     expect(row.guard?.(bare, 'mcpm')).toBe(false);
