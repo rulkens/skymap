@@ -57,6 +57,8 @@ import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starS
 import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
@@ -102,21 +104,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
+  ...stubPlannersFor(PRELUDE),
 ];
 
 /** Every program `executeFrame` walked this frame: one per scheduled face, then the frame's own. */

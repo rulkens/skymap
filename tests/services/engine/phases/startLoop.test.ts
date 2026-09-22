@@ -54,31 +54,16 @@ import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { goLive } from '../../../../src/state/time/timeSlice';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional — PRELUDE's three Layer-owned rows need a stand-in here, since this
+// optional — PRELUDE's Layer-owned rows need a stand-in here, since this
 // fixture's `passes`/`computes` are core's own registry alone too.
-const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-];
+const LAYER_PLANNER_STUBS = stubPlannersFor(PRELUDE);
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
