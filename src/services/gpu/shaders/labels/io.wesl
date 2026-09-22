@@ -76,7 +76,7 @@ struct LabelData {
   // a LIFTED label's own worldPos sits screen-up over OTHER terrain than its
   // subject (label2DDirector's applyLift), so occlusion is judged here
   // instead.  xyz = world Mpc, same frame as worldPos; w unused (zero).
-  // Bytes 80..95 — bytes 76..79 are now genuine alignment padding ahead of
+  // Bytes 80..95 — bytes 72..79 are now genuine alignment padding ahead of
   // this vec4, not slack; 'LABEL_DATA_BYTES' in labelRenderer.ts is 96.
   subjectPos: vec4<f32>,
 };

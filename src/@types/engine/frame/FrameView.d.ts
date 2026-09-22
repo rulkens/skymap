@@ -40,7 +40,9 @@ export type FrameView = {
   /** This view's projection as tangents of the half-angles from the view axis
    *  (`spec.frustum`) — the view's definition; `drawPxPerRad` derives from it. */
   frustum: ViewFrustum;
-  /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole radian→pixel conversion. */
+  /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole
+   *  radian→pixel conversion, and the focal term every renderer's `pxPerRad`
+   *  argument carries into the shared camera uniform prefix. */
   drawPxPerRad: number;
   /** Which physical GPU destination this view's draws land in: `0` = the
    *  canvas, a capture row's six faces claim `viewSlotBase … +5`. A roster

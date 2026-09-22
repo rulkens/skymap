@@ -116,7 +116,7 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *                                             world point (falls back to
  *                                             worldPos), w unused
  *
- * The trailing vec4 needs 16-byte alignment, so bytes 76..79 are now genuine
+ * The trailing vec4 needs 16-byte alignment, so bytes 72..79 are now genuine
  * padding ahead of it (not slack) and the stride is 96, not 72 rounded up.
  * `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the shader
  * since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a fresh

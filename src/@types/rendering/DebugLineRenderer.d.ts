@@ -30,7 +30,6 @@ export type DebugLineRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
     pxPerRad: number,
   ): void;
   /** Number of lines last passed to setLines. Used by tests + the debug pass. */

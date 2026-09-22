@@ -10,7 +10,6 @@ import { hasPickableLabel } from '../../../src/utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../src/utils/labels/labelPickQuads';
 import { LABEL_PICK_GRACE_PADDING_PX } from '../../../src/data/labels/labelPickGracePaddingPx';
 import { ATLAS_FONT_SIZE } from '../../../src/data/fonts';
-import { LABEL_EM_PX_RETUNE } from '../../../src/data/labels/labelSizingDefaults';
 import type { Label2D } from '../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../src/@types/rendering/LabelBBox';
 import type { Label2DProjection } from '../../../src/@types/rendering/Label2DProjection';
@@ -29,7 +28,7 @@ const PROJECTION: Label2DProjection = {
   vp: VP,
   vpF32: VP,
   viewportPx: [200, 2 * ATLAS_FONT_SIZE],
-  pxPerRad: ATLAS_FONT_SIZE / LABEL_EM_PX_RETUNE,
+  pxPerRad: ATLAS_FONT_SIZE / 0.57735,
 };
 
 const label = (over: Partial<Label2D> = {}): Label2D =>

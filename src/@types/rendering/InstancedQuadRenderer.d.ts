@@ -46,7 +46,6 @@ export type InstancedQuadRenderer = {
     instanceBytes: Float32Array;
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
-    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
     pxPerRad: number;
     /** Shared cluster-focus bind group, bound at `@group(1)`. Built once by
      *  the engine against the canonical focusBgl and written once per frame;

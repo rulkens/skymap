@@ -22,7 +22,6 @@ export type FilamentRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
-    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
     pxPerRad: number,
     halfWidthPx: number,
     intensityScale: number,

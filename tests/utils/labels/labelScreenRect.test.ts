@@ -9,16 +9,16 @@
 import { describe, expect, it } from 'vitest';
 import { labelScreenRect } from '../../../src/utils/labels/labelScreenRect';
 import { ATLAS_FONT_SIZE } from '../../../src/data/fonts';
-import { LABEL_EM_PX_RETUNE } from '../../../src/data/labels/labelSizingDefaults';
 import type { Label2D } from '../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../src/@types/rendering/LabelBBox';
 
 const BBOX: LabelBBox = { minX: -10, minY: -20, maxX: 30, maxY: 5 };
 
 // The pxPerRad that projects a 1 Mpc em at clipW 1 to exactly ATLAS_FONT_SIZE
-// pixels, once the shader's retune factor is applied — the reference the
-// hand-computed expectations below are written against.
-const PX_PER_RAD = ATLAS_FONT_SIZE / LABEL_EM_PX_RETUNE;
+// pixels — the reference the hand-computed expectations below are written
+// against. tan(30 degrees) is spelled out rather than imported so a drifted
+// `LABEL_EM_PX_RETUNE` cannot cancel itself out of both sides.
+const PX_PER_RAD = ATLAS_FONT_SIZE / 0.57735;
 
 const label = (over: Partial<Label2D> = {}): Label2D =>
   ({

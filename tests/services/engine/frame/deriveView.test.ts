@@ -9,7 +9,6 @@ import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveS
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
-import { cameraBillboardBasis } from '../../../../src/utils/camera/cameraBillboardBasis';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { mainViewSpec } from '../../../../src/utils/camera/mainViewSpec';
 import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
@@ -138,10 +137,7 @@ describe('deriveView', () => {
     const want = basisOf(v.vp);
     expectVec(orbitForwardOf(v.cam), want.forward);
     expectVec(basisOf(canvas.vp).right, want.forward);
-    // The billboard axes the Milky Way passes read, and the shells' target − eye.
-    const billboard = cameraBillboardBasis(v.cam);
-    expectVec(billboard.right, want.right);
-    expectVec(billboard.up, want.up);
+    // The shells' target − eye.
     const aim = [0, 1, 2].map((i) => v.cam.target[i]! - v.cam.position[i]!) as Vec3;
     expectVec(normalize3(aim), want.forward);
     const camVp = computeViewProj(v.cam, spec().frustum);

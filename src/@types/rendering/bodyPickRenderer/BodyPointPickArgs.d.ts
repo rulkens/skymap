@@ -23,7 +23,6 @@ export type BodyPointPickArgs =
       readonly vp: Float32Array;
       /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
       readonly viewportPx: Vec2;
-      /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
       readonly pxPerRad: number;
       /** The scene-star point-partition bodies to draw (≤25). One packed id per instance. */
       readonly points: readonly BodyPointPick[];

@@ -55,7 +55,7 @@ fn vs(@location(0) corner: vec2<f32>,
   // Place the particle center through the model transform, then push the
   // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + spriteBillboardOffset(inPos, corner) * worldHalfExtent;
+  let cornerWorld = center + spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
   var kClip = worldToClip(u.cam, cornerWorld);

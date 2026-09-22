@@ -34,14 +34,11 @@
 //     which 'expandBillboardScreen' below covers.
 //
 // And the canonical CameraUniforms struct in 'lib/camera.wesl' carries
-// only 'viewProj' + 'viewportPx' — there is no separate 'view' matrix
-// to extract a camera-right / camera-up basis from. Adding one purely
-// to satisfy a generic view-aligned helper that no real renderer would
-// call would bloat the shared 80-byte prefix for every renderer's UBO
-// upload, with no functional benefit. We therefore omit the
-// view-aligned flavour entirely; if a future renderer ever wants it,
-// it can re-derive the basis from columns of the inverse-viewProj or
-// accept a basis pair as parameters.
+// no 'view' matrix to extract a camera-right / camera-up basis from —
+// only 'viewProj', 'viewportPx' and the 'pxPerRad' focal term. We
+// therefore omit the view-aligned flavour entirely; a renderer that
+// wants one re-derives the basis itself, as milkyWay/sprites/io.wesl
+// does per instance from the eye.
 //
 // ## Screen-aligned vs view-aligned world-sized billboards
 //
@@ -56,12 +53,10 @@
 // reads correctly at the centre's depth, with zero extra uniforms —
 // just 'CameraUniforms.viewportPx' that every renderer already has.
 //
-// That variant lives at its call sites rather than as a fourth export:
-// each composes 'worldLenToPx' + 'pxToClipOffset' (the two primitives
-// already used inline by 'labels/vertex.wesl' — the original instance
-// of this pattern in the codebase) around its OWN eye-tuned size
-// constant, so a shared wrapper would have had a single line left to
-// share and nowhere honest to put the constant.
+// That variant lives at its call sites, each composing 'worldLenToPx' +
+// 'pxToClipOffset' (the two primitives 'labels/vertex.wesl' — the
+// original instance of this pattern — already used inline) around its
+// own eye-tuned size constant.
 //
 // ## What about the corner-ordering mismatch
 //

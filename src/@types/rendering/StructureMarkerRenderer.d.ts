@@ -16,7 +16,6 @@ export type StructureMarkerRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
     pxPerRad: number,
     fadeOpacity: number,
   ): void;
@@ -33,7 +32,6 @@ export type StructureMarkerRenderer = {
     passEncoder: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
     pxPerRad: number,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */

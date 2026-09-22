@@ -72,7 +72,6 @@ export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
 export function packSgrAStarLensingUniforms(input: {
   readonly viewProj: Float32Array | Mat4;
   readonly viewportPx: Vec2;
-  /** The DRAWN view's pixels per radian — the camera prefix's focal term. */
   readonly pxPerRad: number;
   readonly schwarzschildRadiusM: number;
   readonly innerRs: number;

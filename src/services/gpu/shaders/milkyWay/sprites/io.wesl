@@ -111,44 +111,38 @@ struct Uniforms {
 // consumers import only 'u'.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// ── spriteBillboardOffset ────────────────────────────────────────────
-//
-// Unit-scale world offset for one billboard corner, off a basis that faces
-// THE EYE rather than a view plane. The CPU used to hand down one
-// screen-aligned basis per draw; that basis differs per dome face or VR
-// eye, so one blob tilted two ways across a seam. An eye-facing basis
-// depends only on the instance-to-eye direction, so every view of the same
-// blob agrees. Mirrors bodies/sgrAStarLensing/vertex.wesl's construction.
-//
-// Built in MODEL space — where the eye is 'u.camPosModel' and the disk
-// normal is the local +y the generator emits into — then rotated into world
-// space, because the corner offset is added in world space. 'u.model'
-// carries a uniform scale, so the rotated axes come back scaled:
-// renormalising AFTER the transform is what keeps this offset unit-length.
-//
-// Looking straight down the disk axis collapses the first cross product, so
-// an in-disk fallback axis takes over and the basis stays defined for every
-// viewing direction. The roll it picks there is arbitrary, which costs
-// nothing: both sprite fragments are radially symmetric about the centre.
+// spriteBillboardOffset — unit-scale world offset for one billboard corner,
+// off a basis facing THE EYE, not a view plane (which differs per dome face or
+// VR eye, tilting one blob two ways across a seam). Built in MODEL space, then
+// rotated to world; 'model' scales uniformly, so the renormalise AFTER that
+// transform is what keeps the offset unit-length. Mirrors
+// bodies/sgrAStarLensing/vertex.wesl.
 
+// The generator emits its disk in the y = 0 plane; the fallback axis covers the
+// down-the-axis view where the first cross collapses (its roll is arbitrary,
+// and invisible on a radially symmetric sprite).
 const DISK_NORMAL_MODEL: vec3<f32> = vec3<f32>(0.0, 1.0, 0.0);
 const DISK_AXIS_FALLBACK: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
-// Below this the cross product's direction is noise, not a basis.
 const BASIS_DEGENERATE_EPS: f32 = 1e-4;
 
-fn spriteBillboardOffset(centerModel: vec3<f32>, corner: vec2<f32>) -> vec3<f32> {
-  let toEye = u.camPosModel.xyz - centerModel;
-  let dist = length(toEye);
-  // dist == 0 only with the eye exactly on the particle, where no direction
-  // is defined; the disk normal keeps the basis finite instead of NaN.
-  let forward = select(DISK_NORMAL_MODEL, toEye / dist, dist > 0.0);
+fn spriteBillboardOffset(
+  model: mat4x4<f32>,
+  camPosModel: vec3<f32>,
+  centerModel: vec3<f32>,
+  corner: vec2<f32>,
+) -> vec3<f32> {
+  let toCenter = centerModel - camPosModel;
+  let dist = length(toCenter);
+  // dist == 0 leaves the view direction undefined; the disk normal keeps the
+  // basis finite rather than NaN.
+  let forward = select(DISK_NORMAL_MODEL, toCenter / dist, dist > 0.0);
   var rightModel = cross(DISK_NORMAL_MODEL, forward);
   if (length(rightModel) < BASIS_DEGENERATE_EPS) {
     rightModel = cross(DISK_AXIS_FALLBACK, forward);
   }
   rightModel = normalize(rightModel);
   let upModel = cross(forward, rightModel);
-  let right = normalize((u.model * vec4<f32>(rightModel, 0.0)).xyz);
-  let up = normalize((u.model * vec4<f32>(upModel, 0.0)).xyz);
+  let right = normalize((model * vec4<f32>(rightModel, 0.0)).xyz);
+  let up = normalize((model * vec4<f32>(upModel, 0.0)).xyz);
   return right * corner.x + up * corner.y;
 }
