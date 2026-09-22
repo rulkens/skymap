@@ -14,19 +14,21 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
+import { starCatalogPass } from '../../../../../src/layers/starCatalog/passes/starCatalogPass';
 import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/cameraFraming';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
+import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/layers/starCatalog/state/defaults';
 import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/starCullSlack';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
+import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
 import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -85,22 +87,24 @@ function makePickRenderer() {
   };
 }
 
-function makeState(renderer: unknown, pickRenderer: unknown, sizePx = 2.5): EngineState {
+function makeRuntime(renderer: unknown, pickRenderer: unknown): StarCatalogRuntime {
+  return { renderer, pickRenderer } as unknown as StarCatalogRuntime;
+}
+
+function makeSettings(sizePx = 2.5): StarCatalogSettings {
   return {
-    gpu: { starCatalogRenderer: renderer, starCatalogPickRenderer: pickRenderer },
-    subsystems: { scheduler: { requestRender: vi.fn() } },
-    settings: {
-      starCatalogs: {
-        enabled: true,
-        sizePx,
-        brightness: 1.0,
-        refineThreshold: 0.05,
-        glowOverlap: 1.0,
-        aggregateIntensityCap: 0.06,
-        items: { gaiaStars: { enabled: true, labelEnabled: false } },
-      },
-    },
-  } as unknown as EngineState;
+    enabled: true,
+    sizePx,
+    brightness: 1.0,
+    refineThreshold: 0.05,
+    glowOverlap: 1.0,
+    aggregateIntensityCap: 0.06,
+    items: { gaiaStars: { enabled: true, labelEnabled: false } },
+  } as unknown as StarCatalogSettings;
+}
+
+function makePassState(sizePx = 2.5): PassState {
+  return { settings: { starCatalogs: makeSettings(sizePx) } } as unknown as PassState;
 }
 
 /** A NEAR0 SlabView whose f64 slab vp is a well-formed, non-degenerate matrix. */
@@ -119,8 +123,9 @@ describe('starCatalogPass frustum cull wiring', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
+    const pass = starCatalogPass(makeRuntime(renderer, makePickRenderer()));
 
-    starCatalogPass.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer, makePickRenderer()));
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), makePassState());
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];
@@ -134,8 +139,9 @@ describe('starCatalogPass frustum cull wiring', () => {
     const pickRenderer = makePickRenderer();
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
+    const pass = starCatalogPass(makeRuntime(renderer, pickRenderer));
 
-    starCatalogPass.drawPick!(PASS_STUB, view, makeCtx(camPos), makeState(renderer, pickRenderer));
+    pass.drawPick!(PASS_STUB, view, makeCtx(camPos), makePassState());
 
     expect(pickRenderer.draw).toHaveBeenCalledTimes(1);
     const args = pickRenderer.draw.mock.calls[0]![1];
@@ -152,13 +158,9 @@ describe('starCatalogPass frustum cull wiring', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const camPos = camAtPc(MID_BAND_PC);
     const view = makeNear0View(camPos);
+    const pass = starCatalogPass(makeRuntime(renderer, makePickRenderer()));
 
-    starCatalogPass.draw(
-      PASS_STUB,
-      view,
-      makeCtx(camPos),
-      makeState(renderer, makePickRenderer(), DEFAULT_STAR_SIZE_PX),
-    );
+    pass.draw!(PASS_STUB, view, makeCtx(camPos), makePassState(DEFAULT_STAR_SIZE_PX));
 
     const args = renderer.draw.mock.calls[0]![1];
     const radiansPerPx = DEFAULT_FOV_Y_RAD / view.viewportPx[1];

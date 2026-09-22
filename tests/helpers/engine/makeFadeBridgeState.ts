@@ -14,6 +14,7 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
 import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
@@ -98,6 +99,7 @@ export function makeFadeBridgeState(): {
     fadeRows: [
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
+      ...starCatalogFadeRows(),
       ...filamentsFadeRows(FILAMENTS_RUNTIME),
       ...flowFadeRows(FLOW_RUNTIME),
     ],

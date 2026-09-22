@@ -23,7 +23,7 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
-import { createStarCatalogPickRenderer } from '../../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer';
+import { createStarCatalogPickRenderer } from '../../../../../src/layers/starCatalog/render/starCatalogPickRenderer';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
 import { Source } from '../../../../../src/data/sources';
 import type { StarCatalogPickResources } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogPickResources';

@@ -25,7 +25,6 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
-import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 /**
@@ -43,7 +42,6 @@ const CORE_INITIAL: CoreEngineSliceState = {
   structureCounts: {},
   loadProgress: null,
   structureSearchList: [],
-  meta: { famousStars: [] },
 };
 
 const engineSlice = createSlice({
@@ -88,21 +86,6 @@ const engineSlice = createSlice({
       action: PayloadAction<readonly StructureSearchEntry[]>,
     ) => {
       state.structureSearchList = [...action.payload];
-    },
-
-    // ── curated metadata sidecars ────────────────────────────────────────────
-    // Whole-array replace, dispatched once per sidecar by its asset slot when
-    // the fetch settles — success writes the parsed entries, failure writes `[]`
-    // so React's fail-soft paths are reached by the same route as "not loaded
-    // yet". The asset slot is the payload's sole writer and this slice is its
-    // only home, so React and the engine can never see divergent copies. The
-    // spread copies the readonly payload into the Immer draft, which wants a
-    // mutable array slot even though nothing mutates it.
-    engineFamousStarsMetaReported: (
-      state,
-      action: PayloadAction<readonly FamousStarMetaEntry[]>,
-    ) => {
-      state.meta.famousStars = [...action.payload];
     },
 
     // ── scale bar ────────────────────────────────────────────────────────────
@@ -171,7 +154,6 @@ export const {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineStructureSearchListChanged,
-  engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineHdrCapabilityChanged,

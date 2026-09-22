@@ -1,29 +1,20 @@
 /**
  * gpuHandleRegistry — integration tests one layer above the generic walker
- * tests: a construct-then-destroy round-trip against the REAL 44-row
+ * tests: a construct-then-destroy round-trip against the REAL 37-row
  * GPU_HANDLE_ROWS table (every key torn down exactly once), a key-
  * uniqueness check (a duplicate row overwrites+leaks silently — the
- * round-trip alone can't see it), the one proven teardown-order constraint
- * (focusUniform outlives the wireInput-phase rows, whose bind group it supplies
- * at construction), and the one row with real boot-time logic beyond a
- * bare factory call (starPointRenderer's epoch-derived seed).
+ * round-trip alone can't see it), and the one proven teardown-order
+ * constraint (focusUniform outlives the wireInput-phase rows, whose bind
+ * group it supplies at construction). The starCatalog Layer's own
+ * construction-order and boot-seed behaviour moved with it into
+ * `layers/starCatalog/create.ts`.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-
-vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
-  createStarPointRenderer: vi.fn(() => ({ setStars: vi.fn(), destroy: vi.fn() })),
-}));
+import { describe, it, expect } from 'vitest';
 
 import { constructGpuHandles } from '../../../../src/services/engine/gpuHandles/constructGpuHandles';
 import { destroyGpuHandles } from '../../../../src/services/engine/gpuHandles/destroyGpuHandles';
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
-import { createStarPointRenderer } from '../../../../src/services/gpu/renderers/bodies/starPointRenderer';
-import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { visibleStars } from '../../../../src/services/engine/frame/visibleStars';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { GpuHandleRow } from '../../../../src/@types/engine/handles/GpuHandleRow';
 import type { GpuHandleKey } from '../../../../src/@types/engine/handles/GpuHandleKey';
 import type { GpuHandleConstructDeps } from '../../../../src/@types/engine/handles/GpuHandleConstructDeps';
@@ -84,52 +75,5 @@ describe('GPU_HANDLE_ROWS — construct/destroy round-trip', () => {
     // mid-teardown.
     expect(order.at(-1)).toBe('focusUniform');
     expect(order.indexOf('focusUniform')).toBeGreaterThan(order.indexOf('pickProgram'));
-  });
-
-  it('declares starCatalogRenderer before its pick twin, which reads it at construction', () => {
-    // starCatalogPickRenderer's real construct closure reads
-    // `state.gpu.starCatalogRenderer!` (see gpuHandleRegistry.ts) — moving
-    // starCatalogRenderer below it would throw a TypeError on first boot,
-    // a failure this stub-based suite otherwise can't see.
-    const keys = GPU_HANDLE_ROWS.map((row) => row.key);
-    expect(keys.indexOf('starCatalogRenderer')).toBeLessThan(
-      keys.indexOf('starCatalogPickRenderer'),
-    );
-  });
-});
-
-describe('GPU_HANDLE_ROWS — starPointRenderer boot seed', () => {
-  it('uploads the full seeded star list at the J2000 boot epoch', () => {
-    const row = GPU_HANDLE_ROWS.find((r) => r.key === 'starPointRenderer') as
-      | GpuHandleRow
-      | undefined;
-    const state = {
-      data: createEngineData(),
-      gpu: {},
-      settings: { starCatalogs: INITIAL_SETTINGS.starCatalogs },
-    } as unknown as EngineState;
-    const realDeps = { ctx: { device: {} } } as unknown as GpuHandleConstructDeps;
-
-    row!.construct(state, realDeps);
-
-    const stub = vi.mocked(createStarPointRenderer).mock.results.at(-1)!.value as {
-      setStars: ReturnType<typeof vi.fn>;
-    };
-    expect(stub.setStars).toHaveBeenCalledTimes(1);
-    const uploaded = stub.setStars.mock.calls[0]![0] as ReadonlyArray<{
-      id: string;
-      positionMpc: unknown;
-    }>;
-
-    // Ground truth computed independently (not reused from the row's own
-    // closure) — a wrong epoch, a dropped star, or a forgotten setStars call
-    // would each show up as a mismatch here.
-    const bootStates = deriveBodyStates(CONST_J2000);
-    const seededStars = visibleStars(INITIAL_SETTINGS.starCatalogs);
-    expect(uploaded.map((s) => s.id)).toEqual(seededStars.map((s) => s.id));
-    expect(uploaded.map((s) => s.id)).toContain('sun');
-    for (const star of uploaded) {
-      expect(star.positionMpc).toEqual(bootStates.get(star.id)!.positionMpc);
-    }
   });
 });

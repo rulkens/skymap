@@ -45,7 +45,7 @@ import { sphereOutsideFrustum } from '../../src/utils/camera/sphereOutsideFrustu
 import {
   writeStarNodeParams,
   NODE_PARAMS_BYTES,
-} from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
+} from '../../src/layers/starCatalog/render/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { initialState as STAR_CATALOGS } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { STAR_SIZE_REF_PX } from '../../src/data/starCullSlack';

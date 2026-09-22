@@ -11,7 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../../support/selectionResolverOver';
+import type { GalaxyRowFixture, StarRowFixture } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/sources';
@@ -92,10 +92,19 @@ const deps: ResolveDeps = {
     byId: (id) => (id === 'virgo' ? virgo : null),
     byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
   },
-  stars: { current: () => null },
 };
 
-const resolver = selectionResolverOver(deps, galaxies);
+/** The starCatalog Layer's slice of the composed resolver — its own live read. */
+function starsFixture(catalog: StarCatalog | null): StarRowFixture {
+  return {
+    renderer: {
+      loadedCatalogs: () =>
+        (catalog ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
+    },
+  } as unknown as StarRowFixture;
+}
+
+const resolver = selectionResolverOver(deps, galaxies, starsFixture(null));
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -217,10 +226,7 @@ describe('extractRow, composed', () => {
 
   it('star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
-    const starResolver = selectionResolverOver(
-      { ...deps, stars: { current: () => catalog } },
-      galaxies,
-    );
+    const starResolver = selectionResolverOver(deps, galaxies, starsFixture(catalog));
     const record = resolveStarRecord(catalog, 1)!;
     expect(starResolver.extractRow({ type: 'star', index: 1 }, SIM_DAYS)).toEqual({
       type: 'star',

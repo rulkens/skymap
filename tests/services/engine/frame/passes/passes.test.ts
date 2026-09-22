@@ -12,8 +12,6 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
-import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
-import { starAggregateUpsamplePass } from '../../../../../src/services/engine/frame/passes/starAggregateUpsamplePass';
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
@@ -157,13 +155,9 @@ const PASS_STUB = {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('starAggregatesPass registry row', () => {
-  it('shares ONE visibility gate with its upsample consumer', () => {
-    // Producer and consumer are the same function by identity, so a frame can
-    // never composite a stale offscreen the producer skipped clearing.
-    expect(starAggregateUpsamplePass.enabled).toBe(starAggregatesPass.enabled);
-  });
-});
+// The starAggregatesPass/starAggregateUpsamplePass producer/consumer gate
+// pin moved to `tests/layers/starCatalog/passes/starAggregateUpsamplePass.test.ts`
+// with the rest of the starCatalog Layer's own pass tests.
 
 // Coverage for the `textured-disks` layer lives in
 // `texturedDisksPass.test.ts` (one test file per ContentPass module,

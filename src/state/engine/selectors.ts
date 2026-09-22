@@ -51,6 +51,7 @@ const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
+const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
 
@@ -108,11 +109,11 @@ export const selectStructureMemberCount = (state: RootState): number | null =>
   selectEngineFacts(state).galaxyCatalog?.structureMemberCount ?? null;
 
 /**
- * Famous-star metadata sidecar, on the same contract as
- * `selectFamousGalaxiesMeta`.
+ * Famous-star metadata sidecar, published as a starCatalog fact, on the same
+ * pre-seed contract as `selectFamousGalaxiesMeta`.
  */
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
-  selectEngine(state).meta.famousStars;
+  selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

@@ -36,8 +36,6 @@ import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { computeStarCut } from '../../gpu/renderers/starCatalog/cut/computeStarCut';
-import { advanceStarFades } from '../../gpu/renderers/starCatalog/cut/advanceStarFades';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
@@ -205,9 +203,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
   // no stamp: focus/focusBlend/layersSettling live only on `snapshot`, reached
   // by reference from every view, so this can run ahead of them. It must
-  // still run ahead of the view-dependent planners below (surface cut, star
-  // cut) so they can walk every view's frustum without re-deriving this per
-  // planner.
+  // still run ahead of the view-dependent planner below (surface cut) and
+  // every Layer's `frame` hook so they can walk every view's frustum without
+  // re-deriving this per planner.
   const canvas = deriveView(
     snapshot,
     cam,
@@ -343,17 +341,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // ── Star-cut planner (advances the LOD fades, one cut for every view) ─────
-  //
-  // A planner peer of the disk/label planners above: `advanceStarFades` is the
-  // ONLY call in a real frame that steps the survey-star fade ramps, and its
-  // vote feeds the keep-ticking predicate below. The cut itself is handed to
-  // the renderer as a value (`setFrameCut`, mirrors `surfaceTiles.setLastCut`),
-  // so every rig view's `starCutFor` reads the one cut. `computeStarCut`'s
-  // header states the `views[0]`-is-anchor contract both calls share.
-  const starFadeAnimating = advanceStarFades(state, views);
-  state.gpu.starCatalogRenderer?.setFrameCut(computeStarCut(state, views));
-
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
     state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, canvas));
@@ -378,7 +365,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    starFadeAnimating,
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,

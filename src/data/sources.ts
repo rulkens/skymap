@@ -29,15 +29,12 @@ import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
-import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
-import { SUN_ENTRY } from './sources/sun';
 import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
-import { S_STAR_ENTRY } from './sources/s-star';
 import { MESH_BODY_ENTRY } from './sources/mesh-body';
-import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
+import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
 
 export { Source } from './source';
 
@@ -84,13 +81,9 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.DebugCartesian]: DEBUG_CARTESIAN_ENTRY,
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
-  [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
-  [Source.GaiaStars]: GAIA_STARS_ENTRY,
-  [Source.Sun]: SUN_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
-  [Source.SStar]: S_STAR_ENTRY,
   [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
   [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
@@ -99,6 +92,7 @@ const UNFORMED_SOURCE_REGISTRY = {
 export const SOURCE_REGISTRY = {
   ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
+  ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
   ...sourceRecordOf(FLOW_SOURCE_ROWS),
   ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),

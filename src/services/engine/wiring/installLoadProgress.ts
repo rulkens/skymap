@@ -38,21 +38,10 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export function installLoadProgress(state: EngineState, deps: BootstrapDeps): void {
   const { cb, allSlots } = deps;
 
-  // Star-catalog slots (registry-built, keyed by Source in the starCatalogs
-  // map). Their wiring rows carry NUMERIC keys, so the string-keyed sidecar
-  // walk below misses them — they must be gathered from their per-source map
-  // like the points, or a committing catalog would get no loading-bar
-  // progress and, worse, no slot-ready render wake (`installSlotReadyWake`
-  // subscribes over this same registry, and in the render-on-demand loop an
-  // unwoken commit simply never presents).
-  for (const [, slot] of state.assetSlots.starCatalogs) {
-    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-  }
-
   // Body-texture slots (minted in wireSlots, keyed in the bodyTextures map like
-  // points/starCatalogs). Their ASSET_WIRING rows carry string keys but live in
-  // this keyed map rather than a named field, so they are gathered here and
-  // skipped in the string-keyed sidecar walk below.
+  // points). Their ASSET_WIRING rows carry string keys but live in this keyed
+  // map rather than a named field, so they are gathered here and skipped in
+  // the string-keyed sidecar walk below.
   for (const [, slot] of state.assetSlots.bodyTextures) {
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }

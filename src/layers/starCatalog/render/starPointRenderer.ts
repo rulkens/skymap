@@ -1,0 +1,283 @@
+/**
+ * starPointRenderer — the neighbourhood's distant stars as additive point
+ * sprites in the depthless HDR accumulation.
+ *
+ * ### Why a thin dedicated pipeline, not a `createGalaxyPointRenderer` wrap
+ *
+ * The survey point pipeline (`galaxyPointRenderer.ts`) was the candidate for
+ * reuse — it already draws additive soft dots into the same rgba16float
+ * target. But its factory signature threads three engine bind-group
+ * layouts (`fadeBgl` / `sourceBgl` / `focusBgl`), its upload path runs a
+ * `GalaxyCatalog` through an off-thread worker bake into a 52-byte
+ * 13-slot instance layout, and its vertex stage carries Malmquist gating,
+ * per-source depth fade, crossfade bands and pick-identity packing. A
+ * handful of seeded scene stars needs NONE of that — wrapping would mean
+ * fabricating a fake catalog + registry entry and binding three no-op
+ * uniform groups per draw just to satisfy machinery the stars never read.
+ * The thin pipeline here is a 28-byte instance layout, one 80-byte camera
+ * uniform, and a vertex/fragment pair that shares the actual common
+ * substance (`lib/camera` + `lib/billboard` helpers, the Gaussian dot
+ * profile) at the WESL level instead of at the pipeline level.
+ *
+ * ### Pipeline profile — additive, depthless
+ *
+ * Colour target: the caller's `targetFormat` (the `hdr` row's
+ * `rgba16float`) with one/one additive blending, matching the survey
+ * points. NO `depthStencil` state: the `hdr` render target is depthless
+ * (`renderTargets.ts` — `{ id: 'hdr', depth: null }`), and a pipeline
+ * that declares a depth format for a pass with no depth attachment is a
+ * validation error. This is also why the factory takes no `depthFormat`
+ * parameter, unlike the sphere-body factories that draw into the
+ * depth-bearing `foreground:0` row.
+ *
+ * ### Precision — camera-relative inputs, then f32 narrowing
+ *
+ * Both the instance positions and the view-projection arrive already rebased
+ * into the CAMERA-RELATIVE frame — the caller (`starPointsPass`) subtracts the
+ * eye from each anchor and folds the eye offset into the vp via
+ * `rebaseViewProj`, both in f64, before handing them here. That matters because
+ * during the final approach to a local-map star the raw anchor (~1e-6 Mpc from
+ * the render origin) and the raw view translation are near-equal large numbers
+ * whose f32 subtraction cancels catastrophically, jittering the sprite centre.
+ * Rebasing turns both operands into small, well-conditioned numbers, so
+ * `setStars` narrows the (already camera-relative) `positionMpc` straight into
+ * the f32 instance buffer and `draw` uploads the (already rebased) f32
+ * view-projection with no precision loss. This renderer stays a dumb pipeline:
+ * it narrows whatever frame it is handed — the seam lives in the layer.
+ *
+ * ### Late-bound star data
+ *
+ * Mirrors `earthRenderer.setMap`: the factory builds the pipeline
+ * immediately and the layer delivers data when it has it. Until a
+ * non-empty `setStars` lands, `draw` is a no-op (no placeholder needed —
+ * an additive pass with nothing to add is correctly invisible, unlike the
+ * Earth where an absent texture would mean an invisible planet).
+ *
+ * @module
+ */
+
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { StarPointRenderer } from '../../../@types/rendering/StarPointRenderer';
+import type { PositionedStar } from '../../../@types/scene/PositionedStar';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import vsCode from '../../../services/gpu/shaders/bodies/starPoints/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/bodies/starPoints/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import {
+  createViewSlotUniformRing,
+  VIEW_SLOT_COUNT,
+} from '../../../utils/gpu/createViewSlotUniformRing';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+
+/**
+ * Per-star instance record: position (f32x3) + colour (f32x3) + absMag
+ * (f32) = 7 floats, 28 bytes.  Must stay byte-exact with the attribute
+ * declarations in `starPoints/vertex.wesl` (locations 0/1/2 at offsets
+ * 0/12/24).
+ */
+const FLOATS_PER_STAR = 7;
+const STAR_STRIDE = FLOATS_PER_STAR * 4; // 28 bytes
+
+/**
+ * Uniform-buffer size for `StarPointUniforms` (`starPoints/io.wesl`): the shared
+ * 80-byte `CameraUniforms` prefix + a `sizePx` / `brightness` / `pxPerRad` tail
+ * rounded up to the 16-byte alignment the prefix's `mat4x4` demands. `sizePx`
+ * lands at float index 20 (byte 80), `brightness` at 21 (byte 84), `pxPerRad`
+ * at 22 (byte 88); float 23 is the alignment pad (zero-init, never written).
+ */
+const STAR_POINT_UNIFORM_BYTES = 96;
+const UNIFORM_SIZEPX_INDEX = 20;
+const UNIFORM_BRIGHTNESS_INDEX = 21;
+const UNIFORM_PX_PER_RAD_INDEX = 22;
+
+export function createStarPointRenderer(
+  device: GPUDevice,
+  targetFormat: GPUTextureFormat,
+): StarPointRenderer {
+  // ── Uniform ring + CPU scratch ─────────────────────────────────────────────
+  //
+  // The 80-byte CameraUniforms prefix (floats 0..15 = viewProj, 16..17 =
+  // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness /
+  // pxPerRad tail at floats 20..22 (23 pad, stays 0). See STAR_POINT_UNIFORM_BYTES.
+  const uniformScratch = new Float32Array(STAR_POINT_UNIFORM_BYTES / 4);
+
+  // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'star-points-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+  // One physical buffer + bind group per view slot: a sky-cubemap
+  // capture sweep calls `draw()` several times per frame with different
+  // cameras, all before one `submit()` — a shared buffer would keep only the
+  // last call's camera (see `createViewSlotUniformRing`'s doc).
+  const uniformRing = createViewSlotUniformRing({
+    device,
+    label: 'star-points-uniform',
+    byteSize: STAR_POINT_UNIFORM_BYTES,
+    layout: bindGroupLayout,
+  });
+
+  // ── Shader modules ────────────────────────────────────────────────────────
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'starPoints.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'starPoints.fragment');
+
+  // ── Render pipeline (additive, depthless — see module header) ────────────
+  const pipeline = device.createRenderPipeline({
+    label: 'star-points-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'star-points-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout],
+    }),
+    vertex: {
+      module: vsModule,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: STAR_STRIDE,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+            { shaderLocation: 1, offset: 12, format: 'float32x3' }, // color
+            { shaderLocation: 2, offset: 24, format: 'float32' }, // absMag
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format: targetFormat,
+          // One/one additive blend on premultiplied output — overlapping
+          // stars brighten, matching the survey points' HDR convention.
+          blend: ADDITIVE_BLEND,
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+    // NO depthStencil: the hdr target has no depth attachment.
+  });
+
+  // ── Star instance buffers (late-bound via setStars) ───────────────────────
+  //
+  // Grow-only reuse, NOT replace-on-upload. `starPointsPass.draw` calls
+  // `setStars` EVERY frame — the camera-relative anchors it hands us change
+  // per frame (the eye is subtracted in f64 before narrowing here). A
+  // create/destroy of the GPU buffer per call would mean a fresh allocation
+  // and release 60×/sec on a hot path. Instead each `viewSlot` gets its OWN
+  // buffer, allocated once sized to that slot's first non-empty set
+  // and reallocated ONLY when a later set on that SAME slot exceeds its
+  // capacity. One buffer per slot, not one shared buffer, because a
+  // sky-cubemap capture sweep calls `setStars` once per face plus once for the
+  // real view — different camera-relative positions — all before one
+  // `submit()`; a shared buffer would keep only the last call's positions
+  // (see `createViewSlotUniformRing`'s doc — the same race, for a
+  // variable-length upload the fixed-size ring can't carry). `capacity[slot]`
+  // is tracked separately from `count[slot]` so a shrink reuses the larger
+  // buffer and draws the smaller subset.
+
+  const instanceBuffers: (GPUBuffer | null)[] = new Array(VIEW_SLOT_COUNT).fill(null);
+  const capacityStars: number[] = new Array(VIEW_SLOT_COUNT).fill(0);
+  const starCounts: number[] = new Array(VIEW_SLOT_COUNT).fill(0);
+
+  function setStars(stars: readonly PositionedStar[], viewSlot: number): void {
+    starCounts[viewSlot] = stars.length;
+    // Empty set clears this slot to the no-op draw state; keep any existing
+    // buffer allocated (it is bounded, and a later non-empty set reuses it).
+    // `createBuffer({ size: 0 })` is forbidden by the spec, so never allocate
+    // here.
+    if (stars.length === 0) return;
+
+    const interleaved = new Float32Array(stars.length * FLOATS_PER_STAR);
+    for (let i = 0; i < stars.length; i++) {
+      const star = stars[i]!;
+      const base = i * FLOATS_PER_STAR;
+      // f64 → f32 narrowing is deliberate here — see the module header's
+      // precision note.
+      interleaved[base + 0] = star.positionMpc[0];
+      interleaved[base + 1] = star.positionMpc[1];
+      interleaved[base + 2] = star.positionMpc[2];
+      interleaved[base + 3] = star.color[0];
+      interleaved[base + 4] = star.color[1];
+      interleaved[base + 5] = star.color[2];
+      interleaved[base + 6] = star.absMag;
+    }
+
+    // Reallocate only when this slot's current buffer can't hold the new set.
+    // `destroy()` on the old one is safe even if a prior frame referenced
+    // it — WebGPU defers the actual release until in-flight work completes.
+    let buffer = instanceBuffers[viewSlot]!;
+    if (buffer === null || stars.length > capacityStars[viewSlot]!) {
+      buffer?.destroy();
+      capacityStars[viewSlot] = stars.length;
+      buffer = device.createBuffer({
+        label: `star-points-instance-buffer-slot${viewSlot}`,
+        size: capacityStars[viewSlot]! * STAR_STRIDE,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      instanceBuffers[viewSlot] = buffer;
+    }
+    device.queue.writeBuffer(buffer, 0, interleaved);
+  }
+
+  // ── draw ──────────────────────────────────────────────────────────────────
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    opts: { sizePx: number; brightness: number; pxPerRad: number; viewSlot: number },
+  ): void {
+    const { viewSlot } = opts;
+    const instanceBuffer = instanceBuffers[viewSlot]!;
+    const starCount = starCounts[viewSlot]!;
+    if (instanceBuffer === null || starCount === 0) return;
+
+    // uniformScratch[18..19] are CameraUniforms' named pads and [23] the tail's
+    // alignment pad — never written, so they hold their construction-time zeros
+    // across frames. sizePx / brightness / pxPerRad ride the tail at floats
+    // 20..22 (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
+    // THIS call's own `viewSlot` buffer — see the ring's doc.
+    writeCameraPrefix(uniformScratch, viewProj, viewportPx);
+    uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
+    uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
+    uniformScratch[UNIFORM_PX_PER_RAD_INDEX] = opts.pxPerRad;
+    uniformRing.writeSlot(viewSlot, uniformScratch);
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, uniformRing.bindGroupOf(viewSlot));
+    pass.setVertexBuffer(0, instanceBuffer);
+    // Six vertices per instanced billboard quad — the vertex stage maps
+    // vertex_index 0..5 through lib/billboard's quadCorner.
+    pass.draw(6, starCount);
+  }
+
+  // ── destroy ───────────────────────────────────────────────────────────────
+
+  function destroy(): void {
+    for (let slot = 0; slot < VIEW_SLOT_COUNT; slot++) {
+      instanceBuffers[slot]?.destroy();
+      instanceBuffers[slot] = null;
+      capacityStars[slot] = 0;
+      starCounts[slot] = 0;
+    }
+    uniformRing.destroy();
+  }
+
+  const renderer: StarPointRenderer = {
+    label: 'starPointRenderer',
+    setStars,
+    draw,
+    destroy,
+  };
+  renderer satisfies Renderer;
+  return renderer;
+}

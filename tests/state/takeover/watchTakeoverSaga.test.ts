@@ -111,7 +111,6 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 const NARRATION_DEPS: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 // ─── Harness ─────────────────────────────────────────────────────────────────

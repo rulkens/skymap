@@ -19,7 +19,6 @@ import { Source } from '../../../src/data/sources';
 
 const resolver = selectionResolverOver({
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 });
 
 describe('sceneBodyPickId', () => {

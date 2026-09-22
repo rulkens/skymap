@@ -34,7 +34,6 @@ export function shouldKeepTicking(
   s: RootState,
   nowMs: number,
   anim: {
-    starFadeAnimating: boolean;
     surfaceTilesAnimating: boolean;
     labelsAnimating: boolean;
     probeDue: boolean;
@@ -47,7 +46,6 @@ export function shouldKeepTicking(
     state.subsystems.structureFocus.isAwake(nowMs) ||
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state) ||
-    anim.starFadeAnimating ||
     anim.surfaceTilesAnimating ||
     anim.labelsAnimating ||
     anim.probeDue ||

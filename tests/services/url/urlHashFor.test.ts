@@ -68,7 +68,6 @@ describe('URL_HASH_FOR', () => {
     };
     const resolver = selectionResolverOver({
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     });
     const id = URL_HASH_FOR.body(star);
     expect(id).toBe('body-sirius');

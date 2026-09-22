@@ -59,7 +59,6 @@ const DEPS: ResolveDeps = {
       id === 'group-local-group' ? LOCAL_GROUP : id === 'group-m81-group' ? M81_GROUP : null,
     byCategory: () => [],
   },
-  stars: { current: () => null },
 };
 const RESOLVER = selectionResolverOver(DEPS);
 

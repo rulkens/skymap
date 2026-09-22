@@ -138,16 +138,13 @@ function makeProgressState(): EngineState {
   // at RUNTIME, so a fixture carrying fields production dropped would still walk
   // — and pin a shape that no longer exists.
   const assetSlots: EngineAssetSlots = {
-    // A keyed family with a member, so the per-source map walk is exercised.
-    starCatalogs: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
-    famousStarsMeta: stubSlot('famous-stars-meta'),
     structureCatalog: stubSlot('structure-catalog'),
     cf4Density: stubSlot('cf4Density'),
     mcpm: stubSlot('mcpm'),
     polyphorm2Mrs: stubSlot('polyphorm-2mrs'),
     mcpmWorkbench: stubSlot('mcpm-workbench'),
     bodyTextureAtlas: stubSlot('body-texture-atlas'),
-    // Empty keyed families: installLoadProgress walks them like starCatalogs.
+    // Empty keyed families: installLoadProgress walks them like layerSlots.
     bodyTextures: new Map(),
     meshBodies: new Map(),
   };
@@ -157,7 +154,9 @@ function makeProgressState(): EngineState {
     // The composed lists `createLayers` would have written; over an empty layer
     // tuple they are core's own registry, and no Layer owns a slot.
     assetRows: expandCompanionRows(ASSET_WIRING),
-    layerSlots: new Map(),
+    // A member, so the per-source Layer-slot walk is exercised (the starCatalog
+    // Layer's Gaia slot is the real-world example this fixture stands in for).
+    layerSlots: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
   } as unknown as EngineState;
 }
 

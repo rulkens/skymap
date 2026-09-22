@@ -21,7 +21,7 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
-import { createStarCatalogRenderer } from '../../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer';
+import { createStarCatalogRenderer } from '../../../../../src/layers/starCatalog/render/starCatalogRenderer';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
 import { Source } from '../../../../../src/data/sources';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';

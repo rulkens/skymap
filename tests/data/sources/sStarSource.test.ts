@@ -10,8 +10,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
-import { S_STAR_ENTRY } from '../../../src/data/sources/s-star';
-import { SUN_ENTRY } from '../../../src/data/sources/sun';
+import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
+import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';

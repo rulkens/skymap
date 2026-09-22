@@ -1,6 +1,6 @@
 /**
  * One catalog's persistent per-node LOD-fade bookkeeping — see
- * `renderers/starCatalog/cut/starFadeState.ts` for the full scheme.
+ * `layers/starCatalog/render/cut/starFadeState.ts` for the full scheme.
  */
 
 export type StarFadeState = {

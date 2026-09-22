@@ -13,11 +13,13 @@ import { filamentsLayer } from '../layers/filaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
+import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
 export const APP_COMPOSITION = {
   layers: [
     galaxyCatalogLayer,
+    starCatalogLayer,
     filamentsLayer,
     flowLayer,
     zoneOfAvoidanceLayer,
@@ -28,6 +30,7 @@ export const APP_COMPOSITION = {
 } satisfies EngineComposition<
   readonly [
     typeof galaxyCatalogLayer,
+    typeof starCatalogLayer,
     typeof filamentsLayer,
     typeof flowLayer,
     typeof zoneOfAvoidanceLayer,

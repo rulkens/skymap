@@ -1,7 +1,7 @@
 /**
  * One draw stream's (leaf or aggregate) per-source node data as reused
  * grow-only flat typed arrays; only `[0, count)` is live — see
- * `createStarNodeStream` in `renderers/starCatalog/cut/starNodeStream.ts`.
+ * `createStarNodeStream` in `layers/starCatalog/render/cut/starNodeStream.ts`.
  */
 
 export type StarNodeStream = {
