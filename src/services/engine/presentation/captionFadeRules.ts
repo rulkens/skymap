@@ -74,19 +74,19 @@ const PRODUCER_SUPPLIED = (): number => 0;
 
 export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> = {
   /**
-   * The descent's aim point. Its own body row governs the name, so muting the
-   * curated neighbourhood leaves the Sun captioning; `bodies.items.sun.enabled`
-   * is the same flag `visibleStars` reads to hide the Sun's dot (unwritable
-   * today — no setter exists — but reachable via a snapshot restore, so the
-   * caption consults it rather than assuming it is always true). The band makes
-   * the name fade IN smoothly on the way down: exactly 0 at the layer's enable
-   * gate (no pop) up to full alpha by half that distance.
+   * The descent's aim point. Its own star-catalog row governs the name, so
+   * muting the curated neighbourhood leaves the Sun captioning; the visibility
+   * axis is BOTH levels, exactly as `visibleStars` composes them, so the caption
+   * never outlives the dot. The band makes the name fade IN smoothly on the way
+   * down: exactly 0 at the layer's enable gate (no pop) up to full alpha by half
+   * that distance.
    */
   sun: {
-    labelEnabled: (settings) => settings.bodies.items.sun.labelEnabled,
-    subjectVisible: (settings) => settings.bodies.items.sun.enabled,
+    labelEnabled: (settings) => settings.starCatalogs.items.sun.labelEnabled,
+    subjectVisible: (settings) =>
+      settings.starCatalogs.enabled && settings.starCatalogs.items.sun.enabled,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'sun' },
+    fadeHandle: { kind: 'labelLayer', layer: 'starCatalog', item: 'sun' },
   },
 
   /** Inside the caption range Earth is simply on — no band, no visibility axis. */

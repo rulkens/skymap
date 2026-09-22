@@ -33,13 +33,6 @@ function volumeFieldIds(): readonly VolumeFieldId[] {
   return ids;
 }
 
-// `STAR_CATALOG_IDS` spans the whole cluster, but the survey-wide Gaia bin draws
-// no per-star names, so its handle would be a controller nothing can move.
-// Filtering on `bearsLabel` is also what keeps `item` inside `LabelCategory`.
-const LABEL_BEARING_STAR_CATALOG_IDS = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'starCatalog' && e.bearsLabel,
-).map((e) => e.id);
-
 // The same narrowing for bodies, and here the COMPILER insists: `item` must be a
 // `LabelCategory`, so `BODY_IDS` (the settings key domain) is the wider set.
 const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' && e.bearsLabel).map(
@@ -87,14 +80,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
     intent: (s) => s.milkyWay.labelEnabled,
-  }),
-  // Curated star-map captions: seeded in code, not demand-loaded, so no guard.
-  fadeLayerRow({
-    key: 'starCatalogLabel',
-    expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
-    handle: (id) => ({ kind: 'labelLayer', layer: 'starCatalog', item: id }),
-    seed: (s, id) => (s.starCatalogs.items[id].labelEnabled ? 1 : 0),
-    intent: (s, id) => s.starCatalogs.items[id].labelEnabled,
   }),
   // scene-body captions — per LABEL-BEARING BodyId, settings-derived seed
   // (bodies are seeded in code, so no demand-loaded guard). Not every body row

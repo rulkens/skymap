@@ -108,13 +108,24 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
-  it('a star is findable by its Bayer alias without the deepZoom gate', () => {
-    // No deepZoom URL gate is set, yet a query for Sirius's Bayer designation
-    // (not its common name) surfaces the Sirius body row — pins both the ungate
-    // and the alias scoring over the star's full names[].
+  it('a star is findable by its Bayer alias, on a star row', () => {
+    // A query for Sirius's Bayer designation (not its common name) surfaces the
+    // Sirius STAR row — pins the alias scoring over the star's full names[] and
+    // that a star ranks as a star, not as a body (spec §7).
     const rows = rankPaletteMatches([M31], [], [], 'Alpha Canis Majoris');
-    const hit = rows.find((r) => r.kind === 'body');
-    expect(hit?.kind === 'body' && hit.body.id).toBe('sirius');
+    const hit = rows.find((r) => r.kind === 'starCatalog');
+    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
+    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sirius')).toBe(false);
+  });
+
+  it('finds the Sun by its authored alias, and never as a body row', () => {
+    // The Sun is its own seeded catalog with no famous-star seed row, so its
+    // aliases live in the authored half of BODY_SEARCH_NAMES; scoring stars off
+    // that same map is what keeps 'Sol' finding it.
+    const rows = rankPaletteMatches([M31], [], [], 'Sol');
+    const hit = rows.find((r) => r.kind === 'starCatalog');
+    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
+    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sun')).toBe(false);
   });
 
   it('finds Sgr A* by its Sagittarius alias', () => {

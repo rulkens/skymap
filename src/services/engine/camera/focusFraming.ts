@@ -22,13 +22,13 @@
  *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
  *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
- *   - body / star: both are discrete near-field objects framed on a physical
- *     radius through the FOV, so they share `bodyLikeFraming` — unclamped pure
- *     math, because at ~2e-16 Mpc (Earth) any Mpc-scale floor would swallow the
- *     framing. `radius` is the physical radius, a real pass-by extent. Their row
- *     shapes differ (body: id/label; star: index/photometry + a nominal solar
- *     radius, the bin having no per-star size), so the cases stay separate. A
- *     body row's optional `focusDistanceRadii` (e.g. Sgr A*'s ~30.4 r_s)
+ *   - body / starCatalog: both are discrete near-field objects framed on a
+ *     physical radius through the FOV, so they share `bodyLikeFraming` —
+ *     unclamped pure math, because at ~2e-16 Mpc (Earth) any Mpc-scale floor
+ *     would swallow the framing. `radius` is the physical radius, a real pass-by
+ *     extent. The cases stay separate because a body row carries identity only
+ *     (its size comes from the seed) while a star row carries its own `radiusM`.
+ *     A body row's optional `focusDistanceRadii` (e.g. Sgr A*'s ~30.4 r_s)
  *     overrides the screen-fill distance with a fixed radius multiple.
  *
  * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
@@ -104,10 +104,6 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         // We are inside the galaxy; there is no meaningful fly-past radius.
         radius: 0,
       };
-    // A seeded body and a survey star differ in row shape but frame identically:
-    // a discrete near-field object sized on its physical radius. Both delegate
-    // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
-    // nominal solar radius (the bin has no per-star size).
     case 'body': {
       // The row carries identity only; the size it frames on comes from the seed.
       const body = findByIdOrThrow(SCENE_BODIES, row.id, 'focusFraming');
@@ -118,7 +114,9 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
       );
     }
-    case 'star':
+    // A star carries its own radius: a seeded star's photosphere, or the nominal
+    // solar radius the extractor stamps on a survey star.
+    case 'starCatalog':
       return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     // The band carries no x/y/z (a line-of-sight effect, not a point), so it
     // has no pose to fabricate. UNREACHABLE BY CONSTRUCTION: every

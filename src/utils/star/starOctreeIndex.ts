@@ -18,7 +18,7 @@
  * reconstruction `walkStarOctreeCut` and `starNodeOriginRelCamMpc` invert.
  */
 import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
-import type { StarOctreeIndex } from '../../@types/rendering/StarOctreeIndex';
+import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
 import { mortonDecode3 } from '../math/mortonDecode3';
 
 const cache = new WeakMap<StarCatalog, StarOctreeIndex>();

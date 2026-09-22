@@ -57,7 +57,7 @@ type SelectionHalo = {
 type MilkyWayRow = { readonly type: 'milkyWay' };
 type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
-type StarRow = Extract<SelectionRow, { type: 'star' }>;
+type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
 
 // Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
 // and returns a descriptor (or null for the structure/zoneOfAvoidance arms,
@@ -69,7 +69,7 @@ const SELECTION_HALO_TABLE: {
   structure: (row: StructureInfo) => null;
   zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
-  star: (row: StarRow) => SelectionHalo;
+  starCatalog: (row: StarCatalogRow) => SelectionHalo;
 } = {
   // `max(diameterKpc, 30)` handles any pre-v4-format galaxy without a measured
   // size; *2 = diameter→radius span.
@@ -90,7 +90,7 @@ const SELECTION_HALO_TABLE: {
   // The band has no ring center — it's a line-of-sight effect along the whole
   // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
-  // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
+  // A scene body (a planet, Earth, a mesh body) is drawn as a real sphere, so
   // its ring rides its true physical radius — the outer bound → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
@@ -103,10 +103,11 @@ const SELECTION_HALO_TABLE: {
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,
   }),
-  // A survey star carries the nominal solar radius (`radiusM`, stamped by the
-  // extractor) and resolves to a sphere on close approach, so its ring rides
-  // that physical radius in Mpc too — same NEAR0 treatment as a scene body.
-  star: (row) => ({
+  // A star carries its own `radiusM` — a seeded star's photosphere, or the
+  // nominal solar radius the extractor stamps on a survey star — and resolves to
+  // a sphere on close approach, so its ring rides that physical radius in Mpc
+  // too: the same NEAR0 treatment as a scene body.
+  starCatalog: (row) => ({
     radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
     slab: NEAR0,

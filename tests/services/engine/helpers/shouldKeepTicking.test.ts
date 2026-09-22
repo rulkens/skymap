@@ -7,7 +7,7 @@
  *
  * The camera term is `selectCameraActive(s)` over the store `RootState`. The
  * final `anim` parameter is the in-frame-animation vote bag runFrame collects
- * from the planners it just ran (star LOD fade, Earth tile subsystem); every
+ * from the planners it just ran (the Earth tile subsystem, labels); every
  * case here defaults it to at-rest (`NO_ANIM`).
  */
 
@@ -55,7 +55,6 @@ const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
 const NO_ANIM = {
-  starFadeAnimating: false,
   surfaceTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
@@ -172,21 +171,11 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
   });
 
-  it('a star LOD fade in flight → true even with everything else at rest', () => {
-    // The star-cut planner (advanceStarFades) reports a node mid-dissolve for this
-    // frame; the loop must keep ticking to finish the ramp even though the camera
-    // is still, no thumbnails are loading, and nothing else animates. This is the
-    // vote read here instead of the star pass firing its own requestRender.
-    const state = makeState({});
-    expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
-    ).toBe(true);
-  });
-
   it('layersAwake is a keep-alive term — true even with everything else at rest', () => {
-    // A Layer's frame hook voted awake this frame (D2); runFrame folds every
-    // hook's vote into this one bag entry, so the predicate need not know
-    // anything about Layers itself — just this bit.
+    // A Layer's frame hook voted awake this frame (D2) — including the
+    // starCatalog Layer's own LOD-fade vote — and runFrame folds every hook's
+    // vote into this one bag entry, so the predicate need not know anything
+    // about Layers itself, or about the star cut, just this bit.
     const state = makeState({});
     expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAwake: true })).toBe(
       true,

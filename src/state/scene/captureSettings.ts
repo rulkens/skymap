@@ -14,12 +14,11 @@
  * (brightness, intensity, palette, …) ride along with the visibility bits
  * (the `enabled` gates) automatically, so restore is a single
  * cluster-for-cluster assignment with no field-by-field translation to
- * keep in sync. That policy is why `bodies` carries its per-item `enabled`
- * axis along with `labelEnabled` even though `enabled` has no settings-panel
- * setter today: `visibleStars` and the foreground-caption layer already
- * treat that flag as live (readable, just not currently writable by the
- * user), so a whole-cluster capture is what keeps a body's dot and its
- * caption restoring in lockstep rather than one outliving the other.
+ * keep in sync. That policy is why `starCatalogs` carries its per-item
+ * `enabled` axis along with `labelEnabled`: `visibleStars` and the
+ * foreground-caption layer read both, so a whole-cluster capture is what keeps a
+ * star's dot and its caption restoring in lockstep rather than one outliving the
+ * other.
  *
  * `orientation` does NOT ride along, despite being captured at the same time
  * `captureScene` calls this function: it is a bare scalar, not one of the

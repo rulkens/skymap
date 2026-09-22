@@ -1,33 +1,20 @@
 /**
  * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth, the
- * local star map, the planets, and Sgr A*. Declutter, envelope, and lift run
- * in `label2DDirector`; every candidate emits even at target 0 (the
- * director's exponential envelope drops only genuinely absent ids, easing an
- * emitted-0 id instead of popping it). `prominencePx` (composed declutter
- * rank) and `lift.subjectSizePx` (raw apparent size) stay distinct facts.
- * Sgr A*'s target falls out of the generic per-kind loop below, not a
- * separate `sgrAStarCaptionTarget` call: both read the same `SCENE_ANCHORS`
- * position by reference and the zero `RENDER_ORIGIN_MPC`, ending in the same
- * `CAPTION_FADE_RULES.sgrAStar.fadeTarget` — identical by construction.
+ * planets, Sgr A*, and the mesh bodies (the seeded stars and the Sun caption
+ * through the star Layer's `produceStarCaptions` now, sharing the per-caption
+ * compose `composeForegroundCaption`). Declutter, envelope and lift run in
+ * `label2DDirector`; every candidate emits even at target 0 (a dropped id eases out instead of popping).
  */
 
-import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { CaptionComposeContext } from '../../../@types/rendering/CaptionComposeContext';
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
-import { CAPTION_FADE_RULES } from './captionFadeRules';
-import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
-import { apparentSizePx } from '../../../utils/math/apparentSizePx';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { overflowFade } from '../../../utils/scene/overflowFade';
-import { subjectOccludedByBodies } from '../../../utils/occlusion/subjectOccludedByBodies';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
+import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -48,102 +35,33 @@ export function produceSceneBodyCaptions(
   state: EngineState,
   ctx: FrameView,
 ): Label2DProducerOutput {
-  const settings = state.settings;
-  const camPos = ctx.drawCamPos;
-  // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
-  // ride, which diverges from origin distance once focus leaves the origin.
-  const camOrbitDistanceMpc = ctx.cam.distance;
-  const viewportShortSidePx = Math.min(ctx.canvasSize.width, ctx.canvasSize.height);
-
-  const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
-  // Hoisted, not resolved per-caption: every 'star' kind shares the
-  // starCatalogLabel clip key and every other kind shares bodyLabel, so each
-  // is a single frame-constant literal (the `produceStructureMarkers.ts:65` /
-  // `produceFamousGalaxyLabels.ts:218` idiom).
+  // Hoisted, not resolved per-caption: every kind this producer emits shares
+  // the bodyLabel clip key (the star Layer's own producer owns starCatalogLabel
+  // now), so it is a single frame-constant literal (the
+  // `produceStructureMarkers.ts:65` / `produceFamousGalaxyLabels.ts:218` idiom).
   const clipFactorBody = state.subsystems.clipPlayer.clipOpacityOf('bodyLabel', now);
-  const clipFactorStarCatalog = state.subsystems.clipPlayer.clipOpacityOf('starCatalogLabel', now);
 
-  // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
-  // FRONT of a body from one behind it. Deciding that per caption here is what
-  // keeps the whale's name legible over Earth's disc while the Moon's still
-  // sinks behind the limb.
-  const occluders = sceneOccluderBodies(state, ctx);
+  const composeCtx: CaptionComposeContext = {
+    settings: state.settings,
+    camPos: ctx.drawCamPos,
+    // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
+    // ride, which diverges from origin distance once focus leaves the origin.
+    camOrbitDistanceMpc: ctx.cam.distance,
+    viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
+    drawPxPerRad: ctx.drawPxPerRad,
+    fades: state.subsystems.fades,
+    nowMs: now,
+    // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
+    // FRONT of a body from one behind it — deciding that per caption is what
+    // keeps the whale's name legible over Earth's disc while the Moon's still
+    // sinks behind the limb.
+    occluders: sceneOccluderBodies(state, ctx),
+  };
 
-  const labels: Label2D[] = [];
-  for (const label of baseLabelsFor(sceneBodyStates(state, ctx))) {
-    const anchor: Vec3 = [
-      label.worldPos[0] - camPos[0],
-      label.worldPos[1] - camPos[1],
-      label.worldPos[2] - camPos[2],
-    ];
-
-    // `worldEmMpc` is the body's RADIUS in Mpc, hence the `2 ×` diameter.
-    const distanceMpc = Math.hypot(anchor[0], anchor[1], anchor[2]);
-    const subjectSizePx = apparentSizePx({
-      diameterKpc: (2 * label.worldEmMpc) / SCALE_UNITS.KPC_TO_MPC,
-      distanceMpc,
-      pxPerRad: ctx.drawPxPerRad,
-    });
-
-    const rule = CAPTION_FADE_RULES[label.kind];
-    const handle = rule.fadeHandle;
-    // `null` only for the constellation row, which `sceneBodyLabels` never
-    // emits (see `CAPTION_FADE_RULES.constellation`'s docblock) — the ternary
-    // exists for the type, not because this branch runs.
-    const registryOpacity = handle === null ? 1 : fades.opacityOf(handle, now);
-    const clipFactor = label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody;
-    // Keep-emitting gate: a toggled-off caption stays gated OPEN while its
-    // registry ramp still has opacity to give, so the ramp's multiply carries
-    // the fade-out to completion instead of the boolean truncating it (the
-    // `produceMilkyWayLabel.ts:48` / `produceFamousGalaxyLabels.ts:174-179`
-    // idiom). `subjectVisible` stays a hard gate — unrelated to this toggle.
-    const ruleGate =
-      rule.subjectVisible(settings) && (rule.labelEnabled(settings) || registryOpacity > 0) ? 1 : 0;
-    // A caption may narrow its kind's reach to its own approach band. The band
-    // is DATA on the caption, so nothing here knows which seeds author one.
-    const revealAlpha =
-      label.revealBand === undefined ? 1 : fadeBand(label.revealBand, distanceMpc);
-    // Once the body fills the view its caption's own lift carries it off the
-    // top edge, leader line and all, so it dissolves — the same rule, on the
-    // same subject size, that dismisses the NEAR0 selection ring. Uniform
-    // across kinds on purpose: `CAPTION_FADE_RULES` bands read DISTANCE, which
-    // says nothing about apparent size, so no row makes this redundant.
-    const fadeAlpha =
-      ruleGate *
-      rule.fadeTarget(distanceMpc, camOrbitDistanceMpc) *
-      revealAlpha *
-      overflowFade(subjectSizePx, viewportShortSidePx) *
-      registryOpacity *
-      clipFactor;
-
-    const prominencePx =
-      CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +
-      Math.min(subjectSizePx, CAPTION_TIER_SCALE - 1);
-
-    labels.push({
-      ...label,
-      worldPos: anchor,
-      fadeAlpha,
-      occludeWeight: subjectOccludedByBodies({
-        subjectMpc: label.worldPos,
-        camPosMpc: camPos,
-        bodies: occluders,
-      })
-        ? 1
-        : 0,
-      // The second channel's cutoff. The subject's NEAR surface, not its
-      // centre, so self-occlusion falls out: a body's own front face sits AT
-      // this distance and so never passes the shader's strict `<`.
-      occludeNearKm: (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
-      prominencePx,
-      lift: {
-        subjectSizePx,
-        // Apparent radius + gap: the connector ends clear of the body's rim.
-        lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
-      },
-    });
-  }
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
+    composeForegroundCaption(composeCtx, label, clipFactorBody),
+  );
 
   return { labels, awake: false };
 }

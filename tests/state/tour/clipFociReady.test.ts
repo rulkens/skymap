@@ -42,7 +42,6 @@ const id = (s: string): FocusId => s as FocusId;
 // famous or galaxy id resolves to null.
 const emptyDeps: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 const emptyResolver = selectionResolverOver(emptyDeps);
 
@@ -62,7 +61,6 @@ const m87Meta: FamousGalaxyMetaEntry = {
 // resolveFocusId returns null for 'm87' — the catalog is absent.
 const depsM87NotLoaded: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 const m87NotLoadedResolver = selectionResolverOver(depsM87NotLoaded);
 

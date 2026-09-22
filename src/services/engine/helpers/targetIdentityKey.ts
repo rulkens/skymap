@@ -19,6 +19,8 @@ export const TARGET_IDENTITY_KEY: Record<FocusableTargetType, (t: FocusableTarge
   // A scene body's seed id is stable and unique within the body namespace, so
   // the `body:${id}` key names it exactly — the same shape as the structure arm.
   body: (t) => (t.type === 'body' ? `body:${t.id}` : ''),
-  // A survey star's identity is its bin-stable record index.
-  star: (t) => (t.type === 'star' ? `star:${t.index}` : ''),
+  // A star's identity is the source + index pair its ref carries; the two
+  // seeded tables and the survey bin number independently, so the source is
+  // part of the key rather than a redundant prefix.
+  starCatalog: (t) => (t.type === 'starCatalog' ? `starCatalog:${t.source}:${t.index}` : ''),
 };

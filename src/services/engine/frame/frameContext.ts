@@ -97,7 +97,7 @@ export function deriveFrameContext(
   // NEAR0's distanceRangeM (spec §7.1) is sized from the star spheres actually
   // drawn; which star is a sphere is a per-view question, so this resolves the
   // positions once and `deriveView` partitions them.
-  const positionedStars = visibleStars(state).map((star) => ({
+  const positionedStars = visibleStars(state.settings.starCatalogs).map((star) => ({
     ...star,
     positionMpc: bodyStates.get(star.id)!.positionMpc,
   }));

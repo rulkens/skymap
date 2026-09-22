@@ -60,7 +60,7 @@ import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional — PRELUDE's two Layer-owned rows need a stand-in here, since this
+// optional — PRELUDE's three Layer-owned rows need a stand-in here, since this
 // fixture's `passes`/`computes` are core's own registry alone too.
 const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
   {
@@ -70,6 +70,11 @@ const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
   },
   {
     name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'star-catalog',
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),
   },

@@ -100,7 +100,6 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
  * undefined.
  */
 const DIVE_DEPS: ResolveDeps = {
-  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({

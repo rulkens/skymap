@@ -19,7 +19,7 @@ import type { FocusableTargetType } from '../../@types/engine/FocusableTargetTyp
 import { selectionToFocusId } from './focusUrl';
 import { MILKY_WAY_FOCUS_ID } from './milkyWayFocusId';
 import { BODY_FOCUS_PREFIX } from './bodyFocusId';
-import { STAR_FOCUS_PREFIX } from './starFocusId';
+import { encodeStarFocusId } from './encodeStarFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
   // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID → pos@).
@@ -33,14 +33,17 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   // No deep link: the band has no position to fly to (spec's Non-goals), so
   // there is nothing for a `#focus=` hash to name.
   zoneOfAvoidance: () => null,
-  // Scene body (any SCENE_BODIES entry — famous star, planet, or Earth) →
-  // its seed id under the shared BODY_FOCUS_PREFIX (`body-sirius`). The same
+  // Scene body (a planet, Earth, a mesh body) → its seed id under the shared
+  // BODY_FOCUS_PREFIX (`body-earth`). The same
   // prefix `actionForRow` and the resolver's focusIdOf emit, and its
   // resolveFocusId strips, closing the `#focus=body-<id>` round-trip. A bare
   // `t.id` would collide with the famous-galaxy character class and mis-decode.
   body: (t) => (t.type === 'body' ? `${BODY_FOCUS_PREFIX}${t.id}` : null),
-  // A survey star's id is the `star-<index>` token; the resolver's resolveFocusId
-  // strips the prefix back to the record index, closing the `#focus=star-<index>`
+  // A star's id is `star-<seedId>` for a seeded catalog and `star-<index>` for a
+  // survey star; `decodeStarFocusId` splits the two apart again, closing the
   // round-trip.
-  star: (t) => (t.type === 'star' ? `${STAR_FOCUS_PREFIX}${t.index}` : null),
+  starCatalog: (t) =>
+    t.type === 'starCatalog'
+      ? encodeStarFocusId({ type: 'starCatalog', source: t.source, index: t.index })
+      : null,
 };

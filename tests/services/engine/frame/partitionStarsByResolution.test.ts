@@ -23,7 +23,9 @@ import {
   STAR_RESOLVE_PX,
 } from '../../../../src/services/engine/frame/partitionStarsByResolution';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
+import { Source } from '../../../../src/data/sources';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -31,9 +33,14 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
 
 /** The record + the position the frame resolves for it, as the layers pair them. */
-const POSITIONED: readonly PositionedStar[] = SCENE_STARS.map((star) => ({
+const POSITIONED: readonly PositionedStar[] = [
+  ...SCENE_SUN.map((star, seedIndex) => ({ star, source: Source.Sun, seedIndex })),
+  ...SCENE_STARS.map((star, seedIndex) => ({ star, source: Source.FamousStar, seedIndex })),
+].map(({ star, source, seedIndex }) => ({
   ...star,
   positionMpc: ANCHOR_POS.get(star.id)!,
+  source,
+  seedIndex,
 }));
 
 const byId = (id: string) => POSITIONED.find((star) => star.id === id)!;

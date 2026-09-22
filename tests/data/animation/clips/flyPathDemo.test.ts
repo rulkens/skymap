@@ -74,7 +74,6 @@ const GROUPS: Record<string, StructureInfo> = {
 
 const DEPS: ResolveDeps = {
   structures: { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 const RESOLVER = selectionResolverOver(DEPS);
 

@@ -37,15 +37,15 @@ import { mat4 } from 'wgpu-matrix';
 
 import { decodeStarCatalog } from '../../src/data/starCatalog/starCatalogFormat';
 import { walkStarOctreeCut } from '../../src/utils/star/walkStarOctreeCut';
-import type { StarCutFrustum } from '../../src/@types/rendering/StarCutFrustum';
-import type { StarCutSnapshot } from '../../src/@types/rendering/StarCutSnapshot';
+import type { StarCutFrustum } from '../../src/layers/starCatalog/@types/StarCutFrustum';
+import type { StarCutSnapshot } from '../../src/layers/starCatalog/@types/StarCutSnapshot';
 import { starOctreeIndex } from '../../src/utils/star/starOctreeIndex';
 import { frustumPlanesFromViewProj } from '../../src/utils/camera/frustumPlanesFromViewProj';
 import { sphereOutsideFrustum } from '../../src/utils/camera/sphereOutsideFrustum';
 import {
   writeStarNodeParams,
   NODE_PARAMS_BYTES,
-} from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
+} from '../../src/layers/starCatalog/render/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { initialState as STAR_CATALOGS } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { STAR_SIZE_REF_PX } from '../../src/data/starCullSlack';

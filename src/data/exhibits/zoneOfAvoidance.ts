@@ -31,7 +31,7 @@ const PICK_BAND_AND_GALAXIES = {
     zoneOfAvoidance: true,
     galaxyCatalog: true,
     body: false,
-    star: false,
+    starCatalog: false,
     structure: false,
     milkyWay: false,
   },

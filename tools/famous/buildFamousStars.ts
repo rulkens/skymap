@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 /**
- * buildFamousStars — split the curated famous-stars seed into its two runtime
- * artefacts.
+ * buildFamousStars — split the curated star seeds into their runtime artefacts.
  *
- * Reads:
- *   - `data/seeds/famous_stars.seed.json`   (curated entries, single source of truth)
+ * Reads every seed in `STAR_SEEDS` (curated entries, single source of truth).
  *
  * Writes:
- *   - `src/data/bodies/famousStars.generated.ts`  (committed generated code)
+ *   - one committed generated `.ts` table per seed (`STAR_SEEDS.generatedPath`)
  *   - `tools/stars-rs/src/famous_ids.generated.rs` (committed generated Rust)
  *   - `public/data/famous_stars_meta.json`        (gitignored build artefact)
  *
@@ -56,8 +54,27 @@ import {
 } from '../parsers/famousStarsSeed';
 import type { FamousStarRow } from '../../src/@types/data/FamousStarRow';
 import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
+import type { StarSeedArtefact } from './@types/StarSeedArtefact';
+
+/**
+ * The seed-backed star tables, one generated module each — a separate catalog
+ * at runtime, which is what keeps "famous stars off" from also hiding the Sun.
+ * The Rust dedup ids and the meta sidecar are built over all of them at once.
+ */
+export const STAR_SEEDS: readonly StarSeedArtefact[] = [
+  {
+    seedKey: 'famous-stars.seed',
+    generatedPath: 'src/data/bodies/famousStars.generated.ts',
+    exportName: 'FAMOUS_STARS_GENERATED',
+  },
+  {
+    seedKey: 'sun.seed',
+    generatedPath: 'src/data/bodies/sun.generated.ts',
+    exportName: 'SUN_GENERATED',
+  },
+];
 
 /**
  * Project the seed entries onto the compact render + search rows the runtime
@@ -110,11 +127,14 @@ export function seedToMetaEntries(entries: readonly FamousStarEntry[]): FamousSt
   }));
 }
 
-const GENERATED_BANNER =
-  '// src/data/bodies/famousStars.generated.ts\n' +
-  '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
-  '// Regenerate with:  npm run build-famous-stars\n' +
-  '// Source of truth:  data/seeds/famous_stars.seed.json\n';
+function generatedBanner(seed: StarSeedArtefact): string {
+  return (
+    `// ${seed.generatedPath}\n` +
+    '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
+    '// Regenerate with:  npm run build-famous-stars\n' +
+    `// Source of truth:  ${RAW_DATA[seed.seedKey].path}\n`
+  );
+}
 
 /** Quote a string as a single-quoted TS literal (prettier's `singleQuote` style). */
 function quote(s: string): string {
@@ -136,7 +156,10 @@ function literal(value: unknown): string {
  * config (2-space indent, single quotes, trailing commas) so the committed file
  * survives a `prettier --write` unchanged.
  */
-export function serializeGeneratedTable(rows: readonly FamousStarRow[]): string {
+export function serializeGeneratedTable(
+  rows: readonly FamousStarRow[],
+  seed: StarSeedArtefact,
+): string {
   const rowsText = rows
     .map((row) => {
       const fields = Object.entries(row)
@@ -146,9 +169,9 @@ export function serializeGeneratedTable(rows: readonly FamousStarRow[]): string 
     })
     .join('\n');
   return (
-    GENERATED_BANNER +
+    generatedBanner(seed) +
     "import type { FamousStarRow } from '../../@types/data/FamousStarRow';\n\n" +
-    `export const FAMOUS_STARS_GENERATED: readonly FamousStarRow[] = [\n${rowsText}\n];\n`
+    `export const ${seed.exportName}: readonly FamousStarRow[] = [\n${rowsText}\n];\n`
   );
 }
 
@@ -199,20 +222,26 @@ export function seedToRustConst(entries: readonly FamousStarEntry[]): string {
 }
 
 function main(): void {
-  const seedPath = rawDataPath('famous-stars.seed');
-  const entries = parseFamousStarsSeed(readFileSync(seedPath, 'utf8'));
-  process.stderr.write(`loaded ${entries.length} famous star entries from seed\n`);
+  // Every seed's entries, in STAR_SEEDS order — the Rust dedup ids and the
+  // InfoCard sidecar are one artefact each over all of them.
+  const allEntries: FamousStarEntry[] = [];
 
-  const generatedPath = resolve('src/data/bodies/famousStars.generated.ts');
-  writeFileSync(generatedPath, serializeGeneratedTable(seedToGeneratedRows(entries)));
-  process.stderr.write(`wrote ${entries.length} rows to famousStars.generated.ts\n`);
+  for (const seed of STAR_SEEDS) {
+    const entries = parseFamousStarsSeed(readFileSync(rawDataPath(seed.seedKey), 'utf8'));
+    allEntries.push(...entries);
+    writeFileSync(
+      resolve(seed.generatedPath),
+      serializeGeneratedTable(seedToGeneratedRows(entries), seed),
+    );
+    process.stderr.write(`wrote ${entries.length} rows to ${seed.generatedPath}\n`);
+  }
 
   const rustPath = resolve('tools/stars-rs/src/famous_ids.generated.rs');
-  writeFileSync(rustPath, seedToRustConst(entries));
+  writeFileSync(rustPath, seedToRustConst(allEntries));
   process.stderr.write(`wrote famous_ids.generated.rs\n`);
 
   const metaPath = resolve('public/data/famous_stars_meta.json');
-  writeMetaSidecar(seedToMetaEntries(entries), metaPath);
+  writeMetaSidecar(seedToMetaEntries(allEntries), metaPath);
   process.stderr.write(`wrote famous_stars_meta.json\n`);
 }
 
