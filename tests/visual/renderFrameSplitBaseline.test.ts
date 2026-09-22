@@ -35,9 +35,9 @@ import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameCon
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
+import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/filaments/@types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //

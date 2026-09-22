@@ -12,14 +12,14 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
+import { filamentsFadeRows } from '../../../src/layers/cosmicWebFilaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
 import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../src/layers/filaments/@types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';

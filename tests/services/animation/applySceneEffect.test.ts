@@ -35,7 +35,7 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
+import { setFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import {
   setGalaxyCatalogVisible,
@@ -45,7 +45,7 @@ import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
 } from '../../../src/layers/structure/state/structures/slice';
-import { writeVolumeField } from '../../../src/layers/volume/state/volumes/slice';
+import { writeVolumeField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';

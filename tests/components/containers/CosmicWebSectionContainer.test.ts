@@ -30,10 +30,10 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import CosmicWebSectionContainer from '../../../src/components/containers/CosmicWebSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { selectVolumesEnabled } from '../../../src/layers/volume/state/volumes/selectors';
-import { selectFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/selectors';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
+import { selectVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
+import { selectFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
+import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { setFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {

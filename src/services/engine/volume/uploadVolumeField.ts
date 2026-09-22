@@ -9,7 +9,7 @@
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { AppStore } from '../../../store/types';
-import { addVolumeField } from '../../../layers/volume/state/volumes/slice';
+import { addVolumeField } from '../../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function uploadVolumeField(

@@ -18,7 +18,7 @@ import { CLUSTER_ENTRY } from './sources/cluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
-import { FILAMENTS_SOURCE_ROWS } from '../layers/filaments/sources/filamentsSourceRows';
+import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';

@@ -92,7 +92,7 @@ import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';

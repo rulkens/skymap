@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSegmentInstances } from '../../../../src/layers/filaments/render/buildSegmentInstances';
+import { buildSegmentInstances } from '../../../../src/layers/cosmicWebFilaments/render/buildSegmentInstances';
 import type { FilamentCloud } from '../../../../src/@types/data/filament/FilamentCloud';
 
 describe('buildSegmentInstances', () => {

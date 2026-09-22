@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
 import { setMilkyWayEnabled } from '../../../src/layers/milkyWay/state/milkyWay/slice';
-import { writeVolumeField } from '../../../src/layers/volume/state/volumes/slice';
+import { writeVolumeField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
 import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
 import type { AppStore } from '../../../../src/store/types';
-import { addVolumeField } from '../../../../src/layers/volume/state/volumes/slice';
+import { addVolumeField } from '../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { ApplyIntentState } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { uploadVolumeField } from '../../../../src/services/engine/volume/uploadVolumeField';
 

@@ -23,7 +23,7 @@ import { runTakeover } from '../../../src/state/takeover/runTakeover';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
 import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
 

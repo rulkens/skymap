@@ -9,7 +9,7 @@
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
 import { constellationsLayer } from '../layers/constellations/layer';
-import { filamentsLayer } from '../layers/filaments/layer';
+import { filamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';

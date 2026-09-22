@@ -3,6 +3,6 @@
  * Settings-only so far — its render and load code still lives in core.
  */
 
-import { volumesSlice } from './volumes/slice';
+import { volumesSlice } from './cosmicWebDensity/slice';
 
 export const volumeLayerSettings = [volumesSlice] as const;

@@ -35,7 +35,7 @@ import { selectTourActive } from '../../../src/state/tour/selectors';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setVolumesEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';

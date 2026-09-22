@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createFilamentRenderer } from '../../../../src/layers/filaments/render/filamentRenderer';
+import { createFilamentRenderer } from '../../../../src/layers/cosmicWebFilaments/render/filamentRenderer';
 import type { FilamentCloud } from '../../../../src/@types/data/filament/FilamentCloud';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 

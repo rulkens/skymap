@@ -150,7 +150,7 @@ import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
-import { filamentFetcher } from '../../../../src/layers/filaments/load/filamentFetcher';
+import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
 import { polyphorm2MrsFetcher } from '../../../../src/services/loading/fetchers/polyphorm2MrsFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';

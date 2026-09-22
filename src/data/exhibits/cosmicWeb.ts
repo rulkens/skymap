@@ -5,7 +5,7 @@
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
-import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
+import { initialState as volumesInitialState } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { buildVolumeFieldSettings } from '../volume/volumeFieldDefaults';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { GALAXIES_OFF } from './utils/galaxiesOff';

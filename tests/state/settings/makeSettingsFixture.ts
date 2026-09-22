@@ -57,7 +57,7 @@ import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/
 import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
-import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
+import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
@@ -65,7 +65,7 @@ import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/
 import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
 import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
-import { initialState as filamentsInitialState } from '../../../src/layers/filaments/state/filaments/initialState';
+import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';

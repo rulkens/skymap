@@ -5,12 +5,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { filamentsAssetRows } from '../../../../src/layers/filaments/load/filamentsAssetRows';
+import { filamentsAssetRows } from '../../../../src/layers/cosmicWebFilaments/load/filamentsAssetRows';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../../src/layers/filaments/@types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/FilamentsRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 
 // The row reads neither the renderer nor the slot — only `factory` closes over

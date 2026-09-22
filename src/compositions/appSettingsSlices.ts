@@ -7,14 +7,14 @@
 
 import { bodyLayerSettings } from '../layers/body/state/slices';
 import { constellationsLayerSettings } from '../layers/constellations/state/slices';
-import { filamentsLayerSettings } from '../layers/filaments/state/slices';
+import { filamentsLayerSettings } from '../layers/cosmicWebFilaments/state/slices';
 import { flowLayerSettings } from '../layers/flow/state/slices';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/state/slices';
 import { localBubbleLayerSettings } from '../layers/localBubble/state/slices';
 import { milkyWayLayerSettings } from '../layers/milkyWay/state/slices';
 import { starCatalogLayerSettings } from '../layers/starCatalog/state/slices';
 import { structureLayerSettings } from '../layers/structure/state/slices';
-import { volumeLayerSettings } from '../layers/volume/state/slices';
+import { volumeLayerSettings } from '../layers/cosmicWebDensity/state/slices';
 import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/slices';
 
 export const APP_SETTINGS_SLICES = [

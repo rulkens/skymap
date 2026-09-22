@@ -30,16 +30,16 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectVolumesEnabled,
   selectVolumeFieldItems,
-} from '../../layers/volume/state/volumes/selectors';
+} from '../../layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
 import {
   selectFilamentsEnabled,
   selectFilamentIntensity,
-} from '../../layers/filaments/state/filaments/selectors';
-import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
+} from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
+import { setVolumesEnabled, writeVolumeField } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import {
   setFilamentsEnabled,
   setFilamentIntensity,
-} from '../../layers/filaments/state/filaments/slice';
+} from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';

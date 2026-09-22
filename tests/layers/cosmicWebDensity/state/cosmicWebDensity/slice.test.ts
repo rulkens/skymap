@@ -9,7 +9,7 @@ import {
   addVolumeField,
   removeVolumeField,
   writeVolumeField,
-} from '../../../../../src/layers/volume/state/volumes/slice';
+} from '../../../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { VolumeFieldId } from '../../../../../src/@types/data/volume/VolumeFieldId';
 
 // A seeded volume id (the boot value records every shippable volume).
