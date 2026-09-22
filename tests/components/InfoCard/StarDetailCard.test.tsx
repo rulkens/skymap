@@ -27,7 +27,6 @@ const fieldStar: StarInfo = {
   y: 0,
   z: 0,
   distancePc: 12,
-  radiusM: 696340000,
   detail: {
     kind: 'photometry',
     absMag: 4.67,
@@ -63,7 +62,6 @@ const rigel: StarInfo = {
   y: 0,
   z: 0,
   distancePc: 264.6,
-  radiusM: 5.49e10,
   detail: { kind: 'curated', meta: rigelMeta },
 };
 
@@ -157,7 +155,6 @@ describe('StarDetailCard', () => {
       y: 0,
       z: 0,
       distancePc: 0,
-      radiusM: 696340000,
       detail: { kind: 'none' },
     };
     const { container } = render(createElement(StarDetailCard, { target: sun }));

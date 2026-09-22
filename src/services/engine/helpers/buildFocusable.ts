@@ -84,7 +84,6 @@ const BUILD_FOCUSABLE: {
       y,
       z,
       distancePc,
-      radiusM: row.radiusM,
       detail: starDetail(row, distancePc, famousStarsMeta),
     };
   },

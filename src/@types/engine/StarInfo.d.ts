@@ -31,6 +31,5 @@ export type StarInfo = {
   readonly z: number;
   /** Distance from the Sun in parsecs (length of positionMpc, Mpc → pc). */
   readonly distancePc: number;
-  readonly radiusM: number;
   readonly detail: StarInfoDetail;
 };

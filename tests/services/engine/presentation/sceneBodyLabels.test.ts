@@ -11,6 +11,16 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
+import { unpackPick } from '../../../../src/data/selectionEncoding';
+import { selectionResolverOver } from '../../../support/selectionResolverOver';
+import type { StarRowFixture } from '../../../support/selectionResolverOver';
+import { Source } from '../../../../src/data/source';
+
+/** No survey catalog loaded — irrelevant here, since seeded picks (the Sun,
+ *  the famous stars) resolve without consulting the renderer. */
+const NO_STARS_LOADED: StarRowFixture = {
+  renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
+} as unknown as StarRowFixture;
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
@@ -129,5 +139,34 @@ describe('sceneBodyLabels', () => {
     expect(label.kind).toBe('meshBody');
     expect(label.text).toBe(body.label);
     expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
+  });
+
+  it("a star caption's pickId decodes and resolves to that star's starCatalog ref", () => {
+    // Clicking the NAME is the affordance under test, not the sprite: this
+    // fails if `bodyLabel`'s source/index packing ever drifts from the seed
+    // table `visibleStars.ts` and `seededStarCatalogsBySource.ts` tag picks
+    // against — a wrong source code would still decode to SOME star, silently.
+    const resolver = selectionResolverOver(
+      { structures: { byId: () => null, byCategory: () => [] } },
+      undefined,
+      NO_STARS_LOADED,
+    );
+
+    const vegaIdx = SCENE_STARS.findIndex((star) => star.id === 'vega');
+    const vegaLabel = labels.find((label) => label.id === 'sceneBody-vega')!;
+    const vegaPick = unpackPick(vegaLabel.pickId!)!;
+    expect(resolver.resolvePick(vegaPick)).toEqual({
+      type: 'starCatalog',
+      source: Source.FamousStar,
+      index: vegaIdx,
+    });
+
+    const sunLabel = labels.find((label) => label.id === 'sceneBody-sun')!;
+    const sunPick = unpackPick(sunLabel.pickId!)!;
+    expect(resolver.resolvePick(sunPick)).toEqual({
+      type: 'starCatalog',
+      source: Source.Sun,
+      index: 0,
+    });
   });
 });

@@ -160,7 +160,6 @@ describe('buildFocusable', () => {
       index: 3,
       id: 'sirius',
       displayName: 'Sirius',
-      radiusM: 1.19e9,
     });
   });
 });

@@ -37,18 +37,16 @@ export const solarSystem: Exhibit = {
   label: 'Solar System',
   // The trails are the exhibit: a viewer who switched them off in the panel still
   // gets them here, and `runTakeover`'s snapshot hands their choice back on exit.
-  // Only bodies stay pickable — at 42 AU the subject is the orrery, so the
-  // survey stars, the galaxy field, and the dust band shouldn't take clicks.
-  // That now costs the Sun's own dot its click too: every star, the Sun
-  // included, resolves as `starCatalog`, and the kind gate is per kind, not
-  // per source.
+  // Bodies and stars both stay pickable: the Sun's own dot is a star-catalog
+  // row, so silencing `starCatalog` would take its click too. The galaxy
+  // field and the dust band still don't take clicks at 42 AU.
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
     picking: {
       kinds: {
         body: true,
-        starCatalog: false,
+        starCatalog: true,
         galaxyCatalog: false,
         structure: false,
         milkyWay: false,

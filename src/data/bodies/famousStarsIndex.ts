@@ -1,8 +1,7 @@
 /**
  * famousStarsIndex — the single derivation of the famous stars' search identity,
- * projected off the generated seed table once: the constellation a palette row
- * shows as its chip (via `constellationOfBody`), and the id set the detail card
- * keys its famous branch on.
+ * projected off the generated seed table once: `FAMOUS_STAR_SEARCH` (read by
+ * `constellationOfBody`) for the constellation a palette row shows as its chip.
  *
  * Deriving here — rather than re-walking `FAMOUS_STARS_GENERATED` at each call
  * site — keeps the table the one source of the star identity: a seed edit
@@ -13,11 +12,6 @@
  */
 
 import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
-
-/** The ids of every famous star — the membership test `buildFocusable` keys on. */
-export const FAMOUS_STAR_IDS: ReadonlySet<string> = new Set(
-  FAMOUS_STARS_GENERATED.map((row) => row.id),
-);
 
 /** Per-star search identity: the full alias list to score, plus the constellation
  *  the palette row shows as its secondary chip. */

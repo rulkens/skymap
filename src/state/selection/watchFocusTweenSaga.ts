@@ -110,12 +110,10 @@ export function* watchFocusTweenSaga() {
 
       // A body the follow rows WILL handle is followed, not tweened — the
       // tween compiles fixed vec3 endpoints and cannot track a body the sim clock
-      // moves. But 'body row' is BROADER than 'followed body': famous stars are
-      // scene bodies too (star-body presence), yet they are static, so the follow
-      // driver leaves them and they must fall through to the tween. Gate on the
-      // SAME predicate the follow driver activates on, rather than a bare
-      // `row.type === 'body'` that would swallow a famous-star focus into a no-op
-      // neither mechanism honours.
+      // moves. Gate on `bodyMovesThisFrame` rather than a bare `row.type ===
+      // 'body'`: a focused S-star is a `starCatalog` row, not a body row, but
+      // the sim clock still moves it, so a type-only gate would miss it and
+      // tween a moving target instead of following it.
       if (bodyMovesThisFrame(row)) return;
 
       // Known ready since the wait above; re-read rather than reuse, since a
