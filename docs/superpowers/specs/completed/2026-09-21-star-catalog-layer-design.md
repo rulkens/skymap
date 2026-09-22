@@ -158,7 +158,7 @@ Folder layout per `src/layers/README.md`; `galaxyCatalog` is the template at eve
 |---|---|
 | `layer.ts` | `defineLayer` with `name: 'starCatalog'`, facts seed `{ famousStarsMeta: [] }`, `targets: [starAggregatesTarget]`, `ui: [{ slot: 'main', content: StarsSectionContainer }]` |
 | `create.ts` / `destroy.ts` | mint and release `StarCatalogRuntime`: the survey store (today `ResolveDeps.stars`), the four renderers, the cut memo, the meta slot |
-| `frame.ts` | the one mutating fade advance (`advanceStarFades`) returning `{ awake: anyNodeFading, settling: … }`; `runFrame`'s `starFadeAnimating` special case is deleted |
+| `frame.ts` | the one mutating fade advance (`advanceStarFades`) returning `{ awake: anyNodeFading, settling: … }`; `runFrame`'s `starFadeAnimating` special case is deleted. Shipped as: a `scope: 'once'` `FrameContentPlanner` row, after #805 retired `Layer.frame` |
 | `settings` | `state/starCatalogs/` as today; the `items` record now has four keys by derivation |
 | `sources/` | the four rows, `STAR_CATALOG_SOURCE_ROWS` |
 | `load/` | `starCatalogSlot`, `famousStarsMetaSlot` (publishes the fact via `deps.publish`), their fetchers, the asset rows |

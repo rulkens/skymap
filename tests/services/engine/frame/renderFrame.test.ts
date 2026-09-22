@@ -347,6 +347,11 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),
   },
+  {
+    name: 'star-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
 ];
 
 function makeInput(

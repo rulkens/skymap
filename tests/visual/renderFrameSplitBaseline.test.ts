@@ -262,6 +262,11 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),
   },
+  {
+    name: 'star-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
 ];
 
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;

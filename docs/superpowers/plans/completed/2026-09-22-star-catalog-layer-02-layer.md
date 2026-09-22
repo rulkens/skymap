@@ -29,6 +29,8 @@
 
 ### Task 1: `Layer.frame` takes the rig's views
 
+Shipped as: the widening landed, then #805 retired `Layer.frame` outright for `Layer.planners`; the star hook rode the merge over to a `scope: 'once'` `FrameContentPlanner` row (`starCatalogPlanner`), which takes the rig's views the same way.
+
 Behaviour-neutral. PR 1's `advanceStarFades(state, views)` needs the whole rig view list (the multi-view prune frustum from #769), but the per-Layer hook receives one `FrameView`. Widening it first is what lets Task 3 move the advance into the Layer without regressing dome/XR rigs to single-view pruning.
 
 **Files:**
@@ -457,7 +459,7 @@ Spec §10, §13. Docs ride the PR.
 
 - `src/layers/starCatalog/` has `layer.ts`, `create.ts`, `destroy.ts`, `frame.ts`, `sources/` (four rows + `starCatalogSourceRows.ts`), `load/`, `passes/` (six), `render/` (four renderers, the upsample, `cut/`, `starAggregatesTarget.ts`), `present/` (fade rows, selection row, captions, caption kinds), `ui/`, `@types/` (`StarCatalogRuntime`, `StarCatalogFacts` + the moved star-only types); `state/` unchanged in shape. Shipped as: `StarInfo` and `StarInfoDetail` live in `src/@types/engine/` because core's `buildFocusable`/`FocusableTarget` name them.
 - No `state.gpu.starCatalogRenderer` / `starCatalogPickRenderer` / `starRenderer` / `starPointRenderer` / `starAggregateUpsample`; no `EngineAssetSlots.starCatalogs` / `famousStarsMeta`; no `ResolveDeps.stars`; no `engine.meta.famousStars` / `engineFamousStarsMetaReported`; `runFrame` has no star block and `shouldKeepTicking` no `starFadeAnimating`.
-- `Layer.frame` receives `views: readonly FrameView[]`.
+- `Layer.frame` receives `views: readonly FrameView[]`. Shipped as: `Layer.planners` — #805 retired `Layer.frame`, so the Layer's advance is a `scope: 'once'` planner row taking the same view list.
 - `SUN_ENTRY` and `S_STAR_ENTRY` are `SeededStarCatalogSourceEntry` rows with codes 26 and 28; `StarCatalogId` has four members; `BodyId` has neither `sun` nor `s-star`; `SEEDED_STAR_CATALOGS` is total over `SeededStarCatalogId`; `SCENE_SUN` exists and `SCENE_STARS` holds no Sun. Shipped as: `SCENE_SUN` is generated from its own seed file (`data/seeds/sun.seed.json` → `sun.generated.ts`) by the same registry-driven generator as the famous table, and the Sun's curated card rides the shared sidecar.
 - `SelectionRef`/`SelectionRow` have a `starCatalog` arm and no `star` arm; `starPickId`, `FieldStarInfo`, `FieldStarDetailCard`, `CompactFieldStarCard`, `GATE_BY_STAR_ID`, `isSceneBodyId`, `BodyStore.stars` do not exist.
 - `encodeStarFocusId` / `decodeStarFocusId` exist; the Layer's `create` throws on an all-digits seed id.

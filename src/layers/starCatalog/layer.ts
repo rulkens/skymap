@@ -12,7 +12,7 @@ import { starCatalogLayerSettings } from './state/slices';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { frame } from './frame';
+import { starCatalogPlanner } from './frame';
 import { starCatalogAssetRows } from './load/starCatalogAssetRows';
 import { starAggregatesPass } from './passes/starAggregatesPass';
 import { starPointsPass } from './passes/starPointsPass';
@@ -51,6 +51,6 @@ export const starCatalogLayer = defineLayer({
     orbitTrails: S_STAR_ORBITAL_ELEMENTS,
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],
-  frame,
+  planners: (runtime) => [starCatalogPlanner(runtime)],
   ui: [{ slot: 'main', content: StarsSectionContainer }],
 });

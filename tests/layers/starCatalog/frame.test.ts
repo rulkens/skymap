@@ -1,15 +1,17 @@
 /**
- * `frame` — the Layer's per-frame prelude: one `advanceStarFades` call, then
- * one `setFrameCut`. Fixture mirrors `readStarCut.test.ts`'s two-level
- * catalog (a leaf under an aggregate root) so a camera move between calls
- * flips cut membership and puts a node mid-fade.
+ * `starCatalogPlanner` — the Layer's once-scope planning row: one
+ * `advanceStarFades` call, then one `setFrameCut`. Fixture mirrors
+ * `readStarCut.test.ts`'s two-level catalog (a leaf under an aggregate root)
+ * so a camera move between calls flips cut membership and puts a node
+ * mid-fade.
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { frame } from '../../../src/layers/starCatalog/frame';
+import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
 import type { PreparedStarCut } from '../../../src/layers/starCatalog/@types/PreparedStarCut';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -82,18 +84,21 @@ function makeState(): PassState {
   } as unknown as PassState;
 }
 
+// The row reads nothing off the snapshot — every fade input rides the views.
+const SNAPSHOT = {} as unknown as ReadyFrameContext;
+
 function crossfadeAt(pc: Readonly<Vec3>): number {
   return fadeBand({ fullAt: inner, goneAt: outer }, Math.hypot(pc[0], pc[1], pc[2]));
 }
 
-describe('starCatalog frame', () => {
+describe('starCatalogPlanner', () => {
   it('advances the ramps exactly once per call and hands the renderer one cut', () => {
     const runtime = makeRuntime(makeTwoLevelCatalog());
-    const tick = frame(runtime);
+    const planner = starCatalogPlanner(runtime);
     const state = makeState();
 
-    tick([makeCtx(camAtPcVec(FAR_PC), 0)], state); // snap: root in, leaf out
-    tick([makeCtx(camAtPcVec(CLOSE_PC), 50)], state); // leaf enters, mid-fade
+    planner.plan(SNAPSHOT, [makeCtx(camAtPcVec(FAR_PC), 0)], state); // snap: root in, leaf out
+    planner.plan(SNAPSHOT, [makeCtx(camAtPcVec(CLOSE_PC), 50)], state); // leaf enters, mid-fade
 
     const setFrameCut = runtime.renderer.setFrameCut as ReturnType<typeof vi.fn>;
     expect(setFrameCut).toHaveBeenCalledTimes(2);
@@ -106,11 +111,11 @@ describe('starCatalog frame', () => {
 
   it('votes settling: false even while a node is mid-fade', () => {
     const runtime = makeRuntime(makeTwoLevelCatalog());
-    const tick = frame(runtime);
+    const planner = starCatalogPlanner(runtime);
     const state = makeState();
 
-    tick([makeCtx(camAtPcVec(FAR_PC), 0)], state);
-    const vote = tick([makeCtx(camAtPcVec(CLOSE_PC), 50)], state);
+    planner.plan(SNAPSHOT, [makeCtx(camAtPcVec(FAR_PC), 0)], state);
+    const vote = planner.plan(SNAPSHOT, [makeCtx(camAtPcVec(CLOSE_PC), 50)], state);
 
     expect(vote.awake).toBe(true); // the leaf/root swap is mid-fade
     expect(vote.settling).toBe(false);
