@@ -7,7 +7,7 @@
  *
  * The frame program expands a `'body'` layer into one render step per body-m
  * slab row (Task 7); `enabled`/`draw` are called once per body-m row and gate
- * on `view.slab.frame.bodyId` — `cloudShellDraw` widens that gate to "this
+ * on `view.slab.frame.hostId` — `cloudShellDraw` widens that gate to "this
  * row's body has a cloud-shell row", which today still means Earth alone
  * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
  * table — the lean choice while Earth is the only textured cloud deck). The
@@ -147,13 +147,13 @@ export const cloudShellPass: ContentPass = {
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     // A row that would draw nothing (no resident map / sub-pixel) must leave the
     // pass plan: mirror draw's branch with the SAME derivation.
-    return cloudShellDraw(state, ctx, view.slab.frame.bodyId) !== null;
+    return cloudShellDraw(state, ctx, view.slab.frame.hostId) !== null;
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.cloudShellRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.bodyId);
+    const drawInputs = cloudShellDraw(state, ctx, view.slab.frame.hostId);
     if (drawInputs === null) return;
     const { earth, deckFade, insideShell } = drawInputs;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
@@ -161,7 +161,7 @@ export const cloudShellPass: ContentPass = {
     // keeps this layer's eyeRelBodyM from ever drifting off that basis. The
     // row's own `bodyId` (not `earth.id`, a plain `string`) is what
     // `BodyPoseProvider` accepts.
-    const pose = ctx.bodyPose(view.slab.frame.bodyId);
+    const pose = ctx.bodyPose(view.slab.frame.hostId);
     if (pose === null) return;
 
     // Live position + orientation from the per-frame snapshot (keyed by id) — not

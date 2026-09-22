@@ -3,7 +3,7 @@
  * triangle meshes in metres. A mesh body with a slab-owning host owns NO row of
  * its own: it rides the host's body-m row the way `ringsPass` rides Saturn's.
  * One hanging off something rowless (the Sun, or nothing) hosts itself —
- * `meshBodySlabHostId` decides, and `BODY_SLAB_CAPACITY` counts those.
+ * `meshBodySlabHostId` decides, and `SLAB_ROW_CEILING` counts those.
  *
  * FRAME CONTRACT (`shaders/bodies/meshBody/io.wesl`): every direction the
  * shader receives is in the HOST's fixed axes — the frame `posM`/`rotM` land
@@ -36,13 +36,13 @@ export const meshBodiesPass: ContentPass = {
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;
-    return drawableMeshBodies(state, ctx, view.slab.frame.bodyId).length > 0;
+    return drawableMeshBodies(state, ctx, view.slab.frame.hostId).length > 0;
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.meshBodyRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const hostId = view.slab.frame.bodyId;
+    const hostId = view.slab.frame.hostId;
     const bodies = drawableMeshBodies(state, ctx, hostId);
     if (bodies.length === 0) return;
     const bodyStates = sceneBodyStates(state, ctx);
@@ -104,7 +104,7 @@ export const meshBodiesPass: ContentPass = {
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
-    const hostId = view.slab.frame.bodyId;
+    const hostId = view.slab.frame.hostId;
     const bodies = drawableMeshBodies(state, ctx, hostId);
     if (bodies.length === 0) return;
     const bodyStates = sceneBodyStates(state, ctx);

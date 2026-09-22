@@ -13,11 +13,11 @@ import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { PositionedStar } from '../../scene/PositionedStar';
-import type { SceneBody } from '../../scene/SceneBody';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
+import type { SlabRow } from './SlabRow';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -48,12 +48,13 @@ export type ReadyFrameContext = {
    */
   bodyPose: BodyPoseProvider;
   /**
-   * The bodies eligible for a slab row before any view's frustum gate: Earth,
-   * the planets, the scene anchors and the mesh bodies that host their own row.
-   * Frame-wide because the roster is a store read, not a camera one — a view
-   * culls it (`visibleSlabBodies`), it never re-assembles it.
+   * The rows eligible for a slab before any view's frustum gate: one per store
+   * body (Earth, the planets, the mesh bodies that host their own row) plus the
+   * composed `state.slabRows` whose band is open. Frame-wide because the roster
+   * is a store read and the band keys on the frame camera — a view culls it
+   * (`visibleSlabBodies`), it never re-assembles it.
    */
-  slabBodyCandidates: readonly SceneBody[];
+  slabBodyCandidates: readonly SlabRow[];
   /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
    *  the hosts of mesh bodies riding someone else's slab row. */
   meshBodies: readonly MeshBody[];

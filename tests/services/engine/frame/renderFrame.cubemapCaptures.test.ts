@@ -136,6 +136,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
   return {
     // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
     viewRig: 'mono',
+    slabRows: [],
     // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
     gpu: { focusUniform: null, meshBodyRenderer: null },
     settings: {
@@ -194,6 +195,7 @@ function makeCtx(
   return {
     snapshot: {
       isReady: true,
+      slabBodyCandidates: [],
       simDays: 0,
       nowMs: 1000,
       focus: {},

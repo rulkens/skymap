@@ -45,6 +45,7 @@ describe('renderFrame — plan rows', () => {
   it('runs a once-section plan before scheduleCubemapCaptures, and a perView-section plan per view before that view opens its own encoder', () => {
     const snapshot = {
       isReady: true,
+      slabBodyCandidates: [],
       nowMs: 0,
       focus: {},
       focusBlend: 0,

@@ -23,7 +23,7 @@ const EYE_M: Vec3 = [6.6e6, -1.2e6, 3.4e5];
 function bodyRow(): Slab {
   return makeSlab({
     vp: Float64Array.from([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 5, 6, 7, 1]),
-    frame: { kind: 'body-m', bodyId: 'earth' },
+    frame: { kind: 'body-m', hostId: 'earth' },
   });
 }
 
@@ -48,7 +48,7 @@ describe('sampledDepthKmFrame', () => {
     expect(sampledDepthKmFrame(makeSlab(), POSE_OF as never)).toBeNull();
     expect(
       sampledDepthKmFrame(
-        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', bodyId: 'planet' } }),
+        makeSlab({ vp: bodyRow().vp, frame: { kind: 'body-m', hostId: 'planet' } }),
         POSE_OF as never,
       ),
     ).toBeNull();

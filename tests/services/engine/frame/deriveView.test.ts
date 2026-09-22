@@ -65,6 +65,7 @@ function makeState(): EngineState {
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
     subsystems: { texturedDisks: {} },
     selectionRows: { hover: null, select: null, focus: null },
+    slabRows: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
@@ -378,6 +379,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         bodies: { items: {} },
       },
       selectionRows: { hover: null, select: null, focus: null },
+      slabRows: [],
       data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       cameraRuntime: {
         register: { pose: CAPTURE_LAST_POSE },

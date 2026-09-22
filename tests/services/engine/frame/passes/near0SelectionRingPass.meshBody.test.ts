@@ -24,6 +24,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
+import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import {
   sceneBodyLabels,
@@ -97,7 +98,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
-    visibleBodies: [earth],
+    visibleRows: [earth].map(bodySlabRowOf),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
     attachedBodiesByHostId: new Map([
@@ -143,7 +144,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     settings: { galaxyCatalogs: { sizePx: 2 } },
   } as unknown as EngineState;
 
-  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.bodyId === 'earth');
+  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
   meshBodiesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 

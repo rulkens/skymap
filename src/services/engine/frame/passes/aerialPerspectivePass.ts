@@ -16,14 +16,14 @@ export const aerialPerspectivePass: ContentPass = {
     if (view.slab.frame.kind !== 'body-m') return false;
     // Handle first, so pre-bootstrap fixtures (null renderer, bare ctx) never touch body inputs.
     if (state.gpu.atmosphereShellRenderer === null) return false;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     return atmosphereDrawList(state, ctx).some((entry) => entry.body.id === bodyId && entry.inside);
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.atmosphereShellRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
     if (entry === undefined) return;
     renderer.drawAerialPerspective(pass, entry.body.id, view.sampledDepth!.view);

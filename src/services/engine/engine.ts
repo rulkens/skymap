@@ -312,6 +312,7 @@ export function createEngine(
     computes: [],
     planners: [],
     assetRows: [],
+    slabRows: [],
     fadeRows: [],
     label3DProducers: [],
     orbitTrailRows: [],

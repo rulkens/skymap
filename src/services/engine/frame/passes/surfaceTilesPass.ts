@@ -43,7 +43,7 @@ export const surfaceTilesPass: ContentPass = {
     // Cast: the registry stays a literal (a row typo is a compile error), which
     // makes it non-indexable by the wider `BodyId`.
     const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[
-      view.slab.frame.bodyId
+      view.slab.frame.hostId
     ];
     if (spec === undefined || state.gpu.surfaceTileRenderer === null) return false;
     if (spec.effects.length > 0 && state.gpu.earthRenderer === null) return false;
@@ -66,7 +66,7 @@ export const surfaceTilesPass: ContentPass = {
     if (tileRenderer === null || view.slab.frame.kind !== 'body-m') return;
     if (surfaceTiles === undefined || surfaceTiles === null) return;
     const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[
-      view.slab.frame.bodyId
+      view.slab.frame.hostId
     ];
     if (spec === undefined) return;
     const maps = state.gpu.earthRenderer;
@@ -121,7 +121,7 @@ export const surfaceTilesPass: ContentPass = {
       effectInputs,
       shading: spec.shading,
       // Earth's floor is its live slider; any other body matches its textured globe.
-      ambientLight: isTexturedBodyKey(view.slab.frame.bodyId as BodyTextureId)
+      ambientLight: isTexturedBodyKey(view.slab.frame.hostId as BodyTextureId)
         ? BODY_AMBIENT_LIGHT
         : state.settings.earth.ambientLight,
       debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],

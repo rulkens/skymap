@@ -22,7 +22,7 @@ export function sampledDepthKmFrame(
   bodyPose: ReadyFrameContext['bodyPose'],
 ): SampledDepthKmFrame | null {
   if (row === null || row.frame.kind !== 'body-m') return null;
-  const pose = bodyPose(row.frame.bodyId);
+  const pose = bodyPose(row.frame.hostId);
   if (pose === null) return null;
   // The row's OWN f64 vp, scaled by metres-per-km so the reconstructed
   // distances land in the km the callers measure their subjects in.

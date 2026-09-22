@@ -1,33 +1,14 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
-import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 
 /**
- * Slab-candidacy floor for a body whose PASS paints far beyond its own disc:
- * the Sgr A* lens quad spans up to ~0.75× the camera distance (vertex.wesl's
- * edgeFadeEndRs sizing), so both culls below — correct for a body that draws
- * itself — would birth the lens mid-band (Sgr A*'s r_s-scale disc clears the
- * 1-px floor only at ~346 AU on a dpr-2 1080p-class viewport, where
- * bandAlpha is already ~0.4: a visible, viewport-dependent pop). Keyed to
- * the SAME band row the layer's alpha reads, so the slab — and with it the
- * lens step — is born exactly where alpha = 0 and onset rides the ramp. The
- * frustum cull is skipped too: inside the band the lensed footprint can
- * span most of the view, so no conservative disc-based cull is available,
- * and one always-on slab row is negligible.
- */
-const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
-
-/**
- * visibleSlabBodies — which of `bodies` get a body slab row this frame:
+ * visibleSlabBodies — which of `rows` get a body slab row this frame:
  * apparent diameter clears `SUB_PIXEL_BODY_CULL_PX` (spec §4) AND the body's
  * angular disc reaches inside the view frustum — off-axis angle minus
  * angular radius, vs. the frustum half-diagonal, never a projected-CENTRE
@@ -39,19 +20,24 @@ const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
  * upstream of any per-layer gate that might otherwise still draw it (radar
  * frame finding 2). A missing `bodyStates` entry is dropped, not thrown
  * (feeds a slab COUNT the frame program pool-sizes from, spec §6). The
- * candidate list is the caller's to assemble — this gate treats every
- * `SceneBody` union arm identically, culling on `id` plus the arm-agnostic
- * `bodyFootprintRadiusM`.
+ * candidate list is the caller's to assemble — this gate reads only the row,
+ * so a store body and an authored one are culled on identical terms.
+ *
+ * A row whose PASS paints far beyond its own disc declares a `cullFloorMpc`
+ * and bypasses BOTH culls inside it: the Sgr A* lens quad spans up to ~0.75×
+ * the camera distance, so the disc-based culls would birth the lens mid-band
+ * (a visible, viewport-dependent pop) and no conservative disc-based frustum
+ * cull exists for a footprint that can span the view.
  */
-export function visibleSlabBodies<T extends SceneBody>(input: {
-  readonly bodies: readonly T[];
+export function visibleSlabBodies<T extends SlabRow>(input: {
+  readonly rows: readonly T[];
   readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
   readonly frustum: ViewFrustum;
   readonly pxPerRad: number;
 }): readonly T[] {
-  const { bodies: candidates, bodyStates, camPosMpc, camForwardMpc, frustum, pxPerRad } = input;
+  const { rows: candidates, bodyStates, camPosMpc, camForwardMpc, frustum, pxPerRad } = input;
 
   // Half-diagonal (corner, not edge — the widest off-axis angle a fully
   // on-screen body can have), padded by FRUSTUM_CULL_MARGIN_FACTOR: this is
@@ -63,24 +49,22 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
   const halfDiagRad = Math.atan(Math.hypot(tanX, tanY));
   const cullThresholdRad = halfDiagRad * FRUSTUM_CULL_MARGIN_FACTOR;
 
-  return candidates.filter((body) => {
-    const state = bodyStates.get(body.id);
+  return candidates.filter((row) => {
+    const state = bodyStates.get(row.anchorId);
     if (state === undefined) return false;
 
-    // Band-bearing lens body: candidacy for the whole band support, both
-    // culls bypassed — see BAND_SLAB_FLOOR_MPC.
-    if (body.id === SGR_A_STAR.id) {
+    if (row.cullFloorMpc !== undefined) {
       const bdx = state.positionMpc[0] - camPosMpc[0];
       const bdy = state.positionMpc[1] - camPosMpc[1];
       const bdz = state.positionMpc[2] - camPosMpc[2];
-      if (Math.hypot(bdx, bdy, bdz) < BAND_SLAB_FLOOR_MPC) return true;
+      if (Math.hypot(bdx, bdy, bdz) < row.cullFloorMpc) return true;
     }
 
     // The widest thing this row can draw — the same value the frustum cull
-    // below needs, so both culls agree on the body's footprint (radar frame
+    // below needs, so both culls agree on the row's footprint (radar frame
     // finding 2: they used to disagree, the bare body radius here vs. this same
     // ring/atmosphere-inclusive max there).
-    const rEffM = Math.max(PROXY_SCALE * bodyFootprintRadiusM(body), bodyDrawRadiusM(body));
+    const rEffM = Math.max(PROXY_SCALE * row.footprintRadiusM, row.boundingRadiusM);
 
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: state.positionMpc,

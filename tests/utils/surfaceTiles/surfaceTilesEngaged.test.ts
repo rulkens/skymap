@@ -28,7 +28,7 @@ const EARTH_STATE = deriveBodyStates(CONST_J2000).get('earth')!;
 
 /** A body-m SlabView for Earth — the only seeded `SURFACE_TILE_REGISTRY` row. */
 const EARTH_VIEW: SlabView = {
-  slab: makeSlab({ frame: { kind: 'body-m', bodyId: 'earth' } }),
+  slab: makeSlab({ frame: { kind: 'body-m', hostId: 'earth' } }),
   vp: new Float32Array(16),
   camPos: [0, 0, 5],
   viewportPx: [1280, 720],

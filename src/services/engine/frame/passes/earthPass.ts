@@ -3,7 +3,7 @@
  * `foreground:0`. The detail patches over it are `surfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
- * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
+ * sub-pixel), so `enabled` mainly checks `view.slab.frame.hostId === 'earth'`;
  * the foreground-distance check below is the one gate this layer still owns,
  * shared with `planetsPass`.
  *
@@ -81,7 +81,7 @@ export function prepareBodySurfaceFrame(
   view: SlabView,
 ): PreparedBodySurfaceFrame | null {
   if (view.slab.frame.kind !== 'body-m') return null;
-  const bodyId = view.slab.frame.bodyId;
+  const bodyId = view.slab.frame.hostId;
 
   let byBody = preparedByCtx.get(ctx);
   if (byBody === undefined) {
@@ -127,7 +127,7 @@ export const earthPass: ContentPass = {
   name: 'earth',
 
   enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== 'earth') return false;
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return state.data.bodies.earth !== null;

@@ -268,6 +268,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // fixture).
   const snapshotFields = {
     isReady: true as const,
+    slabBodyCandidates: [],
     nowMs: 0,
     // resolveLayerOpacity's recession factor lerps on this; production seeds it
     // to 0 in frameContext, and an absent one yields NaN alphas here.

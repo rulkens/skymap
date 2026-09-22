@@ -251,7 +251,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const disabledPasses = state.settings.debug.disabledPasses;
         // The frame's ONLY slab resolution — one SlabView per render step,
         // threaded into every pass in the group. Resolved BEFORE the gate: a
-        // body-row pass's `enabled` reads `view.slab.frame.bodyId` off it, and
+        // body-row pass's `enabled` reads `view.slab.frame.hostId` off it, and
         // a `{ sample }` step's `sampledDepth` must be on `view` before the
         // gate too — `contactShadowsPass.enabled` reads it to tell "my row"
         // from some other row sampling the same texture. Capture rosters

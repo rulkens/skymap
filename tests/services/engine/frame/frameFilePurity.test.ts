@@ -53,7 +53,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/runFrame': 3,
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
-  'frame/visibleSlabBodies': 3,
+  'frame/visibleSlabBodies': 2,
   'frame/visibleStars': 0,
   'frame/passes/bodyGlintsPass': 8,
   'frame/passes/cloudShellPass': 1,
@@ -100,7 +100,7 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
   return [{ name: stmt.getKindName(), exported: false }];
 }
 
-// `bodySlabCapacity.ts` exports `BODY_SLAB_CAPACITY`: a SCREAMING constant's
+// `slabRowCeiling.ts` exports `SLAB_ROW_CEILING`: a SCREAMING constant's
 // file is its camelCase spelling, so filename↔symbol matching ignores case and
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();

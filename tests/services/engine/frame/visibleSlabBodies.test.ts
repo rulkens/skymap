@@ -1,7 +1,7 @@
 /**
- * visibleSlabBodies — which of `bodies` clear the sub-pixel apparent-diameter
+ * visibleSlabBodies — which of `rows` clear the sub-pixel apparent-diameter
  * floor AND the view-frustum angular cull, and so get a body slab row this
- * frame.
+ * frame. Store bodies reach it through `bodySlabRowOf`, as in `deriveView`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -9,8 +9,10 @@ import { describe, it, expect } from 'vitest';
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -64,7 +66,7 @@ describe('visibleSlabBodies', () => {
     ]);
 
     const visible = visibleSlabBodies({
-      bodies: [belowFloor, aboveFloor],
+      rows: [belowFloor, aboveFloor].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -72,7 +74,7 @@ describe('visibleSlabBodies', () => {
       pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((body) => body.id)).toEqual(['above']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['above']);
   });
 
   it('includes earth alongside surviving planets, and drops a body missing a bodyState', () => {
@@ -90,7 +92,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['earth', makeState()]]);
 
     const visible = visibleSlabBodies({
-      bodies: [earth, orphan],
+      rows: [earth, orphan].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
@@ -98,7 +100,7 @@ describe('visibleSlabBodies', () => {
       pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((body) => body.id)).toEqual(['earth']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['earth']);
   });
 
   it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
@@ -116,7 +118,7 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['saturn', makeState([dMpc, 0, 0])]]);
 
     const visible = visibleSlabBodies({
-      bodies: [saturn],
+      rows: [saturn].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -124,7 +126,7 @@ describe('visibleSlabBodies', () => {
       pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((b) => b.id)).toEqual(['saturn']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['saturn']);
   });
 
   describe('view-frustum angular cull', () => {
@@ -145,7 +147,7 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(offAxisDeg, distanceMpc))],
       ]);
       return visibleSlabBodies({
-        bodies: [wideBody],
+        rows: [wideBody].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -155,11 +157,11 @@ describe('visibleSlabBodies', () => {
     }
 
     it('drops a body directly behind the camera (180° off-axis)', () => {
-      expect(frustumCase(180).map((b) => b.id)).toEqual([]);
+      expect(frustumCase(180).map((row) => row.anchorId)).toEqual([]);
     });
 
     it('drops a body 90° off-axis', () => {
-      expect(frustumCase(90).map((b) => b.id)).toEqual([]);
+      expect(frustumCase(90).map((row) => row.anchorId)).toEqual([]);
     });
 
     it('keeps a body whose disc straddles the frustum edge even though its centre is well outside it', () => {
@@ -186,7 +188,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        bodies: [straddling],
+        rows: [straddling].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -194,7 +196,7 @@ describe('visibleSlabBodies', () => {
         pxPerRad: PX_PER_RAD_90,
       });
 
-      expect(visible.map((b) => b.id)).toEqual(['straddling']);
+      expect(visible.map((row) => row.anchorId)).toEqual(['straddling']);
     });
 
     it('keeps Saturn at its real ring-outer radius, pose-A off-axis geometry (θ≈20.55°, in view)', () => {
@@ -213,7 +215,7 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        bodies: [saturn],
+        rows: [saturn].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
@@ -221,7 +223,7 @@ describe('visibleSlabBodies', () => {
         pxPerRad: PX_PER_RAD_60,
       });
 
-      expect(visible.map((b) => b.id)).toEqual(['saturn']);
+      expect(visible.map((row) => row.anchorId)).toEqual(['saturn']);
     });
 
     it('keeps a body just inside the long edge of an off-axis frustum', () => {
@@ -232,14 +234,14 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(71, 1000))],
       ]);
       const visible = visibleSlabBodies({
-        bodies: [wideBody],
+        rows: [wideBody].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: { tanLeft: 0, tanRight: 3, tanDown: -1, tanUp: 1 },
         pxPerRad: PX_PER_RAD_90,
       });
-      expect(visible.map((b) => b.id)).toEqual(['wide']);
+      expect(visible.map((row) => row.anchorId)).toEqual(['wide']);
     });
   });
 
@@ -260,7 +262,7 @@ describe('visibleSlabBodies', () => {
     ]);
 
     const visible = visibleSlabBodies({
-      bodies: [visibleAnchor, hiddenAnchor],
+      rows: [visibleAnchor, hiddenAnchor].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
@@ -268,36 +270,38 @@ describe('visibleSlabBodies', () => {
       pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['visible-anchor']);
   });
 
-  it("keeps Sgr A* for its lens band's whole support, even sub-pixel and off-axis", () => {
+  it('keeps a cullFloorMpc row for its whole floor, even sub-pixel and off-axis', () => {
     // The lens pass's slab must be born where its fade band OPENS (alpha = 0,
     // 500 AU), not where the hole's own r_s-scale disc clears the 1-px floor
     // (~346 AU on a dpr-2 1080p-class viewport — bandAlpha already ~0.4
     // there: the pop this pins, audit-cubemap-alignment.md §8). Placed
     // sub-pixel AND behind the camera: both culls must be bypassed inside
-    // the band, since the lensed footprint isn't the disc.
-    const sgrAStar = SGR_A_STAR;
-    const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
-    const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
+    // the floor, since the lensed footprint isn't the disc. The real core row
+    // is the fixture, so its floor and the band it is keyed to stay pinned.
+    const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === SGR_A_STAR.id);
+    if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no Sgr A* row');
+    const insideFloorMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
+    const outsideFloorMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 
     for (const [distanceMpc, expected] of [
-      [insideBandMpc, [SGR_A_STAR.id]],
-      [outsideBandMpc, []],
+      [insideFloorMpc, [SGR_A_STAR.id]],
+      [outsideFloorMpc, []],
     ] as const) {
       const bodyStates = new Map<string, BodyState>([
         [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
       ]);
       const visible = visibleSlabBodies({
-        bodies: [sgrAStar],
+        rows: [lensRow],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: SQUARE_90,
         pxPerRad: PX_PER_RAD_90,
       });
-      expect(visible.map((body) => body.id)).toEqual(expected);
+      expect(visible.map((row) => row.anchorId)).toEqual(expected);
     }
   });
 });

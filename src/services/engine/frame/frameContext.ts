@@ -13,6 +13,9 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
+import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
+import { slabRowActive } from '../../../utils/frame/slabRowActive';
 import { cameraBasisWorld } from '../../../utils/camera/cameraBasisWorld';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { isEngineReady } from '../helpers/engineReady';
@@ -27,7 +30,6 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveBodyStates } from './deriveBodyStates';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
-import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 import { visibleStars } from './visibleStars';
 
 export function deriveFrameContext(
@@ -60,10 +62,18 @@ export function deriveFrameContext(
   // one here, off the STORE roster rather than the static table, so the two
   // stay the same list.
   const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body) === body.id);
-  const slabBodyCandidates: readonly SceneBody[] =
+  const storeBodies: readonly SceneBody[] =
     earth === null
-      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies]
-      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies];
+      ? [...planets, ...hostlessMeshBodies]
+      : [earth, ...planets, ...hostlessMeshBodies];
+  // A banded row exists only while its band is open — the row IS the gate its
+  // consuming pass used to re-ask for (spec §2.5). Keyed on the FRAME camera,
+  // not a view's offset eye: a rig's eye separation is metres against a band
+  // measured in AU, so no view can disagree about whether the row exists.
+  const slabBodyCandidates: readonly SlabRow[] = [
+    ...storeBodies.map(bodySlabRowOf),
+    ...state.slabRows.filter((row) => slabRowActive(row, cam.position, bodyStates)),
+  ];
 
   // Provider B serves ONLY the engaged body, straight from its own stored
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,

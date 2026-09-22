@@ -39,25 +39,26 @@ export const sgrAStarLensingPass: ContentPass = {
   name: 'sgr-a-star-lensing',
 
   enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== SGR_A_STAR.id) {
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== SGR_A_STAR.id) {
       return false;
     }
-    if (state.gpu.sgrAStarLensingRenderer === null) return false;
-    return skyCaptureBandAlpha('sgrAStar', state, ctx) > 0;
+    return state.gpu.sgrAStarLensingRenderer !== null;
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.sgrAStarLensingRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    if (view.slab.frame.bodyId !== SGR_A_STAR.id) return;
+    if (view.slab.frame.hostId !== SGR_A_STAR.id) return;
 
     // The SAME pose-provider closure `deriveSlabs` built this row's
     // `view.slab.vp` from — see `planetsPass`'s identical seam.
-    const pose = ctx.bodyPose(view.slab.frame.bodyId);
+    const pose = ctx.bodyPose(view.slab.frame.hostId);
     if (pose === null) return;
 
-    // `> 0` by construction: `enabled` gates on it, and the `lens` line only
-    // expands to a step at all while the band is open.
+    // `> 0` by construction: the `lens` line expands to a step only while
+    // Sgr A*'s `SlabRow` exists, and that row's `activeBand` is the SAME band
+    // object this alpha reads off `CUBEMAP_CAPTURES` — the single gate, so the
+    // pass no longer re-asks it in `enabled` (spec §2.5).
     const bandAlpha = skyCaptureBandAlpha('sgrAStar', state, ctx);
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame

@@ -4,6 +4,10 @@
  * The out-of-band case is the load-bearing one: an empty list is what lets
  * `mergeAdjacent` fold the two `(hdr, NEAR0)` lines back into a single render
  * step, so the assertion runs the real expansion rather than stopping at `[]`.
+ *
+ * The candidate list is folded the way `deriveFrameContext` folds it, so the
+ * band edges the lens is born at stay pinned through the composition of
+ * `slabRowActive` and this resolver, not just inside either one.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -17,6 +21,8 @@ import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/f
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
@@ -43,7 +49,12 @@ function camAtAuFromSgrAStar(au: number): Vec3 {
  *  the foreground cull there is no inside body to find and nothing else loads. */
 function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
   return {
-    snapshot: { simDays: SIM_DAYS },
+    snapshot: {
+      simDays: SIM_DAYS,
+      slabBodyCandidates: CORE_SLAB_ROWS.filter((row) =>
+        slabRowActive(row, camPos, deriveBodyStates(SIM_DAYS)),
+      ),
+    },
     drawCamPos: camPos,
     slabs,
     cam: { distance: 1 },
@@ -54,7 +65,7 @@ const STATE = {} as unknown as EngineState;
 
 const SGR_A_STAR_SLAB = makeSlab({
   index: LENS_SLAB_INDEX,
-  frame: { kind: 'body-m', bodyId: SGR_A_STAR.id as BodyId },
+  frame: { kind: 'body-m', hostId: SGR_A_STAR.id as BodyId },
 });
 
 describe('bodyRowSlabs', () => {
@@ -97,7 +108,7 @@ describe('bodyRowSlabs', () => {
     expect(hdrNear0).toHaveLength(1);
   });
 
-  it('resolves nothing when the band is open but the row missed this frame', () => {
+  it('resolves nothing when the row is active but its slab missed this frame', () => {
     const ctx = makeCtx(camAtAuFromSgrAStar(120), [makeSlab()]);
 
     expect(bodyRowSlabs(STATE, ctx).lens).toEqual([]);

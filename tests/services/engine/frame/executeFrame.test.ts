@@ -117,7 +117,7 @@ function makeContentPass(init: {
   name: string;
   enabled?: boolean;
   // Per-row gate for a body-roster pass: reads the resolved view (e.g. its
-  // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
+  // `slab.frame.hostId`) instead of the constant `enabled` flag above.
   enabledFor?: (view: SlabView) => boolean;
   log?: string[];
 }): SpyPass {
@@ -250,7 +250,7 @@ function makeCtx(): FrameView {
 function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodyId } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }
@@ -736,8 +736,8 @@ describe('executeFrame', () => {
     expect(contentPass.draw).toHaveBeenCalledTimes(2);
     const bodyIdOf = (call: number): string => {
       const view = contentPass.draw.mock.calls[call]![1] as SlabView;
-      const frame = view.slab.frame as { kind: 'body-m'; bodyId: string };
-      return frame.bodyId;
+      const frame = view.slab.frame as { kind: 'body-m'; hostId: string };
+      return frame.hostId;
     };
     expect(bodyIdOf(0)).toBe('mars');
     expect(bodyIdOf(1)).toBe('venus');
@@ -747,7 +747,7 @@ describe('executeFrame', () => {
     const contentPass = makeContentPass({
       name: 'body-layer',
       enabledFor: (view) =>
-        (view.slab.frame as { kind: 'body-m'; bodyId: string }).bodyId === 'mars',
+        (view.slab.frame as { kind: 'body-m'; hostId: string }).hostId === 'mars',
     });
     const ctx = makeBodyCtx(['mars', 'venus']);
     const program: FrameStep[] = [

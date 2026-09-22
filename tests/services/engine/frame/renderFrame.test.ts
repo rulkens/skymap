@@ -1023,7 +1023,7 @@ describe('renderFrame', () => {
     // body-m row (a second, distinct-slab step) — the counts must track
     // each view's OWN slabs, not the main ctx's.
     const near0Slab = makeSlab();
-    const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'earth' as any } });
+    const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'earth' as any } });
     const view1 = { ...fx.input.canvas, slabs: [near0Slab] };
     const view2 = { ...fx.input.canvas, slabs: [near0Slab, makeCosmoSlab(), bodySlab] };
 

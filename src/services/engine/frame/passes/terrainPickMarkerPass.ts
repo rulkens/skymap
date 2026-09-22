@@ -31,7 +31,7 @@ export const terrainPickMarkerPass: ContentPass = {
     // Cast: the registry stays a literal (a row typo is a compile error), which
     // makes it non-indexable by the wider `BodyId` — mirrors `surfaceTilesPass`.
     const registry = SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>;
-    if (registry[view.slab.frame.bodyId] === undefined) return false;
+    if (registry[view.slab.frame.hostId] === undefined) return false;
     // A non-empty cut is the closest frame-visible signal that THIS body is the
     // one whose terrain the marcher can read: the tile subsystem serves one
     // engaged body at a time, and `terrainHeightAt` answers 0 for any other.
@@ -43,7 +43,7 @@ export const terrainPickMarkerPass: ContentPass = {
     const renderer = state.gpu.terrainPickMarkerRenderer;
     const cursorTexPx = ctx.snapshot.cursorTexPx;
     if (renderer === null || cursorTexPx === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const pose = ctx.bodyPose(bodyId);
     if (pose === null) return;
 
