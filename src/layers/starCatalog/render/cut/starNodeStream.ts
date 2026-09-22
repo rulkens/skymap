@@ -1,4 +1,4 @@
-import type { StarNodeStream } from '../../../../@types/rendering/StarNodeStream';
+import type { StarNodeStream } from '../../@types/StarNodeStream';
 
 /**
  * Flat typed arrays, not arrays-of-objects: at star-field zoom the cut draws

@@ -1,7 +1,7 @@
 /** One loaded source's per-frame cut, partitioned by `computeStarCut` into
  * its leaf (real-star) and aggregate (flux-mip) streams. */
 
-import type { SourceType } from '../data/SourceType';
+import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarNodeStream } from './StarNodeStream';
 
 export type PreparedStarSource = {

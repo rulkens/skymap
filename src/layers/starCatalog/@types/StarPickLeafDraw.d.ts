@@ -1,7 +1,7 @@
 /** One source's pick draw: compacted flat leaf arrays the pick renderer
  * packs verbatim — the same flat shape `StarNodeStream` carries. */
 
-import type { SourceType } from '../data/SourceType';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 export type StarPickLeafDraw = {
   source: SourceType;

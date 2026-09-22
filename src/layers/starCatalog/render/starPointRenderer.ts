@@ -57,7 +57,7 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { StarPointRenderer } from '../../../@types/rendering/StarPointRenderer';
+import type { StarPointRenderer } from '../@types/StarPointRenderer';
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import vsCode from '../../../services/gpu/shaders/bodies/starPoints/vertex.wesl?static';

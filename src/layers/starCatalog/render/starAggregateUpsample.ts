@@ -30,7 +30,7 @@ import vsCode from '../../../services/gpu/shaders/starAggregateUpsample/vertex.w
 import fsCode from '../../../services/gpu/shaders/starAggregateUpsample/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
-import type { StarAggregateUpsample } from '../../../@types/rendering/StarAggregateUpsample';
+import type { StarAggregateUpsample } from '../@types/StarAggregateUpsample';
 
 export function createStarAggregateUpsample(
   device: GPUDevice,

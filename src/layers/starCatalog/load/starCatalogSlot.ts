@@ -22,7 +22,7 @@ import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
-import type { StarCatalogRenderer } from '../../../@types/rendering/starCatalogRenderer/StarCatalogRenderer';
+import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 
 export function createStarCatalogSlot(
   source: SourceType,

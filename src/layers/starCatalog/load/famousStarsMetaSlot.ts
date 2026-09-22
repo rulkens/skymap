@@ -15,7 +15,7 @@
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { famousStarsMetaFetcher } from './famousStarsMetaFetcher';
-import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
+import type { FamousStarsPayload } from '../@types/FamousStarsPayload';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from '../@types/StarCatalogFacts';

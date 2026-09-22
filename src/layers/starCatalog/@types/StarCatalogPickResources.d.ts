@@ -1,4 +1,4 @@
-import type { SourceType } from '../../data/SourceType';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * The GPU resources the sibling `starCatalogPickRenderer` must SHARE with the

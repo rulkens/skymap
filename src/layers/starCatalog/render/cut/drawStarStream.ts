@@ -1,12 +1,12 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
-import type { StarCatalogRenderer } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogRenderer';
-import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
+import type { StarCatalogRenderer } from '../../@types/StarCatalogRenderer';
+import type { PreparedStarCut } from '../../@types/PreparedStarCut';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { starCullMargins } from '../../../../utils/star/starCullMargins';
-import type { StarDrawStream } from '../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
+import type { StarDrawStream } from '../../@types/StarDrawStream';
 
 /**
  * Six unit-normalized `(nx, ny, nz, d)` clip planes, rewritten each frame.

@@ -10,10 +10,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { starPickLeafDraws } from '../../../../../src/layers/starCatalog/render/cut/starPickLeafDraws';
-import type { PreparedStarCut } from '../../../../../src/@types/rendering/PreparedStarCut';
-import type { StarNodeStream } from '../../../../../src/@types/rendering/StarNodeStream';
-import type { StarNodeDraw } from '../../../../../src/@types/rendering/StarNodeDraw';
+import type { PreparedStarCut } from '../../../../../src/layers/starCatalog/@types/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../src/layers/starCatalog/@types/StarNodeStream';
 import { Source } from '../../../../../src/data/sources';
+
+/** One instanced draw `walkStarOctreeCut` selected, for this file's own fixtures. */
+type StarNodeDraw = { nodeIndex: number; firstRecord: number; recordCount: number };
 
 /** Build a one-node flat stream fixture at a given opacity + aggregate flag. */
 function streamOf(draw: StarNodeDraw, opacity: number, isAggregate: number): StarNodeStream {

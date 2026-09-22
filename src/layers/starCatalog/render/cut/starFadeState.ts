@@ -1,5 +1,5 @@
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarFadeState } from '../../../../@types/rendering/StarFadeState';
+import type { StarFadeState } from '../../@types/StarFadeState';
 
 /**
  * Runs long by design: sole owner of the per-node LOD-fade scheme every

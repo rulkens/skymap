@@ -1,5 +1,5 @@
-import type { Vec2 } from '../../math/Vec2';
-import type { SourceType } from '../../data/SourceType';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * One source's per-frame LEAF cut, as the pick pass draws it — a subset of the

@@ -1,6 +1,6 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
-import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
+import type { PreparedStarCut } from '../../@types/PreparedStarCut';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { readStarCut } from './readStarCut';
 

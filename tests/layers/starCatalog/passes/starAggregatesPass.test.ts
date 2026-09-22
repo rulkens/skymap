@@ -21,7 +21,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
+import type { StarCatalogDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 

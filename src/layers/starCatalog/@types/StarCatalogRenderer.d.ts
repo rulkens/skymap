@@ -33,12 +33,12 @@
  * the layer.
  */
 
-import type { Renderer } from '../Renderer';
-import type { SourceType } from '../../data/SourceType';
-import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCatalogDrawArgs } from './StarCatalogDrawArgs';
-import type { PreparedStarCut } from '../PreparedStarCut';
+import type { PreparedStarCut } from './PreparedStarCut';
 
 export type StarCatalogRenderer = Renderer & {
   /**

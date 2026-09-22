@@ -11,8 +11,8 @@
  * record at [0,0,0].
  */
 
-import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
-import type { StarPickLeafDraw } from '../../../../@types/rendering/StarPickLeafDraw';
+import type { PreparedStarCut } from '../../@types/PreparedStarCut';
+import type { StarPickLeafDraw } from '../../@types/StarPickLeafDraw';
 
 export function starPickLeafDraws(prep: PreparedStarCut): readonly StarPickLeafDraw[] {
   const draws: StarPickLeafDraw[] = [];

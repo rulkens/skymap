@@ -3,7 +3,7 @@
  * each source's partitioned streams plus source-independent shader scalars.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { PreparedStarSource } from './PreparedStarSource';
 
 export type PreparedStarCut = {

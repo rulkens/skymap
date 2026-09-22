@@ -29,8 +29,8 @@ import type { PassState } from '../../../../../src/@types/engine/frame/PassState
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
-import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
-import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
+import type { StarCatalogDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
+import type { StarCatalogPickDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = {

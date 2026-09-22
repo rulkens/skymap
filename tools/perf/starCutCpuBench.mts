@@ -37,8 +37,8 @@ import { mat4 } from 'wgpu-matrix';
 
 import { decodeStarCatalog } from '../../src/data/starCatalog/starCatalogFormat';
 import { walkStarOctreeCut } from '../../src/utils/star/walkStarOctreeCut';
-import type { StarCutFrustum } from '../../src/@types/rendering/StarCutFrustum';
-import type { StarCutSnapshot } from '../../src/@types/rendering/StarCutSnapshot';
+import type { StarCutFrustum } from '../../src/layers/starCatalog/@types/StarCutFrustum';
+import type { StarCutSnapshot } from '../../src/layers/starCatalog/@types/StarCutSnapshot';
 import { starOctreeIndex } from '../../src/utils/star/starOctreeIndex';
 import { frustumPlanesFromViewProj } from '../../src/utils/camera/frustumPlanesFromViewProj';
 import { sphereOutsideFrustum } from '../../src/utils/camera/sphereOutsideFrustum';

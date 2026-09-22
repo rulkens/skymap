@@ -30,7 +30,7 @@
  * one win the pixel, matching visual occlusion.
  */
 
-import type { Renderer } from '../Renderer';
+import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogPickDrawArgs } from './StarCatalogPickDrawArgs';
 
 export type StarCatalogPickRenderer = Renderer & {

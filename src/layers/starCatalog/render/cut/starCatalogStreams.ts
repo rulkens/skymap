@@ -1,5 +1,5 @@
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogStreams } from '../../../../@types/rendering/StarCatalogStreams';
+import type { StarCatalogStreams } from '../../@types/StarCatalogStreams';
 import { createStarNodeStream } from './starNodeStream';
 
 /**

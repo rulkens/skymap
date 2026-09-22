@@ -19,9 +19,9 @@
  * module header's precision note.
  */
 
-import type { Renderer } from './Renderer';
-import type { Vec2 } from '../math/Vec2';
-import type { PositionedStar } from '../scene/PositionedStar';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 
 export type StarPointRenderer = Renderer & {
   /**

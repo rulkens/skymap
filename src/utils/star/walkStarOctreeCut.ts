@@ -72,8 +72,8 @@
  */
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
-import type { StarCutSnapshot } from '../../@types/rendering/StarCutSnapshot';
-import type { StarCutFrustum } from '../../@types/rendering/StarCutFrustum';
+import type { StarCutSnapshot } from '../../layers/starCatalog/@types/StarCutSnapshot';
+import type { StarCutFrustum } from '../../layers/starCatalog/@types/StarCutFrustum';
 import { starOctreeIndex } from './starOctreeIndex';
 
 /** Guards the `edge / distance` ratio when the camera sits inside a box. */

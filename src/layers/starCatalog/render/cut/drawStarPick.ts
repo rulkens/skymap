@@ -1,6 +1,6 @@
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
-import type { StarCatalogPickRenderer } from '../../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickRenderer';
-import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
+import type { StarCatalogPickRenderer } from '../../@types/StarCatalogPickRenderer';
+import type { PreparedStarCut } from '../../@types/PreparedStarCut';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';

@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { StarCutFrustum } from '../../../../@types/rendering/StarCutFrustum';
+import type { StarCutFrustum } from '../../@types/StarCutFrustum';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';

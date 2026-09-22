@@ -9,12 +9,12 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
-import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
-import type { StarCatalogRenderer } from '../../../@types/rendering/starCatalogRenderer/StarCatalogRenderer';
-import type { StarCatalogPickRenderer } from '../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickRenderer';
-import type { StarRenderer } from '../../../@types/rendering/StarRenderer';
-import type { StarPointRenderer } from '../../../@types/rendering/StarPointRenderer';
-import type { StarAggregateUpsample } from '../../../@types/rendering/StarAggregateUpsample';
+import type { FamousStarsPayload } from './FamousStarsPayload';
+import type { StarCatalogRenderer } from './StarCatalogRenderer';
+import type { StarCatalogPickRenderer } from './StarCatalogPickRenderer';
+import type { StarRenderer } from './StarRenderer';
+import type { StarPointRenderer } from './StarPointRenderer';
+import type { StarAggregateUpsample } from './StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
 
 export type StarCatalogRuntime = {
