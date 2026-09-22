@@ -20,7 +20,7 @@ import BodyDetailCard, {
 import { useAppSelector } from '../../store/hooks';
 import { selectFocusedBodyDistanceMpc } from '../../state/engine/selectors';
 
-export type BodyDetailCardContainerProps = Omit<BodyDetailCardProps, 'distanceMpc'>;
+type BodyDetailCardContainerProps = Omit<BodyDetailCardProps, 'distanceMpc'>;
 
 function BodyDetailCardContainer(props: BodyDetailCardContainerProps): ReactNode {
   const distanceMpc = useAppSelector(selectFocusedBodyDistanceMpc);

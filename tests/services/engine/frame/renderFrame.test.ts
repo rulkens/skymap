@@ -518,15 +518,13 @@ function makeInput(
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
           structureMarkerRenderer: null,
-          // Near-field handles null → the body layers, star-points,
-          // star-catalog, and foregroundLabelsPass all report enabled=false,
-          // so the program's
+          // Near-field handles null → the body layers and
+          // foregroundLabelsPass all report enabled=false, so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and
           // the foreground:0→swap composite is touched-set-skipped. These
           // fixtures stay a pure cosmological-frame trace (see the
           // null-handle skip test below).
           earthRenderer: null,
-          starRenderer: null,
           planetRenderer: null,
           // No mesh renderer → the probe scheduler idles before reading `data`.
           meshBodyRenderer: null,
@@ -534,9 +532,7 @@ function makeInput(
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
           atmosphereShellRenderer: null,
-          starPointRenderer: null,
           orbitTrailRenderer: null,
-          starCatalogRenderer: null,
           foregroundLabelRenderer: null,
           // milkyWayPass.draw reads the generated cloud buffers off this handle.
           milkyWayCloud,

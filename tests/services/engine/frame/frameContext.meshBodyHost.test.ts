@@ -39,11 +39,11 @@ const STATE = {
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
   data: {
-    bodies: { earth: SCENE_EARTH, planets: [], stars: [], meshBodies: SCENE_MESH_BODIES },
+    bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
   },
   settings: {
     starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-    bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+    bodies: { items: {} },
   },
   picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
 } as unknown as EngineState;

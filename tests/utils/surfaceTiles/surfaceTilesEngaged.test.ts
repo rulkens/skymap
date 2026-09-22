@@ -66,7 +66,7 @@ function makeCtx(distanceMpc: number): FrameView {
  *  registry-driven gate must not. */
 const STATE_NO_EARTH_RENDERER: PassState = {
   gpu: {},
-  data: { bodies: { earth: SCENE_EARTH, planets: [], stars: [] } },
+  data: { bodies: { earth: SCENE_EARTH, planets: [] } },
 } as unknown as PassState;
 
 describe('surfaceTilesEngaged', () => {

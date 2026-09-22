@@ -1044,9 +1044,9 @@ describe('runFrame — the label-director wake fold', () => {
         // Read unconditionally by `visibleStars` past the ready gate — see
         // frameContext.test.ts's makeState for the same addition and why.
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+        bodies: { items: {} },
       },
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+      data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
       // iterates this every ready frame (04b Task 12).
@@ -1059,7 +1059,6 @@ describe('runFrame — the label-director wake fold', () => {
         galaxyPickRenderer: {},
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
-        starCatalogRenderer: null,
         structureMarkerRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },
@@ -1121,9 +1120,9 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
         ...base.settings,
         flow: { enabled: false },
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+        bodies: { items: {} },
       },
-      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+      data: { bodies: { earth: null, planets: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers,
       cubemapCaptures: makeCubemapCaptureRuntimes(),
@@ -1133,7 +1132,6 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
         galaxyPickRenderer: {},
         renderTargets: { reconcile: vi.fn() },
         compositor: {},
-        starCatalogRenderer: null,
         structureMarkerRenderer: null,
         label3DRenderer: { setLabels: vi.fn() },
       },

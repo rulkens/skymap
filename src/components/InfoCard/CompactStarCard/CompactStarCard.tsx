@@ -12,7 +12,7 @@ import CardRow from '../CardRow/CardRow';
 import styles from '../compactChrome.module.css';
 import local from './CompactStarCard.module.css';
 
-export type CompactStarCardProps = {
+type CompactStarCardProps = {
   info: StarInfo;
 };
 

@@ -2,8 +2,9 @@
  * StarInfoDetail — the block a star's card renders below the shared rows,
  * keyed by its SHAPE rather than which catalog it came from, so a future
  * curated catalog reuses `curated` instead of growing a branch. `none` is
- * real: the Sun has nothing of its own, and an unlanded famous-star sidecar
- * renders its headline alone. Core for the same reason as `StarInfo`.
+ * real: an unlanded famous-star sidecar renders its headline alone, and so
+ * does `buildFocusable.ts`'s non-S-star fallthrough. Core for the same
+ * reason as `StarInfo`.
  */
 
 import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';

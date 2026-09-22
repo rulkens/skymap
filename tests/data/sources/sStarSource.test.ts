@@ -14,7 +14,6 @@ import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
 import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
-import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
@@ -35,14 +34,6 @@ describe('the S-star source row', () => {
     expect(STAR_CATALOG_IDS).toContain(SUN_ENTRY.id);
     expect(BODY_IDS).not.toContain(S_STAR_ENTRY.id);
     expect(BODY_IDS).not.toContain(SUN_ENTRY.id);
-  });
-
-  it('stays out of the label domain, so nothing budgets it a caption', () => {
-    // `bearsLabel: false` is what keeps 39 names out of `LABEL_CATEGORIES` — the
-    // set the SettingsPanel's label rows, `projectLabelCategoryVisibility` and
-    // the `starCatalogLabel` fade row all iterate. Flipping the flag would
-    // register a caption handle for a caption `produceStarCaptions` never emits.
-    expect(LABEL_CATEGORIES).not.toContain(S_STAR_ENTRY.id);
   });
 
   it('every registry code fits the pick texture’s source field, uniquely', () => {

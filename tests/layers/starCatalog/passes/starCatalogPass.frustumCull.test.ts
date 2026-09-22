@@ -14,24 +14,24 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { starCatalogPass } from '../../../../../src/layers/starCatalog/passes/starCatalogPass';
-import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/cameraFraming';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
-import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/layers/starCatalog/state/defaults';
-import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/starCullSlack';
-import { makeSlab } from '../../../../fixtures/makeSlab';
-import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
-import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
-import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
-import type { StarCatalogDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
-import type { StarCatalogPickDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
+import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/cameraFraming';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { Source } from '../../../../src/data/source';
+import { GAIA_STARS_ENTRY } from '../../../../src/layers/starCatalog/sources/gaia-stars';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../src/layers/starCatalog/state/defaults';
+import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../src/data/starCullSlack';
+import { makeSlab } from '../../../fixtures/makeSlab';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
+import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
+import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
+import type { StarCatalogDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
+import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),

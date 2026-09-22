@@ -35,7 +35,7 @@ import { TIPS } from '../tooltips';
 import styles from '../cardChrome.module.css';
 import local from './StarDetailCard.module.css';
 
-export type StarDetailCardProps = {
+type StarDetailCardProps = {
   target: StarInfo;
   pinned?: boolean;
   chrome?: boolean;
@@ -255,8 +255,6 @@ function StarDetailCard({
         </div>
       )}
 
-      {/* The Sun sits at the origin this distance is measured from, so its own
-          row would read "0 m" — a fact about the frame, not about the star. */}
       {detail.kind !== 'curated' && target.distancePc > 0 && (
         <div className={styles.cardSection}>
           <CardRow

@@ -306,7 +306,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
         structureMarkerRenderer: null,
-        // Near-field handles null → the (hdr, NEAR0) star-point render, the
+        // Near-field handles null → the (hdr, NEAR0) render, the
         // foreground:0 render, and the NEAR0 caption render all select
         // nothing, and the foreground:0→swap composite is
         // touched-set-skipped, so those near-field steps bill no timing slot.
@@ -314,16 +314,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // handles ARE wired below (point-sprites, the three cloud rows,
         // hdr→swap).
         earthRenderer: null,
-        starRenderer: null,
         planetRenderer: null,
         // No mesh renderer → the probe scheduler idles before reading `data`.
         meshBodyRenderer: null,
         // Near-field handle null → atmosphereShellPass disabled AND the
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,
-        starPointRenderer: null,
         orbitTrailRenderer: null,
-        starCatalogRenderer: null,
         foregroundLabelRenderer: null,
         // milkyWayPass.draw reads the generated cloud buffers off this handle.
         milkyWayCloud: {
