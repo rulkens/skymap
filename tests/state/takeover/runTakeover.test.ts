@@ -74,11 +74,11 @@ describe('runTakeover', () => {
       });
     });
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   it('a superseded run does not dispatch takeoverEnded', async () => {

@@ -31,7 +31,7 @@ const INFERNO_RAMP = ['#000004', '#3b0f70', '#8c2981', '#de4968', '#fe9f6d', '#f
 export const cosmicWeb: Exhibit = {
   id: 'cosmicWeb',
   label: 'Cosmic Web',
-  settings: { galaxyCatalogs: GALAXIES_OFF, volumes: VOLUMES_WITH_2MRS },
+  settings: { galaxyCatalogs: GALAXIES_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
   // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
   // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
   pose: {

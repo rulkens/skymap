@@ -35,14 +35,14 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads
- * `ctx.settings.volumes.items.mcpm?.enabled`. The engine seeds that record
+ * `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
  * with the `galaxyCatalogs.items[id].enabled` seed that galaxy catalog demand reads.
  * MCPM therefore IS in the boot
  * demand set — `polyphorm-2mrs` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
- * `settings.volumes.items` so the test exercises the real defaults rather than
+ * `settings.cosmicWebDensity.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
  */
 
@@ -124,7 +124,7 @@ type SettingsLeaves = {
 
 /**
  * Volume-field params keyed by id. Demand predicates read
- * `ctx.settings.volumes.items[id]?.enabled`, so `makeState` injects this
+ * `ctx.settings.cosmicWebDensity.items[id]?.enabled`, so `makeState` injects this
  * record directly into the settings bag.
  */
 type VolumeFieldLeaves = Partial<Record<CosmicWebDensityFieldId, { enabled: boolean }>>;
@@ -199,7 +199,7 @@ type MakeStateOptions = {
   settings?: SettingsLeaves;
   /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (registry `visible` seed). */
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
-  /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
+  /** Volume-field params; injected into `settings.cosmicWebDensity.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   /** `ui.paletteOpen` — the pgcAlias row's demand trigger. Defaults to closed. */
   paletteOpen?: boolean;
@@ -263,11 +263,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     tier: 'medium',
     // Inject galaxy catalog + volume items directly into the settings bag — demand
     // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
-    // `ctx.settings.volumes.items[id]?.enabled` from there.
+    // `ctx.settings.cosmicWebDensity.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       galaxyCatalogs: { items: galaxyCatalogItems },
-      volumes: { items: volumeFields },
+      cosmicWebDensity: { items: volumeFields },
     } as unknown as EngineSettingsState,
     ui: { paletteOpen } as import('../../../../src/@types/ui/UiState').UiState,
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
@@ -381,7 +381,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * as 'loading' (it was just triggered by its own demand row before
    * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
-   * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
+   * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true).
    * polyphorm-2mrs is NOT (seeded enabled:false). pgcAlias: palette closed.
    * `hiResFamous` demands

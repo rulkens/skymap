@@ -2,7 +2,7 @@
  * VolumeFieldRowData — the data the SettingsPanel needs to render a
  * single volume-field row.
  *
- * Projected from `state.settings.volumes.items` by `projectVolumeFieldRows`.
+ * Projected from `state.settings.cosmicWebDensity.items` by `projectVolumeFieldRows`.
  * App reads the items Record off the engine-owned store via
  * `selectVolumeFieldItems` and runs that projection in a `useMemo`, so the
  * panel always reflects the live field registry.

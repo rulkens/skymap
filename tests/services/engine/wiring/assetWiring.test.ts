@@ -100,10 +100,14 @@ describe('ASSET_WIRING demand predicates', () => {
     const polyphorm = rowFor('polyphorm2Mrs');
     expect(
       polyphorm.demand(
-        makeCtx({ settings: { volumes: { items: { 'polyphorm-2mrs': { enabled: true } } } } }),
+        makeCtx({
+          settings: { cosmicWebDensity: { items: { 'polyphorm-2mrs': { enabled: true } } } },
+        }),
       ),
     ).toBe(true);
-    expect(polyphorm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
+    expect(
+      polyphorm.demand(makeCtx({ settings: { cosmicWebDensity: { items: {} } } })),
+    ).toBe(false);
   });
 
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {

@@ -2,7 +2,7 @@ import type { CosmicWebDensitySourceEntry } from '../../@types/data/volume/Cosmi
 import { Source } from '../source';
 
 export const MCPM_ENTRY = {
-  type: 'volume',
+  type: 'cosmicWebDensity',
   code: Source.Mcpm,
   id: 'mcpm',
   label: 'MCPM Cosmic Web',

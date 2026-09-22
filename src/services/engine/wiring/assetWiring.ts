@@ -155,15 +155,15 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // All three are load-once and deliberately declare no `release`: adding one
   // requires an `onRelease` that calls `volumeFieldRenderer.unload(id)`, or the
   // GPU resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
-  // Optional-chained `demand` because `settings.volumes.items` has no entry
-  // for a field until it is seeded.
+  // Optional-chained `demand` because `settings.cosmicWebDensity.items` has no
+  // entry for a field until it is seeded.
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
   {
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
+    demand: (ctx) => ctx.settings.cosmicWebDensity.items[MCPM_FIELD]?.enabled === true,
     priority: 70, // the largest single boot payload, and it only reads at the widest rung
   },
 
@@ -174,7 +174,7 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     key: 'polyphorm2Mrs',
     factory: (deps) => createPolyphorm2MrsSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.volumes.items[POLYPHORM_2MRS_FIELD]?.enabled === true,
+    demand: (ctx) => ctx.settings.cosmicWebDensity.items[POLYPHORM_2MRS_FIELD]?.enabled === true,
     priority: 82, // last of the cosmic-web overlays; default-off, so it rarely competes at boot
   },
 
@@ -187,7 +187,7 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     key: 'mcpmWorkbench',
     factory: (deps) => createMcpmWorkbenchSlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.settings.volumes.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
+    demand: (ctx) => ctx.settings.cosmicWebDensity.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
     priority: 82, // same rung as polyphorm2Mrs above; default-off, so it rarely competes at boot
   },
 

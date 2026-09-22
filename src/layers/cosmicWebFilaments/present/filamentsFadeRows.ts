@@ -13,11 +13,11 @@ import type { CosmicWebFilamentsRuntime } from '../@types/CosmicWebFilamentsRunt
 export function filamentsFadeRows(runtime: CosmicWebFilamentsRuntime): readonly FadeLayer<unknown>[] {
   return [
     fadeLayerRow({
-      key: 'filaments',
+      key: 'cosmicWebFilaments',
       expand: () => [undefined],
       handle: () => ({ kind: 'filament' }),
       seed: () => 0,
-      intent: (s) => s.filaments.enabled,
+      intent: (s) => s.cosmicWebFilaments.enabled,
       // Unguarded, a tour reveal whose download is still in flight starts the fade
       // over an empty renderer, and the slot commit's default-duration re-sync then
       // stomps the authored ramp — the layer pops in wherever the invisible fade got.

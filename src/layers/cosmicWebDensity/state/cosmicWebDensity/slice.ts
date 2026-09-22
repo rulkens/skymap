@@ -1,6 +1,6 @@
 /**
- * volumes — the scalar-volume overlay Layer's settings cluster: the master
- * gate plus per-field params, and the reducers that write them.
+ * cosmicWebDensity — the scalar-volume overlay Layer's settings cluster: the
+ * master gate plus per-field params, and the reducers that write them.
  */
 
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
@@ -11,8 +11,8 @@ import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/Cos
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 
 export const cosmicWebDensitySlice = createSlice({
-  name: 'settings/volumes',
-  reducerPath: 'volumes',
+  name: 'settings/cosmicWebDensity',
+  reducerPath: 'cosmicWebDensity',
   initialState,
   reducers: {
     setCosmicWebDensityEnabled: (volumes, action: PayloadAction<boolean>) => {

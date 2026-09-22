@@ -75,10 +75,10 @@ export function makeFadeBridgeState(): {
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
     zoneOfAvoidance: { enabled: true },
-    // Empty volume items: the volumeField intent reads items[id]?.enabled (→
-    // false here), which is all this fixture needs.
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
+    // Empty volume items: the cosmicWebDensityField intent reads
+    // items[id]?.enabled (→ false here), which is all this fixture needs.
+    cosmicWebDensity: { enabled: true, items: {} },
+    cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: true },
   } as unknown as EngineSettingsState;

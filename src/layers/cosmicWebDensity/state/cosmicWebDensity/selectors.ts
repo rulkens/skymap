@@ -8,7 +8,7 @@ import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFiel
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
   [selectSettings],
-  (settings): CosmicWebDensitySettings => settings.volumes,
+  (settings): CosmicWebDensitySettings => settings.cosmicWebDensity,
 );
 
 /** The whole cluster, under the slice's own name. */

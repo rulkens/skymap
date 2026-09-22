@@ -51,10 +51,10 @@ const RECESSION_BY_LABEL_LAYER = {
 const RECESSION_BY_KIND = {
   filament: FILAMENT_RECESSION,
   localBubble: FILAMENT_RECESSION,
-  volumesMaster: VOLUME_RECESSION,
+  cosmicWebDensity: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,
-  volumeField: undefined,
+  cosmicWebDensityField: undefined,
   milkyWay: undefined, // the MW disk does not recede on focus
   flow: undefined,
   constellations: undefined,

@@ -237,7 +237,7 @@ describe('tourBody', () => {
     // cancels the clip before its cues. The reconstruction fold must apply it
     // anyway when beat 1 is entered, and unwind it when Prev returns to beat 0.
     const cueBeat: BeatData = {
-      enterClip: { start: 'live', timeline: [hide(['volumesMaster'], 0)] },
+      enterClip: { start: 'live', timeline: [hide(['cosmicWebDensity'], 0)] },
       caption: { title: 'B1' },
       dwellClip: dwellDrift(9999),
     };
@@ -254,19 +254,19 @@ describe('tourBody', () => {
     await flush();
     await flush();
     // In beat 0's dwell: the stubbed clip fired no cues, volumes still on.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
 
     store.dispatch(advanceTour());
     await flush();
     await flush();
     // Entering beat 1: the fold applied beat 0's hide cue despite it never firing.
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     store.dispatch(prevBeat());
     await flush();
     await flush();
     // Back at beat 0: the prefix is empty again — baseline restored.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
 
     store.dispatch(exitTakeover());
     await task.toPromise();
@@ -334,7 +334,7 @@ describe('tourBody', () => {
     // FULL beats array with the global entry index, so entering beat 1 must
     // apply the skipped prefix's cue exactly as a full playthrough would.
     const cueBeat: BeatData = {
-      enterClip: { start: 'live', timeline: [hide(['volumesMaster'], 0)] },
+      enterClip: { start: 'live', timeline: [hide(['cosmicWebDensity'], 0)] },
       caption: { title: 'B1' },
       dwellClip: dwellDrift(9999),
     };
@@ -351,7 +351,7 @@ describe('tourBody', () => {
 
     // The reconstruction fold dispatches synchronously on entry — beat 0's
     // hide cue is applied before the settle delay even starts ticking.
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     // The settle delay gates the beat itself; once it elapses, beat 1 plays.
     await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
@@ -361,7 +361,7 @@ describe('tourBody', () => {
     store.dispatch(exitTakeover());
     await task.toPromise();
     // The exit restore winds the cue's effect back to the captured baseline.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   // ── (2d) windowed takes settle the reconstruction fold before playing ─────
@@ -443,12 +443,12 @@ describe('tourBody', () => {
 
     // Mutate settings mid-run — the stand-in for an in-clip scene cue.
     store.dispatch(setCosmicWebDensityEnabled(false));
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     await vi.runAllTimersAsync();
 
     // finally restored the captured baseline (volumes back on) and ended the tour.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
     expect(selectTourActive(store.getState())).toBe(false);
   });
 
@@ -478,14 +478,14 @@ describe('tourBody', () => {
     // Advance to the dwell race inside beat 1 (fly resolved, drift blocking).
     await flush();
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     // Dispatch exitTakeover — the exit arm wins the outer race and cancels run.
     store.dispatch(exitTakeover());
     await flush();
 
     // finally must have executed: baseline restored and tour ended.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
     expect(selectTourActive(store.getState())).toBe(false);
   });
 
@@ -522,7 +522,7 @@ describe('tourBody', () => {
     await flush();
 
     // The tour is still running: not restored (volumes still off), still active.
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
     expect(selectTourActive(store.getState())).toBe(true);
   });
 

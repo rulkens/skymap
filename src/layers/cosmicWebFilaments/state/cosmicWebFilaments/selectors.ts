@@ -6,7 +6,7 @@ import type { CosmicWebFilamentsSettings } from '../../../../@types/settings/Cos
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
   [selectSettings],
-  (settings): CosmicWebFilamentsSettings => settings.filaments,
+  (settings): CosmicWebFilamentsSettings => settings.cosmicWebFilaments,
 );
 
 /** The whole cluster, under the slice's own name. */

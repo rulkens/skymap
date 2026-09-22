@@ -84,7 +84,7 @@ function liveState(
         listIds: () => [],
       },
     },
-    settings: { volumes: { enabled: true, items: {} } },
+    settings: { cosmicWebDensity: { enabled: true, items: {} } },
     subsystems: {
       fades: { opacityOf: () => 1 },
       clipPlayer: { clipOpacityOf: () => 1 },

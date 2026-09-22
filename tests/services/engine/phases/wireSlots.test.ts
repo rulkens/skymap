@@ -60,7 +60,7 @@ vi.mock('../../../../src/services/loading/fetchers/polyphorm2MrsFetcher', () => 
   })),
 }));
 
-vi.mock('../../../../src/layers/filaments/load/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
@@ -247,7 +247,7 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * keeps the demand loop — which reads
  * `settings.galaxyCatalogs.items[id].enabled` — demanding every catalog whose
  * slot a test provides. The volume fields are seeded via
- * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
+ * `settings.cosmicWebDensity.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
@@ -327,11 +327,11 @@ function makeState(
       // seedFades registers the zone-of-avoidance band handle too; pulled
       // from `INITIAL_SETTINGS` like flow/constellations below.
       zoneOfAvoidance: INITIAL_SETTINGS.zoneOfAvoidance,
-      filaments: { enabled: false, intensity: 1.0 },
+      cosmicWebFilaments: { enabled: false, intensity: 1.0 },
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
-      volumes: { enabled: true, items: seedVolumeFields() },
+      cosmicWebDensity: { enabled: true, items: seedVolumeFields() },
       // seedFades registers a caption handle per body row, so these must exist.
       bodies: {
         items: Object.fromEntries(

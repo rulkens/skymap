@@ -13,7 +13,7 @@ function volumeEntry(opts: {
   binBaseName: string;
   tiered: boolean;
 }): SourceEntry {
-  return { type: 'volume', ...opts } as unknown as SourceEntry;
+  return { type: 'cosmicWebDensity', ...opts } as unknown as SourceEntry;
 }
 
 function flowEntry(opts: { visible: boolean; binBaseName: string }): SourceEntry {

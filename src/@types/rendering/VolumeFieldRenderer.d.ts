@@ -7,7 +7,7 @@
  * the renderer READS per-field settings each frame via `draw(settingsOf)`.
  * The user-tunable knobs (enabled, intensity, palette, contrast,
  * densityScale, trim, exposure) are no longer set through this handle —
- * they live in `state.settings.volumes.items` and are projected in per
+ * they live in `state.settings.cosmicWebDensity.items` and are projected in per
  * frame.  See `volumeFieldRenderer.ts` for the full pipeline +
  * ray-march details.
  */

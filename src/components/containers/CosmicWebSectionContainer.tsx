@@ -8,7 +8,7 @@
  *
  * ### Volume-fields projection
  *
- * `selectVolumeFieldItems` returns the raw `state.settings.volumes.items`
+ * `selectVolumeFieldItems` returns the raw `state.settings.cosmicWebDensity.items`
  * Record — a referentially stable Immer snapshot that only changes when a
  * field is actually added, removed, or modified. The `useMemo` projection
  * (shape only) is keyed on that stable `volumeFieldItems` reference: the

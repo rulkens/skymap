@@ -1,6 +1,7 @@
 /**
- * filaments — the filament-skeleton overlay Layer's settings cluster: the
- * master toggle + intensity scale, and the reducers that write them.
+ * cosmicWebFilaments — the filament-skeleton overlay Layer's settings
+ * cluster: the master toggle + intensity scale, and the reducers that write
+ * them.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -8,8 +9,8 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { initialState } from './initialState';
 
 export const cosmicWebFilamentsSlice = createSlice({
-  name: 'settings/filaments',
-  reducerPath: 'filaments',
+  name: 'settings/cosmicWebFilaments',
+  reducerPath: 'cosmicWebFilaments',
   initialState,
   reducers: {
     setCosmicWebFilamentsEnabled: (filaments, action: PayloadAction<boolean>) => {

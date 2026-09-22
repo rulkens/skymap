@@ -21,7 +21,7 @@ import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 function volumeFieldIds(): readonly CosmicWebDensityFieldId[] {
   const ids: CosmicWebDensityFieldId[] = [];
   for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'volume') continue;
+    if (entry.type !== 'cosmicWebDensity') continue;
     ids.push(entry.id);
   }
   return ids;
@@ -54,11 +54,11 @@ export const FADE_LAYERS = [
     seed: () => 1,
   }),
   fadeLayerRow({
-    key: 'volumesMaster',
+    key: 'cosmicWebDensity',
     expand: () => [undefined],
-    handle: () => ({ kind: 'volumesMaster' }),
-    seed: (s) => (s.volumes.enabled ? 1 : 0),
-    intent: (s) => s.volumes.enabled,
+    handle: () => ({ kind: 'cosmicWebDensity' }),
+    seed: (s) => (s.cosmicWebDensity.enabled ? 1 : 0),
+    intent: (s) => s.cosmicWebDensity.enabled,
   }),
   fadeLayerRow({
     key: 'milkyWayLabel',
@@ -108,12 +108,12 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
-  fadeLayerRow<CosmicWebDensityFieldId, 'volumeField'>({
-    key: 'volumeField',
+  fadeLayerRow<CosmicWebDensityFieldId, 'cosmicWebDensityField'>({
+    key: 'cosmicWebDensityField',
     expand: () => volumeFieldIds(),
-    handle: (id) => ({ kind: 'volumeField', id }),
+    handle: (id) => ({ kind: 'cosmicWebDensityField', id }),
     seed: () => 0,
-    intent: (s, id) => s.volumes.items[id]?.enabled ?? false,
+    intent: (s, id) => s.cosmicWebDensity.items[id]?.enabled ?? false,
     guard: (state, id) => state.gpu.volumeFieldRenderer?.listIds().includes(id) ?? false,
   }),
 ] satisfies readonly FadeLayer<unknown>[];

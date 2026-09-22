@@ -70,7 +70,7 @@ function makeState(init: StateInit = {}): EngineState {
   // A `fades` stub whose opacityOf answers by FadeId kind so the master gate
   // and the per-field opacity multiplier can be driven independently.
   const opacityOf = (h: { kind: string }) =>
-    h.kind === 'volumesMaster' ? (init.masterOpacity ?? 1) : (init.fieldOpacity ?? 1);
+    h.kind === 'cosmicWebDensity' ? (init.masterOpacity ?? 1) : (init.fieldOpacity ?? 1);
   const renderer =
     init.renderer === undefined
       ? { hasActiveFields: init.hasActiveFields ?? (() => true), listIds: () => [FIELD_ID] }
@@ -78,7 +78,7 @@ function makeState(init: StateInit = {}): EngineState {
   return {
     gpu: { volumeFieldRenderer: renderer },
     settings: {
-      volumes: { enabled: init.volumesEnabled ?? true, items: init.items ?? {} },
+      cosmicWebDensity: { enabled: init.volumesEnabled ?? true, items: init.items ?? {} },
     },
     subsystems: {
       fades: { opacityOf: vi.fn(opacityOf) },
@@ -93,7 +93,7 @@ describe('deriveVolumeLiveness', () => {
   });
 
   it('returns null when master is off AND the master fade is fully out', () => {
-    // volumes.enabled false and volumesMaster opacity 0 → no live volume work.
+    // cosmicWebDensity.enabled false and cosmicWebDensity opacity 0 → no live volume work.
     const state = makeState({ volumesEnabled: false, masterOpacity: 0 });
     expect(deriveVolumeLiveness(state, makeCtx())).toBeNull();
   });

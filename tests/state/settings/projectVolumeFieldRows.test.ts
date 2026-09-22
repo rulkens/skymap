@@ -6,7 +6,7 @@ import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectVolumeFieldRows', () => {
   it('projects each items row to a complete VolumeFieldRowData', () => {
-    const items = makeSettingsFixture().volumes.items;
+    const items = makeSettingsFixture().cosmicWebDensity.items;
     const rows = projectVolumeFieldRows(items);
 
     const mcpm = rows.find((r) => r.id === 'mcpm');

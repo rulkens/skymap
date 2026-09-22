@@ -46,10 +46,10 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   // Gate-backed layers: a scalar `enabled` field in settings, so one action each.
   milkyWayDisk: { actions: (on) => [setMilkyWayEnabled(on)] },
   milkyWayLabel: { actions: (on) => [setMilkyWayLabelEnabled(on)] },
-  filaments: { actions: (on) => [setCosmicWebFilamentsEnabled(on)] },
+  cosmicWebFilaments: { actions: (on) => [setCosmicWebFilamentsEnabled(on)] },
   localBubble: { actions: (on) => [setLocalBubbleEnabled(on)] },
   orbitTrails: { actions: (on) => [setOrbitTrailsEnabled(on)] },
-  volumesMaster: { actions: (on) => [setCosmicWebDensityEnabled(on)] },
+  cosmicWebDensity: { actions: (on) => [setCosmicWebDensityEnabled(on)] },
   flow: { actions: (on) => [setFlowEnabled(on)] },
   constellations: { actions: (on) => [setConstellationsEnabled(on)] },
   zoneOfAvoidance: { actions: (on) => [setZoneOfAvoidanceEnabled(on)] },
@@ -98,11 +98,11 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
       ),
   },
 
-  // `volumes.items` is a Partial record — a field is absent until its slot
-  // commits — so only present ids are emitted.
-  volumeField: {
+  // `cosmicWebDensity.items` is a Partial record — a field is absent until
+  // its slot commits — so only present ids are emitted.
+  cosmicWebDensityField: {
     actions: (on, settings) =>
-      Object.keys(settings.volumes.items).map((id) =>
+      Object.keys(settings.cosmicWebDensity.items).map((id) =>
         writeCosmicWebDensityField({ id: id as CosmicWebDensityFieldId, patch: { enabled: on } }),
       ),
   },

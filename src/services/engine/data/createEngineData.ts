@@ -20,7 +20,7 @@ import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
  * Filaments, flow, and volume fields have no store: filaments/flow held only a
  * `loaded` bit that mirrored their asset slot (read `slotFor(state, key)`
  * instead), and volume fields' only app-side state is settings in
- * `state.settings.volumes.items` (ADR 0006).
+ * `state.settings.cosmicWebDensity.items` (ADR 0006).
  */
 export function createEngineData(): EngineData {
   const bodies = createBodyStore();

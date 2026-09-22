@@ -36,8 +36,8 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
     settings: {
       galaxyCatalogs: { ...f.galaxyCatalogs },
       structures: { ...f.structures },
-      volumes: { ...f.volumes, enabled: !f.volumes.enabled },
-      filaments: { ...f.filaments, intensity: 0.42 },
+      cosmicWebDensity: { ...f.cosmicWebDensity, enabled: !f.cosmicWebDensity.enabled },
+      cosmicWebFilaments: { ...f.cosmicWebFilaments, intensity: 0.42 },
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       zoneOfAvoidance: { ...f.zoneOfAvoidance, enabled: !f.zoneOfAvoidance.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
@@ -71,7 +71,7 @@ describe('restoreSceneSaga', () => {
     await flush();
 
     expect(store.getState().settings.flow.flowSpeed).toBe(7);
-    expect(store.getState().settings.filaments.intensity).toBe(0.42);
+    expect(store.getState().settings.cosmicWebFilaments.intensity).toBe(0.42);
   });
 
   it('reverts selection.focus onto the store', async () => {

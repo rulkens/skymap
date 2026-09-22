@@ -226,7 +226,7 @@ describe('watchTakeoverSaga', () => {
     // strands the user at volumes-off once the last run exits.
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   // ── (4) openExhibit reaches the watcher; an exhibit supersedes a running tour ────
@@ -257,7 +257,7 @@ describe('watchTakeoverSaga', () => {
     // would have captured as "the" baseline to return to.
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   // ── (3) the beat range on the action reaches tourBody ─────────────────────

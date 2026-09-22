@@ -2,7 +2,7 @@ import type { CosmicWebDensitySourceEntry } from '../../@types/data/volume/Cosmi
 import { Source } from '../source';
 
 export const POLYPHORM_2MRS_ENTRY = {
-  type: 'volume',
+  type: 'cosmicWebDensity',
   code: Source.Polyphorm2MRS,
   id: 'polyphorm-2mrs',
   label: 'Polyphorm (2MRS)',

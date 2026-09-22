@@ -12,7 +12,7 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
  */
 export type CosmicWebDensitySourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {
-    readonly type: 'volume';
+    readonly type: 'cosmicWebDensity';
     /** Stable numeric tag; not persisted, only used as the registry key. */
     readonly code: number;
     /**

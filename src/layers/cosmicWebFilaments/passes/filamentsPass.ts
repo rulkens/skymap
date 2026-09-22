@@ -15,12 +15,12 @@ import { FILAMENT_HOT_TINT } from '../../../data/filament/filamentHotTint';
 
 export function filamentsPass(runtime: CosmicWebFilamentsRuntime): ContentPass {
   return {
-    name: 'filaments',
+    name: 'cosmic-web-filaments',
 
     enabled(state, ctx, _view) {
       // Either-or on purpose: the setting is intent, opacity is the visual state,
       // so a fade-out keeps drawing after the toggle flips off until it hits 0.
-      if (state.settings.filaments.enabled) return true;
+      if (state.settings.cosmicWebFilaments.enabled) return true;
       return state.subsystems.fades.opacityOf({ kind: 'filament' }, ctx.snapshot.nowMs) > 0;
     },
 
@@ -31,7 +31,7 @@ export function filamentsPass(runtime: CosmicWebFilamentsRuntime): ContentPass {
         view.viewportPx,
         ctx.drawPxPerRad,
         FILAMENT_LINE_HALFWIDTH_PX,
-        state.settings.filaments.intensity,
+        state.settings.cosmicWebFilaments.intensity,
         // Focus recession is applied HERE (on the drawn opacity), not on the
         // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
         // zero the layer, so the gate keeps reading the pure toggle opacity.

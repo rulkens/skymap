@@ -10,7 +10,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * from here, the .bin lives on disk under `binBaseName`.
  */
 export type CosmicWebFilamentsSourceEntry = SourceEntryBase & {
-  readonly type: 'filament';
+  readonly type: 'cosmicWebFilaments';
   /** Stable numeric tag; not persisted, only used as the registry key. */
   readonly code: number;
   /** Filename stem under `public/data/` (the loader appends `.bin`). */

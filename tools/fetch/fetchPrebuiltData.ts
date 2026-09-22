@@ -45,10 +45,10 @@ const DATA_DIR = 'public/data';
 export function volumeVisibilityByFileName(entries: readonly SourceEntry[]): Map<string, boolean> {
   const map = new Map<string, boolean>();
   for (const entry of entries) {
-    if (entry.type !== 'volume' && entry.type !== 'flow') continue;
+    if (entry.type !== 'cosmicWebDensity' && entry.type !== 'flow') continue;
     const base = entry.binBaseName;
     const fileNames =
-      entry.type === 'volume' && entry.tiered
+      entry.type === 'cosmicWebDensity' && entry.tiered
         ? TIER_LADDER.map((tier) => `${base}-${tier}.scfd`)
         : [`${base}.scfd`];
     for (const fileName of fileNames) map.set(fileName, entry.visible);

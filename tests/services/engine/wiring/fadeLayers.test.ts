@@ -76,7 +76,7 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
-      volumes: { enabled: opts.volumesMasterEnabled ?? true },
+      cosmicWebDensity: { enabled: opts.volumesMasterEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
@@ -138,8 +138,8 @@ function makeSettings(
     bodies: { items: bodyItems() },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
+    cosmicWebDensity: { enabled: true, items: {} },
+    cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
   } as unknown as EngineSettingsState;
@@ -213,16 +213,16 @@ describe('seedFades', () => {
   it('seeds EVERY volume field at 0', () => {
     const state = makeState();
     seedFades(state);
-    // Derive the expected set from the registry — every type:'volume' entry.
-    // Not hardcoded.
+    // Derive the expected set from the registry — every type:'cosmicWebDensity'
+    // entry. Not hardcoded.
     const volumeIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'volume')
+      .filter((e) => e.type === 'cosmicWebDensity')
       .map((e) => e.id);
     expect(volumeIds.length).toBeGreaterThan(0);
     for (const id of volumeIds) {
       expect(
-        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
-        `volumeField{${id}} should seed at 0`,
+        state.subsystems.fades.opacityOf({ kind: 'cosmicWebDensityField', id }),
+        `cosmicWebDensityField{${id}} should seed at 0`,
       ).toBe(0);
     }
   });
@@ -244,11 +244,11 @@ describe('FADE_LAYERS intent subset', () => {
     // is the surviving shared truth after `writes` (Task 5) went: total, and
     // `[]` unconditionally for the three registration-only layers, non-empty
     // for every real write given a settings fixture whose per-item records
-    // are populated (volumeField's fan-out needs at least one item id).
+    // are populated (cosmicWebDensityField's fan-out needs at least one item id).
     const settings = makeSettings();
-    settings.volumes.items = {
+    settings.cosmicWebDensity.items = {
       mcpm: { enabled: true },
-    } as unknown as EngineSettingsState['volumes']['items'];
+    } as unknown as EngineSettingsState['cosmicWebDensity']['items'];
     for (const row of [
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
@@ -271,7 +271,7 @@ describe('FADE_LAYERS intent subset', () => {
   });
 
   it('volume-field row guard gates on the renderer holding the field', () => {
-    const row = rowFor('volumeField');
+    const row = rowFor('cosmicWebDensityField');
     const state = {
       gpu: { volumeFieldRenderer: { listIds: () => ['mcpm'] } },
     } as unknown as EngineState;

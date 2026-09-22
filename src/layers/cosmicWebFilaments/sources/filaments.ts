@@ -2,7 +2,7 @@ import type { CosmicWebFilamentsSourceEntry } from '../../../@types/data/filamen
 import { Source } from '../../../data/source';
 
 export const FILAMENTS_ENTRY = {
-  type: 'filament',
+  type: 'cosmicWebFilaments',
   code: Source.Filaments,
   id: 'filaments',
   label: 'Filaments',
