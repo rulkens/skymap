@@ -60,6 +60,7 @@ import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
+import type { CardRowProps } from '../CardRow/CardRow';
 import Thumbnail from '../Thumbnail/Thumbnail';
 import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
@@ -110,10 +111,54 @@ function BodyDetailCard({
   // decides whether a radius row means anything at all. A miss just drops the
   // row (the absent-row pattern below), not a render-time throw.
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
-  // A captured card shot swaps the "where / how big" rows into a thumbnail +
-  // summary row (matching GalaxyDetailCard); with none, those rows stay put.
   const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
   const hasShot = SHOT_CARD_IDS.has(shotId);
+
+  // The four lead rows — the "where / how big" facts — sit beside the card
+  // shot as summary lines (the galaxy card's layout, one line per 20 px of the
+  // 80 px image), or, for a body with no shot, head the row list as CardRows.
+  // A mesh body's only radius is its bake hull, not a physical fact about the
+  // object, so it gets no radius row; the live camera distance is dropped
+  // until one is published (the initial null report).
+  const leadRows: Extract<CardRowProps, { value: ReactNode }>[] = [];
+  if (entry) {
+    leadRows.push(
+      {
+        label: <InfoTip {...TIPS.constellation!}>Constellation</InfoTip>,
+        value: entry.constellation,
+      },
+      {
+        label: <InfoTip {...TIPS.starDistance!}>Distance</InfoTip>,
+        value: formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC),
+      },
+      {
+        label: <InfoTip {...TIPS.starApparentMag!}>Apparent mag (V)</InfoTip>,
+        value: entry.magV.toFixed(2),
+      },
+      {
+        label: <InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>,
+        value: entry.absMag.toFixed(2),
+      },
+    );
+  } else if (!isFamousStar) {
+    if (seed !== undefined && !isMeshBody(seed)) {
+      leadRows.push({
+        label: <InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>,
+        value: formatRadiusM(seed.surface.datumRadiusM),
+      });
+    }
+    if (distanceMpc != null)
+      leadRows.push({ label: 'Distance', value: formatDistance(distanceMpc) });
+    if (facts?.mass) {
+      leadRows.push({ label: <InfoTip {...TIPS.bodyMass!}>Mass</InfoTip>, value: facts.mass });
+    }
+    if (facts?.gravity) {
+      leadRows.push({
+        label: <InfoTip {...TIPS.bodyGravity!}>Gravity</InfoTip>,
+        value: facts.gravity,
+      });
+    }
+  }
 
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
   const aliases = entry ? entry.names.slice(1) : [];
@@ -130,58 +175,30 @@ function BodyDetailCard({
       <CardRow type="headline">{target.label}</CardRow>
       {aliases.length > 0 && <div className={styles.headlineAlias}>{aliases.join(' · ')}</div>}
 
-      {/*
-        Non-star body (Earth, a planet, a moon): the physical radius resolved
-        off the seed, then the live camera-distance row (time-dependent, off the
-        pub; dropped when no distance is published, e.g. the initial null
-        report), then — when a fact-sheet entry exists — the full planetary
-        card.  With no entry this stays the lean panel (radius alone).  The
-        distance / orbital-period rows relabel for a moon (`facts.parent`), which
-        orbits its planet rather than the Sun.
-      */}
-      {!isFamousStar && hasShot && (
+      {hasShot && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
           <Thumbnail url={`${CARD_IMAGE_DIR}/${shotId}.webp`} alt={`${target.label} thumbnail`} />
           <div className={styles.cardSummary}>
-            {seed !== undefined && !isMeshBody(seed) && (
-              <div className={styles.cardTypeLine}>
-                <InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>{' '}
-                {formatRadiusM(seed.surface.datumRadiusM)}
+            {leadRows.map((row, i) => (
+              <div key={i} className={styles.cardDistLine}>
+                <span>{row.label}</span> {row.value}
               </div>
-            )}
-            {distanceMpc != null && (
-              <div className={styles.cardDistLine}>
-                <span>Distance</span> {formatDistance(distanceMpc)}
-              </div>
-            )}
+            ))}
           </div>
         </div>
       )}
 
+      {/*
+        Non-star body (Earth, a planet, a moon): the lead rows, then — when a
+        fact-sheet entry exists — the full planetary card.  With no entry this
+        stays the lean panel (radius alone).  The distance / orbital-period rows
+        relabel for a moon (`facts.parent`), which orbits its planet rather than
+        the Sun.
+      */}
       {!isFamousStar && (
         <>
           <div className={styles.cardSection}>
-            {/* A mesh body's only radius is its bake hull, not a physical
-                fact about the object — so it gets no radius row at all.
-                Dropped here when the top row already shows it. */}
-            {!hasShot && seed !== undefined && !isMeshBody(seed) && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-                value={formatRadiusM(seed.surface.datumRadiusM)}
-              />
-            )}
-            {!hasShot && distanceMpc != null && (
-              <CardRow label="Distance" value={formatDistance(distanceMpc)} />
-            )}
-            {facts?.mass && (
-              <CardRow label={<InfoTip {...TIPS.bodyMass!}>Mass</InfoTip>} value={facts.mass} />
-            )}
-            {facts?.gravity && (
-              <CardRow
-                label={<InfoTip {...TIPS.bodyGravity!}>Gravity</InfoTip>}
-                value={facts.gravity}
-              />
-            )}
+            {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
             {facts?.dayLength && (
               <CardRow
                 label={<InfoTip {...TIPS.bodyDayLength!}>Day length</InfoTip>}
@@ -272,21 +289,6 @@ function BodyDetailCard({
         the sidecar): headline only — the fail-soft path.  The properties +
         description fill in the instant the sidecar resolves.
       */}
-      {entry && hasShot && (
-        <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={`${CARD_IMAGE_DIR}/${shotId}.webp`} alt={`${target.label} thumbnail`} />
-          <div className={styles.cardSummary}>
-            <div className={styles.cardTypeLine}>
-              <InfoTip {...TIPS.constellation!}>Constellation</InfoTip> {entry.constellation}
-            </div>
-            <div className={styles.cardDistLine}>
-              <InfoTip {...TIPS.starDistance!}>Distance</InfoTip>{' '}
-              {formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
-            </div>
-          </div>
-        </div>
-      )}
-
       {entry && (
         <>
           {/*
@@ -295,30 +297,10 @@ function BodyDetailCard({
             temperature → luminosity → radius → famous-only extras (mass, age,
             variability).  Constellation heads the block as the star's "where",
             not part of that physical sequence.  Measured famous values, so no
-            '~' affordance — unlike the field star's derived estimates.  Both
-            rows are dropped here when the top row above already shows them.
+            '~' affordance — unlike the field star's derived estimates.
           */}
           <div className={styles.cardSection}>
-            {!hasShot && (
-              <CardRow
-                label={<InfoTip {...TIPS.constellation!}>Constellation</InfoTip>}
-                value={entry.constellation}
-              />
-            )}
-            {!hasShot && (
-              <CardRow
-                label={<InfoTip {...TIPS.starDistance!}>Distance</InfoTip>}
-                value={formatDistance(entry.distancePc * SCALE_UNITS.PC_TO_MPC)}
-              />
-            )}
-            <CardRow
-              label={<InfoTip {...TIPS.starApparentMag!}>Apparent mag (V)</InfoTip>}
-              value={entry.magV.toFixed(2)}
-            />
-            <CardRow
-              label={<InfoTip {...TIPS.starAbsoluteMag!}>Absolute mag</InfoTip>}
-              value={entry.absMag.toFixed(2)}
-            />
+            {!hasShot && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
             <CardRow
               label={<InfoTip {...TIPS.spectralType!}>Spectral type</InfoTip>}
               value={entry.spectralType}

@@ -143,16 +143,39 @@ describe('BodyDetailCard', () => {
       }),
     );
 
-    expect(screen.getByRole('img', { name: 'Mars thumbnail' })).toHaveAttribute(
-      'src',
-      '/images/featured/body-mars.webp',
-    );
+    const img = screen.getByRole('img', { name: 'Mars thumbnail' });
+    expect(img).toHaveAttribute('src', '/images/featured/body-mars.webp');
     expect(
       screen.getAllByText(`${(MARS_DATUM_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
     ).toHaveLength(1);
     // The live camera-distance value (not Mars's fixed "Distance from Sun"
     // fact-sheet row, which stays put) must appear exactly once.
     expect(screen.getAllByText(new RegExp(formatDistance(1)))).toHaveLength(1);
+    // The summary column beside the shot holds four lines: radius, distance,
+    // then mass and gravity — which therefore leave the row list below.
+    const topRow = img.parentElement!.textContent;
+    expect(topRow).toContain('0.107 M⊕');
+    expect(topRow).toContain('0.38 g');
+    // (Gravity's tooltip body also cites Mars's 0.38 g, so only mass is
+    // counted for "appears once".)
+    expect(screen.getAllByText('0.107 M⊕')).toHaveLength(1);
+  });
+
+  it("puts Rigel's constellation, distance and both magnitudes beside its card shot", () => {
+    render(
+      createElement(BodyDetailCard, {
+        target: { type: 'body', id: 'rigel', label: 'Rigel', positionMpc: [0, 0, 0] },
+        famousStarsMeta: [rigelMeta],
+      }),
+    );
+
+    const img = screen.getByRole('img', { name: 'Rigel thumbnail' });
+    expect(img).toHaveAttribute('src', '/images/featured/body-rigel.webp');
+    const topRow = img.parentElement!.textContent;
+    expect(topRow).toContain(rigelMeta.constellation);
+    expect(topRow).toContain(rigelMeta.magV.toFixed(2));
+    expect(topRow).toContain(rigelMeta.absMag.toFixed(2));
+    expect(screen.getAllByText(rigelMeta.magV.toFixed(2))).toHaveLength(1);
   });
 
   it('keeps the pre-thumbnail layout for a body with no card shot (Callisto)', () => {
