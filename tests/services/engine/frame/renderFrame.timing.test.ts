@@ -18,6 +18,8 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
@@ -221,21 +223,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
+  ...stubPlannersFor(PRELUDE),
 ];
 
 function makeMinimalInputWithTiming(timingService: GpuTimingService): {

@@ -16,34 +16,18 @@ import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
-import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional (Global Constraints), so PRELUDE's three Layer-owned rows need a
+// optional (Global Constraints), so PRELUDE's Layer-owned rows need a
 // stand-in here — this file checks core's artifacts alone, never the full
-// `createLayers` composition. The names mirror PRELUDE's plan lines in
-// `frameSections.ts`, where a rename shows up first.
-const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
-  {
-    name: 'galaxy-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'flow',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-  {
-    name: 'star-catalog',
-    scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
-  },
-];
+// `createLayers` composition.
+const LAYER_PLANNER_STUBS = stubPlannersFor(PRELUDE);
 
 describe('checkFrameOrder — boot', () => {
   it('every ViewRig’s program passes the boot check', () => {

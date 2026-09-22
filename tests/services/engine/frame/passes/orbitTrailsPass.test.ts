@@ -26,20 +26,23 @@ import { mat4d } from 'wgpu-matrix';
 
 import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
-import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
+import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
+import { keplerianPositionMpc } from '../../../../../src/utils/orbit/keplerianPositionMpc';
+import { addVec3 } from '../../../../../src/utils/math/addVec3';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
@@ -75,6 +78,31 @@ import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitC
 
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
+// The J2000 oracle `SCENE_ORBIT_CONICS` used to provide, hand-derived here with
+// its own two helpers (`keplerianEllipse` for the ellipse, `keplerianPositionMpc`
+// to place a focus that is itself an orbiting body) so the expected values never
+// come from the layer under test.
+function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
+  const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
+  return {
+    centerMpc: addVec3(focusPositionMpc, centerOffsetMpc),
+    semiMajorMpc,
+    semiMinorMpc,
+    eccentricity: el.eccentricity,
+    meanAnomalyRad: el.meanAnomalyRad,
+    color: el.color,
+  };
+}
+
+const SUN_POS_MPC = SCENE_ANCHORS.find((a) => a.id === 'sun')!.positionMpc;
+const EARTH_POS_MPC = addVec3(
+  SUN_POS_MPC,
+  keplerianPositionMpc(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'earth')!),
+);
+// Mercury is CORE_TRAIL_ELEMENTS[0] — the first ORBITAL_ELEMENTS row, unfiltered.
+const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!, SUN_POS_MPC);
+const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!, EARTH_POS_MPC);
+
 const PASS_STUB = {
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
@@ -107,13 +135,13 @@ function makeCtx(distance: number): FrameView {
 // draw reads ctx.drawCamPos + ctx.drawPxPerRad for the per-orbit apparent-size
 // cull/fade, and ctx.simDays to re-derive each conic. Evaluate at CONST_J2000 so
 // the propagated elements equal their tabulated values and the derived conics
-// reproduce SCENE_ORBIT_CONICS (the zero-change point). Park the camera a hair
+// reproduce the J2000 oracle (the zero-change point). Park the camera a hair
 // off the Sun (render origin): the heliocentric planet orbits then project large
 // (uncalled) while the tiny geocentric moon orbits — centred at their distant
 // planets — stay sub-pixel and cull. No single pose can show every orbit
 // (planets and their moons want opposite zooms), so the test asserts the seam
 // for ALL composed conics and the layout for the first (Mercury,
-// SCENE_ORBIT_CONICS[0], always visible here).
+// MERCURY_CONIC, always visible here).
 function makeDrawCtx(): FrameView {
   return {
     snapshot: {
@@ -332,9 +360,9 @@ describe('orbitTrailsPass.draw', () => {
     // Conics compose in table order skipping culled ones, so call 0 is the
     // first conic (Mercury), which is visible from the Sun — check its wiring.
     // The conic vectors are re-derived per frame (fresh arrays), so compare by
-    // VALUE; at CONST_J2000 they reproduce the static SCENE_ORBIT_CONICS[0].
+    // VALUE; at CONST_J2000 they reproduce the static MERCURY_CONIC oracle.
     // viewportPx and the render origin still pass through by reference.
-    const first = SCENE_ORBIT_CONICS[0]!;
+    const first = MERCURY_CONIC;
     const call0 = composeMock.mock.calls[0]!;
     const center0 = call0[1] as unknown as Vec3;
     const semiMajor0 = call0[2] as unknown as Vec3;
@@ -406,7 +434,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = makeDrawCtx();
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, makeState(renderer));
     const [, { instances: staging, occluders }] = renderer.draw.mock.calls[0]!;
-    const first = SCENE_ORBIT_CONICS[0]!;
+    const first = MERCURY_CONIC;
     const cam = ctx.drawCamPos;
     const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
     expect(staging[34]).toBeCloseTo((first.centerMpc[0] - cam[0]) * kmPerMpc, 0);
@@ -548,7 +576,7 @@ describe('orbitTrailsPass.draw', () => {
     // And it MOVED off the frozen J2000 centre — the whole point of re-deriving
     // at t. Earth swept ~98° in 100 days, so the geocentric centre shifts far
     // more than the lunar a·e.
-    const j2000Moon = SCENE_ORBIT_CONICS.find((c) => c.id === 'moon')!;
+    const j2000Moon = MOON_CONIC;
     const drift = Math.hypot(
       moon[0] - j2000Moon.centerMpc[0],
       moon[1] - j2000Moon.centerMpc[1],
