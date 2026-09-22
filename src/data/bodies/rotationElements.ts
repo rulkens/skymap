@@ -114,6 +114,13 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 259.51,
     spinRateDegPerDay: 21.5710715,
   },
+  {
+    id: 'enceladus',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+    primeMeridianDeg: 6.32,
+    spinRateDegPerDay: 262.7318996,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.

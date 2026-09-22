@@ -21,6 +21,8 @@ import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStar
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
+import { MARS_DATUM_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams';
+import { formatDistance } from '../../../src/utils/format/formatDistance';
 
 const rigelTarget: BodyInfo = {
   type: 'body',
@@ -120,6 +122,110 @@ describe('BodyDetailCard', () => {
     );
 
     expect(container.textContent).not.toMatch(/Eccentricity|Pericentre|Orbits/);
+  });
+
+  it("renders Mars's card-shot thumbnail with its Radius and Distance relocated into the summary", () => {
+    // Mars is in SHOT_CARD_IDS (public/images/featured/body-mars.webp exists),
+    // so the top row swaps in for the old radius/distance CardRow positions —
+    // both must appear exactly once, not duplicated.
+    const marsTarget: BodyInfo = {
+      type: 'body',
+      id: 'mars',
+      label: 'Mars',
+      positionMpc: [0, 0, 0],
+    };
+
+    render(
+      createElement(BodyDetailCard, {
+        target: marsTarget,
+        famousStarsMeta: [],
+        distanceMpc: 1,
+      }),
+    );
+
+    const img = screen.getByRole('img', { name: 'Mars thumbnail' });
+    expect(img).toHaveAttribute('src', '/images/featured/body-mars.webp');
+    expect(
+      screen.getAllByText(`${(MARS_DATUM_RADIUS_M * SCALE_UNITS.M_TO_KM).toLocaleString()} km`),
+    ).toHaveLength(1);
+    // The live camera-distance value (not Mars's fixed "Distance from Sun"
+    // fact-sheet row, which stays put) must appear exactly once.
+    expect(screen.getAllByText(formatDistance(1))).toHaveLength(1);
+    // The summary column beside the shot holds four lines: radius, distance,
+    // then mass and gravity — which therefore leave the row list below.
+    const topRow = img.parentElement!.textContent;
+    expect(topRow).toContain('0.107 M⊕');
+    expect(topRow).toContain('0.38 g');
+    // (Gravity's tooltip body also cites Mars's 0.38 g, so only mass is
+    // counted for "appears once".)
+    expect(screen.getAllByText('0.107 M⊕')).toHaveLength(1);
+  });
+
+  it("puts Rigel's constellation, distance and both magnitudes beside its card shot", () => {
+    render(
+      createElement(BodyDetailCard, {
+        target: { type: 'body', id: 'rigel', label: 'Rigel', positionMpc: [0, 0, 0] },
+        famousStarsMeta: [rigelMeta],
+      }),
+    );
+
+    const img = screen.getByRole('img', { name: 'Rigel thumbnail' });
+    expect(img).toHaveAttribute('src', '/images/featured/body-rigel.webp');
+    const topRow = img.parentElement!.textContent;
+    expect(topRow).toContain(rigelMeta.constellation);
+    expect(topRow).toContain(rigelMeta.magV.toFixed(2));
+    expect(topRow).toContain(rigelMeta.absMag.toFixed(2));
+    expect(screen.getAllByText(rigelMeta.magV.toFixed(2))).toHaveLength(1);
+  });
+
+  it('keeps the pre-thumbnail layout for a body with no card shot (Callisto)', () => {
+    // Callisto has no captured shot, so the top row must not appear at all —
+    // the rows stay exactly where they were before this feature.
+    const callistoTarget: BodyInfo = {
+      type: 'body',
+      id: 'callisto',
+      label: 'Callisto',
+      positionMpc: [0, 0, 0],
+    };
+
+    const { container } = render(
+      createElement(BodyDetailCard, {
+        target: callistoTarget,
+        famousStarsMeta: [],
+        distanceMpc: 1,
+      }),
+    );
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('Callisto')).toBeInTheDocument();
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+  });
+
+  it('renders no img for a famous star with no sidecar entry yet, even when it has a shot', () => {
+    // Rigel is in SHOT_CARD_IDS, but with famousStarsMeta empty the sidecar
+    // hasn't resolved — the card must keep the headline-only fallback rather
+    // than pairing a shot with an empty summary column.
+    render(createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [] }));
+
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('renders no empty card section for a shot body with no fact sheet (S2)', () => {
+    // S2 has a captured shot (body-s2), is not a famous star, and has no
+    // BODY_FACTS entry — its lead rows move to the top row, leaving nothing
+    // for the first non-star `cardSection` to render.
+    const target = buildFocusable({
+      type: 'body',
+      id: 's2',
+      label: 'S2',
+      positionMpc: [0, 0, 0],
+    }) as BodyInfo;
+
+    const { container } = render(createElement(BodyDetailCard, { target, famousStarsMeta: [] }));
+
+    for (const section of container.querySelectorAll('div[class*="cardSection"]')) {
+      expect(section.children.length > 0 || section.textContent!.trim() !== '').toBe(true);
+    }
   });
 
   it("renders an S-star's period, eccentricity, pericentre and pericentre speed", () => {

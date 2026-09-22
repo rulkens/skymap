@@ -18,7 +18,7 @@ import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
-import { CARD_IMAGE_DIR } from '../../data/palette/cardImageDir';
+import { cardShotUrl } from '../../utils/palette/cardShotUrl';
 import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
 import { actionForRow } from './utils/actionForRow';
@@ -34,14 +34,7 @@ import styles from './ResultsList.module.css';
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
   if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
-    return (
-      <img
-        className={styles.thumb}
-        src={`${CARD_IMAGE_DIR}/${action.focusId}.webp`}
-        alt=""
-        loading="lazy"
-      />
-    );
+    return <img className={styles.thumb} src={cardShotUrl(action.focusId)} alt="" loading="lazy" />;
   }
   return (
     <span className={styles.glyph} aria-hidden="true">

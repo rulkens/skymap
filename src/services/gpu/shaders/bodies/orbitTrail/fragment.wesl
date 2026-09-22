@@ -99,9 +99,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     clear *= sphereClearance(x, occ.spheres[i]);
   }
 
-  // The spheres cover every body; this covers ONE row's terrain and meshes. The
-  // depth texture need not match the viewport (the far placeholder is 1x1), so
-  // the texel is rescaled while the ray keeps the fragment's own uv.
+  // The spheres cover the sphere bodies; this covers ONE row's terrain and
+  // meshes. The depth texture need not match the viewport (the far
+  // placeholder is 1x1), so the texel is rescaled while the ray keeps the
+  // fragment's own uv.
   let texel = vec2<i32>(in.clip.xy * vec2<f32>(textureDimensions(sceneDepth)) / occ.viewportPx);
   let depth = textureLoad(sceneDepth, texel, 0);
   if (depth != FAR_DEPTH) {

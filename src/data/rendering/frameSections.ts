@@ -278,7 +278,7 @@ export const SCENE: FrameSection = {
     // `depth` names the texture the trails SAMPLE — hdr is depthless, so it
     // attaches nothing — and behind it a trail hides in the terrain and meshes of
     // the last body row to clear that depth; the analytic occluder spheres still
-    // cover every other body.
+    // cover every other sphere body — meshes rely on the depth alone.
     {
       kind: 'render',
       target: 'hdr',
