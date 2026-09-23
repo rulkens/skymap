@@ -18,16 +18,20 @@
  * unifies the pipeline plumbing while keeping the parts that genuinely
  * differ — blend mode and dst format — as *data* in a table.
  *
- * ### Why a pipeline cache keyed by (blend, dstFormat)
+ * ### Why a pipeline cache keyed by (blend, dstFormat, filter)
  *
- * A render pipeline is immutable once built: its blend state and target
- * format are baked in. The compositor may be asked for any (blend,
- * dstFormat) combination, so it builds each on first use and caches it.
- * The key includes the dst format because 'replace' into the swap chain
- * and 'replace' into the HDR target are two distinct pipelines even
+ * A render pipeline is immutable once built: its blend state, target format
+ * and fragment module are baked in. The compositor may be asked for any
+ * (blend, dstFormat, filter) combination, so it builds each on first use and
+ * caches it. The key includes the dst format because 'replace' into the swap
+ * chain and 'replace' into the HDR target are two distinct pipelines even
  * though they share a blend mode — the format is part of the pipeline's
- * immutable identity. The alternative — pre-building every combination
- * at construction — wastes GPU objects on combinations no consumer uses.
+ * immutable identity. `filter` selects the fragment MODULE (plain pass-
+ * through/tone-map vs. `fxaa.wesl`), which is equally baked into the
+ * pipeline; the two variants share the vertex stage, bind group layout and
+ * uniform buffer, since only the fragment work differs. The alternative —
+ * pre-building every combination at construction — wastes GPU objects on
+ * combinations no consumer uses.
  *
  * ### Why one uniform buffer PER cache entry, not one shared buffer
  *
@@ -71,6 +75,7 @@
 // stays byte-identical.
 import vsCode from '../shaders/compositor/vertex.wesl?static';
 import fsCode from '../shaders/compositor/fragment.wesl?static';
+import fxaaFsCode from '../shaders/compositor/fxaa.wesl?static';
 import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
@@ -184,6 +189,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'compositor.fragment');
+  const fxaaFsModule = createShaderModuleWithDevLog(device, fxaaFsCode, 'compositor.fxaa');
 
   // Why nearest, not linear?  The source and dst are the same resolution
   // (the HDR target resizes in lockstep with the swap chain), so the
@@ -230,11 +236,12 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
   function entryFor(
     blend: CompositeBlend,
     dstFormat: GPUTextureFormat,
+    filter: 'fxaa' | null,
   ): {
     pipeline: GPURenderPipeline;
     uniformBuffer: GPUBuffer;
   } {
-    const key = `${blend}:${dstFormat}`;
+    const key = `${blend}:${dstFormat}:${filter ?? 'none'}`;
     const existing = cache.get(key);
     if (existing) return existing;
 
@@ -243,7 +250,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
       layout: pipelineLayout,
       vertex: { module: vsModule, entryPoint: 'vs' },
       fragment: {
-        module: fsModule,
+        module: filter === 'fxaa' ? fxaaFsModule : fsModule,
         entryPoint: 'fs',
         targets: [{ format: dstFormat, blend: BLEND_TABLE[blend].blend }],
       },
@@ -269,8 +276,9 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
       blend: CompositeBlend,
       tone: ToneMap | null,
       dstFormat: GPUTextureFormat,
+      filter: 'fxaa' | null,
     ): void {
-      const entry = entryFor(blend, dstFormat);
+      const entry = entryFor(blend, dstFormat, filter);
 
       if (tone) {
         // Clamp at point of use: the store holds raw intent, this pass

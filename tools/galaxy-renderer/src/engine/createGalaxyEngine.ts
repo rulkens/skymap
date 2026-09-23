@@ -376,6 +376,7 @@ export async function createGalaxyEngine(
       // SDR path passes the same zeros — see ToneMap's field docs.
       { exposure: render.exposure, curve: render.tonemap, hdrKnee: 0, hdrHeadroom: 0 },
       format,
+      null,
     );
     tonePass.end();
     if (!graded) return;

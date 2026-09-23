@@ -7,4 +7,7 @@ export type CompositeStepSpec = {
   readonly kind: 'composite';
   readonly source: string;
   readonly dest: string;
+  /** Post-filter to run inside this merge — currently only the foreground's
+   * edge AA. Absent on every other composite line. */
+  readonly filter?: 'fxaa';
 };

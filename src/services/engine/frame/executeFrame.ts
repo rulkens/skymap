@@ -351,7 +351,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'composite': {
-        const { source, dest, blend, tone } = step.step;
+        const { source, dest, blend, tone, filter } = step.step;
         // Skip unless the source target was actually drawn into this frame:
         // compositing an untouched (uncleared, undefined) source is a no-op at
         // best and reads garbage at worst.
@@ -384,7 +384,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // a spec-table fact for every row including `swap` (whose spec carries
         // the swap-chain format), so it resolves uniformly with no swap branch.
         const dstFormat = ctx.snapshot.renderTargets.specOf(dest).format;
-        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
+        compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat, filter);
         pass.end();
         touched.add(dest);
         break;

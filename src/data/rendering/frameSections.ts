@@ -272,7 +272,11 @@ export const SCENE: FrameSection = {
     // so they ride the SAME single tone curve as the stars and galaxies — there
     // is no seam where the Sun's limb meets the cosmological scene. This is why
     // the fold is a composite and not a second tone-mapped pass.
-    { kind: 'composite', source: 'foreground:0', dest: 'hdr' },
+    // `filter: 'fxaa'` anti-aliases exactly this target's silhouettes (planet
+    // limbs, terrain ridgelines, mesh-body edges) — the only draw `foreground:0`
+    // makes, and the only target with no galaxies/stars for a post filter to
+    // smear. See `shaders/compositor/fxaa.wesl`.
+    { kind: 'composite', source: 'foreground:0', dest: 'hdr', filter: 'fxaa' },
     // The roster slice that draws OVER the opaque bodies: a satellite's near arc
     // passes in front of its host. Still HDR and still ahead of bloom and the one
     // tone-map, so it rides the same curve as everything else. The composite

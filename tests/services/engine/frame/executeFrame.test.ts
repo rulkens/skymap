@@ -348,7 +348,10 @@ describe('executeFrame', () => {
     const compositor = { draw: vi.fn(() => log.push('composite')) };
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
-      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null, filter: null },
+      },
       { kind: 'render', target: 'swap', slab: COSMO, passes: [swap] },
     ];
     const { args } = makeArgs({ program, state: makeState({ compositor }) });
@@ -419,7 +422,10 @@ describe('executeFrame', () => {
   it('skips a composite step whose source target was never touched', () => {
     const draw = vi.fn();
     const program: FrameStep[] = [
-      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null, filter: null },
+      },
     ];
     const { args } = makeArgs({ program, state: makeState({ compositor: { draw } }) });
     executeFrame(args);
@@ -431,7 +437,10 @@ describe('executeFrame', () => {
     const hdr = makeContentPass({ name: 'hdr' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
-      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null, filter: null },
+      },
     ];
     const { args } = makeArgs({ program, state: makeState({ compositor: { draw } }) });
     executeFrame(args);
@@ -455,7 +464,7 @@ describe('executeFrame', () => {
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
       {
         kind: 'composite',
-        step: { source: 'hdr', dest: 'foreground:0', blend: 'over', tone: null },
+        step: { source: 'hdr', dest: 'foreground:0', blend: 'over', tone: null, filter: null },
       },
     ];
     const { args } = makeArgs({ program, state: makeState({ compositor: { draw } }) });
@@ -532,7 +541,10 @@ describe('executeFrame', () => {
     const draw = vi.fn();
     const program: FrameStep[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
-      { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null, filter: null },
+      },
     ];
     const { args } = makeArgs({
       program,

@@ -544,7 +544,10 @@ describe('renderFrame visual baseline', () => {
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
-          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as CosmicWebFilamentsRuntime),
+          filamentsPass({
+            renderer: filamentRenderer,
+            slot: {},
+          } as unknown as CosmicWebFilamentsRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,
@@ -606,7 +609,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "milky-way",
         },
         {
-          "argShape": "pass,object,string,object,string",
+          "argShape": "pass,object,string,object,string,null",
           "renderer": "compositor",
         },
         {

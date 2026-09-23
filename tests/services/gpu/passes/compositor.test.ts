@@ -6,9 +6,10 @@
  * matter. Coverage:
  *
  *   - the exposed surface (label / draw / destroy);
- *   - the pipeline cache: one pipeline per (blend, dstFormat) key,
- *     reused across draws, distinct across blends AND across dst formats
- *     (the same blend into two formats builds two pipelines);
+ *   - the pipeline cache: one pipeline per (blend, dstFormat, filter) key,
+ *     reused across draws, distinct across blends, dst formats AND filters
+ *     (the same blend into two formats builds two pipelines; the same
+ *     blend/format with and without the fxaa filter also does);
  *   - the blend-state table (replace = no blend, over = straight-alpha
  *     OVER, additive = one/one);
  *   - the dst format is baked from the per-draw `dstFormat` arg (threaded
@@ -92,12 +93,12 @@ function target0(desc: GPURenderPipelineDescriptor): GPUColorTargetState {
 }
 
 describe('createCompositor', () => {
-  it('builds one pipeline per (blend, dstFormat) key and reuses it across draws', () => {
+  it('builds one pipeline per (blend, dstFormat, filter) key and reuses it across draws', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
     expect(device.createRenderPipeline).toHaveBeenCalledTimes(1);
   });
 
@@ -107,8 +108,20 @@ describe('createCompositor', () => {
     const pass = mockPass() as unknown as GPURenderPassEncoder;
     // Same dstFormat both draws: the blend is the only thing that differs, so
     // two pipelines proves the blend is part of the key.
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    c.draw(pass, SRC, 'additive', null, SWAP);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
+    c.draw(pass, SRC, 'additive', null, SWAP, null);
+    expect(device.createRenderPipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it('the same blend and dst format with and without the fxaa filter builds two pipelines', () => {
+    // Proves `filter` is part of the cache key, not just threaded through to
+    // a shared pipeline — a dropped filter here would silently composite the
+    // foreground with no anti-aliasing.
+    const device = mockDevice();
+    const c = make(device);
+    const pass = mockPass() as unknown as GPURenderPassEncoder;
+    c.draw(pass, SRC, 'over', null, HDR, null);
+    c.draw(pass, SRC, 'over', null, HDR, 'fxaa');
     expect(device.createRenderPipeline).toHaveBeenCalledTimes(2);
   });
 
@@ -119,8 +132,8 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'over', TONE, SWAP);
-    c.draw(pass, SRC, 'over', TONE, HDR);
+    c.draw(pass, SRC, 'over', TONE, SWAP, null);
+    c.draw(pass, SRC, 'over', TONE, HDR, null);
     expect(device.createRenderPipeline).toHaveBeenCalledTimes(2);
     const [swapDesc, hdrDesc] = pipelineDescriptors(device);
     expect(target0(swapDesc!).format).toBe(SWAP);
@@ -131,9 +144,9 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    c.draw(pass, SRC, 'over', TONE, SWAP);
-    c.draw(pass, SRC, 'additive', null, HDR);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
+    c.draw(pass, SRC, 'over', TONE, SWAP, null);
+    c.draw(pass, SRC, 'additive', null, HDR, null);
     const [replaceDesc, overDesc, additiveDesc] = pipelineDescriptors(device);
 
     expect(target0(replaceDesc!).blend).toBeUndefined();
@@ -155,9 +168,9 @@ describe('createCompositor', () => {
     const pass = mockPass() as unknown as GPURenderPassEncoder;
     // Each draw's target format is whatever the caller hands in — including the
     // formerly-impossible `over → hdr`, proving the blend no longer dictates it.
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    c.draw(pass, SRC, 'over', TONE, HDR);
-    c.draw(pass, SRC, 'additive', null, HDR);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
+    c.draw(pass, SRC, 'over', TONE, HDR, null);
+    c.draw(pass, SRC, 'additive', null, HDR, null);
     const [replaceDesc, overDesc, additiveDesc] = pipelineDescriptors(device);
     expect(target0(replaceDesc!).format).toBe(SWAP);
     expect(target0(overDesc!).format).toBe(HDR);
@@ -169,7 +182,14 @@ describe('createCompositor', () => {
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
+    c.draw(
+      pass,
+      SRC,
+      'replace',
+      { exposure: 1e9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 },
+      SWAP,
+      null,
+    );
     const b1 = packedBytes(device, 0);
     const f1 = new Float32Array(b1);
     const u1 = new Uint32Array(b1);
@@ -179,7 +199,14 @@ describe('createCompositor', () => {
     expect(u1[3]).toBe(2); // curve
     expect(u1[4]).toBe(1); // toneEnabled
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e-9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
+    c.draw(
+      pass,
+      SRC,
+      'replace',
+      { exposure: 1e-9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 },
+      SWAP,
+      null,
+    );
     const f2 = new Float32Array(packedBytes(device, 1));
     expect(f2[0]).toBeCloseTo(0.05, 6); // exposure clamped to the lower bound
   });
@@ -188,7 +215,7 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'over', null, SWAP);
+    c.draw(pass, SRC, 'over', null, SWAP, null);
     expect(new Uint32Array(packedBytes(device, 0))[4]).toBe(0);
   });
 
@@ -196,9 +223,9 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null);
     expect(new Uint32Array(packedBytes(device, 0))[5]).toBe(0);
-    c.draw(pass, SRC, 'over', TONE, SWAP);
+    c.draw(pass, SRC, 'over', TONE, SWAP, null);
     expect(new Uint32Array(packedBytes(device, 1))[5]).toBe(1);
   });
 
@@ -206,7 +233,7 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass();
-    c.draw(pass as unknown as GPURenderPassEncoder, SRC, 'replace', TONE, SWAP);
+    c.draw(pass as unknown as GPURenderPassEncoder, SRC, 'replace', TONE, SWAP, null);
     expect(pass.draw).toHaveBeenCalledWith(3, 1, 0, 0);
     expect(pass.setPipeline).toHaveBeenCalled();
     expect(pass.setBindGroup).toHaveBeenCalled();
@@ -220,8 +247,8 @@ describe('createCompositor', () => {
     const device = mockDevice();
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'replace', TONE, SWAP); // key 1 → buffer 1
-    c.draw(pass, SRC, 'additive', null, HDR); // key 2 → buffer 2
+    c.draw(pass, SRC, 'replace', TONE, SWAP, null); // key 1 → buffer 1
+    c.draw(pass, SRC, 'additive', null, HDR, null); // key 2 → buffer 2
     c.destroy();
     const results = (device.createBuffer as ReturnType<typeof vi.fn>).mock.results;
     expect(results).toHaveLength(2);

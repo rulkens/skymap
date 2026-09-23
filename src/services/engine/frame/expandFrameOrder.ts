@@ -45,8 +45,9 @@ function merge(
   dest: string,
   blend: CompositeBlend,
   tone: ToneMap | null,
+  filter: 'fxaa' | null,
 ): FrameStep {
-  return { kind: 'composite', step: { source, dest, blend, tone } };
+  return { kind: 'composite', step: { source, dest, blend, tone, filter } };
 }
 
 /**
@@ -108,9 +109,9 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
             },
           ],
     ),
-  composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
+  composite: (spec) => [merge(spec.source, spec.dest, 'over', null, spec.filter ?? null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
-  tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
+  tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone, null)],
 };
 
 /** A render step with nothing left to draw never opens a pass. */

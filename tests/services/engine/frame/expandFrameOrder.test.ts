@@ -317,7 +317,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ]);
     expect(steps[first + 7]).toEqual({
       kind: 'composite',
-      step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
+      step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null, filter: 'fxaa' },
     });
   });
 
@@ -437,6 +437,26 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(
       composites.filter((step) => step.kind === 'composite' && step.step.tone !== null),
     ).toHaveLength(1);
+  });
+
+  it("carries a composite spec's `filter` into the step, and defaults to null when absent", () => {
+    // Isolated from FRAME_ORDER's real content: a synthetic order proves the
+    // flag itself survives expansion, independent of which line in
+    // frameSections.ts happens to set it today.
+    const order: FrameStepSpec[] = [
+      { kind: 'composite', source: 'a', dest: 'b', filter: 'fxaa' },
+      { kind: 'composite', source: 'c', dest: 'd' },
+    ];
+    const steps = expandFrameOrder(order, [], {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: [],
+      captureFaces: new Map(),
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    });
+    expect(
+      steps.map((step) => (step.kind === 'composite' ? step.step.filter : 'not composite')),
+    ).toEqual(['fxaa', null]);
   });
 
   it('bloom is the only input that changes the step list', () => {

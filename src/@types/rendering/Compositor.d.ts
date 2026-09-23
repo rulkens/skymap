@@ -1,8 +1,8 @@
 /**
  * Compositor — unified factory for all "merge offscreen texture into target" pipelines.
  *
- * The Compositor owns a single cache of render pipelines keyed by (blend, dstFormat)
- * to amortize pipeline creation across all use cases. Each caller supplies a source
+ * The Compositor owns a single cache of render pipelines keyed by (blend, dstFormat,
+ * filter) to amortize pipeline creation across all use cases. Each caller supplies a source
  * texture view, a blend mode, and optional tone-mapping parameters. When `tone` is
  * non-null, the draw call applies the shared `lib/tonemap.wesl` shader library to
  * compress HDR into the destination format. In phase 2 (CompositeStep as data),
@@ -20,9 +20,9 @@ export type Compositor = {
    * Composite the source texture onto the target within the given render pass.
    *
    * The implementation selects a pipeline from its internal cache keyed by
-   * (blend, dstFormat). When `tone` is non-null, the tone-map curve and
-   * exposure are applied; when null, the source is treated as already LDR and
-   * passed through unchanged.
+   * (blend, dstFormat, filter). When `tone` is non-null, the tone-map curve
+   * and exposure are applied; when null, the source is treated as already LDR
+   * and passed through unchanged (or through the filter, when one is given).
    *
    * `dstFormat` is the format of the render pass's colour attachment, supplied
    * by the caller because a render-pass encoder cannot be queried for its own
@@ -38,6 +38,8 @@ export type Compositor = {
    * @param tone       Tone-mapping parameters, or null for LDR pass-through.
    * @param dstFormat  Colour-attachment format of `pass` — the dest target's
    *                   format; the second half of the pipeline cache key.
+   * @param filter     Post-filter fragment variant, or null for the plain
+   *                   composite/tone-map fragment — the third key component.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -45,6 +47,7 @@ export type Compositor = {
     blend: CompositeBlend,
     tone: ToneMap | null,
     dstFormat: GPUTextureFormat,
+    filter: 'fxaa' | null,
   ): void;
   /** Tear down — releases GPU resources (pipelines, bind groups, uniform buffers). */
   destroy(): void;

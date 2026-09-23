@@ -24,4 +24,6 @@ export type CompositeStep = {
   blend: CompositeBlend;
   /** Tone-map curve/exposure to apply, or null for an already-LDR source. */
   tone: ToneMap | null;
+  /** Post-filter to run in the same draw, or null for none — see `CompositeStepSpec`. */
+  filter: 'fxaa' | null;
 };
