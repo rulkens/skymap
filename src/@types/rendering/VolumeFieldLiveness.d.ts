@@ -10,6 +10,6 @@
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 
 export type VolumeFieldLiveness<Id extends string> = {
-  readonly settingsOf: (id: Id) => VolumeFieldSettings | undefined;
+  readonly settingsOf: (id: Id) => VolumeFieldSettings;
   readonly fadeOpacityOf: (id: Id) => number;
 };

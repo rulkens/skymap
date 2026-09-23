@@ -11,6 +11,7 @@ import { createScalarVolumePass } from '../../../../../src/services/engine/frame
 import type { ScalarVolumePassRow } from '../../../../../src/@types/engine/frame/ScalarVolumePassRow';
 import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
 import type { VolumeFieldLiveness } from '../../../../../src/@types/rendering/VolumeFieldLiveness';
+import type { VolumeFieldSettings } from '../../../../../src/@types/settings/VolumeFieldSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -66,8 +67,19 @@ function makeRow(
   };
 }
 
+const SETTINGS_STUB: VolumeFieldSettings = {
+  enabled: true,
+  intensity: 1,
+  contrast: 1,
+  densityScale: 1,
+  paletteId: 'viridis' as VolumeFieldSettings['paletteId'],
+  trim: 0,
+  exposure: 1,
+  bands: [],
+};
+
 const LIVENESS_STUB: VolumeFieldLiveness<FieldId> = {
-  settingsOf: () => undefined,
+  settingsOf: () => SETTINGS_STUB,
   fadeOpacityOf: () => 1,
 };
 

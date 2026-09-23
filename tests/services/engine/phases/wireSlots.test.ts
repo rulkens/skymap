@@ -137,7 +137,6 @@ import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
-import { cosmicWebDensityFetcher } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher';
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
@@ -212,10 +211,6 @@ function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
     [Source.FamousGalaxy, famous],
   ]);
 }
-
-/** The `binBaseName` of every density cube the mocked fetcher was asked for. */
-const fetchedCubes = (): string[] =>
-  vi.mocked(cosmicWebDensityFetcher).mock.calls.map(([req]) => req.binBaseName);
 
 /** A `ready` payload shaped enough for the all-arrivals gate's `count > 0` check. */
 const readyValue = (count: number): LoadState<unknown> => ({
@@ -527,20 +522,19 @@ describe('wireSlots', () => {
   it('starts no load until the data manifest has resolved', async () => {
     // Point-slot setup copied from "returns synchronously ... and fires
     // `loading` status" above — plain, unfired point slots, same drain, same
-    // four `.load()` assertions. Also pins two sidecar fetchers from the
-    // default boot set (mcpm + structureCatalog — see the sibling
-    // "demand loop loads the default boot sidecar set" test) so a future
-    // refactor that split sidecar dispatch onto a second, differently-awaited
-    // path would fail here, not just on the point-slot half. Famous-galaxies
-    // -meta is left out: its demand predicate reads Famous's slot state,
-    // which needing an extra pre-fire here would collide with the point-slot
+    // four `.load()` assertions. Also pins a sidecar fetcher from the
+    // default boot set (structureCatalog — see the sibling "demand loop
+    // loads the default boot sidecar set" test) so a future refactor that
+    // split sidecar dispatch onto a second, differently-awaited path would
+    // fail here, not just on the point-slot half. Famous-galaxies-meta is
+    // left out: its demand predicate reads Famous's slot state, which
+    // needing an extra pre-fire here would collide with the point-slot
     // assertions above (a fired slot is no longer "about to load").
     let resolveManifest!: () => void;
     const deferred = new Promise<void>((resolve) => {
       resolveManifest = resolve;
     });
     vi.mocked(loadDataManifest).mockReturnValueOnce(deferred);
-    vi.mocked(cosmicWebDensityFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
 
     const sdssSlot = makeFakeSlot('sdss-points');
@@ -566,7 +560,6 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).not.toHaveBeenCalled();
     expect(gladeSlot.load).not.toHaveBeenCalled();
     expect(famousSlot.load).not.toHaveBeenCalled();
-    expect(cosmicWebDensityFetcher).not.toHaveBeenCalled();
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
 
     resolveManifest();
@@ -580,7 +573,6 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
-    expect(fetchedCubes()).toContain('mcpm');
     expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
@@ -625,14 +617,14 @@ describe('wireSlots', () => {
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
-    // Boot parity: MCPM (default-on volume), the cluster catalog (structures
-    // visible), and famous-galaxies-meta load at boot; filaments (off),
-    // Polyphorm 2MRS (off), and the lazy PGC alias stay idle. These loads
-    // come from reevaluateDemand reading the construction-seeded state. Each
-    // sidecar's load is observable through its (mocked) fetcher; clear them
-    // first since the module-scoped mocks persist across tests.
-    vi.mocked(cosmicWebDensityFetcher).mockClear();
+  it('demand loop loads the default boot sidecar set (structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
+    // Boot parity: the cluster catalog (structures visible) and
+    // famous-galaxies-meta load at boot; filaments (off) and the lazy PGC
+    // alias stay idle. These loads come from reevaluateDemand reading the
+    // construction-seeded state. Each sidecar's load is observable through
+    // its (mocked) fetcher; clear them first since the module-scoped mocks
+    // persist across tests. (mcpm-boots / polyphorm-2mrs-idle coverage lives
+    // in demandTable.test and cosmicWebDensityAssetRows.test.)
     vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
 
@@ -645,12 +637,10 @@ describe('wireSlots', () => {
 
     // Default-on / structures-visible ⇒ fetched. The famous-meta sidecar is
     // the Layer's slot now, so its load is observed on the stub, not its fetcher.
-    expect(fetchedCubes()).toContain('mcpm');
     expect(structureCatalogFetcher).toHaveBeenCalled();
     expect(state.layerSlots.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
-    expect(fetchedCubes()).not.toContain('polyphorm-2mrs');
     expect(state.layerSlots.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 

@@ -342,7 +342,6 @@ export function createVolumeFieldRenderer<Id extends string>(
     hasActiveFields(settingsOf, fadeOpacityOf) {
       for (const id of fields.keys()) {
         const s = settingsOf(id);
-        if (!s) continue;
         if (s.intensity <= 0) continue;
         // Opacity is the SOLE visibility truth: a field is active iff its
         // resolved opacity is non-zero. The enabled toggle doesn't override
@@ -389,9 +388,6 @@ export function createVolumeFieldRenderer<Id extends string>(
       frame = (frame + 1) % FRAME_WRAP;
       for (const [id, e] of fields.entries()) {
         const s = settingsOf(id);
-        // No live settings row (e.g. a removed field with a late-firing
-        // callback) → nothing to draw for this field.
-        if (!s) continue;
         // Reactive palette: re-upload the LUT in place when the live
         // setting diverges from what's resident (the bind group
         // references the texture view, which stays valid across

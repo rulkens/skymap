@@ -35,16 +35,16 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * the fade-out tail) is non-zero for a field with `settingsOf` intensity > 0.
    */
   hasActiveFields(
-    settingsOf: (id: Id) => VolumeFieldSettings | undefined,
+    settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
   ): boolean;
   listIds(): Id[];
   /**
    * Dispatch one raymarch per active field, additively blended.  The
-   * per-field tunables are read each frame from `settingsOf`; a field
-   * with no settings row is skipped.  `fadeOpacityOf` supplies the
-   * fade-out opacity per id.  The palette is re-uploaded in place
-   * when `settingsOf(id).paletteId` diverges from what's resident.
+   * per-field tunables are read each frame from `settingsOf`.
+   * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
+   * is re-uploaded in place when `settingsOf(id).paletteId` diverges
+   * from what's resident.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -52,7 +52,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     viewportPx: Vec2,
     pxPerRad: number,
     cameraPosWorld: Readonly<Vec3>,
-    settingsOf: (id: Id) => VolumeFieldSettings | undefined,
+    settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
   ): void;
   destroy(): void;

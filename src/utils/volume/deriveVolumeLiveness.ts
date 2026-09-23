@@ -16,17 +16,13 @@ import { fadeBand } from '../math/fadeBand';
 
 export function deriveVolumeLiveness<Id extends string>(
   renderer: VolumeFieldRenderer<Id>,
-  fieldSettingsOf: (id: Id) => VolumeFieldSettings | undefined,
+  fieldSettingsOf: (id: Id) => VolumeFieldSettings,
   fadeOpacityOf: (id: Id) => number,
   cameraDistanceMpc: number,
 ): VolumeFieldLiveness<Id> | null {
-  const settingsOf = (id: Id) => {
-    const raw = fieldSettingsOf(id);
-    return raw === undefined ? undefined : clampVolumeFieldSettings(raw);
-  };
+  const settingsOf = (id: Id) => clampVolumeFieldSettings(fieldSettingsOf(id));
   const bandedFadeOpacityOf = (id: Id) => {
-    const bands = settingsOf(id)?.bands ?? [];
-    const bandFactor = bands.reduce(
+    const bandFactor = settingsOf(id).bands.reduce(
       (factor, band) => factor * fadeBand(band, cameraDistanceMpc),
       1,
     );

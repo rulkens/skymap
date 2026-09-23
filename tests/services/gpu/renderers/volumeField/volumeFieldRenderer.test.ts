@@ -120,26 +120,6 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(s?.[62]).toBeCloseTo(0.1); // trim
   });
 
-  it('draw skips a field with no settings row', () => {
-    // When `settingsOf` returns undefined the renderer has no tunable
-    // state for that field and must not issue any GPU work.
-    const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture(), MCPM_ENTRY);
-    const pass = makeFakePass();
-    r.draw(
-      pass,
-      new Float32Array(16) as unknown as Mat4,
-      [320, 180],
-      1000,
-      [0, 0, 5],
-      () => undefined,
-      () => 1,
-    );
-    expect(pass.drawIndexed).not.toHaveBeenCalled();
-    expect(uniformScratch(device)).toBeUndefined();
-  });
-
   it('upload seeds contrastCenter / envelope from statics, for an id no registry row names', () => {
     // Per-cube static config taken from `upload`'s `statics` argument;
     // user-tunable knobs are absent from it and arrive per draw via

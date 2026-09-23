@@ -72,20 +72,8 @@ describe('deriveVolumeLiveness (pure core)', () => {
       5,
     )!;
     const clamped = liveness.settingsOf(FIELD_ID);
-    expect(clamped).toBeDefined();
     // The raw intensity 5 is clamped through clampVolumeIntensity.
-    expect(clamped!.intensity).toBe(clampVolumeIntensity(5));
-  });
-
-  it('settingsOf returns undefined for a field with no row', () => {
-    const renderer = stubRenderer();
-    const liveness = deriveVolumeLiveness(
-      renderer,
-      () => undefined,
-      () => 1,
-      5,
-    )!;
-    expect(liveness.settingsOf(FIELD_ID)).toBeUndefined();
+    expect(clamped.intensity).toBe(clampVolumeIntensity(5));
   });
 
   it('returns null at deep zoom — the survey band zeroes every field through the closure', () => {
@@ -146,27 +134,5 @@ describe('deriveVolumeLiveness (pure core)', () => {
     expect(expectedOuter).toBeGreaterThan(0);
     expect(expectedOuter).toBeLessThan(1);
     expect(rampLive.fadeOpacityOf(FIELD_ID)).toBeCloseTo(expectedOuter, 6);
-  });
-
-  it('a settings row missing bands (stale persisted state) falls back to surveyDeepZoom', () => {
-    // Simulates a row persisted before `bands` existed — present at runtime
-    // without it despite the type. Must dissolve like every other field
-    // rather than crash or read as always-on.
-    const stale = { ...rawSettings(), bands: undefined } as unknown as VolumeFieldSettings;
-    const renderer = stubRenderer();
-    const deep = deriveVolumeLiveness(
-      renderer,
-      () => stale,
-      () => 1,
-      0.0005,
-    )!;
-    expect(deep.fadeOpacityOf(FIELD_ID)).toBe(0);
-    const far = deriveVolumeLiveness(
-      renderer,
-      () => stale,
-      () => 1,
-      5,
-    )!;
-    expect(far.fadeOpacityOf(FIELD_ID)).toBeGreaterThan(0);
   });
 });
