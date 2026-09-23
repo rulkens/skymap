@@ -20,6 +20,7 @@ import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/surfaceTileSubsystem';
+import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../../../src/services/gpu/memory/trackGpuMemory';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 const PASS_NAMES = ['point-sprites', 'textured-quads'];
@@ -36,14 +37,16 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-// Only `debug.surfaceTiles` and `debug.cameraDebug` are reached — `flyToLonLat`
-// dispatches a store action rather than reading the handle — so the rest of
-// EngineHandle is unused here and it's cast rather than fully stubbed.
+// `debug.surfaceTiles`, `debug.cameraDebug`, and `debug.gpuMemory` are reached
+// — `flyToLonLat` dispatches a store action rather than reading the handle —
+// so the rest of EngineHandle is unused here and it's cast rather than fully
+// stubbed.
 const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
     surfaceTiles: () => EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
     cameraDebug: () => QUIET_CAMERA_DEBUG_SNAPSHOT,
+    gpuMemory: () => EMPTY_GPU_MEMORY_SNAPSHOT,
   },
 } as unknown as EngineHandle;
 

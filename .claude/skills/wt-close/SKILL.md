@@ -58,7 +58,8 @@ the ordering and the guards are the skill.
    `git stash drop stash@{n}`. The stash stack is shared across all worktrees
    and sessions — the tag+SHA dance is what makes this collision-safe.
 
-6. **Report** in one block: merged PR + squash SHA, worktrees removed vs.
+6. **Report.** First call `session_progress` (if available) with phase `done`.
+   Then report in one block: merged PR + squash SHA, worktrees removed vs.
    left (with owners where known), dev-server stopped, main's new HEAD, and
    any preserved dirty files from step 5.
 

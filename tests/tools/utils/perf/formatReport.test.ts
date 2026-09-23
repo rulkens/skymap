@@ -43,6 +43,7 @@ const withFloors: ScenarioReport = {
     },
   ],
   pageErrors: [],
+  memory: { gpu: { totalBytes: 0, owners: [] }, jsHeapBytes: null },
 };
 
 describe('formatReport', () => {

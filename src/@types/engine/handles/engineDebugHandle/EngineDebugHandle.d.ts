@@ -14,6 +14,7 @@ import type { FrameStats } from '../../FrameStats';
 import type { SurfaceTileDebugSnapshot } from '../../../scene/SurfaceTileDebugSnapshot';
 import type { CameraDebugSnapshot } from '../../../camera/CameraDebugSnapshot';
 import type { AssetSlot } from '../../../loading/AssetSlot';
+import type { GpuMemorySnapshot } from '../../../gpu/memory/GpuMemorySnapshot';
 import type { PassOverridesHandle } from './PassOverridesHandle';
 
 export type EngineDebugHandle = {
@@ -58,4 +59,10 @@ export type EngineDebugHandle = {
    * unopened panel costs nothing.
    */
   readonly cameraDebug: () => CameraDebugSnapshot;
+  /**
+   * The GPU-memory ledger's live tally (see `trackGpuMemory.ts`). A fresh
+   * read off `state.gpu.memory` at call time, like `surfaceTiles` — the
+   * ledger installs async, so this returns an empty snapshot pre-boot.
+   */
+  readonly gpuMemory: () => GpuMemorySnapshot;
 };
