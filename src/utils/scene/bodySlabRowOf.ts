@@ -16,7 +16,7 @@ import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
 export function bodySlabRowOf(body: SceneBody): SlabRow {
   return {
     anchorId: body.id as BodyId,
-    drawRadiusM: (distM, pxPerRad) => bodyDrawRadiusM(body, distM, pxPerRad),
+    drawRadiusM: () => bodyDrawRadiusM(body),
     footprintRadiusM: bodyFootprintRadiusM(body),
     source: 'foreground',
   };

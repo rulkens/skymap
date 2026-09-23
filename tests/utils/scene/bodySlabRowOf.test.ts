@@ -26,7 +26,7 @@ describe('bodySlabRowOf', () => {
       footprintRadiusM: bodyFootprintRadiusM(saturn),
       source: 'foreground',
     });
-    expect(row.drawRadiusM(distM, pxPerRad)).toBe(bodyDrawRadiusM(saturn, distM, pxPerRad));
+    expect(row.drawRadiusM(distM, pxPerRad)).toBe(bodyDrawRadiusM(saturn));
     // The ring-inclusive draw radius is the one that must not collapse onto
     // the datum-derived footprint.
     expect(row.drawRadiusM(distM, pxPerRad)).toBeGreaterThan(row.footprintRadiusM);
