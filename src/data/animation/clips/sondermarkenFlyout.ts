@@ -1,66 +1,87 @@
 /**
  * sondermarkenFlyout — "Søndermarken to the Edge": the Powers of Ten shot.
- * Open looking straight down on the park and pull straight back to the
- * observable horizon, one log-space dolly across ~24 decades.
+ * Open on a near-level view across the park, pull straight back to the
+ * observable horizon in one log-space dolly, and tilt down to the nadir on
+ * the way up.
  *
- * The orbit target is the park itself, not Earth's centre: `distance` is then
- * the altitude, so the log dolly is uniform in altitude from the first second.
- * Aimed at the centre, a log dolly measures from 6371 km away and clears the
- * first 4000 km of altitude in about a second. At cosmic scale the target's
- * offset from Earth's centre is invisible.
+ * The orbit target is where the opening sightline meets the ground, so the
+ * tilt swings the eye up over what the shot is looking at and `distance` is
+ * the range to it; aimed at Earth's centre, a log dolly would clear the first
+ * 4000 km of altitude in about a second.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { dollyTo, hold, seq, wait } from '../../../services/engine/animation/effectHelpers';
+import { aimAlong, all, dollyTo, hold, seq, wait } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { surfacePointBodyFixed } from '../../../utils/geo/surfacePointBodyFixed';
-import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { hostOf } from '../../../services/engine/camera/rungs/hostOf';
+import { toWorldArm } from '../../../services/engine/camera/poseFrameConversion';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { decodeFramedPose } from '../../../utils/url/decodeFramedPose';
+import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
-import { EARTH_PLACES } from '../../palette/earthPlaces';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
-import { SCALE_UNITS } from '../../scaleUnits';
 
-// Eye-tuned: a few seconds on the park before lift-off, ~24 decades at
-// earthFlyout's pace, and a beat at the horizon before the clip ends.
+// Eye-tuned: a few seconds on the opening view, ~24 decades at earthFlyout's
+// pace, the tilt done by ~10 km up, and a beat at the horizon before the end.
 const LEAD_IN_SEC = 3;
 const FLIGHT_SEC = 90;
+const TILT_SEC = 20;
 const END_HOLD_SEC = 4;
 const HORIZON_MPC = 29_500;
 
-const SONDERMARKEN = findByIdOrThrow(EARTH_PLACES, 'sondermarken', 'sondermarkenFlyout');
+/** The opening view, as the app's `#pose=` link value (46 m up, looking north). */
+export const SONDERMARKEN_POSE =
+  'b,earth,0,0,0,3507565.0909855557,779181.3743209324,5261187.663255859,-0.0469557302440652,0.9921810373246189,-0.1156371418303389,0.5013233500514287,0.12353707964967056,0.8563956379179216,-0.8639849871904368,0.01775891677648963,0.503204295276249';
 
 /**
- * Build the clip at the frozen clip-start instant `simDays`: the park's world
- * position and its local vertical both turn with Earth, so both come from that
- * instant's body state.
+ * Build the clip at the frozen clip-start instant `simDays`: the opening pose
+ * is body-fixed, so the world pose and the nadir both turn with Earth.
  */
 export function sondermarkenFlyout(simDays: number): Clip {
-  const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!;
-  const upLocal = surfacePointBodyFixed(SONDERMARKEN.latDeg, SONDERMARKEN.lonDeg, 1);
-  const up = rotateVec3ByTightMat3(upLocal, earth.orientation);
-  const groundMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
-  const target: Vec3 = [
-    earth.positionMpc[0] + up[0] * groundMpc,
-    earth.positionMpc[1] + up[1] * groundMpc,
-    earth.positionMpc[2] + up[2] * groundMpc,
-  ];
-  // Looking along -up puts the eye on the up side of the target: straight down.
-  const { yaw, pitch } = orbitAnglesLookingAlong(
-    [-up[0], -up[1], -up[2]],
-    ORIENTATION_FRAMES.ecliptic,
+  const framed = decodeFramedPose(SONDERMARKEN_POSE);
+  if (framed === null || framed.frame === 'absolute' || !('basisLocal' in framed.pose)) {
+    throw new Error('sondermarkenFlyout: SONDERMARKEN_POSE is not a body-fixed pose');
+  }
+  const basis = ORIENTATION_FRAMES.ecliptic;
+  const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+  const host = hostOf(framed.frame, {
+    bodies,
+    poseBasis: basis,
+    upBasis: basis,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  })!;
+  const start = toWorldArm(
+    framed.pose,
+    host.state,
+    basis,
+    basis,
+    host.radiusM,
+    host.standoffRadii,
+    host.groundRadiusAtM,
   );
+  const earth = bodies.get(SCENE_EARTH.id as BodyId)!.positionMpc;
+  const up = normalize3([
+    start.target[0] - earth[0],
+    start.target[1] - earth[1],
+    start.target[2] - earth[2],
+  ]);
+  const nadir: Vec3 = [-up[0], -up[1], -up[2]];
+
   return {
     id: 'sondermarkenFlyout',
     label: 'Søndermarken to the Edge',
     data: {
-      start: { target, distance: SONDERMARKEN.altKm * 1000 * SCALE_UNITS.M_TO_MPC, yaw, pitch },
+      start: { target: start.target, distance: start.distance, yaw: start.yaw, pitch: start.pitch },
       timeline: [
         seq([
           wait(LEAD_IN_SEC),
-          dollyTo(HORIZON_MPC, FLIGHT_SEC, 'easeInOutCubic'),
+          all([
+            dollyTo(HORIZON_MPC, FLIGHT_SEC, 'easeInOutCubic'),
+            aimAlong(nadir, TILT_SEC, 'easeInOutCubic'),
+          ]),
           hold(END_HOLD_SEC),
         ]),
       ],
