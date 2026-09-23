@@ -99,21 +99,16 @@ export function createFlowFieldRenderer(init: {
   // part:  xyz + age, one vec4 per particle.            STORAGE | COPY_DST
   // trail: ring of (xyz, speed), TRAIL vec4 per particle. STORAGE
   // acc:   advect carried distance, one f32 per particle. STORAGE (unused by streamline)
-  const part = device.createBuffer({
-    label: 'flow-part',
-    size: MAX_PARTICLES * 16,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  const trail = device.createBuffer({
-    label: 'flow-trail',
-    size: MAX_PARTICLES * TRAIL * 16,
-    usage: GPUBufferUsage.STORAGE,
-  });
-  const acc = device.createBuffer({
-    label: 'flow-acc',
-    size: MAX_PARTICLES * 4,
-    usage: GPUBufferUsage.STORAGE,
-  });
+  //
+  // ~27 MB at MAX_PARTICLES, dominated by trail — allocated lazily, on the
+  // first `upload()` (the flow layer is default-off and its cube fetch never
+  // starts until enabled), not at Layer creation, so a session that never
+  // turns flow on never pays for it. `ensureParticleBuffers` also builds
+  // `renderBindGroup`, which binds `part`/`trail`, for the same reason.
+  let part: GPUBuffer | null = null;
+  let trail: GPUBuffer | null = null;
+  let acc: GPUBuffer | null = null;
+  let renderBindGroup: GPUBindGroup | null = null;
 
   const compPrm = device.createBuffer({
     label: 'flow-compPrm',
@@ -200,17 +195,36 @@ export function createFlowFieldRenderer(init: {
     primitive: { topology: 'triangle-strip' },
   });
 
-  // Render bind group: all three resources (camBuf, trail, parts) exist now, so
-  // it can be built at construction and reused for every draw.
-  const renderBindGroup = device.createBindGroup({
-    label: 'flow-render-bg',
-    layout: renderBgl,
-    entries: [
-      { binding: 0, resource: { buffer: camBuf } },
-      { binding: 1, resource: { buffer: trail } },
-      { binding: 2, resource: { buffer: part } },
-    ],
-  });
+  /** Allocate the particle buffer set + the render bind group that binds them,
+   *  once, on the first `upload()` — see the `part`/`trail`/`acc` declaration
+   *  comment above. */
+  function ensureParticleBuffers(): void {
+    if (part) return;
+    part = device.createBuffer({
+      label: 'flow-part',
+      size: MAX_PARTICLES * 16,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    trail = device.createBuffer({
+      label: 'flow-trail',
+      size: MAX_PARTICLES * TRAIL * 16,
+      usage: GPUBufferUsage.STORAGE,
+    });
+    acc = device.createBuffer({
+      label: 'flow-acc',
+      size: MAX_PARTICLES * 4,
+      usage: GPUBufferUsage.STORAGE,
+    });
+    renderBindGroup = device.createBindGroup({
+      label: 'flow-render-bg',
+      layout: renderBgl,
+      entries: [
+        { binding: 0, resource: { buffer: camBuf } },
+        { binding: 1, resource: { buffer: trail } },
+        { binding: 2, resource: { buffer: part } },
+      ],
+    });
+  }
 
   // ── Reused scratch typed arrays (no per-frame allocation) ─────────────────
   // compPrm: f32 view over 48 bytes (12 floats); the u32 view aliases the same
@@ -259,6 +273,10 @@ export function createFlowFieldRenderer(init: {
     label: 'flowFieldRenderer',
 
     upload(cube: ScalarCube): void {
+      // First real upload: flow is default-off, so the particle buffers (see
+      // their declaration comment) are allocated here rather than at Layer
+      // creation.
+      ensureParticleBuffers();
       // Upload the decoded cube to a 3D texture via the shared loader, using the
       // renderer's own device (the device stays encapsulated — the caller hands
       // us a cube, mirroring volumeFieldRenderer.upload). Idempotent re-set:
@@ -285,16 +303,17 @@ export function createFlowFieldRenderer(init: {
 
       // (Re)build the single shared compute bind group now that the velocity
       // texture view + sampler are available. Reused for all three pipelines.
+      // Non-null: `ensureParticleBuffers()` above allocated them this call.
       computeBindGroup = device.createBindGroup({
         label: 'flow-compute-bg',
         layout: computeBgl,
         entries: [
-          { binding: 0, resource: { buffer: part } },
+          { binding: 0, resource: { buffer: part! } },
           { binding: 1, resource: next.textureView },
           { binding: 2, resource: next.sampler },
           { binding: 3, resource: { buffer: compPrm } },
-          { binding: 4, resource: { buffer: trail } },
-          { binding: 5, resource: { buffer: acc } },
+          { binding: 4, resource: { buffer: trail! } },
+          { binding: 5, resource: { buffer: acc! } },
         ],
       });
 
@@ -414,14 +433,17 @@ export function createFlowFieldRenderer(init: {
       device.queue.writeBuffer(camBuf, 0, camF32);
 
       pass.setPipeline(renderPipeline);
-      pass.setBindGroup(0, renderBindGroup);
+      // Non-null: `field !== null` (checked above) only ever becomes true
+      // after `upload()` ran `ensureParticleBuffers()`, which sets this too.
+      pass.setBindGroup(0, renderBindGroup!);
       pass.draw(2 * TRAIL, f.count);
     },
 
     destroy(): void {
-      part.destroy();
-      trail.destroy();
-      acc.destroy();
+      // A session that never enabled flow never allocated these.
+      part?.destroy();
+      trail?.destroy();
+      acc?.destroy();
       compPrm.destroy();
       camBuf.destroy();
       field?.dispose();

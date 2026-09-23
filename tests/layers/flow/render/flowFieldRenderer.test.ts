@@ -58,6 +58,15 @@ function mockCube(): ScalarCube {
 }
 
 describe('createFlowFieldRenderer', () => {
+  it('allocates no particle buffers until the first upload (flow is default-off)', () => {
+    const device = mockDevice();
+    createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
+    // Only the two tiny uniform buffers (compPrm, camBuf) exist at construction
+    // — the ~27 MB part/trail/acc set is a session cost only a session that
+    // enables flow (and so uploads a cube) should pay.
+    expect(device.createBuffer).toHaveBeenCalledTimes(2);
+  });
+
   it('fieldLoaded is false before upload, true after', () => {
     // The flow fade row's guard reads this — it reports whether a cube is
     // committed, independent of the slot lifecycle.
