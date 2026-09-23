@@ -39,9 +39,7 @@
  * literal seeds that record from boot, so `mcpm`'s enabled bit is `true` at
  * boot — symmetric with the `galaxyCatalogs.items[id].enabled` seed that
  * galaxy catalog demand reads. MCPM therefore IS in the boot demand set —
- * `polyphorm-2mrs` is NOT (seeded `enabled: false`). `makeState` injects the
- * same boot literal into `settings.cosmicWebDensity.items` so the test
- * exercises the real defaults rather than a hand-rolled set.
+ * `polyphorm-2mrs` is NOT (seeded `enabled: false`).
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -56,13 +54,13 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
@@ -127,7 +125,14 @@ type SettingsLeaves = {
  * `ctx.settings.cosmicWebDensity.items[id].enabled`, so `makeState` injects this
  * record directly into the settings bag.
  */
-type VolumeFieldLeaves = Record<CosmicWebDensityFieldId, { enabled: boolean }>;
+type VolumeFieldLeaves = EngineSettingsState['cosmicWebDensity']['items'];
+
+/**
+ * Default-at-boot volume fields, matching the Layer's `initialState` literal:
+ * mcpm enabled, the other two disabled. Taken from `INITIAL_SETTINGS` rather
+ * than hand-copied, so a drift in the real defaults fails here too.
+ */
+const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = INITIAL_SETTINGS.cosmicWebDensity.items;
 
 /**
  * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads
@@ -153,16 +158,6 @@ const BOOT_SETTINGS: SettingsLeaves = {
       group: { enabled: true, labelEnabled: true },
     },
   },
-};
-
-/**
- * Default-at-boot volume fields, matching the Layer's `initialState` literal:
- * mcpm enabled, the other two disabled.
- */
-const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = {
-  mcpm: { enabled: true },
-  'polyphorm-2mrs': { enabled: false },
-  'mcpm-workbench': { enabled: false },
 };
 
 /**
@@ -516,7 +511,10 @@ describe('reevaluateDemand demand-table regression', () => {
       },
     };
     // Disable mcpm too so the fired set is exactly the join under test.
-    const volumeFields: VolumeFieldLeaves = { ...BOOT_VOLUME_FIELDS, mcpm: { enabled: false } };
+    const volumeFields: VolumeFieldLeaves = {
+      ...BOOT_VOLUME_FIELDS,
+      mcpm: { ...BOOT_VOLUME_FIELDS.mcpm, enabled: false },
+    };
     // Only Famous carries an enabled row — every other galaxy catalog is absent and
     // reads as not enabled.
     const state = makeState({

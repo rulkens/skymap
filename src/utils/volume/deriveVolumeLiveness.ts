@@ -13,7 +13,6 @@ import type { VolumeFieldLiveness } from '../../@types/rendering/VolumeFieldLive
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import { clampVolumeFieldSettings } from '../clampVolumeFieldSettings';
 import { fadeBand } from '../math/fadeBand';
-import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 
 export function deriveVolumeLiveness<Id extends string>(
   renderer: VolumeFieldRenderer<Id>,
@@ -26,9 +25,7 @@ export function deriveVolumeLiveness<Id extends string>(
     return raw === undefined ? undefined : clampVolumeFieldSettings(raw);
   };
   const bandedFadeOpacityOf = (id: Id) => {
-    // No store row at all (id never seeded) gets the same default a stale
-    // row would via clampVolumeFieldSettings — see that function's header.
-    const bands = settingsOf(id)?.bands ?? [SCALE_FADE_BANDS.surveyDeepZoom];
+    const bands = settingsOf(id)?.bands ?? [];
     const bandFactor = bands.reduce(
       (factor, band) => factor * fadeBand(band, cameraDistanceMpc),
       1,

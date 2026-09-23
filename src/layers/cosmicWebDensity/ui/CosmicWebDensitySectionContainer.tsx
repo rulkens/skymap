@@ -3,8 +3,7 @@
  * "Cosmic web density" section. Reads the master gate and the per-field
  * items Record and wraps both dispatches in `useCallback`. The
  * presentational `CosmicWebDensitySection` imports nothing from `store/` or
- * `state/`. See `CosmicWebDensityTuningSectionContainer`'s header for the
- * shared-selector note.
+ * `state/`.
  */
 
 import { memo, useCallback } from 'react';

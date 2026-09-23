@@ -1,9 +1,6 @@
 /**
- * DensityFieldTuningRow — one registered cosmic-web density field's tuning
- * knobs in the DebugPanel: intensity, contrast, trim, density scale,
- * exposure and palette. The enable checkbox lives in the SettingsPanel's
- * main "Cosmic web density" section, not here — this row is power-user
- * tuning only, using `DebugSlider` to match the surrounding chrome.
+ * DensityFieldTuningRow — one field's tuning knobs, using `DebugSlider` to
+ * match the surrounding chrome.
  */
 
 import type { ReactElement } from 'react';

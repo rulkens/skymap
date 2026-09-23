@@ -7,10 +7,9 @@
  * browser. `manifest.json` only ever names `allowDataFile`'s tracked set —
  * Earth tiles, hi-res images and textures live in separate R2 groups that
  * never touch it, and fonts ship git-tracked under `public/fonts/` — so
- * nothing here has to special-case excluding them. Every manifest file is
- * fetched; boot visibility is app state, not this tool's decision to make.
- * A download lands at `<dest>.part`, renamed into place only on success, so
- * a same-named file on disk is always trustworthy as "already fetched".
+ * nothing here has to special-case excluding them. A download lands at
+ * `<dest>.part`, renamed into place only on success, so a same-named file
+ * on disk is always trustworthy as "already fetched".
  */
 import {
   createWriteStream,

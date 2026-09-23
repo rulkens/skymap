@@ -1,10 +1,8 @@
 /**
  * CosmicWebDensitySection — presentational SettingsPanel section: a master
  * toggle on the header and one enable checkbox per registered field
- * (every `COSMIC_WEB_DENSITY_SOURCE_ROWS` entry). Per-field intensity /
- * contrast / trim / density / exposure / palette knobs live in the
- * DebugPanel's tuning section, not here. Props-driven, no internal state;
- * `memo`'d so an unrelated parent re-render bails on the prop-compare.
+ * (every `COSMIC_WEB_DENSITY_SOURCE_ROWS` entry). Props-driven, no internal
+ * state; `memo`'d so an unrelated parent re-render bails on the prop-compare.
  */
 
 import { memo } from 'react';
@@ -15,7 +13,6 @@ import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSec
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
 export type CosmicWebDensitySectionProps = {
-  /** False short-circuits both volume passes before any GPU cost. */
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   items: CosmicWebDensitySettings['items'];

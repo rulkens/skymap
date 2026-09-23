@@ -18,6 +18,6 @@ export function buildVolumeFieldSettings(
     paletteId: entry.paletteId,
     trim: entry.trim,
     exposure: entry.exposure,
-    bands: entry.fadeBands ?? [SCALE_FADE_BANDS.surveyDeepZoom],
+    bands: [SCALE_FADE_BANDS.surveyDeepZoom],
   };
 }

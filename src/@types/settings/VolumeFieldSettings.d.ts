@@ -66,9 +66,7 @@ export type VolumeFieldSettings = DataItemSettings & {
    * `deriveVolumeLiveness` (`fadeOpacityOf`), keyed on camera distance from
    * the heliocentric render origin. Values, not band names, so a field's
    * choreography is tunable via `writeVolumeField` without touching code.
-   * Seeded from the registry's `fadeBands` (`buildVolumeFieldSettings`);
-   * a stale row missing this falls back to `[SCALE_FADE_BANDS.surveyDeepZoom]`
-   * at the `clampVolumeFieldSettings` read edge.
+   * Seeded to `[SCALE_FADE_BANDS.surveyDeepZoom]` by `buildVolumeFieldSettings`.
    */
   bands: readonly FadeBand[];
 };

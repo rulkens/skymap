@@ -1,8 +1,6 @@
 /**
  * CosmicWebDensityTuningSectionContainer — store boundary for the
- * DebugPanel's "Cosmic web density (tuning)" section. `selectCosmicWebDensityFieldItems`
- * has another independent subscriber, `CosmicWebDensitySectionContainer`;
- * each re-renders only its own subtree on an items change.
+ * DebugPanel's "Cosmic web density (tuning)" section.
  */
 
 import { memo, useCallback } from 'react';

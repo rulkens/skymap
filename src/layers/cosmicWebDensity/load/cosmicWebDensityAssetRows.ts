@@ -9,7 +9,6 @@ import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/Cosmic
 import type { CosmicWebDensityRuntime } from '../@types/CosmicWebDensityRuntime';
 
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
-import { cosmicWebDensityRequest } from './cosmicWebDensityRequest';
 
 const PRIORITY: Record<CosmicWebDensityFieldId, number> = {
   mcpm: 70, // the largest single boot payload, and it only reads at the widest rung
@@ -24,7 +23,12 @@ export function cosmicWebDensityAssetRows(
     ([code, entry]): AssetWiringRow => ({
       key: code,
       factory: () => runtime.slots[entry.id],
-      req: (tier) => cosmicWebDensityRequest(entry, tier),
+      // An untiered row carries no `tier`, so a tier flip leaves its request
+      // unchanged and the demand loop never reloads it.
+      req: (tier) =>
+        entry.tiered
+          ? { binBaseName: entry.binBaseName, tier }
+          : { binBaseName: entry.binBaseName },
       demand: (ctx) => ctx.settings.cosmicWebDensity.items[entry.id].enabled,
       priority: PRIORITY[entry.id],
     }),

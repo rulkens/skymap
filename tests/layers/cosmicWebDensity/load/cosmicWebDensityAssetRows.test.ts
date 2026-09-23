@@ -43,4 +43,13 @@ describe('cosmicWebDensityAssetRows', () => {
     expect(polyphorm.demand(makeCtx(true, false))).toBe(true);
     expect(polyphorm.demand(makeCtx(false, true))).toBe(false);
   });
+
+  it('a tiered row carries the tier, an untiered row carries none', () => {
+    const mcpm = ROWS.find((row) => row.key === Source.Mcpm)!;
+    expect(mcpm.req('medium')).toEqual({ binBaseName: 'mcpm', tier: 'medium' });
+    const workbench = ROWS.find((row) => row.key === Source.McpmWorkbench)!;
+    const untiered = workbench.req('medium');
+    expect(untiered).toEqual({ binBaseName: 'mcpm-workbench' });
+    expect(untiered).not.toHaveProperty('tier');
+  });
 });

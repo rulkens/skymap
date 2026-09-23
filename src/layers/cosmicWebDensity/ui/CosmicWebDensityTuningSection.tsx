@@ -2,7 +2,7 @@
  * CosmicWebDensityTuningSection — DebugPanel section listing every
  * registered cosmic-web density field's tuning knobs (intensity, contrast,
  * trim, density scale, exposure, palette). No enable checkbox here — that
- * lives in the SettingsPanel's main "Cosmic web density" section (spec §7).
+ * lives in the SettingsPanel's main "Cosmic web density" section.
  */
 
 import type { ReactElement } from 'react';

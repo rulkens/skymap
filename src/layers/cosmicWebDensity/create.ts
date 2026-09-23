@@ -12,7 +12,9 @@ import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createVolumeFieldRenderer } from '../../services/gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsample';
-import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySourceRows';
+import { MCPM_ENTRY } from './sources/mcpm';
+import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
+import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
 import { createCosmicWebDensitySlot } from './load/createCosmicWebDensitySlot';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
@@ -21,16 +23,13 @@ export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
     HDR_TARGET_FORMAT,
     deps.fadeBgl,
   );
-  // The source rows cover every id, so the fold is the whole Record.
-  const slots = Object.fromEntries(
-    COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => [
-      entry.id,
-      createCosmicWebDensitySlot(entry, renderer),
-    ]),
-  ) as CosmicWebDensityRuntime['slots'];
   return {
     renderer,
     upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-    slots,
+    slots: {
+      mcpm: createCosmicWebDensitySlot(MCPM_ENTRY, renderer),
+      'polyphorm-2mrs': createCosmicWebDensitySlot(POLYPHORM_2MRS_ENTRY, renderer),
+      'mcpm-workbench': createCosmicWebDensitySlot(MCPM_WORKBENCH_ENTRY, renderer),
+    },
   };
 }
