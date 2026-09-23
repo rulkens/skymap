@@ -13,7 +13,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/components/CommandPalette/utils/scoreFamousMatch.ts',
   'src/components/DebugPanel/CameraBandBar.tsx',
   'src/components/DebugPanel/GpuTimingsSection.tsx',
-  'src/components/InfoCard/detailCardTable.ts',
   'src/components/InfoCard/tooltips.tsx',
   'src/components/SettingsPanel/CosmicWebSection.tsx',
   'src/components/TimeBar/TimeBar.tsx',

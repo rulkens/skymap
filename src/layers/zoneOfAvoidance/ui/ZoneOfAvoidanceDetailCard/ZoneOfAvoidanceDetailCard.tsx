@@ -11,12 +11,12 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { ZoneOfAvoidanceInfo } from '../../../@types/engine/ZoneOfAvoidanceInfo';
-import CardHeader from '../CardHeader/CardHeader';
-import CardRow from '../CardRow/CardRow';
-import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
-import WikipediaRow from '../WikipediaRow/WikipediaRow';
-import styles from '../cardChrome.module.css';
+import type { ZoneOfAvoidanceInfo } from '../../../../@types/engine/ZoneOfAvoidanceInfo';
+import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
+import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
+import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import zoa from './ZoneOfAvoidanceDetailCard.module.css';
 
 export type ZoneOfAvoidanceDetailCardProps = {

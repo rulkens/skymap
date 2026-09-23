@@ -5,6 +5,7 @@
  * its settings and its two DebugPanel/Labels-and-guides UI slots.
  */
 
+import { createElement } from 'react';
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { zoneOfAvoidanceLayerSettings } from './state/slices';
@@ -18,6 +19,8 @@ import { produceZoneOfAvoidanceLettering } from './present/produceZoneOfAvoidanc
 import { zoneOfAvoidanceSelectionRow } from './present/zoneOfAvoidanceSelectionRow';
 import { zoneOfAvoidanceSettingsRow } from './ui/zoneOfAvoidanceSettingsRow';
 import ZoneOfAvoidanceTuningSectionContainer from './ui/ZoneOfAvoidanceTuningSectionContainer';
+import ZoneOfAvoidanceDetailCard from './ui/ZoneOfAvoidanceDetailCard/ZoneOfAvoidanceDetailCard';
+import CompactZoneOfAvoidanceCard from './ui/CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
 
 export const zoneOfAvoidanceLayer = defineLayer({
   name: 'zoneOfAvoidance',
@@ -47,5 +50,22 @@ export const zoneOfAvoidanceLayer = defineLayer({
   ui: [
     { slot: 'labelsAndGuides', content: zoneOfAvoidanceSettingsRow },
     { slot: 'debug', content: ZoneOfAvoidanceTuningSectionContainer },
+    {
+      slot: 'detailCard',
+      content: {
+        type: 'zoneOfAvoidance',
+        // No `onFocus` destructured: the band has no x/y/z (see
+        // ZoneOfAvoidanceInfo), so this arm never wires CardHeader's Focus
+        // pill, unlike every other row.
+        Detail: ({ target, pinned, chrome, onClose }) => {
+          if (target.type !== 'zoneOfAvoidance') return null;
+          return createElement(ZoneOfAvoidanceDetailCard, { target, pinned, chrome, onClose });
+        },
+        Compact: ({ target }) =>
+          target.type === 'zoneOfAvoidance'
+            ? createElement(CompactZoneOfAvoidanceCard, { target })
+            : null,
+      },
+    },
   ],
 });

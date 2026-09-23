@@ -24,9 +24,15 @@ import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { DETAIL_CARD } from './detailCardTable';
+import { APP_COMPOSITION } from '../../compositions/app';
+import { detailCardTable } from './detailCardTable';
 import MobileSheet from './MobileSheet/MobileSheet';
 import styles from './InfoCard.module.css';
+
+// Folded once at module load, not per-render: the composition is static for
+// the app's lifetime, and a missing arm should throw at boot, not on the
+// first hover.
+const DETAIL_CARD = detailCardTable(APP_COMPOSITION.layers);
 
 export type InfoCardProps = {
   /**
