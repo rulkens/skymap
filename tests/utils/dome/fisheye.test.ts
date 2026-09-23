@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { DOME_FACES, DOME_FACE_COUNT } from '../../../src/data/rendering/domeFaces';
+import { DOME_FACES } from '../../../src/data/rendering/domeFaces';
 import { domeBasis } from '../../../src/utils/dome/domeBasis';
 import { domeFaceRotations } from '../../../src/utils/dome/domeFaceRotations';
 import { fisheyeDirection } from '../../../src/utils/dome/fisheyeDirection';
@@ -42,7 +42,6 @@ function sphDir(azimuthDeg: number, elevationDeg: number): Vec3 {
 
 describe('DOME_FACES and domeFaceRotations', () => {
   it('every DOME_FACES basis is orthonormal and right-handed', () => {
-    expect(DOME_FACES.length).toBe(DOME_FACE_COUNT);
     for (const face of DOME_FACES) expectOrthonormalRightHanded(face);
   });
 

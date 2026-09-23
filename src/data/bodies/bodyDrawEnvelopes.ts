@@ -8,10 +8,8 @@ import { sgrAStarLensEnvelopeM } from './sgrAStarLensEnvelope';
  * is for a shell a specific PASS paints, sized by view (distance, pixel
  * scale), not by the body's own geometry — `earth`'s cloud shell is a fixed
  * ratio of its footprint, but `SGR_A_STAR`'s lens envelope grows with the
- * view's `pxPerRad` and camera distance. Keyed by string, not `BodyId`:
- * `SceneBody['id']` is `string` across every union arm (no arm narrows it),
- * so a registry typed by the closed `BodyId` set could not be indexed by a
- * `body.id` read off a live `SceneBody`.
+ * view's `pxPerRad` and camera distance. Keyed by `string`: `SceneBody['id']`
+ * never narrows.
  */
 export const BODY_DRAW_ENVELOPES: Readonly<
   Record<string, (footprintM: number, distM: number, pxPerRad: number) => number>

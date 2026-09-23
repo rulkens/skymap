@@ -8,13 +8,7 @@
 import type { Mat3 } from '../../@types/math/Mat3';
 import { mat3FromColumns } from '../../utils/math/mat3FromColumns';
 
-export const DOME_FACE_COUNT = 5;
-
-// front: right +x, up +y, forward +z; left: right +z, up +y, forward -x;
-// right: right -z, up +y, forward +x; back: right -x, up +y, forward -z;
-// top: right +x, up -z, forward +y — same index order as `DOME_FACES` below.
-export const DOME_FACE_NAMES = ['front', 'left', 'right', 'back', 'top'] as const;
-
+// Same index order as `DOME_FACE_NAMES` below.
 export const DOME_FACES: readonly Mat3[] = [
   mat3FromColumns([1, 0, 0], [0, 1, 0], [0, 0, 1]),
   mat3FromColumns([0, 0, 1], [0, 1, 0], [-1, 0, 0]),
@@ -22,3 +16,8 @@ export const DOME_FACES: readonly Mat3[] = [
   mat3FromColumns([-1, 0, 0], [0, 1, 0], [0, 0, -1]),
   mat3FromColumns([1, 0, 0], [0, 0, -1], [0, 1, 0]),
 ];
+
+export const DOME_FACE_COUNT = DOME_FACES.length;
+
+// Same index order as `DOME_FACES` above.
+export const DOME_FACE_NAMES = ['front', 'left', 'right', 'back', 'top'] as const;

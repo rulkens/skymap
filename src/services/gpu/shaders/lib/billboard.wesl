@@ -2,25 +2,17 @@
 // expansion helpers shared across instanced point/quad renderers.
 //
 // Four of the project's renderers (points, quads, disks, proceduralDisks)
-// each draw one screen- or world-aligned quad per instance using the
-// non-indexed 'triangle-list' topology — six vertices per quad, with the
-// vertex stage looking up the corner offset from a small constant array
-// keyed by '@builtin(vertex_index)'. The corner array was duplicated
-// verbatim in three of those four shaders (only points used a slightly
-// different ordering); the cornerUv remap '(corner + 1) * 0.5' was
-// duplicated in all four. This module collapses that duplication into one
-// canonical pair of helpers ('quadCorner', 'quadUv') and adds one
-// renderer-agnostic expansion helper ('expandBillboardScreen') for the
-// screen-pixel-sized billboard pattern that points uses.
+// each draw one screen- or world-aligned quad per instance; this module
+// holds the shared corner-mapping and expansion helpers used across all of them.
 //
-// No view-aligned flavour: CameraUniforms carries no view matrix.
+// No VIEW-aligned flavour — 'CameraUniforms' has no view matrix;
+// 'expandBillboardWorld' below is eye-facing instead, which needs only '(eye, centre)'.
 //
 // ## Screen-aligned vs view-aligned world-sized billboards
 //
-// The reasoning above rules out a VIEW-aligned world-sized helper.
-// It does NOT rule out a SCREEN-aligned world-sized helper, which is
-// a different beast: instead of building a basis in world space and
-// projecting it, it projects the centre once and expands the corners
+// A SCREEN-aligned world-sized helper is a different beast: instead of
+// building a basis in world space and projecting it, it projects the
+// centre once and expands the corners
 // along the SCREEN axes by a pixel size computed from the world
 // radius and the centre's clip-space depth (clip.w ≈ camera distance
 // for a standard perspective matrix). The output is always camera-
@@ -32,27 +24,6 @@
 // 'pxToClipOffset' (the two primitives 'labels/vertex.wesl' — the
 // original instance of this pattern — already used inline) around its
 // own eye-tuned size constant.
-//
-// ## What about the corner-ordering mismatch
-//
-// The four renderers historically used two slightly different 6-vertex
-// orderings of the same unit square (both render an identical filled
-// quad under WebGPU's default 'cullMode: none'):
-//
-//   - 'quads' / 'texturedDisks' / 'proceduralDisks':
-//       BL, BR, TR,  BL, TR, TL
-//   - 'points':
-//       BL, BR, TL,  TL, BR, TR
-//
-// Both are valid CCW-front-face triangulations of the same square; they
-// produce identical fragment coverage and identical interpolated UVs at
-// every pixel inside the square (linear interpolation across two
-// triangles whose union is the same convex region depends only on the
-// vertex values at the corners, not on which diagonal splits the square).
-// We therefore unify on the (BL, BR, TR, BL, TR, TL) ordering used by 3
-// of the 4 callers and migrate 'points' to match — this lets 'points'
-// use the same 'quadCorner(vid)' helper as everyone else, eliminating
-// the const-array duplication entirely.
 
 // CameraUniforms carries 'viewportPx', which 'expandBillboardScreen'
 // below needs to convert pixel sizes into clip-space offsets.

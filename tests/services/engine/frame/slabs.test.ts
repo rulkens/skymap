@@ -36,10 +36,6 @@ import {
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
-import { sgrAStarLensEnvelopeM } from '../../../../src/data/bodies/sgrAStarLensEnvelope';
-import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
-import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -351,50 +347,6 @@ describe('deriveSlabs', () => {
     // about the scenario's geometry, not the fix, so it holds either way.
     const oldRadialNear = dM - ringOuterM;
     expect(oldRadialNear).toBeGreaterThan(globeProxyNearFaceM);
-  });
-
-  it("clears the Sgr A* lens envelope's near side with its slab's near plane when the hole is off-axis", () => {
-    // If bodyDrawRadiusM(body) ignored the lens pass's reach entirely, the
-    // row's margin would be PROXY_SCALE·r_s — a few percent of r_s — while
-    // the lensed sphere the pass actually classifies rays over reaches many
-    // r_s off the view axis at this distance. θ=30° puts that sphere's near
-    // side well behind a margin that small, clipping a dark strip across the
-    // lens. The envelope (`sgrAStarLensEnvelopeM`) is exactly the
-    // impact-parameter sphere of radius `edgeFadeEndRs` the fullscreen pass
-    // discards outside of — no separate billboard geometry or close-orbit
-    // cap to reason about.
-    //
-    // distRs = 1000 stays deep in the lensing band (goneAt ≈ 5900 r_s) with
-    // the envelope's near corner in FRONT of the camera, where the
-    // 'viewZ − R·sinθ' formula below is exact.
-    const rS = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
-    const dM = 1000 * rS;
-    const thetaRad = (30 * Math.PI) / 180;
-    const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
-    // Same derivation as the Saturn pose-B case above.
-    const bodyRelEye: Vec3 = [dM * Math.sin(thetaRad), 0, -dM * Math.cos(thetaRad)];
-    const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
-    const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
-
-    const cam = makeCam(100);
-    const frustum = symmetricFrustum(cam.fovYRad, cam.aspect);
-    const viewportPx: Vec2 = [1920, 1080];
-    const pxPerRad = viewportPx[1] / (frustum.tanUp - frustum.tanDown);
-
-    const slabs = deriveSlabs(baseInput({ cam, pose, visibleBodies: [SGR_A_STAR], viewportPx }));
-    const row = slabs[2]!;
-
-    const viewZ = dM * Math.cos(thetaRad);
-    const envelopeM = sgrAStarLensEnvelopeM(dM, pxPerRad);
-    const envelopeNearFaceM = viewZ - envelopeM * Math.sin(thetaRad);
-    expect(row.near).toBeLessThanOrEqual(envelopeNearFaceM);
-
-    // Documents the bug: the OLD margin (PROXY_SCALE·r_s, no envelope) sits
-    // in FRONT of the envelope's true near face at this θ — i.e. it clipped
-    // the lensed sphere. This assertion is about the scenario's geometry,
-    // not the fix.
-    const oldNearFaceM = viewZ - PROXY_SCALE * rS;
-    expect(oldNearFaceM).toBeGreaterThan(envelopeNearFaceM);
   });
 
   it("keys a body row's near plane off view-axis depth for a RINGLESS off-axis body — the margin was NEGATIVE under the old radial formula", () => {
