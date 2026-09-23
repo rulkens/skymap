@@ -9,6 +9,7 @@
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
 import { constellationsLayer } from '../layers/constellations/layer';
+import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
@@ -20,6 +21,7 @@ export const APP_COMPOSITION = {
   layers: [
     galaxyCatalogLayer,
     starCatalogLayer,
+    cosmicWebDensityLayer,
     cosmicWebFilamentsLayer,
     flowLayer,
     zoneOfAvoidanceLayer,
@@ -31,6 +33,7 @@ export const APP_COMPOSITION = {
   readonly [
     typeof galaxyCatalogLayer,
     typeof starCatalogLayer,
+    typeof cosmicWebDensityLayer,
     typeof cosmicWebFilamentsLayer,
     typeof flowLayer,
     typeof zoneOfAvoidanceLayer,

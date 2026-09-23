@@ -65,6 +65,10 @@ vi.mock('../../../../src/services/gpu/device', () => ({
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({})),
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      // `trackGpuMemory` (installed by the real, un-mocked `initGpu` phase)
+      // wraps both create calls on whatever device `gpu/device`'s mocked
+      // `initGpu` hands back, so the stub needs this method too.
+      createTexture: vi.fn(() => ({ destroy: vi.fn() })),
       // surfaceTileRenderer uploads its shared template index buffer at
       // construction, so a queue is part of the construction-time surface now.
       queue: { writeBuffer: vi.fn() },
@@ -174,10 +178,6 @@ vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerR
 
 vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', () => ({
   createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer', () => ({
-  createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
@@ -345,8 +345,6 @@ function makeState(): EngineState {
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      volumeFieldRenderer: null,
-      volumeUpsample: null,
       pickDebugOverlay: null,
       earthRenderer: null,
       planetRenderer: null,

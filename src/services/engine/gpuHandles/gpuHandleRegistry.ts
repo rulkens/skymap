@@ -17,7 +17,6 @@ import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyW
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
-import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -207,16 +206,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'milkyWayCloudRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
-  },
-  {
-    key: 'volumeFieldRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
-  },
-  {
-    key: 'volumeUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'milkyWayAggregateUpsample',

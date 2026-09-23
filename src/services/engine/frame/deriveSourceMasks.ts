@@ -30,8 +30,7 @@
  *
  * The loop packs bits only for `GALAXY_CATALOG_SOURCES` — the galaxy catalog source codes that
  * own bit positions in the 32-bit mask. Structure / filament / volume codes
- * never had bits, and `ALL_VISIBLE_MASK` is built from exactly this set, so
- * packing from these codes covers the whole mask domain.
+ * never had bits, so packing from these codes covers the whole mask domain.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

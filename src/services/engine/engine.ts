@@ -59,6 +59,7 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -168,6 +169,9 @@ export function createEngine(
       renderTargets: null,
       compositor: null,
       envBrdfLut: null,
+      // Installed by initGpu right after the device resolves — see
+      // `EngineGpuHandles.memory`'s field doc.
+      memory: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
@@ -185,8 +189,6 @@ export function createEngine(
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
-      volumeFieldRenderer: null,
-      volumeUpsample: null,
       milkyWayAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
@@ -284,12 +286,6 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       structureCatalog: null,
-      // Tier-aware: the demand loop's drift edge reloads it when the tier
-      // changes.
-      mcpm: null,
-      // Tier-aware like mcpm.
-      polyphorm2Mrs: null,
-      mcpmWorkbench: null,
       bodyTextures: new Map(),
       // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
@@ -492,6 +488,8 @@ export function createEngine(
     // The LUT does own one, and it is no row, so nothing else releases it.
     state.gpu.envBrdfLut?.destroy();
     state.gpu.envBrdfLut = null;
+    // Owns no GPU resource of its own — re-nulled for lifecycle symmetry.
+    state.gpu.memory = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
@@ -520,22 +518,14 @@ export function createEngine(
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       // The prelude's compute steps first (they run first, and their dispatches
-      // are GPU work no render toggle could reach), then every composed pass
-      // except the volume-target raymarch, which has no user toggle — the frame
-      // order is what says which pass that is.
+      // are GPU work no render toggle could reach), then every composed pass.
       passOverrides: {
         allNames: [
           // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
           ),
-          ...FRAME_ORDER_PASS_NAMES.filter(
-            (name) =>
-              !FRAME_ORDER.some(
-                (step) =>
-                  step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
-              ),
-          ),
+          ...FRAME_ORDER_PASS_NAMES,
         ],
       },
       // Re-derived per call, not snapshotted: the slots this joins against are
@@ -543,6 +533,7 @@ export function createEngine(
       assetPriorities: () => assetPriorityBySlotName(state),
       surfaceTiles: () =>
         state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.

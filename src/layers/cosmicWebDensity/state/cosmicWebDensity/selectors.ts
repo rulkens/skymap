@@ -1,9 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { CosmicWebDensitySettings } from '../../../../@types/settings/CosmicWebDensitySettings';
-import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
-import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
+import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
@@ -21,5 +19,5 @@ export const selectCosmicWebDensityEnabled = createSelector(
 
 export const selectCosmicWebDensityFieldItems = createSelector(
   [selectRoute],
-  (route: CosmicWebDensitySettings): Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>> => route.items,
+  (route: CosmicWebDensitySettings): CosmicWebDensitySettings['items'] => route.items,
 );

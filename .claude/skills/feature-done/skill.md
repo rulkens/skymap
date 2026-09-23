@@ -40,6 +40,9 @@ that shipped it.
 
 ## Audit steps
 
+First, if `session_progress` is available, call it with phase `verify`, label
+`Done audit` and `doc` = the plan path.
+
 Run the checks below in order. Don't short-circuit — collect every
 finding and report them together at the end. Use parallel tool calls
 where the checks are independent.
@@ -163,6 +166,9 @@ DoD audit — <plan filename>
 
 OVERALL: <READY / NOT READY: <reason>>
 ```
+
+On `READY`, call `session_progress` (if available) with phase `land`; on
+`BLOCKED`, leave the phase alone.
 
 If `READY`, **execute the housekeeping moves immediately** as part of
 the same response — no separate confirmation step. The audit _is_ the

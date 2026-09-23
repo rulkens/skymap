@@ -10,11 +10,6 @@ export const PLANET_ENTRY = {
   // patch — allSky:true matches the other non-catalog rows (the coverage-mask
   // logic only consults this flag for galaxy-catalog footprints).
   allSky: true,
-  // On by default: the planets are part of the baseline near-field scene,
-  // resolved only on close approach through their content-layer. The flag never
-  // reaches ALL_VISIBLE_MASK (galaxy-catalog rows only), so it's a scene-intent
-  // marker, not a bitmask contributor.
-  visible: true,
   // The planets caption themselves on the final descent, so this row bears
   // labels like any other named source — the foreground-labels layer draws the
   // captions on the NEAR0 slab rather than the COSMO one, which is a routing

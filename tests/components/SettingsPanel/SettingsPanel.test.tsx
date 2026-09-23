@@ -31,9 +31,6 @@ vi.mock('../../../src/compositions/app', () => ({
 vi.mock('../../../src/components/containers/TierChipContainer', () => ({
   default: () => <div data-testid="tier-chip" />,
 }));
-vi.mock('../../../src/components/containers/CosmicWebSectionContainer', () => ({
-  default: () => <div data-testid="cosmic-web-section" />,
-}));
 vi.mock('../../../src/components/containers/StructuresSectionContainer', () => ({
   default: () => <div data-testid="structures-section" />,
 }));
@@ -62,7 +59,7 @@ describe('SettingsPanel — composition order (D13)', () => {
     const { getByTestId, container } = render(<SettingsPanel />);
 
     const layerEl = getByTestId('stub-layer-section');
-    const coreEl = getByTestId('cosmic-web-section');
+    const coreEl = getByTestId('structures-section');
     // DOCUMENT_POSITION_FOLLOWING: layerEl comes before coreEl.
     expect(layerEl.compareDocumentPosition(coreEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

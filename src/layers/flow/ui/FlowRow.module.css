@@ -3,7 +3,7 @@
  * labelled-slider row for intensity.  The section's enable toggle is NOT
  * here — it lives on the `CollapsibleSection` header (the `headerToggle`),
  * like every other section master, so the body holds only the look
- * controls.  Shares the slider idiom with `VolumeFieldRow.module.css`.
+ * controls.
  */
 
 .row {
@@ -16,7 +16,7 @@
 /*
  * Slider row wrapper — just enough to host the shared compact `Slider`
  * (label + value readout folded into its own pill) and the descriptive
- * hover `title`.  Same idiom as VolumeFieldRow's `.sliderRow`.
+ * hover `title`.
  */
 .sliderRow {
   display: flex;

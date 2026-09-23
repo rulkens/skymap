@@ -25,7 +25,7 @@ const SLOTS = buildTimingSlotMap([
   'procedural-disks', // pairIdx 1 → u64 2/3
   'textured-disks', //  pairIdx 2 → u64 4/5
   'filaments', //       pairIdx 3 → u64 6/7
-  'scalar-volume', //   pairIdx 4 → u64 8/9
+  'cosmic-web-density', // pairIdx 4 → u64 8/9
   'milky-way', //       pairIdx 5 → u64 10/11
   'tone-map', //        pairIdx 6 → u64 12/13
   'ui-overlay', //      pairIdx 7 → u64 14/15
@@ -82,7 +82,7 @@ describe('decodeTimestampBuffer', () => {
       [1, 0n, 2_000_000n], // procedural-disks
       [2, 0n, 3_000_000n], // textured-disks
       [3, 0n, 500_000n], //   filaments
-      [4, 0n, 4_000_000n], // scalar-volume
+      [4, 0n, 4_000_000n], // cosmic-web-density
       [5, 0n, 600_000n], //   milky-way
       [6, 0n, 100_000n], //   tone-map
       [7, 0n, 100_000n], //   ui-overlay
@@ -94,7 +94,7 @@ describe('decodeTimestampBuffer', () => {
     expect(out.get('procedural-disks')).toBeCloseTo(2.0, 6);
     expect(out.get('textured-disks')).toBeCloseTo(3.0, 6);
     expect(out.get('filaments')).toBeCloseTo(0.5, 6);
-    expect(out.get('scalar-volume')).toBeCloseTo(4.0, 6);
+    expect(out.get('cosmic-web-density')).toBeCloseTo(4.0, 6);
     expect(out.get('milky-way')).toBeCloseTo(0.6, 6);
     expect(out.get('tone-map')).toBeCloseTo(0.1, 6);
     expect(out.get('ui-overlay')).toBeCloseTo(0.1, 6);

@@ -6,7 +6,7 @@
  *
  * Three controls draw the exact same pill: the section header's master toggle
  * (`CollapsibleSection`), every per-row on/off checkbox (`SettingsPanel`), and
- * the per-cube enable checkbox (`VolumeFieldRow`).  They MUST read as one
+ * the per-cube enable checkbox (`CosmicWebDensitySection`).  They MUST read as one
  * control family, so the look lived as three copy-pasted blocks that drifted
  * the moment one was tweaked.  This module is the single source: consumers
  * `composes: pillToggle from './pillToggle.module.css'` into their own class.

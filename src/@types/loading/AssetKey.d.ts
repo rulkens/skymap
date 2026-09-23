@@ -6,9 +6,8 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  * asset-wiring layer: all of `SourceType`, plus string keys for assets that don't
  * map one-to-one onto a `Source`. The two sets differ in both directions. Cluster,
  * Supercluster and Void all arrive via the single `'structureCatalog'` fetch, so a
- * per-source key would pull one file three times; conversely `'mcpm'` and `'flow'`
- * do have `Source` codes but their slots are named `assetSlots` fields, and only
- * a string key routes through `slotFor`.
+ * per-source key would pull one file three times; conversely `'flow'` does have
+ * a `Source` code but its slot is keyed by that string, not the code.
  * See ADR 0005 §2 for the identity-vs-wiring split; `EngineAssetSlots` for the slots.
  */
 export type AssetKey =
@@ -19,10 +18,7 @@ export type AssetKey =
   | 'pgcAlias'
   | 'filaments'
   | 'localBubble'
-  | 'mcpm'
   | 'flow'
-  | 'polyphorm2Mrs'
-  | 'mcpmWorkbench'
   | 'constellations'
   | 'bodyTextureAtlas'
   | 'hiResFamous' // a GPU allocation rather than a fetch, so the demand loop owns its lifetime; its request is keyed on `layerSide`, not the tier — medium and large share 1024 and never drift

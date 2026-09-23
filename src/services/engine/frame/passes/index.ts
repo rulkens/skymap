@@ -6,8 +6,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { scalarVolumePass } from './scalarVolumePass';
-import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './milkyWayUpsamplePass';
@@ -41,8 +39,6 @@ import { domeResamplePass } from './domeResamplePass';
  * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
-  scalarVolumePass,
-  volumeUpsamplePass,
   horizonShellPass,
   structureMarkersPass,
   milkyWayAggregatePass,

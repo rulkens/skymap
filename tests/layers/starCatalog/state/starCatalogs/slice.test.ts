@@ -11,8 +11,8 @@ import {
 
 describe('starCatalogsSlice', () => {
   it('setStarCatalogVisible toggles a catalog’s enabled', () => {
-    // gaiaStars seeds enabled: true from SOURCE_REGISTRY[Source.GaiaStars].visible;
-    // the per-item reducer flips one row without touching the master gate.
+    // gaiaStars boots enabled: true; the per-item reducer flips one row
+    // without touching the master gate.
     const next = starCatalogsSlice.reducer(
       starCatalogsSlice.getInitialState(),
       setStarCatalogVisible({ id: 'gaiaStars', enabled: false }),

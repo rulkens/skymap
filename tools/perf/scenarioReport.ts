@@ -19,6 +19,7 @@
  */
 
 import type { TimingSlotName } from '../../src/@types/gpu/timing/TimingSlotName';
+import type { MemorySnapshot } from '../../src/@types/perf/MemorySnapshot';
 
 /** One slot's aggregated cost over the sample window: median + p90 ms. */
 export type LayerStat = { slot: TimingSlotName; median: number; p90: number };
@@ -53,4 +54,7 @@ export type ScenarioReport = {
    *  arrival order. Human mode collapses them to a ⚠ summary; JSON mode surfaces
    *  them raw. */
   pageErrors: readonly string[];
+  /** GPU-memory ledger + JS heap, read once per scenario via `hook.memory()`
+   *  after sampling both strategies — measure-only, no bearing on the timings. */
+  memory: MemorySnapshot;
 };

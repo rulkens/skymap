@@ -96,20 +96,6 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('polyphorm2Mrs demand follows its field-enabled flag (default-off ⇒ false)', () => {
-    const polyphorm = rowFor('polyphorm2Mrs');
-    expect(
-      polyphorm.demand(
-        makeCtx({
-          settings: { cosmicWebDensity: { items: { 'polyphorm-2mrs': { enabled: true } } } },
-        }),
-      ),
-    ).toBe(true);
-    expect(
-      polyphorm.demand(makeCtx({ settings: { cosmicWebDensity: { items: {} } } })),
-    ).toBe(false);
-  });
-
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
     const cluster = rowFor('structureCatalog');
     // Every category's ring + label off — both axes read from the item rows.

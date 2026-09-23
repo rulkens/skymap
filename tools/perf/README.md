@@ -62,6 +62,11 @@ Progress goes to stderr in both modes, so stdout is pure JSON.
   is the honest classifier.
 - **`--compare-tiers`** — a `pass × small/medium/large` table, fresh browser context per tier,
   `—` where a tier excludes a source.
+- **MEMORY** — measure-only, not part of the timing verdict: the GPU-memory ledger's total
+  (`trackGpuMemory.ts`, wraps every `createBuffer`/`createTexture`) plus JS heap (Chrome only —
+  needs `--enable-precise-memory-info`, which `launchChromium` always passes), then the top 10 GPU
+  owners by resident bytes. `gc'd` counts objects reclaimed by GC without an explicit `destroy()` —
+  the leak signal.
 
 ## Scenarios
 
@@ -116,7 +121,7 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 
 The browser side is `window.__skymapPerf` (`src/state/perf/installPerfHook.ts`, gated behind
 `?perf`), a deliberately tiny seam: `ready`, `setPose`, `setStrategy`, `collectTimings`,
-`setTier`, `getTier`, `slotGroups`. The Node side (`tools/perf/measurePerf.ts`) may import
+`setTier`, `getTier`, `slotGroups`, `memory`. The Node side (`tools/perf/measurePerf.ts`) may import
 Playwright, `tools/utils/*`, and **type-only** `src/@types/*` — never renderer/shader/
 frameProgram modules. Formatters are pure `(report, palette)` functions in `tools/utils/perf/`
 with injected ANSI palettes (`--json`/piped output stays plain); the pure pieces are all

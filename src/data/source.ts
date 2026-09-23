@@ -227,8 +227,8 @@ export const Source = {
    * home for cubes promoted from the workbench dev tool via
    * `tools/volumes/promoteWorkbenchExport.ts`. Registry-key-only code (not
    * persisted, not pickable); the entry carries its presentation defaults
-   * like MCPM/Polyphorm2MRS. Hidden (`visible: false`) until Phase 4
-   * validation clears — see `src/data/sources/mcpm-workbench.ts`. Appended
+   * like MCPM/Polyphorm2MRS. Hidden until a promotion decision clears
+   * — see `src/layers/cosmicWebDensity/sources/mcpm-workbench.ts`. Appended
    * at 31, the first code the 6-bit pick-source widening opened up — never
    * renumber the codes below it.
    */

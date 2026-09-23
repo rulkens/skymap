@@ -19,7 +19,7 @@ the SettingsPanel rows for those too.
 Hand-wired per source:
 
 - Dedicated slot files in `src/services/loading/slots/` (`cf4DensitySlot.ts`,
-  `mcpmSlot.ts`, `flowFieldSlot.ts`, `filamentSlot.ts`, `starCatalogSlot.ts`, …).
+  `flowFieldSlot.ts`, `filamentSlot.ts`, `starCatalogSlot.ts`, …).
 - A per-asset row in `ASSET_WIRING` (`src/services/engine/wiring/assetWiring.ts`):
   `starCatalogRow` per star catalog, one row per volume field.
 

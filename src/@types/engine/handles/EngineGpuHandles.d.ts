@@ -6,7 +6,7 @@
  * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
  * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
  * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `envBrdfLut`, `uiCtx`,
- * `timingService`). `pickProgram` is a row too, built
+ * `timingService`, `memory`). `pickProgram` is a row too, built
  * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
  * bakes the swap format, or it silently goes stale on the first HDR toggle.
  */
@@ -20,7 +20,6 @@ import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
-import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
@@ -51,6 +50,7 @@ import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
+import type { GpuMemorySnapshot } from '../../gpu/memory/GpuMemorySnapshot';
 
 export type EngineGpuHandles = {
   /**
@@ -106,11 +106,11 @@ export type EngineGpuHandles = {
   focusUniform: FocusUniformBuffer | null;
   /**
    * The offscreen render-target table — one owner for every offscreen row's
-   * (`hdr`, `volume`, …) texture lifecycle, reconciled every frame against the
+   * (`hdr`, `bloom0`, …) texture lifecycle, reconciled every frame against the
    * canvas size and the live state — only the rows whose pixel size moved are
    * reallocated.  See `services/gpu/renderTargets.ts` for the target table +
-   * the per-row rationale (why the HDR offscreen exists, why the volume row
-   * renders at 1/3 scale).
+   * the per-row rationale (why the HDR offscreen exists); Layer-owned rows
+   * are appended from each `Layer.targets`.
    */
   renderTargets: RenderTargets | null;
   /**
@@ -141,6 +141,16 @@ export type EngineGpuHandles = {
    * `fontAtlases` it IS a GPU resource, so `destroy()` releases it.
    */
   envBrdfLut: GPUTexture | null;
+  /**
+   * Live GPU-memory ledger snapshot fn — see `trackGpuMemory.ts`. Installed
+   * by `initGpu` right after the device resolves (before any renderer
+   * allocates), so every `device.createBuffer`/`createTexture` call across
+   * the whole boot is tracked. Not a `GPU_HANDLE_ROWS` row (nothing to
+   * destroy — see `GpuHandleKey`'s Exclude list); `destroy()` re-nulls it for
+   * lifecycle symmetry. `engine.ts`'s `debug.gpuMemory` reads it with an
+   * empty-snapshot fallback for the pre-boot window.
+   */
+  memory: (() => GpuMemorySnapshot) | null;
   /**
    * `device` + `context` + `canvas` for every renderer that targets the swap
    * chain, retained here for the same reason as `fontAtlases`:
@@ -285,33 +295,12 @@ export type EngineGpuHandles = {
    */
   label3DRenderer: Label3DRenderer | null;
   /**
-   * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
-   * constructs it (same phase as the other optional renderers).
-   * Excluded from the `isEngineReady` predicate — the renderer is
-   * optional at runtime; the `volumeUpsamplePass.enabled` gate checks
-   * the master `volumesEnabled` setting first and then consults
-   * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
-   * is silently a no-op.  Stored here so `destroy()` can release every
-   * per-field GPU buffer (3D volume textures, palette LUTs, uniform
-   * buffers, corner / index VBOs).
-   */
-  volumeFieldRenderer: VolumeFieldRenderer | null;
-  /**
-   * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
-   * constructs it (same phase as the other optional renderers).
-   * Excluded from the `isEngineReady` predicate — when null, the
-   * `volumeUpsamplePass` skips its draw (so a null handle is a silent
-   * no-op).  Stored here so `destroy()` can release the pipeline +
-   * sampler + bind-group-layout.
-   */
-  volumeUpsample: AdditiveUpsample | null;
-  /**
    * Reduced-res-to-HDR composite for the Milky Way cloud's star field. Reads
    * the `mw-aggregate` offscreen that `milkyWayAggregatePass` drew the
-   * additive star billboards into and blends it into HDR. A SECOND instance of
-   * the (fully generic) volume-upsample factory, deliberately not the volume's
-   * own handle, so the two subsystems' gates stay independent. Null until
-   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
+   * additive star billboards into and blends it into HDR. Its own instance
+   * of the generic additive-upsample factory, independent of the density
+   * Layer's own, so the two subsystems' gates stay independent. Null until
+   * `initGpu` constructs it (same phase as the other optional renderers). Excluded from
    * `isEngineReady` — when null, `milkyWayUpsamplePass` skips its draw, so a
    * null handle is a silent no-op. Stored here so `destroy()` can release the
    * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
@@ -321,7 +310,7 @@ export type EngineGpuHandles = {
    * Dual-filter bloom mip pyramid — owns the bright / downsample / upsample /
    * fold pipelines that drive the `bloom0..bloom4` render-target rows and the
    * strength-scaled fold back into HDR. Null until `initGpu` constructs it
-   * (same phase as `volumeUpsample`). Excluded from
+   * (same phase as the other optional renderers). Excluded from
    * `isEngineReady` — every bloom content layer's `enabled` gate is exactly the
    * `bloomPyramid !== null` handle-ready check, so a null handle silently drops
    * the whole bloom sub-program. The `settings.bloom.enabled` toggle gates at

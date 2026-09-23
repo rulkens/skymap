@@ -110,6 +110,10 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
   commits, packaged per the user's checkpoint answer (separate PR(s) or one
   PR). Prep, adjacent cleanup, and feature are **three different diffs** —
   never conflated, whatever PR they ride.
+- When prep ships as its own branch, the prep session reports `prep: true` to
+  `session_progress` and the feature session reports
+  `dependsOn: [{ branch: "<local branch>" }]` (add `pr` once it's open).
+  Landing stays the user's move; the dash only notices when the prep has landed.
 
 ## Rationalizations
 

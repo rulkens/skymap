@@ -7,7 +7,6 @@ export const VOID_ENTRY = {
   id: 'void',
   label: 'Void',
   allSky: true,
-  visible: true,
   bearsLabel: true,
   bearsMarker: true,
   labelLayer: 'structure',

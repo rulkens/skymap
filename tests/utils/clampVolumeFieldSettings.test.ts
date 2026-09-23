@@ -36,12 +36,3 @@ describe('clampVolumeFieldSettings — input object is not mutated', () => {
     expect(rawHigh.exposure).toBe(before.exposure);
   });
 });
-
-describe('clampVolumeFieldSettings — bands', () => {
-  it('falls back to [surveyDeepZoom] when bands is absent (stale persisted row)', () => {
-    // A row persisted before `bands` existed has it absent at runtime despite
-    // the type saying otherwise — the exact case the module header calls out.
-    const stale = { ...rawHigh, bands: undefined } as unknown as VolumeFieldSettings;
-    expect(clampVolumeFieldSettings(stale).bands).toEqual([SCALE_FADE_BANDS.surveyDeepZoom]);
-  });
-});

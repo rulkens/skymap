@@ -2,56 +2,49 @@
  * VolumeFieldRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
  * and the per-field registry; consumers upload / unload cubes (keyed by
- * field id, mirroring `galaxyPointRenderer.upload`/`unload`, which key by
- * galaxy-catalog id), and
- * the renderer READS per-field settings each frame via `draw(settingsOf)`.
- * The user-tunable knobs (enabled, intensity, palette, contrast,
- * densityScale, trim, exposure) are no longer set through this handle —
- * they live in `state.settings.cosmicWebDensity.items` and are projected in per
- * frame.  See `volumeFieldRenderer.ts` for the full pipeline +
- * ray-march details.
+ * an id generic over the caller), and the renderer READS per-field
+ * settings each frame via `draw(settingsOf)`. The user-tunable knobs
+ * (enabled, intensity, palette, contrast, densityScale, trim, exposure)
+ * are not set through this handle — the caller's settings store owns
+ * them.  See `volumeFieldRenderer.ts` for the full pipeline + ray-march
+ * details.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
+import type { VolumeFieldDefaults } from '../data/volume/VolumeFieldDefaults';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
-import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 
-export type VolumeFieldRenderer = {
+export type VolumeFieldRenderer<Id extends string = string> = {
   /**
    * Human-readable identifier (`'volumeFieldRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  upload(id: CosmicWebDensityFieldId, cube: ScalarCube): void;
-  unload(id: CosmicWebDensityFieldId): void;
+  /** `statics` are the per-cube, non-tunable presentation facts, read once here. */
+  upload(
+    id: Id,
+    cube: ScalarCube,
+    statics: Pick<VolumeFieldDefaults, 'paletteId' | 'contrastCenter' | 'envelope'>,
+  ): void;
+  unload(id: Id): void;
   /**
-   * True iff any field is currently producing visible output. The live
-   * per-field settings come from `settingsOf` (the renderer no longer
-   * mirrors enabled / intensity, so it cannot answer without it); a
-   * field with no settings row, intensity ≤ 0, is treated as off.
-   *
-   * The optional `fadeOpacityOf` callback widens the predicate to also
-   * include fields whose `enabled` is false but whose fade-out tail
-   * (opacity > 0) is still in flight — that's the state the
-   * volume-upsample gate and the encodeHdr* pass-opener want, so
-   * they keep blitting / drawing through the ~100 ms ramp.
-   *
-   * `settingsOf` / `fadeOpacityOf` are keyed by volume-field id.
+   * True iff any field's resolved opacity (`fadeOpacityOf`, which covers
+   * the fade-out tail) is non-zero for a field with `settingsOf` intensity > 0.
    */
   hasActiveFields(
-    settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined,
-    fadeOpacityOf?: (id: CosmicWebDensityFieldId) => number,
+    settingsOf: (id: Id) => VolumeFieldSettings,
+    fadeOpacityOf: (id: Id) => number,
   ): boolean;
-  listIds(): CosmicWebDensityFieldId[];
+  listIds(): Id[];
   /**
    * Dispatch one raymarch per active field, additively blended.  The
-   * per-field tunables are read each frame from `settingsOf`; a field
-   * with no settings row is skipped.  `fadeOpacityOf` supplies the
-   * fade-out opacity per id.  The palette is re-uploaded in place
-   * when `settingsOf(id).paletteId` diverges from what's resident.
+   * per-field tunables are read each frame from `settingsOf`.
+   * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
+   * is re-uploaded in place when `settingsOf(id).paletteId` diverges
+   * from what's resident.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -59,8 +52,8 @@ export type VolumeFieldRenderer = {
     viewportPx: Vec2,
     pxPerRad: number,
     cameraPosWorld: Readonly<Vec3>,
-    settingsOf: (id: CosmicWebDensityFieldId) => VolumeFieldSettings | undefined,
-    fadeOpacityOf: (id: CosmicWebDensityFieldId) => number,
+    settingsOf: (id: Id) => VolumeFieldSettings,
+    fadeOpacityOf: (id: Id) => number,
   ): void;
   destroy(): void;
 };

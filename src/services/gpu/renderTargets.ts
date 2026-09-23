@@ -24,24 +24,7 @@
  * floating-point textures; 32-bit float requires the `float32-filterable`
  * feature on most platforms. Half-float gives ~5 decimal digits and a range
  * of ±65 504 — plenty for additive billboard sums peaking at a few hundred
- * in dense cluster cores. The volume row matches the HDR precision so the
- * additive field sum doesn't lose dynamic range across the upsample.
- *
- * ### Why the volume row renders at 1/3 scale
- *
- * The scalar-volume fragment shader is the heaviest per-pixel pass (192
- * raymarch steps × N active fields × every back-facing cube fragment). The
- * 3D volume texture is bandlimited and the per-fragment dither covers
- * sub-pixel aliasing, so full-res raymarching is wasted work; the upsample
- * pass bilinearly samples the small target back into HDR and the
- * interpolation is invisible for low-frequency volumetric data. The `scale`
- * field IS the downsample divisor — total fragment reduction is its square
- * (3 → 1/9th the fragments). `floor` (not `round`) matches the upsample
- * shader's sample-at-uv semantics, and the min-1-px clamp guards tiny
- * canvases where `floor(size / 3)` would yield an illegal 0-dimension
- * texture. Consumers that need "viewport == texture size" (the raymarch
- * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
- * cannot drift.
+ * in dense cluster cores.
  *
  * ### Why the mw-aggregate row renders at reduced resolution
  *
@@ -87,7 +70,7 @@
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
- * bilinear upsample used for the low-frequency volume row would smear — and
+ * bilinear upsample used for the low-frequency reduced-res rows would smear — and
  * full-res is also what lets a swap-pass fragment index the colour texel 1:1
  * (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
  *
@@ -161,18 +144,9 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
-    // Half-res additive raymarch starts from zero coverage.
-    {
-      id: 'volume',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: 3,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
     // The starCatalog Layer's own `star-aggregates` target composes in here
-    // (see `layers/starCatalog/render/starAggregatesTarget.ts`). Same reason
-    // as `volume`: the Milky Way's star billboards draw additively into
-    // this row.
+    // (see `layers/starCatalog/render/starAggregatesTarget.ts`): the Milky
+    // Way's star billboards draw additively into this row.
     {
       id: 'mw-aggregate',
       format: HDR_TARGET_FORMAT,
@@ -518,7 +492,7 @@ export function createRenderTargets(
     depthViewOf(id: string): GPUTextureView {
       const view = depthViews.get(id);
       if (!view) {
-        // Covers depthless rows ('hdr', 'volume', 'swap'), unknown ids, and
+        // Covers depthless rows ('hdr', 'mw-aggregate', 'swap'), unknown ids, and
         // use-after-destroy — an absent depth view is either "this row
         // declares no depth" or a wiring bug, both loud.
         throw new Error(`renderTargets: no depth view for target '${id}'`);

@@ -1317,8 +1317,10 @@ Each item is one PR unless stated. (a)-(c) are §9's prep.
   (depends on §6.3's band having moved), then
   `structure` (mints the focus producer seam, §6.1), then `volume` (the family with no
   family-level asset row, review finding 6, so its move collapses the four literal blocks at
-  `assetWiring.ts:248-289` into rows), then `body` (the largest `Runtime`: fourteen renderers
-  plus `earthTiles`), then the five singletons, which may share one PR.
+  `assetWiring.ts:248-289` into rows) — **done, split into `cosmicWebDensity` and
+  `cosmicWebFilaments`, `docs/grill-sessions/cosmic-web-density-layer-2026-09-22.md`** — then
+  `body` (the largest `Runtime`: fourteen renderers plus `earthTiles`), then the five singletons,
+  which may share one PR.
 - **(f) Edenhofer dust as the greenfield proof.** A new `src/layers/edenhoferDust/` built
   entirely from the Layer contract whose only edit outside its own directory is one
   `FRAME_ORDER` line. If that claim fails, the contract is wrong, and this is where we find out,

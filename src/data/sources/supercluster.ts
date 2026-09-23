@@ -7,7 +7,6 @@ export const SUPERCLUSTER_ENTRY = {
   id: 'supercluster',
   label: 'Supercluster',
   allSky: true,
-  visible: true,
   bearsLabel: true,
   bearsMarker: true,
   labelLayer: 'structure',

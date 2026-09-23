@@ -24,8 +24,6 @@ export const SUN_ENTRY = {
   // A single body at the near-field origin, not a sky patch — allSky:true
   // matches the other non-catalog rows.
   allSky: true,
-  // Seeds `starCatalogs.items.sun.enabled`, which the Stars panel now writes.
-  visible: true,
   bearsLabel: true,
   labelLayer: 'starCatalog',
   bearsMarker: false,

@@ -16,6 +16,7 @@
 
 import type { PerfPose } from '../../../@types/perf/PerfPose';
 import type { PerfSample } from '../../../@types/perf/PerfSample';
+import type { MemorySnapshot } from '../../../@types/perf/MemorySnapshot';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import type { Tier } from '../../../@types/data/Tier';
@@ -42,6 +43,8 @@ export type SkymapPerfHook = {
    * assumed boot default.
    */
   readonly getTier: () => Tier;
+  /** GPU-memory ledger + JS heap, for the perf report's memory section. */
+  readonly memory: () => MemorySnapshot;
   /**
    * Slot/layer name → its render-step groupKey (`'orbit-trails' → 'hdr·NEAR0'`;
    * a group-key row maps to itself). The Node harness can't import

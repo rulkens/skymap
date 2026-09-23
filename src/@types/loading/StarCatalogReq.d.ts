@@ -3,9 +3,8 @@ import type { Tier } from '../data/Tier';
 
 /**
  * Request shape for `starCatalogFetcher`: which star-catalog source, and at
- * which tier. Carries `source` — unlike `MCPMReq` (tier alone) — because one
- * fetcher serves EVERY `starCatalog` row of the registry, not a single named
- * cube: the `source` dimension is what lets a future famous-star catalog reuse
+ * which tier. Carries `source` because one fetcher serves EVERY `starCatalog`
+ * row of the registry: the `source` dimension is what lets a future famous-star catalog reuse
  * the same fetcher unchanged. `tier` selects the `-<tier>.bin` resolution
  * variant when the source ships tiered.
  */

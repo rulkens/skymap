@@ -33,11 +33,6 @@ export const SGR_A_STAR_ENTRY = {
   // A single body, not a sky patch — allSky:true matches the other non-catalog
   // rows (the coverage-mask logic only consults this flag for galaxy footprints).
   allSky: true,
-  // Seeds `bodies.items['sgr-a-star'].enabled`. Inert today in the same way
-  // `gaiaStars.labelEnabled` is: nothing renders for Sgr A*, so no gate reads
-  // it. Seeded true so it means "present" rather than asserting a hidden body,
-  // and so a future glyph or horizon disc inherits a sane default.
-  visible: true,
   bearsLabel: true,
   labelLayer: 'body',
   bearsMarker: false,

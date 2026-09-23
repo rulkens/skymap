@@ -138,7 +138,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the
   // default-visible galaxy catalogs + famous-galaxies-meta + the default-on MCPM volume +
-  // the cluster catalog; filaments / polyphorm2Mrs / PGC-alias stay idle until their
+  // the cluster catalog; filaments / Polyphorm 2MRS / PGC-alias stay idle until their
   // demand flips.  The same loop re-runs on every state change.
   reevaluateDemand(state);
 }
