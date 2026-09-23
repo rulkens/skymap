@@ -14,6 +14,10 @@ import { resolveClipFoci } from '../../../../src/services/engine/animation/resol
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { decodeFramedPose } from '../../../../src/utils/url/decodeFramedPose';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { linkedPoseToWorld } from '../../../../src/utils/camera/linkedPoseToWorld';
+import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -57,6 +61,23 @@ describe('sondermarkenFlyout', () => {
       earth.orientation,
     );
     for (let i = 0; i < 3; i++) expect(view[i]).toBeCloseTo(forward[i]!, 6);
+  });
+
+  it("opens on the linked pose's roll", () => {
+    const linked = linkedPoseToWorld(SONDERMARKEN_POSE, SIM_DAYS, BASIS);
+    expect((clip.data.start as CameraPose).roll).toBe(linked.roll);
+  });
+
+  it('ends the tilt with geographic north at the top of the frame', () => {
+    const start = clip.data.start as CameraPose;
+    const resolved = resolveClipFoci(clip.data, NO_SELECTION, 1, start, SIM_DAYS, BASIS);
+    const pose = evaluateClip(resolved, 30, BASIS);
+    const { view, earth } = eyeAndView(pose);
+    const pole = rotateVec3ByTightMat3([0, 0, 1], earth.orientation);
+    const k = pole[0] * view[0] + pole[1] * view[1] + pole[2] * view[2];
+    const north = normalize3([pole[0] - k * view[0], pole[1] - k * view[1], pole[2] - k * view[2]]);
+    const { up } = imagePlaneBasis(view, pose.roll!, frameUp(BASIS));
+    for (let i = 0; i < 3; i++) expect(up[i]!).toBeCloseTo(north[i]!, 3);
   });
 
   it('ends the tilt looking straight down, from above the ground', () => {

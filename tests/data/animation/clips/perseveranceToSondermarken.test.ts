@@ -73,12 +73,20 @@ describe('perseveranceToSondermarken', () => {
   const earth = bodies.get('earth')!.positionMpc;
 
   it('opens on the Perseverance link pose', () => {
-    expectSameShot(start, linkedPoseToWorld(PERSEVERANCE_POSE, SIM_DAYS, BASIS), mars);
+    const linked = linkedPoseToWorld(PERSEVERANCE_POSE, SIM_DAYS, BASIS);
+    expectSameShot(start, linked, mars);
+    expect(start.roll).toBe(linked.roll);
   });
 
   it('lands on the pose sondermarkenFlyout opens on', () => {
     const next = sondermarkenFlyout(SIM_DAYS).data.start as CameraPose;
-    expectSameShot(evaluateClip(resolved, END_SEC, BASIS), next, earth);
+    const landed = evaluateClip(resolved, END_SEC, BASIS);
+    expectSameShot(landed, next, earth);
+    expect(landed.roll).toBe(next.roll);
+  });
+
+  it('levels on the ecliptic at the system hold', () => {
+    expect(evaluateClip(resolved, MID_HOLD_SEC, BASIS).roll).toBeCloseTo(0, 12);
   });
 
   it('frames both Earth and Mars at the system hold', () => {

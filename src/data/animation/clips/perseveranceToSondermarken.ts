@@ -12,7 +12,16 @@
 
 import type { Clip } from '../../../@types/animation/Clip';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { aimAt, all, dollyTo, hold, moveTarget, seq, wait } from '../../../services/engine/animation/effectHelpers';
+import {
+  aimAt,
+  all,
+  dollyTo,
+  hold,
+  moveTarget,
+  seq,
+  tween,
+  wait,
+} from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { linkedPoseToWorld } from '../../../utils/camera/linkedPoseToWorld';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -88,7 +97,11 @@ export function perseveranceToSondermarken(simDays: number): Clip {
     seq([
       aimAt(orbitAnglesLookingAlong(neg(roverUp), basis), TILT_SEC),
       wait(LEG_SEC - TILT_SEC - SWING_SEC),
-      aimAt(orbitAnglesLookingAlong(systemAim, basis), SWING_SEC),
+      all([
+        aimAt(orbitAnglesLookingAlong(systemAim, basis), SWING_SEC),
+        // Roll 0 levels the ecliptic across the frame.
+        tween('roll', { to: 0, over: SWING_SEC }),
+      ]),
     ]),
   ]);
   const inbound = all([
@@ -97,7 +110,10 @@ export function perseveranceToSondermarken(simDays: number): Clip {
     seq([
       aimAt(orbitAnglesLookingAlong(neg(parkUp), basis), DESCEND_AIM_SEC),
       wait(LEG_SEC - DESCEND_AIM_SEC - TILT_SEC),
-      aimAt({ yaw: end.yaw, pitch: end.pitch }, TILT_SEC),
+      all([
+        aimAt({ yaw: end.yaw, pitch: end.pitch }, TILT_SEC),
+        tween('roll', { to: end.roll ?? 0, over: TILT_SEC }),
+      ]),
     ]),
   ]);
 
@@ -105,7 +121,7 @@ export function perseveranceToSondermarken(simDays: number): Clip {
     id: 'perseveranceToSondermarken',
     label: 'Perseverance to Søndermarken',
     data: {
-      start: { target, distance: range, yaw: linked.yaw, pitch: linked.pitch },
+      start: { target, distance: range, yaw: linked.yaw, pitch: linked.pitch, roll: linked.roll },
       timeline: [seq([wait(LEAD_IN_SEC), outbound, hold(SYSTEM_HOLD_SEC), inbound])],
     },
   };
