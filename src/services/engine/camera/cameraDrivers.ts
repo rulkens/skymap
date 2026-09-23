@@ -41,8 +41,6 @@ import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { lerp } from '../../../utils/math/lerp';
-import { wrapRad } from '../../../utils/math/wrapRad';
-import { EASE } from '../animation/ease';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
@@ -320,14 +318,8 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         bodies: ctx.bodies,
         playback: tween,
       });
-      const arm = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
-      // Roll is no clip channel, so it eases here, the short way round: a tween
-      // whose `to` carries a heading (flyToLonLat) must land with it.
-      const fromRoll = tween.from.roll ?? 0;
-      const t = EASE[tween.easing](ctx.elapsedMs / tween.durationMs);
-      const roll = lerp(fromRoll, fromRoll + wrapRad((tween.to.roll ?? 0) - fromRoll), t);
       return {
-        pose: isWorldArm(arm) ? absoluteArm({ ...arm.pose, roll }) : arm,
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
         memory: settledMemory(mem),
       };
     },

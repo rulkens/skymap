@@ -39,7 +39,7 @@ import type { Channel } from '../../../../src/@types/animation/Channel';
 // ---------------------------------------------------------------------------
 
 function emptyTracks(): Record<Channel, BaseSegment[]> {
-  return { distance: [], yaw: [], pitch: [], target: [] };
+  return { distance: [], yaw: [], pitch: [], roll: [], target: [] };
 }
 
 // ---------------------------------------------------------------------------

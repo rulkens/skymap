@@ -22,7 +22,10 @@ import {
   all,
   seq,
   wait,
+  flyPath,
+  atPoint,
 } from '../../../../src/services/engine/animation/effectHelpers';
+import { tweenToClip } from '../../../../src/services/engine/camera/tweenToClip';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
@@ -444,5 +447,56 @@ describe('focus tween = one-segment clip', () => {
     // Log midpoint for contrast: sqrt(10 * 1000) ≈ 100, which is far from 505.
     // Asserting the result is well above 200 rules out the log path decisively.
     expect(pose.distance).toBeGreaterThan(200);
+  });
+});
+
+describe('roll channel', () => {
+  const ROLLED: CameraPose = { ...START, roll: 0.3 };
+
+  it('opens on the start pose roll and holds it under other writers', () => {
+    const data: ClipData = { start: ROLLED, timeline: [dollyTo(100, 2)] };
+    expect(evaluateClip(data, 0).roll).toBe(0.3);
+    expect(evaluateClip(data, 1).roll).toBe(0.3);
+  });
+
+  it("tween('roll') interpolates additively, the short way round", () => {
+    const linear: ClipData = {
+      start: ROLLED,
+      timeline: [tween('roll', { to: 0.9, over: 2, ease: 'linear' })],
+    };
+    expect(evaluateClip(linear, 1).roll).toBeCloseTo(0.6, 12);
+    expect(evaluateClip(linear, 3).roll).toBe(0.9);
+
+    const acrossPi: ClipData = {
+      start: { ...START, roll: 3.0 },
+      timeline: [tween('roll', { to: -3.0, over: 2, ease: 'linear' })],
+    };
+    expect(Math.abs(evaluateClip(acrossPi, 1).roll!)).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it('a clip with no roll anywhere evaluates to roll 0', () => {
+    const data: ClipData = { start: START, timeline: [dollyTo(100, 2)] };
+    expect(evaluateClip(data, 1).roll ?? 0).toBe(0);
+  });
+
+  it('a flyPath authors no roll: the base roll holds through the path', () => {
+    const data: ClipData = {
+      start: ROLLED,
+      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 4, ease: 'linear', linger: 0 })],
+    };
+    expect(evaluateClip(data, 2).roll).toBe(0.3);
+  });
+
+  it("a camera tween lands on the descriptor's target roll", () => {
+    const desc = {
+      from: { ...TWEEN_FROM, roll: 0.1 },
+      to: { ...TWEEN_TO, roll: 1.2 },
+      durationMs: DURATION_MS,
+      easing: 'easeOutCubic' as const,
+      frame: 'equatorial' as const,
+    };
+    const data = tweenToClip(desc);
+    expect(evaluateClip(data, 0).roll).toBe(0.1);
+    expect(evaluateClip(data, DURATION_SEC).roll).toBe(1.2);
   });
 });

@@ -31,7 +31,7 @@
  *
  * ### `tween` rejects 'target' at the type level
  *
- * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch'`
+ * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch' | 'roll'`
  * (not the full `Channel` union). Passing `'target'` is a compile-time error.
  * Vec3 channels use the dedicated `moveTarget` helper, which emits a `setVec`
  * arm rather than a `set` arm.
@@ -73,7 +73,7 @@ import {
 /**
  * tween — builds a `set` CameraAction on a SCALAR channel.
  *
- * `ch` is intentionally narrowed to `'distance' | 'yaw' | 'pitch'`. The Vec3
+ * `ch` is intentionally narrowed to the scalar channels. The Vec3
  * channel `'target'` is not a scalar and is NOT accepted here — use
  * `moveTarget` instead. Passing `'target'` is a compile-time error.
  *
@@ -84,7 +84,7 @@ import {
  * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
-  ch: 'distance' | 'yaw' | 'pitch',
+  ch: 'distance' | 'yaw' | 'pitch' | 'roll',
   opts: { to: number; over: number; ease?: Ease; space?: Space; frame?: PoseFrame },
 ): CameraAction & { kind: 'set' } {
   return {
