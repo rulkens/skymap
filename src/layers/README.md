@@ -18,11 +18,14 @@ function is a root file named for it; a member that is a collection is a folder.
 | `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                            |
 | `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                          |
 | `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                   |
-| `frame?`        | `frame.ts`                                     | Per-frame prelude; returns the awake vote                                                                             |
+| `planners?`     | `frame.ts`                                     | Per-frame content planning; joins `CORE_PLANNERS`                                                                     |
 | `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
 | `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
 | `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
-| `ui?`           | `ui/`                                          | The SettingsPanel section, hand-written                                                                               |
+| `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                    |
+| `sourceCounts?` | `present/`                                     | Per-source counts, an async iterable, on the same terms as `search?`                                                  |
+| `slabs?`        | `layer.ts`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)          |
+| `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written             |
 | `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
 | `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
 | `fades?`        | `present/`                                     |                                                                                                                       |

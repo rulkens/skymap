@@ -47,6 +47,9 @@ hand-maintained list that a new Layer must remember to join is the bug.
 - The body Layer owns four clusters: `bodies earth orbitTrails
   sgrAStarLensingTuning`. Two are captured, two are not — so "capture every
   Layer cluster" is NOT today's behaviour, and adopting it is a real change.
+- A `blackHoles` visibility key arrives with the `blackHoles` Layer (PR 2 of
+  `2026-09-22-black-holes-layer-design.md`) — join it to the captured/not-
+  captured lists above alongside the other body-Layer clusters it splits from.
 - `captureSettings` (`src/state/scene/captureSettings.ts`) destructures the
   clusters by name and `structuredClone`s them. `restoreSceneSaga` puts them
   back in one `mergeSnapshot`.
