@@ -41,6 +41,7 @@ import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/
 import type { CosmicWebDensityRuntime } from '../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
+import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -434,7 +435,7 @@ describe('renderFrame visual baseline', () => {
       milkyWayEnabled: true,
       filamentsEnabled: true,
       filamentIntensity: 1,
-      volumesEnabled: true,
+      cosmicWebDensityEnabled: true,
     };
 
     renderFrame({
@@ -513,7 +514,10 @@ describe('renderFrame visual baseline', () => {
             intensity: settings.filamentIntensity,
           },
           constellations: { enabled: false, intensity: 1 },
-          cosmicWebDensity: { enabled: settings.volumesEnabled, items: {} },
+          cosmicWebDensity: {
+            ...INITIAL_SETTINGS.cosmicWebDensity,
+            enabled: settings.cosmicWebDensityEnabled,
+          },
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },

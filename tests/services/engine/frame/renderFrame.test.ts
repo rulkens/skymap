@@ -34,6 +34,7 @@ import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDe
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
@@ -369,7 +370,7 @@ function makeInput(
   // renderer and the gate test an upsample spy.
   const densityRuntime = {
     renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
-    upsample: null,
+    upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
@@ -420,7 +421,7 @@ function makeInput(
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
-    volumesEnabled: false,
+    cosmicWebDensityEnabled: false,
     bloomEnabled: false,
     ...(overrides.settings ?? {}),
   };
@@ -614,7 +615,10 @@ function makeInput(
             intensity: settings.filamentIntensity,
           },
           constellations: { enabled: false, intensity: 1 },
-          cosmicWebDensity: { enabled: settings.volumesEnabled, items: {} },
+          cosmicWebDensity: {
+            ...INITIAL_SETTINGS.cosmicWebDensity,
+            enabled: settings.cosmicWebDensityEnabled,
+          },
           debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
@@ -916,7 +920,7 @@ describe('renderFrame', () => {
     // when the density liveness is non-null the density offscreen pass is the
     // FIRST beginRenderPass. The gate is the shared liveness — a renderer with
     // active fields + the master enabled drives it.
-    const fx2 = makeInput({ settings: { volumesEnabled: true } });
+    const fx2 = makeInput({ settings: { cosmicWebDensityEnabled: true } });
     const drawSpy = vi.fn();
     // Mutated in place: the raymarch row captured this renderer at construction.
     Object.assign(fx2.densityRuntime.renderer, { draw: drawSpy, hasActiveFields: () => true });

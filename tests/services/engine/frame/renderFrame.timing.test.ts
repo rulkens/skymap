@@ -38,6 +38,7 @@ import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimi
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -257,7 +258,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // this renderer in place (the raymarch row captured it at construction).
   const densityRuntime = {
     renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
-    upsample: null,
+    upsample: { draw: vi.fn(), destroy: vi.fn() },
   } as unknown as CosmicWebDensityRuntime;
 
   const cam = makeCam();
@@ -317,7 +318,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
-    volumesEnabled: false,
+    cosmicWebDensityEnabled: false,
   };
 
   const input: RenderFrameInput = {
@@ -388,7 +389,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
           intensity: settings.filamentIntensity,
         },
         constellations: { enabled: false, intensity: 1 },
-        cosmicWebDensity: { enabled: settings.volumesEnabled, items: {} },
+        cosmicWebDensity: {
+          ...INITIAL_SETTINGS.cosmicWebDensity,
+          enabled: settings.cosmicWebDensityEnabled,
+        },
         debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
