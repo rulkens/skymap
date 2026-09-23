@@ -133,6 +133,10 @@ const SERVE_BUILD_DIR = 'tools/record/.build';
 const SERVE_PORT = 4517;
 const PREVIEW_READY_TIMEOUT_MS = 30_000;
 
+// Frame rates the Wisdome dome plays back; the first is the default. Both
+// fit H.264 level 6.1 at 4096x4096 (see buildFfmpegArgs).
+const DOME_FPS: readonly [number, ...number[]] = [30, 60];
+
 type RecordOptions = {
   tourId: string;
   /** --clip; set = the take is a clip, and the tour flags are rejected. */
@@ -152,7 +156,7 @@ type RecordOptions = {
   serve: boolean;
   /** --rebuild: force a fresh --serve build even if SERVE_BUILD_DIR already has one. */
   rebuild: boolean;
-  /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1 @ 30 fps and a libx264 encode. */
+  /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
   dome: boolean;
   /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
   frames: number | undefined;
@@ -332,11 +336,13 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       throw new Error(`--dome requires --dpr 1 (or omit it), got ${options.dpr}`);
     }
     if (fpsExplicit) {
-      if (options.fps !== 30) {
-        throw new Error(`--dome requires --fps 30 (or omit it), got ${options.fps}`);
+      if (!DOME_FPS.includes(options.fps)) {
+        throw new Error(
+          `--dome requires --fps ${DOME_FPS.join(' or ')} (or omit it), got ${options.fps}`,
+        );
       }
     } else {
-      options.fps = 30;
+      options.fps = DOME_FPS[0];
     }
   }
   // The viewport is size/dpr in CSS pixels, and Playwright viewports are
