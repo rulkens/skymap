@@ -10,7 +10,7 @@
 
 **Tech Stack:** TS, RTK slices, React (SettingsPanel, DebugPanel), Vitest, WebGPU pass files. No shader changes.
 
-**Spec:** `docs/superpowers/specs/2026-09-22-cosmic-web-density-layer-design.md`: §2 (ground prep, commit order), §3 (Layer folder), §4 (core mechanism), §5 (boot state leaves the registry), §6 (load + arrival invariant), §7 (UI), §8 (deletions), §9 (types), §10 (testing), §11 (docs), §12 (DoD), §13 (rulings 1–7). Decisions ledger: `docs/grill-sessions/cosmic-web-density-layer-2026-09-22.md` (Q1–Q15; "Inventory facts" at the end).
+**Spec:** `docs/superpowers/specs/completed/2026-09-22-cosmic-web-density-layer-design.md`: §2 (ground prep, commit order), §3 (Layer folder), §4 (core mechanism), §5 (boot state leaves the registry), §6 (load + arrival invariant), §7 (UI), §8 (deletions), §9 (types), §10 (testing), §11 (docs), §12 (DoD), §13 (rulings 1–7). Decisions ledger: `docs/grill-sessions/cosmic-web-density-layer-2026-09-22.md` (Q1–Q15; "Inventory facts" at the end).
 
 ## Global Constraints
 
@@ -91,13 +91,13 @@ export const ALL_VISIBLE_MASK: number;
 - `fetchPrebuiltData.ts`: `volumeVisibilityByFileName` and `selectManifestFiles` are deleted, along with the `--volumes` argument, the `excluded` count and its stderr line. `main` downloads `Object.keys(manifest).sort()`. The header gains one clause saying every manifest file is fetched. The `SOURCE_ENTRIES` and `TIER_LADDER` imports go if they are left unused. `docs/DATA.md:61`: drop the "by default skipping… `--volumes all`" parenthetical, keeping `--dry-run`.
 - No new test: every change is a literal relocation or a deletion, and the dump gate below proves the values. Spec §10 lists an `allVisibleMask` test. Once the mask is a fold over `INITIAL_SETTINGS.galaxyCatalogs.items`, a test comparing the two is a mirror (testing.md), so it is **not written** (Question 2). Tests that assert `enabled === entry.visible` are constant restatements now, so delete those assertions; don't rewrite them.
 
-- [ ] **Before any edit**, dump `INITIAL_SETTINGS` as sorted-key JSON into the scratchpad (`before.json`). Use a scratchpad `.ts` script run with `npx tsx` that imports `src/state/settings/initialSettings.ts` and prints `JSON.stringify` of a recursive key-sort. If tsx cannot load the graph (Vite-only specifiers), use a throwaway `tests/_dump.test.ts` that writes the file and delete it before committing.
-- [ ] Types, then rows, then readers. `npm run typecheck:fast` lists every consumer. Grep `\.visible\b` and `visible:` under `src/`, `tools/` and `tests/` for cast-built fixtures and comments that tsc misses. Skip the unrelated UI `visible` fields (`splash.visible`, etc.).
-- [ ] `fetchPrebuiltData.ts` + `DATA.md:61`. Delete its test file.
-- [ ] Dump again (`after.json`), then `diff before.json after.json`. It must be **empty**. Any difference means a transcribed value is wrong: fix the literal, never the dump.
-- [ ] Delete the backlog detail file and the `docs/BACKLOG.md:39` line.
-- [ ] `npm run typecheck:fast && npx vitest run tests/layers tests/data tests/state tests/services/engine/wiring tests/services/engine/phases tests/utils tests/tools/fetch` → green.
-- [ ] Commit: `refactor(sources): boot visibility and intensity live in Layer initialState, not the registry`.
+- [x] **Before any edit**, dump `INITIAL_SETTINGS` as sorted-key JSON into the scratchpad (`before.json`). Use a scratchpad `.ts` script run with `npx tsx` that imports `src/state/settings/initialSettings.ts` and prints `JSON.stringify` of a recursive key-sort. If tsx cannot load the graph (Vite-only specifiers), use a throwaway `tests/_dump.test.ts` that writes the file and delete it before committing.
+- [x] Types, then rows, then readers. `npm run typecheck:fast` lists every consumer. Grep `\.visible\b` and `visible:` under `src/`, `tools/` and `tests/` for cast-built fixtures and comments that tsc misses. Skip the unrelated UI `visible` fields (`splash.visible`, etc.).
+- [x] `fetchPrebuiltData.ts` + `DATA.md:61`. Delete its test file.
+- [x] Dump again (`after.json`), then `diff before.json after.json`. It must be **empty**. Any difference means a transcribed value is wrong: fix the literal, never the dump.
+- [x] Delete the backlog detail file and the `docs/BACKLOG.md:39` line.
+- [x] `npm run typecheck:fast && npx vitest run tests/layers tests/data tests/state tests/services/engine/wiring tests/services/engine/phases tests/utils tests/tools/fetch` → green.
+- [x] Commit: `refactor(sources): boot visibility and intensity live in Layer initialState, not the registry`.
 
 ---
 
@@ -177,11 +177,11 @@ export function createScalarVolumePass<Id extends string>(row: ScalarVolumePassR
   - `deriveVolumeLiveness.test.ts`: move from `volumeLiveness.test.ts` the cases at `:101` (no active field → null), `:113` (clamp at the read edge), `:122` (undefined for a missing row), `:136` (deep zoom zeroes every field through the bands), `:157` (custom bands), `:167` (no bands ≡ surveyDeepZoom). Rewrite them against a stub renderer with plain closures and a distance, not a `PassState`. What stays in `volumeLiveness.test.ts` is `:91`, `:95`, `:106`, `:128`, which are the state reads Task 4 moves to the Layer wrapper.
   - `createScalarVolumePass.test.ts`: `it('draws with sizeOf(row.targetId) as the viewport and pxPerRad scaled by the target height')`. Stub `sizeOf('t')` → `{ width: 100, height: 50 }` on a 300×150 canvas with `drawPxPerRad = 600`, and assert `draw` receives `[100, 50]` and `200`, hand-computed. `it('is disabled when liveness returns null')`.
 
-- [ ] Types and renderer generic. Then `uploadVolumeField` and the three slots pass the entry. Then the handle type.
-- [ ] `deriveVolumeLiveness` + `VolumeFieldLiveness`. `volumeLiveness.ts` delegates to it (the same observable result).
-- [ ] `ScalarVolumePassRow` + `createScalarVolumePass`.
-- [ ] Tests as listed. `npm run typecheck:fast && npx vitest run tests/services/gpu/renderers/volumeField tests/services/engine/frame tests/services/engine/volume tests/utils/volume tests/services/loading` → green.
-- [ ] Commit: `refactor(volume): generic renderer, scalar-volume pass factory and pure liveness core`.
+- [x] Types and renderer generic. Then `uploadVolumeField` and the three slots pass the entry. Then the handle type.
+- [x] `deriveVolumeLiveness` + `VolumeFieldLiveness`. `volumeLiveness.ts` delegates to it (the same observable result).
+- [x] `ScalarVolumePassRow` + `createScalarVolumePass`.
+- [x] Tests as listed. `npm run typecheck:fast && npx vitest run tests/services/gpu/renderers/volumeField tests/services/engine/frame tests/services/engine/volume tests/utils/volume tests/services/loading` → green.
+- [x] Commit: `refactor(volume): generic renderer, scalar-volume pass factory and pure liveness core`.
 
 ---
 
@@ -221,10 +221,10 @@ export const COSMIC_WEB_DENSITY_SOURCE_ROWS = [
 - `src/data/` must not import the Layer's sources except through `sources.ts`' spread, as for every formed Layer. The exhibit `src/data/exhibits/cosmicWeb.ts` already imports the Layer's `initialState`, so that edge is not new.
 - No new test: moves only. Every moved test keeps its assertions, which is the identity check for the move.
 
-- [ ] `--dry` then real `move-files` for the seven moves (one manifest). Grep `data/sources/mcpm`, `data/sources/polyphorm`, `volumeFieldDefaults`, `projectVolumeFieldRows`, `settings/CosmicWebDensitySettings`, `settings/VolumeFieldRowData` for stragglers, including `vi.mock` literals and `.mts`.
-- [ ] Source-rows file and the `sources.ts` swap. Delete `VolumeSettings.d.ts`.
-- [ ] `npm run typecheck:fast && npx vitest run tests/layers/cosmicWebDensity tests/data tests/conventions tests/components` → green. `layerImportBoundary` must stay green: no `src/state/**` or `src/services/engine/**` file may now import the moved defaults. If one does, stop and report it; don't add an allow row.
-- [ ] Commit: `refactor(cosmicWebDensity): sources, defaults and Layer-only types move into the Layer`.
+- [x] `--dry` then real `move-files` for the seven moves (one manifest). Grep `data/sources/mcpm`, `data/sources/polyphorm`, `volumeFieldDefaults`, `projectVolumeFieldRows`, `settings/CosmicWebDensitySettings`, `settings/VolumeFieldRowData` for stragglers, including `vi.mock` literals and `.mts`.
+- [x] Source-rows file and the `sources.ts` swap. Delete `VolumeSettings.d.ts`.
+- [x] `npm run typecheck:fast && npx vitest run tests/layers/cosmicWebDensity tests/data tests/conventions tests/components` → green. `layerImportBoundary` must stay green: no `src/state/**` or `src/services/engine/**` file may now import the moved defaults. If one does, stop and report it; don't add an allow row.
+- [x] Commit: `refactor(cosmicWebDensity): sources, defaults and Layer-only types move into the Layer`.
 
 ---
 
@@ -350,13 +350,13 @@ defineLayer({
   - `deriveCosmicWebDensityLiveness.test.ts`: `it('is null when the master is off and its fade is out')`, and `it('stays live through a master fade-out tail with the toggle off')`. These are the two state-read cases left in `volumeLiveness.test.ts:95,106` after Task 2, now against a Runtime stub.
   - `createLayers`' duplicate-name and duplicate-target asserts already catch a half-moved pass or target. No test for that.
 
-- [ ] Runtime + Req types, `create`/`destroy`, `layer.ts`, composition entry.
-- [ ] Load: request, fetcher, slot factory, asset rows. Delete the three slots, three fetchers, two Req types and `uploadVolumeField`. Delete `addCosmicWebDensityField` (+ `removeCosmicWebDensityField` if still present).
-- [ ] Render: the liveness wrapper, both passes, the target row in `layer.ts`. Delete the core passes, `volumeLiveness`, the `volume` target row + prose, the handle rows + members + nulls, and the `passes/index.ts` entries. Update `FRAME_ORDER` strings and `engine.ts` `allNames`.
-- [ ] Fades: the Layer's rows. Delete the two core rows and `volumeFieldIds()`.
-- [ ] Ratchet row gone. Comment re-points. String-literal sweep: grep `'scalar-volume'`, `'volume-upsample'`, `'volume'` (targets only), `volumeFieldRenderer`, `volumeUpsample`, `uploadVolumeField`, `MCPMReq`, `Polyphorm2MRSReq`, `mcpmFetcher`, `polyphorm2MrsFetcher`, `mcpmWorkbenchFetcher`, `mcpmSlot`, `polyphorm2MrsSlot`, `mcpmWorkbenchSlot`, `addCosmicWebDensityField`, `polyphorm2Mrs` across `src/`, `tools/` (incl. `.mts`) and `tests/` (incl. `vi.mock` literals). Only `tools/mcpm-workbench/**`'s own `mcpmWorkbench` tool-page keys may survive.
-- [ ] `npm run typecheck:fast`, then `npx vitest run tests/layers tests/services/engine tests/services/gpu tests/services/loading tests/state tests/components tests/conventions tests/visual` → green. Then `npm run build` (the `?static` shader specifiers the renderer pulls are only checked here).
-- [ ] Commit: `refactor(cosmicWebDensity): the Layer owns the density cubes — runtime, load, target, passes, fades`.
+- [x] Runtime + Req types, `create`/`destroy`, `layer.ts`, composition entry.
+- [x] Load: request, fetcher, slot factory, asset rows. Delete the three slots, three fetchers, two Req types and `uploadVolumeField`. Delete `addCosmicWebDensityField` (+ `removeCosmicWebDensityField` if still present).
+- [x] Render: the liveness wrapper, both passes, the target row in `layer.ts`. Delete the core passes, `volumeLiveness`, the `volume` target row + prose, the handle rows + members + nulls, and the `passes/index.ts` entries. Update `FRAME_ORDER` strings and `engine.ts` `allNames`.
+- [x] Fades: the Layer's rows. Delete the two core rows and `volumeFieldIds()`.
+- [x] Ratchet row gone. Comment re-points. String-literal sweep: grep `'scalar-volume'`, `'volume-upsample'`, `'volume'` (targets only), `volumeFieldRenderer`, `volumeUpsample`, `uploadVolumeField`, `MCPMReq`, `Polyphorm2MRSReq`, `mcpmFetcher`, `polyphorm2MrsFetcher`, `mcpmWorkbenchFetcher`, `mcpmSlot`, `polyphorm2MrsSlot`, `mcpmWorkbenchSlot`, `addCosmicWebDensityField`, `polyphorm2Mrs` across `src/`, `tools/` (incl. `.mts`) and `tests/` (incl. `vi.mock` literals). Only `tools/mcpm-workbench/**`'s own `mcpmWorkbench` tool-page keys may survive.
+- [x] `npm run typecheck:fast`, then `npx vitest run tests/layers tests/services/engine tests/services/gpu tests/services/loading tests/state tests/components tests/conventions tests/visual` → green. Then `npm run build` (the `?static` shader specifiers the renderer pulls are only checked here).
+- [x] Commit: `refactor(cosmicWebDensity): the Layer owns the density cubes — runtime, load, target, passes, fades`.
 
 ---
 
@@ -401,11 +401,11 @@ type Props = {
   - `it('lists every source row, the workbench included')`: three checkboxes, labels from the rows.
   - No test for the filaments section or the debug section's sliders. Each is a direct dispatch of an existing action, and a test would restate the markup.
 
-- [ ] Density main + debug sections, tuning row + CSS, filaments section. Add the `ui` entries to both `layer.ts` files.
-- [ ] `projectVolumeFieldRows` maps the source rows.
-- [ ] Delete the core section, row, container, mount, Style-picker CSS and the two old tests. Grep `CosmicWebSection`, `VolumeFieldRow`, `deriveCosmicWebStyle`, `stylePicker` → empty.
-- [ ] `npm run typecheck:fast && npx vitest run tests/layers/cosmicWebDensity tests/layers/cosmicWebFilaments tests/components tests/conventions` → green.
-- [ ] Commit: `feat(cosmicWebDensity): density and filaments sections split; per-cube sliders move to the DebugPanel`.
+- [x] Density main + debug sections, tuning row + CSS, filaments section. Add the `ui` entries to both `layer.ts` files.
+- [x] `projectVolumeFieldRows` maps the source rows.
+- [x] Delete the core section, row, container, mount, Style-picker CSS and the two old tests. Grep `CosmicWebSection`, `VolumeFieldRow`, `deriveCosmicWebStyle`, `stylePicker` → empty.
+- [x] `npm run typecheck:fast && npx vitest run tests/layers/cosmicWebDensity tests/layers/cosmicWebFilaments tests/components tests/conventions` → green.
+- [x] Commit: `feat(cosmicWebDensity): density and filaments sections split; per-cube sliders move to the DebugPanel`.
 
 ---
 
@@ -427,13 +427,15 @@ Spec §11.
   - Line numbers shift after Task 1's deletion of `:39`, so match by title.
 - `docs/RENDERER.md`: grep `scalar-volume`, `'volume'` target, `volumeUpsample`. Edit only on a hit (none at spec time).
 
-- [ ] Docs as listed.
-- [ ] `npx vitest run tests/conventions` → green (the README is a `src/layers/` entry the purity sweep walks).
-- [ ] Commit: `docs(cosmicWebDensity): Layer formed — Edenhofer joint, README, parent spec, backlog`.
+- [x] Docs as listed.
+- [x] `npx vitest run tests/conventions` → green (the README is a `src/layers/` entry the purity sweep walks).
+- [x] Commit: `docs(cosmicWebDensity): Layer formed — Edenhofer joint, README, parent spec, backlog`.
 
 ---
 
 ## Definition of Done
+
+> Completed 2026-09-23 (#814). Post-plan deletions: `ui/projectVolumeFieldRows.ts` and `@types/VolumeFieldRowData.d.ts` (sections iterate the source rows directly), `load/cosmicWebDensityRequest.ts`, `VolumeFieldDefaults.fadeBands`, and `| undefined` on `settingsOf` (`items` is total). Ledger: `2026-09-22-cosmic-web-density-layer-02-layer.ledger.md`.
 
 **Deliverable inventory**
 
