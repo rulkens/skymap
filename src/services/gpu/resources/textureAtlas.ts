@@ -192,6 +192,18 @@ export class TextureAtlas {
   }
 
   /**
+   * Destroy the underlying GPU texture. Without this, a dropped atlas (a
+   * body switch standing down Earth's tile atlases, engine teardown for the
+   * galaxy thumbnail atlas) strands its texture until the JS wrapper is GC'd
+   * — the ledger's `gcReclaimed` counter is exactly this leak. Idempotent,
+   * like `initTexture`, since a caller may hold no GPU device to re-check.
+   */
+  destroy(): void {
+    this.texture?.destroy();
+    this.texture = undefined;
+  }
+
+  /**
    * Get the slot for `key`, allocating one if needed. Sets `lastSeenFrame`.
    * Returns the slot index (callers use it to compute UVs), or `null` when the
    * atlas is full of slots already claimed on THIS frame.

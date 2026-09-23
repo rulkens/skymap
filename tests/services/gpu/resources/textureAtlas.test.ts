@@ -152,4 +152,25 @@ describe('TextureAtlas slot state machine', () => {
     const uvRow1 = a.slotUv(16);
     expect(uvRow1[1]).toBeCloseTo(SLOT_SIDE / ATLAS_SIDE);
   });
+
+  // A dropped atlas (body switch, engine teardown) must not strand its GPU
+  // texture until the wrapper is GC'd — see trackGpuMemory's gcReclaimed.
+  it('destroy() destroys the underlying GPU texture', () => {
+    const destroyTexture = vi.fn();
+    const device = {
+      createTexture: () => ({ createView: () => ({}) as GPUTextureView, destroy: destroyTexture }),
+    } as unknown as GPUDevice;
+    const a = new TextureAtlas(device, {
+      atlasSide: ATLAS_SIDE,
+      slotSide: SLOT_SIDE,
+      format: 'rgba8unorm-srgb',
+      label: 'test-atlas',
+    });
+    a.initTexture();
+    a.destroy();
+    expect(destroyTexture).toHaveBeenCalledTimes(1);
+    // Idempotent: a second destroy (no second GPU texture to destroy) must not throw.
+    expect(() => a.destroy()).not.toThrow();
+    expect(destroyTexture).toHaveBeenCalledTimes(1);
+  });
 });

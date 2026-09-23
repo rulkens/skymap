@@ -147,6 +147,10 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
       userEvictHandler = undefined;
       loadedKeys.clear();
       failedKeys.clear();
+      // Release the GPU texture itself — every caller of this destroy()
+      // (surface tile stand-down, galaxy atlas teardown) is dropping the
+      // atlas for good, not just resetting its bookkeeping.
+      atlas.destroy();
     },
   };
   subsystem satisfies Destroyable;

@@ -34,7 +34,7 @@ const TEST_ATLAS_CONFIG: Deps = {
 const TEST_SLOT_COUNT = 16; // (32 / 8) ** 2
 
 function makeFakeDevice(): GPUDevice {
-  const fakeTexture = { createView: () => ({}) as GPUTextureView };
+  const fakeTexture = { createView: () => ({}) as GPUTextureView, destroy: vi.fn() };
   const queue = {
     copyExternalImageToTexture: vi.fn(),
     writeBuffer: vi.fn(),
@@ -329,7 +329,7 @@ describe('createTileStreamSubsystem', () => {
     });
   });
 
-  it('destroy clears the eviction handler', () => {
+  it('destroy clears the eviction handler and destroys the GPU texture', () => {
     const atlas = createTileStreamSubsystem<ImageBitmap>({
       device,
       requestRender: () => {},
@@ -339,6 +339,10 @@ describe('createTileStreamSubsystem', () => {
     const handler = vi.fn();
     atlas.setEvictHandler(handler);
     atlas.destroy();
+    // A dropped atlas must not strand its GPU texture until the wrapper is
+    // GC'd — see trackGpuMemory's gcReclaimed leak signal.
+    const fakeTexture = vi.mocked(device.createTexture).mock.results[0]!.value;
+    expect(fakeTexture.destroy).toHaveBeenCalledTimes(1);
     // After destroy the handler should not be invoked even if more
     // allocations happen — but we don't allocate post-destroy in
     // production; just assert destroy() itself doesn't throw.
