@@ -70,6 +70,8 @@ export function tweenToClip(d: CameraTweenDescriptor): ClipData {
         }),
         tween('yaw', { to: d.to.yaw, over: durationSec, ease: 'easeOutCubic' }),
         tween('pitch', { to: d.to.pitch, over: durationSec, ease: 'easeOutCubic' }),
+        // A heading-carrying `to` (flyToLonLat) must land with its roll.
+        tween('roll', { to: d.to.roll ?? 0, over: durationSec, ease: 'easeOutCubic' }),
         moveTarget(d.to.target, durationSec, 'easeOutCubic'),
       ]),
     ],
