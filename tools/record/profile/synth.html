@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: #000">
+    <canvas id="c" width="4096" height="4096" style="display: block"></canvas>
+    <script>
+      // synthetic dome frame: black surround, dense starfield + soft glow inside the fisheye disc
+      const N = 4096,
+        c = document.getElementById('c'),
+        g = c.getContext('2d');
+      let seed = 1;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const base = document.createElement('canvas');
+      base.width = base.height = N;
+      function paint(g) {
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, N, N);
+        g.save();
+        g.beginPath();
+        g.arc(N / 2, N / 2, N / 2, 0, Math.PI * 2);
+        g.clip();
+        const grd = g.createRadialGradient(N * 0.5, N * 0.75, 50, N * 0.5, N * 0.75, N * 0.6);
+        grd.addColorStop(0, 'rgba(255,220,180,0.5)');
+        grd.addColorStop(1, 'rgba(20,30,60,0.2)');
+        g.fillStyle = grd;
+        g.fillRect(0, 0, N, N);
+        for (let i = 0; i < 150000; i++) {
+          const a = (rnd() * 255) | 0,
+            s = rnd() < 0.97 ? 1 : 3;
+          g.fillStyle = `rgb(${a},${a},${Math.min(255, a + 30)})`;
+          g.fillRect(rnd() * N, rnd() * N, s, s);
+        }
+        g.restore();
+      }
+      paint(base.getContext('2d'));
+      function draw(frame) {
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, N, N);
+        g.drawImage(base, (frame % 7) - 3, (frame % 5) - 2);
+      }
+      window.__raf = 0;
+      window.__frame = 0;
+      function tick() {
+        window.__raf++;
+        draw(window.__frame++);
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>
