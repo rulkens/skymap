@@ -1,41 +1,11 @@
-// compositor/fxaa.wesl — FXAA 3.11-style edge anti-aliasing, run as the
-// fxaa-filter fragment variant of the 'foreground:0 -> hdr' composite.
-// Exempt from the usual comment budget (see docs/superpowers/conventions/
-// comments.md): the edge-search maths is unreadable without the derivation.
-//
-// Bodies and terrain are ray-cast / discard-based, not triangle edges, so
-// there is no geometric AA for their silhouettes; this filters the ONE
-// target they draw into ('foreground:0', no galaxies or stars) as it folds
-// into HDR. 'textureLoad' throughout, never 'textureSample': the target is
-// rgba16float, not guaranteed 'float32-filterable', and 1:1 with the
-// destination, so there is no derivative to take anyway. The edge search
-// below lands on half-texel offsets by construction, so its taps run a
-// manual bilinear lerp of four 'textureLoad's over the scalar edge signal —
-// see 'bilinearEdgeSignal'.
-//
-// ## Edge signal: max-channel Reinhard luma of PREMULTIPLIED colour, or alpha
-//
-// The target is linear HDR (unbounded above 1), so raw luma both under-
-// reports dim limbs and over-triggers on the Sun; 'c/(1+c)' compresses it
-// first. Max-channel, not Rec.709 weights, matching 'bloom/bright.wesl' and
-// the compositor's own HDR-headroom split — a saturated single-channel limb
-// (e.g. Mars) must not be under-weighted by a green-heavy formula. The
-// signal premultiplies before compressing so a bright, mostly-transparent
-// fragment cannot look like a strong edge on its own; 'max(..., c.a)' then
-// adds coverage as an INDEPENDENT signal, because the most visible edge here
-// — a body's limb against empty space — has both rgb and a fall to 0 on the
-// far side, so color-derived luma alone reads flat across it.
-//
-// ## Filtering in premultiplied space
-//
-// 'foreground:0' holds STRAIGHT alpha (confirmed by the compositor's own
-// 'over' blend, source colour factor 'src-alpha' on an un-premultiplied
-// fragment output — see compositor.ts's BLEND_TABLE). Blending two straight-
-// alpha taps directly would darken a rim against a transparent neighbour
-// (the darkening the compositor's own header warns against for 'over'), so
-// the final tap blends in premultiplied space and un-premultiplies before
-// returning — exactly what the 'preserveAlpha' straight-alpha contract
-// expects downstream.
+// compositor/fxaa.wesl — FXAA 3.11 (quality-12) as the 'fxaa' fragment variant
+// of the 'foreground:0 -> hdr' composite: that target holds only bodies and
+// terrain, so their silhouettes (ray-cast limbs are 'discard' edges MSAA would
+// miss) get AA without smearing point sources. textureLoad only: rgba16float
+// isn't guaranteed filterable, so the edge-search taps lerp by hand.
+// The source is STRAIGHT alpha (the 'over' blend multiplies by src-alpha), so
+// the final blend runs premultiplied and un-premultiplies, or a rim against
+// empty space would darken.
 
 import package::compositor::io::VSOut;
 
@@ -53,17 +23,22 @@ const SEARCH_DIST: array<f32, 12> = array<f32, 12>(
   1.0, 1.0, 1.0, 1.0, 1.0, 1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0
 );
 const ALPHA_EPS: f32 = 1e-4;
+const ALPHA_EDGE_WEIGHT: f32 = 0.25;
 
 fn clampTexel(p: vec2<i32>, dims: vec2<i32>) -> vec2<i32> {
   return clamp(p, vec2<i32>(0), dims - vec2<i32>(1));
 }
 
+// Luma of c/(1+c) because the source is linear HDR (raw luma misses dim limbs
+// and saturates on the Sun); max-channel to match 'bloom/bright.wesl'. Alpha is
+// ADDED, not max'd: a max would pin every opaque pixel to 1 and erase edges
+// between two opaque surfaces, while a dark limb against empty space still
+// needs a step to detect.
 fn edgeSignal(texel: vec2<i32>, dims: vec2<i32>) -> f32 {
   let c = textureLoad(srcTex, clampTexel(texel, dims), 0);
   let pm = c.rgb * c.a;
   let compressed = pm / (vec3<f32>(1.0) + pm);
-  let l = max(compressed.r, max(compressed.g, compressed.b));
-  return max(l, c.a);
+  return max(compressed.r, max(compressed.g, compressed.b)) + ALPHA_EDGE_WEIGHT * c.a;
 }
 
 // Bilinear mix of the scalar edge signal at a continuous coordinate in
