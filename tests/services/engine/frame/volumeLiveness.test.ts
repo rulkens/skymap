@@ -14,10 +14,10 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 
-const FIELD_ID = 'mcpm' as VolumeFieldId;
+const FIELD_ID = 'mcpm' as CosmicWebDensityFieldId;
 
 /**
  * A raw (unclamped) VolumeFieldSettings whose intensity is out of range.
@@ -70,7 +70,7 @@ function makeState(init: StateInit = {}): EngineState {
   // A `fades` stub whose opacityOf answers by FadeId kind so the master gate
   // and the per-field opacity multiplier can be driven independently.
   const opacityOf = (h: { kind: string }) =>
-    h.kind === 'volumesMaster' ? (init.masterOpacity ?? 1) : (init.fieldOpacity ?? 1);
+    h.kind === 'cosmicWebDensity' ? (init.masterOpacity ?? 1) : (init.fieldOpacity ?? 1);
   const renderer =
     init.renderer === undefined
       ? { hasActiveFields: init.hasActiveFields ?? (() => true), listIds: () => [FIELD_ID] }
@@ -78,7 +78,7 @@ function makeState(init: StateInit = {}): EngineState {
   return {
     gpu: { volumeFieldRenderer: renderer },
     settings: {
-      volumes: { enabled: init.volumesEnabled ?? true, items: init.items ?? {} },
+      cosmicWebDensity: { enabled: init.volumesEnabled ?? true, items: init.items ?? {} },
     },
     subsystems: {
       fades: { opacityOf: vi.fn(opacityOf) },
@@ -93,7 +93,7 @@ describe('deriveVolumeLiveness', () => {
   });
 
   it('returns null when master is off AND the master fade is fully out', () => {
-    // volumes.enabled false and volumesMaster opacity 0 → no live volume work.
+    // cosmicWebDensity.enabled false and cosmicWebDensity opacity 0 → no live volume work.
     const state = makeState({ volumesEnabled: false, masterOpacity: 0 });
     expect(deriveVolumeLiveness(state, makeCtx())).toBeNull();
   });
@@ -143,7 +143,7 @@ describe('deriveVolumeLiveness', () => {
     // exemption exists for volumes.
     const state = makeState({
       hasActiveFields: (_settingsOf, fadeOpacityOf) =>
-        (fadeOpacityOf as (id: VolumeFieldId) => number)(FIELD_ID) > 0,
+        (fadeOpacityOf as (id: CosmicWebDensityFieldId) => number)(FIELD_ID) > 0,
       items: { [FIELD_ID]: rawSettings() },
     });
     const deepCtx = makeCtx({
@@ -166,8 +166,8 @@ describe('deriveVolumeLiveness', () => {
 
   it('a field with no fadeBands entry behaves byte-identically to surveyDeepZoom today', () => {
     // Deep inside surveyDeepZoom's goneAt edge with the default band → 0,
-    // exactly the pre-Prep-1 behaviour every existing field (MCPM, CF-4,
-    // polyphorm) still gets.
+    // exactly the pre-Prep-1 behaviour every existing field (MCPM,
+    // polyphorm, MCPM workbench) still gets.
     const state = makeState({ items: { [FIELD_ID]: rawSettings() } });
     const liveness = deriveVolumeLiveness(state, makeCtx({ drawCamPos: [0, 0, 0.0005] }))!;
     expect(liveness.fadeOpacityOf(FIELD_ID)).toBe(0);

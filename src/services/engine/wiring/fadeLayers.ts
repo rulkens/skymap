@@ -10,24 +10,18 @@
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
-// INCLUDING the DEV-only binBaseName:null debug fixtures, unlike
-// `seedVolumeFields` which excludes them from `settings.volumes.items`. Both the
-// debug toggle and the debug slot's commit call `fadeTo` on these ids, and
-// `FadeRegistry.fadeTo` THROWS on an unregistered id, so omitting them breaks the
-// DEV toggle. A registered-but-never-read handle costs nothing in production.
-function volumeFieldIds(): readonly VolumeFieldId[] {
-  const ids: VolumeFieldId[] = [];
+function volumeFieldIds(): readonly CosmicWebDensityFieldId[] {
+  const ids: CosmicWebDensityFieldId[] = [];
   for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'volume') continue;
+    if (entry.type !== 'cosmicWebDensity') continue;
     ids.push(entry.id);
   }
   return ids;
@@ -37,14 +31,6 @@ function volumeFieldIds(): readonly VolumeFieldId[] {
 // `LabelCategory`, so `BODY_IDS` (the settings key domain) is the wider set.
 const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' && e.bearsLabel).map(
   (e) => e.id,
-);
-
-// Exempt from the volumeField row's demand-loaded guard: their lazy-load is
-// triggered by that row's own `post`, which a false guard would skip.
-const DEBUG_VOLUME_FIELD_IDS: ReadonlySet<VolumeFieldId> = new Set(
-  Object.values(SOURCE_REGISTRY)
-    .filter((entry) => entry.type === 'volume' && entry.binBaseName === null)
-    .map((entry) => entry.id as VolumeFieldId),
 );
 
 export const FADE_LAYERS = [
@@ -68,11 +54,11 @@ export const FADE_LAYERS = [
     seed: () => 1,
   }),
   fadeLayerRow({
-    key: 'volumesMaster',
+    key: 'cosmicWebDensity',
     expand: () => [undefined],
-    handle: () => ({ kind: 'volumesMaster' }),
-    seed: (s) => (s.volumes.enabled ? 1 : 0),
-    intent: (s) => s.volumes.enabled,
+    handle: () => ({ kind: 'cosmicWebDensity' }),
+    seed: (s) => (s.cosmicWebDensity.enabled ? 1 : 0),
+    intent: (s) => s.cosmicWebDensity.enabled,
   }),
   fadeLayerRow({
     key: 'milkyWayLabel',
@@ -122,24 +108,13 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
-  fadeLayerRow<VolumeFieldId, 'volumeField'>({
-    key: 'volumeField',
+  fadeLayerRow<CosmicWebDensityFieldId, 'cosmicWebDensityField'>({
+    key: 'cosmicWebDensityField',
     expand: () => volumeFieldIds(),
-    handle: (id) => ({ kind: 'volumeField', id }),
+    handle: (id) => ({ kind: 'cosmicWebDensityField', id }),
     seed: () => 0,
-    intent: (s, id) => s.volumes.items[id]?.enabled ?? false,
-    // The DEV debug fixtures are EXEMPT from the demand-loaded gate: they are
-    // loaded BY this row's own `post`, and a false guard short-circuits before
-    // `post`, so the toggle that should trigger the lazy-load never would.
-    guard: (state, id) =>
-      DEBUG_VOLUME_FIELD_IDS.has(id) ||
-      (state.gpu.volumeFieldRenderer?.listIds().includes(id) ?? false),
-    // Re-reads the just-applied intent so a DISABLE toggle never triggers a load.
-    // cf4/mcpm load via reevaluateDemand instead, and the helper is a no-op for
-    // them, so the two paths partition.
-    post: (state, id) => {
-      if (state.settings.volumes.items[id]?.enabled) maybeLazyLoadDebugVolume(state, id);
-    },
+    intent: (s, id) => s.cosmicWebDensity.items[id]?.enabled ?? false,
+    guard: (state, id) => state.gpu.volumeFieldRenderer?.listIds().includes(id) ?? false,
   }),
 ] satisfies readonly FadeLayer<unknown>[];
 

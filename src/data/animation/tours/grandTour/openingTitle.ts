@@ -50,8 +50,8 @@ export const openingTitle: ClipData = {
     // back so "You are here" lands on beat 2, not under the title card.
     hide(
       [
-        'volumesMaster', // the cosmic-web beat's reveal
-        'filaments', // hidden for the WHOLE tour — the web beats show the volume only
+        'cosmicWebDensity', // the cosmic-web beat's reveal
+        'cosmicWebFilaments', // hidden for the WHOLE tour — the web beats show the volume only
         'flow', // the flows beat's reveal
         'structureRing', // shown per category as beats reach them
         'label:milkyWay', // "You are here" is beat 2's reveal

@@ -35,9 +35,9 @@ import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameCon
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
+import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/filaments/@types/FilamentsRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -504,9 +504,12 @@ describe('renderFrame visual baseline', () => {
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
-          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          cosmicWebFilaments: {
+            enabled: settings.filamentsEnabled,
+            intensity: settings.filamentIntensity,
+          },
           constellations: { enabled: false, intensity: 1 },
-          volumes: { enabled: settings.volumesEnabled, items: {} },
+          cosmicWebDensity: { enabled: settings.volumesEnabled, items: {} },
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
@@ -541,7 +544,7 @@ describe('renderFrame visual baseline', () => {
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
-          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
+          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as CosmicWebFilamentsRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,

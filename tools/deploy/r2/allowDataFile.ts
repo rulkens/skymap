@@ -47,7 +47,6 @@ export const allowDataFile = (path: string): boolean => {
     name === 'filaments-small.bin' ||
     name === 'famous_galaxies_meta.json' ||
     name === 'famous_stars_meta.json' ||
-    name === 'cf4_density.scfd' ||
     name === 'flowfield.scfd' ||
     name === 'mcpm-workbench.scfd' ||
     name === 'structures.ccat' ||

@@ -36,7 +36,7 @@ const BEATS: readonly BeatData[] = [
   {
     caption: { title: 'strip' },
     enterClip: clip([
-      hide(['volumesMaster', 'filaments', 'survey'], 0),
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'survey'], 0),
       scene(setLabelsFocusedOnly(true)),
     ]),
     dwellClip: dwellDrift(1),
@@ -48,8 +48,8 @@ const BEATS: readonly BeatData[] = [
   },
   {
     caption: { title: 'web reveal' },
-    enterClip: clip([show(['filaments'], 9)]),
-    dwellClip: clip([show(['volumesMaster'], 2)]),
+    enterClip: clip([show(['cosmicWebFilaments'], 9)]),
+    dwellClip: clip([show(['cosmicWebDensity'], 2)]),
   },
 ];
 
@@ -64,8 +64,8 @@ describe('computeSceneEntering', () => {
     const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 1);
 
-    expect(result.volumes.enabled).toBe(false);
-    expect(result.filaments.enabled).toBe(false);
+    expect(result.cosmicWebDensity.enabled).toBe(false);
+    expect(result.cosmicWebFilaments.enabled).toBe(false);
     expect(result.labels.focusedOnly).toBe(true);
     // The bare 'survey' key fans out over every catalog item.
     for (const item of Object.values(result.galaxyCatalogs.items)) {
@@ -85,8 +85,8 @@ describe('computeSceneEntering', () => {
     const base = INITIAL_SETTINGS;
     const result = computeSceneEntering(base, BEATS, 3);
 
-    expect(result.filaments.enabled).toBe(true); // beat 2 enter
-    expect(result.volumes.enabled).toBe(true); // beat 2 DWELL cue
+    expect(result.cosmicWebFilaments.enabled).toBe(true); // beat 2 enter
+    expect(result.cosmicWebDensity.enabled).toBe(true); // beat 2 DWELL cue
   });
 
   it('collects cues nested inside seq / all / fork', () => {
@@ -95,13 +95,16 @@ describe('computeSceneEntering', () => {
       {
         caption: null,
         enterClip: clip([
-          seq([hold(1), all([fork(hide(['filaments'], 0)), scene(setLabelsFocusedOnly(true))])]),
+          seq([
+            hold(1),
+            all([fork(hide(['cosmicWebFilaments'], 0)), scene(setLabelsFocusedOnly(true))]),
+          ]),
         ]),
         dwellClip: dwellDrift(1),
       },
     ];
     const result = computeSceneEntering(base, beats, 1);
-    expect(result.filaments.enabled).toBe(false);
+    expect(result.cosmicWebFilaments.enabled).toBe(false);
     expect(result.labels.focusedOnly).toBe(true);
   });
 

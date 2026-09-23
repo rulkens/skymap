@@ -7,7 +7,7 @@
  * per-cube STATIC presentation config (contrastCenter, envelope), and a
  * `residentPaletteId` GPU-residency fact.  The user-tunable knobs
  * (enabled, intensity, contrast, densityScale, paletteId, trim, exposure)
- * are NOT mirrored here — they live in `state.settings.volumes.items`
+ * are NOT mirrored here — they live in `state.settings.cosmicWebDensity.items`
  * and are read per frame in `draw` via the `settingsOf` projection.
  * Mirroring them here would re-introduce the very entanglement the
  * settings unification removes (two sources of truth that can drift).
@@ -18,14 +18,14 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  id: VolumeFieldId;
+  id: CosmicWebDensityFieldId;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
-   * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
+   * coordinate space [0, 1].  Divergent palettes (coolwarm)
    * want 0.5 so the deadband suppresses the cosmic-mean midpoint
    * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
    * the deadband suppresses the void floor (LUT t=0) and the stretch
@@ -49,7 +49,7 @@ export type FieldEntry = {
   /**
    * GPU-RESIDENCY fact: the palette id currently uploaded into
    * `paletteTexture`.  NOT a user setting (that's
-   * `state.settings.volumes.items[id].paletteId`); this just tracks
+   * `state.settings.cosmicWebDensity.items[id].paletteId`); this just tracks
    * what's resident on the GPU.  `draw` compares it against the field's
    * live setting and re-uploads the LUT in place when they differ —
    * palette is the one knob with a GPU side effect, so it's the one knob

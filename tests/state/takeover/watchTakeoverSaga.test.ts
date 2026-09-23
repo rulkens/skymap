@@ -92,7 +92,7 @@ import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -175,7 +175,7 @@ describe('watchTakeoverSaga', () => {
   it('a second startTour supersedes the first run, staying active under the new run', async () => {
     const playClip = makeAutoFlyStub();
     const { store } = buildHarness({ playClip });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
 
     // Start first run with a forever-dwelling tour; advance into its dwell.
     store.dispatch(startTour('webShowcase'));
@@ -199,14 +199,14 @@ describe('watchTakeoverSaga', () => {
   it('a superseding startTour restores the outgoing run before the successor snapshots', async () => {
     const playClip = makeAutoFlyStub();
     const { store } = buildHarness({ playClip });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
 
     store.dispatch(startTour('webShowcase'));
     await flush();
     await flush();
 
     // Stand-in for an in-clip scene cue mutating settings mid-run.
-    store.dispatch(setVolumesEnabled(false));
+    store.dispatch(setCosmicWebDensityEnabled(false));
     await flush();
 
     store.dispatch(startTour('webShowcase'));
@@ -226,7 +226,7 @@ describe('watchTakeoverSaga', () => {
     // strands the user at volumes-off once the last run exits.
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   // ── (4) openExhibit reaches the watcher; an exhibit supersedes a running tour ────
@@ -234,14 +234,14 @@ describe('watchTakeoverSaga', () => {
   it('openExhibit supersedes a running tour, restoring its scene before the exhibit snapshots', async () => {
     const playClip = makeAutoFlyStub();
     const { store } = buildHarness({ playClip });
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
 
     store.dispatch(startTour('webShowcase'));
     await flush();
     await flush();
 
     // Stand-in for an in-clip scene cue mutating settings mid-run.
-    store.dispatch(setVolumesEnabled(false));
+    store.dispatch(setCosmicWebDensityEnabled(false));
     await flush();
 
     store.dispatch(openExhibit('cosmicWeb'));
@@ -257,7 +257,7 @@ describe('watchTakeoverSaga', () => {
     // would have captured as "the" baseline to return to.
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   // ── (3) the beat range on the action reaches tourBody ─────────────────────

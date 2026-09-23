@@ -34,7 +34,6 @@
     "build-data-manifest": "tsx tools/deploy/buildDataManifest.ts",
     "structure-audit": "tsx tools/structure-audit/structureAudit.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
-    "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts && npm run build-data-manifest",
     "build-surface-tiles": "tsx tools/textures/buildSurfaceTiles.ts",
     "build-site-ground-heights": "tsx tools/textures/buildSiteGroundHeights.ts",
     "report-site-terrain": "tsx tools/textures/reportSiteTerrain.ts",

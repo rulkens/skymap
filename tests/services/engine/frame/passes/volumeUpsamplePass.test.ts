@@ -136,7 +136,7 @@ function livenessState(init: {
       fades: { opacityOf: () => init.masterOpacity ?? 1 },
       clipPlayer: { clipOpacityOf: () => 1 },
     },
-    settings: { volumes: { enabled: init.volumesEnabled ?? true, items: {} } },
+    settings: { cosmicWebDensity: { enabled: init.volumesEnabled ?? true, items: {} } },
   } as unknown as EngineState;
 }
 

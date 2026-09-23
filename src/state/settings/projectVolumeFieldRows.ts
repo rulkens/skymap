@@ -22,15 +22,15 @@
  */
 
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSettings';
 import { getVolumeFieldDefaults } from '../../data/volume/volumeFieldDefaults';
 import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../data/defaults';
 
 export function projectVolumeFieldRows(
-  items: Partial<Record<VolumeFieldId, VolumeFieldSettings>>,
+  items: Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>>,
 ): ReadonlyArray<VolumeFieldRowData> {
-  const ids = Object.keys(items) as VolumeFieldId[];
+  const ids = Object.keys(items) as CosmicWebDensityFieldId[];
   return ids.map((id) => {
     const field = items[id];
     const defaults = getVolumeFieldDefaults(id);

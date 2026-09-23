@@ -10,8 +10,8 @@
  *
  *   - `galaxyCatalogs` — point-billboard appearance + per-catalog gates.
  *   - `structures`     — ring/marker + label visibility per category.
- *   - `volumes`        — scalar-volume master gate + per-field params.
- *   - `filaments`      — filament-skeleton master gate + intensity.
+ *   - `cosmicWebDensity`   — scalar-volume master gate + per-field params.
+ *   - `cosmicWebFilaments` — filament-skeleton master gate + intensity.
  *   - `milkyWay`       — Milky-Way disk + label axes.
  *   - `zoneOfAvoidance` — galactic-plane dust band + its lettering; the
  *                         Zone-of-Avoidance view drives it, and a viewer who
@@ -77,8 +77,8 @@ export type SettingsSnapshot = Readonly<
     EngineSettingsState,
     | 'galaxyCatalogs'
     | 'structures'
-    | 'volumes'
-    | 'filaments'
+    | 'cosmicWebDensity'
+    | 'cosmicWebFilaments'
     | 'milkyWay'
     | 'zoneOfAvoidance'
     | 'flow'

@@ -6,9 +6,9 @@ import type { BodyTextureSlotKey } from '../data/BodyTextureSlotKey';
  * asset-wiring layer: all of `SourceType`, plus string keys for assets that don't
  * map one-to-one onto a `Source`. The two sets differ in both directions. Cluster,
  * Supercluster and Void all arrive via the single `'structureCatalog'` fetch, so a
- * per-source key would pull one file three times; conversely `'cf4Density'`,
- * `'mcpm'` and `'flow'` do have `Source` codes but their slots are named
- * `assetSlots` fields, and only a string key routes through `slotFor`.
+ * per-source key would pull one file three times; conversely `'mcpm'` and `'flow'`
+ * do have `Source` codes but their slots are named `assetSlots` fields, and only
+ * a string key routes through `slotFor`.
  * See ADR 0005 §2 for the identity-vs-wiring split; `EngineAssetSlots` for the slots.
  */
 export type AssetKey =
@@ -19,7 +19,6 @@ export type AssetKey =
   | 'pgcAlias'
   | 'filaments'
   | 'localBubble'
-  | 'cf4Density' // the DEV-only `debug-*` synthetic cubes are deliberately absent — they live in `assetSlots.syntheticVolumes`, outside the demand-driven asset set
   | 'mcpm'
   | 'flow'
   | 'polyphorm2Mrs'

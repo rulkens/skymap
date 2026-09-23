@@ -374,9 +374,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
         milkyWay: { enabled: settings.milkyWayEnabled },
-        filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+        cosmicWebFilaments: {
+          enabled: settings.filamentsEnabled,
+          intensity: settings.filamentIntensity,
+        },
         constellations: { enabled: false, intensity: 1 },
-        volumes: { enabled: settings.volumesEnabled, items: {} },
+        cosmicWebDensity: { enabled: settings.volumesEnabled, items: {} },
         debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
@@ -524,7 +527,7 @@ describe('renderFrame — timing service hookup', () => {
     // Force volumes on with an active volumeFieldRenderer. The scalar-volume
     // layer gates on `deriveVolumeLiveness`, which reads the renderer straight
     // off `state.gpu.volumeFieldRenderer`.
-    (input.state as any).settings.volumes = { enabled: true, items: {} };
+    (input.state as any).settings.cosmicWebDensity = { enabled: true, items: {} };
     const drawSpy = vi.fn();
     (input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,

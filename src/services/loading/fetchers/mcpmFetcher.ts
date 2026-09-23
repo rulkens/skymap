@@ -11,7 +11,8 @@
  *
  * On 404 the slot machinery's error path leaves the field
  * unregistered; the Volumes panel simply doesn't show "MCPM Cosmic
- * Web". Mirrors the cf4DensityFetcher fallback.
+ * Web" — a missing optional binary disables the overlay silently
+ * rather than crashing.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';

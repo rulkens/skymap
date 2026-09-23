@@ -23,7 +23,7 @@ import { runTakeover } from '../../../src/state/takeover/runTakeover';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
 import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
 
@@ -65,20 +65,20 @@ describe('runTakeover', () => {
 
   it('an exhibit restores its settings changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
-    store.dispatch(setVolumesEnabled(true));
+    store.dispatch(setCosmicWebDensityEnabled(true));
 
     sagaMiddleware.run(function* () {
       yield* runTakeover({ kind: 'exhibit', id: 'solarSystem' }, function* () {
-        yield* put(setVolumesEnabled(false));
+        yield* put(setCosmicWebDensityEnabled(false));
         yield* take(exitTakeover);
       });
     });
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(false);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(false);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
   it('a superseded run does not dispatch takeoverEnded', async () => {

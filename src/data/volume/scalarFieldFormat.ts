@@ -18,9 +18,9 @@
  * `src/data/volumeFieldDefaults.ts` keyed by the renderer's field handle.
  *
  * v1 and v2 files are rejected outright with a "regenerate" hint — same
- * precedent as the GalaxyCatalog and Filament decoders.  Operators run
- * `npm run build-cf4-density` (or the relevant builder) and re-sync R2 in
- * lockstep with the code deploy.
+ * precedent as the GalaxyCatalog and Filament decoders.  Operators run the
+ * relevant builder (e.g. `npm run build-mcpm`) and re-sync R2 in lockstep
+ * with the code deploy.
  *
  * Layout (little-endian):
  *

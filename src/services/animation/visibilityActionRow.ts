@@ -15,15 +15,15 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
 } from '../../layers/milkyWay/state/milkyWay/slice';
-import { setFilamentsEnabled } from '../../layers/filaments/state/filaments/slice';
+import { setCosmicWebFilamentsEnabled } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
 import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
-import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
+import { setCosmicWebDensityEnabled, writeCosmicWebDensityField } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setFlowEnabled } from '../../layers/flow/state/flow/slice';
 import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
 import {
@@ -46,10 +46,10 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   // Gate-backed layers: a scalar `enabled` field in settings, so one action each.
   milkyWayDisk: { actions: (on) => [setMilkyWayEnabled(on)] },
   milkyWayLabel: { actions: (on) => [setMilkyWayLabelEnabled(on)] },
-  filaments: { actions: (on) => [setFilamentsEnabled(on)] },
+  cosmicWebFilaments: { actions: (on) => [setCosmicWebFilamentsEnabled(on)] },
   localBubble: { actions: (on) => [setLocalBubbleEnabled(on)] },
   orbitTrails: { actions: (on) => [setOrbitTrailsEnabled(on)] },
-  volumesMaster: { actions: (on) => [setVolumesEnabled(on)] },
+  cosmicWebDensity: { actions: (on) => [setCosmicWebDensityEnabled(on)] },
   flow: { actions: (on) => [setFlowEnabled(on)] },
   constellations: { actions: (on) => [setConstellationsEnabled(on)] },
   zoneOfAvoidance: { actions: (on) => [setZoneOfAvoidanceEnabled(on)] },
@@ -98,12 +98,12 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
       ),
   },
 
-  // `volumes.items` is a Partial record — a field is absent until its slot
-  // commits — so only present ids are emitted.
-  volumeField: {
+  // `cosmicWebDensity.items` is a Partial record — a field is absent until
+  // its slot commits — so only present ids are emitted.
+  cosmicWebDensityField: {
     actions: (on, settings) =>
-      Object.keys(settings.volumes.items).map((id) =>
-        writeVolumeField({ id: id as VolumeFieldId, patch: { enabled: on } }),
+      Object.keys(settings.cosmicWebDensity.items).map((id) =>
+        writeCosmicWebDensityField({ id: id as CosmicWebDensityFieldId, patch: { enabled: on } }),
       ),
   },
 

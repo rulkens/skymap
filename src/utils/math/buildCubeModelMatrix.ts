@@ -20,7 +20,7 @@ import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 // Composition order, applied right-to-left to a unit-cube corner v:
 //
 //   1. scale  by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) — unit cube
-//      becomes its physical extent (e.g. [0, 1000]^3 for CF-4)
+//      becomes its physical extent (e.g. [0, 1000]^3 for the flow field)
 //   2. translate by the cube's origin in its native frame — shifts the
 //      cube so its corner sits at `origin`, which for an observer-centered
 //      cube means the cube's geometric centre lands at the native frame's
@@ -29,9 +29,10 @@ import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 //      native frame's origin, which (after step 2) coincides with the
 //      cube's centre.  Order matters: rotating BEFORE the translate
 //      would pivot around the cube's corner instead and offset the
-//      whole volume by `R*origin - origin` in the native frame.  The
-//      synthetic cubes (and flow) ship identity rotations, so the bug is
-//      invisible there; CF-4 (with the SG→EQ quaternion) exposes it.
+//      whole volume by `R*origin - origin` in the native frame.  Every
+//      shipping cube ships an identity rotation, so the bug is invisible
+//      today; a cube with a non-identity per-cube tilt (see the box-tilt
+//      use in `exportScfd.ts`) would expose it.
 //   4. transform from the native frame into world space
 //
 // Pure math, no GPU device — unit-testable on its own (see

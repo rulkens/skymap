@@ -8,14 +8,12 @@
  *
  * ### Volume-fields projection
  *
- * `selectVolumeFieldItems` returns the raw `state.settings.volumes.items`
+ * `selectVolumeFieldItems` returns the raw `state.settings.cosmicWebDensity.items`
  * Record — a referentially stable Immer snapshot that only changes when a
  * field is actually added, removed, or modified. The `useMemo` projection
- * (filter + shape) is keyed on that stable `volumeFieldItems` reference:
- * the projected array is rebuilt only when the items Record changes, not on
- * every unrelated store write. `debug-*` synthetic fixtures are excluded here
- * rather than inside the projection, so the panel shows only real science
- * volumes while the items Record itself stays complete.
+ * (shape only) is keyed on that stable `volumeFieldItems` reference: the
+ * projected array is rebuilt only when the items Record changes, not on
+ * every unrelated store write.
  *
  * ### Handler stability
  *
@@ -30,91 +28,87 @@ import { memo, useCallback, useMemo } from 'react';
 import CosmicWebSection from '../SettingsPanel/CosmicWebSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-  selectVolumesEnabled,
-  selectVolumeFieldItems,
-} from '../../layers/volume/state/volumes/selectors';
+  selectCosmicWebDensityEnabled,
+  selectCosmicWebDensityFieldItems,
+} from '../../layers/cosmicWebDensity/state/cosmicWebDensity/selectors';
 import {
-  selectFilamentsEnabled,
-  selectFilamentIntensity,
-} from '../../layers/filaments/state/filaments/selectors';
-import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
+  selectCosmicWebFilamentsEnabled,
+  selectCosmicWebFilamentsIntensity,
+} from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/selectors';
+import { setCosmicWebDensityEnabled, writeCosmicWebDensityField } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import {
-  setFilamentsEnabled,
-  setFilamentIntensity,
-} from '../../layers/filaments/state/filaments/slice';
+  setCosmicWebFilamentsEnabled,
+  setCosmicWebFilamentsIntensity,
+} from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 
 function CosmicWebSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
 
-  const volumesEnabled = useAppSelector(selectVolumesEnabled);
-  const volumeFieldItems = useAppSelector(selectVolumeFieldItems);
-  const filamentsEnabled = useAppSelector(selectFilamentsEnabled);
-  const filamentIntensity = useAppSelector(selectFilamentIntensity);
+  const volumesEnabled = useAppSelector(selectCosmicWebDensityEnabled);
+  const volumeFieldItems = useAppSelector(selectCosmicWebDensityFieldItems);
+  const filamentsEnabled = useAppSelector(selectCosmicWebFilamentsEnabled);
+  const filamentIntensity = useAppSelector(selectCosmicWebFilamentsIntensity);
 
   // Project the raw items Record into the display shape the section renders.
-  // debug-* fixture fields are dropped so the panel only shows real science
-  // volumes. Keyed on the stable volumeFieldItems reference — the array is
-  // rebuilt only when the items Record actually changes.
-  const volumeFields = useMemo(
-    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.id.startsWith('debug-')),
-    [volumeFieldItems],
-  );
+  // Keyed on the stable volumeFieldItems reference — the array is rebuilt
+  // only when the items Record actually changes.
+  const volumeFields = useMemo(() => projectVolumeFieldRows(volumeFieldItems), [volumeFieldItems]);
 
   const onVolumesEnabledChange = useCallback(
-    (enabled: boolean) => dispatch(setVolumesEnabled(enabled)),
+    (enabled: boolean) => dispatch(setCosmicWebDensityEnabled(enabled)),
     [dispatch],
   );
 
   const onFilamentsChange = useCallback(
-    (enabled: boolean) => dispatch(setFilamentsEnabled(enabled)),
+    (enabled: boolean) => dispatch(setCosmicWebFilamentsEnabled(enabled)),
     [dispatch],
   );
 
   const onFilamentIntensityChange = useCallback(
-    (value: number) => dispatch(setFilamentIntensity(value)),
+    (value: number) => dispatch(setCosmicWebFilamentsIntensity(value)),
     [dispatch],
   );
 
   const onVolumeFieldEnabledChange = useCallback(
-    (id: VolumeFieldId, enabled: boolean) => dispatch(writeVolumeField({ id, patch: { enabled } })),
+    (id: CosmicWebDensityFieldId, enabled: boolean) => dispatch(writeCosmicWebDensityField({ id, patch: { enabled } })),
     [dispatch],
   );
 
   const onVolumeFieldIntensityChange = useCallback(
-    (id: VolumeFieldId, intensity: number) =>
-      dispatch(writeVolumeField({ id, patch: { intensity } })),
+    (id: CosmicWebDensityFieldId, intensity: number) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { intensity } })),
     [dispatch],
   );
 
   const onVolumeFieldContrastChange = useCallback(
-    (id: VolumeFieldId, contrast: number) =>
-      dispatch(writeVolumeField({ id, patch: { contrast } })),
+    (id: CosmicWebDensityFieldId, contrast: number) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { contrast } })),
     [dispatch],
   );
 
   const onVolumeFieldDensityScaleChange = useCallback(
-    (id: VolumeFieldId, densityScale: number) =>
-      dispatch(writeVolumeField({ id, patch: { densityScale } })),
+    (id: CosmicWebDensityFieldId, densityScale: number) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { densityScale } })),
     [dispatch],
   );
 
   const onVolumeFieldTrimChange = useCallback(
-    (id: VolumeFieldId, trim: number) => dispatch(writeVolumeField({ id, patch: { trim } })),
+    (id: CosmicWebDensityFieldId, trim: number) => dispatch(writeCosmicWebDensityField({ id, patch: { trim } })),
     [dispatch],
   );
 
   const onVolumeFieldExposureChange = useCallback(
-    (id: VolumeFieldId, exposure: number) =>
-      dispatch(writeVolumeField({ id, patch: { exposure } })),
+    (id: CosmicWebDensityFieldId, exposure: number) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { exposure } })),
     [dispatch],
   );
 
   const onVolumeFieldPaletteChange = useCallback(
-    (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) =>
-      dispatch(writeVolumeField({ id, patch: { paletteId } })),
+    (id: CosmicWebDensityFieldId, paletteId: ScalarFieldPaletteId) =>
+      dispatch(writeCosmicWebDensityField({ id, patch: { paletteId } })),
     [dispatch],
   );
 

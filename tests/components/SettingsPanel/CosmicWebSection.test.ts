@@ -37,14 +37,14 @@ import { createElement } from 'react';
 import CosmicWebSection from '../../../src/components/SettingsPanel/CosmicWebSection';
 import type { CosmicWebSectionProps } from '../../../src/components/SettingsPanel/CosmicWebSection';
 import type { VolumeFieldRowData } from '../../../src/@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { ScalarFieldPaletteId } from '../../../src/@types/data/volume/ScalarFieldPaletteId';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
 const MOCK_FIELD: VolumeFieldRowData = {
-  id: 'cf4-density' as VolumeFieldId,
-  label: 'CF-4 DM density',
+  id: 'mcpm' as CosmicWebDensityFieldId,
+  label: 'MCPM Cosmic Web',
   enabled: true,
   intensity: 0.5,
   contrast: 1.2,
@@ -63,14 +63,14 @@ function baseProps(overrides?: Partial<CosmicWebSectionProps>): CosmicWebSection
     filamentIntensity: 0.5,
     onFilamentIntensityChange: vi.fn<(value: number) => void>(),
     volumeFields: [MOCK_FIELD],
-    onVolumeFieldEnabledChange: vi.fn<(id: VolumeFieldId, enabled: boolean) => void>(),
-    onVolumeFieldIntensityChange: vi.fn<(id: VolumeFieldId, intensity: number) => void>(),
-    onVolumeFieldContrastChange: vi.fn<(id: VolumeFieldId, contrast: number) => void>(),
-    onVolumeFieldDensityScaleChange: vi.fn<(id: VolumeFieldId, value: number) => void>(),
-    onVolumeFieldTrimChange: vi.fn<(id: VolumeFieldId, trim: number) => void>(),
-    onVolumeFieldExposureChange: vi.fn<(id: VolumeFieldId, exposure: number) => void>(),
+    onVolumeFieldEnabledChange: vi.fn<(id: CosmicWebDensityFieldId, enabled: boolean) => void>(),
+    onVolumeFieldIntensityChange: vi.fn<(id: CosmicWebDensityFieldId, intensity: number) => void>(),
+    onVolumeFieldContrastChange: vi.fn<(id: CosmicWebDensityFieldId, contrast: number) => void>(),
+    onVolumeFieldDensityScaleChange: vi.fn<(id: CosmicWebDensityFieldId, value: number) => void>(),
+    onVolumeFieldTrimChange: vi.fn<(id: CosmicWebDensityFieldId, trim: number) => void>(),
+    onVolumeFieldExposureChange: vi.fn<(id: CosmicWebDensityFieldId, exposure: number) => void>(),
     onVolumeFieldPaletteChange:
-      vi.fn<(id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void>(),
+      vi.fn<(id: CosmicWebDensityFieldId, paletteId: ScalarFieldPaletteId) => void>(),
     ...overrides,
   };
 }
@@ -195,7 +195,7 @@ describe('CosmicWebSection', () => {
 
   describe('VolumeFieldRow intensity callback', () => {
     it('calls onVolumeFieldIntensityChange with the field id and stepped value on a keyboard nudge', () => {
-      const onVolumeFieldIntensityChange = vi.fn<(id: VolumeFieldId, intensity: number) => void>();
+      const onVolumeFieldIntensityChange = vi.fn<(id: CosmicWebDensityFieldId, intensity: number) => void>();
       const { container } = render(
         createElement(
           CosmicWebSection,
@@ -213,10 +213,7 @@ describe('CosmicWebSection', () => {
       fireEvent.keyDown(intensitySlider, { key: 'ArrowRight' });
 
       expect(onVolumeFieldIntensityChange).toHaveBeenCalledOnce();
-      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith(
-        'cf4-density' as VolumeFieldId,
-        0.51,
-      );
+      expect(onVolumeFieldIntensityChange).toHaveBeenCalledWith('mcpm' as CosmicWebDensityFieldId, 0.51);
     });
   });
 

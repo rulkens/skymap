@@ -34,6 +34,7 @@ what has actually been harvested and when, one row per `npm run fetch-eox
 | Everest            | 2026-09-03 | 280       |
 | Giza               | 2026-09-03 | 360       |
 | Sjælland           | 2026-09-03 | 3472      |
+| Malmö              | 2026-09-23 | 180       |
 
 ## Per-region layout
 

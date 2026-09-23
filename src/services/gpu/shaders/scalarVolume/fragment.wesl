@@ -48,7 +48,7 @@ struct VolumeUniforms {
   // voxels participate.
   contrast: f32,
   // Per-cube center of the contrast window in LUT space [0, 1].
-  // Divergent palettes (coolwarm; CF-4) want 0.5 — the cosmic mean
+  // Divergent palettes (coolwarm) want 0.5 — the cosmic mean
   // sits at the divergent transparent midpoint, the deadband
   // suppresses it symmetrically.  Sequential palettes (inferno;
   // MCPM, log-normalised so voxel value = 0 means void) want 0.0 —
@@ -66,8 +66,8 @@ struct VolumeUniforms {
   // smoothstep pinned at 1.0 throughout the cube (effectively
   // disabling the envelope).  Used to hide the axis-aligned cube
   // silhouette for content-driven cubes whose corner regions are
-  // empty / noisy (CF-4 density); debug fixtures opt out via the
-  // sentinel so their corner test patterns stay visible.
+  // empty / noisy; a cube that instead wants its corners visible
+  // (e.g. to verify axis alignment) opts out via the sentinel.
   envelopeInner: f32,
   envelopeOuter: f32,
   // Per-cube HDR exposure multiplier on the rgb contribution per
@@ -148,7 +148,7 @@ struct FsIn {
 // "more noise, not more structure" symptom this replaces.
 //
 // Generalised for arbitrary 'center' in [0, 1].  For divergent palettes
-// (CF-4, coolwarm) the meaningful zero sits at LUT t=0.5, so center=0.5
+// (coolwarm) the meaningful zero sits at LUT t=0.5, so center=0.5
 // and dev measures distance from the midpoint symmetrically — both ends
 // of the palette light up.  For sequential palettes (MCPM, inferno) the
 // meaningful zero sits at LUT t=0 (transparent void), so center=0.0
@@ -207,8 +207,9 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // cube during camera motion.  Without jitter, the 192 fixed sample
   // positions along each ray show through as a coherent grid because
   // every pixel uses the same step phase — at high densityScale
-  // (MCPM=18, CF-4=20), per-step opacity is large enough to make that
-  // grid visible.  Per-fragment jitter decorrelates neighbouring rays:
+  // (every shipping cube defaults to 18), per-step opacity is large
+  // enough to make that grid visible.  Per-fragment jitter decorrelates
+  // neighbouring rays:
   // visible aliasing becomes high-frequency grain instead of a moving
   // grid, and the accumulated integral stays unbiased (jitter averages
   // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
@@ -316,7 +317,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     //   highlightGain = 1 + smoothstep(0.5, 1.0, dev) * (exposure - 1)
     // For sequential palettes (MCPM, contrastCenter=0) the boost
     // ramps in over signedT > 0.5 and peaks at signedT = 1.0; for
-    // divergent palettes (CF-4, contrastCenter=0.5) it ramps in
+    // divergent palettes (coolwarm, contrastCenter=0.5) it ramps in
     // symmetrically toward both palette extremes.  Mid-tones near the
     // center get highlightGain ≈ 1.0 (no boost), so the warm gradient
     // stays LDR-bounded; only peaks push past the LUT's brightest

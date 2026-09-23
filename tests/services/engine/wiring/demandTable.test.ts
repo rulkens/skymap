@@ -35,14 +35,14 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads
- * `ctx.settings.volumes.items.mcpm?.enabled`. The engine seeds that record
+ * `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
  * with the `galaxyCatalogs.items[id].enabled` seed that galaxy catalog demand reads.
  * MCPM therefore IS in the boot
- * demand set — `cf4-density` is NOT (registry visible:false → seeded
+ * demand set — `polyphorm-2mrs` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
- * `settings.volumes.items` so the test exercises the real defaults rather than
+ * `settings.cosmicWebDensity.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
  */
 
@@ -59,7 +59,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../src/@types/data/volume/CosmicWebDensityFieldId';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -124,10 +124,10 @@ type SettingsLeaves = {
 
 /**
  * Volume-field params keyed by id. Demand predicates read
- * `ctx.settings.volumes.items[id]?.enabled`, so `makeState` injects this
+ * `ctx.settings.cosmicWebDensity.items[id]?.enabled`, so `makeState` injects this
  * record directly into the settings bag.
  */
-type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
+type VolumeFieldLeaves = Partial<Record<CosmicWebDensityFieldId, { enabled: boolean }>>;
 
 /**
  * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads
@@ -158,7 +158,7 @@ const BOOT_SETTINGS: SettingsLeaves = {
 /**
  * Default-at-boot volume fields: seeded from the shippable volume registry via
  * the same `seedVolumeFields` the engine runs at construction (mcpm enabled,
- * cf4-density disabled).
+ * polyphorm-2mrs disabled).
  */
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
@@ -178,7 +178,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   // visible:false — specialist DESI drill patches, not part of the default
   // all-sky scene), so the construction seed lands their enabled bits false and
   // their ASSET_WIRING point rows are NOT demanded at boot. Symmetric with
-  // cf4-density among the volume fields: registry visible:false → seeded
+  // polyphorm-2mrs among the volume fields: registry visible:false → seeded
   // enabled:false → absent from the boot set.
   desiDeep: { enabled: false },
   desiWedge: { enabled: false },
@@ -192,7 +192,6 @@ type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
   pgcAlias: StubSlot;
-  cf4Density: StubSlot;
   mcpm: StubSlot;
 }>;
 
@@ -200,7 +199,7 @@ type MakeStateOptions = {
   settings?: SettingsLeaves;
   /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (registry `visible` seed). */
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
-  /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
+  /** Volume-field params; injected into `settings.cosmicWebDensity.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   /** `ui.paletteOpen` — the pgcAlias row's demand trigger. Defaults to closed. */
   paletteOpen?: boolean;
@@ -264,11 +263,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     tier: 'medium',
     // Inject galaxy catalog + volume items directly into the settings bag — demand
     // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
-    // `ctx.settings.volumes.items[id]?.enabled` from there.
+    // `ctx.settings.cosmicWebDensity.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       galaxyCatalogs: { items: galaxyCatalogItems },
-      volumes: { items: volumeFields },
+      cosmicWebDensity: { items: volumeFields },
     } as unknown as EngineSettingsState,
     ui: { paletteOpen } as import('../../../../src/@types/ui/UiState').UiState,
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
@@ -290,7 +289,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
         unknown,
         unknown
       > as never,
-      cf4Density: (namedSlots.cf4Density ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       // Empty keyed family: the body-texture rows resolve to undefined slots
       // (far resting pose ⇒ none demanded anyway), so none fires.
@@ -325,7 +323,7 @@ function collectFired(state: EngineState): Set<AssetKey> {
   }
 
   // Core's named slots — the ones that might have fired.
-  const namedKeys = ['structureCatalog', 'cf4Density', 'mcpm'] as const;
+  const namedKeys = ['structureCatalog', 'mcpm'] as const;
   for (const key of namedKeys) {
     const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
@@ -378,14 +376,14 @@ describe('reevaluateDemand demand-table regression', () => {
    * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible in
    * SOURCE_REGISTRY. DesiDeep + DesiWedge + DesiSgw are the galaxy catalogs with
    * visible:false, so their enabled bits seed false and their point rows are
-   * NOT demanded at boot — symmetric with cf4-density among the volume fields.
+   * NOT demanded at boot — symmetric with polyphorm-2mrs among the volume fields.
    * Famous slot is modelled
    * as 'loading' (it was just triggered by its own demand row before
    * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
-   * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
-   * which the construction seed lands as true (registry visible:true). cf4Density
-   * is NOT (seeded enabled:false). pgcAlias: palette closed.
+   * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`,
+   * which the construction seed lands as true (registry visible:true).
+   * polyphorm-2mrs is NOT (seeded enabled:false). pgcAlias: palette closed.
    * `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */

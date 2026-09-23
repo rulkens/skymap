@@ -1,9 +1,9 @@
 /**
  * mcpmSlot — factory for the MCPM Cosmic Web volume's asset slot.
  *
- * Tier-aware (unlike cf4DensitySlot's void request). On commit, hands
- * the decoded ScalarCube to `uploadVolumeField` under the id 'mcpm' —
- * the shared ingest path every volume slot commits through.
+ * Tier-aware. On commit, hands the decoded ScalarCube to
+ * `uploadVolumeField` under the id 'mcpm' — the shared ingest path every
+ * volume slot commits through.
  *
  * Default-on cosmic-web baseline (registry visible:true). Its on/off
  * bit is seeded at engine construction, so the demand predicate

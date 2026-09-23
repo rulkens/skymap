@@ -4,11 +4,11 @@
  * field's toggle before its cube lazy-loads.
  */
 
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
 export type VolumeSettings = {
   /** False short-circuits both volume passes before any GPU cost. */
   enabled: boolean;
-  items: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
+  items: Partial<Record<CosmicWebDensityFieldId, VolumeFieldSettings>>;
 };

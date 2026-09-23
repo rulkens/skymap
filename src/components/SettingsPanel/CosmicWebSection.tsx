@@ -43,7 +43,7 @@
 
 import { memo } from 'react';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import CollapsibleSection from './CollapsibleSection';
@@ -80,13 +80,13 @@ export type CosmicWebSectionProps = {
    * list inside Advanced.
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
-  onVolumeFieldEnabledChange: (id: VolumeFieldId, enabled: boolean) => void;
-  onVolumeFieldIntensityChange: (id: VolumeFieldId, intensity: number) => void;
-  onVolumeFieldContrastChange: (id: VolumeFieldId, contrast: number) => void;
-  onVolumeFieldDensityScaleChange: (id: VolumeFieldId, value: number) => void;
-  onVolumeFieldTrimChange: (id: VolumeFieldId, trim: number) => void;
-  onVolumeFieldExposureChange: (id: VolumeFieldId, exposure: number) => void;
-  onVolumeFieldPaletteChange: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
+  onVolumeFieldEnabledChange: (id: CosmicWebDensityFieldId, enabled: boolean) => void;
+  onVolumeFieldIntensityChange: (id: CosmicWebDensityFieldId, intensity: number) => void;
+  onVolumeFieldContrastChange: (id: CosmicWebDensityFieldId, contrast: number) => void;
+  onVolumeFieldDensityScaleChange: (id: CosmicWebDensityFieldId, value: number) => void;
+  onVolumeFieldTrimChange: (id: CosmicWebDensityFieldId, trim: number) => void;
+  onVolumeFieldExposureChange: (id: CosmicWebDensityFieldId, exposure: number) => void;
+  onVolumeFieldPaletteChange: (id: CosmicWebDensityFieldId, paletteId: ScalarFieldPaletteId) => void;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

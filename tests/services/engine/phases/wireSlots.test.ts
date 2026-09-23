@@ -43,14 +43,14 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 //
 // Replace every fetcher with a no-op resolved Promise.  None of our
 // tests trigger an actual network request — the slots whose `.load()`
-// fires inside wireSlots (famousGalaxiesMeta, filaments, cf4Density) need a
+// fires inside wireSlots (famousGalaxiesMeta, filaments, polyphorm2Mrs) need a
 // fetcher that resolves quickly so the slot transitions to `ready`
 // without timing out the test.  We don't care about the value because
 // no commit step (here) reads it; the slots that have a commit are
 // the per-source point slots, which we inject as fakes (see below).
 
-vi.mock('../../../../src/services/loading/fetchers/cf4DensityFetcher', () => ({
-  cf4DensityFetcher: vi.fn(async () => ({
+vi.mock('../../../../src/services/loading/fetchers/polyphorm2MrsFetcher', () => ({
+  polyphorm2MrsFetcher: vi.fn(async () => ({
     dims: [4, 4, 4],
     voxels: new Float32Array(64),
     valueMin: 0,
@@ -60,7 +60,7 @@ vi.mock('../../../../src/services/loading/fetchers/cf4DensityFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/layers/filaments/load/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/cosmicWebFilaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
@@ -125,17 +125,6 @@ vi.mock('../../../../src/services/loading/dataManifest', () => ({
   loadDataManifest: vi.fn(async () => {}),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
-  syntheticVolumeFetcher: vi.fn(async () => ({
-    dims: [4, 4, 4],
-    voxels: new Float32Array(64),
-    valueMin: 0,
-    valueMax: 1,
-    frame: 'supergalactic',
-    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-  })),
-}));
-
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -161,8 +150,8 @@ import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
-import { filamentFetcher } from '../../../../src/layers/filaments/load/filamentFetcher';
-import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
+import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
+import { polyphorm2MrsFetcher } from '../../../../src/services/loading/fetchers/polyphorm2MrsFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -258,7 +247,7 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * keeps the demand loop — which reads
  * `settings.galaxyCatalogs.items[id].enabled` — demanding every catalog whose
  * slot a test provides. The volume fields are seeded via
- * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
+ * `settings.cosmicWebDensity.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
@@ -338,11 +327,11 @@ function makeState(
       // seedFades registers the zone-of-avoidance band handle too; pulled
       // from `INITIAL_SETTINGS` like flow/constellations below.
       zoneOfAvoidance: INITIAL_SETTINGS.zoneOfAvoidance,
-      filaments: { enabled: false, intensity: 1.0 },
+      cosmicWebFilaments: { enabled: false, intensity: 1.0 },
       // seedFades reads orbitTrails.enabled for the settings-derived orbit-trails
       // seed (always present, unlike the demand-loaded flow/filament rows).
       orbitTrails: { enabled: true },
-      volumes: { enabled: true, items: seedVolumeFields() },
+      cosmicWebDensity: { enabled: true, items: seedVolumeFields() },
       // seedFades registers a caption handle per body row, so these must exist.
       bodies: {
         items: Object.fromEntries(
@@ -366,7 +355,7 @@ function makeState(
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
       // optional-chain through them.  The scalar volume renderer is stubbed so
-      // CF-4 and synthetic commits can land.
+      // volume commits can land.
       renderTargets: null,
       labelRenderer: null,
       markerLineRenderer: null,
@@ -423,7 +412,6 @@ function makeState(
       starCatalogs: new Map(),
       filaments: null,
       structureCatalog: null,
-      cf4Density: null,
       mcpm: null,
       // Real (empty) map: installLoadProgress walks it, and the body-texture
       // rows are `built: 'external'` so the construction pass skips them.
@@ -600,7 +588,7 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'milkyWay' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
-    expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
+    expect(hasHandle({ kind: 'cosmicWebDensity' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
     // No item-less structure handle: structure labels use per-item handles,
     // and produceStructureLabels fires each category's load-in.
@@ -614,7 +602,7 @@ describe('wireSlots', () => {
       return call?.[1] as number | undefined;
     };
     expect(opacityFor({ kind: 'milkyWay' })).toBe(1);
-    expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
+    expect(opacityFor({ kind: 'cosmicWebDensity' })).toBe(1);
     // The milkyWay label layer is seeded from settings.milkyWay.labelEnabled
     // (default true), rather than registered at 0 for a producer to ramp.
     expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);
@@ -623,15 +611,15 @@ describe('wireSlots', () => {
 
   it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousGalaxiesMeta) and not the off-by-default ones', async () => {
     // Boot parity: MCPM (default-on volume), the cluster catalog (structures
-    // visible), and famous-galaxies-meta load at boot; filaments (off), CF-4
-    // density (off), and the lazy PGC alias stay idle. These loads come from
-    // reevaluateDemand reading the construction-seeded state. Each sidecar's
-    // load is observable through its (mocked) fetcher; clear them first
-    // since the module-scoped mocks persist across tests.
+    // visible), and famous-galaxies-meta load at boot; filaments (off),
+    // Polyphorm 2MRS (off), and the lazy PGC alias stay idle. These loads
+    // come from reevaluateDemand reading the construction-seeded state. Each
+    // sidecar's load is observable through its (mocked) fetcher; clear them
+    // first since the module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
-    vi.mocked(cf4DensityFetcher).mockClear();
+    vi.mocked(polyphorm2MrsFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
@@ -647,7 +635,7 @@ describe('wireSlots', () => {
     expect(state.layerSlots.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
-    expect(cf4DensityFetcher).not.toHaveBeenCalled();
+    expect(polyphorm2MrsFetcher).not.toHaveBeenCalled();
     expect(state.layerSlots.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 
@@ -704,9 +692,8 @@ describe('wireSlots', () => {
 
     // Registry includes the Layer's slots (the per-source point slots and its
     // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
-    // (structure catalog, CF-4, MCPM) plus synthetic fixtures (DEV-only —
-    // vitest runs as DEV). Asserted as a superset so additive changes don't
-    // break the test for the wrong reason.
+    // (structure catalog, MCPM). Asserted as a superset so additive
+    // changes don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);

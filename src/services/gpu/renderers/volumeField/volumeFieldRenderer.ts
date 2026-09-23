@@ -31,7 +31,7 @@
  * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
  * The user-tunable knobs (enabled, intensity, contrast, densityScale,
  * palette, trim, exposure) are NOT mirrored on the entry — they live in
- * 'state.settings.volumes.items' and are read per frame in 'draw' via
+ * 'state.settings.cosmicWebDensity.items' and are read per frame in 'draw' via
  * the 'settingsOf' projection, so there is exactly one source of truth.
  * Sharing the pipeline across all fields keeps the layout-'auto' trap
  * from biting: one pipeline → one auto-derived bind-group layout → all
@@ -52,7 +52,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
 import { getVolumeFieldDefaults } from '../../../../data/volume/volumeFieldDefaults';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
@@ -206,7 +206,7 @@ export function createVolumeFieldRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  const fields = new Map<VolumeFieldId, FieldEntry>();
+  const fields = new Map<CosmicWebDensityFieldId, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
   // the fragment shader as a temporal seed for the ray-march jitter
   // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
@@ -272,7 +272,7 @@ export function createVolumeFieldRenderer(
         fields.delete(id);
       }
       // Per-cube STATIC presentation config read once from the registry.
-      // The id is a `VolumeFieldId` (the registry-derived field union),
+      // The id is a `CosmicWebDensityFieldId` (the registry-derived field union),
       // so the lookup needs no cast.  The user-tunable knobs (enabled,
       // intensity, contrast, densityScale, palette, trim, exposure) are NOT
       // seeded here — they live in settings and are read per frame in `draw`.

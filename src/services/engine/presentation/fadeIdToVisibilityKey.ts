@@ -5,7 +5,7 @@
  * ### Two vocabularies, one bridge
  *
  * `FadeId` is the registry vocabulary — shaped for the renderer, with
- * discriminators (`GalaxyCatalogId`, `StructureId`, `VolumeFieldId`) where
+ * discriminators (`GalaxyCatalogId`, `StructureId`, `CosmicWebDensityFieldId`) where
  * a subsystem owns many controllers. `VisibilityLayerKey` is the
  * intent-addressing vocabulary — the friendly names a cinematic-tour cue
  * thinks in, intentionally finer-grained (e.g. `milkyWayDisk` vs
@@ -75,11 +75,11 @@ const VISIBILITY_KEY_BY_KIND = {
   // All structure sources (cluster, supercluster, void, group) collapse to
   // `structureRing`; per-source clip targeting is deferred.
   structure: 'structureRing',
-  // Each volume field maps to `volumeField`; the clip factor applies uniformly
-  // across all active volume fields.
-  volumeField: 'volumeField',
+  // Each volume field maps to `cosmicWebDensityField`; the clip factor applies
+  // uniformly across all active volume fields.
+  cosmicWebDensityField: 'cosmicWebDensityField',
   milkyWay: 'milkyWayDisk',
-  filament: 'filaments',
+  cosmicWebFilaments: 'cosmicWebFilaments',
   localBubble: 'localBubble',
   flow: 'flow',
   constellations: 'constellations',
@@ -91,7 +91,7 @@ const VISIBILITY_KEY_BY_KIND = {
   // rendered `FadeId`. Conservative until a clip actually needs per-frame
   // overlay dimming; routing by `id` is then a one-row change.
   overlay: undefined,
-  volumesMaster: 'volumesMaster',
+  cosmicWebDensity: 'cosmicWebDensity',
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, VisibilityLayerKey | undefined>;
 
 /**
