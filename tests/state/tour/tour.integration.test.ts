@@ -18,7 +18,7 @@ import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpoc
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
-import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
@@ -170,15 +170,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const surveyClipFactor = clipPlayer.clipOpacityOf('survey', 7_000);
     expect(surveyClipFactor).toBe(0);
 
-    // "Untouched" is the registry entry per id, NOT a blanket `true`:
-    // INITIAL_SETTINGS takes each catalog's gate from SOURCE_REGISTRY's `visible`,
+    // "Untouched" is the boot value per id, NOT a blanket `true`: the
+    // galaxy catalog cluster boots each catalog from its own Layer literal,
     // and DesiDeep boots false.
     const settings = store.getState().settings;
     const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
+    const bootItems = INITIAL_SETTINGS.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
     for (const [id, item] of Object.entries(catalogItems)) {
-      const entry = SOURCE_ENTRIES.find((e) => e.id === id);
-      expect(entry).toBeDefined();
-      expect(item.enabled).toBe(entry!.visible);
+      expect(item.enabled).toBe(bootItems[id]?.enabled);
     }
 
     clipPlayer.destroy();

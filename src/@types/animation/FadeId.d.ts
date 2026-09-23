@@ -58,7 +58,7 @@
  *                    Discriminator: `id: OverlayId`.
  *   - cosmicWebDensity — the master enable gate for the whole scalar-
  *                    volume subsystem. Used by setCosmicWebDensityEnabled
- *                    and the scalarVolumePass / volumeUpsamplePass gates to
+ *                    and the cosmic-web-density raymarch / upsample gates to
  *                    smooth the master toggle. Multiplied into each
  *                    cosmicWebDensityField's per-frame opacity at the call
  *                    site, so a master fade-out drags every field down with

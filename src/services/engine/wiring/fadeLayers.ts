@@ -10,24 +10,13 @@
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
-import { SOURCE_REGISTRY } from '../../../data/sources';
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
-function volumeFieldIds(): readonly CosmicWebDensityFieldId[] {
-  const ids: CosmicWebDensityFieldId[] = [];
-  for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'cosmicWebDensity') continue;
-    ids.push(entry.id);
-  }
-  return ids;
-}
-
-// The same narrowing for bodies, and here the COMPILER insists: `item` must be a
+// Narrowed to label-bearing bodies because the COMPILER insists: `item` must be a
 // `LabelCategory`, so `BODY_IDS` (the settings key domain) is the wider set.
 const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' && e.bearsLabel).map(
   (e) => e.id,
@@ -52,13 +41,6 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'texturedDisks' }),
     seed: () => 1,
-  }),
-  fadeLayerRow({
-    key: 'cosmicWebDensity',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'cosmicWebDensity' }),
-    seed: (s) => (s.cosmicWebDensity.enabled ? 1 : 0),
-    intent: (s) => s.cosmicWebDensity.enabled,
   }),
   fadeLayerRow({
     key: 'milkyWayLabel',
@@ -107,14 +89,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'orbitTrails' }),
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
-  }),
-  fadeLayerRow<CosmicWebDensityFieldId, 'cosmicWebDensityField'>({
-    key: 'cosmicWebDensityField',
-    expand: () => volumeFieldIds(),
-    handle: (id) => ({ kind: 'cosmicWebDensityField', id }),
-    seed: () => 0,
-    intent: (s, id) => s.cosmicWebDensity.items[id]?.enabled ?? false,
-    guard: (state, id) => state.gpu.volumeFieldRenderer?.listIds().includes(id) ?? false,
   }),
 ] satisfies readonly FadeLayer<unknown>[];
 

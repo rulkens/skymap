@@ -58,7 +58,7 @@ Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([
 
 Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in [`src/data/sources.ts`](../src/data/sources.ts) / `src/data/sources/*.ts` (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
 
-For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (by default skipping hidden/unwired scalar-field volumes; `--volumes all` includes them, `--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
+For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (`--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
 
 ## Galaxy catalogs
 

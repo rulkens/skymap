@@ -135,7 +135,7 @@ function makeContentPass(init: {
 // ── Fake ctx / state ─────────────────────────────────────────────────────────
 
 const HDR_VIEW = { __id: 'hdr-view' } as unknown as GPUTextureView;
-const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
+const DENSITY_VIEW = { __id: 'density-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const FAR_VIEW = { __id: 'far-depth-placeholder-view' } as unknown as GPUTextureView;
@@ -157,7 +157,7 @@ const EXEC_SPECS = [
     clearValue: { r: 0, g: 0, b: 0, a: 1 },
   },
   {
-    id: 'volume',
+    id: 'cosmic-web-density',
     format: 'rgba16float' as const,
     depth: null,
     scale: 3,
@@ -207,7 +207,7 @@ function makeCtx(): FrameView {
     },
     viewOf: (id: string) => {
       if (id === 'hdr') return HDR_VIEW;
-      if (id === 'volume') return VOLUME_VIEW;
+      if (id === 'cosmic-web-density') return DENSITY_VIEW;
       if (id === 'foreground:0') return FG_VIEW;
       if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
       throw new Error(`mock renderTargets: no view for '${id}'`);
@@ -370,14 +370,14 @@ describe('executeFrame', () => {
 
   it('clears a target on its first pass of the frame and loads on later passes', () => {
     // Two hdr render steps against the same target: first clears (a=1), the
-    // second — target already touched — loads. A volume layer proves the
+    // second — target already touched — loads. A density layer proves the
     // per-target clear value (a=0).
     const env = makeEncoderEnv();
     const first = makeContentPass({ name: 'first' });
     const second = makeContentPass({ name: 'second' });
     const vol = makeContentPass({ name: 'vol' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'volume', slab: COSMO, passes: [vol] },
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: [vol] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
     ];
@@ -386,11 +386,11 @@ describe('executeFrame', () => {
     // already touched) loads.
     const { args } = makeArgs({ program, env });
     executeFrame(args);
-    // volume first pass → clear, a=0
+    // density first pass → clear, a=0
     const volAtt = attachmentOfDraw(env, vol);
     expect(volAtt.loadOp).toBe('clear');
     expect(volAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-    expect(volAtt.view).toBe(VOLUME_VIEW);
+    expect(volAtt.view).toBe(DENSITY_VIEW);
     // hdr first step (merged group of first+second) → clear, a=1
     const firstAtt = attachmentOfDraw(env, first);
     expect(firstAtt.loadOp).toBe('clear');

@@ -7,7 +7,6 @@ export const CLUSTER_ENTRY = {
   id: 'cluster',
   label: 'Cluster',
   allSky: true,
-  visible: true,
   bearsLabel: true,
   bearsMarker: true,
   labelLayer: 'structure',

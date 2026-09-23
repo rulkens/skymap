@@ -17,7 +17,6 @@ export const S_STAR_ENTRY = {
   // A tight cluster at one point on the sky, not a survey footprint —
   // allSky:true matches the other non-catalog rows.
   allSky: true,
-  visible: true,
   // No captions: 39 names inside a few arcseconds would pile into an unreadable
   // smear, and Sgr A* already names the place. So no `labelLayer`/`detailLabel`/
   // `shortLabel`/`plural` either — those are present iff `bearsLabel`.

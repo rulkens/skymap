@@ -7,10 +7,6 @@ export const FLOW_ENTRY = {
   id: 'flow',
   label: 'Flow',
   allSky: true,
-  // `SourceEntryBase` conformance, not the overlay's default gate — nothing
-  // reads it (`ALL_VISIBLE_MASK` folds galaxy catalogs only). `DEFAULT_FLOW`
-  // owns the default-off decision and the reason for it.
-  visible: false,
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'flowfield',

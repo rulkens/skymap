@@ -14,8 +14,8 @@
  * **Breaking change vs v1 (still in force):** the binary no longer carries
  * `palette_id` (formerly at offset 22) or `density_scale` (formerly at
  * offsets 64..67).  The density-scale slot stays `reserved` and zero-filled.
- * Palette and density-scale are presentation, not data, and live in
- * `src/data/volumeFieldDefaults.ts` keyed by the renderer's field handle.
+ * Palette and density-scale are presentation, not data, and live on each
+ * field's source row, keyed by the renderer's field handle.
  *
  * v1 and v2 files are rejected outright with a "regenerate" hint — same
  * precedent as the GalaxyCatalog and Filament decoders.  Operators run the
@@ -63,7 +63,8 @@
  *   voxels[i] : f16 (stored as Uint16 raw bits), channels interleaved per cell
  *
  * v3 keeps palette and densityScale out of the binary — those are
- * presentation concerns and live in `src/data/volumeFieldDefaults.ts`.
+ * presentation concerns and live on each field's source row
+ * (`src/layers/cosmicWebDensity/sources/`).
  * The format remains self-describing for everything that IS data: dims,
  * channels, dtype, frame, origin, voxelSize, rotation, valueMin/valueMax,
  * voxels.
@@ -281,8 +282,8 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   const voxels = new Uint16Array(expectedVoxels);
   voxels.set(new Uint16Array(buf, SCFD_HEADER_BYTES, expectedVoxels));
 
-  // Decoded cube is data-only; presentation defaults flow through
-  // `volumeFieldDefaults.ts` at registration time.
+  // Decoded cube is data-only; presentation defaults flow through the
+  // field's source row at registration time.
   return {
     dims,
     channels,

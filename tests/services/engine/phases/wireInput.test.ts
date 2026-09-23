@@ -158,8 +158,6 @@ function makeState(): EngineState {
       texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      volumeFieldRenderer: null,
-      volumeUpsample: null,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },

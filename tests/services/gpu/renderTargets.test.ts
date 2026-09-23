@@ -1,7 +1,7 @@
 /**
  * Tests for `createRenderTargets` — the single owner of every offscreen
- * `RenderTargetSpec` row's texture lifecycle (the HDR + half-res volume
- * targets that used to live in `postProcess.ts` / `volumeOffscreen.ts`).
+ * `RenderTargetSpec` row's texture lifecycle, core's rows and the Layers'
+ * composed in beside them.
  *
  * Vitest runs in Node without a real GPU, so `device.createTexture` is
  * mocked; each mock returns a fresh `{ createView, destroy }` pair so the
@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
+import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
@@ -83,17 +84,22 @@ describe('renderTargetRows', () => {
   });
 });
 
+// The density Layer's reduced-res target: the tests below use it as the
+// scale-3 offscreen row, composed in as `composeRenderTargetRows` does at boot.
+const DENSITY_TARGETS = cosmicWebDensityLayer.targets!;
+const DENSITY_ROWS = composeRenderTargetRows(SWAP_FORMAT, [DENSITY_TARGETS]);
+
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      renderTargetRows(SWAP_FORMAT),
+      DENSITY_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
-    expect(targets.viewOf('volume')).toBeDefined();
+    expect(targets.viewOf('cosmic-web-density')).toBeDefined();
     // The swap chain is executor-resolved from the acquired frame view, not
     // allocated here — so it (and any unknown id) throws.
     expect(() => targets.viewOf('swap')).toThrow();
@@ -103,27 +109,29 @@ describe('createRenderTargets', () => {
   it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    // `star-aggregates` is the starCatalog Layer's own target now — composed
-    // in exactly as `composeRenderTargetRows` does at boot, so this test
-    // still exercises its scale/divisor math against the real row.
+    // `star-aggregates` and `cosmic-web-density` are Layer-owned targets —
+    // composed in exactly as `composeRenderTargetRows` does at boot, so this
+    // test still exercises their scale/divisor math against the real rows.
     const targets = createRenderTargets(
       device,
-      composeRenderTargetRows(SWAP_FORMAT, [[STAR_AGGREGATES_TARGET]]),
+      composeRenderTargetRows(SWAP_FORMAT, [[STAR_AGGREGATES_TARGET], DENSITY_TARGETS]),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // cosmic-web-density @ scale 3 (colour), star-aggregates @ scale 2 (colour),
     // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
     // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
     // (colour only), and sky-cubemap @ fixedSizePx (colour) → 12 textures,
     // plus the far-depth placeholder (outside the spec table, never resized)
-    // → 13. hdr at full size, volume at floor(size/3), star-aggregates and
+    // → 13. hdr at full size, cosmic-web-density at floor(size/3), star-aggregates and
     // mw-aggregate at floor(size/2).
     expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
-    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
+    const volDesc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-cosmic-web-density',
+    )![0];
     const aggDesc = create.mock.calls.find(
       (c) => c[0].label === 'render-target-star-aggregates',
     )![0];
@@ -135,7 +143,7 @@ describe('createRenderTargets', () => {
     expect(aggDesc.format).toBe('rgba16float');
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
@@ -147,7 +155,7 @@ describe('createRenderTargets', () => {
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
     const volResized = create.mock.calls
-      .filter((c) => c[0].label === 'render-target-volume')
+      .filter((c) => c[0].label === 'render-target-cosmic-web-density')
       .at(-1)![0];
     const aggResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-star-aggregates')
@@ -157,7 +165,7 @@ describe('createRenderTargets', () => {
     expect(aggResized.size).toEqual({ width: 600, height: 450, depthOrArrayLayers: 1 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).not.toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).not.toBe(volViewBefore);
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
@@ -328,13 +336,13 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      DENSITY_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(2),
     );
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const callsBefore = create.mock.calls.length;
 
     // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
@@ -351,7 +359,7 @@ describe('createRenderTargets', () => {
     // still the object its consumers resolved before the call.
     expect(create.mock.calls.length).toBe(callsBefore + 1);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
   });
 
   it('reconcile allocates nothing when neither the canvas size nor a resolved scale moved', () => {
@@ -373,16 +381,18 @@ describe('createRenderTargets', () => {
     expect(create.mock.calls.length).toBe(callsBefore);
   });
 
-  it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
+  it('clamps cosmic-web-density to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      DENSITY_ROWS,
       { width: 2, height: 2 },
       stateWithDivisor(MW_DIVISOR),
     );
-    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
+    const volDesc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-cosmic-web-density',
+    )![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1, depthOrArrayLayers: 1 });
   });
@@ -452,17 +462,17 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      DENSITY_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     const specsBefore = targets.specs;
     const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
-    const volSpecBefore = specsBefore.find((s) => s.id === 'volume')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'cosmic-web-density')!;
     const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const fgViewBefore = targets.viewOf('foreground:0');
     const callsBefore = create.mock.calls.length;
 
@@ -477,11 +487,11 @@ describe('createRenderTargets', () => {
     // rebuilt — and has no new texture allocated (the swap row carries no
     // texture, so this is allocation-free).
     expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
-    expect(targets.specs.find((s) => s.id === 'volume')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'cosmic-web-density')).toBe(volSpecBefore);
     expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
     expect(create.mock.calls.length).toBe(callsBefore);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
@@ -515,12 +525,12 @@ describe('createRenderTargets', () => {
   it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      renderTargetRows(SWAP_FORMAT),
+      DENSITY_ROWS,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
-    // volume @ scale 3 -> floor(900/3), floor(600/3).
-    expect(targets.sizeOf('volume')).toEqual({ width: 300, height: 200 });
+    // cosmic-web-density @ scale 3 -> floor(900/3), floor(600/3).
+    expect(targets.sizeOf('cosmic-web-density')).toEqual({ width: 300, height: 200 });
     expect(() => targets.sizeOf('swap')).toThrow();
     expect(() => targets.sizeOf('nope')).toThrow();
   });

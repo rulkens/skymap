@@ -4,16 +4,12 @@
  *
  * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
  * field should LOOK on first registration — its palette and
- * `densityScale` — is presentation, not data, and lives in
- * `src/data/volumeFieldDefaults.ts` rather than in the binary header.
- *
- * See that file's module header for the alternatives considered and
- * the rationale behind keeping a TS registry of compile-time
- * vocabulary.
+ * `densityScale` — is presentation, not data, and lives on each field's
+ * source row (`src/layers/cosmicWebDensity/sources/`), built into
+ * `VolumeFieldSettings` by `layers/cosmicWebDensity/state/defaults.ts`.
  */
 
 import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
-import type { FadeBand } from '../../math/FadeBand';
 
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;
@@ -108,24 +104,4 @@ export type VolumeFieldDefaults = {
    *     breakdown that motivates this value.
    */
   trim: number;
-  /**
-   * Optional per-cube starting Intensity (overall opacity multiplier in
-   * [0, 1]).  When omitted, the slot seeds with the global
-   * `DEFAULT_VOLUME_FIELD_INTENSITY`.  Per-cube override exists because
-   * a heavy-tailed log-normalised cube (MCPM) wants intensity=1.0 by
-   * default to read at full saturation, while a cube already
-   * calibrated against its cosmic mean can sit comfortably at the
-   * global default.
-   */
-  intensity?: number;
-  /** Optional human-readable label override (renderer falls back to id). */
-  label?: string;
-  /**
-   * Optional per-field scale-fade bands, seeded into `VolumeFieldSettings.bands`
-   * (`buildVolumeFieldSettings`). Omitted → `[SCALE_FADE_BANDS.surveyDeepZoom]`,
-   * today's one-size-fits-all deep-zoom fade. A field wanting a different
-   * choreography (e.g. full close-in, gone far out) declares its own bands here
-   * instead of hand-editing `deriveVolumeLiveness`.
-   */
-  fadeBands?: readonly FadeBand[];
 };

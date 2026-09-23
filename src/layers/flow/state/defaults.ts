@@ -14,8 +14,8 @@ import type { FlowSettings } from '../../../@types/settings/FlowSettings';
  *
  * `enabled` is off because the velocity cube is tens of MB and demand-loads on
  * the first enable, so a fresh session pays nothing until the user asks for it.
- * A plain literal, not registry-derived: `FLOW_ENTRY.visible` exists for
- * registry consistency but is not itself this default's source.
+ * A plain literal, not registry-derived — the registry row carries the asset,
+ * not the boot-visibility decision.
  *
  * The eight look/motion knobs are the spike's hand-dialled advect look. Do not
  * "tidy" them; they ARE the look. `count` starts at the buffer ceiling so the

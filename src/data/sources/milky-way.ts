@@ -10,8 +10,6 @@ export const MILKY_WAY_ENTRY = {
   // other non-catalog overlays (the coverage-mask logic only consults this
   // for galaxy-catalog patches).
   allSky: true,
-  // On by default — the galactic disk is part of the baseline scene.
-  visible: true,
   bearsLabel: true,
   // The "You are here" label has a stem line but no ring/halo marker —
   // markers are the structure-ring concept, which the disk overlay doesn't share.

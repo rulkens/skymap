@@ -20,9 +20,7 @@ import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
-import { MCPM_ENTRY } from './sources/mcpm';
-import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
-import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { PLANET_ENTRY } from './sources/planet';
@@ -71,13 +69,10 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.Mcpm]: MCPM_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
-  [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
-  [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
 } as const;
 
@@ -89,6 +84,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(FLOW_SOURCE_ROWS),
   ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),
   ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
+  ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every
