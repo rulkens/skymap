@@ -11,15 +11,10 @@
  */
 
 import type { Clip } from '../../../@types/animation/Clip';
-import type { BodyId } from '../../../@types/data/body/BodyId';
-import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { aimAlong, all, dollyTo, hold, seq, wait } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { hostOf } from '../../../services/engine/camera/rungs/hostOf';
-import { toWorldArm } from '../../../services/engine/camera/poseFrameConversion';
-import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
-import { decodeFramedPose } from '../../../utils/url/decodeFramedPose';
+import { linkedPoseToWorld } from '../../../utils/camera/linkedPoseToWorld';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
@@ -41,28 +36,8 @@ export const SONDERMARKEN_POSE =
  * is body-fixed, so the world pose and the nadir both turn with Earth.
  */
 export function sondermarkenFlyout(simDays: number): Clip {
-  const framed = decodeFramedPose(SONDERMARKEN_POSE);
-  if (framed === null || framed.frame === 'absolute' || !('basisLocal' in framed.pose)) {
-    throw new Error('sondermarkenFlyout: SONDERMARKEN_POSE is not a body-fixed pose');
-  }
-  const basis = ORIENTATION_FRAMES.ecliptic;
-  const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
-  const host = hostOf(framed.frame, {
-    bodies,
-    poseBasis: basis,
-    upBasis: basis,
-    terrainHeightAt: datumOnlyTerrainHeight,
-  })!;
-  const start = toWorldArm(
-    framed.pose,
-    host.state,
-    basis,
-    basis,
-    host.radiusM,
-    host.standoffRadii,
-    host.groundRadiusAtM,
-  );
-  const earth = bodies.get(SCENE_EARTH.id as BodyId)!.positionMpc;
+  const start = linkedPoseToWorld(SONDERMARKEN_POSE, simDays, ORIENTATION_FRAMES.ecliptic);
+  const earth = deriveBodyStates(simDays).get(SCENE_EARTH.id)!.positionMpc;
   const up = normalize3([
     start.target[0] - earth[0],
     start.target[1] - earth[1],
