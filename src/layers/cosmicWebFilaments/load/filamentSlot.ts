@@ -12,6 +12,9 @@ import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
 
+const EMPTY_VERTICES = new Float32Array(0);
+const EMPTY_STRIP_OFFSETS = new Uint32Array(0);
+
 export function createFilamentSlot(
   renderer: FilamentRenderer,
 ): AssetSlot<FilamentCloud, FilamentReq> {
@@ -23,6 +26,12 @@ export function createFilamentSlot(
       // inside the async commit body for symmetry with the galaxy-catalog point
       // slot, whose upload is async.
       renderer.upload(cloud);
+      // `upload` copies the vertices into a segment-instance GPU buffer and
+      // never retains `cloud`; nothing reads the decoded arrays back
+      // (filaments have no pick/selection path), so drop them rather than
+      // let `AssetSlot.lastReady` hold the whole polyline set for the session.
+      cloud.vertices = EMPTY_VERTICES;
+      cloud.stripOffsets = EMPTY_STRIP_OFFSETS;
     },
   });
 }

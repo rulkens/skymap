@@ -16,6 +16,8 @@ import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/Cosmic
 import type { VolumeFieldRenderer } from '../../../@types/rendering/VolumeFieldRenderer';
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 
+const EMPTY_VOXELS = new Uint16Array(0);
+
 export function createCosmicWebDensitySlot(
   entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number][1],
   renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>,
@@ -26,6 +28,12 @@ export function createCosmicWebDensitySlot(
     fetch: cosmicWebDensityFetcher,
     commit: async (cube) => {
       renderer.upload(id, cube, entry);
+      // `upload` copies `voxels` into a GPU 3D texture and never retains the
+      // cube; nothing else reads it back (`AssetSlot.lastReady` would
+      // otherwise hold this tens-of-MB f16 buffer for the rest of the
+      // session). `readonly` is a compile-time-only guard here — this is the
+      // one deliberate post-upload drop, not a general mutation site.
+      (cube as { voxels: Uint16Array }).voxels = EMPTY_VOXELS;
     },
   });
 }
