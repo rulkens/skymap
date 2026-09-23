@@ -47,7 +47,7 @@ function makeGpu(): Gpu {
 
 describe('wireBodyTextureSlots', () => {
   let originalCreateImageBitmap: typeof globalThis.createImageBitmap | undefined;
-  const bitmap = { __bitmap: true } as unknown as ImageBitmap;
+  const bitmap = { __bitmap: true, close: vi.fn() } as unknown as ImageBitmap;
 
   beforeEach(() => {
     originalCreateImageBitmap = globalThis.createImageBitmap;
@@ -78,6 +78,8 @@ describe('wireBodyTextureSlots', () => {
     expect(gpu.earthRenderer.setMap).toHaveBeenCalledWith('clouds', bitmap);
     expect(gpu.cloudShellRenderer.setTexture).toHaveBeenCalledTimes(1);
     expect(gpu.cloudShellRenderer.setTexture).toHaveBeenCalledWith(bitmap);
+    // Closed only once both consumers uploaded from it — not before.
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
   });
 
   it("the 'moon:normal' slot's commit routes to texturedBodyRenderer.setMap('moon','normal', …)", async () => {

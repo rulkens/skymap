@@ -7,6 +7,7 @@
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { meshFetcher } from '../../loading/fetchers/meshFetcher';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
@@ -20,7 +21,15 @@ export function wireMeshBodySlots(state: EngineState): void {
     const slot = createAssetSlot<MeshAsset, MeshReq>({
       name: `${body.id}-mesh`,
       fetch: meshFetcher,
-      commit: async (asset) => state.gpu.meshBodyRenderer?.setMesh(body.id, asset),
+      // `setMesh` uploads every bitmap synchronously (copyExternalImageToTexture
+      // + mip chain) and never retains one, so closing right after frees the
+      // decoded pixels — nothing downstream reads a mesh slot's `.current()`
+      // for its textures, only `meshBodyRenderer`'s own `hasMesh`/`meshes` map.
+      commit: async (asset) => {
+        state.gpu.meshBodyRenderer?.setMesh(body.id, asset);
+        for (const textureSlot of MESH_TEXTURE_SLOTS) asset[textureSlot.field].close();
+        asset.contactShadow?.close();
+      },
       onRelease: () => state.gpu.meshBodyRenderer?.clearMesh(body.id),
     });
     state.assetSlots.meshBodies.set(body.id, slot);

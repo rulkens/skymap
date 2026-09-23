@@ -67,7 +67,16 @@ export function wireBodyTextureSlots(state: EngineState): void {
     const slot = createAssetSlot<ImageBitmap, BodyTextureReq>({
       name: `${key}-texture`,
       fetch: bodyTextureFetcher,
-      commit: async (bitmap) => commitBodyTexture(state, entry, bitmap),
+      // `commitBodyTexture` fans the SAME bitmap out to every resident consumer
+      // (cloud: earth + shell; ring: three renderers) synchronously before
+      // returning, so closing right after is safe for all of them — none
+      // retains the bitmap past its own `copyExternalImageToTexture` call, and
+      // the slot's own `lastReady.value` (what `.current()` reads) is only ever
+      // null-checked downstream, never read for pixels.
+      commit: async (bitmap) => {
+        commitBodyTexture(state, entry, bitmap);
+        bitmap.close();
+      },
       onRelease: () => releaseBodyTexture(state, entry),
     });
     state.assetSlots.bodyTextures.set(key, slot);
