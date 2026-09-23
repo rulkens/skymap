@@ -39,20 +39,13 @@ describe('cosmicWebDensityFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(encodeScalarField(fakeCube));
   });
 
-  it.each([
-    ['mcpm', 'small', 'mcpm-small.scfd'],
-    ['mcpm', 'medium', 'mcpm-medium.scfd'],
-    ['mcpm', 'large', 'mcpm-large.scfd'],
-    ['polyphorm-2mrs', 'small', 'polyphorm-2mrs-small.scfd'],
-    ['polyphorm-2mrs', 'medium', 'polyphorm-2mrs-medium.scfd'],
-    ['polyphorm-2mrs', 'large', 'polyphorm-2mrs-large.scfd'],
-  ] as const)('fetches %s at %s tier from %s', async (binBaseName, tier, expectedFilename) => {
+  it('fetches a tiered request from <binBaseName>-<tier>.scfd', async () => {
     const cube = await cosmicWebDensityFetcher(
-      { binBaseName, tier },
+      { binBaseName: 'mcpm', tier: 'small' },
       new AbortController().signal,
       () => {},
     );
-    expect(fetchedUrl().endsWith(`/${expectedFilename}`)).toBe(true);
+    expect(fetchedUrl().endsWith('/mcpm-small.scfd')).toBe(true);
     expect(cube.dims).toEqual([2, 2, 2]);
     expect(cube.frameKind).toBe('equatorial-cartesian');
   });

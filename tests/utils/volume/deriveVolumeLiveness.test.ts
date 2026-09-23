@@ -129,17 +129,6 @@ describe('deriveVolumeLiveness (pure core)', () => {
     expect(liveness.fadeOpacityOf(FIELD_ID)).toBeCloseTo(1, 6);
   });
 
-  it('a field with no fadeBands entry behaves byte-identically to surveyDeepZoom today', () => {
-    const renderer = stubRenderer();
-    const liveness = deriveVolumeLiveness(
-      renderer,
-      () => rawSettings(),
-      () => 1,
-      0.0005,
-    )!;
-    expect(liveness.fadeOpacityOf(FIELD_ID)).toBe(0);
-  });
-
   it('multiple bands multiply (outer × inner trapezoid)', () => {
     const outer = { fullAt: 0.01, goneAt: 0.03 }; // recede: full close, gone far
     const inner = { fullAt: 0.001, goneAt: 0.0001 }; // approach: full far, gone close

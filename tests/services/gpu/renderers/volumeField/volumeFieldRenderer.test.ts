@@ -140,26 +140,35 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(uniformScratch(device)).toBeUndefined();
   });
 
-  it('upload seeds contrastCenter / envelope from statics', () => {
+  it('upload seeds contrastCenter / envelope from statics, for an id no registry row names', () => {
     // Per-cube static config taken from `upload`'s `statics` argument;
     // user-tunable knobs are absent from it and arrive per draw via
-    // settingsOf.
+    // settingsOf. The renderer names no registry — any id is valid as long
+    // as the caller supplies statics, which is what makes a second caller
+    // (a future dust volume on its own ids) possible without widening this
+    // renderer's id union.
     const device = mockDevice();
     const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    const statics = {
+      paletteId: 'viridis' as const,
+      contrastCenter: 0.5,
+      envelope: { inner: 0.7, outer: 1.2 },
+    };
+    expect(() => r.upload('dust', fixture(), statics)).not.toThrow();
+    expect(r.listIds()).toContain('dust');
     r.draw(
       makeFakePass(),
       new Float32Array(16) as unknown as Mat4,
       [320, 180],
       1000,
       [0, 0, 5],
-      () => fullSettings(),
+      () => fullSettings({ paletteId: statics.paletteId }),
       () => 1,
     );
     const s = uniformScratch(device);
-    expect(s?.[58]).toBeCloseTo(MCPM_ENTRY.contrastCenter); // contrastCenter
-    expect(s?.[59]).toBeCloseTo(MCPM_ENTRY.envelope.inner); // envelopeInner
-    expect(s?.[60]).toBeCloseTo(MCPM_ENTRY.envelope.outer); // envelopeOuter
+    expect(s?.[58]).toBeCloseTo(statics.contrastCenter); // contrastCenter
+    expect(s?.[59]).toBeCloseTo(statics.envelope.inner); // envelopeInner
+    expect(s?.[60]).toBeCloseTo(statics.envelope.outer); // envelopeOuter
   });
 
   it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
@@ -233,23 +242,6 @@ describe('createVolumeFieldRenderer draw', () => {
     );
     expect(pass.drawIndexed).not.toHaveBeenCalled();
     expect(uniformScratch(device)).toBeUndefined();
-  });
-
-  it('uploads a field whose id no registry row names, palette seeded from statics', () => {
-    // The renderer names no registry — any id is valid as long as the
-    // caller supplies statics, which is what makes a second caller (a
-    // future dust volume on its own ids) possible without widening this
-    // renderer's id union.
-    const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    expect(() =>
-      r.upload('dust', fixture(), {
-        paletteId: 'viridis',
-        contrastCenter: 0.5,
-        envelope: { inner: 2.0, outer: 2.0 },
-      }),
-    ).not.toThrow();
-    expect(r.listIds()).toContain('dust');
   });
 });
 
