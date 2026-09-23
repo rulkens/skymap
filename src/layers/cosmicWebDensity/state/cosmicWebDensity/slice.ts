@@ -21,11 +21,8 @@ export const cosmicWebDensitySlice = createSlice({
       volumes,
       action: PayloadAction<{ id: CosmicWebDensityFieldId; patch: Partial<VolumeFieldSettings> }>,
     ) => {
-      // Shallow per-field merge via Immer's `Object.assign`. An unknown id
-      // is a silent no-op.
-      const row = volumes.items[action.payload.id];
-      if (!row) return;
-      Object.assign(row, action.payload.patch);
+      // Shallow per-field merge via Immer's `Object.assign`.
+      Object.assign(volumes.items[action.payload.id], action.payload.patch);
     },
   },
 });

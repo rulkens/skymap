@@ -35,7 +35,7 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads
- * `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`. The Layer's `initialState`
+ * `ctx.settings.cosmicWebDensity.items.mcpm.enabled`. The Layer's `initialState`
  * literal seeds that record from boot, so `mcpm`'s enabled bit is `true` at
  * boot — symmetric with the `galaxyCatalogs.items[id].enabled` seed that
  * galaxy catalog demand reads. MCPM therefore IS in the boot demand set —
@@ -124,10 +124,10 @@ type SettingsLeaves = {
 
 /**
  * Volume-field params keyed by id. Demand predicates read
- * `ctx.settings.cosmicWebDensity.items[id]?.enabled`, so `makeState` injects this
+ * `ctx.settings.cosmicWebDensity.items[id].enabled`, so `makeState` injects this
  * record directly into the settings bag.
  */
-type VolumeFieldLeaves = Partial<Record<CosmicWebDensityFieldId, { enabled: boolean }>>;
+type VolumeFieldLeaves = Record<CosmicWebDensityFieldId, { enabled: boolean }>;
 
 /**
  * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads
@@ -269,7 +269,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     tier: 'medium',
     // Inject galaxy catalog + volume items directly into the settings bag — demand
     // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
-    // `ctx.settings.cosmicWebDensity.items[id]?.enabled` from there.
+    // `ctx.settings.cosmicWebDensity.items[id].enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       galaxyCatalogs: { items: galaxyCatalogItems },
@@ -389,7 +389,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * as 'loading' (it was just triggered by its own demand row before
    * famousGalaxiesMeta's row evaluates), so famousGalaxiesMeta is also demanded. structureCatalog
    * loads because every structure category is visible by default. mcpm IS
-   * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm?.enabled`,
+   * demanded: the predicate checks `ctx.settings.cosmicWebDensity.items.mcpm.enabled`,
    * which boots true. polyphorm-2mrs is NOT (seeded enabled:false).
    * pgcAlias: palette closed. `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.

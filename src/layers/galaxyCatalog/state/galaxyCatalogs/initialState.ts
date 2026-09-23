@@ -1,11 +1,10 @@
 /**
- * Item rows are DERIVED from the galaxy-catalog registry entries so they
- * can't drift from the catalog set; each row's `enabled` comes from
- * `BOOT_ENABLED` below — a compiler-complete map over `GalaxyCatalogId`, so
- * a new catalog is a type error until its boot state is written here.
+ * Each row's `enabled` comes from `BOOT_ENABLED` below — a compiler-complete
+ * map over `GalaxyCatalogId`, so a new catalog is a type error until its
+ * boot state is written here.
  */
 
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
+import { GALAXY_CATALOG_IDS } from '../../../../data/galaxyCatalog/galaxyCatalogIds';
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
@@ -42,9 +41,6 @@ export const initialState: GalaxyCatalogSettings = {
   sbMax: 30.0,
   falloffStrength: 0.7,
   items: Object.fromEntries(
-    SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
-      e.id,
-      { enabled: BOOT_ENABLED[e.id as GalaxyCatalogId], labelEnabled: true },
-    ]),
+    GALAXY_CATALOG_IDS.map((id) => [id, { enabled: BOOT_ENABLED[id], labelEnabled: true }]),
   ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
 };

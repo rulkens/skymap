@@ -25,7 +25,7 @@ export function cosmicWebDensityAssetRows(
       key: code,
       factory: () => runtime.slots[entry.id],
       req: (tier) => cosmicWebDensityRequest(entry, tier),
-      demand: (ctx) => ctx.settings.cosmicWebDensity.items[entry.id]?.enabled === true,
+      demand: (ctx) => ctx.settings.cosmicWebDensity.items[entry.id].enabled,
       priority: PRIORITY[entry.id],
     }),
   );
