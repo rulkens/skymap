@@ -7,9 +7,9 @@
  */
 
 import type { ReactElement } from 'react';
-import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
 import DebugSlider from '../../../components/DebugPanel/DebugSlider';
 import { PaletteSelect } from '../../../components/common/PaletteSelect/PaletteSelect';
 import styles from './DensityFieldTuningRow.module.css';
@@ -31,8 +31,7 @@ const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type DensityFieldTuningRowProps = {
-  /** `id` narrowed past the base `string` — the field's writes are keyed on it. */
-  entry: CosmicWebDensitySourceEntry & { readonly id: CosmicWebDensityFieldId };
+  entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number][1];
   settings: VolumeFieldSettings;
   onChange: (id: CosmicWebDensityFieldId, patch: Partial<VolumeFieldSettings>) => void;
 };

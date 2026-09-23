@@ -1,28 +1,5 @@
-/**
- * Each row's `enabled` comes from `BOOT_ENABLED` below — a compiler-complete
- * map over `GalaxyCatalogId`, so a new catalog is a type error until its
- * boot state is written here.
- */
-
-import { GALAXY_CATALOG_IDS } from '../../../../data/galaxyCatalog/galaxyCatalogIds';
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
-import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
-
-// The DESI patches boot hidden: a pencil-beam cone, a dec-band fan and the
-// Sloan Great Wall are specialist drill-down overlays, not part of the
-// all-sky default scene the other bulk catalogs populate.
-const BOOT_ENABLED: Record<GalaxyCatalogId, boolean> = {
-  sdss: true,
-  '2mrs': true,
-  glade: true,
-  famousGalaxy: true,
-  milliquas: true,
-  desiDeep: false,
-  desiWedge: false,
-  desiSgw: false,
-};
 
 export const initialState: GalaxyCatalogSettings = {
   // 2.5 px: a visible Gaussian disc on mid-DPI displays without ~3 M overlapping
@@ -40,7 +17,17 @@ export const initialState: GalaxyCatalogSettings = {
   sbScale: 5.0,
   sbMax: 30.0,
   falloffStrength: 0.7,
-  items: Object.fromEntries(
-    GALAXY_CATALOG_IDS.map((id) => [id, { enabled: BOOT_ENABLED[id], labelEnabled: true }]),
-  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+  items: {
+    sdss: { enabled: true, labelEnabled: true },
+    '2mrs': { enabled: true, labelEnabled: true },
+    glade: { enabled: true, labelEnabled: true },
+    famousGalaxy: { enabled: true, labelEnabled: true },
+    milliquas: { enabled: true, labelEnabled: true },
+    // The DESI patches boot hidden: a pencil-beam cone, a dec-band fan and the
+    // Sloan Great Wall are specialist drill-down overlays, not part of the
+    // all-sky default scene the other bulk catalogs populate.
+    desiDeep: { enabled: false, labelEnabled: true },
+    desiWedge: { enabled: false, labelEnabled: true },
+    desiSgw: { enabled: false, labelEnabled: true },
+  },
 };
