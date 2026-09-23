@@ -1,6 +1,6 @@
 # Dome fisheye — implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use `- [ ]` checkboxes.
+> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use `- [x]` checkboxes.
 
 **Goal:** Render skymap as a 4096² equidistant 180° fulldome master for Wisdome Malmö (Friday 2026-09-25): a live `?dome` preview and a `record-clip --dome` film.
 
@@ -8,7 +8,7 @@
 
 **Tech stack:** TypeScript, WebGPU, WGSL/WESL, Vitest, Playwright + ffmpeg (recorder).
 
-**Spec:** `docs/superpowers/specs/2026-09-19-view-rigs-dome-fisheye-design.md`, sections "Dome rig (feature PR)", "Testing" (fisheye twin) and "Risks and eye-checks". **Builds on:** PR 1, `docs/superpowers/plans/2026-09-19-view-rigs-prep.md`. This plan assumes all of PR 1's contracts exist: `FrameSection`, `PRELUDE/SCENE/POST/OVERLAYS` (in `src/data/rendering/frameSections.ts`), `ViewRig`/`ViewRigKey`, `VIEW_RIGS.mono`, `state.viewRig`, `FrameContextInput`, `FrameView`, `deriveView`, `mainViewSpec`/`faceViewSpec`, `{ canvas, views }`, `ViewFrustum` + `symmetricFrustum`, `ViewSpec`, `ViewSpec.kind`, `cutSurfaceTiles` over `viewProjsLocal`, `PreparedStarCut.originMpc` and `toRefPx` by `pxPerRad`.
+**Spec:** `docs/superpowers/specs/completed/2026-09-19-view-rigs-dome-fisheye-design.md`, sections "Dome rig (feature PR)", "Testing" (fisheye twin) and "Risks and eye-checks". **Builds on:** PR 1, `docs/superpowers/plans/completed/2026-09-19-view-rigs-prep.md`. This plan assumes all of PR 1's contracts exist: `FrameSection`, `PRELUDE/SCENE/POST/OVERLAYS` (in `src/data/rendering/frameSections.ts`), `ViewRig`/`ViewRigKey`, `VIEW_RIGS.mono`, `state.viewRig`, `FrameContextInput`, `FrameView`, `deriveView`, `mainViewSpec`/`faceViewSpec`, `{ canvas, views }`, `ViewFrustum` + `symmetricFrustum`, `ViewSpec`, `ViewSpec.kind`, `cutSurfaceTiles` over `viewProjsLocal`, `PreparedStarCut.originMpc` and `toRefPx` by `pxPerRad`.
 
 ## Global constraints
 
@@ -80,14 +80,14 @@ domeFaceUv(dir: Readonly<Vec3>): { readonly face: number; readonly u: number; re
 
 Build with `mat3FromColumns` / `multiply3x3` (`src/utils/math/`).
 
-- [ ] Test `every DOME_FACES basis is orthonormal and right-handed (right = up × forward)`, and the same for `domeFaceRotations(60)`. A sign typo in the table would otherwise show up only as a mirrored face at the venue.
-- [ ] Test `centre maps to the zenith on the top face`: `fisheyeDirection(0, 0)` ≈ (0, 1, 0), and `domeFaceUv` gives face 4 with u = v = 0.5.
-- [ ] Test `the camera forward lands at 30° elevation on the front meridian`: take `domeBasis(60)`ᵀ·(0, 0, 1) and assert that it is ≈ `fisheyeDirection(0, −2/3)` (12 digits). `domeFaceUv` of it is face 0, u = 0.5, v = (1 − tan 30°)/2.
-- [ ] Test `edges: bottom = front horizon, top = back, right = right`: (0, −1) → (0, 0, 1), (0, 1) → (0, 0, −1) and (1, 0) → (1, 0, 0).
-- [ ] Test `outside the unit circle is none`: (0.8, 0.8) → null, while (1, 0) is not null.
-- [ ] Test `every face is reached`: a 64² NDC grid over the disc hits faces {0, 1, 2, 3, 4}, and nothing else.
-- [ ] Test `continuous across face edges`: sample directions densely on each of the eight edges (four side–side edges at 45° azimuth, four side–top edges at 45° elevation), stepping ±1e-6 across each edge. For every sample, the chosen face contains it (|s|, |t| ≤ 1 + 1e-9), and normalize(rightᵢ·s + upᵢ·t + forwardᵢ) ≈ d. Both sides therefore converge on the same direction.
-- [ ] Commit.
+- [x] Test `every DOME_FACES basis is orthonormal and right-handed (right = up × forward)`, and the same for `domeFaceRotations(60)`. A sign typo in the table would otherwise show up only as a mirrored face at the venue.
+- [x] Test `centre maps to the zenith on the top face`: `fisheyeDirection(0, 0)` ≈ (0, 1, 0), and `domeFaceUv` gives face 4 with u = v = 0.5.
+- [x] Test `the camera forward lands at 30° elevation on the front meridian`: take `domeBasis(60)`ᵀ·(0, 0, 1) and assert that it is ≈ `fisheyeDirection(0, −2/3)` (12 digits). `domeFaceUv` of it is face 0, u = 0.5, v = (1 − tan 30°)/2.
+- [x] Test `edges: bottom = front horizon, top = back, right = right`: (0, −1) → (0, 0, 1), (0, 1) → (0, 0, −1) and (1, 0) → (1, 0, 0).
+- [x] Test `outside the unit circle is none`: (0.8, 0.8) → null, while (1, 0) is not null.
+- [x] Test `every face is reached`: a 64² NDC grid over the disc hits faces {0, 1, 2, 3, 4}, and nothing else.
+- [x] Test `continuous across face edges`: sample directions densely on each of the eight edges (four side–side edges at 45° azimuth, four side–top edges at 45° elevation), stepping ±1e-6 across each edge. For every sample, the chosen face contains it (|s|, |t| ≤ 1 + 1e-9), and normalize(rightᵢ·s + upᵢ·t + forwardᵢ) ≈ d. Both sides therefore converge on the same direction.
+- [x] Commit.
 
 ### Task 2: `dome-cube` target, face view slots, copy step
 
@@ -129,11 +129,11 @@ export type CopyStepSpec = { readonly kind: 'copy'; readonly source: string }; /
   - The step marks nothing touched, because the output is not a target id. It takes no timing slot (see Out of scope).
 - **Landmine:** the compositor keeps **one uniform buffer per (blend, dstFormat) key** (`src/services/gpu/passes/compositor.ts` header). The five face copies share `(replace, rgba16float)`, and they are correct only because each face is its own submit.
 
-- [ ] Test `a canvas-scaled layered row allocates canvas-sized with one layer view per layer and reallocates on resize` (use the `renderTargets.test.ts` mock device; 5 layers; resize 64² → 128²).
-- [ ] Test `dome faces claim five slots disjoint from every capture row, inside VIEW_SLOT_COUNT`. Put it beside the capture-slot test in `cubemapCaptures.test.ts`, because a slot collision corrupts the other view's uniforms without raising any error.
-- [ ] Test `copy step draws its source into ctx.output with replace and no tone`, using a stub compositor: assert the pass attachment view is `ctx.output`, and that the args are `(…, 'replace', null, HDR_TARGET_FORMAT)`.
-- [ ] Test `copy step without a view output throws`.
-- [ ] Commit.
+- [x] Test `a canvas-scaled layered row allocates canvas-sized with one layer view per layer and reallocates on resize` (use the `renderTargets.test.ts` mock device; 5 layers; resize 64² → 128²).
+- [x] Test `dome faces claim five slots disjoint from every capture row, inside VIEW_SLOT_COUNT`. Put it beside the capture-slot test in `cubemapCaptures.test.ts`, because a slot collision corrupts the other view's uniforms without raising any error.
+- [x] Test `copy step draws its source into ctx.output with replace and no tone`, using a stub compositor: assert the pass attachment view is `ctx.output`, and that the args are `(…, 'replace', null, HDR_TARGET_FORMAT)`.
+- [x] Test `copy step without a view output throws`.
+- [x] Commit.
 
 ### Task 3: Fisheye resample pass
 
@@ -162,9 +162,9 @@ export const domeResamplePass: ContentPass; // name 'dome-resample'
 - Declare the table as `const DOME_FACES = array<mat3x3<f32>, 5>(…)` with **literal numbers in column order**. Copy it into a function-scope `var` before the runtime-indexed loop, because runtime indexing of a module `const` array is not portable across WGSL compilers.
 - Pipeline target: `HDR_TARGET_FORMAT`, with no blend.
 
-- [ ] Test `DOME_FACES in domeResample.wesl equals the TS table`: text-parse the 45 literals in order (regex idiom from `tests/services/gpu/shaders/orbitTrailConstants.parity.test.ts`) and compare them with `DOME_FACES` flattened column-major, plus the array length against `DOME_FACE_COUNT`. The argmax/uv rule itself can't be text-pinned; it is a line-for-line port of `domeFaceUv`, and review checks it.
-- [ ] Verify: `npm run typecheck:fast`, plus the WESL link tests for the new file. On the dev server the dome view does not exist until Task 4, so the eye-check waits for Task 5.
-- [ ] Commit.
+- [x] Test `DOME_FACES in domeResample.wesl equals the TS table`: text-parse the 45 literals in order (regex idiom from `tests/services/gpu/shaders/orbitTrailConstants.parity.test.ts`) and compare them with `DOME_FACES` flattened column-major, plus the array length against `DOME_FACE_COUNT`. The argmax/uv rule itself can't be text-pinned; it is a line-for-line port of `domeFaceUv`, and review checks it.
+- [x] Verify: `npm run typecheck:fast`, plus the WESL link tests for the new file. On the dev server the dome view does not exist until Task 4, so the eye-check waits for Task 5.
+- [x] Commit.
 
 ### Task 4: The `dome` rig
 
@@ -217,13 +217,13 @@ export function domeFaceSpecs(canvas: FrameView, state: EngineState): readonly V
 
 Today's single-order check (`checkFrameOrder.ts` loop and throws) would reject `dome-resample` under mono, and would reject `SCENE` once it is listed by both rigs.
 
-- [ ] Test `domeFaceSpecs returns five specs on slots 19–23, each targeting its dome-cube layer`: use a stub `layerViewOf`.
-- [ ] Test `a direction projected through each dome view's vp lands where domeFaceUv says`. This is the twin ↔ render contract, the only test that catches a flipped axis or a swapped face order.
+- [x] Test `domeFaceSpecs returns five specs on slots 19–23, each targeting its dome-cube layer`: use a stub `layerViewOf`.
+- [x] Test `a direction projected through each dome view's vp lands where domeFaceUv says`. This is the twin ↔ render contract, the only test that catches a flipped axis or a swapped face order.
   - For each face, take directions at the face centre and 0.9 of the way to each edge, in dome coordinates.
   - Carry each one to world space with `domeBasis` and the main camera's world axes, which you decode from `main`'s view matrix as PR 1's test decodes forward.
   - Project `drawCamPos + dir·k` through `views[i].vp`, then assert u = (ndc.x + 1)/2 and v = (1 − ndc.y)/2 to 5 digits.
-- [ ] Test `a pass drawn only by the dome program passes the boot check`, and test `a pass listed twice within one rig's program throws`.
-- [ ] Commit.
+- [x] Test `a pass drawn only by the dome program passes the boot check`, and test `a pass listed twice within one rig's program throws`.
+- [x] Commit.
 
 ### Task 5: `?dome` boot, square canvas, picking off
 
@@ -238,8 +238,8 @@ Today's single-order check (`checkFrameOrder.ts` loop and throws) would reject `
 - `pickFrameContext` returns `null` when `!VIEW_RIGS[state.viewRig].pickable`. That one gate turns off hover pick, click pick and `drawPickDebugOverlay`, because all three go through it.
 - `wireInput`'s pointer-move handler returns before the `cursorTexPx` write and wake when the rig isn't pickable. `terrainPickMarkerPass` stays off in dome because its gate reads `ctx.cursorTexPx === null`. The pass sits in `SCENE` (`frameSections.ts:236`), so leaving `OVERLAYS` out of the program does not reach it (Open points #2).
 
-- [ ] Test `pickFrameContext is null under a non-pickable rig` (the existing test file's fixture with `viewRig: 'dome'`). Without the gate, a dome click would select whatever the unseen 60° main view has under the cursor.
-- [ ] Eye-check, with the dev server (running already) and the user looking at `?dome`:
+- [x] Test `pickFrameContext is null under a non-pickable rig` (the existing test file's fixture with `viewRig: 'dome'`). Without the gate, a dome click would select whatever the unseen 60° main view has under the cursor.
+- [x] Eye-check, with the dev server (running already) and the user looking at `?dome`:
   - the canvas is a centred square;
   - the fisheye disc is black outside;
   - the look direction sits two-thirds of the way from the centre to the bottom edge;
@@ -247,7 +247,7 @@ Today's single-order check (`checkFrameOrder.ts` loop and throws) would reject `
   - bloom is continuous across the seam lines;
   - no labels, rings or marker lines appear;
   - the HUD stays usable.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: Recorder `--dome`
 
@@ -274,20 +274,20 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 
 **`--frames N`** (user-ruled 2026-09-20, applies to every take, not just dome): stop after N captured frames and close the file cleanly. N is a positive integer; the take ends at `min(natural end, loopFrames, N)` — the capture loop already bounds on `frameCap` and a looping clip's `loopFrames` (`record.ts:874`, `:904`), so this is a third bound on the same comparison, not a new stop path. `--frames` beyond the take's own length is clamped, never a way to run a loop twice. It is the FIRST N frames only: no start offset (tours window with `--beats`; a clip start offset is out of scope). Its value: a 4096² dome frame renders five faces, so an early Wisdome test file costs minutes at `--frames 150` (5 s) instead of 4440 frames.
 
-- [ ] Test `dome capture URL carries both gates` in `buildCaptureUrl.test.ts`.
-- [ ] Test `dome encode pins the Wisdome H.264 argv`: full-array `toEqual`. A dropped `-level 6.1` or `-pix_fmt` produces a file that only fails on the venue's player.
-- [ ] Add `--frames`: parse + validate in `parseArgs`, clamp into the loop's bound, name it in the progress line and the README table. No test (argv plumbing over an existing bound; Task 7 exercises it).
-- [ ] Commit.
+- [x] Test `dome capture URL carries both gates` in `buildCaptureUrl.test.ts`.
+- [x] Test `dome encode pins the Wisdome H.264 argv`: full-array `toEqual`. A dropped `-level 6.1` or `-pix_fmt` produces a file that only fails on the venue's player.
+- [x] Add `--frames`: parse + validate in `parseArgs`, clamp into the loop's bound, name it in the progress line and the README table. No test (argv plumbing over an existing bound; Task 7 exercises it).
+- [x] Commit.
 
 ### Task 7: Test film to Wisdome
 
 **Files:** none committed (`recordings/` is gitignored).
 
-- [ ] If `public/data` in the worktree is empty, run `/link-data` first.
-- [ ] Take the short film FIRST: `npm run record-clip -- earthUniverseLoop --dome --frames 150 --serve --rebuild` (5 s at 30 fps). `--serve` means a production build with no HMR reloads mid-take, and `--rebuild` because the app changed. This is the file Wisdome gets early, and it proves the format before any long render.
-- [ ] Then the full take, `npm run record-clip -- earthUniverseLoop --dome --serve` (drop `--frames`), one loop cycle: 148 s, 4440 frames at 30 fps.
+- [x] If `public/data` in the worktree is empty, run `/link-data` first.
+- [x] Take the short film FIRST: `npm run record-clip -- earthUniverseLoop --dome --frames 150 --serve --rebuild` (5 s at 30 fps). `--serve` means a production build with no HMR reloads mid-take, and `--rebuild` because the app changed. This is the file Wisdome gets early, and it proves the format before any long render.
+- [x] Then the full take, `npm run record-clip -- earthUniverseLoop --dome --serve` (drop `--frames`), one loop cycle: 148 s, 4440 frames at 30 fps.
   - Time the first progress lines (they print every 60 frames). If a frame takes more than about 2 s (over 2.5 h total), report the rate to the user before committing to the full run.
-- [ ] Probe the file:
+- [x] Probe the file:
 
   ```bash
   ffprobe -v error -select_streams v:0 \
@@ -297,10 +297,10 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 
   Expect `codec_name=h264`, `profile=Main`, `level=61`, `pix_fmt=yuv420p`, `width=4096`, `height=4096` and `r_frame_rate=30/1`.
 
-- [ ] Extract stills with `ffmpeg -ss <t> -i <out> -frames:v 1 still-<t>.png` at t = 2 s (Earth close-up: face seams over Earth), 35 s (galaxy field: dot/glow floors at face edges) and 74 s (far turn-around).
+- [x] Extract stills with `ffmpeg -ss <t> -i <out> -frames:v 1 still-<t>.png` at t = 2 s (Earth close-up: face seams over Earth), 35 s (galaxy field: dot/glow floors at face edges) and 74 s (far turn-around).
   - Check each still: the disc is black outside, the horizon sits about 30° up from the bottom edge, and there are no seams.
   - Show the stills to the user.
-- [ ] Hand the file path to the user to send to wisdome-teknik.kf@malmo.se. Sending it is the user's action.
+- [x] Hand the file path to the user to send to wisdome-teknik.kf@malmo.se. Sending it is the user's action.
 
 ## Risks and eye-checks
 
