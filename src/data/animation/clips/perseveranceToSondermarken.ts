@@ -28,6 +28,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookin
 import { frameUp } from '../../../utils/camera/frameUp';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { normalize3 } from '../../../utils/math/normalize3';
+import { northUpRoll } from '../../../utils/camera/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCALE_UNITS } from '../../scaleUnits';
 import { SONDERMARKEN_POSE } from './sondermarkenFlyout';
@@ -108,7 +109,14 @@ export function perseveranceToSondermarken(simDays: number): Clip {
     dollyTo(end.distance, LEG_SEC),
     moveTarget(end.target, TARGET_SEC),
     seq([
-      aimAt(orbitAnglesLookingAlong(neg(parkUp), basis), DESCEND_AIM_SEC),
+      all([
+        aimAt(orbitAnglesLookingAlong(neg(parkUp), basis), DESCEND_AIM_SEC),
+        // Overhead the park, north at the top, as sondermarkenFlyout frames it.
+        tween('roll', {
+          to: northUpRoll(neg(parkUp), bodies.get('earth')!.orientation, basis),
+          over: DESCEND_AIM_SEC,
+        }),
+      ]),
       wait(LEG_SEC - DESCEND_AIM_SEC - TILT_SEC),
       all([
         aimAt({ yaw: end.yaw, pitch: end.pitch }, TILT_SEC),

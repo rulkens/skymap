@@ -23,11 +23,8 @@ import {
 } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { linkedPoseToWorld } from '../../../utils/camera/linkedPoseToWorld';
-import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
-import { frameUp } from '../../../utils/camera/frameUp';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
-import { BODY_LOCAL_FRAME } from '../../camera/bodyLocalFrame';
+import { northUpRoll } from '../../../utils/camera/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
 
@@ -61,8 +58,7 @@ export function sondermarkenFlyout(simDays: number): Clip {
   // Looking straight down, "level" is whichever way north points: the tilt
   // carries the opening's northward view to the top of the frame. Copenhagen's
   // zenith sits >10° off the ecliptic pole, clear of the roll's degeneracy.
-  const pole = rotateVec3ByTightMat3(BODY_LOCAL_FRAME.pole, earthState.orientation);
-  const northUpRoll = rollFromScreenUp(nadir, pole, frameUp(basis));
+  const northUp = northUpRoll(nadir, earthState.orientation, basis);
 
   return {
     id: 'sondermarkenFlyout',
@@ -75,7 +71,7 @@ export function sondermarkenFlyout(simDays: number): Clip {
           all([
             dollyTo(HORIZON_MPC, FLIGHT_SEC, 'easeInOutCubic'),
             aimAlong(nadir, TILT_SEC, 'easeInOutCubic'),
-            tween('roll', { to: northUpRoll, over: TILT_SEC }),
+            tween('roll', { to: northUp, over: TILT_SEC }),
           ]),
           hold(END_HOLD_SEC),
         ]),

@@ -19,6 +19,7 @@ import { DEFAULT_FOV_Y_RAD } from '../../../../src/services/engine/camera/camera
 import { linkedPoseToWorld } from '../../../../src/utils/camera/linkedPoseToWorld';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
+import { northUpRoll } from '../../../../src/utils/camera/northUpRoll';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -34,6 +35,8 @@ const NO_SELECTION = {} as SelectionResolver;
 const SIM_DAYS = CONST_J2000 + 9763.2;
 const MID_HOLD_SEC = 50;
 const END_SEC = 97;
+// Lead-in 3 s + outbound 45 s + hold 4 s + the descent's 16 s aim.
+const OVERHEAD_PARK_SEC = 68;
 
 const sub = (a: Readonly<Vec3>, b: Readonly<Vec3>): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a: Readonly<Vec3>, b: Readonly<Vec3>): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -87,6 +90,13 @@ describe('perseveranceToSondermarken', () => {
 
   it('levels on the ecliptic at the system hold', () => {
     expect(evaluateClip(resolved, MID_HOLD_SEC, BASIS).roll).toBeCloseTo(0, 12);
+  });
+
+  it('passes overhead the park with north at the top, as sondermarkenFlyout does', () => {
+    const pose = evaluateClip(resolved, OVERHEAD_PARK_SEC, BASIS);
+    const forward = normalize3(sub(pose.target as Vec3, eyeMpc(pose)));
+    const orientation = bodies.get('earth')!.orientation;
+    expect(pose.roll!).toBeCloseTo(northUpRoll(forward, orientation, BASIS), 6);
   });
 
   it('frames both Earth and Mars at the system hold', () => {
