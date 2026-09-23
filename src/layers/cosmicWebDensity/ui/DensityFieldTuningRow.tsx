@@ -2,14 +2,8 @@
  * DensityFieldTuningRow — one registered cosmic-web density field's tuning
  * knobs in the DebugPanel: intensity, contrast, trim, density scale,
  * exposure and palette. The enable checkbox lives in the SettingsPanel's
- * main "Cosmic web density" section, not here (spec §7) — this row is
- * power-user tuning only.
- *
- * Uses `DebugSlider` (the dev panel's dense native range row), not the
- * explorer-facing `common/Slider`, to match the surrounding DebugPanel
- * chrome. Slider bounds mirror the retired `VolumeFieldRow`'s — contrast's
- * deadband window, trim's LUT-space cutoff, exposure's highlight gain and
- * density's optical-depth multiplier all keep their prior ranges.
+ * main "Cosmic web density" section, not here — this row is power-user
+ * tuning only, using `DebugSlider` to match the surrounding chrome.
  */
 
 import type { ReactElement } from 'react';
@@ -20,6 +14,9 @@ import DebugSlider from '../../../components/DebugPanel/DebugSlider';
 import { PaletteSelect } from '../../../components/common/PaletteSelect/PaletteSelect';
 import styles from './DensityFieldTuningRow.module.css';
 
+const INTENSITY_MIN = 0;
+const INTENSITY_MAX = 1;
+const INTENSITY_STEP = 0.01;
 const CONTRAST_MIN = 0.25;
 const CONTRAST_MAX = 4.0;
 const CONTRAST_STEP = 0.05;
@@ -45,9 +42,9 @@ function DensityFieldTuningRow({ row, onChange }: DensityFieldTuningRowProps): R
       <DebugSlider
         label="Intensity"
         value={row.intensity}
-        min={0}
-        max={1}
-        step={0.01}
+        min={INTENSITY_MIN}
+        max={INTENSITY_MAX}
+        step={INTENSITY_STEP}
         readout={row.intensity.toFixed(2)}
         onChange={(v) => onChange(row.id, { intensity: v })}
       />

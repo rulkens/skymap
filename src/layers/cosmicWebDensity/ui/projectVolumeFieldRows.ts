@@ -17,18 +17,9 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourc
 export function projectVolumeFieldRows(
   items: CosmicWebDensitySettings['items'],
 ): ReadonlyArray<VolumeFieldRowData> {
-  return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => {
-    const field = items[entry.id];
-    return {
-      id: entry.id,
-      label: entry.label,
-      enabled: field.enabled,
-      intensity: field.intensity,
-      contrast: field.contrast,
-      densityScale: field.densityScale,
-      paletteId: field.paletteId,
-      trim: field.trim,
-      exposure: field.exposure,
-    };
-  });
+  return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => ({
+    ...items[entry.id],
+    id: entry.id,
+    label: entry.label,
+  }));
 }

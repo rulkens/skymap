@@ -1,20 +1,10 @@
 /**
  * FieldEntry — internal per-registered-field record kept by the
- * `VolumeFieldRenderer`'s `fields` map.
- *
- * Holds the things the renderer genuinely owns: GPU resources (textures,
- * buffers, bind groups), the cube's model / inverse-model matrices, the
- * per-cube STATIC presentation config (contrastCenter, envelope) supplied
- * by the caller's `upload(id, cube, statics)`, and a `residentPaletteId`
- * GPU-residency fact.  The user-tunable knobs (enabled, intensity,
- * contrast, densityScale, paletteId, trim, exposure) are NOT mirrored
- * here — the caller's settings store owns them and they are read per
- * frame in `draw` via the `settingsOf` projection.  Mirroring them here
- * would re-introduce the very entanglement the settings unification
- * removes (two sources of truth that can drift).
- *
- * Lives in @types/rendering because the renderer's `.d.ts` needs the
- * shape.
+ * `VolumeFieldRenderer`'s `fields` map: GPU resources, the cube's
+ * matrices, per-cube STATIC presentation config from `upload`'s
+ * `statics` argument, and a `residentPaletteId` GPU-residency fact.
+ * User-tunable knobs live in the caller's settings store, read per
+ * frame in `draw` via `settingsOf` — not mirrored here.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -22,7 +12,6 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  id: string;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
    * coordinate space [0, 1].  Divergent palettes (coolwarm)

@@ -24,7 +24,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/data/structure/buildStaticAnchorStructures.ts',
   'src/data/volume/scalarFieldPalettes.ts',
   'src/hooks/useDismissablePopover.ts',
-  'src/layers/cosmicWebDensity/state/defaults.ts',
   'src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow.ts',
   'src/layers/galaxyCatalog/present/produceFamousGalaxyLabels.ts',
   'src/layers/galaxyCatalog/render/proceduralDiskRenderer.ts',

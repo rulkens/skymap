@@ -285,8 +285,8 @@ export type EngineGpuHandles = {
   /**
    * Reduced-res-to-HDR composite for the Milky Way cloud's star field. Reads
    * the `mw-aggregate` offscreen that `milkyWayAggregatePass` drew the
-   * additive star billboards into and blends it into HDR. A SECOND instance of
-   * the (fully generic) additive-upsample factory, deliberately not the density
+   * additive star billboards into and blends it into HDR. Its own instance
+   * of the generic additive-upsample factory, independent of the density
    * Layer's own, so the two subsystems' gates stay independent. Null until
    * `initGpu` constructs it (same phase as the other optional renderers). Excluded from
    * `isEngineReady` — when null, `milkyWayUpsamplePass` skips its draw, so a

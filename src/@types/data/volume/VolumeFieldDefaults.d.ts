@@ -4,12 +4,9 @@
  *
  * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
  * field should LOOK on first registration — its palette and
- * `densityScale` — is presentation, not data, and lives in
- * `src/data/volumeFieldDefaults.ts` rather than in the binary header.
- *
- * See that file's module header for the alternatives considered and
- * the rationale behind keeping a TS registry of compile-time
- * vocabulary.
+ * `densityScale` — is presentation, not data, and lives on each field's
+ * source row (`src/layers/cosmicWebDensity/sources/`), built into
+ * `VolumeFieldSettings` by `layers/cosmicWebDensity/state/defaults.ts`.
  */
 
 import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
@@ -108,8 +105,6 @@ export type VolumeFieldDefaults = {
    *     breakdown that motivates this value.
    */
   trim: number;
-  /** Optional human-readable label override (renderer falls back to id). */
-  label?: string;
   /**
    * Optional per-field scale-fade bands, seeded into `VolumeFieldSettings.bands`
    * (`buildVolumeFieldSettings`). Omitted → `[SCALE_FADE_BANDS.surveyDeepZoom]`,

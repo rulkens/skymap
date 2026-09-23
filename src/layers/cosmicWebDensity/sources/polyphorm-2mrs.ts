@@ -16,7 +16,7 @@ export const POLYPHORM_2MRS_ENTRY = {
   // shown together (the Cosmic Web view enables both) to close the sky MCPM's
   // SDSS wedge leaves open, and one continuous field should read as one field,
   // not two colours meeting at a footprint edge. Telling them apart is the
-  // Volumes panel's job, not the ramp's.
+  // Cosmic web density section's job, not the ramp's.
   paletteId: 'inferno',
   contrast: 1.7,
   contrastCenter: 0.0,

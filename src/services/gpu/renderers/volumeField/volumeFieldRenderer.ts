@@ -31,8 +31,8 @@
  * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
  * The user-tunable knobs (enabled, intensity, contrast, densityScale,
  * palette, trim, exposure) are NOT mirrored on the entry — they live in
- * 'state.settings.cosmicWebDensity.items' and are read per frame in 'draw' via
- * the 'settingsOf' projection, so there is exactly one source of truth.
+ * the caller's settings and are read per frame in 'draw' via the
+ * 'settingsOf' projection, so there is exactly one source of truth.
  * Sharing the pipeline across all fields keeps the layout-'auto' trap
  * from biting: one pipeline → one auto-derived bind-group layout → all
  * bind groups are interchangeable across fields with the same shape.
@@ -307,7 +307,6 @@ export function createVolumeFieldRenderer<Id extends string>(
         entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
       });
       fields.set(id, {
-        id,
         // Per-cube static config, taken from the caller's `statics` above.
         contrastCenter: statics.contrastCenter,
         envelopeInner: statics.envelope.inner,
@@ -352,7 +351,7 @@ export function createVolumeFieldRenderer<Id extends string>(
         // burn a full raymarch. This one test also covers the fade-out
         // tail (toggle off, opacity still ramping down) for free: the tail
         // IS a non-zero opacity.
-        if ((fadeOpacityOf ? fadeOpacityOf(id) : 1) > 0) return true;
+        if (fadeOpacityOf(id) > 0) return true;
       }
       return false;
     },

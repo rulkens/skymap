@@ -2,15 +2,12 @@
  * VolumeFieldRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
  * and the per-field registry; consumers upload / unload cubes (keyed by
- * an id generic over the caller, mirroring `galaxyPointRenderer.upload`/
- * `unload`, which key by galaxy-catalog id), and the renderer READS
- * per-field settings each frame via `draw(settingsOf)`. Generic over
- * `Id` so a second caller (e.g. a dust volume) can register its own field
- * ids on its own renderer instance without widening this union. The
- * user-tunable knobs (enabled, intensity, palette, contrast,
- * densityScale, trim, exposure) are not set through this handle — the
- * caller's settings store owns them and projects them in per frame.  See
- * `volumeFieldRenderer.ts` for the full pipeline + ray-march details.
+ * an id generic over the caller), and the renderer READS per-field
+ * settings each frame via `draw(settingsOf)`. The user-tunable knobs
+ * (enabled, intensity, palette, contrast, densityScale, trim, exposure)
+ * are not set through this handle — the caller's settings store owns
+ * them.  See `volumeFieldRenderer.ts` for the full pipeline + ray-march
+ * details.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
@@ -34,22 +31,12 @@ export type VolumeFieldRenderer<Id extends string = string> = {
   ): void;
   unload(id: Id): void;
   /**
-   * True iff any field is currently producing visible output. The live
-   * per-field settings come from `settingsOf` (the renderer no longer
-   * mirrors enabled / intensity, so it cannot answer without it); a
-   * field with no settings row, intensity ≤ 0, is treated as off.
-   *
-   * The optional `fadeOpacityOf` callback widens the predicate to also
-   * include fields whose `enabled` is false but whose fade-out tail
-   * (opacity > 0) is still in flight — that's the state the
-   * volume-upsample gate and the encodeHdr* pass-opener want, so
-   * they keep blitting / drawing through the ~100 ms ramp.
-   *
-   * `settingsOf` / `fadeOpacityOf` are keyed by volume-field id.
+   * True iff any field's resolved opacity (`fadeOpacityOf`, which covers
+   * the fade-out tail) is non-zero for a field with `settingsOf` intensity > 0.
    */
   hasActiveFields(
     settingsOf: (id: Id) => VolumeFieldSettings | undefined,
-    fadeOpacityOf?: (id: Id) => number,
+    fadeOpacityOf: (id: Id) => number,
   ): boolean;
   listIds(): Id[];
   /**

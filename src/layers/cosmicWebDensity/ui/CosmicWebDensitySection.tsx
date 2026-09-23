@@ -1,14 +1,10 @@
 /**
  * CosmicWebDensitySection — presentational SettingsPanel section: a master
- * toggle on the header and one enable checkbox per registered field (MCPM,
- * Polyphorm 2MRS, the MCPM workbench export — every `COSMIC_WEB_DENSITY_SOURCE_ROWS`
- * entry, the workbench included). The per-field intensity / contrast / trim /
- * density / exposure / palette knobs live in the DebugPanel's tuning section,
- * not here (spec §7).
- *
- * Props-driven, no internal state: imports nothing from `store/` or `state/`.
- * `memo`'d so an unrelated parent re-render bails on the prop-compare instead
- * of re-rendering this section.
+ * toggle on the header and one enable checkbox per registered field
+ * (every `COSMIC_WEB_DENSITY_SOURCE_ROWS` entry). Per-field intensity /
+ * contrast / trim / density / exposure / palette knobs live in the
+ * DebugPanel's tuning section, not here. Props-driven, no internal state;
+ * `memo`'d so an unrelated parent re-render bails on the prop-compare.
  */
 
 import { memo } from 'react';
