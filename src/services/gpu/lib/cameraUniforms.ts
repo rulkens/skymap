@@ -82,7 +82,7 @@ export const CAMERA_UNIFORM_BYTES = 80;
 export function writeCameraPrefix(
   target: Float32Array,
   viewProj: Float32Array | Mat4,
-  viewportPx: Vec2,
+  viewportPx: Readonly<Vec2>,
   pxPerRad: number,
 ): void {
   target.set(viewProj, 0);

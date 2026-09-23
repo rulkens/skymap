@@ -22,12 +22,6 @@ import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
  * (feeds a slab COUNT the frame program pool-sizes from, spec §6). The
  * candidate list is the caller's to assemble — this gate reads only the row,
  * so a store body and an authored one are culled on identical terms.
- *
- * A row whose PASS paints far beyond its own disc declares a `cullFloorMpc`
- * and bypasses BOTH culls inside it: the Sgr A* lens quad spans up to ~0.75×
- * the camera distance, so the disc-based culls would birth the lens mid-band
- * (a visible, viewport-dependent pop) and no conservative disc-based frustum
- * cull exists for a footprint that can span the view.
  */
 export function visibleSlabBodies<T extends SlabRow>(input: {
   readonly rows: readonly T[];
@@ -53,18 +47,19 @@ export function visibleSlabBodies<T extends SlabRow>(input: {
     const state = bodyStates.get(row.anchorId);
     if (state === undefined) return false;
 
-    if (row.cullFloorMpc !== undefined) {
-      const bdx = state.positionMpc[0] - camPosMpc[0];
-      const bdy = state.positionMpc[1] - camPosMpc[1];
-      const bdz = state.positionMpc[2] - camPosMpc[2];
-      if (Math.hypot(bdx, bdy, bdz) < row.cullFloorMpc) return true;
-    }
+    const dx = state.positionMpc[0] - camPosMpc[0];
+    const dy = state.positionMpc[1] - camPosMpc[1];
+    const dz = state.positionMpc[2] - camPosMpc[2];
+    const distM = Math.hypot(dx, dy, dz) * SCALE_UNITS.MPC_TO_M;
 
     // The widest thing this row can draw — the same value the frustum cull
     // below needs, so both culls agree on the row's footprint (radar frame
     // finding 2: they used to disagree, the bare body radius here vs. this same
-    // ring/atmosphere-inclusive max there).
-    const rEffM = Math.max(PROXY_SCALE * row.footprintRadiusM, row.boundingRadiusM);
+    // ring/atmosphere-inclusive max there). A view-dependent envelope (e.g.
+    // Sgr A*'s lens quad) can reach far beyond the row's own geometry, which
+    // is what lets both culls below see the lens without a bypass: they are
+    // judging the same envelope the pass actually paints.
+    const rEffM = Math.max(PROXY_SCALE * row.footprintRadiusM, row.drawRadiusM(distM, pxPerRad));
 
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: state.positionMpc,

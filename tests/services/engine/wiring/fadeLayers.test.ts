@@ -25,11 +25,18 @@ import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibi
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
 const GALAXY_RUNTIME = {
   pointRenderer: { hasCatalog: () => true },
 } as unknown as GalaxyCatalogRuntime;
+
+/** No cube resident: the density rows' guards read the renderer, their seeds do not. */
+const DENSITY_RUNTIME = {
+  renderer: { listIds: () => [] },
+} as unknown as CosmicWebDensityRuntime;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -57,7 +64,7 @@ function makeState(
     milkyWayEnabled?: boolean;
     milkyWayLabelEnabled?: boolean;
     surveyLabelEnabled?: boolean;
-    volumesMasterEnabled?: boolean;
+    cosmicWebDensityEnabled?: boolean;
     orbitTrailsEnabled?: boolean;
     ringVisibility?: Partial<Record<string, boolean>>;
     labelVisibility?: Partial<Record<string, boolean>>;
@@ -76,7 +83,7 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
-      volumes: { enabled: opts.volumesMasterEnabled ?? true },
+      cosmicWebDensity: { enabled: opts.cosmicWebDensityEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
@@ -97,9 +104,9 @@ function makeState(
     subsystems: {
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
-    // `seedFades` walks the COMPOSED rows; over an empty layer tuple that is
-    // the core manifest these tests are written against.
-    fadeRows: FADE_LAYERS,
+    // `seedFades` walks the COMPOSED rows: the core manifest plus the density
+    // Layer's, whose master and per-cube seeds are pinned below.
+    fadeRows: [...FADE_LAYERS, ...cosmicWebDensityFadeRows(DENSITY_RUNTIME)],
   } as unknown as EngineState;
 }
 
@@ -138,8 +145,8 @@ function makeSettings(
     bodies: { items: bodyItems() },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
+    cosmicWebDensity: { enabled: true, items: {} },
+    cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
   } as unknown as EngineSettingsState;
@@ -156,8 +163,6 @@ describe('seedFades', () => {
     seedFades(state);
     expect(state.subsystems.fades.opacityOf({ kind: 'milkyWay' })).toBe(0);
   });
-
-  // ── volumesMaster gating ─────────────────────────────────────────
 
   // ── label-layer handles ──────────────────────────────────────────
 
@@ -210,35 +215,19 @@ describe('seedFades', () => {
 
   // ── demand-loaded sets (seed 0 so first-load fade-in isn't lost) ──
 
-  it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {
+  it('seeds EVERY volume field at 0', () => {
     const state = makeState();
     seedFades(state);
-    // Derive the expected set from the registry — every type:'volume' entry,
-    // INCLUDING the binBaseName:null debug fixtures. Not hardcoded. The
-    // inclusion of the debug ids is load-bearing: setVolumeFieldEnabled +
-    // the debug slot commit both fadeTo these handles, and fadeTo throws on
-    // an unregistered id, so a missing debug handle breaks the DEV toggle.
+    // Derive the expected set from the registry — every type:'cosmicWebDensity'
+    // entry. Not hardcoded.
     const volumeIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'volume')
+      .filter((e) => e.type === 'cosmicWebDensity')
       .map((e) => e.id);
     expect(volumeIds.length).toBeGreaterThan(0);
     for (const id of volumeIds) {
       expect(
-        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
-        `volumeField{${id}} should seed at 0`,
-      ).toBe(0);
-    }
-    // Regression lock: at least one binBaseName:null debug fixture is present
-    // in the iterated set and seeds at 0. This is the gap Part C fixed — before
-    // it, debug fixtures were excluded and their fadeTo threw under DEV.
-    const debugIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'volume' && e.binBaseName === null)
-      .map((e) => e.id);
-    expect(debugIds.length).toBeGreaterThan(0);
-    for (const id of debugIds) {
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
-        `debug volumeField{${id}} should seed at 0`,
+        state.subsystems.fades.opacityOf({ kind: 'cosmicWebDensityField', id }),
+        `cosmicWebDensityField{${id}} should seed at 0`,
       ).toBe(0);
     }
   });
@@ -260,15 +249,16 @@ describe('FADE_LAYERS intent subset', () => {
     // is the surviving shared truth after `writes` (Task 5) went: total, and
     // `[]` unconditionally for the three registration-only layers, non-empty
     // for every real write given a settings fixture whose per-item records
-    // are populated (volumeField's fan-out needs at least one item id).
+    // are populated (cosmicWebDensityField's fan-out needs at least one item id).
     const settings = makeSettings();
-    settings.volumes.items = {
-      'debug-gaussian': { enabled: true },
-    } as unknown as EngineSettingsState['volumes']['items'];
+    settings.cosmicWebDensity.items = {
+      mcpm: { enabled: true },
+    } as unknown as EngineSettingsState['cosmicWebDensity']['items'];
     for (const row of [
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...zoneOfAvoidanceFadeRows(),
+      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
     ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
@@ -284,44 +274,5 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.seed(makeSettings({ orbitTrailsEnabled: true }), undefined)).toBe(1);
     // And no guard — the conic table is always present (unlike flow/filaments).
     expect(row.guard).toBeUndefined();
-  });
-
-  it('volume-field row post lazy-loads debug volumes on enable only', () => {
-    const load = vi.fn<(req: unknown) => void>();
-    const slot = {
-      state: () => ({ kind: 'idle' }) as const,
-      load,
-    };
-    function makeVolumeState(enabled: boolean): EngineState {
-      return {
-        assetSlots: { syntheticVolumes: { 'debug-gaussian': slot } },
-        settings: { volumes: { items: { 'debug-gaussian': { enabled } } } },
-      } as unknown as EngineState;
-    }
-    const row = rowFor('volumeField');
-
-    row.post?.(makeVolumeState(true), 'debug-gaussian');
-    expect(load).toHaveBeenCalledTimes(1);
-
-    load.mockClear();
-    row.post?.(makeVolumeState(false), 'debug-gaussian');
-    expect(load).not.toHaveBeenCalled();
-  });
-
-  it('volume-field row guard gates on the renderer holding the field; debug fixtures exempt', () => {
-    const row = rowFor('volumeField');
-    const state = {
-      gpu: { volumeFieldRenderer: { listIds: () => ['cf4-density'] } },
-    } as unknown as EngineState;
-    // Not in the renderer's map → suppressed; present → fades.
-    expect(row.guard?.(state, 'mcpm')).toBe(false);
-    expect(row.guard?.(state, 'cf4-density')).toBe(true);
-    // Debug fixtures are loaded BY this row's own post (maybeLazyLoadDebugVolume),
-    // and a guard skips post — so they are never suppressed.
-    expect(row.guard?.(state, 'debug-gaussian')).toBe(true);
-    // No renderer yet (mid-bootstrap): demand-loaded ids suppressed, debug exempt.
-    const bare = { gpu: {} } as unknown as EngineState;
-    expect(row.guard?.(bare, 'mcpm')).toBe(false);
-    expect(row.guard?.(bare, 'debug-gaussian')).toBe(true);
   });
 });

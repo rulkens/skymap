@@ -84,10 +84,10 @@ export type ReadyFrameContext = {
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
   visibleSourceMask: number;
   /**
-   * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
+   * The offscreen render-target table (`hdr`, `cosmic-web-density`, …).  Forwarded
    * here from `state.gpu.renderTargets` — same reference, no allocation —
    * so the executor's `viewFor` and any layer that samples an offscreen
-   * (`ctx.snapshot.renderTargets.viewOf('volume')`) never reach back into `state`.
+   * (`ctx.snapshot.renderTargets.viewOf('cosmic-web-density')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
   /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */

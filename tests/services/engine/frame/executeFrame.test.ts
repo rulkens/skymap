@@ -135,7 +135,7 @@ function makeContentPass(init: {
 // ── Fake ctx / state ─────────────────────────────────────────────────────────
 
 const HDR_VIEW = { __id: 'hdr-view' } as unknown as GPUTextureView;
-const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
+const DENSITY_VIEW = { __id: 'density-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
 const FAR_VIEW = { __id: 'far-depth-placeholder-view' } as unknown as GPUTextureView;
@@ -157,7 +157,7 @@ const EXEC_SPECS = [
     clearValue: { r: 0, g: 0, b: 0, a: 1 },
   },
   {
-    id: 'volume',
+    id: 'cosmic-web-density',
     format: 'rgba16float' as const,
     depth: null,
     scale: 3,
@@ -207,7 +207,7 @@ function makeCtx(): FrameView {
     },
     viewOf: (id: string) => {
       if (id === 'hdr') return HDR_VIEW;
-      if (id === 'volume') return VOLUME_VIEW;
+      if (id === 'cosmic-web-density') return DENSITY_VIEW;
       if (id === 'foreground:0') return FG_VIEW;
       if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
       throw new Error(`mock renderTargets: no view for '${id}'`);
@@ -370,14 +370,14 @@ describe('executeFrame', () => {
 
   it('clears a target on its first pass of the frame and loads on later passes', () => {
     // Two hdr render steps against the same target: first clears (a=1), the
-    // second — target already touched — loads. A volume layer proves the
+    // second — target already touched — loads. A density layer proves the
     // per-target clear value (a=0).
     const env = makeEncoderEnv();
     const first = makeContentPass({ name: 'first' });
     const second = makeContentPass({ name: 'second' });
     const vol = makeContentPass({ name: 'vol' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'volume', slab: COSMO, passes: [vol] },
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: [vol] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
     ];
@@ -386,11 +386,11 @@ describe('executeFrame', () => {
     // already touched) loads.
     const { args } = makeArgs({ program, env });
     executeFrame(args);
-    // volume first pass → clear, a=0
+    // density first pass → clear, a=0
     const volAtt = attachmentOfDraw(env, vol);
     expect(volAtt.loadOp).toBe('clear');
     expect(volAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-    expect(volAtt.view).toBe(VOLUME_VIEW);
+    expect(volAtt.view).toBe(DENSITY_VIEW);
     // hdr first step (merged group of first+second) → clear, a=1
     const firstAtt = attachmentOfDraw(env, first);
     expect(firstAtt.loadOp).toBe('clear');
@@ -462,6 +462,57 @@ describe('executeFrame', () => {
     executeFrame(args);
     expect(draw).toHaveBeenCalledTimes(1);
     expect(draw.mock.calls[0]![4]).toBe('rgba16float');
+  });
+
+  it('copy step draws its source into ctx.output with replace and no tone', () => {
+    const env = makeEncoderEnv();
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view' } as unknown as GPUTextureView;
+    const hdr = makeContentPass({ name: 'hdr' });
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    const { args } = makeArgs({ program, env, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+
+    expect(draw).toHaveBeenCalledTimes(1);
+    // draw(pass, viewFor(source)=HDR_VIEW, 'replace', null, specOf(source).format)
+    expect(draw.mock.calls[0]![1]).toBe(HDR_VIEW);
+    expect(draw.mock.calls[0]![2]).toBe('replace');
+    expect(draw.mock.calls[0]![3]).toBe(null);
+    expect(draw.mock.calls[0]![4]).toBe('rgba16float');
+
+    // The copy pass's own attachment is ctx.output, cleared opaque black.
+    const copyPassDesc = env.beginRenderPass.mock.calls.at(-1)![0] as GPURenderPassDescriptor;
+    const attachment = Array.from(
+      copyPassDesc.colorAttachments as Iterable<GPURenderPassColorAttachment>,
+    )[0]!;
+    expect(attachment.view).toBe(outputView);
+    expect(attachment.loadOp).toBe('clear');
+    expect(attachment.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it('copy step without a view output throws', () => {
+    const hdr = makeContentPass({ name: 'hdr' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    // Default makeCtx() carries no `output` — the mono/canvas-view case.
+    const { args } = makeArgs({ program });
+    expect(() => executeFrame(args)).toThrow(/copy step has no view output/);
+  });
+
+  it('skips a copy step whose source was never touched', () => {
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view-2' } as unknown as GPUTextureView;
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [{ kind: 'copy', source: 'hdr' }];
+    const { args } = makeArgs({ program, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+    expect(draw).not.toHaveBeenCalled();
   });
 
   it('merged strategy opens exactly one pass per non-empty render step', () => {

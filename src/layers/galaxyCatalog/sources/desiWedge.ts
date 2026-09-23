@@ -14,12 +14,6 @@ export const DESI_WEDGE_ENTRY = {
   allSky: false,
   bearsLabel: false,
   bearsMarker: false,
-  // Off by default: a 2.5°-thick declination-band wedge is a specialist
-  // overlay — a second way of drilling through DESI DR1 alongside the deep
-  // cone — not part of the all-sky default scene the other bulk catalogs
-  // populate. The GalaxiesSection toggle is the opt-in for anyone who wants
-  // the wedge (or to compare it against the cone).
-  visible: false,
   // Same four tracers as the deep cone: the QSO tail's z ≈ 3.5 maps to
   // ~7100 Mpc of line-of-sight comoving distance under the flat-ΛCDM
   // conversion the pipeline applies to every row (`redshiftToDistanceMpc`,

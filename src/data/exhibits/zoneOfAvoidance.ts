@@ -9,7 +9,7 @@
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
-import { VOLUMES_OFF } from './utils/volumesOff';
+import { COSMIC_WEB_DENSITY_OFF } from './utils/cosmicWebDensityOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The band is the subject, so the exhibit forces it on rather than inheriting
@@ -66,7 +66,7 @@ export const zoneOfAvoidance: Exhibit = {
     zoneOfAvoidance: BAND_ON,
     galaxyCatalogs: galaxyCatalogsInitialState,
     milkyWay: MILKY_WAY_WITH_MARKER,
-    volumes: VOLUMES_OFF,
+    cosmicWebDensity: COSMIC_WEB_DENSITY_OFF,
     picking: PICK_BAND_AND_GALAXIES,
   },
   pose: {

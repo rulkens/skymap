@@ -66,6 +66,7 @@ import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import { coreSelectionRows } from './selection/coreSelectionRows';
 import { composeSelectionRows } from './selection/composeSelectionRows';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -184,8 +185,6 @@ export function createEngine(
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
-      volumeFieldRenderer: null,
-      volumeUpsample: null,
       milkyWayAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
@@ -205,6 +204,7 @@ export function createEngine(
       bodyGlintRenderer: null,
       sgrAStarLensingRenderer: null,
       cubeFaceBlitRenderer: null,
+      domeResampleRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
@@ -273,21 +273,15 @@ export function createEngine(
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
-    // The only rig today; `renderFrame`/`runFrame` look it up via VIEW_RIGS.
-    viewRig: 'mono',
+    // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
+    // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
+    viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming
     // `initGpu` already assigned them.
     assetSlots: {
       structureCatalog: null,
-      cf4Density: null,
-      // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
-      // when the tier changes.
-      mcpm: null,
-      // Tier-aware like mcpm.
-      polyphorm2Mrs: null,
-      mcpmWorkbench: null,
       bodyTextures: new Map(),
       // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
@@ -318,6 +312,10 @@ export function createEngine(
     orbitTrailRows: [],
     layerSlots: new Map(),
   };
+
+  // React doesn't own this attribute, so it survives re-renders; `global.css`'s
+  // `#c[data-view-rig='dome']` rule reads it to square the canvas.
+  canvas.dataset.viewRig = state.viewRig;
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
   // the director declutters by prominence otherwise. The constellation figure NAMES
@@ -515,22 +513,14 @@ export function createEngine(
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       // The prelude's compute steps first (they run first, and their dispatches
-      // are GPU work no render toggle could reach), then every composed pass
-      // except the volume-target raymarch, which has no user toggle — the frame
-      // order is what says which pass that is.
+      // are GPU work no render toggle could reach), then every composed pass.
       passOverrides: {
         allNames: [
           // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
           ),
-          ...FRAME_ORDER_PASS_NAMES.filter(
-            (name) =>
-              !FRAME_ORDER.some(
-                (step) =>
-                  step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
-              ),
-          ),
+          ...FRAME_ORDER_PASS_NAMES,
         ],
       },
       // Re-derived per call, not snapshotted: the slots this joins against are

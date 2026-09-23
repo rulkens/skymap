@@ -61,7 +61,7 @@ export const cosmicWeb: ClipData = {
     lookAtId(COMA_SC, 3),
     focus(COMA_SC),
     hold(1),
-    show(['volumesMaster'], 9),
+    show(['cosmicWebDensity'], 9),
     all([moveTargetId(COMA_SC, 9), dollyToId(COMA_SC, 9)]),
   ],
 };

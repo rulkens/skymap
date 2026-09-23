@@ -16,12 +16,15 @@
 // layout is identical; importing one authoritative struct definition
 // makes drift structurally impossible.
 //
-// ## Uniforms layout — CameraUniforms-prefix only at v1
+// ## Uniforms layout — CameraUniforms prefix + the eye
 //
 // The 80-byte CameraUniforms prefix carries viewProj + viewportPx +
-// pxPerRad + one pad.  No renderer-specific tail at v1.  The CPU-side
-// write site in structureMarkerRenderer.ts allocates 80 bytes and writes
-// the same shape as markerLineRenderer.ts.
+// pxPerRad + one pad.  Bytes 80..95 are 'camPosMpc': the eye in the
+// same absolute-Mpc frame 'positionAndRadius.xyz' uses (w unused,
+// float 23 zero-padded) — the vertex stage needs it to build the
+// eye-facing world basis ('expandBillboardWorld'), which a
+// view-projection matrix alone can't give it.  The CPU-side write
+// site in structureMarkerRenderer.ts allocates 96 bytes.
 //
 // ## Why no per-vertex attribute struct
 //
@@ -36,13 +39,17 @@ import package::lib::camera::CameraUniforms;
 
 struct Uniforms {
   cam: CameraUniforms,
+  // The eye, absolute Mpc — see the "Uniforms layout" doc above.
+  camPosMpc: vec4<f32>,
 };
 
-// Ring and halo radii were tuned by eye when 'worldLenToPx' under-reported
-// the true apparent size by tan(fovY/2).  Folding tan(30 degrees) back in
-// keeps the markers the size they are today at the app's 60 degree fov,
-// while they now track the fov slider instead of ignoring it.
-const MARKER_SIZE_PX_RETUNE: f32 = 0.57735;
+// The marker radii in the data were tuned by eye against the old
+// 'worldLenToPx' pixel path, which under-reported apparent size by
+// tan(30 degrees) at the app's 60 degree fov.  Folding the same factor
+// into the WORLD radius (rather than a pixel size, now that the quad is
+// built in world space) keeps mono at 60 degrees looking as it always
+// has.
+const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 
 // ── per-instance attributes ───────────────────────────────────────
 //
@@ -80,10 +87,11 @@ struct VsIn {
 //
 // Both halo and ring fragment stages need the unit-quad UV (for
 // distance-from-centre), the chosen tint, and a pre-applied alpha.
-// The ring fragment additionally needs the ring's world radius and
-// the camera-to-centre distance so it can compute its screen-space
-// ring width without a separate uniform.  The halo fragment ignores
-// those last two; they cost nothing to interpolate.
+// The ring fragment additionally needs the ring's world radius; its
+// on-screen band width comes from 'dpdx'/'dpdy' of 'uv' in the
+// fragment stage now (see ring.wesl), not a smuggled pixel size, so
+// there is no per-view scalar to carry here — 'uv' alone is enough in
+// every view of a rig.
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
@@ -95,12 +103,8 @@ struct VsOut {
   // Pre-applied alpha (haloAlpha for the halo pipeline, ringAlpha for
   // the ring).  The vertex stage selects which one.
   @location(2) alpha: f32,
-  // For the ring fragment: the world-space ring radius in Mpc and the
-  // distance from camera to billboard centre — together these let the
-  // fragment compute the screen-space ring width without a separate
-  // uniform.  Halo fragment ignores these.
+  // The world-space marker radius in Mpc.  Halo fragment ignores it.
   @location(3) radiusMpc: f32,
-  @location(4) camDistMpc: f32,
   // Per-instance structure index — assembled in the vertex stage from
   // @builtin(instance_index).  Consumed only by the ringPick fragment
   // (offscreen r32uint picking pass), which packs it together with
@@ -113,5 +117,5 @@ struct VsOut {
   // because integers can't be linearly interpolated and all six
   // vertices of one instance share the same value — same idiom as
   // points/io.wesl's `instanceIdx`.
-  @location(5) @interpolate(flat) structureIndex: u32,
+  @location(4) @interpolate(flat) structureIndex: u32,
 };

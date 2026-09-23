@@ -1,13 +1,12 @@
 // structureMarker/halo.wesl — additive radial-gradient billboard for
 // structure halos (clusters / superclusters; voids opt out).
 //
-// One instance per structure marker.  The vertex stage projects the
-// marker's world-space centre to clip space, then expands a unit quad to
-// the marker's apparent radius in pixels ('worldLenToPx' +
-// 'pxToClipOffset' from lib/billboard.wesl) — screen-axis-aligned (no
-// shear under orbit), world-sized (grows naturally as the camera
-// approaches), zero extra uniforms.  See lib/billboard.wesl's
-// "Screen-aligned vs view-aligned" subsection.
+// One instance per structure marker.  The vertex stage expands a unit
+// quad into a WORLD-space disc facing the eye ('expandBillboardWorld'
+// from lib/billboard.wesl) and projects each corner individually — see
+// ring.wesl's header for why that, not a screen-aligned expansion, is
+// what makes a multi-view rig (five dome faces, a VR eye pair) draw one
+// consistent world curve instead of a seam.
 //
 // The fragment stage emits an additive radial gradient: centre alpha
 // full, edge alpha zero, smoothstep falloff across the quad.
@@ -16,10 +15,9 @@ import package::structureMarker::io::Uniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
-import package::structureMarker::io::MARKER_SIZE_PX_RETUNE;
+import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
-import package::lib::billboard::pxToClipOffset;
-import package::lib::billboard::worldLenToPx;
+import package::lib::billboard::expandBillboardWorld;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
@@ -37,24 +35,17 @@ fn vs(
   let worldPos = input.positionAndRadius.xyz;
   let radiusMpc = input.positionAndRadius.w;
 
-  // Project the centre, expand the unit quad's corner into a
-  // screen-aligned, world-sized clip-space offset.  See
-  // lib/billboard.wesl for the derivation.
-  let centerClip = worldToClip(u.cam, worldPos);
+  // Eye-facing world disc — see lib/billboard.wesl's expandBillboardWorld.
+  let half = radiusMpc * MARKER_RADIUS_RETUNE;
   let corner = quadCorner(vi);
-  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w) * MARKER_SIZE_PX_RETUNE;
-  let offset = pxToClipOffset(u.cam, corner * sizePx, centerClip.w);
+  let offset = expandBillboardWorld(u.camPosMpc.xyz, worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
+  out.pos = worldToClip(u.cam, worldPos + offset);
   out.uv = corner;
   out.color = input.haloColorAndAlpha.xyz;
   out.alpha = input.haloColorAndAlpha.w;
   out.radiusMpc = radiusMpc;
-  // camDistMpc unused by halo; just pass through 0.  Ring fragment
-  // computes its own distance because halo and ring share the VsOut
-  // struct.
-  out.camDistMpc = 0.0;
   // structureIndex is consumed only by the ringPick fragment.  Halo doesn't
   // need it but WGSL requires every field of a returned struct to be
   // initialised, so we pass 0u.  All six vertices of one instance share

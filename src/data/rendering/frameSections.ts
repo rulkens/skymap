@@ -92,12 +92,12 @@ export const SCENE: FrameSection = {
     // lands before that view's apply and after the previous view's — no line
     // among the once-scope PRELUDE computes could give it that ordering.
     { kind: 'compute', name: 'aerial-perspective' },
-    // The half-res scalar-volume raymarch into its own offscreen. It is merged
-    // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
-    // never by a whole-texture composite — so there is no `volume→hdr` line here,
-    // and this render must precede that step.
-    { kind: 'render', target: 'volume', slab: COSMO, passes: ['scalar-volume'] },
-    // The zone-of-avoidance band raymarch — the twin of the volume render above,
+    // The reduced-res cosmic-web density raymarch into its own offscreen. It is
+    // merged into HDR by the `cosmic-web-density-upsample` pass inside the hdr
+    // COSMO step below, never by a whole-texture composite — so there is no
+    // `cosmic-web-density→hdr` line here, and this render must precede that step.
+    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // The zone-of-avoidance band raymarch — the twin of the density render above,
     // into its own 1/5-res offscreen, merged the same way by
     // `zone-of-avoidance-upsample` inside the hdr COSMO step. That layer also
     // draws the band's full-res curved lettering straight into HDR, since MSDF
@@ -115,9 +115,9 @@ export const SCENE: FrameSection = {
         'point-sprites',
         'procedural-disks',
         'textured-disks',
-        'filaments',
+        'cosmic-web-filaments',
         'flow',
-        'volume-upsample',
+        'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
         'horizon-shell',
         'structure-markers',
@@ -309,6 +309,22 @@ export const POST: FrameSection = {
     // one replace-composite compresses it to display range.
     { kind: 'tonemap', source: 'hdr', dest: 'swap' },
   ],
+};
+
+// The dome rig's own two sections. `SCENE_TO_DOME_CUBE` is `SCENE` plus one
+// line: copy this face's freshly-drawn `hdr` into its own `dome-cube` layer
+// (`ViewSpec.output`), so the resample below reads five already-drawn faces.
+// `DOME_RESAMPLE` runs once against the canvas, after every face — it
+// fisheye-resamples the whole `dome-cube` row back into `hdr`, which `POST`
+// then blooms and tone-maps into the canvas exactly as the mono rig does.
+export const SCENE_TO_DOME_CUBE: FrameSection = {
+  scope: 'perView',
+  steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }],
+};
+
+export const DOME_RESAMPLE: FrameSection = {
+  scope: 'once',
+  steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
 };
 
 export const OVERLAYS: FrameSection = {

@@ -4,8 +4,7 @@
  *
  * If a future maintainer re-runs `tools/extractMcpmCube.py` against a new
  * VAC release with different metadata, these assertions fail loudly
- * rather than silently shipping a misaligned cube. Mirrors the role of
- * `tools/auditCf4Anchors.ts` for CF-4.
+ * rather than silently shipping a misaligned cube.
  */
 import { describe, it, expect } from 'vitest';
 import {

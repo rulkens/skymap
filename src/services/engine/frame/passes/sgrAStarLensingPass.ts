@@ -20,7 +20,7 @@ import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar
 import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packSgrAStarLensingUniforms } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
-import { lensQuadPlaneRadiusRs } from '../../../../utils/lensing/lensQuadPlaneRadiusRs';
+import { lensEdgeFadeEndRs } from '../../../../utils/lensing/lensEdgeFadeEndRs';
 import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 
 // `BLACK_HOLES` is authored data guaranteed to carry a Sgr A* row; a missing
@@ -83,24 +83,15 @@ export const sgrAStarLensingPass: ContentPass = {
     const simSeconds = ctx.snapshot.simDays * SECONDS_PER_DAY;
     const flickerPhase = ((2 * Math.PI * simSeconds) / tuning.flickerTimescaleS) % (2 * Math.PI);
 
-    // Where the escape fade must reach zero: weak-field deflection is 2/b rad
-    // (b in r_s), so it drops below one screen pixel at b = 2·drawPxPerRad.
-    // Capped at 0.6× the camera's distance (in r_s) because a billboard's
-    // impact-parameter coverage can never exceed that distance — 0.6 bounds
-    // the vertex's plane-stretch factor at 1.25 (see vertex.wesl) — and
-    // floored at the LUT max so the fade never cuts into the LUT-resolved
-    // strong-field region during a close descent — fading at the raw LUT edge
-    // blends a sky still deflected ~40 px into the true sky.
+    // Where the escape fade must reach zero — see lensEdgeFadeEndRs's doc.
     const distRs =
       Math.hypot(anchorPosRelCamM[0], anchorPosRelCamM[1], anchorPosRelCamM[2]) /
       SCHWARZSCHILD_RADIUS_M;
-    const edgeFadeEndRs = Math.max(
+    const edgeFadeEndRs = lensEdgeFadeEndRs(
+      distRs,
+      ctx.drawPxPerRad,
       renderer.lut.maxImpactParamRs,
-      Math.min(2 * ctx.drawPxPerRad, 0.6 * distRs),
     );
-    // Billboard half-size in f64 HERE, not in the vertex shader — see
-    // `lensQuadPlaneRadiusRs`'s docblock.
-    const quadPlaneRadiusRs = lensQuadPlaneRadiusRs(edgeFadeEndRs, distRs);
 
     const uniforms = packSgrAStarLensingUniforms({
       viewProj: view.vp,
@@ -124,7 +115,8 @@ export const sgrAStarLensingPass: ContentPass = {
       emissionStrength: tuning.emissionStrength,
       edgeFadeEndRs,
       emissionTint: tuning.emissionTint,
-      quadPlaneRadiusRs,
+      viewBasis: pose.basisM,
+      frustum: ctx.frustum,
     });
 
     // Named by the CAPTURE the lens samples, not by the texture that capture

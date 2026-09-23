@@ -16,4 +16,7 @@ export type ViewRig = {
    *  view: a rig with no canvas draw (dome) lists none of its own. */
   readonly views: (canvas: FrameView, state: EngineState) => readonly ViewSpec[] | null;
   readonly program: readonly FrameSection[];
+  /** Whether the canvas cursor maps to one of this rig's views — false turns
+   *  off picking and the terrain pick marker (a dome has no single cursor ray). */
+  readonly pickable: boolean;
 };

@@ -67,12 +67,12 @@ function serializeFadeId(h: FadeId): string {
       return `galaxyCatalog:${h.id}`;
     case 'structure':
       return `structure:${h.id}`;
-    case 'volumeField':
-      return `volumeField:${h.id}`;
+    case 'cosmicWebDensityField':
+      return `cosmicWebDensityField:${h.id}`;
     case 'milkyWay':
       return 'milkyWay';
-    case 'filament':
-      return 'filament';
+    case 'cosmicWebFilaments':
+      return 'cosmicWebFilaments';
     case 'localBubble':
       return 'localBubble';
     case 'flow':
@@ -90,8 +90,8 @@ function serializeFadeId(h: FadeId): string {
       return `labelLayer:${h.layer}${h.item ? ':' + h.item : ''}`;
     case 'overlay':
       return `overlay:${h.id}`;
-    case 'volumesMaster':
-      return 'volumesMaster';
+    case 'cosmicWebDensity':
+      return 'cosmicWebDensity';
   }
 }
 

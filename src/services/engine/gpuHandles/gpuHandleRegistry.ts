@@ -17,7 +17,6 @@ import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyW
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
-import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
 import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -34,6 +33,7 @@ import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer'
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
+import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
@@ -208,16 +208,6 @@ export const GPU_HANDLE_ROWS = [
       createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
-    key: 'volumeFieldRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
-  },
-  {
-    key: 'volumeUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
     key: 'milkyWayAggregateUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
@@ -260,6 +250,13 @@ export const GPU_HANDLE_ROWS = [
     key: 'cubeFaceBlitRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+  },
+  {
+    // Boot-eager like every other renderer row; `dome-cube` itself is the lazy
+    // one (`allocateWhen: state.viewRig === 'dome'`).
+    key: 'domeResampleRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'bodyPickRenderer',

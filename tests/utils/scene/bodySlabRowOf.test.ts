@@ -18,15 +18,17 @@ describe('bodySlabRowOf', () => {
     if (saturn === undefined) throw new Error('SCENE_PLANETS is missing saturn');
 
     const row = bodySlabRowOf(saturn);
+    const distM = 1e12;
+    const pxPerRad = 1000;
 
-    expect(row).toEqual({
+    expect(row).toMatchObject({
       anchorId: 'saturn',
-      boundingRadiusM: bodyDrawRadiusM(saturn),
       footprintRadiusM: bodyFootprintRadiusM(saturn),
       source: 'foreground',
     });
+    expect(row.drawRadiusM(distM, pxPerRad)).toBe(bodyDrawRadiusM(saturn, distM, pxPerRad));
     // The ring-inclusive draw radius is the one that must not collapse onto
     // the datum-derived footprint.
-    expect(row.boundingRadiusM).toBeGreaterThan(row.footprintRadiusM);
+    expect(row.drawRadiusM(distM, pxPerRad)).toBeGreaterThan(row.footprintRadiusM);
   });
 });

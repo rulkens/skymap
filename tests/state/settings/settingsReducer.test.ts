@@ -13,6 +13,6 @@ describe('settingsReducer', () => {
       mergeSnapshot({ labels: { focusedOnly: true } }),
     );
     expect(next.labels).toEqual({ focusedOnly: true });
-    expect(next.filaments).toBe(INITIAL_SETTINGS.filaments);
+    expect(next.cosmicWebFilaments).toBe(INITIAL_SETTINGS.cosmicWebFilaments);
   });
 });

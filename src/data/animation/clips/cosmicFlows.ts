@@ -74,7 +74,7 @@ export const cosmicFlows: Clip = {
     start: { target: [0, -0.01, 0] as Vec3, yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
     timeline: [
       wait(2), // lead-in: hold the start pose for 2 s (the forked bob still runs)
-      hide(['volumesMaster', 'filaments', 'surveyLabel'], 0), // snap cosmic web off — instant intent
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0), // snap cosmic web off — instant intent
       fade(['flow'], 0, 0), // mask: clipOpacity(flow) → 0 before enable
       scene(setFlowEnabled(true)), // load the flow field behind the mask
 

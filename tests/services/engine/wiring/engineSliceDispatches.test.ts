@@ -139,10 +139,6 @@ function makeProgressState(): EngineState {
   // — and pin a shape that no longer exists.
   const assetSlots: EngineAssetSlots = {
     structureCatalog: stubSlot('structure-catalog'),
-    cf4Density: stubSlot('cf4Density'),
-    mcpm: stubSlot('mcpm'),
-    polyphorm2Mrs: stubSlot('polyphorm-2mrs'),
-    mcpmWorkbench: stubSlot('mcpm-workbench'),
     bodyTextureAtlas: stubSlot('body-texture-atlas'),
     // Empty keyed families: installLoadProgress walks them like layerSlots.
     bodyTextures: new Map(),

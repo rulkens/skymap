@@ -8,7 +8,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -29,6 +28,9 @@ const CLUSTER: SelectionRow = {
   physicalRadiusMpc: 10,
   driver: null,
 };
+
+/** A visibility mask covering the two catalogs this file's fixtures populate. */
+const SDSS_AND_TWOMRS_MASK = maskWith(maskWith(0, Source.SDSS), Source.TwoMRS);
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const flat = new Float32Array(positions.length * 3);
@@ -83,12 +85,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
+    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER)); // primes the key — not asserted
     publish.mockClear();
 
     for (let i = 0; i < 9; i += 1)
-      tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
-    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(null)); // the one selection change
+      tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(null)); // the one selection change
 
     expect(publish).toHaveBeenCalledTimes(1);
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
@@ -100,7 +102,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const tick = galaxyCatalogPlanner(runtime);
 
     const milkyWay: SelectionRow = { type: 'milkyWay', driver: null };
-    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(milkyWay));
+    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
   });
@@ -149,7 +151,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     } as unknown as GalaxyCatalogRuntime;
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Tier swap: same selection, same visible mask, but this source's array
@@ -165,7 +167,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       ],
     ]);
     catalogsVersion = 1;
-    tick.plan(makeSnapshot(ALL_VISIBLE_MASK), VIEWS, makeState(CLUSTER));
+    tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });

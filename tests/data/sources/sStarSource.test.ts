@@ -18,14 +18,12 @@ import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
-  it('seeds a STAR-catalog settings row whose default follows the registry', () => {
+  it('seeds a STAR-catalog settings row', () => {
     // `visibleStars` gates all 39 on `starCatalogs.items.sStar.enabled`. The row
     // is derived, not authored, so the failure mode is an ABSENT key — an
-    // undefined read that throws on the first frame rather than a wrong boolean.
+    // undefined read that throws on the first frame rather than the row missing.
     expect(STAR_CATALOG_IDS).toContain(S_STAR_ENTRY.id);
-    expect(INITIAL_SETTINGS.starCatalogs.items[S_STAR_ENTRY.id]?.enabled).toBe(
-      S_STAR_ENTRY.visible,
-    );
+    expect(INITIAL_SETTINGS.starCatalogs.items[S_STAR_ENTRY.id]).toBeDefined();
   });
 
   it('the Sun joins it in the star cluster, and neither is a body any more', () => {

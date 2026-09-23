@@ -152,7 +152,11 @@ describe('expandFrameOrder', () => {
     const targets = program
       .filter((step) => step.kind === 'render')
       .map((step) => (step.kind === 'render' ? `${step.target}·${step.slab}` : ''));
-    expect(targets.slice(0, 3)).toEqual([`volume·${COSMO}`, `hdr·${COSMO}`, `star-aggregates·0`]);
+    expect(targets.slice(0, 3)).toEqual([
+      `cosmic-web-density·${COSMO}`,
+      `hdr·${COSMO}`,
+      `star-aggregates·0`,
+    ]);
   });
 
   it('resolves a line in its authored order, dropping names no pass owns', () => {

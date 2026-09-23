@@ -2,7 +2,7 @@
  * flowFieldFetcher — `Fetcher<ScalarCube, void>` against the prebuilt
  * `flowfield.scfd` on R2 (or `public/data/` in local dev).
  *
- * Mirrors `cf4DensityFetcher`'s shape: one URL, no per-request branching,
+ * One URL, no per-request branching,
  * decode via the format module. The request payload is `void` — there is
  * one and only one CF4++ velocity cube. Unlike the galaxy catalog catalogs (and
  * unlike MCPM), the flow field is NOT tier-gated: it ships as a single
@@ -11,8 +11,8 @@
  * request type would be vestigial.
  *
  * On 404 the slot machinery's error path leaves the layer unloaded; the flow
- * toggle simply has nothing to commit. This mirrors the cf4Density / filament
- * fallback (a missing optional binary disables that layer silently rather than
+ * toggle simply has nothing to commit. This mirrors the filament fallback (a
+ * missing optional binary disables that layer silently rather than
  * crashing).
  */
 

@@ -273,25 +273,19 @@ describe('visibleSlabBodies', () => {
     expect(visible.map((row) => row.anchorId)).toEqual(['visible-anchor']);
   });
 
-  it('keeps a cullFloorMpc row for its whole floor, even sub-pixel and off-axis', () => {
-    // The lens pass's slab must be born where its fade band OPENS (alpha = 0,
-    // 500 AU), not where the hole's own r_s-scale disc clears the 1-px floor
-    // (~346 AU on a dpr-2 1080p-class viewport — bandAlpha already ~0.4
-    // there: the pop this pins, audit-cubemap-alignment.md §8). Placed
-    // sub-pixel AND behind the camera: both culls must be bypassed inside
-    // the floor, since the lensed footprint isn't the disc. The real core row
-    // is the fixture, so its floor and the band it is keyed to stay pinned.
+  describe("Sgr A*'s lens envelope, not a bypass", () => {
+    // Both culls read the lens row's `drawRadiusM` like any other row's
+    // shell, so candidacy tracks where the LENSED SPHERE actually reaches
+    // rather than bypassing for any position inside the band, which would
+    // keep a hole directly behind the camera.
     const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id);
     if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no galactic-centre row');
-    const insideFloorMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
-    const outsideFloorMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
+    const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
+    const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 
-    for (const [distanceMpc, expected] of [
-      [insideFloorMpc, [GALACTIC_CENTRE_ANCHOR.id]],
-      [outsideFloorMpc, []],
-    ] as const) {
+    it('keeps the lens inside the band, 30° off-axis (well within the frustum cull threshold)', () => {
       const bodyStates = new Map<string, BodyState>([
-        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(30, insideBandMpc))],
       ]);
       const visible = visibleSlabBodies({
         rows: [lensRow],
@@ -301,7 +295,37 @@ describe('visibleSlabBodies', () => {
         frustum: SQUARE_90,
         pxPerRad: PX_PER_RAD_90,
       });
-      expect(visible.map((row) => row.anchorId)).toEqual(expected);
-    }
+      expect(visible.map((row) => row.anchorId)).toEqual([GALACTIC_CENTRE_ANCHOR.id]);
+    });
+
+    it('drops the lens inside the band but 180° behind the camera — the envelope does not reach that far', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(180, insideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        rows: [lensRow],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((row) => row.anchorId)).toEqual([]);
+    });
+
+    it('drops the lens outside the band, where the envelope is 0', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(0, outsideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        rows: [lensRow],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((row) => row.anchorId)).toEqual([]);
+    });
   });
 });

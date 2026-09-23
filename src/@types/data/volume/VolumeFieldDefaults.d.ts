@@ -4,16 +4,12 @@
  *
  * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
  * field should LOOK on first registration — its palette and
- * `densityScale` — is presentation, not data, and lives in
- * `src/data/volumeFieldDefaults.ts` rather than in the binary header.
- *
- * See that file's module header for the alternatives considered and
- * the rationale behind keeping a TS registry of compile-time
- * vocabulary.
+ * `densityScale` — is presentation, not data, and lives on each field's
+ * source row (`src/layers/cosmicWebDensity/sources/`), built into
+ * `VolumeFieldSettings` by `layers/cosmicWebDensity/state/defaults.ts`.
  */
 
 import type { ScalarFieldPaletteId } from './ScalarFieldPaletteId';
-import type { FadeBand } from '../../math/FadeBand';
 
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;
@@ -23,8 +19,8 @@ export type VolumeFieldDefaults = {
    * around the value midpoint and stretches the surviving range
    * across the full palette.  Per-cube because the right amount of
    * windowing depends on how noisy the cube's near-mean voxels are —
-   * dense scientific reconstructions (CF-4) want a touch of
-   * windowing on by default; synthetic test fixtures don't.
+   * a dense scientific reconstruction wants a touch of windowing on
+   * by default to suppress near-mean noise.
    */
   contrast: number;
   /**
@@ -36,8 +32,7 @@ export type VolumeFieldDefaults = {
    *   - Divergent palettes (coolwarm) with a meaningful zero at the
    *     midpoint of the data range → `contrastCenter = 0.5`.  The
    *     deadband suppresses near-mean noise symmetrically; the
-   *     stretch pushes both ends toward palette extremes.  CF-4
-   *     density contrast is the canonical example.
+   *     stretch pushes both ends toward palette extremes.
    *
    *   - Sequential palettes (inferno, magma, viridis) with a
    *     meaningful zero at the start of the LUT (voids are
@@ -62,12 +57,12 @@ export type VolumeFieldDefaults = {
    * aligned silhouette of the bounding box.  Whether a cube WANTS this
    * envelope is content-dependent:
    *
-   *   - CF-4 density: yes — corners are sparse void anyway, the cosmic
-   *     structures of interest (Laniakea, Local Void, Great Attractor)
-   *     sit comfortably inside the inscribed sphere.  Hiding the cube
-   *     silhouette makes the overlay blend with the surrounding sky.
-   *   - Debug grids: no — the whole point is to verify axis alignment,
-   *     so the corners must stay visible.
+   *   - A cosmic-web density volume: yes — corners are sparse void
+   *     anyway, the cosmic structures of interest sit comfortably
+   *     inside the inscribed sphere.  Hiding the cube silhouette makes
+   *     the overlay blend with the surrounding sky.
+   *   - A cube whose whole point is verifying axis alignment: no — the
+   *     corners must stay visible.
    *
    * The envelope is a smoothstep from `inner` (fully opaque) to `outer`
    * (fully transparent), where both numbers are distance from the cube
@@ -93,39 +88,20 @@ export type VolumeFieldDefaults = {
    * Per-cube static (not a user-tunable slider) because it's a
    * per-dataset aesthetic decision rather than a tuning knob — MCPM
    * with its log-normalised heavy tail wants 4-6 to surface the
-   * fiery slime-mould look; CF-4 keeps 1.0 because its divergent
-   * coolwarm is already calibrated against the cosmic mean.
+   * fiery slime-mould look, while a cube already calibrated against
+   * its cosmic mean can keep 1.0.
    */
   exposure: number;
   /**
    * Default user-tunable low-end cutoff (Trim) in normalised LUT space.
    * Per-cube starting point; user can override via the Trim slider.
    *
-   *   - 0.0 = no trim (every voxel passes).  CF-4 default — its
-   *     coolwarm palette is already calibrated against the cosmic mean
-   *     and trimming would crop scientifically meaningful structure.
+   *   - 0.0 = no trim (every voxel passes).  Right for a cube whose
+   *     palette is already calibrated against the cosmic mean, where
+   *     trimming would crop scientifically meaningful structure.
    *   - 0.2 = light trim hiding the low-density fog band.  MCPM
    *     default — see the analysis in the spec for the percentile
    *     breakdown that motivates this value.
    */
   trim: number;
-  /**
-   * Optional per-cube starting Intensity (overall opacity multiplier in
-   * [0, 1]).  When omitted, the slot seeds with the global
-   * `DEFAULT_VOLUME_FIELD_INTENSITY`.  Per-cube override exists because
-   * a heavy-tailed log-normalised cube (MCPM) wants intensity=1.0 by
-   * default to read at full saturation, while CF-4's calibrated
-   * coolwarm sits comfortably at the global 0.5.
-   */
-  intensity?: number;
-  /** Optional human-readable label override (renderer falls back to id). */
-  label?: string;
-  /**
-   * Optional per-field scale-fade bands, seeded into `VolumeFieldSettings.bands`
-   * (`buildVolumeFieldSettings`). Omitted → `[SCALE_FADE_BANDS.surveyDeepZoom]`,
-   * today's one-size-fits-all deep-zoom fade. A field wanting a different
-   * choreography (e.g. full close-in, gone far out) declares its own bands here
-   * instead of hand-editing `deriveVolumeLiveness`.
-   */
-  fadeBands?: readonly FadeBand[];
 };

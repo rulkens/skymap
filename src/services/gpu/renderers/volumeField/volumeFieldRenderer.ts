@@ -6,9 +6,9 @@
  * Public surface (factory shape, matching D.2 conventions):
  *
  *   - createVolumeFieldRenderer(device, targetFormat, fadeBgl)
- *   - upload(id, cube)            → upload cube to a 3D r16float
- *                                       texture, read the per-cube static
- *                                       config from the registry, register
+ *   - upload(id, cube, statics)     → upload cube to a 3D r16float
+ *                                       texture, take the per-cube static
+ *                                       config from `statics`, register
  *                                       in the field map
  *   - unload(id)                → drop the texture, unregister
  *   - hasActiveFields(settingsOf)    → true iff any field whose live
@@ -31,8 +31,8 @@
  * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
  * The user-tunable knobs (enabled, intensity, contrast, densityScale,
  * palette, trim, exposure) are NOT mirrored on the entry — they live in
- * 'state.settings.volumes.items' and are read per frame in 'draw' via
- * the 'settingsOf' projection, so there is exactly one source of truth.
+ * the caller's settings and are read per frame in 'draw' via the
+ * 'settingsOf' projection, so there is exactly one source of truth.
  * Sharing the pipeline across all fields keeps the layout-'auto' trap
  * from biting: one pipeline → one auto-derived bind-group layout → all
  * bind groups are interchangeable across fields with the same shape.
@@ -52,8 +52,6 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
-import { getVolumeFieldDefaults } from '../../../../data/volume/volumeFieldDefaults';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../../data/volume/scalarFieldPalettes';
 import vsCode from '../../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../../shaders/scalarVolume/fragment.wesl?static';
@@ -99,14 +97,14 @@ const CUBE_INDICES = new Uint16Array([
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createVolumeFieldRenderer(
+export function createVolumeFieldRenderer<Id extends string>(
   device: GPUDevice,
   // The colour-target format the raymarch pipeline writes into — the HDR
   // offscreen (`'rgba16float'`), NOT the swap chain. Handed over explicitly
   // (never read off a `GpuContext.format`, which is always the swap format).
   targetFormat: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
-): VolumeFieldRenderer {
+): VolumeFieldRenderer<Id> {
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -206,7 +204,7 @@ export function createVolumeFieldRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  const fields = new Map<VolumeFieldId, FieldEntry>();
+  const fields = new Map<Id, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
   // the fragment shader as a temporal seed for the ray-march jitter
   // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
@@ -260,9 +258,9 @@ export function createVolumeFieldRenderer(
     );
   }
 
-  const renderer: VolumeFieldRenderer = {
+  const renderer: VolumeFieldRenderer<Id> = {
     label: 'volumeFieldRenderer',
-    upload(id, cube) {
+    upload(id, cube, statics) {
       const existing = fields.get(id);
       if (existing) {
         existing.volumeTexture.destroy();
@@ -271,20 +269,19 @@ export function createVolumeFieldRenderer(
         existing.fadeBuffer.destroy();
         fields.delete(id);
       }
-      // Per-cube STATIC presentation config read once from the registry.
-      // The id is a `VolumeFieldId` (the registry-derived field union),
-      // so the lookup needs no cast.  The user-tunable knobs (enabled,
-      // intensity, contrast, densityScale, palette, trim, exposure) are NOT
-      // seeded here — they live in settings and are read per frame in `draw`.
-      const defaults = getVolumeFieldDefaults(id);
+      // Per-cube STATIC presentation config is the caller's to supply —
+      // this renderer names no registry, so it can't look defaults up
+      // itself.  The user-tunable knobs (enabled, intensity, contrast,
+      // densityScale, palette, trim, exposure) are NOT seeded here —
+      // they live in the caller's settings and are read per frame in `draw`.
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.inverse(modelMatrix);
       const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
-      // Seed the resident LUT from the registry default so it matches
-      // `residentPaletteId`; `draw` re-uploads in place if the live
-      // setting later diverges.
-      writePaletteLut(paletteTexture, defaults.paletteId);
+      // Seed the resident LUT from the caller's static default so it
+      // matches `residentPaletteId`; `draw` re-uploads in place if the
+      // live setting later diverges.
+      writePaletteLut(paletteTexture, statics.paletteId);
       const uniformBuffer = device.createBuffer({
         size: UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -310,15 +307,14 @@ export function createVolumeFieldRenderer(
         entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
       });
       fields.set(id, {
-        id,
-        // Per-cube static config, read once from the registry above.
-        contrastCenter: defaults.contrastCenter,
-        envelopeInner: defaults.envelope.inner,
-        envelopeOuter: defaults.envelope.outer,
+        // Per-cube static config, taken from the caller's `statics` above.
+        contrastCenter: statics.contrastCenter,
+        envelopeInner: statics.envelope.inner,
+        envelopeOuter: statics.envelope.outer,
         // GPU-residency fact: the palette id just written into
         // `paletteTexture`.  `draw` re-uploads the LUT when the live
         // setting diverges from this.
-        residentPaletteId: defaults.paletteId,
+        residentPaletteId: statics.paletteId,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -344,9 +340,8 @@ export function createVolumeFieldRenderer(
       fields.delete(id);
     },
     hasActiveFields(settingsOf, fadeOpacityOf) {
-      for (const e of fields.values()) {
-        const s = settingsOf(e.id);
-        if (!s) continue;
+      for (const id of fields.keys()) {
+        const s = settingsOf(id);
         if (s.intensity <= 0) continue;
         // Opacity is the SOLE visibility truth: a field is active iff its
         // resolved opacity is non-zero. The enabled toggle doesn't override
@@ -355,7 +350,7 @@ export function createVolumeFieldRenderer(
         // burn a full raymarch. This one test also covers the fade-out
         // tail (toggle off, opacity still ramping down) for free: the tail
         // IS a non-zero opacity.
-        if ((fadeOpacityOf ? fadeOpacityOf(e.id) : 1) > 0) return true;
+        if (fadeOpacityOf(id) > 0) return true;
       }
       return false;
     },
@@ -391,11 +386,8 @@ export function createVolumeFieldRenderer(
       // the entry.
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       frame = (frame + 1) % FRAME_WRAP;
-      for (const e of fields.values()) {
-        const s = settingsOf(e.id);
-        // No live settings row (e.g. a removed field with a late-firing
-        // callback) → nothing to draw for this field.
-        if (!s) continue;
+      for (const [id, e] of fields.entries()) {
+        const s = settingsOf(id);
         // Reactive palette: re-upload the LUT in place when the live
         // setting diverges from what's resident (the bind group
         // references the texture view, which stays valid across
@@ -421,7 +413,7 @@ export function createVolumeFieldRenderer(
         // fade-in proceeds without a stall. s.intensity is the user's
         // intensity slider; 0 there means "fully transparent regardless of
         // fade", so we skip the GPU work entirely.
-        const opacity = fadeOpacityOf(e.id);
+        const opacity = fadeOpacityOf(id);
         if (opacity <= 0 || s.intensity <= 0) continue;
         writeCameraPrefix(scratch, viewProj, viewportPx, pxPerRad);
         // Explicit pad zeroing — the scratch is reused across the field

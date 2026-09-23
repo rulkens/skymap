@@ -96,16 +96,6 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
-    const cf4 = rowFor('cf4Density');
-    expect(
-      cf4.demand(
-        makeCtx({ settings: { volumes: { items: { 'cf4-density': { enabled: true } } } } }),
-      ),
-    ).toBe(true);
-    expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
     const cluster = rowFor('structureCatalog');
     // Every category's ring + label off — both axes read from the item rows.

@@ -18,7 +18,7 @@ const BAND = SCALE_FADE_BANDS.sgrAStarLensing;
 
 const ROW: SlabRow = {
   anchorId: ANCHOR_ID,
-  boundingRadiusM: 1,
+  drawRadiusM: () => 1,
   footprintRadiusM: 1,
   activeBand: BAND,
   source: 'lens',

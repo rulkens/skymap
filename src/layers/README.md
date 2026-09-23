@@ -86,7 +86,7 @@ and expect both to be ruled on when the Layer structure is cleaned up:
 
 ## Status
 
-`galaxyCatalog`, `starCatalog`, `filaments`, `flow`, `zoneOfAvoidance`,
-`localBubble`, and `constellations` are formed. The other four folders
-(`body`, `milkyWay`, `structure`, `volume`) are settings-only stubs from prep
-step (c) and are filled in one Layer at a time.
+`galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
+`flow`, `zoneOfAvoidance`, `localBubble`, and `constellations` are formed.
+The other three folders (`body`, `milkyWay`, `structure`) are settings-only
+stubs from prep step (c) and are filled in one Layer at a time.

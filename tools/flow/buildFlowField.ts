@@ -15,14 +15,13 @@
  *   …and uploads them to R2.  Contributors curl those instead of the 167 MB
  *   .npz.  See `data/raw/cf4/README.md` for the full fetch + build recipe.
  *
- * This is the 4-channel velocity analogue of `buildCf4Density.ts`: same .npy
- * loading, same f16 packing, the same numpy-C-order → WebGPU-x-fastest axis
- * transpose, the same observer-centred origin.  The differences are (a) the
- * velocity array is 4-D — three Cartesian components per cell — so we emit
- * `channels = 4` voxels (vx, vy, vz, δ); and (b) a velocity field needs
- * cross-channel normalisation stats (speed magnitude, percentiles) that a
- * per-channel min/max can't express, so we fold those into the SCFD header's
- * `velocityStats`.
+ * Same .npy loading, f16 packing, numpy-C-order → WebGPU-x-fastest axis
+ * transpose, and observer-centred origin as every other SCFD volume builder.
+ * The differences are (a) the velocity array is 4-D — three Cartesian
+ * components per cell — so we emit `channels = 4` voxels (vx, vy, vz, δ);
+ * and (b) a velocity field needs cross-channel normalisation stats (speed
+ * magnitude, percentiles) that a per-channel min/max can't express, so we
+ * fold those into the SCFD header's `velocityStats`.
  *
  * Pure Node/TS — no Python required.  Idempotent; prints what it generated;
  * exits non-zero on missing inputs.  Output is gitignored and synced to R2.
@@ -43,10 +42,10 @@ import { attractorVoxel } from './flowFieldFrame';
 
 /**
  * Physical voxel edge length, derived from the box size and grid resolution.
- * CF4++ ships a 1000 Mpc box on a 128³ grid in *physical* Mpc — identical to
- * the density cube (see `buildCf4Density.ts`).  We compute it from the loaded
- * N rather than hardcoding 128 so the script tracks a future resolution bump
- * automatically; the 1000 Mpc box extent is the load-bearing constant.
+ * CF4++ ships a 1000 Mpc box on a 128³ grid in *physical* Mpc.  We compute
+ * it from the loaded N rather than hardcoding 128 so the script tracks a
+ * future resolution bump automatically; the 1000 Mpc box extent is the
+ * load-bearing constant.
  */
 const CF4PP_BOX_SIZE_MPC = 1000;
 
@@ -199,11 +198,18 @@ export async function buildFlowField(args?: {
   const deltaP99 = percentile99(new Float64Array(density));
 
   // ── 3. Pack 4-channel voxels with the C-order → x-fastest transpose ──
-  // Identical axis transpose to buildCf4Density (numpy C-order axis 0 = SGX
-  // slowest, axis 2 = SGZ fastest → WebGPU x-fastest), extended ×4 for the
-  // interleaved (vx, vy, vz, δ) components.  See buildCf4Density's long
-  // comment for why the transpose is required: a straight copy would swap the
-  // cube's X and Z relative to the model matrix's local-x = SGX assumption.
+  // The CF4++ .npy is C-order with shape (Nx, Ny, Nz): axis 0 = SGX (slowest
+  // in memory), axis 2 = SGZ (fastest) — numpy stores npy[i, j, k] at offset
+  // i*Ny*Nz + j*Nz + k, so the LAST index varies fastest.  WebGPU's
+  // writeTexture instead reads the buffer x-FASTEST: texture coordinate
+  // (xt, yt, zt) comes from offset zt*Ny*Nx + yt*Nx + xt, so the FIRST
+  // coordinate varies fastest.  A straight copy would therefore place numpy
+  // axis 2 (SGZ) into WebGPU's x-axis and axis 0 (SGX) into its z-axis —
+  // swapping the cube's X and Z relative to the model matrix's local-x = SGX
+  // assumption, so density blobs would sit at the wrong world positions
+  // relative to cluster labels rendered via raDecDistToEqCart.  Fixed here
+  // by transposing axes 0 ↔ 2 at pack time, extended ×4 for the interleaved
+  // (vx, vy, vz, δ) components.
   //
   // LOAD-BEARING ASSUMPTION: the velocity components stay in NATIVE SG order
   // with NO permutation and NO sign flip — vx → SGX (R), vy → SGY, vz → SGZ.
@@ -241,7 +247,7 @@ export async function buildFlowField(args?: {
     frameKind: 'supergalactic-cartesian',
     // Identity quaternion — the renderer composes the SG→EQ rotation from
     // frameKind; `rotation` is reserved for per-cube tilt offsets and ships
-    // identity for vanilla SG cubes.  (See buildCf4Density's note.)
+    // identity for vanilla SG cubes.
     origin,
     voxelSize: voxelSizeMpc,
     rotation: [0, 0, 0, 1],

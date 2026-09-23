@@ -1,15 +1,17 @@
 /**
- * packSgrAStarLensingUniforms — pure packer for the 176-byte
+ * packSgrAStarLensingUniforms — pure packer for the 240-byte
  * `SgrAStarLensingUniforms` struct (`shaders/lib/sgrAStarLensing.wesl`).
  *
  * The CPU half of the uniform contract between the Sgr A* lens pass and its
  * WGSL. The struct is the shared
  * `CameraUniforms` prefix (`writeCameraPrefix`, the same helper every
  * world-space renderer uses) plus the lens's own scalar params, the LUT
- * addressing pair, this frame's fade-band alpha, and the camera-relative
- * anchor position (the f64->f32 rebase seam `bodyGlintsPass` /
- * `starPointsPass` already use — the caller subtracts the eye and folds
- * it into `viewProj` before calling this).
+ * addressing pair, this frame's fade-band alpha, the camera-relative anchor
+ * position (the f64->f32 rebase seam `bodyGlintsPass` / `starPointsPass`
+ * already use — the caller subtracts the eye and folds it into `viewProj`
+ * before calling this), and — because the lens is a per-view fullscreen
+ * pass rather than a flat quad — this view's camera basis and frustum
+ * tangents, which the vertex stage uses to build each fragment's ray.
  *
  * ## Byte layout (must stay byte-exact with `shaders/lib/sgrAStarLensing.wesl`)
  *
@@ -38,36 +40,49 @@
  *   f32 38      (byte 152..155): emissionStrength — tuning knob
  *   f32 39      (byte 156..159): edgeFadeEndRs — per-frame derived (not a knob)
  *   f32 40..42  (byte 160..171): emissionTint — tuning knob, vec3<f32>
- *   f32 43      (byte 172..175): quadPlaneRadiusRs — per-frame derived (not a knob)
+ *   f32 43      (byte 172..175): _pad1 — unwritten (zero)
+ *   f32 44..46  (byte 176..187): viewBasis column 0 (right)   vec3<f32>
+ *   f32 47      (byte 188..191): (column 0 pad — unwritten)
+ *   f32 48..50  (byte 192..203): viewBasis column 1 (up)      vec3<f32>
+ *   f32 51      (byte 204..207): (column 1 pad — unwritten)
+ *   f32 52..54  (byte 208..219): viewBasis column 2 (forward) vec3<f32>
+ *   f32 55      (byte 220..223): (column 2 pad — unwritten)
+ *   f32 56..59  (byte 224..239): frustumTan (tanLeft, tanRight, tanDown, tanUp)
  *
- * Total: 176 bytes / 44 f32. The 12 scalars at f32 20..31 exactly fill the
+ * Total: 240 bytes / 60 f32. The 12 scalars at f32 20..31 exactly fill the
  * run up to f32 32, so `anchorPosRelCamM` lands on a 16-byte boundary with
  * no implicit padding — see the .wesl module header for the alignment
- * argument.
+ * argument. `mat3x3<f32>` stores each column at a 16-byte (4-float)
+ * stride — the 4th float of each column is WGSL's own std140 column
+ * padding, not a packer field.
  *
  * `lutSampleCount` is packed as `f32` (the brief allows `f32` or `u32`; a
  * texel count round-trips exactly through f32 up to 2^24, far beyond any
  * plausible LUT size, so there is no precision reason to special-case a
  * `u32` write into this otherwise-uniform `Float32Array`).
  *
- * Takes a NAMED bag, not positional args: 17 of these fields are bare
- * `number`s, so a transposition (`innerRs`/`outerRs`,
- * `diskScaleHeightRs`/`edgeFadeStartFraction`) would type-check, pass the
- * offset parity test, and render subtly wrong. The table above documents each
- * field; `viewProj` is already camera-rebased and column-major, `bandAlpha`
- * is this frame's fade-band alpha, and everything in r_s or metres says so in
- * its name.
+ * Takes a NAMED bag, not positional args: fields are bare `number`s, so a
+ * transposition (`innerRs`/`outerRs`, `diskScaleHeightRs`/
+ * `edgeFadeStartFraction`) would type-check, pass the offset parity test,
+ * and render subtly wrong. The table above documents each field; `viewProj`
+ * is already camera-rebased and column-major, `viewBasis` is column-major
+ * (`Mat3`'s own convention — right | up | forward), `bandAlpha` is this
+ * frame's fade-band alpha, and everything in r_s or metres says so in its
+ * name.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { Mat3 } from '../../@types/math/Mat3';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/cameraUniforms';
 
 /** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
  *  scalars + anchorPosRelCamM (3) + tuning knobs (4 scalars + emissionTint's
- *  3) + edgeFadeEndRs + quadPlaneRadiusRs = 44. */
-export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 24;
+ *  3) + edgeFadeEndRs + _pad1 (24) + viewBasis (3 padded 16-B columns, 12) +
+ *  frustumTan (4) = 60. */
+export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 40;
 
 export function packSgrAStarLensingUniforms(input: {
   readonly viewProj: Float32Array | Mat4;
@@ -91,7 +106,8 @@ export function packSgrAStarLensingUniforms(input: {
   readonly emissionStrength: number;
   readonly edgeFadeEndRs: number;
   readonly emissionTint: Readonly<Vec3>;
-  readonly quadPlaneRadiusRs: number;
+  readonly viewBasis: Readonly<Mat3>;
+  readonly frustum: ViewFrustum;
 }): Float32Array {
   const {
     viewProj,
@@ -115,7 +131,8 @@ export function packSgrAStarLensingUniforms(input: {
     emissionStrength,
     edgeFadeEndRs,
     emissionTint,
-    quadPlaneRadiusRs,
+    viewBasis,
+    frustum,
   } = input;
   const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
   writeCameraPrefix(out, viewProj, viewportPx, pxPerRad); // f32 0..18; 19 stays zero
@@ -142,6 +159,22 @@ export function packSgrAStarLensingUniforms(input: {
   out[40] = emissionTint[0]; // byte 160 — vec3
   out[41] = emissionTint[1]; // byte 164
   out[42] = emissionTint[2]; // byte 168
-  out[43] = quadPlaneRadiusRs; // byte 172 — per-frame derived (not a knob)
+  // out[43] (byte 172) stays 0 — _pad1, unread.
+  out[44] = viewBasis[0]; // byte 176 — viewBasis column 0 (right)
+  out[45] = viewBasis[1]; // byte 180
+  out[46] = viewBasis[2]; // byte 184
+  // out[47] (byte 188) stays 0 — std140 column padding.
+  out[48] = viewBasis[3]; // byte 192 — viewBasis column 1 (up)
+  out[49] = viewBasis[4]; // byte 196
+  out[50] = viewBasis[5]; // byte 200
+  // out[51] (byte 204) stays 0 — std140 column padding.
+  out[52] = viewBasis[6]; // byte 208 — viewBasis column 2 (forward)
+  out[53] = viewBasis[7]; // byte 212
+  out[54] = viewBasis[8]; // byte 216
+  // out[55] (byte 220) stays 0 — std140 column padding.
+  out[56] = frustum.tanLeft; // byte 224
+  out[57] = frustum.tanRight; // byte 228
+  out[58] = frustum.tanDown; // byte 232
+  out[59] = frustum.tanUp; // byte 236
   return out;
 }

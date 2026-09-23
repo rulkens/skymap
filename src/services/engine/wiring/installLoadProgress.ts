@@ -3,8 +3,7 @@
  * load-progress emitter over it.
  *
  * Runs AFTER every slot is installed (point + body-texture slots minted
- * directly earlier in `wireSlots`, sidecars from `installSlots`, the DEV
- * synthetic-volume record from the orchestrator).
+ * directly earlier in `wireSlots`, sidecars from `installSlots`).
  * It populates `deps.allSlots` — keyed by `slot.name` — from all of those, then
  * hands the same Map to `createLoadProgressEmitter` and subscribes the emitter
  * to each slot.
@@ -78,13 +77,6 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   // loading-bar progress and no slot-ready render wake.
   for (const [, slot] of state.layerSlots) {
     allSlots.set(slot.name, slot);
-  }
-
-  // DEV synthetic-volume fixtures (present only in dev builds).
-  if (state.assetSlots.syntheticVolumes) {
-    for (const slot of Object.values(state.assetSlots.syntheticVolumes)) {
-      allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-    }
   }
 
   const progressEmitter = createLoadProgressEmitter((snapshot) => {

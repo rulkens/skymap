@@ -180,8 +180,8 @@ function makeState(): EngineState {
       // fixture carries both boot values rather than leaving either reader to
       // resolve undefined.
       milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
-      filaments: { enabled: false, intensity: 1 },
-      volumes: { enabled: false },
+      cosmicWebFilaments: { enabled: false, intensity: 1 },
+      cosmicWebDensity: { enabled: false },
     },
     picking: {
       pickInFlight: false,

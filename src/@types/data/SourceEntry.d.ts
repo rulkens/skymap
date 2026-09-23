@@ -1,8 +1,8 @@
 import type { GalaxyCatalogSourceEntry } from './galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { StructureSourceEntry } from './structure/StructureSourceEntry';
-import type { FilamentSourceEntry } from './filament/FilamentSourceEntry';
+import type { CosmicWebFilamentsSourceEntry } from './filament/CosmicWebFilamentsSourceEntry';
 import type { ConstellationsSourceEntry } from './constellations/ConstellationsSourceEntry';
-import type { VolumeSourceEntry } from './volume/VolumeSourceEntry';
+import type { CosmicWebDensitySourceEntry } from './volume/CosmicWebDensitySourceEntry';
 import type { MilkyWaySourceEntry } from './milkyWay/MilkyWaySourceEntry';
 import type { FlowSourceEntry } from './flow/FlowSourceEntry';
 import type { BodySourceEntry } from './body/BodySourceEntry';
@@ -21,9 +21,9 @@ import type { ZoneOfAvoidanceSourceEntry } from './zoneOfAvoidance/ZoneOfAvoidan
 export type SourceEntry =
   | GalaxyCatalogSourceEntry
   | StructureSourceEntry
-  | FilamentSourceEntry
+  | CosmicWebFilamentsSourceEntry
   | ConstellationsSourceEntry
-  | VolumeSourceEntry
+  | CosmicWebDensitySourceEntry
   | MilkyWaySourceEntry
   | FlowSourceEntry
   | StarCatalogSourceEntry

@@ -14,14 +14,12 @@ import type { SlabHostId } from './SlabHostId';
 export type SlabRow = {
   /** Pose = `ctx.bodyPose(anchorId)`; also the row's `SlabFrame.hostId`. */
   readonly anchorId: SlabHostId;
-  /** Outermost drawn extent, metres (`bodyDrawRadiusM`) — drives the far edge. */
-  readonly boundingRadiusM: number;
+  /** Outermost drawn extent for this view, metres — far edge and both culls. */
+  readonly drawRadiusM: (distM: number, pxPerRad: number) => number;
   /** Solid-sphere occupied radius, metres (`bodyFootprintRadiusM`) — drives the near edge / cull. */
   readonly footprintRadiusM: number;
   /** The row exists only while `fadeBand(activeBand, |cam − anchor|) > 0`. */
   readonly activeBand?: FadeBand;
-  /** Inside this camera distance both `visibleSlabBodies` culls are bypassed. */
-  readonly cullFloorMpc?: number;
   /** Which frame-graph line consumes the row (`BodyRowSource`). */
   readonly source: 'foreground' | 'lens';
 };

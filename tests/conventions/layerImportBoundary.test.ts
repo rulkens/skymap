@@ -86,13 +86,11 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-// Both dispatch an action creator a Layer owns — core writing INTO a Layer's
-// cluster. Neither is a decision: both Layers are still settings-only folders,
-// so there is nowhere else for the work to live. DELETE each row as its Layer
-// forms — `uploadVolumeField` becomes volume's slot wiring, and the tier ->
-// milkyWay put becomes a `milkyWay/sagas/` watcher.
+// Dispatches an action creator a Layer owns — core writing INTO a Layer's
+// cluster. Not a decision: milkyWay is still a settings-only folder, so there
+// is nowhere else for the work to live. DELETE the row as the Layer forms —
+// the tier -> milkyWay put becomes a `milkyWay/sagas/` watcher.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  'services/engine/volume/uploadVolumeField': 1,
   'state/tier/watchTierSaga': 1,
 };
 

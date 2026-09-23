@@ -156,7 +156,11 @@ export function bodySlabRow(input: {
   const { eyeRelBodyM, basisM } = relPose;
 
   const dM = Math.hypot(eyeRelBodyM[0], eyeRelBodyM[1], eyeRelBodyM[2]);
-  const rMaxM = row.boundingRadiusM;
+  // Straight off the tangents — no fovYRad round trip needed at all. Shared
+  // with the DEV-only radiusPx block below: a row's drawn envelope can depend
+  // on it just as radiusPx already did.
+  const pxPerRad = viewportPx[1] / (frustum.tanUp - frustum.tanDown);
+  const rMaxM = row.drawRadiusM(dM, pxPerRad);
   const forward: Vec3 = [basisM[6], basisM[7], basisM[8]];
   const up: Vec3 = [basisM[3], basisM[4], basisM[5]];
 
@@ -205,8 +209,7 @@ export function bodySlabRow(input: {
         positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
         radiusM: rMaxM,
         camPosMpc: [0, 0, 0],
-        // Straight off the tangents — no fovYRad round trip needed at all.
-        pxPerRad: viewportPx[1] / (frustum.tanUp - frustum.tanDown),
+        pxPerRad,
       }) / 2
     : 0;
 

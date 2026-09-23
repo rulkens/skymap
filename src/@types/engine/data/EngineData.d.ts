@@ -20,7 +20,7 @@ import type { BodyStore } from './BodyStore';
  * the slot through `slotFor(state, 'flow' / 'filaments')` instead.
  *
  * Volumes also have no store: their only app-side state is per-field settings,
- * which live in `state.settings.volumes.items` (ADR 0006 superseded the
+ * which live in `state.settings.cosmicWebDensity.items` (ADR 0006 superseded the
  * volumeStore that ADR 0005 originally proposed for that type).
  */
 export type EngineData = {

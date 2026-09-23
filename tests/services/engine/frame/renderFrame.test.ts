@@ -29,8 +29,12 @@ import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/Fr
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
+import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
@@ -150,7 +154,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
     {
-      id: 'volume',
+      id: 'cosmic-web-density',
       format: 'rgba16float',
       depth: null,
       scale: 3,
@@ -181,7 +185,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumePass / milkyWayAggregatePass read this for their
+    // the density raymarch / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720 the
     // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
     sizeOf: (id: string) => {
@@ -361,19 +365,26 @@ function makeInput(
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },
   } as unknown as GalaxyCatalogRuntime;
+  // No active field ⇒ the density passes' shared liveness is null, keeping
+  // these fixtures off the density raymarch; the ordering test swaps in a live
+  // renderer and the gate test an upsample spy.
+  const densityRuntime = {
+    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    upsample: { draw: vi.fn(), destroy: vi.fn() },
+  } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const compositor = makeMockCompositor(callLog);
-  // The render-target table backing views. The volume row's default view is
-  // an inert stub — renderFrame's baseline tests don't exercise the volume
-  // pass (volumesEnabled is false by default); the volume-ordering test
+  // The render-target table backing views. The density row's default view is
+  // an inert stub — renderFrame's baseline tests don't exercise the density
+  // pass (no active field by default); the density-ordering test
   // swaps in its own half-res view via this record. The mw-aggregate row DOES
   // get touched every frame here: the fixture camera keeps the Milky-Way cloud
   // alive, so its star pass opens a real pass against this view.
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: hdrTargetView,
-    volume: {} as GPUTextureView,
+    'cosmic-web-density': {} as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeMockRenderTargets(renderTargetViews);
@@ -410,7 +421,7 @@ function makeInput(
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
-    volumesEnabled: false,
+    cosmicWebDensityEnabled: false,
     bloomEnabled: false,
     ...(overrides.settings ?? {}),
   };
@@ -495,6 +506,7 @@ function makeInput(
     renderTargets,
     compositor,
     galaxyPointRenderer,
+    densityRuntime,
     milkyWayCloudRenderer,
     milkyWayCloud,
     horizonShellRenderer,
@@ -534,7 +546,6 @@ function makeInput(
           // clipPathDebugPass.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
-          volumeFieldRenderer: null,
           structureMarkerRenderer: null,
           // Near-field handles null → the body layers and
           // foregroundLabelsPass all report enabled=false, so the program's
@@ -599,9 +610,15 @@ function makeInput(
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
-          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          cosmicWebFilaments: {
+            enabled: settings.filamentsEnabled,
+            intensity: settings.filamentIntensity,
+          },
           constellations: { enabled: false, intensity: 1 },
-          volumes: { enabled: settings.volumesEnabled, items: {} },
+          cosmicWebDensity: {
+            ...INITIAL_SETTINGS.cosmicWebDensity,
+            enabled: settings.cosmicWebDensityEnabled,
+          },
           debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
@@ -631,13 +648,16 @@ function makeInput(
         // `scheduleCubemapCaptures`.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
         // `renderFrame` expands FRAME_ORDER over the COMPOSED pass list:
-        // core's registry plus the galaxyCatalog Layer's, which is what
-        // `createLayers` writes and what these ordering assertions exercise.
+        // core's registry plus the galaxyCatalog and cosmicWebDensity Layers',
+        // which is what `createLayers` writes and what these ordering
+        // assertions exercise.
         passes: [
           ...CONTENT_PASSES,
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
+          cosmicWebDensityPass(densityRuntime),
+          cosmicWebDensityUpsamplePass(densityRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,
@@ -895,34 +915,29 @@ describe('renderFrame', () => {
     expect((fx.compositor.draw as ReturnType<typeof vi.fn>).mock.calls[0]![2]).toBe('replace');
   });
 
-  it('opens the volume pass before the hdr pass when the scalar-volume layer is enabled', () => {
-    // The FRAME program's volume render step precedes the hdr render step, so
-    // when `deriveVolumeLiveness` is non-null the volume offscreen pass is the
-    // FIRST beginRenderPass. The gate is the shared liveness — a
-    // volumeFieldRenderer with active fields + volumes.enabled true drives it.
-    const fx2 = makeInput({ settings: { volumesEnabled: true } });
+  it('opens the density pass before the hdr pass when the density layer is live', () => {
+    // The FRAME program's density render step precedes the hdr render step, so
+    // when the density liveness is non-null the density offscreen pass is the
+    // FIRST beginRenderPass. The gate is the shared liveness — a renderer with
+    // active fields + the master enabled drives it.
+    const fx2 = makeInput({ settings: { cosmicWebDensityEnabled: true } });
     const drawSpy = vi.fn();
-    (fx2.input.state as any).gpu.volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-      listIds: () => [],
-    };
-    // volumeUpsamplePass.draw self-guards on a null volumeUpsample — keep it
-    // null so the upsample layer draws nothing; this test pins the volume pass
+    // Mutated in place: the raymarch row captured this renderer at construction.
+    Object.assign(fx2.densityRuntime.renderer, { draw: drawSpy, hasActiveFields: () => true });
+    // A null upsample handle draws nothing; this test pins the density pass
     // ordering. Its enabled() still tracks the SAME liveness (no desync).
-    (fx2.input.state as any).gpu.volumeUpsample = null;
-    // The volume offscreen view comes off ctx.renderTargets.viewOf('volume');
-    // swap the backing record's row so the mock table serves it.
-    const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
-    fx2.renderTargetViews.volume = halfResView;
+    // The density offscreen view comes off ctx.renderTargets.viewOf; swap the
+    // backing record's row so the mock table serves it.
+    const reducedResView = { __id: 'reduced-res' } as unknown as GPUTextureView;
+    fx2.renderTargetViews['cosmic-web-density'] = reducedResView;
 
     renderFrame(fx2.input);
 
-    // First beginRenderPass = the volume pass (clear a=0), before the hdr pass.
+    // First beginRenderPass = the density pass (clear a=0), before the hdr pass.
     const calls = (fx2.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls.length).toBeGreaterThanOrEqual(4); // volume + hdr + mw-aggregate + composite
+    expect(calls.length).toBeGreaterThanOrEqual(4); // density + hdr + mw-aggregate + composite
     const firstAtt = Array.from(calls[0]![0].colorAttachments as any)[0] as any;
-    expect(firstAtt.view).toBe(halfResView);
+    expect(firstAtt.view).toBe(reducedResView);
     expect(firstAtt.loadOp).toBe('clear');
     expect(firstAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 
@@ -930,17 +945,17 @@ describe('renderFrame', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('skips the volume pass and hides the volume-upsample layer when volumes are off', () => {
-    // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
-    // BOTH the scalar-volume producer and the volume-upsample consumer gate
-    // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the hdr + composite passes open.
+  it('skips the density pass and hides its upsample when no field is live', () => {
+    // Default fixture: no active field → liveness null → BOTH the density
+    // producer and the upsample consumer gate off the same fact, so they
+    // cannot disagree. Wire an upsample spy to prove the consumer is also
+    // hidden. Only the hdr + composite passes open.
     const upsampleDraw = vi.fn();
-    (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
+    (fx.densityRuntime as any).upsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
-    // composite, no volume pass.
+    // composite, no density pass.
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();

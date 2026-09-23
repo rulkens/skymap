@@ -8,16 +8,14 @@
  * build it here. This IS the engine's boot value (`INITIAL_SETTINGS`) plus
  * overrides, not an independent mirror: each Layer cluster spreads that
  * slice's own production `initialState`, with item rows re-DERIVED from
- * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`
- * and volume items from a fresh `seedVolumeFields()` call. Deriving the item
- * keys (rather than hand-listing them) means adding a catalog or category
- * can't silently leave the fixture stale.
+ * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`.
+ * Deriving the item keys (rather than hand-listing them) means adding a
+ * catalog or category can't silently leave the fixture stale.
  *
  * One deliberate divergence from the boot value: every galaxy catalog row is
- * `enabled: true` here, whereas `INITIAL_SETTINGS` derives `enabled` from each
- * registry entry's `visible` field (so default-off catalogs like desiDeep boot
- * disabled). Reducer/selector tests want a uniform all-on baseline they can
- * flip bits off of — a registry-shaped fixture would couple every "toggle X"
+ * `enabled: true` here, whereas `INITIAL_SETTINGS` boots the DESI patches
+ * disabled. Reducer/selector tests want a uniform all-on baseline they can
+ * flip bits off of — a boot-shaped fixture would couple every "toggle X"
  * test to which catalogs happen to ship visible.
  *
  * `overrides` is a shallow top-level merge for the rare test that wants one
@@ -29,7 +27,6 @@ import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalo
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_RAMP_SEC,
@@ -57,7 +54,7 @@ import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/
 import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
-import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
+import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
@@ -65,7 +62,7 @@ import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/
 import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
 import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
-import { initialState as filamentsInitialState } from '../../../src/layers/filaments/state/filaments/initialState';
+import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
@@ -115,7 +112,7 @@ export function makeSettingsFixture(
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
     sgrAStarLensingTuning: { ...sgrAStarLensingTuningInitialState },
-    filaments: { ...filamentsInitialState },
+    cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
@@ -131,7 +128,7 @@ export function makeSettingsFixture(
         BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<BodyId, BodyItemSettings>,
     },
-    volumes: { ...volumesInitialState, items: seedVolumeFields() },
+    cosmicWebDensity: { ...volumesInitialState, items: { ...volumesInitialState.items } },
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
     picking: { ...pickingInitialState },

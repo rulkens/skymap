@@ -12,27 +12,21 @@ import type { SlabRow } from '../../@types/engine/frame/SlabRow';
 import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 import { SGR_A_STAR } from './sceneSgrAStar';
+import { sgrAStarLensEnvelopeM } from './sgrAStarLensEnvelope';
 
-// r_s: the datum IS the Schwarzschild radius, and the row draws nothing wider
-// today — `reliefM` is [0, 0], no shell, no ring. Not the lens quad's extent,
-// which the blackHoles Layer's own footprint will state.
+// r_s: the datum IS the Schwarzschild radius, the occupied sphere.
 const SGR_A_STAR_RADIUS_M = SGR_A_STAR.surface.datumRadiusM;
 
-// The hole's own r_s-scale disc clears the 1-px roster floor only well inside
-// the band (~346 AU on a dpr-2 1080p-class viewport, where the band is already
-// ~0.4): a visible, viewport-dependent pop. Floored at the band's own outer
-// edge instead, so the row — and with it the lens step — is born exactly where
-// alpha = 0. The frustum cull goes with it: inside the band the lensed
-// footprint can span most of the view, so no disc-based cull is conservative.
+// The drawn extent IS the lensed sphere, and it is 0 outside the band, so the
+// roster culls and `activeBand` agree by construction — no bypass needed.
 export const CORE_SLAB_ROWS: readonly SlabRow[] = [
   {
     // The PLACE, not the body: the row is posed from the Galactic Centre, so
     // the pose key does not move when the Layer takes the black hole over.
     anchorId: GALACTIC_CENTRE_ANCHOR.id,
-    boundingRadiusM: SGR_A_STAR_RADIUS_M,
+    drawRadiusM: sgrAStarLensEnvelopeM,
     footprintRadiusM: SGR_A_STAR_RADIUS_M,
     activeBand: SCALE_FADE_BANDS.sgrAStarLensing,
-    cullFloorMpc: SCALE_FADE_BANDS.sgrAStarLensing.goneAt,
     source: 'lens',
   },
 ];

@@ -6,17 +6,24 @@
 
 import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 import type { Vec2 } from '../math/Vec2';
+import type { Vec3 } from '../math/Vec3';
 
 export type StructureMarkerRenderer = {
   readonly label: string;
   /** Replace the marker set (`[]` clears); partitioned by `category`, one draw each. */
   setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void;
-  /** `fadeOpacity` scales the whole layer's alpha through `lib::fadeUniforms::applyFade`. */
+  /**
+   * `camPosMpc` is the drawn view's eye, in the same absolute-Mpc frame the
+   * instance positions use — the ring/halo vertex stage needs it to build an
+   * eye-facing world basis (see structureMarker/io.wesl). `fadeOpacity` scales
+   * the whole layer's alpha through `lib::fadeUniforms::applyFade`.
+   */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    camPosMpc: Vec3,
     fadeOpacity: number,
   ): void;
   markerCount(): number;
@@ -26,13 +33,15 @@ export type StructureMarkerRenderer = {
    * writes + tests depth, so a galaxy in front of a ring claims the pixel). The pose
    * packs into this renderer's OWN `@group(0)` buffer, never the draw-time uniform,
    * which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
-   * FadeUniforms, since every declared group must be bound.
+   * FadeUniforms, since every declared group must be bound. `camPosMpc` is the
+   * pick-time eye, same frame as `draw`'s.
    */
   pickRing(
     passEncoder: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
     pxPerRad: number,
+    camPosMpc: Vec3,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

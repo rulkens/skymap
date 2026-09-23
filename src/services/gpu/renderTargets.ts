@@ -24,24 +24,7 @@
  * floating-point textures; 32-bit float requires the `float32-filterable`
  * feature on most platforms. Half-float gives ~5 decimal digits and a range
  * of ±65 504 — plenty for additive billboard sums peaking at a few hundred
- * in dense cluster cores. The volume row matches the HDR precision so the
- * additive field sum doesn't lose dynamic range across the upsample.
- *
- * ### Why the volume row renders at 1/3 scale
- *
- * The scalar-volume fragment shader is the heaviest per-pixel pass (192
- * raymarch steps × N active fields × every back-facing cube fragment). The
- * 3D volume texture is bandlimited and the per-fragment dither covers
- * sub-pixel aliasing, so full-res raymarching is wasted work; the upsample
- * pass bilinearly samples the small target back into HDR and the
- * interpolation is invisible for low-frequency volumetric data. The `scale`
- * field IS the downsample divisor — total fragment reduction is its square
- * (3 → 1/9th the fragments). `floor` (not `round`) matches the upsample
- * shader's sample-at-uv semantics, and the min-1-px clamp guards tiny
- * canvases where `floor(size / 3)` would yield an illegal 0-dimension
- * texture. Consumers that need "viewport == texture size" (the raymarch
- * layer's dither-frequency viewport) read it via `sizeOf`, so the two sites
- * cannot drift.
+ * in dense cluster cores.
  *
  * ### Why the mw-aggregate row renders at reduced resolution
  *
@@ -87,7 +70,7 @@
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
  * resolution (`scale: 1`) because opaque geometry has hard edges that the
- * bilinear upsample used for the low-frequency volume row would smear — and
+ * bilinear upsample used for the low-frequency reduced-res rows would smear — and
  * full-res is also what lets a swap-pass fragment index the colour texel 1:1
  * (spec invariant: `foreground:0` and `swap` both render at `scale: 1`).
  *
@@ -114,6 +97,7 @@ import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
+import { DOME_FACE_COUNT } from '../../data/rendering/domeFaces';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
@@ -160,18 +144,9 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
-    // Half-res additive raymarch starts from zero coverage.
-    {
-      id: 'volume',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: 3,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
     // The starCatalog Layer's own `star-aggregates` target composes in here
-    // (see `layers/starCatalog/render/starAggregatesTarget.ts`). Same reason
-    // as `volume`: the Milky Way's star billboards draw additively into
-    // this row.
+    // (see `layers/starCatalog/render/starAggregatesTarget.ts`): the Milky
+    // Way's star billboards draw additively into this row.
     {
       id: 'mw-aggregate',
       format: HDR_TARGET_FORMAT,
@@ -226,14 +201,12 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: captureRowAllocateWhen('sgrAStar'),
+      layers: 6,
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
       // (and its cube/layer views) without a rebuild path of its own.
-      fixedSizePx: {
-        size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
-        layers: 6,
-      },
+      fixedSizePx: { size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx },
     },
     // The sky a reflection probe is captured over, on the same lazy terms as
     // `sky-cubemap`: 6 layers, held only while the camera is inside the solar
@@ -245,7 +218,22 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: captureRowAllocateWhen('solarSystem'),
-      fixedSizePx: { size: 256, layers: 6 },
+      layers: 6,
+      fixedSizePx: { size: 256 },
+    },
+    // The fisheye's five cube-adjacent faces (front/left/right/back/top), one
+    // canvas-sized 2d-array layer each — a normal render target that happens
+    // to carry `layers`, not a `fixedSizePx` row: the dome image IS the
+    // canvas size. 5 × N² × 8 B is 671 MB at 4096², hence `allocateWhen`
+    // gates it to the dome rig alone.
+    {
+      id: 'dome-cube',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1,
+      layers: DOME_FACE_COUNT,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      allocateWhen: (state) => state.viewRig === 'dome',
     },
     {
       id: 'swap',
@@ -340,7 +328,7 @@ export function createRenderTargets(
       // `fixedSizePx.layers > 1` row (a 2d-array texture, e.g. the sky
       // cubemap's 6 faces) reads unambiguously beside `depthOrArrayLayers`.
       dimension: '2d',
-      size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
+      size: { width, height, depthOrArrayLayers: spec.layers ?? 1 },
       // RENDER_ATTACHMENT lets the content layers' pipelines write into the
       // target; TEXTURE_BINDING lets the compositor / upsample fragment
       // shaders sample from it — for 'foreground:0' this is ALSO what the
@@ -351,7 +339,7 @@ export function createRenderTargets(
     });
     textures.set(spec.id, texture);
     views.set(spec.id, texture.createView());
-    if (spec.fixedSizePx?.layers === 6) {
+    if (spec.layers === 6) {
       cubeViews.set(
         spec.id,
         texture.createView({
@@ -362,7 +350,7 @@ export function createRenderTargets(
         }),
       );
     }
-    const layerCount = spec.fixedSizePx?.layers ?? 1;
+    const layerCount = spec.layers ?? 1;
     if (layerCount > 1) {
       layerViews.set(
         spec.id,
@@ -383,7 +371,7 @@ export function createRenderTargets(
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
         dimension: '2d',
-        size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
+        size: { width, height, depthOrArrayLayers: spec.layers ?? 1 },
         // Each painter-chain row clears its own depth (spec §7.3), so this
         // buffer only ever holds the LAST row's value — which is why the
         // caption occlusion pass (lib/sceneDepth.wesl) reads the COLOUR
@@ -504,7 +492,7 @@ export function createRenderTargets(
     depthViewOf(id: string): GPUTextureView {
       const view = depthViews.get(id);
       if (!view) {
-        // Covers depthless rows ('hdr', 'volume', 'swap'), unknown ids, and
+        // Covers depthless rows ('hdr', 'mw-aggregate', 'swap'), unknown ids, and
         // use-after-destroy — an absent depth view is either "this row
         // declares no depth" or a wiring bug, both loud.
         throw new Error(`renderTargets: no depth view for target '${id}'`);

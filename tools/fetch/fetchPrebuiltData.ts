@@ -19,63 +19,15 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, posix } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
 import type { DataManifest } from '../../src/@types/data/DataManifest';
-import type { SourceEntry } from '../../src/@types/data/SourceEntry';
-import { SOURCE_ENTRIES } from '../../src/data/sourceEntries';
-import { TIER_LADDER } from '../../src/data/tierLadder';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 
 const DATA_DIR = 'public/data';
-
-/**
- * `.scfd` filename -> its registry row's `visible` default, for every
- * volume/flow entry that has an on-disk file. A `.scfd` can be live on R2
- * with NO row at all — a data pipeline that shipped ahead of its renderer
- * wiring (e.g. the Edenhofer dust volume) — so this is deliberately a
- * lookup, not a blocklist: an unlisted file is exactly as "not visible" as
- * one that's registered `visible: false`, and both stay out of the default
- * pull. `src/data/sources/*` is the single source of visibility truth, so
- * the registered half of this can't drift from what the app defaults to.
- */
-export function volumeVisibilityByFileName(entries: readonly SourceEntry[]): Map<string, boolean> {
-  const map = new Map<string, boolean>();
-  for (const entry of entries) {
-    if (entry.type !== 'volume' && entry.type !== 'flow') continue;
-    const base = entry.binBaseName;
-    if (base == null) continue; // procedural debug fixtures have no on-disk file
-    const fileNames =
-      entry.type === 'volume' && entry.tiered
-        ? TIER_LADDER.map((tier) => `${base}-${tier}.scfd`)
-        : [`${base}.scfd`];
-    for (const fileName of fileNames) map.set(fileName, entry.visible);
-  }
-  return map;
-}
-
-/**
- * Manifest logical paths to download. Every non-volume family (galaxy
- * catalogs, star catalogs, structures, filaments, root JSON) always passes;
- * a `scalar-field/` entry passes only when its filename maps to `visible:
- * true`, unless `includeHiddenVolumes` (the `--volumes all` case) waves
- * every scalar-field file through regardless. Pure over the manifest so the
- * rule is unit-testable without a network call.
- */
-export function selectManifestFiles(
-  manifest: DataManifest,
-  visibilityByFileName: ReadonlyMap<string, boolean>,
-  includeHiddenVolumes: boolean,
-): string[] {
-  return Object.keys(manifest).filter((logicalPath) => {
-    if (!logicalPath.startsWith('scalar-field/')) return true;
-    if (includeHiddenVolumes) return true;
-    return visibilityByFileName.get(posix.basename(logicalPath)) === true;
-  });
-}
 
 async function fetchManifest(host: string): Promise<DataManifest> {
   const url = `${host}/data/manifest.json`;
@@ -109,24 +61,14 @@ async function downloadFile(url: string, destPath: string): Promise<number> {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const volumesAll = args.includes('--volumes') && args[args.indexOf('--volumes') + 1] === 'all';
 
   const host = readEnvProductionValue('VITE_DATA_BASE_URL');
   process.stderr.write(`fetchPrebuiltData: manifest ${host}/data/manifest.json\n`);
   const manifest = await fetchManifest(host);
 
-  const visibility = volumeVisibilityByFileName(SOURCE_ENTRIES);
-  const selected = selectManifestFiles(manifest, visibility, volumesAll).sort();
-  const excluded = Object.keys(manifest).length - selected.length;
+  const selected = Object.keys(manifest).sort();
 
-  process.stderr.write(
-    `  ${selected.length} of ${Object.keys(manifest).length} manifest entries selected\n`,
-  );
-  if (excluded > 0) {
-    process.stderr.write(
-      `  (${excluded} hidden/unwired volume file(s) excluded — pass --volumes all to include)\n`,
-    );
-  }
+  process.stderr.write(`  ${selected.length} manifest entries selected\n`);
 
   let presentBytes = 0;
   let toDownloadBytes = 0;

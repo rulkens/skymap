@@ -56,6 +56,7 @@ function makeState(
     compositor?: unknown;
     texturedDisks?: unknown;
     enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
+    viewRig?: EngineState['viewRig'];
   } = {},
 ): EngineState {
   const galaxyPointRenderer =
@@ -78,6 +79,7 @@ function makeState(
 
   return {
     booted: overrides.booted ?? true,
+    viewRig: overrides.viewRig ?? 'mono',
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
@@ -125,6 +127,13 @@ describe('pickFrameContext', () => {
     expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ renderTargets: null }), makeCanvas())).toBeNull();
     expect(pickFrameContext(makeState({ compositor: null }), makeCanvas())).toBeNull();
+  });
+
+  it('is null under a non-pickable rig', () => {
+    // Dome has no single cursor ray to pick against — VIEW_RIGS.dome.pickable
+    // is false, and this must gate before any of the ready-state derivation
+    // below, or a dome click would resolve against the unseen main view.
+    expect(pickFrameContext(makeState({ viewRig: 'dome' }), makeCanvas())).toBeNull();
   });
 
   it('reproduces the frame’s camera from register.pose + projection', () => {

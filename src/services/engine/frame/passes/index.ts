@@ -6,8 +6,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { scalarVolumePass } from './scalarVolumePass';
-import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './milkyWayUpsamplePass';
@@ -34,14 +32,13 @@ import { atmosphereShellPass } from './atmosphereShellPass';
 import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
+import { domeResamplePass } from './domeResamplePass';
 
 /**
  * Core's contributed passes, as a flat set. It states no order and no grouping:
  * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
-  scalarVolumePass,
-  volumeUpsamplePass,
   horizonShellPass,
   structureMarkersPass,
   milkyWayAggregatePass,
@@ -68,4 +65,5 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   atmosphereShellPass,
   aerialPerspectivePass,
   skyCubemapBlitPass,
+  domeResamplePass,
 ];

@@ -6,17 +6,20 @@ Surfaced by rung 7's T7 review (`.superpowers/sdd/2026-08-20-fade-rows/task-7-re
 findings 2 and 4, adjudicated concern 2), two related "fixtures escape the
 type system at an `as unknown as` seam" gaps:
 
-**Null-vs-undefined guard drift.** `volumeLiveness.ts` guards its renderer
-handle `=== null` (ZoA's copy left with #763: its renderer is Layer-runtime
-owned and never null), so a state object (typically a
-test fixture built via `as unknown as EngineState`) with the field simply
-absent — `undefined`, not `null` — slips past the "not live" gate instead of
-being caught by it. This is the actual mechanism behind a
-`renderFrameSplitBaseline` baseline drift caught during rung 7: seeding
-`focusBlend` in the fixture only un-masked the drift, it didn't cause it.
-The local fix each time is to null the renderer explicitly in the fixture;
-the guard itself is the landmine that will keep re-surfacing until every
-`EngineState`-shaped fixture is disciplined about `null` vs omitted fields.
+**Null-vs-undefined guard drift.** The renderer-handle `=== null` guard this
+item originally found in `volumeLiveness.ts` is gone along with that file:
+`src/utils/volume/deriveVolumeLiveness.ts` (the pure core, shared by
+`src/layers/cosmicWebDensity/present/deriveCosmicWebDensityLiveness.ts` and
+the dust Layer to come) now takes `renderer` as a required,
+non-nullable `VolumeFieldRenderer<Id>` — Layer-runtime owned and never null,
+same resolution ZoA's copy already had with #763. The general landmine this
+item is about — a test fixture built via `as unknown as EngineState` with a
+required field simply absent (`undefined`, not `null`) slipping past a
+`=== null` gate — is not fully retired: it's the shape to keep watching for
+in any liveness-style guard the app still writes. This is the actual
+mechanism behind a `renderFrameSplitBaseline` baseline drift caught during
+rung 7: seeding `focusBlend` in the fixture only un-masked the drift, it
+didn't cause it.
 
 **`focusBlend` required-but-fixture-omittable → `NaN` alpha.**
 `ReadyFrameContext.focusBlend` is a required `number`

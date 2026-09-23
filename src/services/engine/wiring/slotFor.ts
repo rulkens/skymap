@@ -6,7 +6,7 @@
  *
  *   - The keyed body-texture and mesh-body families live in their own maps.
  *   - The auxiliary assets named by `AssetKey` (the cluster catalog, the
- *     scalar-volume cubes) are named fields on `state.assetSlots`.
+ *     body-texture atlas) are named fields on `state.assetSlots`.
  *   - A Layer's own slots (incl. every per-source star/galaxy catalog) live in
  *     `state.layerSlots`, consulted first.
  *

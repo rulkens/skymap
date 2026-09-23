@@ -20,7 +20,6 @@ export const MESH_BODY_ENTRY = {
   // matches the other non-catalog rows (the coverage mask reads it only for
   // galaxy-catalog footprints).
   allSky: true,
-  visible: true,
   bearsLabel: true,
   labelLayer: 'body',
   bearsMarker: false,

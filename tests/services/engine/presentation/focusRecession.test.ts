@@ -43,14 +43,14 @@ function makeClipPlayer(factor: number): ClipPlayer {
 
 describe('focusRecession', () => {
   it('returns the exact target for a tagged handle at blend 1', () => {
-    expect(focusRecession({ kind: 'filament' }, 1)).toBe(FILAMENT_RECESSION);
+    expect(focusRecession({ kind: 'cosmicWebFilaments' }, 1)).toBe(FILAMENT_RECESSION);
   });
 });
 
 describe('resolveLayerOpacity', () => {
   it('multiplies opacityOf by focusRecession', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     // Register at 0 then snap to a known toggle opacity at now=0. fadeTo with
     // duration 0 lands the controller exactly on the target immediately.
     fades.register(handle, 0);
@@ -65,7 +65,7 @@ describe('resolveLayerOpacity', () => {
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     fades.register(handle, 0); // toggle opacity 0
 
     const state = makeState(fades, makeClipPlayer(1));
@@ -82,7 +82,7 @@ describe('resolveLayerOpacity', () => {
 
   it('multiplies the clip factor for a mapped id', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     fades.register(handle, 0);
     fades.fadeTo(handle, 0.8, 0, 0); // toggle = 0.8
 

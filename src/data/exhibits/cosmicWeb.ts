@@ -5,22 +5,21 @@
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
-import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
-import { buildVolumeFieldSettings } from '../volume/volumeFieldDefaults';
+import { initialState as volumesInitialState } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { GALAXIES_OFF } from './utils/galaxiesOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
 // footprint where MCPM only covers the SDSS wedge, so the web closes up behind
-// the viewer. Its registry row is default-off (a panel toggle), so the
-// exhibit turns it on explicitly — built from the registry defaults rather
-// than indexed out of the seed, which is `Partial` by type.
+// the viewer. It boots off (a panel toggle), so the exhibit turns it on
+// explicitly, indexed straight out of the boot seed — `items` is complete by
+// type, so no default-rebuild is needed.
 const VOLUMES_WITH_2MRS = {
   ...volumesInitialState,
   items: {
     ...volumesInitialState.items,
-    'polyphorm-2mrs': { ...buildVolumeFieldSettings('polyphorm-2mrs'), enabled: true },
+    'polyphorm-2mrs': { ...volumesInitialState.items['polyphorm-2mrs'], enabled: true },
   },
 };
 
@@ -31,7 +30,7 @@ const INFERNO_RAMP = ['#000004', '#3b0f70', '#8c2981', '#de4968', '#fe9f6d', '#f
 export const cosmicWeb: Exhibit = {
   id: 'cosmicWeb',
   label: 'Cosmic Web',
-  settings: { galaxyCatalogs: GALAXIES_OFF, volumes: VOLUMES_WITH_2MRS },
+  settings: { galaxyCatalogs: GALAXIES_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
   // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
   // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
   pose: {

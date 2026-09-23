@@ -19,7 +19,8 @@
 // fragment falloff runs over the quad's OWN corner coords, so peak alpha
 // never learns the quad's screen size and total emission tracks screen
 // AREA. The vertex stage therefore divides emission by the square of the
-// size ratio, which keeps the clamp a pure SIZE decision in both
+// resize factor 'k' (angular, not projected — see the vertex stage), which
+// keeps the clamp a pure SIZE decision in both
 // directions — the floor stabilises coverage without inflating the far
 // field, the cap bounds fill without dimming a close approach. A dead
 // record (size 0) projects its corner onto its center, giving a
@@ -33,18 +34,14 @@
 // pixels, and additive blending serializes the blender per pixel — so
 // subpixel stars are culled in the VERTEX stage (degenerate quad, zero
 // fragments) instead, with survivors brightened so total light holds. The
-// LOD works on the NDC apparent size, captured before the px-space clamp
-// rescales the corner delta.
+// LOD works on the sprite's ANGULAR apparent size (see 'apparent' below),
+// captured before the pixel clamp derives 'k' from the same number.
 
 import package::milkyWay::sprites::io::u;
 import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::fluxConservingLod;
 import package::lib::cloudSprite::starGlowAlpha;
-
-// Depth epsilon: pull the clamped clip-z this far inside the far plane so a
-// sprite sitting exactly ON it still passes the clip test.
-const CLIP_Z_EPS: f32 = 1e-4;
 
 struct VSOut {
   @builtin(position) pos: vec4<f32>,
@@ -68,79 +65,46 @@ fn vs(@location(0) corner: vec2<f32>,
   let worldHalfExtent = inSB.x * modelScale * u.params1.z;
 
   // Place the particle center through the model transform, then push the
-  // billboard corner out along this instance's own eye-facing basis.
+  // billboard corner out along this instance's own eye-facing basis. 'k'
+  // below scales this SAME offset for all four corners of one sprite, so
+  // — unlike a per-corner projected size — they agree on size by
+  // construction and a sprite never tears at the LOD's cull threshold.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
   let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
-  // The LOD below culls by apparent size and parks a culled VERTEX off
-  // screen, so all four vertices of one sprite must measure the same size
-  // or a sprite on the cull threshold tears into a triangle. A tilted
-  // quad's corners differ slightly; measure one fixed corner for all four.
-  let diagWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, vec2<f32>(1.0, 1.0)) * worldHalfExtent;
 
-  let cClip = worldToClip(u.cam, center);
-  // The quad is tilted against the view plane, so its corners sit at
-  // different depths; projecting them independently draws a trapezoid
-  // and spikes a corner that crosses behind the eye across the screen.
-  // Sharing the centre's depth keeps the image a parallelogram on the
-  // centre and a corner is behind the eye only when the sprite is.
-  let dClip = u.cam.viewProj * vec4<f32>(offsetWorld, 0.0);
-  var kClip = vec4<f32>(cClip.xy + dClip.xy, cClip.z, cClip.w);
-
-  // Pixel-space screen-size clamp (replaces the tool's 0.11-NDC cap). Only
-  // meaningful when both center and corner are in front of the camera.
-  // 'apparent' defaults to 1.0 (LOD leaves off-screen stars alone; clip
-  // culling handles them), matching the tool.
-  var apparent = 1.0;
-  // Emission factor that undoes the area change the px clamp is about to make
-  // (see the inner block). Declared out here so that every path which applies
-  // NO clamp — center or corner behind the camera, or a zero-length delta —
-  // leaves it at exactly 1.0 and needs no correction of its own.
-  var clampFluxScale = 1.0;
-  if (cClip.w > 0.0 && kClip.w > 0.0) {
-    let cN = cClip.xy / cClip.w;
-    var d = kClip.xy / kClip.w - cN;
-    // NDC apparent half-extent for the flux-conserving LOD below, captured
-    // BEFORE the px clamp rescales 'd' — the LOD band was tuned in NDC
-    // units in the tool, while the clamp works in pixels.
-    apparent = length((u.cam.viewProj * vec4<f32>(diagWorld, 0.0)).xy / cClip.w);
-    // NDC spans [-1, 1] across viewportPx, so a delta 'd' in NDC is
-    // 'd * viewportPx * 0.5' in pixels. Its length is the sprite's on-screen
-    // half-extent in pixels.
-    let lPx = length(d * u.cam.viewportPx * 0.5);
-    if (lPx > 0.0) {
-      let targetPx = clamp(lPx, u.params1.x, u.params1.y);
-      d = d * (targetPx / lPx);
-      kClip = vec4<f32>((cN + d) * kClip.w, kClip.z, kClip.w);
-      // Conserve flux across that resize. Peak alpha is fixed by the corner
-      // coords, so a sprite's total light is proportional to its screen area
-      // — which, left alone, is already inverse-square correct: the projected
-      // half-extent goes as 1/distance, so the area goes as 1/distance^2.
-      // That is exactly why a clamp breaks it. Scaling the quad by
-      // k = targetPx / lPx scales its area by k*k, so dividing emission by
-      // k*k restores the sprite's light exactly.
-      //
-      // Applied in BOTH directions. At the floor k > 1, so this cancels the
-      // inflation the floor would otherwise hand the entire far field (which
-      // all sits on the floor). At the cap k < 1, so it BRIGHTENS a close
-      // star instead of capping it — the honest reading, since a star you are
-      // nearly inside really is blinding and the tone mapper and bloom exist
-      // for that. No ceiling is imposed on the boost: any ceiling would only
-      // move the un-conserved regime to a different threshold rather than
-      // remove it, and the alternative (correcting the floor only) would make
-      // the clamp conserve light in one direction and eat it in the other.
-      let invK = lPx / targetPx;
-      clampFluxScale = invK * invK;
-    }
-  }
-
-  // Survive the adaptive NEAR0 far plane: on a deep descent (or a tight orbit
-  // of another local-volume body) the foreground far plane pulls inside the
-  // disc's far edge, and without this the distant half of the cloud is
-  // frustum-clipped while the approach fade still shows it. Clamp clip-z just
-  // inside the far plane instead — identical to starCatalog/vertex.wesl. Safe
-  // ONLY because this is a depthless pass (no depth test/write in the
-  // pipeline), so the clamped depth perturbs no depth compare.
-  kClip.z = min(kClip.z, kClip.w * (1.0 - CLIP_Z_EPS));
+  // Apparent size is ANGULAR — half-extent over distance, times the view's
+  // pixels per radian — so every face of a multi-view rig measures a sprite
+  // identically; a per-face projected size differs across a seam and kinks
+  // the field there. distWorld: model-space distance through the model's
+  // uniform scale (params0.z).
+  let distWorld = length(inPos - u.camPosModel.xyz) * modelScale;
+  let halfRad = worldHalfExtent / max(distWorld, 1e-30);
+  let lPx = halfRad * u.cam.pxPerRad;
+  // The LOD band was tuned against the NDC length of the (1,1) corner's
+  // projected delta; this is that same number for an on-axis sprite.
+  let apparent = lPx * 2.0 * length(vec2<f32>(1.0 / u.cam.viewportPx.x, 1.0 / u.cam.viewportPx.y));
+  var k = 1.0;
+  if (lPx > 0.0) { k = clamp(lPx, u.params1.x, u.params1.y) / lPx; }
+  // Conserve flux across that resize: peak alpha is fixed by the corner
+  // coords, so a sprite's total light is proportional to its screen area —
+  // which, left alone, is already inverse-square correct. Scaling the quad
+  // by k scales its area by k*k, so dividing emission by k*k restores the
+  // light exactly, in BOTH directions: at the floor k > 1, cancelling the
+  // inflation the floor would otherwise hand the far field; at the cap
+  // k < 1, brightening a close star instead of dimming it (a star you are
+  // nearly inside really is blinding — the tone mapper and bloom exist for
+  // that, so no ceiling is imposed on the boost).
+  let clampFluxScale = 1.0 / (k * k);
+  // Every corner projected exactly and handed to the rasteriser UNTOUCHED.
+  // Exact projection is what makes two faces draw one world quad, and the
+  // hardware clip is what cuts a corner behind a view's eye plane AT that
+  // plane. Never add the clip-z clamp (min(z, w - eps), the far-plane
+  // survival idiom) here: NEAR0 is reversed-Z with an infinite far plane, so
+  // there is nothing to survive, and the clamp moves a behind-the-eye corner
+  // onto the z = 0 plane at the wrong parameter, discarding most of a big
+  // sprite that straddles the eye plane. A view then loses a different set
+  // of sprites than its neighbour and the seam shows as a brightness step.
+  let kClip = worldToClip(u.cam, center + offsetWorld * k);
 
   // Flux-conserving LOD — the band math and its tuning rationale live in
   // lib/cloudSprite.wesl. It is independent of the clamp correction above and

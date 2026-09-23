@@ -1,13 +1,4 @@
-/**
- * Rows are DERIVED from the galaxy-catalog registry entries so they can't
- * drift from the catalog set; each row's `enabled` is that entry's `visible`
- * (a hardcoded `true` would override a row that boots hidden, e.g. DesiDeep).
- */
-
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import { DEFAULT_GALAXY_PROVENANCE } from '../defaults';
-import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 
 export const initialState: GalaxyCatalogSettings = {
@@ -26,10 +17,17 @@ export const initialState: GalaxyCatalogSettings = {
   sbScale: 5.0,
   sbMax: 30.0,
   falloffStrength: 0.7,
-  items: Object.fromEntries(
-    SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
-      e.id,
-      { enabled: e.visible, labelEnabled: true },
-    ]),
-  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+  items: {
+    sdss: { enabled: true, labelEnabled: true },
+    '2mrs': { enabled: true, labelEnabled: true },
+    glade: { enabled: true, labelEnabled: true },
+    famousGalaxy: { enabled: true, labelEnabled: true },
+    milliquas: { enabled: true, labelEnabled: true },
+    // The DESI patches boot hidden: a pencil-beam cone, a dec-band fan and the
+    // Sloan Great Wall are specialist drill-down overlays, not part of the
+    // all-sky default scene the other bulk catalogs populate.
+    desiDeep: { enabled: false, labelEnabled: true },
+    desiWedge: { enabled: false, labelEnabled: true },
+    desiSgw: { enabled: false, labelEnabled: true },
+  },
 };

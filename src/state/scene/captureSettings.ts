@@ -41,8 +41,8 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
   const {
     galaxyCatalogs,
     structures,
-    volumes,
-    filaments,
+    cosmicWebDensity,
+    cosmicWebFilaments,
     milkyWay,
     zoneOfAvoidance,
     flow,
@@ -58,8 +58,8 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
   return structuredClone({
     galaxyCatalogs,
     structures,
-    volumes,
-    filaments,
+    cosmicWebDensity,
+    cosmicWebFilaments,
     milkyWay,
     zoneOfAvoidance,
     flow,
