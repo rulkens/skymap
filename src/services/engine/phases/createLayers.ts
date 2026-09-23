@@ -178,7 +178,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   ]);
   if (slabRows.length > LAYER_SLAB_ROW_HEADROOM) {
     throw new Error(
-      `createLayers: slab rows exceed SLAB_ROW_CEILING — ${slabRows.length} composed rows, ` +
+      `createLayers: slab rows exceed LAYER_SLAB_ROW_HEADROOM — ${slabRows.length} composed rows, ` +
         `LAYER_SLAB_ROW_HEADROOM is ${LAYER_SLAB_ROW_HEADROOM}`,
     );
   }

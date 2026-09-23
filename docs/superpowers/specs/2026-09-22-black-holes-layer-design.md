@@ -66,7 +66,7 @@ driver: { poseId: row.anchorId, boundingRadiusM: rS, footprintRadiusM: blackHole
           groundRadiusM: rS, standoffRadii: row.standoffRadii, focusDistanceRadii: row.focusDistanceRadii },
 ```
 
-`driver` travels on the extracted row rather than as a `SelectionKindRow` method so the five focus-generic camera readers (`cameraDrivers`, `approachTiltedPose`, `focusFraming`, `selectionHaloTable`, `pivotRadiusMpc`) stay pure functions of the row — no resolver threaded through them. The three readers that take a *body id* by contract (`bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung`: go-home, fly-to-lon/lat, surface rung) keep reading `SCENE_BODIES`. `poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string`, not `SlabHostId`; whether the camera engages a metre frame is the slab table's answer, not the driver's. `blackHoleFootprintRadiusM(row)` (= `LENS_QUAD_MAX_RS × rS`) is the one home for the quad's extent; the slab row (§2.5) reads the same helper.
+`driver` travels on the extracted row rather than as a `SelectionKindRow` method so the five focus-generic camera readers (`cameraDrivers`, `approachTiltedPose`, `focusFraming`, `selectionHaloTable`, `pivotRadiusMpc`) stay pure functions of the row — no resolver threaded through them. The three readers that take a *body id* by contract (`bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung`: go-home, fly-to-lon/lat, surface rung) keep reading `SCENE_BODIES`. `poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string | null`, not `SlabHostId`, null for a survey star (which has no id; the camera then holds its base pose, as today); whether the camera engages a metre frame is the slab table's answer, not the driver's. `blackHoleFootprintRadiusM(row)` (= `LENS_QUAD_MAX_RS × rS`) is the one home for the quad's extent; the slab row (§2.5) reads the same helper.
 
 Core gains one row each in `URL_HASH_FOR`, `targetIdentityKey` and `focusFraming` (the `blackHole` case delegates to `bodyLikeFraming` with `radiusM` + `focusDistanceRadii`, as `star` does). The 39 S-stars' `focusId: 'sgr-a-star'` (`makers/sStar.ts:57`) becomes `'blackhole-sgr-a-star'`; the two featured cards (`featuredTabs.ts:153-157, 418-422`) follow.
 
@@ -91,7 +91,7 @@ export type SourceCountReport = { source: SourceType; count: number };
 readonly driver: DriverGeometry | null;
 // src/@types/engine/camera/DriverGeometry.d.ts
 export type DriverGeometry = {
-  poseId: string;               // deriveBodyStates key; a SlabHostId when a slab row names it
+  poseId: string | null;        // deriveBodyStates key; null when the focus poses from no table (a survey star)
   boundingRadiusM: number;      // pivot floor for a groundless driver (mesh hull, hole)
   footprintRadiusM: number;     // framing / halo / approach distance
   groundRadiusM: number | null; // null = no surface to taper against (mesh bodies)
@@ -114,8 +114,8 @@ detailCard: { readonly type: FocusableTargetType; readonly Detail: DetailCard; r
 // src/@types/engine/frame/SlabRow.d.ts — core builds these too (bodySlabRowOf), so no "Layer" prefix
 export type SlabRow = {
   readonly anchorId: SlabHostId;      // pose = ctx.bodyPose(anchorId); also the row's host identity
-  readonly boundingRadiusM: number;   // bracket, pick, apparent size (today bodyDrawRadiusM)
-  readonly footprintRadiusM: number;  // widest thing drawn (today bodyFootprintRadiusM)
+  readonly boundingRadiusM: number;   // outermost drawn extent, far edge (today bodyDrawRadiusM)
+  readonly footprintRadiusM: number;  // occupied solid sphere, near edge / cull (today bodyFootprintRadiusM)
   readonly activeBand?: FadeBand;     // row exists only while fadeBand(activeBand, |cam − anchor|) > 0
   readonly cullFloorMpc?: number;          // inside this distance the sub-pixel/frustum culls are bypassed
   readonly source: 'foreground' | 'lens';  // which frame-graph line consumes the row
@@ -132,7 +132,7 @@ The Layer's row: `{ anchorId: 'galactic-centre', boundingRadiusM: rS, footprintR
 
 ### 2.6 Store
 
-`state.engine.layerSearch: Record<string, readonly LayerSearchEntry[]>` keyed by Layer name, whole-snapshot replace per yield, key deleted at teardown; `selectLayerSearchRows` flattens. `sourceCounts` keeps today's `engineSourceCountReported` action and `sourceCounts` map — three sagas pulse on the action (`watchTierSaga.ts:80`, `watchSelectionRowsSaga.ts:72`, `resolveFocusRefDeferring.ts:19`) and `createLayers`' `contentVersion` bump and `engineStatusChanged` side effects move into the consuming saga unchanged. The Layer's settings: `layers/blackHoles/state/lensingTuning/` (today's `sgrAStarLensingTuning` slice, key renamed) plus the source row's `visible`/`labelEnabled`.
+`state.engine.layerSearch: Record<string, readonly LayerSearchEntry[]>` keyed by Layer name, whole-snapshot replace per yield; `selectLayerSearchRows` flattens. The key is not deleted at teardown in PR 1 — zero tenants, so a stale row after engine teardown is unreachable; PR 2 adds the delete with the first tenant. `sourceCounts` keeps today's `engineSourceCountReported` action and `sourceCounts` map — three sagas pulse on the action (`watchTierSaga.ts:80`, `watchSelectionRowsSaga.ts:72`, `resolveFocusRefDeferring.ts:19`) and `createLayers`' `contentVersion` bump and `engineStatusChanged` side effects move into the consuming saga unchanged. The Layer's settings: `layers/blackHoles/state/lensingTuning/` (today's `sgrAStarLensingTuning` slice, key renamed) plus the source row's `visible`/`labelEnabled`.
 
 ## 3. Ground preparation — PR 1
 

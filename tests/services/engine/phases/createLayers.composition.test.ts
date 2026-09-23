@@ -207,7 +207,7 @@ describe('createLayers composition', () => {
 
     await expect(
       createLayers(state, makeDeps([slabRowLayer('over', anchorIds)], store)),
-    ).rejects.toThrow(/slab rows exceed SLAB_ROW_CEILING/);
+    ).rejects.toThrow(/slab rows exceed LAYER_SLAB_ROW_HEADROOM/);
   });
 
   it('throws at boot when two Layers name the same slab anchorId', async () => {

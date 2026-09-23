@@ -7,4 +7,6 @@
  * composition fits instead. Today: Sgr A*'s row plus three spare.
  */
 
+// Reserved for the blackHoles row (PR 2) plus later Layers — a row is a timing-query
+// slot and a pass-group title, so this stays deliberately small.
 export const LAYER_SLAB_ROW_HEADROOM = 4;
