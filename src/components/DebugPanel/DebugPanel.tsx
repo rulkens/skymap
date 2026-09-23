@@ -19,6 +19,7 @@ import { layerUiContents } from '../../utils/layer/layerUiContents';
 import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
+import MemorySectionContainer from '../containers/MemorySectionContainer';
 import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
 import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
@@ -66,6 +67,7 @@ function DebugPanel({
           GPU timings section, which is dark without `?gpuTimings`. */}
       <FrameStatsRow frameStats={frameStats} />
       <GpuTimingsSection service={timingService} />
+      <MemorySectionContainer engineHandleRef={engineHandleRef} />
       <CameraStateSectionContainer engineHandleRef={engineHandleRef} />
       <RenderTogglesSectionContainer passNames={passNames} />
       {layerUiContents(APP_COMPOSITION.layers, 'debug').map((Section, index) => (

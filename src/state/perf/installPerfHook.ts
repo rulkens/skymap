@@ -10,6 +10,7 @@
  */
 
 import { isPerfMode } from '../../utils/url/isPerfMode';
+import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { clearSelection } from '../selection/selectionSlice';
@@ -25,6 +26,7 @@ import type { PerfPose } from '../../@types/perf/PerfPose';
 import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { Tier } from '../../@types/data/Tier';
+import type { MemorySnapshot } from '../../@types/perf/MemorySnapshot';
 
 // Per-frame yaw advance in radians; mirrors the camera slice's inline
 // `initialState.autoRotate.rate`, which the slice does not export.
@@ -111,6 +113,7 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     collectTimings: (frames: number) => collectTimings(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
+    memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),
     dispatch: store.dispatch,
     getState: () => store.getState(),
     slotGroups: SLOT_GROUPS,

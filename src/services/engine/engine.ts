@@ -59,6 +59,7 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -168,6 +169,9 @@ export function createEngine(
       renderTargets: null,
       compositor: null,
       envBrdfLut: null,
+      // Installed by initGpu right after the device resolves — see
+      // `EngineGpuHandles.memory`'s field doc.
+      memory: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
@@ -484,6 +488,8 @@ export function createEngine(
     // The LUT does own one, and it is no row, so nothing else releases it.
     state.gpu.envBrdfLut?.destroy();
     state.gpu.envBrdfLut = null;
+    // Owns no GPU resource of its own — re-nulled for lifecycle symmetry.
+    state.gpu.memory = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
@@ -527,6 +533,7 @@ export function createEngine(
       assetPriorities: () => assetPriorityBySlotName(state),
       surfaceTiles: () =>
         state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.
