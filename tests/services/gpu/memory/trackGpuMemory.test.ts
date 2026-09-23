@@ -104,7 +104,6 @@ describe('trackGpuMemory', () => {
     expect(snap.totalBytes).toBe(64);
     expect(snap.owners).toEqual([
       { owner: 'volumeFieldRenderer', kind: 'texture', bytes: 64, count: 1, gcReclaimed: 0 },
-      { owner: 'volumeFieldRenderer', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
     ]);
   });
 
@@ -121,19 +120,20 @@ describe('trackGpuMemory', () => {
     const device = makeFakeDevice();
     const ledger = trackGpuMemory(device);
     const buffer = device.createBuffer({ label: 'owner-a', size: 100, usage: 0 });
+    device.createBuffer({ label: 'owner-a', size: 30, usage: 0 });
 
     buffer.destroy();
-    let snap = ledger.snapshot();
-    expect(snap.totalBytes).toBe(0);
-    expect(snap.owners).toEqual([
-      { owner: 'owner-a', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
-    ]);
-
     buffer.destroy(); // idempotent — must not go negative
-    snap = ledger.snapshot();
-    expect(snap.owners).toEqual([
-      { owner: 'owner-a', kind: 'buffer', bytes: 0, count: 0, gcReclaimed: 0 },
+    expect(ledger.snapshot().owners).toEqual([
+      { owner: 'owner-a', kind: 'buffer', bytes: 30, count: 1, gcReclaimed: 0 },
     ]);
+  });
+
+  it('drops an owner row once everything it held is destroyed', () => {
+    const device = makeFakeDevice();
+    const ledger = trackGpuMemory(device);
+    device.createBuffer({ label: 'owner-a', size: 100, usage: 0 }).destroy();
+    expect(ledger.snapshot()).toEqual({ totalBytes: 0, owners: [] });
   });
 
   it('sorts owners by bytes descending and keeps per-owner totals independent', () => {

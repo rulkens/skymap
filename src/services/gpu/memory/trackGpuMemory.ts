@@ -113,9 +113,12 @@ export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
 
   return {
     snapshot(): GpuMemorySnapshot {
-      const rows = [...owners.entries()].flatMap(([owner, byKind]) =>
-        [...byKind.entries()].map(([kind, row]) => ({ owner, kind, ...row })),
-      );
+      // A fully-released row is noise — unless it was GC-reclaimed, the leak signal.
+      const rows = [...owners.entries()]
+        .flatMap(([owner, byKind]) =>
+          [...byKind.entries()].map(([kind, row]) => ({ owner, kind, ...row })),
+        )
+        .filter((row) => row.count > 0 || row.gcReclaimed > 0);
       rows.sort((a, b) => b.bytes - a.bytes);
       return { totalBytes: rows.reduce((sum, row) => sum + row.bytes, 0), owners: rows };
     },
