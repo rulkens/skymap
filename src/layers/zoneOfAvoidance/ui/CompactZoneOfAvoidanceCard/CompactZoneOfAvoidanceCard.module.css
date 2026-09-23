@@ -5,7 +5,7 @@
  * glyph is local — no other compact card needs one.
  */
 .root {
-  composes: infoCardCompact from '../compactChrome.module.css';
+  composes: infoCardCompact from '../../../../components/InfoCard/compactChrome.module.css';
 }
 
 .glyph {
