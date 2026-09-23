@@ -36,7 +36,6 @@ import { flyout } from './flyout';
 import { earthFlyout } from './earthFlyout';
 import { earthCosmicWebLoop } from './earthCosmicWebLoop';
 import { earthUniverseLoop } from './earthUniverseLoop';
-import { sondermarkenFlyout } from './sondermarkenFlyout';
 import { flowOrbit } from './flowOrbit';
 import { flyPathDemo } from './flyPathDemo';
 import { famousFlythrough } from './famousFlythrough';
@@ -64,7 +63,6 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   flyout: () => flyout,
   // The only instant-dependent clips: they read Earth's position at `simDays`.
   earthFlyout,
-  sondermarkenFlyout,
   earthUniverseLoop,
   earthCosmicWebLoop,
   flowOrbit: () => flowOrbit,

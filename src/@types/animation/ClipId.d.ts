@@ -13,7 +13,6 @@ export type ClipId =
   | 'cosmicFlows'
   | 'flyout'
   | 'earthFlyout'
-  | 'sondermarkenFlyout'
   | 'earthUniverseLoop'
   | 'earthCosmicWebLoop'
   | 'flowOrbit'
