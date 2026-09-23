@@ -105,7 +105,7 @@ function structureRow(): StructureInfo {
 }
 
 // The milkyWay singleton row (bare tag — position resolved from the constant).
-const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay', driver: null };
+const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
 
 // A scene-body row (planet / famous star / Earth). Like a survey star its halo
 // is NEAR0-tagged (radiusMpc 0, floored to a pixel ring), so the COSMO layer

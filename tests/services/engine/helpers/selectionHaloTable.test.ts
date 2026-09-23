@@ -93,7 +93,7 @@ describe('selectionHalo', () => {
       driver: starRowDriver(null, SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M),
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
-    expect(selectionHalo({ type: 'milkyWay', driver: null })!.slab).toBe(COSMO);
+    expect(selectionHalo({ type: 'milkyWay' })!.slab).toBe(COSMO);
     const starHalo = selectionHalo(star)!;
     expect(starHalo.slab).toBe(NEAR0);
     // The star arm must ride its REAL physical radius (radiusM → Mpc), not the

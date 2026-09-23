@@ -131,7 +131,7 @@ describe('logCameraState', () => {
       far: 100,
     });
 
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay', driver: null }, SIM_DAYS);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
 
     const [, blob] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(blob);
@@ -162,14 +162,7 @@ describe('logCameraState', () => {
       },
     };
 
-    logCameraState(
-      cam,
-      fakeCanvas(800, 600),
-      { type: 'milkyWay', driver: null },
-      SIM_DAYS,
-      null,
-      bodyArm,
-    );
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('body:earth');
@@ -179,7 +172,7 @@ describe('logCameraState', () => {
 
     // Untagged input (and every world-arm frame) reads as absolute.
     logSpy.mockClear();
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay', driver: null }, SIM_DAYS);
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
     expect(JSON.parse(world).eyeFromCentreM).toBeNull();
@@ -203,14 +196,7 @@ describe('logCameraState', () => {
       pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
     };
 
-    logCameraState(
-      cam,
-      fakeCanvas(800, 600),
-      { type: 'milkyWay', driver: null },
-      SIM_DAYS,
-      null,
-      siteArm,
-    );
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('site:curiosity');

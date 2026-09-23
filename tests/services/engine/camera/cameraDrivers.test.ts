@@ -516,7 +516,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(pickWinner(drivers, s).id).toBe('resting');
 
     // A non-body focus (Milky Way) → still inactive.
-    store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay', driver: null } }));
+    store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
     s = store.getState() as unknown as RootState;
     expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
 

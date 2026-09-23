@@ -57,9 +57,8 @@ const structureRow = (over: Partial<StructureInfo> = {}) =>
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
-    driver: null,
     ...over,
-  }) as StructureInfo & { readonly driver: null };
+  }) as StructureInfo;
 
 describe('focusFraming', () => {
   it('galaxy arm — targets galaxy position and frames on its diameter', () => {
@@ -93,7 +92,7 @@ describe('focusFraming', () => {
   });
 
   it('milkyWay arm — targets galactic centre at the fixed view distance', () => {
-    const result = focusFraming({ type: 'milkyWay', driver: null }, FOVY);
+    const result = focusFraming({ type: 'milkyWay' }, FOVY);
     expect(result.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],

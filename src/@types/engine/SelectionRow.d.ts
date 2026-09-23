@@ -14,20 +14,19 @@ import type { Vec3 } from '../math/Vec3';
  * rides the row (not the async meta sidecar) so a star's name shows the instant
  * it is selected, before the JSON has loaded.
  *
- * Every arm carries `driver`: the camera-host geometry behind the focus, filled
- * by the arm's own `extractRow`, null on an arm that never drives the camera.
- * It is what spares the camera readers a seed lookup by focus id — an arm whose
- * subject is in no body table answers for itself.
+ * `driver` rides only the arms that host the camera (`DrivenSelectionRow`),
+ * filled by the arm's own `extractRow`; readers go through `selectionDriver`,
+ * so no reader resolves a focus id against a body table.
  *
  * Every arm is JSON-serializable (`GalaxyRow.objId` is a string,
  * `StructureInfo` is a plain record, the body arm is flat numbers + strings),
  * so the RTK serializability check stays on.
  */
 export type SelectionRow =
-  | (GalaxyRow & { readonly driver: null })
-  | (StructureInfo & { readonly driver: null })
-  | { readonly type: 'milkyWay'; readonly driver: null }
-  | { readonly type: 'zoneOfAvoidance'; readonly driver: null }
+  | GalaxyRow
+  | StructureInfo
+  | { readonly type: 'milkyWay' }
+  | { readonly type: 'zoneOfAvoidance' }
   | {
       readonly type: 'body';
       readonly id: string;

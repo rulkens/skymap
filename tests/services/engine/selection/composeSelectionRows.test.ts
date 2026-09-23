@@ -44,7 +44,7 @@ import type { SelectionKindRow } from '../../../../src/@types/engine/layer/Selec
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get('earth')!.positionMpc;
 
-const virgo: StructureInfo & { readonly driver: null } = {
+const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
@@ -52,7 +52,6 @@ const virgo: StructureInfo & { readonly driver: null } = {
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-  driver: null,
 };
 
 function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
@@ -200,19 +199,11 @@ describe('extractRow, composed', () => {
   });
 
   it('structure ref → the StructureInfo by id', () => {
-    // The arm stamps `driver` onto the record, so the row is a copy of it — the
-    // id is the identity every consumer diffs on, never the reference.
-    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual({
-      ...virgo,
-      driver: null,
-    });
+    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(virgo);
   });
 
   it('milkyWay ref → the singleton tag', () => {
-    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual({
-      type: 'milkyWay',
-      driver: null,
-    });
+    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual({ type: 'milkyWay' });
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {

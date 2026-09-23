@@ -41,7 +41,7 @@ const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 
-const virgoRow: StructureInfo & { readonly driver: null } = {
+const virgoRow: StructureInfo = {
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
@@ -49,7 +49,6 @@ const virgoRow: StructureInfo & { readonly driver: null } = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-  driver: null,
 };
 
 const earthRow: SelectionRow = {

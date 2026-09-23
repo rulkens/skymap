@@ -15,6 +15,6 @@ export function zoneOfAvoidanceSelectionRow(): SelectionKindRow<ZoneOfAvoidanceR
     type: 'zoneOfAvoidance',
     pickSources: [Source.ZoneOfAvoidance],
     resolvePick: () => ({ type: 'zoneOfAvoidance' }),
-    extractRow: () => ({ type: 'zoneOfAvoidance', driver: null }),
+    extractRow: () => ({ type: 'zoneOfAvoidance' }),
   };
 }

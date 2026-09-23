@@ -50,7 +50,7 @@ describe('liveFocusRow', () => {
   });
 
   it('passes a non-body row through unchanged (already live-resolved)', () => {
-    const focus: SelectionRow = { type: 'milkyWay', driver: null };
+    const focus: SelectionRow = { type: 'milkyWay' };
     expect(liveFocusRow(focus, LIVE_SIM_DAYS)).toBe(focus);
   });
 

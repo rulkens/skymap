@@ -19,6 +19,7 @@ import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { isWorldArm } from './rungs/isWorldArm';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -38,7 +39,7 @@ export function approachTiltedPose(
 ): FramedCameraPose {
   if (!isWorldArm(framed)) return framed;
   if (!pivotsOnFocusedBody || rememberedTiltRad === 0) return framed;
-  const driver = focusRow?.driver ?? null;
+  const driver = selectionDriver(focusRow);
   if (driver === null || driver.poseId === null || !bodyMovesThisFrame(focusRow)) return framed;
   // No ground, no nadir to tilt off: a mesh body's radius is a hull.
   if (driver.groundRadiusM === null) return framed;

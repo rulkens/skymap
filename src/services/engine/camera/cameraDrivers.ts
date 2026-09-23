@@ -40,6 +40,7 @@ import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -102,7 +103,7 @@ function followPose(
   const s = ctx.state;
   const focus = s.selectionRows.focus;
   const livePos = liveBodyPosition(focus, ctx.bodies);
-  const driver = focus?.driver ?? null;
+  const driver = selectionDriver(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
   if (driver === null || driver.poseId === null || livePos === null) {
     return { pose: s.camera.base, memory: mem };

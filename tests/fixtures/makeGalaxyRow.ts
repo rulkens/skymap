@@ -13,12 +13,8 @@ import { Source } from '../../src/data/sources';
 
 import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
 
-export function makeGalaxyRow(
-  overrides: Partial<GalaxyRow> = {},
-): GalaxyRow & { readonly driver: null } {
+export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
   return {
-    // A galaxy never hosts the camera, so its selection-row arm drives nothing.
-    driver: null,
     type: 'galaxyCatalog',
     source: Source.SDSS,
     index: 0,

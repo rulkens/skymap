@@ -9,12 +9,13 @@
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { MIN_DISTANCE_MPC } from '../../../utils/camera/clampDistance';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
 export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   // A groundless driver (a mesh body's hull) has nothing to report here.
-  const groundRadiusM = row?.driver?.groundRadiusM ?? null;
+  const groundRadiusM = selectionDriver(row)?.groundRadiusM ?? null;
   return groundRadiusM === null ? null : groundRadiusM * SCALE_UNITS.M_TO_MPC;
 }
 
@@ -27,7 +28,7 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
 export const SURFACELESS_FLOOR_MPC = 1e-17;
 
 export function pivotFraming(row: SelectionRow | null): PivotFraming {
-  const driver = row?.driver ?? null;
+  const driver = selectionDriver(row);
   if (driver === null) return { radiusMpc: null, floorMpc: SURFACELESS_FLOOR_MPC };
   // No ground to taper against (MeshBody.boundingRadiusM), but the hull is a
   // real obstacle, so the zoom still floors a standoff off it.

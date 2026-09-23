@@ -39,9 +39,8 @@ const structureRow = (over: Partial<StructureInfo> = {}) =>
     worldPos: [10, -20, 30],
     physicalRadiusMpc: 2,
     apparentRadiusMpc: 5,
-    driver: null,
     ...over,
-  }) as StructureInfo & { readonly driver: null };
+  }) as StructureInfo;
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose, FOCUS_TWEEN_MS, easeOutCubic, and the caller-stamped frame', () => {
@@ -82,7 +81,7 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('the Milky Way arm targets the galactic centre at the fixed view distance', () => {
-    const d = focusTweenDescriptor({ type: 'milkyWay', driver: null }, FROM, FOVY, FRAME);
+    const d = focusTweenDescriptor({ type: 'milkyWay' }, FROM, FOVY, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],

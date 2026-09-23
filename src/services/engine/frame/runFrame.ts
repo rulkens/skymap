@@ -50,6 +50,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -234,7 +235,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frame's snapshot is focused.
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
-    const focusId = focusRow?.driver?.poseId ?? null;
+    const focusId = selectionDriver(focusRow)?.poseId ?? null;
     if (focusId !== null) {
       const bodyState = sceneBodyStates(state, canvas).get(focusId);
       if (bodyState !== undefined) {

@@ -99,14 +99,8 @@ describe('applyFocusedBodyPivot', () => {
 
   it('is a pass-through when the focus is not a body', () => {
     expect(applyFocusedBodyPivot(DRAG_FRAMED, true, null, BODIES_A, NO_PAN)).toBe(DRAG_FRAMED);
-    expect(
-      applyFocusedBodyPivot(
-        DRAG_FRAMED,
-        true,
-        { type: 'milkyWay', driver: null },
-        BODIES_A,
-        NO_PAN,
-      ),
-    ).toBe(DRAG_FRAMED);
+    expect(applyFocusedBodyPivot(DRAG_FRAMED, true, { type: 'milkyWay' }, BODIES_A, NO_PAN)).toBe(
+      DRAG_FRAMED,
+    );
   });
 });

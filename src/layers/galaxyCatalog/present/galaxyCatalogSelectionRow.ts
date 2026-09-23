@@ -39,8 +39,7 @@ export function galaxyCatalogSelectionRow(runtime: Catalogs): SelectionKindRow<G
         ref.source,
         runtime.famousMeta,
       );
-      // A galaxy frames on its catalogue diameter, not on a camera host.
-      return row === null ? null : { ...row, driver: null };
+      return row;
     },
     focusId: {
       claims: (id) =>

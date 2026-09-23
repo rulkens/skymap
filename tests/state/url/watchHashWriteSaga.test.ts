@@ -54,7 +54,6 @@ const virgoRow: SelectionRow = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-  driver: null,
 };
 
 function buildHarness() {

@@ -26,7 +26,6 @@ const CLUSTER: SelectionRow = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 10,
-  driver: null,
 };
 
 /** A visibility mask covering the two catalogs this file's fixtures populate. */
@@ -101,7 +100,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    const milkyWay: SelectionRow = { type: 'milkyWay', driver: null };
+    const milkyWay: SelectionRow = { type: 'milkyWay' };
     tick.plan(makeSnapshot(SDSS_AND_TWOMRS_MASK), VIEWS, makeState(milkyWay));
 
     expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });

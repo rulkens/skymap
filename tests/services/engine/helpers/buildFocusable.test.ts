@@ -21,8 +21,7 @@ const structure = {
   worldPos: [1, 2, 3],
   featured: true,
   physicalRadiusMpc: 5,
-  driver: null,
-} as unknown as StructureInfo & { readonly driver: null };
+} as unknown as StructureInfo;
 
 const NO_META: readonly FamousStarMetaEntry[] = [];
 
@@ -121,7 +120,7 @@ describe('buildFocusable', () => {
     expect(buildFocusable(structure, NO_META)).toBe(structure);
   });
   it('milkyWay row → MILKY_WAY_INFO', () => {
-    expect(buildFocusable({ type: 'milkyWay', driver: null }, NO_META)).toBe(MILKY_WAY_INFO);
+    expect(buildFocusable({ type: 'milkyWay' }, NO_META)).toBe(MILKY_WAY_INFO);
   });
 
   it('body row → BodyInfo for Earth and a planet', () => {
