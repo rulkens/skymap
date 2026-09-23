@@ -6,25 +6,31 @@
  */
 
 import type { ReactElement } from 'react';
-import type { VolumeFieldRowData } from '../@types/VolumeFieldRowData';
+import type { CosmicWebDensitySettings } from '../@types/CosmicWebDensitySettings';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
 import DebugSection from '../../../components/DebugPanel/DebugSection';
 import DensityFieldTuningRow from './DensityFieldTuningRow';
 
 export type CosmicWebDensityTuningSectionProps = {
-  rows: ReadonlyArray<VolumeFieldRowData>;
+  items: CosmicWebDensitySettings['items'];
   onChange: (id: CosmicWebDensityFieldId, patch: Partial<VolumeFieldSettings>) => void;
 };
 
 function CosmicWebDensityTuningSection({
-  rows,
+  items,
   onChange,
 }: CosmicWebDensityTuningSectionProps): ReactElement {
   return (
     <DebugSection title="Cosmic web density (tuning)">
-      {rows.map((row) => (
-        <DensityFieldTuningRow key={row.id} row={row} onChange={onChange} />
+      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
+        <DensityFieldTuningRow
+          key={entry.id}
+          entry={entry}
+          settings={items[entry.id]}
+          onChange={onChange}
+        />
       ))}
     </DebugSection>
   );

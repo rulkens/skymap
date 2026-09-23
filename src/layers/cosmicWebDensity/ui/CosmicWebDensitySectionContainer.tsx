@@ -1,13 +1,13 @@
 /**
  * CosmicWebDensitySectionContainer — store boundary for the SettingsPanel's
  * "Cosmic web density" section. Reads the master gate and the per-field
- * items Record, projects it via `projectVolumeFieldRows`, and wraps both
- * dispatches in `useCallback`. The presentational `CosmicWebDensitySection`
- * imports nothing from `store/` or `state/`. See
- * `CosmicWebDensityTuningSectionContainer`'s header for the shared-selector note.
+ * items Record and wraps both dispatches in `useCallback`. The
+ * presentational `CosmicWebDensitySection` imports nothing from `store/` or
+ * `state/`. See `CosmicWebDensityTuningSectionContainer`'s header for the
+ * shared-selector note.
  */
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 import CosmicWebDensitySection from './CosmicWebDensitySection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
@@ -18,15 +18,12 @@ import {
   setCosmicWebDensityEnabled,
   writeCosmicWebDensityField,
 } from '../state/cosmicWebDensity/slice';
-import { projectVolumeFieldRows } from './projectVolumeFieldRows';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 
 function CosmicWebDensitySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const enabled = useAppSelector(selectCosmicWebDensityEnabled);
   const items = useAppSelector(selectCosmicWebDensityFieldItems);
-
-  const rows = useMemo(() => projectVolumeFieldRows(items), [items]);
 
   const onEnabledChange = useCallback(
     (value: boolean) => dispatch(setCosmicWebDensityEnabled(value)),
@@ -43,7 +40,7 @@ function CosmicWebDensitySectionContainer(): React.ReactElement {
     <CosmicWebDensitySection
       enabled={enabled}
       onEnabledChange={onEnabledChange}
-      rows={rows}
+      items={items}
       onRowEnabledChange={onRowEnabledChange}
     />
   );

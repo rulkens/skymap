@@ -7,7 +7,7 @@
  */
 
 import type { ReactElement } from 'react';
-import type { VolumeFieldRowData } from '../@types/VolumeFieldRowData';
+import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import DebugSlider from '../../../components/DebugPanel/DebugSlider';
@@ -31,64 +31,70 @@ const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type DensityFieldTuningRowProps = {
-  row: VolumeFieldRowData;
+  /** `id` narrowed past the base `string` — the field's writes are keyed on it. */
+  entry: CosmicWebDensitySourceEntry & { readonly id: CosmicWebDensityFieldId };
+  settings: VolumeFieldSettings;
   onChange: (id: CosmicWebDensityFieldId, patch: Partial<VolumeFieldSettings>) => void;
 };
 
-function DensityFieldTuningRow({ row, onChange }: DensityFieldTuningRowProps): ReactElement {
+function DensityFieldTuningRow({
+  entry,
+  settings,
+  onChange,
+}: DensityFieldTuningRowProps): ReactElement {
   return (
     <div className={styles.row}>
-      <div className={styles.label}>{row.label}</div>
+      <div className={styles.label}>{entry.label}</div>
       <DebugSlider
         label="Intensity"
-        value={row.intensity}
+        value={settings.intensity}
         min={INTENSITY_MIN}
         max={INTENSITY_MAX}
         step={INTENSITY_STEP}
-        readout={row.intensity.toFixed(2)}
-        onChange={(v) => onChange(row.id, { intensity: v })}
+        readout={settings.intensity.toFixed(2)}
+        onChange={(v) => onChange(entry.id, { intensity: v })}
       />
       <DebugSlider
         label="Contrast"
-        value={row.contrast}
+        value={settings.contrast}
         min={CONTRAST_MIN}
         max={CONTRAST_MAX}
         step={CONTRAST_STEP}
-        readout={row.contrast.toFixed(2)}
-        onChange={(v) => onChange(row.id, { contrast: v })}
+        readout={settings.contrast.toFixed(2)}
+        onChange={(v) => onChange(entry.id, { contrast: v })}
       />
       <DebugSlider
         label="Trim"
-        value={row.trim}
+        value={settings.trim}
         min={TRIM_MIN}
         max={TRIM_MAX}
         step={TRIM_STEP}
-        readout={row.trim.toFixed(2)}
-        onChange={(v) => onChange(row.id, { trim: v })}
+        readout={settings.trim.toFixed(2)}
+        onChange={(v) => onChange(entry.id, { trim: v })}
       />
       <DebugSlider
         label="Density"
-        value={row.densityScale}
+        value={settings.densityScale}
         min={DENSITY_MIN}
         max={DENSITY_MAX}
         step={DENSITY_STEP}
-        readout={row.densityScale.toFixed(1)}
-        onChange={(v) => onChange(row.id, { densityScale: v })}
+        readout={settings.densityScale.toFixed(1)}
+        onChange={(v) => onChange(entry.id, { densityScale: v })}
       />
       <DebugSlider
         label="Exposure"
-        value={row.exposure}
+        value={settings.exposure}
         min={EXPOSURE_MIN}
         max={EXPOSURE_MAX}
         step={EXPOSURE_STEP}
-        readout={row.exposure.toFixed(1)}
-        onChange={(v) => onChange(row.id, { exposure: v })}
+        readout={settings.exposure.toFixed(1)}
+        onChange={(v) => onChange(entry.id, { exposure: v })}
       />
       <div className={styles.paletteRow}>
         <span className={styles.paletteLabel}>Palette</span>
         <PaletteSelect
-          value={row.paletteId}
-          onChange={(paletteId) => onChange(row.id, { paletteId })}
+          value={settings.paletteId}
+          onChange={(paletteId) => onChange(entry.id, { paletteId })}
         />
       </div>
     </div>

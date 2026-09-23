@@ -8,8 +8,9 @@
  */
 
 import { memo } from 'react';
-import type { VolumeFieldRowData } from '../@types/VolumeFieldRowData';
+import type { CosmicWebDensitySettings } from '../@types/CosmicWebDensitySettings';
 import type { CosmicWebDensityFieldId } from '../../../@types/data/volume/CosmicWebDensityFieldId';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../sources/cosmicWebDensitySourceRows';
 import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
 import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
@@ -17,15 +18,14 @@ export type CosmicWebDensitySectionProps = {
   /** False short-circuits both volume passes before any GPU cost. */
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
-  /** One row per registered field, in `COSMIC_WEB_DENSITY_SOURCE_ROWS` order. */
-  rows: ReadonlyArray<VolumeFieldRowData>;
+  items: CosmicWebDensitySettings['items'];
   onRowEnabledChange: (id: CosmicWebDensityFieldId, enabled: boolean) => void;
 };
 
 function CosmicWebDensitySection({
   enabled,
   onEnabledChange,
-  rows,
+  items,
   onRowEnabledChange,
 }: CosmicWebDensitySectionProps) {
   return (
@@ -34,15 +34,15 @@ function CosmicWebDensitySection({
       headerToggle={enabled}
       onHeaderToggleChange={onEnabledChange}
     >
-      {rows.map((row) => (
-        <div className={styles.panelRow} key={row.id}>
-          <label htmlFor={`toggle-cosmic-web-density-${row.id}`}>{row.label}</label>
+      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
+        <div className={styles.panelRow} key={entry.id}>
+          <label htmlFor={`toggle-cosmic-web-density-${entry.id}`}>{entry.label}</label>
           <input
-            id={`toggle-cosmic-web-density-${row.id}`}
+            id={`toggle-cosmic-web-density-${entry.id}`}
             type="checkbox"
             className={styles.toggle}
-            checked={row.enabled}
-            onChange={(e) => onRowEnabledChange(row.id, e.target.checked)}
+            checked={items[entry.id].enabled}
+            onChange={(e) => onRowEnabledChange(entry.id, e.target.checked)}
           />
         </div>
       ))}
