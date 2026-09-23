@@ -14,8 +14,12 @@ import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement): FrameView | null {
+  // A dome frame has no single cursor ray to pick against (five faces, no
+  // canvas-space main view) — the rig's own `pickable` flag is the one gate.
+  if (!VIEW_RIGS[state.viewRig].pickable) return null;
   const nowMs = performance.now();
   // One read of the committed orientation for this call — `poseBasis` and the
   // at-rest `upBasis` are the SAME frame, unlike `runFrame`'s live mid-slerp one.

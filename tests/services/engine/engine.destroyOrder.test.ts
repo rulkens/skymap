@@ -33,7 +33,9 @@ import type { EngineCallbacks } from '../../../src/@types/engine/EngineCallbacks
 describe('engine.destroy — Layer teardown order (D8)', () => {
   it('destroys Layers in reverse tuple order before core teardown', () => {
     order.length = 0;
-    const canvas = {} as unknown as HTMLCanvasElement;
+    // `dataset` is real here — engine.ts stamps `canvas.dataset.viewRig` on
+    // every boot (the `?dome` rig gate), so the stub canvas needs the property.
+    const canvas = { dataset: {} } as unknown as HTMLCanvasElement;
     const { store } = createAppStore({ settings: makeSettingsFixture() });
     const cb: EngineCallbacks = { store, setSagaContext: vi.fn(), runSaga: vi.fn() };
 

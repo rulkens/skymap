@@ -153,6 +153,14 @@ fn fs(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   let impactParamM = length(offsetVec);
   let impactParamRs = impactParamM / u.schwarzschildRadiusM;
 
+  // Past the fade end the fade is 0 and the annulus gate below never opens
+  // (outerRs + MARCH_GATE_MARGIN_RS ≤ 24 across the tuning range, well under
+  // edgeFadeEndRs's 50 r_s floor) — discarding here is what keeps a fullscreen
+  // pass nearly free at the far end of the band.
+  if (impactParamRs >= u.edgeFadeEndRs) {
+    discard;
+  }
+
   var color = vec3<f32>(0.0);
   var alpha = 0.0;
 

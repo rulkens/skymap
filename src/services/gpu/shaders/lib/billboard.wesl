@@ -2,50 +2,17 @@
 // expansion helpers shared across instanced point/quad renderers.
 //
 // Four of the project's renderers (points, quads, disks, proceduralDisks)
-// each draw one screen- or world-aligned quad per instance using the
-// non-indexed 'triangle-list' topology — six vertices per quad, with the
-// vertex stage looking up the corner offset from a small constant array
-// keyed by '@builtin(vertex_index)'. The corner array was duplicated
-// verbatim in three of those four shaders (only points used a slightly
-// different ordering); the cornerUv remap '(corner + 1) * 0.5' was
-// duplicated in all four. This module collapses that duplication into one
-// canonical pair of helpers ('quadCorner', 'quadUv') and adds one
-// renderer-agnostic expansion helper ('expandBillboardScreen') for the
-// screen-pixel-sized billboard pattern that points uses.
+// each draw one screen- or world-aligned quad per instance; this module
+// holds the shared corner-mapping and expansion helpers used across all of them.
 //
-// ## Why these four exports and no more
-//
-// The plan's Task 5 draft proposed a helper, 'expandBillboardWorld',
-// that would VIEW-align a world-sized quad (camera-right + camera-up
-// basis extracted from a 'view' matrix). Reading the actual call
-// sites revealed that NONE of the four candidate renderers want a
-// generic view-aligned world basis:
-//
-//   - 'quads' builds its basis from the projected celestial-north
-//     direction at each galaxy's screen position (so the texture's
-//     north-up orientation tracks sky-north, not the camera). That's
-//     fundamentally renderer-specific math — see the long doc-block
-//     around 'NORTH_WORLD' / 'upClip' in 'quads.wesl'.
-//   - 'texturedDisks' and 'proceduralDisks' build their bases from the galaxy's
-//     intrinsic position-angle and inclination (camera-INDEPENDENT — the
-//     disk plane is a property of the galaxy in 3D space). That math
-//     belongs in 'lib/orientation.wesl' (Task 6), not here.
-//   - 'points' is screen-aligned (corner direction = pure screen X / Y),
-//     which 'expandBillboardScreen' below covers.
-//
-// And the canonical CameraUniforms struct in 'lib/camera.wesl' carries
-// no 'view' matrix to extract a camera-right / camera-up basis from —
-// only 'viewProj', 'viewportPx' and the 'pxPerRad' focal term. We
-// therefore omit the view-aligned flavour entirely; a renderer that
-// wants one re-derives the basis itself, as milkyWay/sprites/io.wesl
-// does per instance from the eye.
+// No VIEW-aligned flavour — 'CameraUniforms' has no view matrix;
+// 'expandBillboardWorld' below is eye-facing instead, which needs only '(eye, centre)'.
 //
 // ## Screen-aligned vs view-aligned world-sized billboards
 //
-// The reasoning above rules out a VIEW-aligned world-sized helper.
-// It does NOT rule out a SCREEN-aligned world-sized helper, which is
-// a different beast: instead of building a basis in world space and
-// projecting it, it projects the centre once and expands the corners
+// A SCREEN-aligned world-sized helper is a different beast: instead of
+// building a basis in world space and projecting it, it projects the
+// centre once and expands the corners
 // along the SCREEN axes by a pixel size computed from the world
 // radius and the centre's clip-space depth (clip.w ≈ camera distance
 // for a standard perspective matrix). The output is always camera-
@@ -57,27 +24,6 @@
 // 'pxToClipOffset' (the two primitives 'labels/vertex.wesl' — the
 // original instance of this pattern — already used inline) around its
 // own eye-tuned size constant.
-//
-// ## What about the corner-ordering mismatch
-//
-// The four renderers historically used two slightly different 6-vertex
-// orderings of the same unit square (both render an identical filled
-// quad under WebGPU's default 'cullMode: none'):
-//
-//   - 'quads' / 'texturedDisks' / 'proceduralDisks':
-//       BL, BR, TR,  BL, TR, TL
-//   - 'points':
-//       BL, BR, TL,  TL, BR, TR
-//
-// Both are valid CCW-front-face triangulations of the same square; they
-// produce identical fragment coverage and identical interpolated UVs at
-// every pixel inside the square (linear interpolation across two
-// triangles whose union is the same convex region depends only on the
-// vertex values at the corners, not on which diagonal splits the square).
-// We therefore unify on the (BL, BR, TR, BL, TR, TL) ordering used by 3
-// of the 4 callers and migrate 'points' to match — this lets 'points'
-// use the same 'quadCorner(vid)' helper as everyone else, eliminating
-// the const-array duplication entirely.
 
 // CameraUniforms carries 'viewportPx', which 'expandBillboardScreen'
 // below needs to convert pixel sizes into clip-space offsets.
@@ -236,9 +182,11 @@ fn expandBillboardScreen(
 // lib/camera.wesl's 'pxPerRad' section. Every eye-tuned constant on
 // the consumer side was retuned once against the corrected scale.
 //
-// Shared by halo / ring / labels / star sprites so every consumer sizes
-// against the same focal term; a size tuned by eye in one lives beside
-// that consumer as a named px constant, never in here.
+// Shared by labels / starCatalog (structureMarker's halo/ring moved to
+// the eye-facing world expansion below, which needs no pixel size at
+// all) so every consumer sizes against the same focal term; a size
+// tuned by eye in one lives beside that consumer as a named px
+// constant, never in here.
 
 fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
   return (worldLen / clipW) * cam.pxPerRad;
@@ -257,9 +205,49 @@ fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
 // reads as 'offsetPx' actual pixels on screen regardless of depth.
 // Same cancellation as 'expandBillboardScreen' above, but accepts an
 // arbitrary 2D pixel offset rather than a unit corner × size — useful
-// for labels' per-glyph atlas-px offsets and, paired with
-// 'worldLenToPx', for the world-sized billboards halo / ring expand.
+// for labels' per-glyph atlas-px offsets.
 
 fn pxToClipOffset(cam: CameraUniforms, offsetPx: vec2<f32>, clipW: f32) -> vec2<f32> {
   return offsetPx * (2.0 / cam.viewportPx) * clipW;
+}
+
+// ── expandBillboardWorld ─────────────────────────────────────────────
+//
+// The WORLD offset to add to 'centerWorld' for one quad corner of an
+// EYE-facing billboard: forward = normalize(center - eye), so the
+// billboard plane is perpendicular to the eye ray. Unlike a screen- or
+// view-aligned quad, this depends only on '(eye, centre)' — never on a
+// projection matrix — so every view of a multi-view rig (five dome
+// faces, a VR eye pair) expands the same world corners and rasterises
+// the same curve, with no seam where two views disagree. Roll around
+// 'forward' is arbitrary and free for radially symmetric content (a
+// ring, a halo); the fallback axis only avoids a degenerate cross
+// product when looking straight along REF_UP. Same idiom as
+// milkyWay/sprites/io.wesl's 'spriteBillboardOffset', which stays
+// model-space there because its roll reference is the disk normal, not
+// a world-fixed up.
+
+const BILLBOARD_REF_UP: vec3<f32> = vec3<f32>(0.0, 1.0, 0.0);
+const BILLBOARD_REF_AXIS: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
+// Below this the cross product's direction is noise, not a basis.
+const BASIS_DEGENERATE_EPS: f32 = 1e-4;
+
+fn expandBillboardWorld(
+  eyeWorld: vec3<f32>,
+  centerWorld: vec3<f32>,
+  corner: vec2<f32>,
+  halfExtent: f32,
+) -> vec3<f32> {
+  let toCenter = centerWorld - eyeWorld;
+  let dist = length(toCenter);
+  // dist == 0 leaves the eye direction undefined; REF_UP keeps the
+  // basis finite rather than NaN.
+  let forward = select(BILLBOARD_REF_UP, toCenter / dist, dist > 0.0);
+  var right = cross(BILLBOARD_REF_UP, forward);
+  if (length(right) < BASIS_DEGENERATE_EPS) {
+    right = cross(BILLBOARD_REF_AXIS, forward);
+  }
+  right = normalize(right);
+  let up = cross(forward, right);
+  return (right * corner.x + up * corner.y) * halfExtent;
 }

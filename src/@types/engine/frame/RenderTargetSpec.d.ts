@@ -38,11 +38,18 @@ export type RenderTargetSpec = {
    */
   clearValue: GPUColor;
   /**
+   * 2d-array layer count for this row (absent ⇒ 1, an ordinary 2d texture).
+   * Independent of `fixedSizePx` — a canvas-scaled row can carry layers too
+   * (the dome-cube row). `layerViewOf` exposes one per-layer `dimension: '2d'`
+   * view when this is > 1 (WebGPU rejects a multi-layer view as a colour
+   * ATTACHMENT); `cubeViewOf` exposes a `dimension: 'cube'` view when this is
+   * exactly 6 (sampled as `texture_cube` — WebGPU has no cube-view render
+   * attachment).
+   */
+  layers?: number;
+  /**
    * When present, this row's pixel size is `fixedSizePx.size` on each axis
-   * regardless of canvas size, and its texture has `fixedSizePx.layers`
-   * array layers (a `2d-array` texture, sampled as `texture_cube` by a
-   * consumer that binds all six as a cube — WebGPU has no cube-view render
-   * attachment). `scale` is ignored when this is present.
+   * regardless of canvas size. `scale` is ignored when this is present.
    *
    * `size` may be a FUNCTION for a row whose declared size is a live setting
    * (`sky-cubemap`'s DebugPanel knob) — the same
@@ -51,7 +58,6 @@ export type RenderTargetSpec = {
    */
   fixedSizePx?: {
     readonly size: number | ((state: EngineState) => number);
-    readonly layers: number;
   };
   /**
    * When present, this row's texture exists only on the frames this returns

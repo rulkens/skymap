@@ -1,12 +1,13 @@
 /**
- * checkFrameOrder — the once-at-boot cross-check on `FRAME_ORDER`. Nothing
- * type-checks a pass/compute/planner name or a target string, so each
- * failure it catches would otherwise be silent: a Layer that adds a pass or a
- * compute row and forgets the order line never runs, a name listed twice runs
- * twice, a mistyped target filters to nothing. Names no present Layer owns
- * are NOT an error for a pass or a compute — that is how a Layer left out of
- * a composition is omitted. A `plan` line is stricter: it always names a row
- * the composition owns, so an unmatched name throws immediately.
+ * checkFrameOrder — the once-at-boot cross-check over every `ViewRig`'s
+ * program: catches a pass/compute/planner a Layer contributes but no line
+ * runs, a name listed twice, a mistyped target, or a plan row that doesn't
+ * lead its section. "Listed twice" is checked PER PROGRAM (a section two
+ * rigs share, like `PRELUDE`, submits separately in each rig's own encoder);
+ * "some program runs it" is checked ACROSS every program. A `plan` row is
+ * strict: it always names a registered `FrameContentPlanner` whose scope
+ * matches its section's, so an unmatched name throws immediately — unlike a
+ * pass/compute, which a composition without that Layer simply omits.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -65,112 +66,135 @@ const STEP_FACTS: {
   composite: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
   bloom: () => NONE,
   tonemap: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
+  // The dest is a VIEW's own output, not a named target row, so only the
+  // source enters the declared-target check.
+  copy: (spec) => ({ ...NONE, targets: [spec.source] }),
 };
 
 export function checkFrameOrder(
-  sections: readonly FrameSection[],
+  programs: readonly (readonly FrameSection[])[],
   passes: readonly ContentPass[],
   computes: readonly ContentCompute[],
   planners: readonly FrameContentPlanner<unknown>[],
   targets: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[],
 ): void {
-  const drawCount = new Map<string, number>();
-  // Separate from `drawCount`: a pass and a compute row may share a name on
-  // purpose (`'flow'` is both), which one map would misread as "listed twice".
-  const computeCount = new Map<string, number>();
-  const planCount = new Map<string, number>();
-  const captured = new Set<string>();
-  const touchedTargets: string[] = [];
-  const sampled: string[] = [];
   const present = new Set(passes.map((pass) => pass.name));
   const computeByName = new Map(computes.map((compute) => [compute.name, compute]));
   const plannerByName = new Map(planners.map((planner) => [planner.name, planner]));
 
-  for (const section of sections) {
-    // A `plan` row must lead its section — the shape `runPlanSteps` relies on
-    // to run every plan before the section's first GPU step.
-    let sawNonPlan = false;
-    for (const spec of section.steps) {
-      if (spec.kind === 'plan') {
-        if (sawNonPlan) {
-          throw new Error(
-            `checkFrameOrder: plan row '${spec.name}' follows a non-plan row — plan rows lead their section`,
-          );
+  const drawnAnywhere = new Set<string>();
+  const computedAnywhere = new Set<string>();
+  const plannedAnywhere = new Set<string>();
+  const captured = new Set<string>();
+  const touchedTargets: string[] = [];
+  const sampled: string[] = [];
+
+  for (const program of programs) {
+    // Fresh per program: two rigs sharing a section (`PRELUDE`) each submit it
+    // in their own encoder, so only a repeat WITHIN one program is the silent
+    // double-run this guards against — a pass/compute/planner name may repeat
+    // ACROSS programs on purpose (`PRELUDE`'s `plan galaxy-catalog` runs in
+    // both `mono` and `dome`). A pass and a compute may also share a name on
+    // purpose (`'flow'` is both), hence three separate maps.
+    const drawCount = new Map<string, number>();
+    const computeCount = new Map<string, number>();
+    const planCount = new Map<string, number>();
+
+    for (const section of program) {
+      // A `plan` row must lead its section — the shape `runPlanSteps` relies on
+      // to run every plan before the section's first GPU step.
+      let sawNonPlan = false;
+      for (const spec of section.steps) {
+        if (spec.kind === 'plan') {
+          if (sawNonPlan) {
+            throw new Error(
+              `checkFrameOrder: plan row '${spec.name}' follows a non-plan row — plan rows lead their section`,
+            );
+          }
+          planCount.set(spec.name, (planCount.get(spec.name) ?? 0) + 1);
+          plannedAnywhere.add(spec.name);
+          const planner = plannerByName.get(spec.name);
+          if (planner === undefined) {
+            throw new Error(
+              `checkFrameOrder: plan row names '${spec.name}', which no registered FrameContentPlanner declares`,
+            );
+          }
+          if (planner.scope !== section.scope) {
+            throw new Error(
+              `checkFrameOrder: plan row '${spec.name}' has scope '${planner.scope}', but its section is '${section.scope}'`,
+            );
+          }
+          continue;
         }
-        planCount.set(spec.name, (planCount.get(spec.name) ?? 0) + 1);
-        const planner = plannerByName.get(spec.name);
-        if (planner === undefined) {
-          throw new Error(
-            `checkFrameOrder: plan row names '${spec.name}', which no registered FrameContentPlanner declares`,
-          );
+        sawNonPlan = true;
+        if (spec.kind === 'compute') {
+          const compute = computeByName.get(spec.name);
+          if (compute !== undefined && compute.scope !== section.scope) {
+            throw new Error(
+              `checkFrameOrder: compute row '${spec.name}' has scope '${compute.scope}', but its section is '${section.scope}'`,
+            );
+          }
         }
-        if (planner.scope !== section.scope) {
-          throw new Error(
-            `checkFrameOrder: plan row '${spec.name}' has scope '${planner.scope}', but its section is '${section.scope}'`,
-          );
+        const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
+        const facts = factsOf(spec);
+        // `expandFrameOrder` drops a render line none of whose passes is present, so
+        // its target — Layer-owned, left out with the Layer — is never touched.
+        const drops = spec.kind === 'render' && !facts.drawn.some((name) => present.has(name));
+        for (const name of facts.drawn) {
+          drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
+          drawnAnywhere.add(name);
         }
-        continue;
+        for (const name of facts.computed) {
+          computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
+          computedAnywhere.add(name);
+        }
+        for (const name of facts.captured) captured.add(name);
+        if (!drops) {
+          touchedTargets.push(...facts.targets);
+          sampled.push(...facts.sampled);
+        }
       }
-      sawNonPlan = true;
-      if (spec.kind === 'compute') {
-        const compute = computeByName.get(spec.name);
-        if (compute !== undefined && compute.scope !== section.scope) {
-          throw new Error(
-            `checkFrameOrder: compute row '${spec.name}' has scope '${compute.scope}', but its section is '${section.scope}'`,
-          );
-        }
+    }
+
+    for (const [name, count] of drawCount) {
+      if (count > 1) {
+        throw new Error(`checkFrameOrder: pass '${name}' is listed on ${count} FRAME_ORDER lines`);
       }
-      const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
-      const facts = factsOf(spec);
-      // `expandFrameOrder` drops a render line none of whose passes is present, so
-      // its target — Layer-owned, left out with the Layer — is never touched.
-      const drops = spec.kind === 'render' && !facts.drawn.some((name) => present.has(name));
-      for (const name of facts.drawn) drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
-      for (const name of facts.computed) computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
-      for (const name of facts.captured) captured.add(name);
-      if (!drops) {
-        touchedTargets.push(...facts.targets);
-        sampled.push(...facts.sampled);
+    }
+    for (const [name, count] of computeCount) {
+      if (count > 1) {
+        throw new Error(
+          `checkFrameOrder: compute '${name}' is listed on ${count} FRAME_ORDER lines`,
+        );
+      }
+    }
+    for (const [name, count] of planCount) {
+      if (count > 1) {
+        throw new Error(
+          `checkFrameOrder: planner '${name}' is listed on ${count} FRAME_ORDER lines`,
+        );
       }
     }
   }
 
   for (const pass of passes) {
-    const count = drawCount.get(pass.name) ?? 0;
-    if (count === 0 && !captured.has(pass.name)) {
+    if (!drawnAnywhere.has(pass.name) && !captured.has(pass.name)) {
       throw new Error(`checkFrameOrder: no FRAME_ORDER line draws contributed pass '${pass.name}'`);
-    }
-    if (count > 1) {
-      throw new Error(
-        `checkFrameOrder: pass '${pass.name}' is listed on ${count} FRAME_ORDER lines`,
-      );
     }
   }
 
   for (const compute of computes) {
-    const count = computeCount.get(compute.name) ?? 0;
-    if (count === 0) {
+    if (!computedAnywhere.has(compute.name)) {
       throw new Error(
         `checkFrameOrder: no FRAME_ORDER line runs contributed compute '${compute.name}'`,
-      );
-    }
-    if (count > 1) {
-      throw new Error(
-        `checkFrameOrder: compute '${compute.name}' is listed on ${count} FRAME_ORDER lines`,
       );
     }
   }
 
   for (const planner of planners) {
-    const count = planCount.get(planner.name) ?? 0;
-    if (count === 0) {
+    if (!plannedAnywhere.has(planner.name)) {
       throw new Error(
         `checkFrameOrder: no FRAME_ORDER line plans registered planner '${planner.name}'`,
-      );
-    }
-    if (count > 1) {
-      throw new Error(
-        `checkFrameOrder: planner '${planner.name}' is listed on ${count} FRAME_ORDER lines`,
       );
     }
   }

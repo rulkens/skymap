@@ -271,33 +271,58 @@ describe('visibleSlabBodies', () => {
     expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
   });
 
-  it("keeps Sgr A* for its lens band's whole support, even sub-pixel and off-axis", () => {
-    // The lens pass's slab must be born where its fade band OPENS (alpha = 0,
-    // 500 AU), not where the hole's own r_s-scale disc clears the 1-px floor
-    // (~346 AU on a dpr-2 1080p-class viewport — bandAlpha already ~0.4
-    // there: the pop this pins, audit-cubemap-alignment.md §8). Placed
-    // sub-pixel AND behind the camera: both culls must be bypassed inside
-    // the band, since the lensed footprint isn't the disc.
-    const sgrAStar = SGR_A_STAR;
+  describe("Sgr A*'s lens envelope, not a bypass", () => {
+    // Both culls read `bodyDrawRadiusM`'s lens envelope like any other
+    // body's shell, so candidacy tracks where the LENSED SPHERE actually
+    // reaches rather than bypassing entirely for any position inside the
+    // lens band (BAND_SLAB_FLOOR_MPC), which would keep a hole directly
+    // behind the camera.
     const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 
-    for (const [distanceMpc, expected] of [
-      [insideBandMpc, [SGR_A_STAR.id]],
-      [outsideBandMpc, []],
-    ] as const) {
+    it('keeps Sgr A* inside the band, 30° off-axis (well within the frustum cull threshold)', () => {
       const bodyStates = new Map<string, BodyState>([
-        [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
+        [SGR_A_STAR.id, makeState(offAxisPositionMpc(30, insideBandMpc))],
       ]);
       const visible = visibleSlabBodies({
-        bodies: [sgrAStar],
+        bodies: [SGR_A_STAR],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: SQUARE_90,
         pxPerRad: PX_PER_RAD_90,
       });
-      expect(visible.map((body) => body.id)).toEqual(expected);
-    }
+      expect(visible.map((body) => body.id)).toEqual([SGR_A_STAR.id]);
+    });
+
+    it('drops Sgr A* inside the band but 180° behind the camera — the envelope does not reach that far', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, insideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        bodies: [SGR_A_STAR],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((body) => body.id)).toEqual([]);
+    });
+
+    it('drops Sgr A* outside the band, where the envelope is 0', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [SGR_A_STAR.id, makeState(offAxisPositionMpc(0, outsideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        bodies: [SGR_A_STAR],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((body) => body.id)).toEqual([]);
+    });
   });
 });

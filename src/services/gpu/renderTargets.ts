@@ -114,6 +114,7 @@ import type { RenderTargets } from '../../@types/rendering/RenderTargets';
 import type { RenderTargetSpec } from '../../@types/engine/frame/RenderTargetSpec';
 import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
+import { DOME_FACE_COUNT } from '../../data/rendering/domeFaces';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
@@ -226,14 +227,12 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: captureRowAllocateWhen('sgrAStar'),
+      layers: 6,
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
       // (and its cube/layer views) without a rebuild path of its own.
-      fixedSizePx: {
-        size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
-        layers: 6,
-      },
+      fixedSizePx: { size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx },
     },
     // The sky a reflection probe is captured over, on the same lazy terms as
     // `sky-cubemap`: 6 layers, held only while the camera is inside the solar
@@ -245,7 +244,22 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
       allocateWhen: captureRowAllocateWhen('solarSystem'),
-      fixedSizePx: { size: 256, layers: 6 },
+      layers: 6,
+      fixedSizePx: { size: 256 },
+    },
+    // The fisheye's five cube-adjacent faces (front/left/right/back/top), one
+    // canvas-sized 2d-array layer each — a normal render target that happens
+    // to carry `layers`, not a `fixedSizePx` row: the dome image IS the
+    // canvas size. 5 × N² × 8 B is 671 MB at 4096², hence `allocateWhen`
+    // gates it to the dome rig alone.
+    {
+      id: 'dome-cube',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1,
+      layers: DOME_FACE_COUNT,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      allocateWhen: (state) => state.viewRig === 'dome',
     },
     {
       id: 'swap',
@@ -340,7 +354,7 @@ export function createRenderTargets(
       // `fixedSizePx.layers > 1` row (a 2d-array texture, e.g. the sky
       // cubemap's 6 faces) reads unambiguously beside `depthOrArrayLayers`.
       dimension: '2d',
-      size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
+      size: { width, height, depthOrArrayLayers: spec.layers ?? 1 },
       // RENDER_ATTACHMENT lets the content layers' pipelines write into the
       // target; TEXTURE_BINDING lets the compositor / upsample fragment
       // shaders sample from it — for 'foreground:0' this is ALSO what the
@@ -351,7 +365,7 @@ export function createRenderTargets(
     });
     textures.set(spec.id, texture);
     views.set(spec.id, texture.createView());
-    if (spec.fixedSizePx?.layers === 6) {
+    if (spec.layers === 6) {
       cubeViews.set(
         spec.id,
         texture.createView({
@@ -362,7 +376,7 @@ export function createRenderTargets(
         }),
       );
     }
-    const layerCount = spec.fixedSizePx?.layers ?? 1;
+    const layerCount = spec.layers ?? 1;
     if (layerCount > 1) {
       layerViews.set(
         spec.id,
@@ -383,7 +397,7 @@ export function createRenderTargets(
         label: `render-target-${spec.id}-depth`,
         format: spec.depth,
         dimension: '2d',
-        size: { width, height, depthOrArrayLayers: spec.fixedSizePx?.layers ?? 1 },
+        size: { width, height, depthOrArrayLayers: spec.layers ?? 1 },
         // Each painter-chain row clears its own depth (spec §7.3), so this
         // buffer only ever holds the LAST row's value — which is why the
         // caption occlusion pass (lib/sceneDepth.wesl) reads the COLOUR
