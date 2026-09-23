@@ -133,6 +133,10 @@ const SERVE_BUILD_DIR = 'tools/record/.build';
 const SERVE_PORT = 4517;
 const PREVIEW_READY_TIMEOUT_MS = 30_000;
 
+// Frame rates the Wisdome dome plays back; the first is the default. Both
+// fit H.264 level 6.1 at 4096x4096 (see buildFfmpegArgs).
+const DOME_FPS: readonly [number, ...number[]] = [30, 60];
+
 type RecordOptions = {
   tourId: string;
   /** --clip; set = the take is a clip, and the tour flags are rejected. */
@@ -152,6 +156,10 @@ type RecordOptions = {
   serve: boolean;
   /** --rebuild: force a fresh --serve build even if SERVE_BUILD_DIR already has one. */
   rebuild: boolean;
+  /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
+  dome: boolean;
+  /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
+  frames: number | undefined;
 };
 
 type Take =
@@ -196,10 +204,18 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     simTime: undefined,
     serve: false,
     rebuild: false,
+    dome: false,
+    frames: undefined,
   };
   // Tracked separately from options.url: the default url must not trip the
   // --serve/--url conflict check below, only an explicit --url may.
   let urlExplicit = false;
+  // Tracked so --dome's size/dpr/fps defaults only apply where the operator
+  // didn't already say something — --dome can appear before OR after these
+  // flags in argv, so the loop can't decide this inline.
+  let sizeExplicit = false;
+  let dprExplicit = false;
+  let fpsExplicit = false;
   let positionalSeen = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -212,6 +228,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       options.rebuild = true;
       continue;
     }
+    if (arg === '--dome') {
+      options.dome = true;
+      continue;
+    }
     if (
       arg === '--beats' ||
       arg === '--clip' ||
@@ -220,7 +240,8 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       arg === '--size' ||
       arg === '--dpr' ||
       arg === '--out' ||
-      arg === '--url'
+      arg === '--url' ||
+      arg === '--frames'
     ) {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
@@ -241,8 +262,12 @@ function parseArgs(argv: readonly string[]): RecordOptions {
         if (!Number.isInteger(options.fps) || options.fps < 1) {
           throw new Error(`--fps must be a positive integer, got '${value}'`);
         }
+        fpsExplicit = true;
       }
-      if (arg === '--size') options.size = parseSize(value);
+      if (arg === '--size') {
+        options.size = parseSize(value);
+        sizeExplicit = true;
+      }
       if (arg === '--dpr') {
         // Only 1 or 2: the app clamps devicePixelRatio to 2 when sizing the
         // canvas backing store (src/services/gpu/device.ts), so a higher dpr
@@ -251,17 +276,25 @@ function parseArgs(argv: readonly string[]): RecordOptions {
           throw new Error(`--dpr must be 1 or 2, got '${value}'`);
         }
         options.dpr = Number(value);
+        dprExplicit = true;
       }
       if (arg === '--out') options.out = value;
       if (arg === '--url') {
         options.url = value.replace(/\/$/, '');
         urlExplicit = true;
       }
+      if (arg === '--frames') {
+        const parsed = Number(value);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+          throw new Error(`--frames must be a positive integer, got '${value}'`);
+        }
+        options.frames = parsed;
+      }
     } else if (arg.startsWith('--')) {
       throw new Error(
         `unknown flag '${arg}' ` +
           '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
-          '--serve, --rebuild; positional: tour id)',
+          '--serve, --rebuild, --dome, --frames; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -284,6 +317,33 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       '--serve builds and serves its own production copy at a URL it picks — pass --url only ' +
         'when pointing at a server that is already running, not together with --serve',
     );
+  }
+  if (options.dome) {
+    // An explicit --size may still override, but only as a square — that's
+    // what lets a fast pipeline check run at e.g. 1024x1024 instead of the
+    // full 4096x4096 delivery frame.
+    if (sizeExplicit) {
+      if (options.size.width !== options.size.height) {
+        throw new Error(
+          `--dome requires a square --size (WxW) for the fisheye faces, got ` +
+            `${options.size.width}x${options.size.height}`,
+        );
+      }
+    } else {
+      options.size = parseSize('4096x4096');
+    }
+    if (dprExplicit && options.dpr !== 1) {
+      throw new Error(`--dome requires --dpr 1 (or omit it), got ${options.dpr}`);
+    }
+    if (fpsExplicit) {
+      if (!DOME_FPS.includes(options.fps)) {
+        throw new Error(
+          `--dome requires --fps ${DOME_FPS.join(' or ')} (or omit it), got ${options.fps}`,
+        );
+      }
+    } else {
+      options.fps = DOME_FPS[0];
+    }
   }
   // The viewport is size/dpr in CSS pixels, and Playwright viewports are
   // integral — a 4K output divides cleanly by 2, but an odd custom size
@@ -314,10 +374,10 @@ type FfmpegHandle = {
  * async 'error' event (ENOENT), not a spawn() throw, so this awaits the
  * spawn/error race explicitly to turn it into a clear install hint.
  */
-async function spawnFfmpeg(fps: number, out: string): Promise<FfmpegHandle> {
+async function spawnFfmpeg(fps: number, out: string, dome: boolean): Promise<FfmpegHandle> {
   // ffmpeg does not create directories; the default out lands in recordings/.
   mkdirSync(dirname(out), { recursive: true });
-  const proc = spawn('ffmpeg', buildFfmpegArgs({ fps, out }), {
+  const proc = spawn('ffmpeg', buildFfmpegArgs({ fps, out, dome }), {
     stdio: ['pipe', 'ignore', 'pipe'],
   });
   await new Promise<void>((resolve, reject) => {
@@ -752,12 +812,19 @@ async function captureTake(
   console.log(
     `stepping at ${(1000 / options.fps).toFixed(2)} ms per frame ` +
       (loopFrames !== undefined
-        ? `(looping clip — recording exactly ${loopFrames} frames, one cycle) ...`
-        : `(cap ${frameCap} captured frames) ...`),
+        ? `(looping clip — recording exactly ${loopFrames} frames, one cycle)`
+        : `(cap ${frameCap} captured frames)`) +
+      (options.frames !== undefined ? `, stopping early at --frames ${options.frames}` : '') +
+      ' ...',
   );
   let frame = 0;
   while (true) {
     framesSoFar = frame; // keeps the diagnostics above frame-accurate
+    // --frames is a third bound alongside loopFrames/frameCap below — the
+    // take ends at min(natural end, loopFrames, --frames) — and, unlike
+    // frameCap, hitting it is a clean stop, not an abort: an operator's
+    // --frames 150 smoke take is EXPECTED to end early.
+    if (options.frames !== undefined && frame >= options.frames) break;
     // Poll the bridge at the frame boundary (module header: deterministic
     // stop frame). Checked BEFORE granting so a take that ends inside grant N
     // yields exactly N captured frames, the last one showing the final pose.
@@ -808,7 +875,8 @@ async function captureTake(
     await writeFrame(Buffer.from(shot.data, 'base64'));
     frame++;
     if (frame % PROGRESS_EVERY_FRAMES === 0) {
-      console.log(`  frame ${frame} / ${loopFrames ?? frameCap}`);
+      const denom = Math.min(loopFrames ?? frameCap, options.frames ?? Infinity);
+      console.log(`  frame ${frame} / ${denom}`);
     }
   }
 
@@ -824,9 +892,15 @@ async function captureTake(
  * disk — the smoke check is "does the container say the size and frame count
  * we intended", not "did ffmpeg exit 0" alone.
  */
-async function ffprobeReport(
-  out: string,
-): Promise<{ width: number; height: number; nbFrames: string }> {
+async function ffprobeReport(out: string): Promise<{
+  width: number;
+  height: number;
+  nbFrames: string;
+  profile: string;
+  level: string;
+  pixFmt: string;
+  rFrameRate: string;
+}> {
   const proc = spawn(
     'ffprobe',
     ['-v', 'error', '-select_streams', 'v:0', '-show_streams', '-of', 'json', out],
@@ -848,7 +922,15 @@ async function ffprobeReport(
   });
   if (code !== 0) throw new Error(`ffprobe exited with code ${String(code)}: ${stderr.trim()}`);
   const parsed = JSON.parse(stdout) as {
-    streams?: { width?: number; height?: number; nb_frames?: string }[];
+    streams?: {
+      width?: number;
+      height?: number;
+      nb_frames?: string;
+      profile?: string;
+      level?: number;
+      pix_fmt?: string;
+      r_frame_rate?: string;
+    }[];
   };
   const stream = parsed.streams?.[0];
   if (stream?.width === undefined || stream.height === undefined) {
@@ -858,6 +940,10 @@ async function ffprobeReport(
     width: stream.width,
     height: stream.height,
     nbFrames: stream.nb_frames ?? '(not reported)',
+    profile: stream.profile ?? '(not reported)',
+    level: stream.level !== undefined ? String(stream.level) : '(not reported)',
+    pixFmt: stream.pix_fmt ?? '(not reported)',
+    rFrameRate: stream.r_frame_rate ?? '(not reported)',
   };
 }
 
@@ -882,7 +968,7 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime });
+    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;
@@ -975,7 +1061,7 @@ async function main(): Promise<void> {
 
     // ffmpeg first: a missing binary should fail in milliseconds, not after a
     // browser launch and a full app boot.
-    const ffmpeg = await spawnFfmpeg(options.fps, out);
+    const ffmpeg = await spawnFfmpeg(options.fps, out, options.dome);
     let frames: number;
     try {
       const browser = await launchChromium();
@@ -1009,6 +1095,10 @@ async function main(): Promise<void> {
           : `(cap was ${frameCap})`),
     );
     console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
+    console.log(
+      `  ffprobe: profile ${probe.profile}, level ${probe.level}, pix_fmt ${probe.pixFmt}, ` +
+        `r_frame_rate ${probe.rFrameRate}`,
+    );
   } finally {
     if (preview !== undefined && preview.proc.exitCode === null) preview.proc.kill('SIGTERM');
   }

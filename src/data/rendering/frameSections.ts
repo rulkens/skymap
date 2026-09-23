@@ -311,6 +311,22 @@ export const POST: FrameSection = {
   ],
 };
 
+// The dome rig's own two sections. `SCENE_TO_DOME_CUBE` is `SCENE` plus one
+// line: copy this face's freshly-drawn `hdr` into its own `dome-cube` layer
+// (`ViewSpec.output`), so the resample below reads five already-drawn faces.
+// `DOME_RESAMPLE` runs once against the canvas, after every face — it
+// fisheye-resamples the whole `dome-cube` row back into `hdr`, which `POST`
+// then blooms and tone-maps into the canvas exactly as the mono rig does.
+export const SCENE_TO_DOME_CUBE: FrameSection = {
+  scope: 'perView',
+  steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }],
+};
+
+export const DOME_RESAMPLE: FrameSection = {
+  scope: 'once',
+  steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
+};
+
 export const OVERLAYS: FrameSection = {
   scope: 'once',
   steps: [

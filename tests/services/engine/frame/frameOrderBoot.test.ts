@@ -12,10 +12,10 @@ import { describe, it, expect } from 'vitest';
 
 import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
-import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
@@ -30,17 +30,19 @@ import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderS
 const LAYER_PLANNER_STUBS = stubPlannersFor(PRELUDE);
 
 describe('checkFrameOrder — boot', () => {
-  it('the app’s FRAME_ORDER passes the boot check', () => {
+  it('every ViewRig’s program passes the boot check', () => {
     // The swap format only decides the swap ROW's format, never an id, so any
     // valid format yields the same rows `startLoop` reads off the assembled
-    // table.
+    // table. Every rig, the same set `startLoop` itself checks — not just
+    // `FRAME_ORDER` (mono's own concatenation), so a dome-only pass or a
+    // section shared by both rigs is exercised here too.
     const targets = composeRenderTargetRows(
       'bgra8unorm',
       APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
     );
     expect(() =>
       checkFrameOrder(
-        VIEW_RIGS.mono.program,
+        Object.values(VIEW_RIGS).map((rig) => rig.program),
         CONTENT_PASSES,
         CORE_COMPUTES,
         [...CORE_PLANNERS, ...LAYER_PLANNER_STUBS],

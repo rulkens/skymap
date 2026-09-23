@@ -11,6 +11,9 @@
  * precedent for locating/parsing the struct and computing WGSL alignment;
  * the embedded `cam: CameraUniforms` prefix is treated as an opaque 80-byte
  * block, its own byte-for-byte parity living in `cameraUniforms.test.ts`.
+ * `mat3x3<f32>` gets its own column-by-column check (`viewBasis`): std140
+ * pads each column to 16 bytes, so a flat `lanes` count would misplace the
+ * 2nd/3rd columns.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -22,6 +25,7 @@ import {
 } from '../../../src/utils/gpu/packSgrAStarLensingUniforms';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -30,11 +34,15 @@ const weslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/sgrAStarLensing
 /** std140 alignment + size for the types SgrAStarLensingUniforms uses.
  *  `lanes: 0` marks the embedded `CameraUniforms` prefix — its block offset
  *  still comes from this table (it advances the cursor 80 bytes), but its
- *  content is not asserted here; see the module header for why. */
+ *  content is not asserted here; see the module header for why. `lanes: -1`
+ *  marks `mat3x3<f32>`, checked column-by-column (its own 16-byte column
+ *  stride) rather than as a flat run of floats. */
 const WESL_TYPES: Record<string, { align: number; size: number; lanes: number }> = {
   f32: { align: 4, size: 4, lanes: 1 },
   'vec3<f32>': { align: 16, size: 12, lanes: 3 },
+  'vec4<f32>': { align: 16, size: 16, lanes: 4 },
   CameraUniforms: { align: 16, size: 80, lanes: 0 },
+  'mat3x3<f32>': { align: 16, size: 48, lanes: -1 },
 };
 
 function roundUp(value: number, align: number): number {
@@ -113,8 +121,10 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const dopplerStrength = 703;
     const emissionStrength = 704;
     const edgeFadeEndRs = 705;
-    const quadPlaneRadiusRs = 706;
     const emissionTint: Vec3 = [801, 802, 803];
+    // This view's camera basis + frustum tangents.
+    const viewBasis: Mat3 = [901, 902, 903, 904, 905, 906, 907, 908, 909];
+    const frustum = { tanLeft: 910, tanRight: 911, tanDown: 912, tanUp: 913 };
 
     const rec = packSgrAStarLensingUniforms({
       viewProj,
@@ -138,10 +148,15 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       emissionStrength,
       edgeFadeEndRs,
       emissionTint,
-      quadPlaneRadiusRs,
+      viewBasis,
+      frustum,
     });
 
     const vectorByField: Record<string, Vec3> = { anchorPosRelCamM, emissionTint };
+    const vec4ByField: Record<string, readonly [number, number, number, number]> = {
+      frustumTan: [frustum.tanLeft, frustum.tanRight, frustum.tanDown, frustum.tanUp],
+    };
+    const mat3ByField: Record<string, Mat3> = { viewBasis };
     const scalarByField: Record<string, number> = {
       schwarzschildRadiusM,
       innerRs,
@@ -159,17 +174,31 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       dopplerStrength,
       emissionStrength,
       edgeFadeEndRs,
-      quadPlaneRadiusRs,
     };
-    // `_pad0` (byte 104) is unwritten — flickerTimescaleS moved CPU-side
-    // (sgrAStarLensingPass.ts's flickerPhase precompute) and is never
-    // sampled by the shader, so its old uniform slot stays zero.
-    const zeroPadFields = new Set<string>(['_pad0']);
+    // `_pad0`/`_pad1` are unwritten — `_pad0` because flickerTimescaleS lives
+    // CPU-side (sgrAStarLensingPass.ts's flickerPhase precompute) and is
+    // never sampled by the shader; `_pad1` is unread.
+    const zeroPadFields = new Set<string>(['_pad0', '_pad1']);
 
     for (const field of layout) {
       if (field.lanes === 0) {
         // The opaque cam: CameraUniforms prefix — content unchecked here.
         continue;
+      } else if (field.lanes === -1) {
+        // mat3x3<f32>: three columns, each its own 16-byte (4-float) slot —
+        // lane 3 of every column is std140 padding, never written.
+        const mat = mat3ByField[field.name];
+        if (!mat) throw new Error(`no sentinel matrix for field '${field.name}'`);
+        for (let col = 0; col < 3; col++) {
+          for (let row = 0; row < 3; row++) {
+            expect(rec[field.floatOffset + col * 4 + row]).toBe(mat[col * 3 + row]);
+          }
+          expect(rec[field.floatOffset + col * 4 + 3]).toBe(0);
+        }
+      } else if (field.lanes === 4) {
+        const vec = vec4ByField[field.name];
+        if (!vec) throw new Error(`no sentinel vec4 for field '${field.name}'`);
+        for (let lane = 0; lane < 4; lane++) expect(rec[field.floatOffset + lane]).toBe(vec[lane]);
       } else if (field.lanes === 3) {
         const vec = vectorByField[field.name];
         if (!vec) throw new Error(`no sentinel vector for field '${field.name}'`);

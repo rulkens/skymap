@@ -111,6 +111,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
   tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
+  copy: (spec) => [{ kind: 'copy', source: spec.source }],
 };
 
 /** A render step with nothing left to draw never opens a pass. */

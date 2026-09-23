@@ -32,6 +32,7 @@ import { atmosphereShellPass } from './atmosphereShellPass';
 import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
+import { domeResamplePass } from './domeResamplePass';
 
 /**
  * Core's contributed passes, as a flat set. It states no order and no grouping:
@@ -64,4 +65,5 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   atmosphereShellPass,
   aerialPerspectivePass,
   skyCubemapBlitPass,
+  domeResamplePass,
 ];

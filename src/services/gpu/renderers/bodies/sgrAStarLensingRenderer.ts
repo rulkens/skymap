@@ -1,7 +1,7 @@
 /**
- * sgrAStarLensingRenderer — the Sgr A* lens pass: one billboard draw per
- * frame classifying capture/escape/annulus rays against the deflection LUT
- * and the sky cubemap. Structural precedent: `bodyGlintRenderer.ts`.
+ * sgrAStarLensingRenderer — the Sgr A* lens pass: one fullscreen-triangle
+ * draw per view classifying capture/escape/annulus rays against the
+ * deflection LUT and the sky cubemap. Structural precedent: `bodyGlintRenderer.ts`.
  *
  * LANDMINE — the LUT's captured samples are IEEE `Infinity`, which a
  * fast-math compiler need not preserve, so they upload as
@@ -159,9 +159,9 @@ export function createSgrAStarLensingRenderer(
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    // Six vertices, one billboard quad — the vertex stage maps
-    // vertex_index 0..5 through lib/billboard's quadCorner.
-    pass.draw(6);
+    // Three vertices, one fullscreen triangle — the vertex stage derives
+    // each corner's ray from this view's own frustum tangents.
+    pass.draw(3);
   }
 
   function destroy(): void {

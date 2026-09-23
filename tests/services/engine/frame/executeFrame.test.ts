@@ -464,6 +464,57 @@ describe('executeFrame', () => {
     expect(draw.mock.calls[0]![4]).toBe('rgba16float');
   });
 
+  it('copy step draws its source into ctx.output with replace and no tone', () => {
+    const env = makeEncoderEnv();
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view' } as unknown as GPUTextureView;
+    const hdr = makeContentPass({ name: 'hdr' });
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    const { args } = makeArgs({ program, env, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+
+    expect(draw).toHaveBeenCalledTimes(1);
+    // draw(pass, viewFor(source)=HDR_VIEW, 'replace', null, specOf(source).format)
+    expect(draw.mock.calls[0]![1]).toBe(HDR_VIEW);
+    expect(draw.mock.calls[0]![2]).toBe('replace');
+    expect(draw.mock.calls[0]![3]).toBe(null);
+    expect(draw.mock.calls[0]![4]).toBe('rgba16float');
+
+    // The copy pass's own attachment is ctx.output, cleared opaque black.
+    const copyPassDesc = env.beginRenderPass.mock.calls.at(-1)![0] as GPURenderPassDescriptor;
+    const attachment = Array.from(
+      copyPassDesc.colorAttachments as Iterable<GPURenderPassColorAttachment>,
+    )[0]!;
+    expect(attachment.view).toBe(outputView);
+    expect(attachment.loadOp).toBe('clear');
+    expect(attachment.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it('copy step without a view output throws', () => {
+    const hdr = makeContentPass({ name: 'hdr' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    // Default makeCtx() carries no `output` — the mono/canvas-view case.
+    const { args } = makeArgs({ program });
+    expect(() => executeFrame(args)).toThrow(/copy step has no view output/);
+  });
+
+  it('skips a copy step whose source was never touched', () => {
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view-2' } as unknown as GPUTextureView;
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [{ kind: 'copy', source: 'hdr' }];
+    const { args } = makeArgs({ program, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+    expect(draw).not.toHaveBeenCalled();
+  });
+
   it('merged strategy opens exactly one pass per non-empty render step', () => {
     const env = makeEncoderEnv();
     const a = makeContentPass({ name: 'a' });

@@ -23,9 +23,12 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   }
   const phaseLocals = deps.phaseLocals;
 
-  // Against the ASSEMBLED rows: a freshly derived table would be a second answer.
+  // Against the ASSEMBLED rows: a freshly derived table would be a second
+  // answer. Every rig's program, not just the live `state.viewRig` — a pass
+  // only the dome rig draws must still pass boot before the user ever
+  // switches to it.
   checkFrameOrder(
-    VIEW_RIGS[state.viewRig].program,
+    Object.values(VIEW_RIGS).map((rig) => rig.program),
     state.passes,
     state.computes,
     state.planners,

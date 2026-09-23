@@ -1,9 +1,10 @@
 /**
- * checkFrameOrder — the boot-time cross-check between the authored frame order,
- * the passes/computes/planners the present Layers contributed, and the
- * assembled render-target rows. Nothing type-checks a pass name or a target
- * string, so a typo would otherwise draw nothing, silently; each case here is
- * one such silent failure.
+ * checkFrameOrder — the boot-time cross-check between the authored frame
+ * order (one program per `ViewRig`), the passes/computes/planners the
+ * present Layers contributed, and the assembled render-target rows. Nothing
+ * type-checks a pass/compute/planner name or a target string, so a typo
+ * would otherwise draw nothing, silently; each case here is one such silent
+ * failure.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -65,10 +66,10 @@ const drawing = (...names: string[]): FrameStepSpec[] => [
 ];
 
 describe('checkFrameOrder', () => {
-  it('throws naming a contributed pass no FRAME_ORDER line draws', () => {
+  it('throws naming a contributed pass no program draws', () => {
     expect(() =>
       checkFrameOrder(
-        [section(drawing('a'))],
+        [[section(drawing('a'))]],
         [fakePass('a'), fakePass('ghost-pass')],
         NO_COMPUTES,
         NO_PLANNERS,
@@ -77,14 +78,29 @@ describe('checkFrameOrder', () => {
     ).toThrow(/ghost-pass/);
   });
 
-  it('throws naming a pass listed on two lines', () => {
+  it('throws naming a pass listed on two lines within one program', () => {
     const steps: FrameStepSpec[] = [
       { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
       { kind: 'render', target: 'hdr', slab: NEAR0, passes: ['a'] },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).toThrow(/'a'/);
+  });
+
+  it('accepts a pass drawn once each by two different programs', () => {
+    // The dome-fisheye load-bearing case: `PRELUDE` is shared by `mono` and
+    // `dome`, each its own program, each its own encoder and submit — a name
+    // repeated ACROSS programs is not the same silent bug as within one.
+    expect(() =>
+      checkFrameOrder(
+        [[section(drawing('a'))], [section(drawing('a'))]],
+        [fakePass('a')],
+        NO_COMPUTES,
+        NO_PLANNERS,
+        TARGETS,
+      ),
+    ).not.toThrow();
   });
 
   it('accepts a pass that only a capture line rosters', () => {
@@ -103,7 +119,7 @@ describe('checkFrameOrder', () => {
     ];
     expect(() =>
       checkFrameOrder(
-        [section(steps)],
+        [[section(steps)]],
         [fakePass('a'), fakePass('capture-only'), fakePass('body-capture-only')],
         NO_COMPUTES,
         NO_PLANNERS,
@@ -120,14 +136,30 @@ describe('checkFrameOrder', () => {
       ...drawing('a'),
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+    ).not.toThrow();
+  });
+
+  it('a pass drawn only by one program (a rig-exclusive pass) passes the boot check', () => {
+    // `dome-resample` is the real case: no `mono` line draws it, only
+    // `dome`'s own program — that must not read as "no line draws it".
+    const monoProgram = [section(drawing('a'))];
+    const domeProgram = [section(drawing('dome-resample'))];
+    expect(() =>
+      checkFrameOrder(
+        [monoProgram, domeProgram],
+        [fakePass('a'), fakePass('dome-resample')],
+        NO_COMPUTES,
+        NO_PLANNERS,
+        TARGETS,
+      ),
     ).not.toThrow();
   });
 
   it('throws naming a step target that is not a declared render-target id', () => {
     const steps: FrameStepSpec[] = [{ kind: 'render', target: 'hrd', slab: COSMO, passes: ['a'] }];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).toThrow(/hrd/);
   });
 
@@ -138,7 +170,7 @@ describe('checkFrameOrder', () => {
       { kind: 'render', target: 'layer-only', slab: COSMO, passes: ['absent'] },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).not.toThrow();
   });
 
@@ -148,7 +180,7 @@ describe('checkFrameOrder', () => {
       { kind: 'tonemap', source: 'hdr', dest: 'swop' },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).toThrow(/swop/);
   });
 
@@ -156,7 +188,7 @@ describe('checkFrameOrder', () => {
     const steps: FrameStepSpec[] = [{ kind: 'compute', name: 'sky-view' }];
     expect(() =>
       checkFrameOrder(
-        [section(steps)],
+        [[section(steps)]],
         [],
         [fakeCompute('sky-view'), fakeCompute('ghost-compute')],
         NO_PLANNERS,
@@ -165,24 +197,24 @@ describe('checkFrameOrder', () => {
     ).toThrow(/ghost-compute/);
   });
 
-  it('throws naming a compute row listed on two lines', () => {
+  it('throws naming a compute row listed on two lines within one program', () => {
     const steps: FrameStepSpec[] = [
       { kind: 'compute', name: 'flow' },
       { kind: 'compute', name: 'flow' },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [], [fakeCompute('flow')], NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [], [fakeCompute('flow')], NO_PLANNERS, TARGETS),
     ).toThrow(/'flow'/);
   });
 
   it('a compute row and a pass sharing one name do not collide in the count', () => {
     // 'flow' names both the ribbon integrator (compute) and the ribbon draw
-    // (pass) on purpose — one FRAME_ORDER line of each must not read as
+    // (pass) on purpose — one line of each, in one program, must not read as
     // "listed twice".
     const steps: FrameStepSpec[] = [{ kind: 'compute', name: 'flow' }, ...drawing('flow')];
     expect(() =>
       checkFrameOrder(
-        [section(steps)],
+        [[section(steps)]],
         [fakePass('flow')],
         [fakeCompute('flow')],
         NO_PLANNERS,
@@ -196,7 +228,7 @@ describe('checkFrameOrder', () => {
       { kind: 'render', target: 'hdr', slab: 0, depth: { sample: 'forground:0' }, passes: ['a'] },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).toThrow(/forground:0/);
   });
 
@@ -205,7 +237,7 @@ describe('checkFrameOrder', () => {
       { kind: 'render', target: 'hdr', slab: 0, depth: { sample: 'hdr' }, passes: ['a'] },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
+      checkFrameOrder([[section(steps)]], [fakePass('a')], NO_COMPUTES, NO_PLANNERS, TARGETS),
     ).toThrow(/'hdr'/);
   });
 
@@ -213,7 +245,7 @@ describe('checkFrameOrder', () => {
     const steps: FrameStepSpec[] = [{ kind: 'plan', name: 'structure-markers' }];
     expect(() =>
       checkFrameOrder(
-        [section(steps)],
+        [[section(steps)]],
         [],
         NO_COMPUTES,
         [fakePlanner('structure-markers'), fakePlanner('ghost-planner')],
@@ -224,9 +256,9 @@ describe('checkFrameOrder', () => {
 
   it('throws naming a plan row no registered planner declares', () => {
     const steps: FrameStepSpec[] = [{ kind: 'plan', name: 'ghost-planner' }];
-    expect(() => checkFrameOrder([section(steps)], [], NO_COMPUTES, NO_PLANNERS, TARGETS)).toThrow(
-      /ghost-planner/,
-    );
+    expect(() =>
+      checkFrameOrder([[section(steps)]], [], NO_COMPUTES, NO_PLANNERS, TARGETS),
+    ).toThrow(/ghost-planner/);
   });
 
   it('planner on two lines throws', () => {
@@ -235,15 +267,31 @@ describe('checkFrameOrder', () => {
       { kind: 'plan', name: 'flow' },
     ];
     expect(() =>
-      checkFrameOrder([section(steps)], [], NO_COMPUTES, [fakePlanner('flow')], TARGETS),
+      checkFrameOrder([[section(steps)]], [], NO_COMPUTES, [fakePlanner('flow')], TARGETS),
     ).toThrow(/'flow'/);
+  });
+
+  it('accepts a planner planned once each by two different programs', () => {
+    // The shared-PRELUDE load-bearing case: `plan galaxy-catalog` names a row
+    // in both `mono` and `dome`'s own programs — once per program is not the
+    // same silent bug as one program naming it twice.
+    const steps: FrameStepSpec[] = [{ kind: 'plan', name: 'galaxy-catalog' }];
+    expect(() =>
+      checkFrameOrder(
+        [[section(steps)], [section(steps)]],
+        [],
+        NO_COMPUTES,
+        [fakePlanner('galaxy-catalog')],
+        TARGETS,
+      ),
+    ).not.toThrow();
   });
 
   it('perView planner in a once section throws', () => {
     const steps: FrameStepSpec[] = [{ kind: 'plan', name: 'structure-markers' }];
     expect(() =>
       checkFrameOrder(
-        [section(steps, 'once')],
+        [[section(steps, 'once')]],
         [],
         NO_COMPUTES,
         [fakePlanner('structure-markers', 'perView')],
@@ -256,7 +304,7 @@ describe('checkFrameOrder', () => {
     const steps: FrameStepSpec[] = [{ kind: 'compute', name: 'sky-view' }];
     expect(() =>
       checkFrameOrder(
-        [section(steps, 'perView')],
+        [[section(steps, 'perView')]],
         [],
         [fakeCompute('sky-view', 'once')],
         NO_PLANNERS,
@@ -269,7 +317,7 @@ describe('checkFrameOrder', () => {
     const steps: FrameStepSpec[] = [...drawing('a'), { kind: 'plan', name: 'structure-markers' }];
     expect(() =>
       checkFrameOrder(
-        [section(steps)],
+        [[section(steps)]],
         [fakePass('a')],
         NO_COMPUTES,
         [fakePlanner('structure-markers')],

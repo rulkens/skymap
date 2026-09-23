@@ -47,4 +47,6 @@ export type FrameStep =
       | { target?: undefined; capture: CaptureFaceRef }
     ))
   | { kind: 'composite'; step: CompositeStep }
-  | { kind: 'bloom' };
+  | { kind: 'bloom' }
+  /** The expanded form of `CopyStepSpec`. */
+  | { kind: 'copy'; source: string };
