@@ -14,9 +14,8 @@
  * created via `device.createTexture`.
  */
 
-import type { GpuMemoryLedger } from '../../../@types/gpu/memory/GpuMemoryLedger';
 import type { GpuMemorySnapshot } from '../../../@types/gpu/memory/GpuMemorySnapshot';
-import type { GpuMemoryOwnerTally } from '../../../@types/gpu/memory/GpuMemoryOwnerTally';
+import type { GpuMemoryOwnerRow } from '../../../@types/gpu/memory/GpuMemoryOwnerRow';
 import type { GpuResourceKind } from '../../../@types/gpu/memory/GpuResourceKind';
 import { ownerFromStack } from '../../../utils/gpu/memory/ownerFromStack';
 import { textureByteSize } from '../../../utils/gpu/memory/textureByteSize';
@@ -27,27 +26,25 @@ const LEDGER_BASENAME = 'trackGpuMemory';
 
 export const EMPTY_GPU_MEMORY_SNAPSHOT: GpuMemorySnapshot = { totalBytes: 0, owners: [] };
 
-export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
-  // owner -> kind -> tally: an owner using both buffers and textures (e.g.
-  // volumeFieldRenderer) gets two independent accumulators, later two rows.
-  const owners = new Map<string, Map<GpuResourceKind, GpuMemoryOwnerTally>>();
+/** Row key: an owner using both buffers and textures (e.g.
+ *  `volumeFieldRenderer`) gets two independent rows under two keys. */
+const rowKey = (owner: string, kind: GpuResourceKind): string => `${kind}:${owner}`;
 
-  function rowFor(owner: string, kind: GpuResourceKind): GpuMemoryOwnerTally {
-    let byKind = owners.get(owner);
-    if (!byKind) {
-      byKind = new Map();
-      owners.set(owner, byKind);
-    }
-    let row = byKind.get(kind);
+export function trackGpuMemory(device: GPUDevice): () => GpuMemorySnapshot {
+  const rows = new Map<string, GpuMemoryOwnerRow>();
+
+  function rowFor(owner: string, kind: GpuResourceKind): GpuMemoryOwnerRow {
+    const key = rowKey(owner, kind);
+    let row = rows.get(key);
     if (!row) {
-      row = { bytes: 0, count: 0, gcReclaimed: 0 };
-      byKind.set(kind, row);
+      row = { owner, kind, bytes: 0, count: 0, gcReclaimed: 0 };
+      rows.set(key, row);
     }
     return row;
   }
 
   function release(owner: string, kind: GpuResourceKind, bytes: number, gc: boolean): void {
-    const row = owners.get(owner)?.get(kind);
+    const row = rows.get(rowKey(owner, kind));
     if (!row) return;
     row.bytes -= bytes;
     row.count -= 1;
@@ -111,16 +108,13 @@ export function trackGpuMemory(device: GPUDevice): GpuMemoryLedger {
       textureByteSize(descriptor),
     );
 
-  return {
-    snapshot(): GpuMemorySnapshot {
-      // A fully-released row is noise — unless it was GC-reclaimed, the leak signal.
-      const rows = [...owners.entries()]
-        .flatMap(([owner, byKind]) =>
-          [...byKind.entries()].map(([kind, row]) => ({ owner, kind, ...row })),
-        )
-        .filter((row) => row.count > 0 || row.gcReclaimed > 0);
-      rows.sort((a, b) => b.bytes - a.bytes);
-      return { totalBytes: rows.reduce((sum, row) => sum + row.bytes, 0), owners: rows };
-    },
+  return function snapshot(): GpuMemorySnapshot {
+    // A fully-released row is noise — unless it was GC-reclaimed, the leak
+    // signal — and a copy per row so callers can't mutate the live ledger.
+    const live = [...rows.values()]
+      .filter((row) => row.count > 0 || row.gcReclaimed > 0)
+      .map((row) => ({ ...row }));
+    live.sort((a, b) => b.bytes - a.bytes);
+    return { totalBytes: live.reduce((sum, row) => sum + row.bytes, 0), owners: live };
   };
 }

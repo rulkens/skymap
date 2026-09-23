@@ -6,7 +6,7 @@
  * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
  * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
  * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `envBrdfLut`, `uiCtx`,
- * `timingService`). `pickProgram` is a row too, built
+ * `timingService`, `memory`). `pickProgram` is a row too, built
  * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
  * bakes the swap format, or it silently goes stale on the first HDR toggle.
  */
@@ -50,6 +50,7 @@ import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 import type { Compositor } from '../../rendering/Compositor';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
+import type { GpuMemorySnapshot } from '../../gpu/memory/GpuMemorySnapshot';
 
 export type EngineGpuHandles = {
   /**
@@ -140,6 +141,16 @@ export type EngineGpuHandles = {
    * `fontAtlases` it IS a GPU resource, so `destroy()` releases it.
    */
   envBrdfLut: GPUTexture | null;
+  /**
+   * Live GPU-memory ledger snapshot fn — see `trackGpuMemory.ts`. Installed
+   * by `initGpu` right after the device resolves (before any renderer
+   * allocates), so every `device.createBuffer`/`createTexture` call across
+   * the whole boot is tracked. Not a `GPU_HANDLE_ROWS` row (nothing to
+   * destroy — see `GpuHandleKey`'s Exclude list); `destroy()` re-nulls it for
+   * lifecycle symmetry. `engine.ts`'s `debug.gpuMemory` reads it with an
+   * empty-snapshot fallback for the pre-boot window.
+   */
+  memory: (() => GpuMemorySnapshot) | null;
   /**
    * `device` + `context` + `canvas` for every renderer that targets the swap
    * chain, retained here for the same reason as `fontAtlases`:

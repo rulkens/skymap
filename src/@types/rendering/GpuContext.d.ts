@@ -4,8 +4,6 @@
  * Bundled together to avoid threading them as separate arguments everywhere.
  */
 
-import type { GpuMemoryLedger } from '../gpu/memory/GpuMemoryLedger';
-
 /**
  * Everything downstream code needs to issue draw calls.
  *
@@ -55,15 +53,4 @@ export type GpuContext = {
    * without re-reading `GpuContext`.
    */
   readonly hdrCapable: boolean;
-
-  /**
-   * Live GPU-memory ledger for this device — see `trackGpuMemory.ts`. Set by
-   * `device.ts`'s `initGpu` and carried everywhere a `GpuContext` reaches, so
-   * any renderer's `ctx.memory?.snapshot()` reads the same tally the
-   * DebugPanel and perf harness read. Optional, not always-present: the
-   * dozen+ renderer test fixtures that hand-build a `GpuContext` literal
-   * don't need a ledger stub too, and `engine.ts`'s `debug.gpuMemory` already
-   * falls back to an empty snapshot pre-boot the same way.
-   */
-  readonly memory?: GpuMemoryLedger;
 };

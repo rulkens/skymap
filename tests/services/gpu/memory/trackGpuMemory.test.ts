@@ -32,7 +32,7 @@ function makeFakeDevice() {
 describe('trackGpuMemory', () => {
   it('starts with an empty snapshot', () => {
     const ledger = trackGpuMemory(makeFakeDevice());
-    expect(ledger.snapshot()).toEqual({ totalBytes: 0, owners: [] });
+    expect(ledger()).toEqual({ totalBytes: 0, owners: [] });
   });
 
   it('tallies a labeled buffer under its label', () => {
@@ -40,7 +40,7 @@ describe('trackGpuMemory', () => {
     const ledger = trackGpuMemory(device);
     device.createBuffer({ label: 'test-buffer', size: 1024, usage: 0 });
 
-    const snap = ledger.snapshot();
+    const snap = ledger();
     expect(snap.totalBytes).toBe(1024);
     expect(snap.owners).toEqual([
       { owner: 'test-buffer', kind: 'buffer', bytes: 1024, count: 1, gcReclaimed: 0 },
@@ -57,7 +57,7 @@ describe('trackGpuMemory', () => {
       usage: 0,
     } as GPUTextureDescriptor);
 
-    const snap = ledger.snapshot();
+    const snap = ledger();
     expect(snap.totalBytes).toBe(4 * 4 * 4);
     expect(snap.owners[0]).toEqual({
       owner: 'test-texture',
@@ -79,7 +79,7 @@ describe('trackGpuMemory', () => {
       usage: 0,
     } as GPUTextureDescriptor);
 
-    const snap = ledger.snapshot();
+    const snap = ledger();
     expect(snap.totalBytes).toBe(100 + 64);
     expect(snap.owners).toEqual([
       { owner: 'volumeFieldRenderer', kind: 'buffer', bytes: 100, count: 1, gcReclaimed: 0 },
@@ -100,7 +100,7 @@ describe('trackGpuMemory', () => {
 
     buffer.destroy();
 
-    const snap = ledger.snapshot();
+    const snap = ledger();
     expect(snap.totalBytes).toBe(64);
     expect(snap.owners).toEqual([
       { owner: 'volumeFieldRenderer', kind: 'texture', bytes: 64, count: 1, gcReclaimed: 0 },
@@ -113,7 +113,7 @@ describe('trackGpuMemory', () => {
     const device = makeFakeDevice();
     const ledger = trackGpuMemory(device);
     device.createBuffer({ size: 4, usage: 0 });
-    expect(ledger.snapshot().owners[0]!.owner).toBe('unknown');
+    expect(ledger().owners[0]!.owner).toBe('unknown');
   });
 
   it('destroy() subtracts the buffer once and a second destroy() is a no-op', () => {
@@ -124,7 +124,7 @@ describe('trackGpuMemory', () => {
 
     buffer.destroy();
     buffer.destroy(); // idempotent — must not go negative
-    expect(ledger.snapshot().owners).toEqual([
+    expect(ledger().owners).toEqual([
       { owner: 'owner-a', kind: 'buffer', bytes: 30, count: 1, gcReclaimed: 0 },
     ]);
   });
@@ -133,7 +133,7 @@ describe('trackGpuMemory', () => {
     const device = makeFakeDevice();
     const ledger = trackGpuMemory(device);
     device.createBuffer({ label: 'owner-a', size: 100, usage: 0 }).destroy();
-    expect(ledger.snapshot()).toEqual({ totalBytes: 0, owners: [] });
+    expect(ledger()).toEqual({ totalBytes: 0, owners: [] });
   });
 
   it('sorts owners by bytes descending and keeps per-owner totals independent', () => {
@@ -143,7 +143,7 @@ describe('trackGpuMemory', () => {
     device.createBuffer({ label: 'big', size: 1000, usage: 0 });
     device.createBuffer({ label: 'small', size: 10, usage: 0 });
 
-    const snap = ledger.snapshot();
+    const snap = ledger();
     expect(snap.totalBytes).toBe(1020);
     expect(snap.owners.map((o) => o.owner)).toEqual(['big', 'small']);
     expect(snap.owners[1]).toEqual({

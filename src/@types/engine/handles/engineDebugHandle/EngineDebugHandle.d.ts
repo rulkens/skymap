@@ -61,8 +61,8 @@ export type EngineDebugHandle = {
   readonly cameraDebug: () => CameraDebugSnapshot;
   /**
    * The GPU-memory ledger's live tally (see `trackGpuMemory.ts`). A fresh
-   * read off `state.gpu.uiCtx.memory` at call time, like `surfaceTiles` — the
-   * GPU context arrives async, so this returns an empty snapshot pre-boot.
+   * read off `state.gpu.memory` at call time, like `surfaceTiles` — the
+   * ledger installs async, so this returns an empty snapshot pre-boot.
    */
   readonly gpuMemory: () => GpuMemorySnapshot;
 };

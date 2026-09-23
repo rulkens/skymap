@@ -57,8 +57,8 @@
  *   - SUMMARY — the at-a-glance verdict: budget line, hottest merged pass, floor
  *     caveat.
  *   - MEMORY — measure-only: GPU ledger total + JS heap, then the top 10 GPU
- *     owners by resident bytes (`GpuMemoryLedger`, see `trackGpuMemory.ts`).
- *     No heat colors — this section reports what's resident, not frame cost.
+ *     owners by resident bytes (see `trackGpuMemory.ts`). No heat colors —
+ *     this section reports what's resident, not frame cost.
  *   - ⚠ page errors — a trailing summary that de-duplicates `report.pageErrors`
  *     to one line per unique message with its count; nothing when there are none.
  */

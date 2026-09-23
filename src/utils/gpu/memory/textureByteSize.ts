@@ -1,5 +1,4 @@
 import { TEXTURE_BYTES_PER_TEXEL } from '../../../data/gpu/textureBytesPerTexel';
-import { normalizeGpuExtent3D } from './normalizeGpuExtent3D';
 
 // Module-level, not per-call: a format missing from the table warns ONCE across
 // the whole session rather than once per texture (which would be every frame
@@ -15,7 +14,11 @@ const FALLBACK_BYTES_PER_TEXEL = 4;
  * per-sample, not resolved).
  */
 export function textureByteSize(descriptor: GPUTextureDescriptor): number {
-  const [width, height, depth] = normalizeGpuExtent3D(descriptor.size);
+  // `GPUExtent3D` is a dict OR a `[width, height?, depth?]` array.
+  const size = descriptor.size;
+  const [width, height, depth] = Array.isArray(size)
+    ? [size[0] ?? 1, size[1] ?? 1, size[2] ?? 1]
+    : [size.width, size.height ?? 1, size.depthOrArrayLayers ?? 1];
   const format = descriptor.format;
   let bytesPerTexel = TEXTURE_BYTES_PER_TEXEL[format];
   if (bytesPerTexel === undefined) {

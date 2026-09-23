@@ -10,9 +10,10 @@
 import cx from 'classnames';
 import { Fragment, useEffect, useState, type ReactElement } from 'react';
 import type { GpuMemorySnapshot } from '../../@types/gpu/memory/GpuMemorySnapshot';
+import type { GpuResourceKind } from '../../@types/gpu/memory/GpuResourceKind';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import DebugSection from './DebugSection';
-import { gpuResourceKindColorClass } from './gpuResourceKindColorClass';
+import colors from './loadStateColors.module.css';
 import styles from './MemorySection.module.css';
 
 export type MemorySectionProps = {
@@ -21,6 +22,14 @@ export type MemorySectionProps = {
 
 const POLL_MS = 1000;
 const mb = (bytes: number): string => (bytes / (1024 * 1024)).toFixed(1);
+
+// Reuses loadStateColors' committing/ready swatches (already proven distinct
+// and readable-on-dark in this panel) rather than adding a third hardcoded
+// colour pair.
+const KIND_COLOR_CLASS: Record<GpuResourceKind, string> = {
+  buffer: colors.colorCommitting!,
+  texture: colors.colorReady!,
+};
 
 function MemorySection({ gpuMemory }: MemorySectionProps): ReactElement {
   const [snap, setSnap] = useState<GpuMemorySnapshot>(gpuMemory);
@@ -45,8 +54,8 @@ function MemorySection({ gpuMemory }: MemorySectionProps): ReactElement {
       ) : (
         <>
           <div className={styles.legend}>
-            <span className={gpuResourceKindColorClass('buffer')}>■</span> buffer{'  '}
-            <span className={gpuResourceKindColorClass('texture')}>■</span> texture
+            <span className={KIND_COLOR_CLASS.buffer}>■</span> buffer{'  '}
+            <span className={KIND_COLOR_CLASS.texture}>■</span> texture
           </div>
           <div className={styles.table}>
             <span className={styles.head}>owner</span>
@@ -55,9 +64,7 @@ function MemorySection({ gpuMemory }: MemorySectionProps): ReactElement {
             <span className={styles.head}>gc&apos;d</span>
             {snap.owners.map((row) => (
               <Fragment key={`${row.owner}-${row.kind}`}>
-                <span className={cx(styles.name, gpuResourceKindColorClass(row.kind))}>
-                  {row.owner}
-                </span>
+                <span className={cx(styles.name, KIND_COLOR_CLASS[row.kind])}>{row.owner}</span>
                 <span className={styles.number}>{row.count}</span>
                 <span className={styles.number}>{mb(row.bytes)}</span>
                 <span className={styles.number}>{row.gcReclaimed > 0 ? row.gcReclaimed : ''}</span>
