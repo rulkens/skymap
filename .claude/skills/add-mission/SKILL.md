@@ -152,7 +152,7 @@ Every step is a literal edit site. Tick them all.
    dish/boresight on +Y, up +Z → `[0, -1, 0, 1, 0, 0, 0, 0, 1]`.
 6. **Bake** — `npm run build-meshes` rewrites `meshAssets.generated.ts` (all
    keys; the others must not change) and per-tier
-   `public/data/meshes/<key>-<px>.mesh` / `<key>-<px>_{albedo,mr,normal}.webp`
+   `public/data/meshes/<key>-<tier>.mesh` / `<key>-<tier>_{albedo,mr,normal}.webp`
    plus the untiered `<key>_contact.webp`. Check the
    row: `substituted: []` for a PBR-baked source, `boundingRadiusM` plausible,
    `groundOffsetM` for a lander. In a worktree every OTHER key's prebaked GLB
