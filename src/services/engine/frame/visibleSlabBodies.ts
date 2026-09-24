@@ -1,16 +1,14 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 
 /**
- * visibleSlabBodies — which of `bodies` get a body slab row this frame:
+ * visibleSlabBodies — which of `rows` get a body slab row this frame:
  * apparent diameter clears `SUB_PIXEL_BODY_CULL_PX` (spec §4) AND the body's
  * angular disc reaches inside the view frustum — off-axis angle minus
  * angular radius, vs. the frustum half-diagonal, never a projected-CENTRE
@@ -22,19 +20,18 @@ import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
  * upstream of any per-layer gate that might otherwise still draw it (radar
  * frame finding 2). A missing `bodyStates` entry is dropped, not thrown
  * (feeds a slab COUNT the frame program pool-sizes from, spec §6). The
- * candidate list is the caller's to assemble — this gate treats every
- * `SceneBody` union arm identically, culling on `id` plus the arm-agnostic
- * `bodyFootprintRadiusM`.
+ * candidate list is the caller's to assemble — this gate reads only the row,
+ * so a store body and an authored one are culled on identical terms.
  */
-export function visibleSlabBodies<T extends SceneBody>(input: {
-  readonly bodies: readonly T[];
+export function visibleSlabBodies<T extends SlabRow>(input: {
+  readonly rows: readonly T[];
   readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
   readonly frustum: ViewFrustum;
   readonly pxPerRad: number;
 }): readonly T[] {
-  const { bodies: candidates, bodyStates, camPosMpc, camForwardMpc, frustum, pxPerRad } = input;
+  const { rows: candidates, bodyStates, camPosMpc, camForwardMpc, frustum, pxPerRad } = input;
 
   // Half-diagonal (corner, not edge — the widest off-axis angle a fully
   // on-screen body can have), padded by FRUSTUM_CULL_MARGIN_FACTOR: this is
@@ -46,8 +43,8 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
   const halfDiagRad = Math.atan(Math.hypot(tanX, tanY));
   const cullThresholdRad = halfDiagRad * FRUSTUM_CULL_MARGIN_FACTOR;
 
-  return candidates.filter((body) => {
-    const state = bodyStates.get(body.id);
+  return candidates.filter((row) => {
+    const state = bodyStates.get(row.anchorId);
     if (state === undefined) return false;
 
     const dx = state.positionMpc[0] - camPosMpc[0];
@@ -56,16 +53,13 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
     const distM = Math.hypot(dx, dy, dz) * SCALE_UNITS.MPC_TO_M;
 
     // The widest thing this row can draw — the same value the frustum cull
-    // below needs, so both culls agree on the body's footprint (radar frame
+    // below needs, so both culls agree on the row's footprint (radar frame
     // finding 2: they used to disagree, the bare body radius here vs. this same
-    // ring/atmosphere-inclusive max there). A `BODY_DRAW_ENVELOPES` row (e.g.
-    // Sgr A*'s lens quad) can reach far beyond the body's own geometry, which
+    // ring/atmosphere-inclusive max there). A view-dependent envelope (e.g.
+    // Sgr A*'s lens quad) can reach far beyond the row's own geometry, which
     // is what lets both culls below see the lens without a bypass: they are
-    // now judging the same envelope the pass actually paints.
-    const rEffM = Math.max(
-      PROXY_SCALE * bodyFootprintRadiusM(body),
-      bodyDrawRadiusM(body, distM, pxPerRad),
-    );
+    // judging the same envelope the pass actually paints.
+    const rEffM = Math.max(PROXY_SCALE * row.footprintRadiusM, row.drawRadiusM(distM, pxPerRad));
 
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: state.positionMpc,

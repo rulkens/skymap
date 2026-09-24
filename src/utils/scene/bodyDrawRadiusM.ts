@@ -12,13 +12,9 @@ import { bodyFootprintRadiusM } from './bodyFootprintRadiusM';
  * `deriveSlabs` uses this for both a slab's near plane and its painter-sort
  * interval, so the two cannot disagree about the body's drawn footprint.
  * `ATMOSPHERE_PARAMS`/`RingSpec` stay km-native by design (their WGSL structs
- * are km); converted here with `SCALE_UNITS.KM_TO_M`. `distM`/`pxPerRad` are
- * the view's own — an envelope row may depend on them (a pass can paint far
- * beyond the body itself, by an amount that scales with distance and pixel
- * scale, e.g. Sgr A*'s lens quad) — so, unlike the other shells, this ONE
- * component of the answer is not a fixed multiple of the body's geometry.
+ * are km); converted here with `SCALE_UNITS.KM_TO_M`.
  */
-export function bodyDrawRadiusM(body: SceneBody, distM: number, pxPerRad: number): number {
+export function bodyDrawRadiusM(body: SceneBody): number {
   const footprintM = bodyFootprintRadiusM(body);
   let radiusM = footprintM;
 
@@ -29,7 +25,7 @@ export function bodyDrawRadiusM(body: SceneBody, distM: number, pxPerRad: number
 
   const envelope = BODY_DRAW_ENVELOPES[body.id];
   if (envelope !== undefined) {
-    radiusM = Math.max(radiusM, envelope(footprintM, distM, pxPerRad));
+    radiusM = Math.max(radiusM, envelope(footprintM));
   }
 
   const ring = SCENE_RINGS.find((row) => row.bodyId === body.id);

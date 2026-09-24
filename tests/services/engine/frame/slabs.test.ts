@@ -34,6 +34,7 @@ import {
   NEAR_RATIO,
 } from '../../../../src/utils/camera/foregroundFrustum';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -92,7 +93,7 @@ function baseInput(
     cosmoVp: makeCosmoVp(),
     altitudeMpc: cam.distance,
     pose: NO_POSE,
-    visibleBodies: [],
+    visibleRows: [],
     viewportPx: [1920, 1080] as Vec2,
     starSphereRangeM: null,
     ...overrides,
@@ -224,14 +225,16 @@ describe('deriveSlabs', () => {
 
     // Deliberately NOT in distance order, so the assertion below exercises the
     // sort rather than coincidentally matching input order.
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [near, far, mid] }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [near, far, mid].map(bodySlabRowOf) }),
+    );
 
     expect(slabs).toHaveLength(2 + 3);
     expect(slabs[2]!.distanceRangeM![0]).toBeGreaterThan(slabs[3]!.distanceRangeM![0]);
     expect(slabs[3]!.distanceRangeM![0]).toBeGreaterThan(slabs[4]!.distanceRangeM![0]);
-    expect(slabs[2]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-far' });
-    expect(slabs[3]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-mid' });
-    expect(slabs[4]?.frame).toEqual({ kind: 'body-m', bodyId: 'body-near' });
+    expect(slabs[2]?.frame).toEqual({ kind: 'body-m', hostId: 'body-far' });
+    expect(slabs[3]?.frame).toEqual({ kind: 'body-m', hostId: 'body-mid' });
+    expect(slabs[4]?.frame).toEqual({ kind: 'body-m', hostId: 'body-near' });
     for (const slab of slabs.slice(2)) {
       expect(slab.precision).toBe('f64');
       expect(slab.reversedZ).toBe(true);
@@ -240,7 +243,7 @@ describe('deriveSlabs', () => {
 
   it('drops a body whose pose is null this frame (culled)', () => {
     const body = makePlanet({ id: 'culled-body' });
-    const slabs = deriveSlabs(baseInput({ pose: NO_POSE, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose: NO_POSE, visibleRows: [body].map(bodySlabRowOf) }));
     expect(slabs).toHaveLength(2);
   });
 
@@ -256,7 +259,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [0, 0, -1e9],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const row = slabs[2]!;
     // Hand-written, not re-derived from bodyDrawRadiusM/dM inside the test.
     // rMaxM (1e5) has no atmosphere/ring/cloud to widen it, so the margin is
@@ -291,7 +294,7 @@ describe('deriveSlabs', () => {
     const original = mutableFlag[NEAR0];
     mutableFlag[NEAR0] = false;
     try {
-      const slabs = deriveSlabs(baseInput({ cam, pose, visibleBodies: [body] }));
+      const slabs = deriveSlabs(baseInput({ cam, pose, visibleRows: [body].map(bodySlabRowOf) }));
       const row = slabs[2]!;
       expect(row.reversedZ).toBe(false);
       const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
@@ -328,7 +331,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -368,7 +371,7 @@ describe('deriveSlabs', () => {
     const eyeRelBodyM: Vec3 = [-bodyRelEye[0], -bodyRelEye[1], -bodyRelEye[2]];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const row = slabs[2]!;
 
     const viewZ = dM * Math.cos(thetaRad);
@@ -385,7 +388,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [100, 0, 0], // dM = 100 m < rMaxM = 1000 m
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const row = slabs[2]!;
     expect(row.near).toBe(MIN_NEAR_M);
     expect(row.distanceRangeM![0]).toBe(0);
@@ -405,7 +408,7 @@ describe('deriveSlabs', () => {
       eyeRelBodyM: [dM, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const row = slabs[2]!;
     const expectedNear = (dM - radiusM) * NEAR_RATIO;
     expect(row.near).toBeCloseTo(expectedNear, 6);
@@ -483,7 +486,7 @@ describe('deriveSlabs', () => {
     const basisM: BodyRelativePose['basisM'] = [1, 0, 0, 0, 1, 0, 0, 0, -1];
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM, basisM });
 
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body] }));
+    const slabs = deriveSlabs(baseInput({ pose, visibleRows: [body].map(bodySlabRowOf) }));
     const vp = slabs[2]!.vp;
 
     // A translation leaking into `view` would show up in `vp`'s column 3
@@ -529,7 +532,7 @@ describe('bodySlabRow attachedBodies widening', () => {
     });
     const pose: BodyPoseProvider = () => ({ eyeRelBodyM: EYE_REL_BODY_M, basisM: BASIS_M });
     return bodySlabRow({
-      body,
+      row: bodySlabRowOf(body),
       pose,
       frustum: symmetricFrustum(1, 16 / 9),
       viewportPx: [1920, 1080] as Vec2,
@@ -579,7 +582,11 @@ describe('foregroundChainOrder', () => {
     // the §7.1 ordering case (frame kind and painter position are independent
     // axes).
     const slabs = deriveSlabs(
-      baseInput({ pose, visibleBodies: [near, far], starSphereRangeM: [1e8, 1e8] }),
+      baseInput({
+        pose,
+        visibleRows: [near, far].map(bodySlabRowOf),
+        starSphereRangeM: [1e8, 1e8],
+      }),
     );
     expect(foregroundChainOrder(slabs)).toEqual([2, NEAR0, 3]);
   });
@@ -594,7 +601,9 @@ describe('foregroundChainOrder', () => {
       eyeRelBodyM: [1e6, 0, 0],
       basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     });
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [body], starSphereRangeM: null }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [body].map(bodySlabRowOf), starSphereRangeM: null }),
+    );
     expect(foregroundChainOrder(slabs)).toEqual([NEAR0, 2]);
   });
 
@@ -616,12 +625,14 @@ describe('foregroundChainOrder', () => {
     // Both rows clamp to distanceRangeM[0] === 0 (the camera is inside both), so
     // the primary sort key alone ties — deeply-inside is listed first to prove
     // the secondary key, not input order, decides the outcome.
-    const slabs = deriveSlabs(baseInput({ pose, visibleBodies: [deeplyInside, barelyInside] }));
+    const slabs = deriveSlabs(
+      baseInput({ pose, visibleRows: [deeplyInside, barelyInside].map(bodySlabRowOf) }),
+    );
     const chain = foregroundChainOrder(slabs);
 
     expect(chain).toHaveLength(3);
     const lastSlab = slabs[chain[chain.length - 1]!];
-    expect(lastSlab?.frame).toEqual({ kind: 'body-m', bodyId: 'deeply-inside' });
+    expect(lastSlab?.frame).toEqual({ kind: 'body-m', hostId: 'deeply-inside' });
   });
 });
 

@@ -123,7 +123,7 @@ describe('App cinema mode', () => {
     // `webShowcase` is a real registry tour — same seed as the
     // TourOverlayContainer suite. `tourStarted` seeds the beat/caption
     // bookkeeping; `takeoverStarted` is what `selectTourActive` (App's mount
-    // gate) actually reads now — both are `runTakeover`/`tourBody` writes,
+    // gate) actually reads now — both are `runTakeoverSaga`/`tourBodySaga` writes,
     // driven directly here rather than through the saga. The dwell landing
     // (nonce bump) is what reveals the caption; mid-fly it is hidden by design.
     store.dispatch(tourStarted({ tourId: 'webShowcase' }));

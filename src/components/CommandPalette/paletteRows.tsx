@@ -83,6 +83,39 @@ function namedRowView(
   };
 }
 
+const EARTH_CHIP = <span className={styles.source}>Earth</span>;
+
+/**
+ * Shared render for the `place` and `layer` arms: a letter glyph, the first
+ * name, the rest as aliases, and an optional source chip. Neither kind has a
+ * thumbnail to look up, so the two differ only in that chip.
+ */
+function glyphRowView(
+  kind: string,
+  id: string,
+  names: readonly string[],
+  chip?: ReactNode,
+): RowView {
+  const primary = names[0] ?? '(unnamed)';
+  const aliases = names.slice(1);
+  return {
+    key: `${kind}:${id}`,
+    testid: `${kind}-row-${id}`,
+    leading: (
+      <span className={styles.glyph} aria-hidden="true">
+        {primary[0] ?? '·'}
+      </span>
+    ),
+    primary,
+    secondary: (
+      <>
+        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+        {chip}
+      </>
+    ),
+  };
+}
+
 /**
  * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
  * on `m.kind`. The list renderer wraps every row in one identical <li> (active
@@ -212,27 +245,14 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       secondary: <span className={styles.source}>Tour</span>,
     };
   },
-  // Earth-place row — letter glyph (no captured shot for these) + a fixed
-  // 'Earth' chip, since every row here is on the one body.
-  place: (m) => {
-    if (m.kind !== 'place') return EMPTY_ROW_VIEW;
-    const primary = m.entry.names[0] ?? '(unnamed)';
-    const aliases = m.entry.names.slice(1);
-    return {
-      key: `place:${m.entry.id}`,
-      testid: `place-row-${m.entry.id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {primary[0] ?? '·'}
-        </span>
-      ),
-      primary,
-      secondary: (
-        <>
-          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-          <span className={styles.source}>Earth</span>
-        </>
-      ),
-    };
-  },
+  // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
+  // publishing Layer is not a source label the user would recognise.
+  layer: (m) =>
+    m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView('layer', m.entry.id, m.entry.names),
+  // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
+  // here is on the one body.
+  place: (m) =>
+    m.kind !== 'place'
+      ? EMPTY_ROW_VIEW
+      : glyphRowView('place', m.entry.id, m.entry.names, EARTH_CHIP),
 };

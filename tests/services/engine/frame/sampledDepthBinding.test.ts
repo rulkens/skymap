@@ -37,7 +37,7 @@ describe('sampledDepthBinding', () => {
   it('binds the far placeholder, not the real view, when the row cannot be unprojected', () => {
     // A body the pose provider cannot place (here: 'mars') — sampledDepthKmFrame
     // returns null, and the placeholder rule must still route the view.
-    const row = makeSlab({ frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
+    const row = makeSlab({ frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
     const binding = sampledDepthBinding(
       { view: ROW_DEPTH_VIEW, row },
       RESOLVES_EVERY_BODY,
@@ -48,7 +48,7 @@ describe('sampledDepthBinding', () => {
   });
 
   it('binds the real view alongside a non-null frame for a resolvable row', () => {
-    const row = makeSlab({ frame: { kind: 'body-m', bodyId: 'earth' } });
+    const row = makeSlab({ frame: { kind: 'body-m', hostId: 'earth' } });
     const binding = sampledDepthBinding(
       { view: ROW_DEPTH_VIEW, row },
       RESOLVES_EVERY_BODY,

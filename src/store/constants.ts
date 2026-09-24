@@ -31,7 +31,7 @@ export const selectionRowsRoute = 'selectionRows' as const;
 // TourOverlay reads; everything else it shows derives from the registry.
 // Whether a tour is ACTIVE lives on `takeoverRoute` now, not here.
 export const tourRoute = 'tour' as const;
-// `takeoverRoute` is the mutual-exclusion slice `runTakeover` writes: which
+// `takeoverRoute` is the mutual-exclusion slice `runTakeoverSaga` writes: which
 // source (tour or view), if any, currently owns the scene.
 export const takeoverRoute = 'takeover' as const;
 // `engineRoute` is the engine runtime slice — lifecycle status, per-source and

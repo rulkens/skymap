@@ -38,9 +38,6 @@ import {
   MILKY_WAY_CENTER_WORLD,
 } from '../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
@@ -90,29 +87,23 @@ const SELECTION_HALO_TABLE: {
   // The band has no ring center — it's a line-of-sight effect along the whole
   // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
-  // A scene body (a planet, Earth, a mesh body) is drawn as a real sphere, so
-  // its ring rides its true physical radius — the outer bound → Mpc — letting the
+  // A scene body and a star are both drawn as a real sphere, so the ring rides
+  // the driver's footprint — the outer bound / photosphere → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
-  // it through `near0SelectionRingPass` (not the COSMO layer), so the two
+  // them through `near0SelectionRingPass` (not the COSMO layer), so the two
   // layers stay slab-exclusive on the shared renderer.
-  body: (row) => ({
-    radiusMpc:
-      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, row.id, 'selectionHaloTable')) *
-      SCALE_UNITS.M_TO_MPC,
-    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-    slab: NEAR0,
-  }),
-  // A star carries its own `radiusM` — a seeded star's photosphere, or the
-  // nominal solar radius the extractor stamps on a survey star — and resolves to
-  // a sphere on close approach, so its ring rides that physical radius in Mpc
-  // too: the same NEAR0 treatment as a scene body.
-  starCatalog: (row) => ({
-    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
-    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-    slab: NEAR0,
-  }),
+  body: nearFieldHalo,
+  starCatalog: nearFieldHalo,
 };
+
+function nearFieldHalo(row: BodyRow | StarCatalogRow): SelectionHalo {
+  return {
+    radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
+    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+    slab: NEAR0,
+  };
+}
 
 /**
  * selectionHalo — dispatch wrapper for the per-kind halo table.

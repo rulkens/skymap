@@ -1,6 +1,6 @@
 /**
  * tourSlice — the guided-tour runtime state, authored with inline Immer case
- * reducers. Single-writer: only `tourBody` dispatches these; the keyboard /
+ * reducers. Single-writer: only `tourBodySaga` dispatches these; the keyboard /
  * nav request actions (`advanceTour`, `prevBeat`, `togglePause`, `exitTakeover`)
  * are reducer-less signals the sagas consume, then translate into the writes
  * here. Routing pause through the saga (not letting `togglePause` flip the flag

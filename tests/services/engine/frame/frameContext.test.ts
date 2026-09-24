@@ -93,6 +93,7 @@ function makeState(
     // read unconditionally past the ready gate now) get an empty registry, so
     // every fixture below stays a 2-row (NEAR0+COSMO) slab table, matching
     // what every assertion in this file was written against.
+    slabRows: [],
     data: { bodies: { earth: null, planets: [], meshBodies: [] } },
     settings: {
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
@@ -195,7 +196,7 @@ describe('deriveFrameContext — ready branch', () => {
       cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
       altitudeMpc: cam.distance,
       pose: () => null,
-      visibleBodies: [],
+      visibleRows: [],
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
     });

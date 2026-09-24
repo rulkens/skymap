@@ -35,6 +35,17 @@ describe('deriveBodyStates', () => {
     }
   });
 
+  it('galactic-centre and sgr-a-star resolve to the same position', () => {
+    // The dual-state alias PR 2 removes: the region, the bands and the lens
+    // slab row key on the PLACE while the S-star focus graph, the glint, the
+    // caption and the pick stamp still name the BODY. Two positions here is
+    // the whole failure mode — the impostor hub 178 pc off the hole it hubs.
+    const place = states.get('galactic-centre');
+    const body = states.get('sgr-a-star');
+    expect(place).toBeDefined();
+    expect(body?.positionMpc).toBe(place?.positionMpc);
+  });
+
   it('every element row derives a body state', () => {
     // The truncation gate for the table crossing the old MAX_ORBITS = 24, which
     // prep-01 made dynamic: asserted against ORBITAL_ELEMENTS.length so it stays

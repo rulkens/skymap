@@ -48,6 +48,17 @@ tests/  Vitest suite — mirrors src/ tree
 - **Choices I must make**: if the `mcp__claude-dash-ui__ask_user` tool is available, put every one in ONE call (`options`, `recommended`, a `why` of ≤ 15 words; visual checks as `kind: "check"` with the image attached) and end the turn with one line saying they're in the dash, without repeating them in prose. Don't act on a question the answers list under "Left open". Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
 - **Process progress**: if the `mcp__claude-dash-ui__session_progress` tool is available, call it when your work moves between explore, design, plan, implement, verify, land and done (main session only; carry on if it fails). For your own steps, send `steps` once, then `{ step, label }` per task; set `doc` to the plan path.
 
+## Reply shape
+
+- Replies longer than ~15 lines open with a `> [!TLDR]` of at most 3 lines: the outcome, not the process.
+- Mark what a reader scans for with GitHub alert blockquotes, one idea each. The `>` is required:
+  `> [!DONE]` finished and verified · `> [!DECISION]` a choice made and why · `> [!QUESTION]` something needed from me ·
+  `> [!RISK]` what could break · `> [!NEXT]` what happens next · `> [!WAITING]` blocked on an agent or CI ·
+  `> [!BLOCKED]` can't continue. NOTE / TIP / IMPORTANT / WARNING / CAUTION keep their GitHub meaning.
+- Write each callout as a headline on the marker line (at most ~8 words, readable on its own), then an optional
+  one- or two-sentence body on the following `> ` lines. Add `-` after the `]` (`> [!DONE]- …`) to start it folded.
+- Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
+
 ## Commands
 
 ```bash

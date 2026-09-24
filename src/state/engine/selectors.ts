@@ -22,6 +22,8 @@
  * framework-agnostic.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
+
 import { engineRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
@@ -36,6 +38,7 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
@@ -81,6 +84,16 @@ export const selectLoadProgress = (state: RootState): LoadProgressState | null =
  */
 export const selectStructureSearchList = (state: RootState): readonly StructureSearchEntry[] =>
   selectEngine(state).structureSearchList;
+
+/**
+ * Every Layer's published palette rows, flattened for the ranker. The one
+ * `createSelector` here: the flatten mints a new array, which as a plain arrow
+ * would re-fire the palette's `useMemo` on every unrelated store write.
+ */
+export const selectLayerSearchRows = createSelector(
+  [(state: RootState) => selectEngine(state).layerSearch],
+  (byLayer): readonly LayerSearchEntry[] => Object.values(byLayer).flat(),
+);
 
 /**
  * Famous-galaxy metadata sidecar, published as a galaxyCatalog fact (Ruling 6):

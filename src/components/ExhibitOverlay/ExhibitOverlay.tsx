@@ -1,6 +1,6 @@
 /**
  * ExhibitOverlay — "notes on the scene": a full-screen takeover for a curated
- * exhibit (spec §4.2), sibling to TourOverlay under the same `runTakeover`
+ * exhibit (spec §4.2), sibling to TourOverlay under the same `runTakeoverSaga`
  * bracket. No card, no chrome besides an Exit pill — the caption and notes
  * sit directly over the live field behind their own scrims. Purely
  * presentational; a container resolves the exhibit and owns the toggle's state.

@@ -33,6 +33,8 @@ export function instantiateLayer<
     worldLabels: guides?.worldLabels ?? [],
     orbitTrails: guides?.orbitTrails ?? [],
     selection: layer.selection?.(runtime) ?? [],
+    search: layer.search?.(runtime),
+    sourceCounts: layer.sourceCounts?.(runtime),
     destroy: () => layer.destroy(runtime),
   };
 }

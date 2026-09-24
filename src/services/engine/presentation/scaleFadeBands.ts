@@ -15,7 +15,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMa
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/regions/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
 
 // Each near-field extent is read from the region whose content the row gates,
@@ -31,10 +31,10 @@ const FARTHEST_STAR_PC = NEIGHBOURHOOD_EXTENT_MPC / SCALE_UNITS.PC_TO_MPC;
 const CONSTELLATIONS_FULL_AT_KPC = 1;
 const CONSTELLATIONS_GONE_AT_KPC = 10;
 
-// R₀ — the Galactic Centre's distance from the render origin, off the same seed
-// the S-star orbits are scaled by, so the caption band cannot drift from the
-// position it labels.
-const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
+// R₀ — the Galactic Centre's distance from the render origin, off the same
+// place seed the S-star orbits are scaled by, so the caption band cannot drift
+// from the position it labels.
+const SGR_A_STAR_R0_MPC = Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc);
 
 // The shape `starBackdrop` and `bodyGlintBackdrop` share — full at 2× a
 // region's extent, gone by 10× — one home so the two cannot drift apart.

@@ -8,8 +8,8 @@
  * depends on distance from one shared render origin.
  */
 
-import type { BodyId } from '../../data/body/BodyId';
+import type { SlabHostId } from './SlabHostId';
 
 export type SlabFrame =
   /** `originRelative: true` ⇒ geometry deltas are computed as pos − renderOrigin. */
-  { kind: 'world-mpc'; originRelative: boolean } | { kind: 'body-m'; bodyId: BodyId };
+  { kind: 'world-mpc'; originRelative: boolean } | { kind: 'body-m'; hostId: SlabHostId };

@@ -26,7 +26,7 @@ export type ContentPass = {
   /**
    * Whether this pass should record draw commands this frame, given the
    * step's already-resolved `SlabView` — a pass on a body roster reads
-   * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
+   * `view.slab.frame.hostId` to gate its own row. Pure: no side effects.
    */
   enabled(state: PassState, ctx: FrameView, view: SlabView): boolean;
   /**

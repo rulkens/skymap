@@ -25,7 +25,7 @@
  *                    before its duration is knowable), so `visitBeatSaga`
  *                    computes it and carries it on `dwellStarted`.
  *
- * The slice is single-writer: only `tourBody` mutates it. The keyboard / nav
+ * The slice is single-writer: only `tourBodySaga` mutates it. The keyboard / nav
  * request actions (`advanceTour`, `prevBeat`, `togglePause`, `exitTakeover`)
  * are reducer-less signals the sagas consume — they never write here directly.
  */

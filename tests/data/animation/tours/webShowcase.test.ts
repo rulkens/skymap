@@ -4,7 +4,7 @@
  *
  * These assert on the beat data (it IS plain data) — the clip structure, captions,
  * and the in-clip scene strip — without running the tour saga. The end-to-end
- * fly + isolate behaviour is covered by the `tourBody` suite and the
+ * fly + isolate behaviour is covered by the `tourBodySaga` suite and the
  * webShowcaseDive integration test.
  */
 
@@ -33,7 +33,7 @@ describe('webShowcase tour', () => {
 
   it('beat 1 opens with the scene strip: an instant hide of volumes/filaments/labels', () => {
     // The strip rides the first clip (no tour-level setup surface); the
-    // runTakeover snapshot/restore pair winds it back at tour end.
+    // runTakeoverSaga snapshot/restore pair winds it back at tour end.
     const first = webShowcase.beats[0]!.enterClip!.timeline[0];
     expect(first).toEqual(hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0));
   });

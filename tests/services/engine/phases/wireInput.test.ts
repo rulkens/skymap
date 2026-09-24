@@ -414,7 +414,7 @@ describe('wireInput', () => {
     const deps = makeDeps();
 
     // A galaxy/star focus id defers until its catalog pulse lands
-    // (`resolveFocusRefDeferring` parks it), so the resolved `focus` ref
+    // (`resolveFocusRefDeferringSaga` parks it), so the resolved `focus` ref
     // stays null for the whole boot window while `pending.focus` already
     // holds the id — the extraReducer sets `pending.focus` synchronously,
     // no saga needed to observe the guard here. A ref-only guard would read

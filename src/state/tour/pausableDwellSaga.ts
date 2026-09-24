@@ -4,7 +4,7 @@
  * `dwellClip` plays as ambient motion; the viewer can advance, step back, or
  * pause/resume any number of times. This saga owns exactly that concern — the
  * countdown, the pause bookkeeping, and playing the ambient clip — and returns
- * the steering outcome the outer `tourBody` loop reads.
+ * the steering outcome the outer `tourBodySaga` loop reads.
  *
  * ### One race, pause as state
  *

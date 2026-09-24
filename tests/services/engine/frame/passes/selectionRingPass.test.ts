@@ -13,6 +13,8 @@ import type { StructureInfo } from '../../../../../src/@types/data/structure/Str
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
+import { starRowDriver } from '../../../../fixtures/starRowDriver';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ function makeRendererSpy() {
 
 // A minimal GalaxyRow at a known world position + diameter. The layer reads
 // x/y/z and diameterKpc straight from the row via selectionHalo.
-function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
+function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return makeGalaxyRow({
     source: Source.Glade,
     z: 100, // 100 Mpc away on +z
@@ -113,6 +115,7 @@ const BODY_ROW: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [1e-9, 2e-9, -3e-9],
+  driver: bodyDriverGeometry('jupiter'),
 };
 
 // A survey-star row — its halo is NEAR0-tagged, so the COSMO layer must ignore
@@ -125,6 +128,7 @@ const STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
   radiusM: 696340000,
+  driver: starRowDriver(null, 696340000),
 };
 
 function makeStateWithSelection(row: SelectionRow | null): EngineState {

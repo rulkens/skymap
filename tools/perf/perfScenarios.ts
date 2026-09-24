@@ -57,7 +57,7 @@ const EARTH_TARGET: Vec3 = [-8.5895045e-13, 4.3022234e-12, 1.865304e-12];
 // once rather than risking the target drifting between them.
 const GALACTIC_CENTRE_TARGET: Vec3 = [-0.00043726202, -0.0069827522, -0.0038794295];
 
-// The look-at point for `galactic-centre`: SGR_A_STAR_ANCHOR.positionMpc,
+// The look-at point for `galactic-centre`: GALACTIC_CENTRE_ANCHOR.positionMpc,
 // printed via tsx (not the hand-flown GALACTIC_CENTRE_TARGET above, which is
 // ~178 pc off Sgr A* — ~550× the whole 0.325 pc S-star envelope, so reusing it
 // would frame empty space at this scale).

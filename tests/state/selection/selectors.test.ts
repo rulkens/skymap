@@ -100,7 +100,7 @@ describe('selectHasSelectionIntent', () => {
     const { store } = createAppStore();
     store.dispatch(requestFocus('m31'));
     // The request is still deferring: the resolved focus ref stays null while
-    // it parks on a catalog pulse, exactly as `resolveFocusRefDeferring` does
+    // it parks on a catalog pulse, exactly as `resolveFocusRefDeferringSaga` does
     // for a cold `#focus=m31` load. A guard reading only the ref slots would
     // see this state as empty.
     expect(store.getState().selection.focus).toBeNull();

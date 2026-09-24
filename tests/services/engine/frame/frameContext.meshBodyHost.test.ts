@@ -38,6 +38,7 @@ const STATE = {
   },
   subsystems: { texturedDisks: {} },
   selectionRows: { hover: null, select: null, focus: null },
+  slabRows: [],
   data: {
     bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES },
   },
@@ -88,7 +89,7 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
     expect(view).not.toBeNull();
     if (view === null) return;
     expect(
-      view.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth'),
+      view.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.hostId === 'earth'),
     ).toBe(true);
   });
 });

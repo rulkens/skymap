@@ -77,7 +77,7 @@ function faceCtxWithMarsRow(face: CubeFace): FrameView {
 }
 
 function marsSlab(index: number) {
-  return makeSlab({ index, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
+  return makeSlab({ index, frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
 }
 
 /** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
@@ -197,7 +197,7 @@ describe('scheduleProbeCapture', () => {
           slabs: [
             makeSlab(),
             makeSlab({ index: 1 }),
-            makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'voyager1' as BodyId } }),
+            makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'voyager1' as BodyId } }),
           ],
         }) as unknown as FrameView,
     );

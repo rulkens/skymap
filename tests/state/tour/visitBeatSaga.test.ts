@@ -232,7 +232,7 @@ describe('visitBeatSaga', () => {
 
     sagaMiddleware.run(visitBeatSaga, famousBeat, 0);
 
-    // Cloud not loaded, runtime null — saga blocked in waitUntil.
+    // Cloud not loaded, runtime null — saga blocked in waitUntilSaga.
     await vi.advanceTimersByTimeAsync(200);
     expect(playClipMock).not.toHaveBeenCalled();
 

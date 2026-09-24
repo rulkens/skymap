@@ -11,6 +11,8 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
+import { starRowDriver } from '../../../../fixtures/starRowDriver';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
 const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
@@ -30,6 +32,7 @@ const STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
   radiusM: 696340000,
+  driver: starRowDriver(null, 696340000),
 };
 
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
@@ -98,6 +101,7 @@ const FAR_STAR_ROW: SelectionRow = {
   label: 'Field star',
   positionMpc: [3e-5, 4e-5, 0], // camera at origin ⇒ camDist 5e-5 Mpc
   radiusM: 696340000,
+  driver: starRowDriver(null, 696340000),
 };
 
 // A SlabView with `slab.far` BELOW the star's camDist. camPos at the origin
@@ -177,6 +181,7 @@ describe('near0SelectionRingPass.draw — live body position', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [1e-6, 0, 0],
+      driver: bodyDriverGeometry('earth'),
     };
 
     const renderer = makeRendererSpy();

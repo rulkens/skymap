@@ -52,6 +52,7 @@ import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
@@ -75,6 +76,12 @@ export type CommandPaletteProps = {
    * hidden).
    */
   readonly structures?: readonly StructureSearchEntry[];
+  /**
+   * Every Layer's published search rows, flattened (`selectLayerSearchRows`).
+   * Required, not optional: the empty list is the honest "no Layer publishes
+   * rows", and an omitted prop would hide a container that forgot to read it.
+   */
+  readonly layerRows: readonly LayerSearchEntry[];
   /** The browse tabs shown in the empty-query state — the container passes `FEATURED_TABS`. */
   readonly tabs: readonly PaletteTab[];
   /** The stored active tab id (`ui.paletteTab`); falls back to the first shown tab if absent. */
@@ -96,6 +103,7 @@ function CommandPalette({
   entries,
   aliasIndex,
   structures,
+  layerRows,
   tabs,
   tab,
   onTabChange,
@@ -131,6 +139,7 @@ function CommandPalette({
     entries,
     aliasIndex,
     structures,
+    layerRows,
     cards: activeTab?.cards ?? [],
     onTabStep,
     open,

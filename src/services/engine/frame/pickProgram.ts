@@ -44,7 +44,7 @@
  *
  * ### Retained GPU memory is O(1) in body-row count, not O(rows ever seen)
  *
- * Body-slab rows (index 2…2+`BODY_SLAB_CAPACITY`−1) share ONE viewport-sized
+ * Body-slab rows (index 2…2+`SLAB_ROW_CEILING`−1) share ONE viewport-sized
  * `bodyPickTarget` pair across `pick()`'s single-texel-per-slab reads: each
  * row's texel is copied to its OWN staging buffer before the next row's pass
  * re-clears the shared texture — safe because one `GPUCommandEncoder`'s

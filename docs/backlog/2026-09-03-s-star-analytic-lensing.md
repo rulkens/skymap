@@ -83,6 +83,11 @@ closed unmerged, branch kept). User ruling: not now.
 5. Interplay with `2026-09-02-lens-crossfade-duplicate-points.md`: that item
    fades the direct roster; this one hard-swaps the S-stars. Keep them agreeing.
 
+## Note (2026-09-22, `blackHoles` Layer ground prep)
+
+The S-star lensing rider rides the hole's `SlabRow`, filtering `frame.hostId`;
+no contract field — see `2026-09-22-black-holes-layer-design.md` §2.5.
+
 ## Follow-on
 
 The cubemap is now a one-shot static bake (its own backlog item, landed and

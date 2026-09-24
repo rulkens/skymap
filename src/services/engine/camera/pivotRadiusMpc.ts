@@ -8,21 +8,15 @@
  */
 
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { MIN_DISTANCE_MPC, SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyStandoffRadii } from '../../../utils/scene/bodyStandoffRadii';
-import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
+import { MIN_DISTANCE_MPC } from '../../../utils/camera/clampDistance';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
 export function pivotRadiusMpc(row: SelectionRow | null): number | null {
-  if (row === null) return null;
-  if (row.type === 'starCatalog') return row.radiusM * SCALE_UNITS.M_TO_MPC;
-  if (row.type !== 'body') return null;
-  // A mesh body has nothing to report here (see MeshBody.boundingRadiusM).
-  const body = findByIdOrThrow(SCENE_BODIES, row.id, 'pivotRadiusMpc');
-  return isMeshBody(body) ? null : body.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
+  // A groundless driver (a mesh body's hull) has nothing to report here.
+  const groundRadiusM = selectionDriver(row)?.groundRadiusM ?? null;
+  return groundRadiusM === null ? null : groundRadiusM * SCALE_UNITS.M_TO_MPC;
 }
 
 /**
@@ -34,27 +28,20 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
 export const SURFACELESS_FLOOR_MPC = 1e-17;
 
 export function pivotFraming(row: SelectionRow | null): PivotFraming {
-  const body =
-    row !== null && row.type === 'body'
-      ? findByIdOrThrow(SCENE_BODIES, row.id, 'pivotFraming')
-      : null;
+  const driver = selectionDriver(row);
+  if (driver === null) return { radiusMpc: null, floorMpc: SURFACELESS_FLOOR_MPC };
   // No ground to taper against (MeshBody.boundingRadiusM), but the hull is a
   // real obstacle, so the zoom still floors a standoff off it.
-  if (body !== null && isMeshBody(body)) {
-    const boundingMpc = body.boundingRadiusM * SCALE_UNITS.M_TO_MPC;
+  if (driver.groundRadiusM === null) {
+    const boundingMpc = driver.boundingRadiusM * SCALE_UNITS.M_TO_MPC;
     return {
       radiusMpc: null,
-      floorMpc: Math.max(MIN_DISTANCE_MPC, boundingMpc * body.standoffRadii),
+      floorMpc: Math.max(MIN_DISTANCE_MPC, boundingMpc * driver.standoffRadii),
     };
   }
-  // `body` is already resolved above for the body arm — reuse it instead of a
-  // second `findByIdOrThrow` scan; the star/null arms still go through `pivotRadiusMpc`.
-  const radiusMpc =
-    body !== null ? body.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC : pivotRadiusMpc(row);
-  if (radiusMpc === null) return { radiusMpc, floorMpc: SURFACELESS_FLOOR_MPC };
-  const standoffRadii = body !== null ? bodyStandoffRadii(body) : SURFACE_STANDOFF_RADII;
+  const radiusMpc = driver.groundRadiusM * SCALE_UNITS.M_TO_MPC;
   return {
     radiusMpc,
-    floorMpc: Math.max(MIN_DISTANCE_MPC, radiusMpc * standoffRadii),
+    floorMpc: Math.max(MIN_DISTANCE_MPC, radiusMpc * driver.standoffRadii),
   };
 }

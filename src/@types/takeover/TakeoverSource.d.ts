@@ -1,5 +1,5 @@
 /**
- * TakeoverSource — which feature owns the scene under `runTakeover`. Closed on
+ * TakeoverSource — which feature owns the scene under `runTakeoverSaga`. Closed on
  * `kind` so a third taker is a compile-time union member, not another flag.
  */
 

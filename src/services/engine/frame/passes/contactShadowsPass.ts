@@ -25,7 +25,7 @@ export const contactShadowsPass: ContentPass = {
   enabled(state, ctx, view) {
     if (view.sampledDepth?.row !== view.slab) return false;
     if (view.slab.frame.kind !== 'body-m') return false;
-    return drawableMeshBodies(state, ctx, view.slab.frame.bodyId).some(
+    return drawableMeshBodies(state, ctx, view.slab.frame.hostId).some(
       (body) => MESH_ASSETS[body.meshKey]?.contactDecal !== undefined,
     );
   },
@@ -33,7 +33,7 @@ export const contactShadowsPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.meshBodyRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const hostId = view.slab.frame.bodyId;
+    const hostId = view.slab.frame.hostId;
     const bodyStates = sceneBodyStates(state, ctx);
     const hostState = bodyStates.get(hostId);
     if (hostState === undefined) return;

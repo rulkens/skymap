@@ -12,6 +12,7 @@ import {
   selectFamousGalaxiesMeta,
   selectAliasIndex,
   selectStructureSearchList,
+  selectLayerSearchRows,
 } from '../../state/engine/selectors';
 import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
@@ -61,11 +62,13 @@ function CommandPaletteContainer(): React.ReactElement {
   const famousGalaxiesMeta = useAppSelector(selectFamousGalaxiesMeta);
   const aliasIndex = useAppSelector(selectAliasIndex);
   const structures = useAppSelector(selectStructureSearchList);
+  const layerRows = useAppSelector(selectLayerSearchRows);
   return (
     <CommandPalette
       entries={famousGalaxiesMeta}
       aliasIndex={aliasIndex}
       structures={structures}
+      layerRows={layerRows}
       tabs={FEATURED_TABS}
       tab={paletteTab}
       onTabChange={(id) => dispatch(setPaletteTab(id))}

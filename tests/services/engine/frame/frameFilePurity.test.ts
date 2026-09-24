@@ -100,7 +100,7 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
   return [{ name: stmt.getKindName(), exported: false }];
 }
 
-// `bodySlabCapacity.ts` exports `BODY_SLAB_CAPACITY`: a SCREAMING constant's
+// `slabRowCeiling.ts` exports `SLAB_ROW_CEILING`: a SCREAMING constant's
 // file is its camelCase spelling, so filename↔symbol matching ignores case and
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();

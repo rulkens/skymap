@@ -24,9 +24,11 @@ import { MIN_NEAR_MPC } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/sources';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { starRowDriver } from '../../../fixtures/starRowDriver';
 import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
 const EARTH_ROW: SelectionRow = {
@@ -34,7 +36,10 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
+
+const SUN_RADIUS_M = 696340000;
 
 describe('pivotRadiusMpc', () => {
   it('converts a body row’s radius to Mpc', () => {
@@ -49,7 +54,8 @@ describe('pivotRadiusMpc', () => {
       id: null,
       label: 'Field star',
       positionMpc: [1, 2, 3],
-      radiusM: 696340000,
+      radiusM: SUN_RADIUS_M,
+      driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotRadiusMpc(star)).toBeCloseTo(696340 * SCALE_UNITS.KM_TO_MPC, 30);
   });
@@ -77,6 +83,7 @@ describe('pivotFraming', () => {
       id: 'sgr-a-star',
       label: 'Sagittarius A*',
       positionMpc: [0, 0, 0],
+      driver: bodyDriverGeometry('sgr-a-star'),
     };
     const radiusMpc = SGR_A_STAR.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     expect(pivotFraming(sgrAStar)).toEqual({
@@ -97,6 +104,7 @@ describe('pivotFraming', () => {
       id: 'whale',
       label: 'Whale',
       positionMpc: [0, 0, 0],
+      driver: bodyDriverGeometry('whale'),
     };
     const seed = findByIdOrThrow(SCENE_MESH_BODIES, 'whale', 'test');
     expect(pivotFraming(whale).radiusMpc).toBeNull();
@@ -115,7 +123,8 @@ describe('pivotFraming', () => {
       id: null,
       label: 'Field star',
       positionMpc: [1, 2, 3],
-      radiusM: 696340000,
+      radiusM: SUN_RADIUS_M,
+      driver: starRowDriver(null, SUN_RADIUS_M),
     };
     expect(pivotFraming(star).floorMpc).toBeCloseTo(
       696340 * SCALE_UNITS.KM_TO_MPC * SURFACE_STANDOFF_RADII,

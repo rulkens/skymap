@@ -9,6 +9,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { logCameraState } from '../../../../src/services/engine/helpers/logCameraState';
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
@@ -57,6 +58,7 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: cam.target,
+      driver: bodyDriverGeometry('earth'),
     };
 
     logCameraState(cam, fakeCanvas(1920, 1080), focus, SIM_DAYS);
@@ -101,6 +103,7 @@ describe('logCameraState', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [3, 4, 0],
+      driver: bodyDriverGeometry('earth'),
     };
 
     logCameraState(cam, fakeCanvas(800, 600), focus, SIM_DAYS);

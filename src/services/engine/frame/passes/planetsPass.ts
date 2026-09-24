@@ -6,7 +6,7 @@
  *
  * The frame program expands a `'body'` layer into one render step per body-m
  * slab row (Task 7); `enabled`/`draw` are therefore called once PER BODY,
- * gated on `view.slab.frame.bodyId` filtered to the `flat` branch of
+ * gated on `view.slab.frame.hostId` filtered to the `flat` branch of
  * `sceneBodyPartition` — the resolved body whose surface texture is not
  * resident. A body with a resident texture is `textured` (drawn by
  * `texturedBodiesPass`), and a sub-pixel body is a `glint` (`bodyGlintsPass`,
@@ -70,7 +70,7 @@ export const planetsPass: ContentPass = {
     // bodies bag) never touch ctx or state.data.
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     return sceneBodyPartition(state, ctx).flat.some((p) => p.id === bodyId);
   },
 
@@ -83,7 +83,7 @@ export const planetsPass: ContentPass = {
     if (view.slab.frame.kind !== 'body-m') return false;
     if (state.gpu.planetRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const { flat, textured } = sceneBodyPartition(state, ctx);
     return flat.some((p) => p.id === bodyId) || textured.some((p) => p.id === bodyId);
   },
@@ -91,7 +91,7 @@ export const planetsPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.planetRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const planet = sceneBodyPartition(state, ctx).flat.find((p) => p.id === bodyId);
     if (planet === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
@@ -135,7 +135,7 @@ export const planetsPass: ContentPass = {
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const { flat, textured } = sceneBodyPartition(state, ctx);
     const planet = flat.find((p) => p.id === bodyId) ?? textured.find((p) => p.id === bodyId);
     if (planet === undefined) return;

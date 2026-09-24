@@ -13,6 +13,7 @@ import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
 export type CoreEngineSliceState = {
   status: EngineStatus;
@@ -46,4 +47,11 @@ export type CoreEngineSliceState = {
    * catalog lands still gets the anchor set.
    */
   structureSearchList: readonly StructureSearchEntry[];
+  /**
+   * Palette rows published by each Layer's `search` feed, keyed by Layer name
+   * — a whole-snapshot replace per yield, so a Layer that clears its rows
+   * yields an empty array rather than deleting a key. `selectLayerSearchRows`
+   * flattens it for the ranker.
+   */
+  layerSearch: Record<string, readonly LayerSearchEntry[]>;
 };

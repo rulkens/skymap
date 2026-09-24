@@ -72,7 +72,7 @@ function makeCtx(): FrameView {
 function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodyId } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }
@@ -653,7 +653,7 @@ describe('createPickProgram', () => {
       const base = makeCtx(); // NEAR0 distanceRangeM[0] = 0.01 Mpc (in metres)
       const nearBody = makeSlab({
         index: 2,
-        frame: { kind: 'body-m', bodyId: 'mars' as BodyId },
+        frame: { kind: 'body-m', hostId: 'mars' as BodyId },
         // Genuinely nearer than NEAR0's bracket above.
         distanceRangeM: [0.0001 * SCALE_UNITS.MPC_TO_M, 0.0005 * SCALE_UNITS.MPC_TO_M],
       });
@@ -723,7 +723,7 @@ describe('createPickProgram', () => {
       // must not let NEAR0 sort as nearest again.
       const base = makeCtx();
       const unresolvedNear0 = { ...base.slabs[0]!, distanceRangeM: null };
-      const body = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
+      const body = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
       vi.mocked(pickFrameContext).mockReturnValue({
         ...base,
         slabs: [unresolvedNear0, base.slabs[1]!, body],

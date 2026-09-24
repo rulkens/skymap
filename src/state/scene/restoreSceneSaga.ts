@@ -4,7 +4,7 @@
  * dispatches, no engine context of its own.
  *
  * This is the close of a takeover's capture → play → restore round-trip
- * (`captureScene` is the open). `runTakeover` runs it in its `finally`, so it
+ * (`captureScene` is the open). `runTakeoverSaga` runs it in its `finally`, so it
  * fires on BOTH a natural finish and an `exitTakeover`/supersede cancellation.
  *
  *   1. `put(mergeSnapshot(settings))` — the ten clusters land in ONE merge

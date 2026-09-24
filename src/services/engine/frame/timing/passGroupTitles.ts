@@ -9,7 +9,7 @@
  */
 
 import { slabName } from '../slabs';
-import { BODY_SLAB_CAPACITY } from './bodySlabCapacity';
+import { SLAB_ROW_CEILING } from './slabRowCeiling';
 
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // FIRST, because the prelude's dispatches run ahead of every render step and
@@ -31,7 +31,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // host through whichever body row that host holds this frame.
   'probe·COSMO': 'Probe capture',
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `probe·${slabName(k + 2)}`,
       'Probe capture',
     ]),
@@ -43,17 +43,17 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // buckets under one title regardless of which row Sgr A* lands in this
   // frame, same reasoning as the `foreground:0·BODY[k]` block below.
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `hdr·${slabName(k + 2)}`,
       'Sgr A* lensing',
     ]),
   ),
   'foreground:0·NEAR0': 'Foreground bodies · depth',
   // One `foreground:0·BODY[k]` row per capacity slot, derived from `slabName`
-  // rather than authored — a new SCENE_PLANETS row widens BODY_SLAB_CAPACITY
+  // rather than authored — a new SCENE_PLANETS row widens SLAB_ROW_CEILING
   // and this table follows with no hand-added line.
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `foreground:0·${slabName(k + 2)}`,
       'Foreground bodies · depth',
     ]),

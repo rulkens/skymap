@@ -1,9 +1,9 @@
 /**
  * wireGalaxyCatalogSourceSlot — one per-source galaxy-catalog slot, built by
  * `create`. WHEN it loads belongs to the Layer's asset rows, and the arrival
- * fade to core's `installFadeOnArrival`, not here. `subscribe` keeps today's two
- * writes at today's beat: core's catalog-landed pulse (which owns what the count
- * MEANS — Ruling 3) and the provenance fact.
+ * fade to core's `installFadeOnArrival`, not here. `subscribe` keeps the
+ * provenance fact at today's beat; the catalog-landed pulse rides the Layer's
+ * `sourceCounts` feed, which subscribes to this same slot.
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
@@ -62,7 +62,6 @@ export function wireGalaxyCatalogSourceSlot(
 
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      deps.reportSourceCount(source, s.value.count);
       // One O(rows) pass paid here per commit rather than lazily in React, so the
       // debug panel never reaches into the raw cloud.
       galaxy.provenanceCounts.set(source, countEstimatedProvenance(s.value));

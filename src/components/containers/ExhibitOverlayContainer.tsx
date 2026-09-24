@@ -33,7 +33,7 @@ function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.Re
   const exhibit = exhibitRegistry[id];
 
   // The switch is honest as local state: during a takeover nothing else writes
-  // what its arms touch, and `runTakeover`'s snapshot rewinds them on exit.
+  // what its arms touch, and `runTakeoverSaga`'s snapshot rewinds them on exit.
   // Holding the switched-on exhibit's id rather than a boolean is what resets it
   // when the takeover passes to another exhibit.
   const [toggledId, setToggledId] = useState<ExhibitId | null>(null);

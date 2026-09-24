@@ -1,6 +1,6 @@
 /**
  * exhibitBodySaga tests — settings, then a fly racing `exitTakeover`, then a steady
- * wait for it — run directly (not through `runTakeover`, which Task 3's suite
+ * wait for it — run directly (not through `runTakeoverSaga`, which Task 3's suite
  * already covers) so these assert only what `exhibitBodySaga` itself is responsible
  * for.
  *
@@ -109,12 +109,12 @@ describe('exhibitBodySaga', () => {
 
     expect(task.isRunning()).toBe(false);
     // exhibitBodySaga itself never restores — no reason for the setting to flip back
-    // as a side effect of exitTakeover; runTakeover (untested here) owns that.
+    // as a side effect of exitTakeover; runTakeoverSaga (untested here) owns that.
     expect(store.getState().settings.flow.enabled).toBe(true);
   });
 
   it('drifts during the hold and hands the spin back on exit', async () => {
-    // `camera.autoRotate` is NOT in runTakeover's scene snapshot, so a leak
+    // `camera.autoRotate` is NOT in runTakeoverSaga's scene snapshot, so a leak
     // here leaves the viewer's camera turning for the rest of the session.
     const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
     const { store, sagaMiddleware } = buildStore(playClip);

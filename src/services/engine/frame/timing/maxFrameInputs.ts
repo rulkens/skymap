@@ -11,13 +11,13 @@ import type { CubemapCaptureKey } from '../../../../@types/rendering/CubemapCapt
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import type { FrameInputs } from '../expandFrameOrder';
 import { NEAR0 } from '../slabs';
-import { BODY_SLAB_CAPACITY } from './bodySlabCapacity';
+import { SLAB_ROW_CEILING } from './slabRowCeiling';
 
 export const MAX_FRAME_INPUTS: FrameInputs = {
   tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
   bloomEnabled: true,
   // NEAR0 plus every capacity body row — sized off the registry, never by hand.
-  foregroundChain: [NEAR0, ...Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2)],
+  foregroundChain: [NEAR0, ...Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)],
   // Every row's 6 faces, so the capture slots exist even when no band is on —
   // sized off the registry, so a second capture row needs no edit here. A
   // probe face may draw its subject's host, which can sit in any body row.
@@ -28,14 +28,14 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
         face,
         bodySlabs:
           CUBEMAP_CAPTURES[key].kind === 'probe'
-            ? Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2)
+            ? Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)
             : [],
       })),
     ]),
   ),
   bodyRowSlabs: {
     // Every capacity index, for both: the two rows move with the live bodies.
-    lens: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
-    insideAtmosphere: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
+    lens: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
+    insideAtmosphere: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
   },
 };

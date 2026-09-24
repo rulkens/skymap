@@ -14,6 +14,7 @@ import { CONST_J2000 } from '../time/constJ2000';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { positionDriverById } from './positionDrivers';
 import { SCENE_ANCHORS } from './sceneAnchors';
+import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
 import type { BodyRegionId } from '../../@types/data/BodyRegionId';
@@ -21,7 +22,12 @@ import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 
 const SUN_ID = 'sun';
 
+// The S-star elements still focus on the BODY (PR 2 re-points them), so the
+// subtree is gathered from `sgr-a-star` while the region is anchored on the
+// place. Both ids end up claimed, which is what keeps the neighbourhood's
+// residual set from picking either one up.
 const SGR_A_STAR_ID = 'sgr-a-star';
+const GALACTIC_CENTRE_ID = GALACTIC_CENTRE_ANCHOR.id;
 
 // The rate-less J2000 snapshot `foregroundMaxDistance` already reads. Extents
 // are set by static star anchors and semi-major axes, so no instant moves them.
@@ -59,7 +65,10 @@ const anchoredMemberIds = (anchorId: string): readonly string[] => {
 
 const SOLAR_SYSTEM_IDS: readonly string[] = anchoredMemberIds(SUN_ID);
 
-const GALACTIC_CENTRE_IDS: readonly string[] = anchoredMemberIds(SGR_A_STAR_ID);
+const GALACTIC_CENTRE_IDS: readonly string[] = [
+  ...anchoredMemberIds(GALACTIC_CENTRE_ID),
+  ...anchoredMemberIds(SGR_A_STAR_ID),
+];
 
 // Every seeded star anchor no tighter region has claimed. The subtraction must cover EVERY
 // anchored region, or a fallen-through anchor inflates the extent the NEAR0 far plane reads.
@@ -106,5 +115,5 @@ const region = (
 export const BODY_REGIONS: readonly BodyRegion[] = [
   region('solar-system', 'Solar System', SUN_ID, SOLAR_SYSTEM_IDS),
   region('solar-neighbourhood', 'Solar Neighbourhood', SUN_ID, SOLAR_NEIGHBOURHOOD_IDS),
-  region('galactic-centre', 'Galactic Centre', SGR_A_STAR_ID, GALACTIC_CENTRE_IDS),
+  region('galactic-centre', 'Galactic Centre', GALACTIC_CENTRE_ID, GALACTIC_CENTRE_IDS),
 ];

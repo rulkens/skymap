@@ -8,7 +8,7 @@
  *
  * The four controls converge on the SAME tour signals the keyboard will dispatch
  * (`prevBeat` / `advanceTour` / `togglePause` / `exitTakeover`) — `pausableDwellSaga`
- * and `tourBody` are the single home that acts on them, so the button and
+ * and `tourBodySaga` are the single home that acts on them, so the button and
  * keyboard surfaces share one behaviour with no duplicated logic.
  *
  * App mounts this only while `selectTourActive` is true, so the container does

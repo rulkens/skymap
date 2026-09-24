@@ -64,7 +64,7 @@ function makeCtx(): FrameView {
 
 function makeBodyView(bodyId: BodyId): SlabView {
   return {
-    slab: makeSlab({ frame: { kind: 'body-m', bodyId } }),
+    slab: makeSlab({ frame: { kind: 'body-m', hostId: bodyId } }),
     vp: new Float32Array(16),
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],

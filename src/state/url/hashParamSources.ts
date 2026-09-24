@@ -121,7 +121,7 @@ const focusSource: HashParamSource = {
   write: (state) => {
     // An in-flight request outranks the resolved slot — precedence, not
     // fallback. `requestFocus` for a galaxy or star parks inside
-    // `resolveFocusRefDeferring` until its catalog pulses, and the resolved slot
+    // `resolveFocusRefDeferringSaga` until its catalog pulses, and the resolved slot
     // stays null for that whole window; a write landing there would compose a
     // body with no `focus` at all and push the deep link away. The pending id is
     // the very string the read handed to `requestFocus`, so republishing it is

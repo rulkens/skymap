@@ -36,7 +36,7 @@ export const solarSystem: Exhibit = {
   id: 'solarSystem',
   label: 'Solar System',
   // The trails are the exhibit: a viewer who switched them off in the panel still
-  // gets them here, and `runTakeover`'s snapshot hands their choice back on exit.
+  // gets them here, and `runTakeoverSaga`'s snapshot hands their choice back on exit.
   // Bodies and stars both stay pickable: the Sun's own dot is a star-catalog
   // row, so silencing `starCatalog` would take its click too. The galaxy
   // field and the dust band still don't take clicks at 42 AU.

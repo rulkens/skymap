@@ -7,10 +7,12 @@
  * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
-import type { Task } from 'redux-saga';
+import { put } from 'typed-redux-saga';
+import type { SagaIterator, Task } from 'redux-saga';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
+import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -18,9 +20,11 @@ import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DD
 
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
+import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
 import {
   factsReported,
   layerFactsSeeded,
+  layerSearchReported,
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
@@ -28,6 +32,8 @@ import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSele
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
+import { CORE_SLAB_ROWS } from '../../../data/bodies/coreSlabRows';
+import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { CORE_PLANNERS } from '../frame/planners';
@@ -61,16 +67,16 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // echo is per-arrival, not per-boot: a catalog the user enables mid-session
   // echoes too, where the deleted gate only subscribed to boot-enabled sources.
   const countBySource = new Map<SourceType, number>();
-  const reportSourceCount = (source: SourceType, count: number): void => {
-    deps.cb.store.dispatch(engineSourceCountReported({ source, count }));
+  function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
+    yield* put(engineSourceCountReported(report));
     // A catalog landing IS a content change for the sky capture keyed on it.
     state.contentVersion += 1;
-    countBySource.set(source, count);
-    if (count > 0) {
+    countBySource.set(report.source, report.count);
+    if (report.count > 0) {
       const total = [...countBySource.values()].reduce((sum, n) => sum + n, 0);
-      deps.cb.store.dispatch(engineStatusChanged({ kind: 'ready', count: total }));
+      yield* put(engineStatusChanged({ kind: 'ready', count: total }));
     }
-  };
+  }
 
   // Collected here (not read back off `runSaga`'s call sites) so `state.layers = instances`
   // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
@@ -91,7 +97,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       focusUniform,
       store: deps.cb.store,
       requestRender,
-      reportSourceCount,
     };
     // Facts is erased to `undefined` at this composition boundary
     // (`Layer<string, unknown>`), so `publish` cannot appear in a
@@ -116,7 +121,23 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
             deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
         }
       : common;
-    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
+    const instance = instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
+    // The feeds are tasks like `sagas`, on the same array, so `engine.ts`'s
+    // teardown cancels them the same way — which is what closes each iterator.
+    const { search, sourceCounts } = instance;
+    if (search) {
+      layerSagaTasks.push(
+        deps.cb.runSaga(() =>
+          runLayerFeedSaga(search, (rows) => put(layerSearchReported({ layer: layer.name, rows }))),
+        ),
+      );
+    }
+    if (sourceCounts) {
+      layerSagaTasks.push(
+        deps.cb.runSaga(() => runLayerFeedSaga(sourceCounts, consumeSourceCountSaga)),
+      );
+    }
+    return instance;
   });
 
   state.layers = instances;
@@ -148,6 +169,22 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       ...instances.map((instance) => instance.assets),
     ]),
   );
+  // Static, so read off the composition rather than the instances — `targets`
+  // is composed the same way. The ceiling sizes the GPU query set before any
+  // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
+  // headroom that reserved; a duplicate `anchorId` would give two rows one
+  // pose and one `SlabFrame.hostId`, with the second silently unreachable.
+  const slabRows = concatUniqueRows('createLayers: slab rows', (row) => row.anchorId, [
+    CORE_SLAB_ROWS,
+    ...deps.composition.layers.map((layer) => layer.slabs ?? []),
+  ]);
+  if (slabRows.length > LAYER_SLAB_ROW_HEADROOM) {
+    throw new Error(
+      `createLayers: slab rows exceed LAYER_SLAB_ROW_HEADROOM — ${slabRows.length} composed rows, ` +
+        `LAYER_SLAB_ROW_HEADROOM is ${LAYER_SLAB_ROW_HEADROOM}`,
+    );
+  }
+  state.slabRows = slabRows;
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
   state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
   state.orbitTrailRows = [

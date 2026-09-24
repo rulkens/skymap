@@ -51,7 +51,7 @@
  * first, hiding exactly the pushes this file exists to count.
  *
  * Bodies are the subject rather than galaxies because a body is what fits inside
- * the gap. A galaxy deep link parks in `resolveFocusRefDeferring` until its
+ * the gap. A galaxy deep link parks in `resolveFocusRefDeferringSaga` until its
  * catalog pulses, so its ref write lands well after the read pass has finished
  * and no other row's trigger is left to fall into the window; a body resolves
  * inline off the static `SCENE_BODIES` table, mid-pass.

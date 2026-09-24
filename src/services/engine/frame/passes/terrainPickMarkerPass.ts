@@ -10,6 +10,7 @@
 
 import type { BodyFixedPose } from '../../../../@types/camera/BodyFixedPose';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -30,8 +31,8 @@ export const terrainPickMarkerPass: ContentPass = {
     if (view.slab.frame.kind !== 'body-m') return false;
     // Cast: the registry stays a literal (a row typo is a compile error), which
     // makes it non-indexable by the wider `BodyId` — mirrors `surfaceTilesPass`.
-    const registry = SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>;
-    if (registry[view.slab.frame.bodyId] === undefined) return false;
+    const registry = SURFACE_TILE_REGISTRY as Partial<Record<SlabHostId, SurfaceTileSpec>>;
+    if (registry[view.slab.frame.hostId] === undefined) return false;
     // A non-empty cut is the closest frame-visible signal that THIS body is the
     // one whose terrain the marcher can read: the tile subsystem serves one
     // engaged body at a time, and `terrainHeightAt` answers 0 for any other.
@@ -43,7 +44,10 @@ export const terrainPickMarkerPass: ContentPass = {
     const renderer = state.gpu.terrainPickMarkerRenderer;
     const cursorTexPx = ctx.snapshot.cursorTexPx;
     if (renderer === null || cursorTexPx === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
+    // Membership IS the predicate (`surfaceTileRegistry`'s header) and it is
+    // what narrows a slab host to a body — a place hosts no terrain.
+    if (!(bodyId in SURFACE_TILE_REGISTRY)) return;
     const pose = ctx.bodyPose(bodyId);
     if (pose === null) return;
 
@@ -53,7 +57,10 @@ export const terrainPickMarkerPass: ContentPass = {
     // `eyeRelAnchorM` IS `eyeRelBodyM`.
     const eyeM = pose.eyeRelBodyM;
     const arm: BodyFixedPose = {
-      bodyId,
+      // `in` gates membership above but does not narrow the KEY, so this
+      // states what that check just proved — the same assertion
+      // `runFrame`'s tile-planning predicate makes.
+      bodyId: bodyId as BodyId,
       anchorLocalM: [0, 0, 0],
       eyeRelAnchorM: [eyeM[0], eyeM[1], eyeM[2]],
       basisLocal: [...pose.basisM],

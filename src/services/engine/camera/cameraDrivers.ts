@@ -31,19 +31,16 @@ import { reencodePose } from '../../../utils/camera/reencodePose';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
-import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -106,9 +103,9 @@ function followPose(
   const s = ctx.state;
   const focus = s.selectionRows.focus;
   const livePos = liveBodyPosition(focus, ctx.bodies);
-  const focusId = focusDriverId(focus);
+  const driver = selectionDriver(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
-  if (focusId === null || livePos === null) {
+  if (driver === null || driver.poseId === null || livePos === null) {
     return { pose: s.camera.base, memory: mem };
   }
   // The pose eased TOWARD, in world terms whatever arm the regime is in — by
@@ -160,11 +157,7 @@ function followPose(
     // only an owed one seeds the framing distance.
     distanceTarget = memory.saturated
       ? committed.distance
-      : bodyFocusDistance(
-          bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focusId, 'cameraDrivers')) *
-            SCALE_UNITS.M_TO_MPC,
-          ctx.projection.fovYRad,
-        );
+      : bodyFocusDistance(driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC, ctx.projection.fovYRad);
   } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {

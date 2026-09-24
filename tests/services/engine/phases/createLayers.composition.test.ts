@@ -14,6 +14,8 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
+import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 
 function makeState(
@@ -89,6 +91,22 @@ function worldLabelLayer(tag: string): Layer<string, unknown> {
   } as unknown as Layer<string, unknown>;
 }
 
+/** A Layer contributing `count` slab rows, anchored `<tag>-slab-<i>`. */
+function slabRowLayer(tag: string, anchorIds: readonly string[]): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    slabs: anchorIds.map((anchorId) => ({
+      anchorId,
+      boundingRadiusM: 1,
+      footprintRadiusM: 1,
+      source: 'foreground' as const,
+    })),
+  } as unknown as Layer<string, unknown>;
+}
+
 /** A Layer contributing one orbit-trail row and nothing else. */
 function orbitTrailLayer(tag: string, row: OrbitalElements): Layer<string, unknown> {
   return {
@@ -161,6 +179,43 @@ describe('createLayers composition', () => {
     await createLayers(state, makeDeps(layers, store));
 
     expect(state.label3DProducers.map((producer) => producer.id)).toEqual(['a-world', 'b-world']);
+  });
+
+  it("composes CORE_SLAB_ROWS then every Layer's slabs, in tuple order", async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [slabRowLayer('a', ['a-anchor']), slabRowLayer('b', ['b-anchor'])];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    expect(state.slabRows.map((row) => row.anchorId)).toEqual([
+      ...CORE_SLAB_ROWS.map((row) => row.anchorId),
+      'a-anchor',
+      'b-anchor',
+    ]);
+  });
+
+  it('throws at boot when a composition’s slab rows exceed the ceiling', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    // One past the headroom, counting core's own rows — the GPU query set is
+    // already sized, so the overflow row would draw into nothing.
+    const anchorIds = Array.from(
+      { length: LAYER_SLAB_ROW_HEADROOM - CORE_SLAB_ROWS.length + 1 },
+      (_, k) => `over-${k}`,
+    );
+
+    await expect(
+      createLayers(state, makeDeps([slabRowLayer('over', anchorIds)], store)),
+    ).rejects.toThrow(/slab rows exceed LAYER_SLAB_ROW_HEADROOM/);
+  });
+
+  it('throws at boot when two Layers name the same slab anchorId', async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [slabRowLayer('a', ['shared-anchor']), slabRowLayer('b', ['shared-anchor'])];
+
+    await expect(createLayers(state, makeDeps(layers, store))).rejects.toThrow(/shared-anchor/);
   });
 
   it('throws at boot when two Layers mint the same slot key', async () => {

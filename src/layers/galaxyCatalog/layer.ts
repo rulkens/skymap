@@ -13,6 +13,7 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { galaxyCatalogPlanner } from './frame';
 import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
+import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
 import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from './passes/proceduralDisksPass';
 import { texturedDisksPass } from './passes/texturedDisksPass';
@@ -42,6 +43,7 @@ export const galaxyCatalogLayer = defineLayer({
   ],
   assets: galaxyCatalogAssetRows,
   sagas: [watchPaletteWakeSaga],
+  sourceCounts: galaxyCatalogSourceCounts,
   fades: galaxyCatalogFadeRows,
   guides: (runtime) => ({
     screenLabels: [

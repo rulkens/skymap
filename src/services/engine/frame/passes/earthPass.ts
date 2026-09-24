@@ -3,7 +3,7 @@
  * `foreground:0`. The detail patches over it are `surfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
- * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
+ * sub-pixel), so `enabled` mainly checks `view.slab.frame.hostId === 'earth'`;
  * the foreground-distance check below is the one gate this layer still owns,
  * shared with `planetsPass`.
  *
@@ -21,6 +21,7 @@ import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { CelestialBody } from '../../../../@types/scene/CelestialBody';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -46,7 +47,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
  * layers can seed a row from. Mirrors `sceneBodyStates`' own null-safety
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
-function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null {
+function sceneBodyForId(state: PassState, bodyId: SlabHostId): CelestialBody | null {
   const { earth, planets } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
   return planets.find((p) => p.id === bodyId) ?? null;
@@ -73,7 +74,7 @@ type PreparedBodySurfaceFrame = {
   readonly camLocal: Vec3;
 };
 
-const preparedByCtx = new WeakMap<FrameView, Map<BodyId, PreparedBodySurfaceFrame | null>>();
+const preparedByCtx = new WeakMap<FrameView, Map<SlabHostId, PreparedBodySurfaceFrame | null>>();
 
 export function prepareBodySurfaceFrame(
   state: PassState,
@@ -81,7 +82,7 @@ export function prepareBodySurfaceFrame(
   view: SlabView,
 ): PreparedBodySurfaceFrame | null {
   if (view.slab.frame.kind !== 'body-m') return null;
-  const bodyId = view.slab.frame.bodyId;
+  const bodyId = view.slab.frame.hostId;
 
   let byBody = preparedByCtx.get(ctx);
   if (byBody === undefined) {
@@ -99,7 +100,7 @@ function computeBodySurfaceFrame(
   state: PassState,
   ctx: FrameView,
   view: SlabView,
-  bodyId: BodyId,
+  bodyId: SlabHostId,
 ): PreparedBodySurfaceFrame | null {
   const body = sceneBodyForId(state, bodyId);
   if (body === null) return null;
@@ -127,7 +128,7 @@ export const earthPass: ContentPass = {
   name: 'earth',
 
   enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== 'earth') return false;
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return state.data.bodies.earth !== null;

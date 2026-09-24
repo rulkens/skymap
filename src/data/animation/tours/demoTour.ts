@@ -12,7 +12,7 @@
  * `buildStaticAnchorStructures`), so Virgo — a cluster with seed id `virgo-m87`
  * — is `cluster-virgo-m87`, and Laniakea — a supercluster with seed id
  * `laniakea-sc` — is `supercluster-laniakea-sc`. A bare seed id never matches
- * `structures.byId`, so the beat's `waitUntil(clipFociReady)` would poll forever:
+ * `structures.byId`, so the beat's `waitUntilSaga(clipFociReady)` would poll forever:
  * the category prefix is load-bearing, not cosmetic.
  *
  * Each beat uses `flyAndFocusOnClip` so the InfoCard and isolation highlight

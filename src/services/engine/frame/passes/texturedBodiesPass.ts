@@ -7,7 +7,7 @@
  *
  * The frame program expands a `'body'` layer into one render step per body-m
  * slab row (Task 7); `enabled`/`draw` are called once per body-m row, gated on
- * `view.slab.frame.bodyId` filtered to the `textured` branch of
+ * `view.slab.frame.hostId` filtered to the `textured` branch of
  * `sceneBodyPartition`. Its sibling `planetsPass` takes the `flat` branch, so
  * a body is textured XOR flat by construction — a given bodyId matches at most
  * one, so the two opaque `foreground:0` layers can never z-fight over the same
@@ -99,14 +99,14 @@ export const texturedBodiesPass: ContentPass = {
     // renderer, bare ctx) never touch ctx or the partition inputs.
     if (state.gpu.texturedBodyRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     return sceneBodyPartition(state, ctx).textured.some((b) => b.id === bodyId);
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.texturedBodyRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const bodyId = view.slab.frame.bodyId;
+    const bodyId = view.slab.frame.hostId;
     const body = sceneBodyPartition(state, ctx).textured.find((b) => b.id === bodyId);
     if (body === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` was fed to build this row's

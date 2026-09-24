@@ -16,11 +16,14 @@ import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
+import type { SlabRow } from '../frame/SlabRow';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerGuides } from './LayerGuides';
+import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
+import type { SourceCountReport } from './SourceCountReport';
 
 export type Layer<
   Name extends string,
@@ -46,6 +49,10 @@ export type Layer<
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
    * folded into `rootSaga`. Factories, not running sagas. */
   readonly sagas?: readonly SagaFactory[];
+  /** Candidate `body-m` slab rows, joined to `CORE_SLAB_ROWS` in `state.slabRows`.
+   * `anchorId`s are globally unique and the composed total must fit
+   * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
+  readonly slabs?: readonly SlabRow[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
@@ -86,6 +93,12 @@ export type Layer<
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
    * asserted at boot. */
   selection?(runtime: Runtime): readonly SelectionKindRow[];
+  /** Palette rows. Each yield REPLACES this Layer's previous snapshot; a static
+   * Layer yields once. Core runs it as a saga beside `sagas`, cancelled at teardown. */
+  search?(runtime: Runtime): AsyncIterable<readonly LayerSearchEntry[]>;
+  /** Per-source counts on the same terms. Core dispatches `engineSourceCountReported`
+   * per yield and keeps its ready-total / contentVersion side effects. */
+  sourceCounts?(runtime: Runtime): AsyncIterable<SourceCountReport>;
   /** Appended after `CORE_PLANNERS` in `createLayers`; a row's own `FrameSection`
    * line is hand-authored, same as a compute row's. */
   planners?(runtime: Runtime): readonly FrameContentPlanner<unknown>[];

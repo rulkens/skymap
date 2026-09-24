@@ -50,7 +50,7 @@ import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipFociReady } from '../tour/clipFociReady';
-import { waitUntil } from '../tour/waitUntil';
+import { waitUntilSaga } from '../tour/waitUntilSaga';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import type { SagaContext } from '../../store/types';
@@ -70,7 +70,7 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
 
   // Block until every id-bearing cue resolves AND the camera runtime (which
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
-  yield* call(waitUntil, () => clipFociReady(clip.data, selection) && cameraRuntime() !== null);
+  yield* call(waitUntilSaga, () => clipFociReady(clip.data, selection) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
   const orientation = yield* select(selectOrientation);
   const frameBasis = ORIENTATION_FRAMES[orientation];

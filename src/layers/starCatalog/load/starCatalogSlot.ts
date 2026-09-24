@@ -12,12 +12,10 @@ import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 
 export function createStarCatalogSlot(
   source: SourceType,
-  deps: Pick<LayerCoreDeps, 'reportSourceCount'>,
   renderer: StarCatalogRenderer,
 ): AssetSlot<StarCatalog, StarCatalogReq> {
   const id = SOURCE_REGISTRY[source].id;
@@ -36,9 +34,6 @@ export function createStarCatalogSlot(
         `[engine] ${id}: ${s.value.starCount.toLocaleString()} stars, ` +
           `${s.value.nodeCount.toLocaleString()} nodes`,
       );
-      // Report the loaded star count so the SettingsPanel's per-catalog count
-      // chip lights up and a tier reload re-reports the new tier's population.
-      deps.reportSourceCount(source, s.value.starCount);
     }
   });
   return slot;

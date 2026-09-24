@@ -26,6 +26,7 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -42,6 +43,7 @@ const CORE_INITIAL: CoreEngineSliceState = {
   structureCounts: {},
   loadProgress: null,
   structureSearchList: [],
+  layerSearch: {},
 };
 
 const engineSlice = createSlice({
@@ -86,6 +88,19 @@ const engineSlice = createSlice({
       action: PayloadAction<readonly StructureSearchEntry[]>,
     ) => {
       state.structureSearchList = [...action.payload];
+    },
+
+    // ── per-Layer palette rows ───────────────────────────────────────────────
+    // Whole-snapshot replace under the Layer's own key, one dispatch per yield
+    // of its `search` feed — a Layer whose rows clear yields `[]`.
+    layerSearchReported: (
+      state,
+      action: PayloadAction<{ layer: string; rows: readonly LayerSearchEntry[] }>,
+    ) => {
+      // Cast: Immer's draft type wants a mutable `names` array inside each row,
+      // but the rows are authored readonly and only ever replaced wholesale.
+      const byLayer = state.layerSearch as Record<string, readonly LayerSearchEntry[]>;
+      byLayer[action.payload.layer] = [...action.payload.rows];
     },
 
     // ── scale bar ────────────────────────────────────────────────────────────
@@ -154,6 +169,7 @@ export const {
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineStructureSearchListChanged,
+  layerSearchReported,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineHdrCapabilityChanged,
