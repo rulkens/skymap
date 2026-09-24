@@ -57,14 +57,9 @@ export const zoneOfAvoidanceLayer = defineLayer({
         // No `onFocus` destructured: the band has no x/y/z (see
         // ZoneOfAvoidanceInfo), so this arm never wires CardHeader's Focus
         // pill, unlike every other row.
-        Detail: ({ target, pinned, chrome, onClose }) => {
-          if (target.type !== 'zoneOfAvoidance') return null;
-          return createElement(ZoneOfAvoidanceDetailCard, { target, pinned, chrome, onClose });
-        },
-        Compact: ({ target }) =>
-          target.type === 'zoneOfAvoidance'
-            ? createElement(CompactZoneOfAvoidanceCard, { target })
-            : null,
+        Detail: ({ target, pinned, chrome, onClose }) =>
+          createElement(ZoneOfAvoidanceDetailCard, { target, pinned, chrome, onClose }),
+        Compact: ({ target }) => createElement(CompactZoneOfAvoidanceCard, { target }),
       },
     },
   ],

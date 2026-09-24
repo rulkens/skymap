@@ -15,6 +15,6 @@ describe('detailCardTable', () => {
   });
 
   it('a composition missing an arm throws naming the arm', () => {
-    expect(() => detailCardTable([])).toThrowError(/zoneOfAvoidance/);
+    expect(() => detailCardTable([])).toThrow(/zoneOfAvoidance/);
   });
 });

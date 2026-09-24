@@ -1,20 +1,20 @@
 /**
  * detailCardTable — folds core's five FocusableTarget arms with every Layer's
- * `detailCard` ui-slot contribution into the `Record<FocusableTargetType, …>`
- * InfoCard dispatches on. Called once at module load (`InfoCard.tsx`), so a
- * missing arm throws at boot naming the union member nobody claimed — a
- * composition wiring bug, not one to surface per-render.
+ * `detailCard` ui-slot contribution into the `DetailCardTable` InfoCard
+ * dispatches on. Called once at module load (`InfoCard.tsx`), so a missing arm
+ * throws at boot naming the union member nobody claimed — a composition
+ * wiring bug, not one to surface per-render.
  *
- * Each core entry narrows `target` via `target.type` (no cast) and renders
- * that arm's cards — `GalaxyDetailCard` / `CompactCard` for a galaxy,
- * `StructureDetailCard` / `CompactStructureCard` for a structure. The
- * structure `Detail` threads the structure-only `selectedMemberCount` through;
- * the other core arms ignore it.
+ * Each core entry renders its arm's cards straight from `target` — the table
+ * key is the narrowing proof, so no entry re-checks `target.type` —
+ * `GalaxyDetailCard` / `CompactCard` for a galaxy, `StructureDetailCard` /
+ * `CompactStructureCard` for a structure. The structure `Detail` threads the
+ * structure-only `selectedMemberCount` through; the other core arms ignore it.
  *
- * Dispatching on `target.type` through a `Record<FocusableTargetType, …>`
- * table follows the simplicity convention's table-dispatch rule (item 7): a
- * new focusable kind adds one Layer `ui` entry instead of a render branch in
- * InfoCard. InfoCard keeps the outer-wrapper-stable contract and the
+ * Dispatching on `target.type` through a `DetailCardTable` follows the
+ * simplicity convention's table-dispatch rule (item 7): a new focusable kind
+ * adds one Layer `ui` entry instead of a render branch in InfoCard. InfoCard
+ * keeps the outer-wrapper-stable contract and the
  * hover/pinned stacking around this lookup; the table only decides which card
  * a given target renders as.
  *
@@ -29,7 +29,8 @@
 
 import { createElement } from 'react';
 import type { Layer } from '../../@types/engine/layer/Layer';
-import type { FocusableTargetType } from '../../@types/engine/FocusableTargetType';
+import type { SelectionKind } from '../../@types/engine/SelectionKind';
+import type { DetailCardTable } from '../../@types/components/infoCard/DetailCardTable';
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
@@ -47,100 +48,83 @@ import CompactStarCard from './CompactStarCard/CompactStarCard';
 /** The five focusable kinds core still owns outright — no Layer claims them.
  * `zoneOfAvoidance` is the one arm missing here: it arrives via
  * `layerUiContents`, from the zoneOfAvoidance Layer's own `ui` entry. */
-const CORE_DETAIL_CARDS: Partial<Record<FocusableTargetType, DetailCardEntry>> = {
+const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'galaxyCatalog') return null;
-      return createElement(GalaxyDetailCard, {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
+      createElement(GalaxyDetailCard, {
         info: target,
         pinned,
         chrome,
         onFocus: pinned ? onFocus : undefined,
         onClose: pinned ? onClose : undefined,
-      });
-    },
-    Compact: ({ target }) =>
-      target.type === 'galaxyCatalog' ? createElement(CompactCard, { info: target }) : null,
+      }),
+    Compact: ({ target }) => createElement(CompactCard, { info: target }),
   },
   structure: {
-    Detail: ({ target, pinned, selectedMemberCount, chrome, onFocus, onClose }) => {
-      if (target.type !== 'structure') return null;
-      return createElement(StructureDetailCard, {
+    Detail: ({ target, pinned, selectedMemberCount, chrome, onFocus, onClose }) =>
+      createElement(StructureDetailCard, {
         structure: target,
         pinned,
         memberCount: selectedMemberCount,
         chrome,
         onFocus,
         onClose,
-      });
-    },
-    Compact: ({ target }) =>
-      target.type === 'structure'
-        ? createElement(CompactStructureCard, { structure: target })
-        : null,
+      }),
+    Compact: ({ target }) => createElement(CompactStructureCard, { structure: target }),
   },
   milkyWay: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'milkyWay') return null;
-      return createElement(MilkyWayDetailCard, {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
+      createElement(MilkyWayDetailCard, {
         target,
         pinned,
         chrome,
         onFocus,
         onClose,
-      });
-    },
-    Compact: ({ target }) =>
-      target.type === 'milkyWay' ? createElement(CompactMilkyWayCard, { target }) : null,
+      }),
+    Compact: ({ target }) => createElement(CompactMilkyWayCard, { target }),
   },
   body: {
     // The body arm renders through a store container: a focused body's distance
     // is time-dependent and re-derived live off the throttled time pub, which a
     // presentational card cannot read (store-boundary rule). The container reads
     // it and passes it as a prop; identity rows stay on the pure card.
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'body') return null;
-      return createElement(BodyDetailCardContainer, {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
+      createElement(BodyDetailCardContainer, {
         target,
         pinned,
         chrome,
         onFocus,
         onClose,
-      });
-    },
-    Compact: ({ target }) =>
-      target.type === 'body' ? createElement(CompactBodyCard, { target }) : null,
+      }),
+    Compact: ({ target }) => createElement(CompactBodyCard, { target }),
   },
   starCatalog: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
-      if (target.type !== 'starCatalog') return null;
-      return createElement(StarDetailCard, {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
+      createElement(StarDetailCard, {
         target,
         pinned,
         chrome,
         onFocus,
         onClose,
-      });
-    },
-    Compact: ({ target }) =>
-      target.type === 'starCatalog' ? createElement(CompactStarCard, { info: target }) : null,
+      }),
+    Compact: ({ target }) => createElement(CompactStarCard, { info: target }),
   },
 };
 
 /** Folds `CORE_DETAIL_CARDS` with every composed Layer's `detailCard` ui-slot
  * entry into the table InfoCard dispatches on. Throws if the composition
- * leaves any `FocusableTargetType` arm — core or Layer — unclaimed. */
-export function detailCardTable(
-  layers: readonly Layer<string, unknown>[],
-): Record<FocusableTargetType, DetailCardEntry> {
-  const table: Partial<Record<FocusableTargetType, DetailCardEntry>> = { ...CORE_DETAIL_CARDS };
+ * leaves any `SelectionKind` arm — core or Layer — unclaimed. */
+export function detailCardTable(layers: readonly Layer<string, unknown>[]): DetailCardTable {
+  const table: Partial<DetailCardTable> = { ...CORE_DETAIL_CARDS };
   for (const { type, ...entry } of layerUiContents(layers, 'detailCard')) {
-    table[type] = entry;
+    // TypeScript can't correlate a union-typed `type` with `entry`'s matching
+    // arm across the fold, so the write goes through the widened record once.
+    (table as Record<SelectionKind, DetailCardEntry>)[type] = entry as DetailCardEntry;
   }
 
   const missing = SELECTION_KINDS.filter((type) => table[type] === undefined);
   if (missing.length > 0) {
     throw new Error(`detailCardTable: no detailCard arm for "${missing.join(', ')}"`);
   }
-  return table as Record<FocusableTargetType, DetailCardEntry>;
+  return table as DetailCardTable;
 }
