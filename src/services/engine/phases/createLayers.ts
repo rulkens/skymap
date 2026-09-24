@@ -67,7 +67,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // echo is per-arrival, not per-boot: a catalog the user enables mid-session
   // echoes too, where the deleted gate only subscribed to boot-enabled sources.
   const countBySource = new Map<SourceType, number>();
-  function* consumeSourceCount(report: SourceCountReport): SagaIterator {
+  function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
     yield* put(engineSourceCountReported(report));
     // A catalog landing IS a content change for the sky capture keyed on it.
     state.contentVersion += 1;
@@ -134,7 +134,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
     if (sourceCounts) {
       layerSagaTasks.push(
-        deps.cb.runSaga(() => runLayerFeedSaga(sourceCounts, consumeSourceCount)),
+        deps.cb.runSaga(() => runLayerFeedSaga(sourceCounts, consumeSourceCountSaga)),
       );
     }
     return instance;

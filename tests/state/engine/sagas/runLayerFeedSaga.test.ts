@@ -28,7 +28,7 @@ function run(feed: AsyncIterable<number>): { puts: UnknownAction[]; task: Task }
 }
 
 describe('runLayerFeedSaga', () => {
-  it('hands every yield to onValue in order', async () => {
+  it('hands every yield to consumeSaga in order', async () => {
     const { puts, task } = run(
       (async function* () {
         yield 1;
