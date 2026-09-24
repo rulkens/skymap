@@ -1,6 +1,6 @@
 # Mesh-body tiers Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Mesh bodies ship per-tier assets (geometry + textures), and the runtime fetches the largest tier at or below the app tier.
 
@@ -81,14 +81,14 @@ Behaviour:
 
 Tests (existing fixtures build GLBs in-memory; give each target `glbPaths: { small: … }`):
 
-- [ ] `it('writes <key>-<tier> geometry and slot textures for every source tier')` — a two-tier target (`small`, `medium`) → both `k-small.*` and `k-medium.*` exist; no unsuffixed `k.mesh`.
-- [ ] `it('caps each tier's textures at tierToTexturePx(tier)')` — a 4096² source albedo → the small file is 2048 wide, the medium 4096 wide.
-- [ ] `it('takes row metrics from the ceiling tier')` — small and medium GLBs with different lowest vertices → `groundOffsetM` equals the medium one; `tierCeiling === 'medium'`.
-- [ ] `it('refuses a tier set that skips a rung')` — `{ small, large }` → throws the message above.
-- [ ] `it('keeps the contact mask untiered')` — a seated two-tier target writes exactly one `k_contact.webp`.
-- [ ] Update every existing test's target to `glbPaths: { small }` and every asserted path to the `-small` form; `writes every MESH_TEXTURE_SLOTS suffix…` keeps its intent.
-- [ ] `npm test -- tests/tools/meshes` green; `npm run typecheck:fast` green.
-- [ ] Commit.
+- [x] `it('writes <key>-<tier> geometry and slot textures for every source tier')` — a two-tier target (`small`, `medium`) → both `k-small.*` and `k-medium.*` exist; no unsuffixed `k.mesh`.
+- [x] `it('caps each tier's textures at tierToTexturePx(tier)')` — a 4096² source albedo → the small file is 2048 wide, the medium 4096 wide.
+- [x] `it('takes row metrics from the ceiling tier')` — small and medium GLBs with different lowest vertices → `groundOffsetM` equals the medium one; `tierCeiling === 'medium'`.
+- [x] `it('refuses a tier set that skips a rung')` — `{ small, large }` → throws the message above.
+- [x] `it('keeps the contact mask untiered')` — a seated two-tier target writes exactly one `k_contact.webp`.
+- [x] Update every existing test's target to `glbPaths: { small }` and every asserted path to the `-small` form; `writes every MESH_TEXTURE_SLOTS suffix…` keeps its intent.
+- [x] `npm test -- tests/tools/meshes` green; `npm run typecheck:fast` green.
+- [x] Commit.
 
 ### Task 2: Fetch the clamped tier at runtime
 
@@ -112,11 +112,11 @@ export function meshTierPrefix(meshKey: string, tier: Tier): string;
 
 Tests:
 
-- [ ] `meshFetcher`: `it('fetches the requested tier's geometry and textures')` — `{ meshKey: 'curiosity', tier: 'small' }` → the fetch URLs end `meshes/curiosity-small.mesh` / `_albedo.webp` …; `it('fetches the contact mask untiered')` → `meshes/curiosity_contact.webp`.
-- [ ] `assetWiring`: `it('clamps a mesh body's tier to its tierCeiling')` — `req('large')` on a small-ceiling body → `tier: 'small'`.
-- [ ] `assetWiring` (Review Focus 2): a tier flip on a resident mesh body changes its `req` → re-trigger, following how the existing file asserts it for body textures (if the file has no such pattern, assert `req('small')` ≠ `req('medium')` on a medium-ceiling fixture row instead and say so in the commit).
-- [ ] `npm test` green; `npm run typecheck:fast` green.
-- [ ] Commit.
+- [x] `meshFetcher`: `it('fetches the requested tier's geometry and textures')` — `{ meshKey: 'curiosity', tier: 'small' }` → the fetch URLs end `meshes/curiosity-small.mesh` / `_albedo.webp` …; `it('fetches the contact mask untiered')` → `meshes/curiosity_contact.webp`.
+- [x] `assetWiring`: `it('clamps a mesh body's tier to its tierCeiling')` — `req('large')` on a small-ceiling body → `tier: 'small'`.
+- [x] `assetWiring` (Review Focus 2): a tier flip on a resident mesh body changes its `req` → re-trigger, following how the existing file asserts it for body textures (if the file has no such pattern, assert `req('small')` ≠ `req('medium')` on a medium-ceiling fixture row instead and say so in the commit).
+- [x] `npm test` green; `npm run typecheck:fast` green.
+- [x] Commit.
 
 ### Task 3: Rebake the real assets and regenerate the table
 
@@ -124,12 +124,12 @@ Tests:
 - Modify (generated): `src/data/bodies/meshAssets.generated.ts`
 - Outputs (gitignored): `public/data/meshes/*-small.*`, `public/data/manifest.json`
 
-- [ ] **First**, un-share `public/data`: it is a symlink to main's (`readlink public/data`). Replace it with an APFS clone so the bake cannot touch main's live files: `rm public/data && cp -Rc /Users/rulkens/Development/js/skymap/public/data public/data` (clone = no extra disk).
-- [ ] Raw GLBs: `rawDataPath` resolves against cwd; if `data/raw/meshes/` is missing in this worktree, symlink it from main (`ln -s /Users/rulkens/Development/js/skymap/data/raw/meshes data/raw/meshes`, creating `data/raw/` first).
-- [ ] `npm run build-meshes` → every key writes `-small` files; the generated table gains `tierCeiling: 'small'` and loses `path`; all other row values byte-identical to before (diff the table).
-- [ ] Remove the now-orphaned unsuffixed `meshes/<key>.*` (+hash) files from THIS worktree's `public/data/meshes`, then regenerate the manifest the way `npm run dev`'s predev does (check `package.json` for the script name).
-- [ ] `npm test` green (the round-trip test pins the committed table to the serializer).
-- [ ] Commit the generated table.
+- [x] **First**, un-share `public/data`: it is a symlink to main's (`readlink public/data`). Replace it with an APFS clone so the bake cannot touch main's live files: `rm public/data && cp -Rc /Users/rulkens/Development/js/skymap/public/data public/data` (clone = no extra disk).
+- [x] Raw GLBs: `rawDataPath` resolves against cwd; if `data/raw/meshes/` is missing in this worktree, symlink it from main (`ln -s /Users/rulkens/Development/js/skymap/data/raw/meshes data/raw/meshes`, creating `data/raw/` first).
+- [x] `npm run build-meshes` → every key writes `-small` files; the generated table gains `tierCeiling: 'small'` and loses `path`; all other row values byte-identical to before (diff the table).
+- [x] Remove the now-orphaned unsuffixed `meshes/<key>.*` (+hash) files from THIS worktree's `public/data/meshes`, then regenerate the manifest the way `npm run dev`'s predev does (check `package.json` for the script name).
+- [x] `npm test` green (the round-trip test pins the committed table to the serializer).
+- [x] Commit the generated table.
 
 ## Definition of Done
 
