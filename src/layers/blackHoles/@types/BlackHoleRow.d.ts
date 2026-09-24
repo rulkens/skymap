@@ -1,13 +1,14 @@
 /**
  * `BlackHoleRow` — one supermassive black hole in the scene: where it sits, how
- * heavy it is, when its lens draws, and its disk-emission parameters. Every
- * shared loop (lens pass, slab rows) iterates `BLACK_HOLES`, so a second hole
- * (M87*) is a second row, not code.
+ * heavy it is, when its lens draws, how its far-field marker looks, and its
+ * disk-emission parameters. Every shared loop (lens pass, marker pass, slab
+ * rows) iterates `BLACK_HOLES`, so a second hole (M87*) is a second row, not code.
  */
 
 import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
 import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { FadeBand } from '../../../@types/math/FadeBand';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type BlackHoleRow = {
   readonly id: BlackHoleId;
@@ -22,6 +23,10 @@ export type BlackHoleRow = {
   // Arrival distance, in r_s, the user framed live (2026-09-01): outside the
   // descent floor and deep inside the lensing fade band.
   readonly focusDistanceRadii: number;
+  // A fixed marker tint, not a photometric measurement: a black hole has no
+  // albedo to derive one from. Linear RGB.
+  readonly glintTint: Readonly<Vec3>;
+  readonly glintBaseIntensity: number; // marker brightness outside the lens band
   readonly emission: {
     readonly innerRs: number; // Schwarzschild radii; inner edge of the accretion disc
     readonly outerRs: number; // Schwarzschild radii; photon ring / EHT imaging radius

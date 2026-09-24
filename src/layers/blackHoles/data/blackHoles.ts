@@ -18,6 +18,10 @@ export const BLACK_HOLES: readonly BlackHoleRow[] = [
     band: SCALE_FADE_BANDS.sgrAStarLensing,
     standoffRadii: 2.0,
     focusDistanceRadii: 30.4,
+    // Warm orange, tuned to read against the additive HDR field it shares with
+    // the seeded-body glints.
+    glintTint: [1, 0.55, 0.2],
+    glintBaseIntensity: 0.8,
     emission: {
       // ISCO out to the EHT photon ring; Schwarzschild, no spin.
       innerRs: 3,

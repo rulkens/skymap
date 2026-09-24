@@ -6,7 +6,7 @@
  * use: the captured disc must truly OCCLUDE the starlight behind it, while
  * per-pixel alpha lets the earlier roster through where deflection is
  * negligible.
- * No `drawPick` — Sgr A*'s pick stamp lives in `starPointsPass`.
+ * No `drawPick` — the hole's pick stamp lives in `blackHoleMarkerPass`.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

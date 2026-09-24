@@ -192,7 +192,8 @@ export const SCENE: FrameSection = {
     { kind: 'render', target: 'hdr', slab: 'lens', passes: ['black-hole-lensing'] },
     // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
     // bodies (the glints branch of the body partition) as brightness-scaled
-    // additive points, sibling of `star-points`. Outside the band the lens line
+    // additive points, sibling of `star-points`, and the black holes' far-field
+    // markers. Outside the band the lens line
     // emits nothing and this merges back into the roster above — see
     // `expandFrameOrder`'s merge rule, which is what keeps the pass count
     // unchanged there.
@@ -200,7 +201,7 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints'],
+      passes: ['body-glints', 'black-hole-marker'],
       slot: 'POST_LENSING',
     },
     // The near-field foreground bodies (the zoom-to-earth fold), into their own
