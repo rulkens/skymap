@@ -67,7 +67,7 @@ describe('allowDataFile', () => {
   });
 
   it('accepts a hashed tiered mesh file and texture under meshes/', () => {
-    expect(allowDataFile('meshes/whale-2048.a3f19c2e.mesh')).toBe(true);
-    expect(allowDataFile('meshes/whale-2048_albedo.a3f19c2e.webp')).toBe(true);
+    expect(allowDataFile('meshes/whale-small.a3f19c2e.mesh')).toBe(true);
+    expect(allowDataFile('meshes/whale-small_albedo.a3f19c2e.webp')).toBe(true);
   });
 });

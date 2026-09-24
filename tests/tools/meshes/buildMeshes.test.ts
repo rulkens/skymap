@@ -163,7 +163,7 @@ async function writeGlb(doc: Document): Promise<string> {
 
 /** Node's Buffer is a view into a shared pool — hand decodeMesh only its own bytes. */
 function readMesh(): ArrayBuffer {
-  const bytes = readFileSync(join(dir, 'out', 'testmesh-2048.mesh'));
+  const bytes = readFileSync(join(dir, 'out', 'testmesh-small.mesh'));
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
@@ -513,10 +513,10 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.substituted).toEqual(['metalRough', 'normalMap']);
-    const normalPx = await sharp(join(dir, 'out', 'testmesh-2048_normal.webp'))
+    const normalPx = await sharp(join(dir, 'out', 'testmesh-small_normal.webp'))
       .raw()
       .toBuffer();
-    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
       .raw()
       .toBuffer();
     expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
@@ -555,7 +555,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
@@ -576,7 +576,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([77, 255, 0]);
@@ -592,7 +592,7 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
 
     for (const slot of MESH_TEXTURE_SLOTS) {
-      expect(existsSync(join(dir, 'out', `testmesh-2048${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-small${slot.suffix}.webp`))).toBe(true);
     }
   });
 
@@ -688,7 +688,7 @@ describe('buildMeshes()', () => {
     );
   });
 
-  it('writes <key>-<px> geometry and slot textures for every source tier', async () => {
+  it('writes <key>-<tier> geometry and slot textures for every source tier', async () => {
     const doc = new Document();
     doc.createBuffer();
     const material = await withBaseColour(doc, doc.createMaterial('one'));
@@ -698,12 +698,12 @@ describe('buildMeshes()', () => {
 
     await runTiers({ small: glbPath, medium: glbPath });
 
-    expect(existsSync(join(dir, 'out', 'testmesh-2048.mesh'))).toBe(true);
-    expect(existsSync(join(dir, 'out', 'testmesh-4096.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh-small.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh-medium.mesh'))).toBe(true);
     expect(existsSync(join(dir, 'out', 'testmesh.mesh'))).toBe(false);
     for (const slot of MESH_TEXTURE_SLOTS) {
-      expect(existsSync(join(dir, 'out', `testmesh-2048${slot.suffix}.webp`))).toBe(true);
-      expect(existsSync(join(dir, 'out', `testmesh-4096${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-small${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-medium${slot.suffix}.webp`))).toBe(true);
     }
   });
 
@@ -729,8 +729,8 @@ describe('buildMeshes()', () => {
 
     await runTiers({ small: glbPath, medium: glbPath });
 
-    const small = await sharp(join(dir, 'out', 'testmesh-2048_albedo.webp')).metadata();
-    const medium = await sharp(join(dir, 'out', 'testmesh-4096_albedo.webp')).metadata();
+    const small = await sharp(join(dir, 'out', 'testmesh-small_albedo.webp')).metadata();
+    const medium = await sharp(join(dir, 'out', 'testmesh-medium_albedo.webp')).metadata();
     expect(small.width).toBe(2048);
     expect(medium.width).toBe(4096);
   });

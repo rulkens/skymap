@@ -1,8 +1,8 @@
 import type { Tier } from '../../@types/data/Tier';
-import { tierToTexturePx } from '../math/tierToTexturePx';
 
-/** `meshes/<meshKey>-<px>` — the stem every tiered mesh file hangs off,
- *  shared by `meshFetcher` (reads it) and `buildMeshes` (writes it). */
+/** `meshes/<meshKey>-<tier>` — the stem every tiered mesh file hangs off,
+ *  shared by `meshFetcher` (reads it) and `buildMeshes` (writes it), named
+ *  like the catalog tiers (`sdss-small.bin`), not the texture px cap. */
 export function meshTierPrefix(meshKey: string, tier: Tier): string {
-  return `meshes/${meshKey}-${tierToTexturePx(tier)}`;
+  return `meshes/${meshKey}-${tier}`;
 }

@@ -4,7 +4,7 @@
 
 **Goal:** Mesh bodies ship per-tier assets (geometry + textures), and the runtime fetches the largest tier at or below the app tier.
 
-**Architecture:** A straight copy of the body-texture tier machinery. Each mesh source names one raw GLB per tier it has; `buildMeshes` bakes every tier to `meshes/<key>-<px>.*` with textures capped at `tierToTexturePx(tier)`. The generated `MeshAssetRow` records `tierCeiling`, and `meshBodyRow.req(tier)` sends `clampTier(tier, tierCeiling)`, exactly as `bodyTextureRow` does (`src/services/engine/wiring/assetWiring.ts:71-90`).
+**Architecture:** A straight copy of the body-texture tier machinery. Each mesh source names one raw GLB per tier it has; `buildMeshes` bakes every tier to `meshes/<key>-<tier>.*` with textures capped at `tierToTexturePx(tier)`. The generated `MeshAssetRow` records `tierCeiling`, and `meshBodyRow.req(tier)` sends `clampTier(tier, tierCeiling)`, exactly as `bodyTextureRow` does (`src/services/engine/wiring/assetWiring.ts:71-90`).
 
 **Tech Stack:** TS, glTF-Transform, sharp, Vitest.
 
@@ -16,14 +16,14 @@
 
 - Tiers vary geometry AND textures (PR 2's small tier is decimated).
 - Each body lists the tiers it has; the fetcher gets the largest ≤ the app tier → implemented as a contiguous-from-`small` source set + `tierCeiling` + `clampTier`.
-- Every file is renamed to the px-suffixed form, existing bodies included (`whale.mesh` → `whale-2048.mesh`); no "unsuffixed = small" special case. One R2 re-sync + prune of the old names.
+- Every file is renamed to the tier-suffixed form, existing bodies included (`whale.mesh` → `whale-small.mesh`); no "unsuffixed = small" special case. One R2 re-sync + prune of the old names.
 
 ## Global Constraints
 
-- File names: `meshes/<key>-<px>.mesh`, `meshes/<key>-<px><slot.suffix>.webp` (`_albedo`, `_mr`, `_normal`), with `px = tierToTexturePx(tier)` (small 2048, medium 4096, large 8192). The contact mask stays UNTIERED: `meshes/<key>_contact.webp`.
+- File names: `meshes/<key>-<tier>.mesh`, `meshes/<key>-<tier><slot.suffix>.webp` (`_albedo`, `_mr`, `_normal`), named like the catalog tiers, with textures capped at `tierToTexturePx(tier)` (small 2048, medium 4096, large 8192). The contact mask stays UNTIERED: `meshes/<key>_contact.webp`.
 - Every existing body in `MESH_SOURCES` has exactly one tier, `small` (the Blender prebake bakes 2048², `tools/meshes/prebake/meshPrebake.py:18`).
 - `MESH_TRIANGLE_BUDGET` (600k) applies per tier file.
-- The R2 allow-list regexes (`tools/deploy/r2/allowDataFile.ts:19-20`) already admit `-2048` — no change there.
+- The R2 allow-list regexes (`tools/deploy/r2/allowDataFile.ts:19-20`) already admit `-small`/`-medium`/`-large` — no change there.
 
 ## Review Focus
 
@@ -73,7 +73,7 @@ readonly tierCeiling: Tier;
 ```
 
 Behaviour:
-- `bake` runs the existing per-GLB pipeline (ground-stamp check, one material, triangle budget, `mergeGeometry`, slot textures) once per tier, writing `<key>-<px>.mesh` and `<key>-<px><suffix>.webp`; `writeTexture` takes the tier's `tierToTexturePx` as its resize edge.
+- `bake` runs the existing per-GLB pipeline (ground-stamp check, one material, triangle budget, `mergeGeometry`, slot textures) once per tier, writing `<key>-<tier>.mesh` and `<key>-<tier><suffix>.webp`; `writeTexture` takes the tier's `tierToTexturePx` as its resize edge.
 - Row metrics (`boundingRadiusM`, `groundOffsetM`, `meanAlbedo`, `triangleCount`, `substituted`, `contactDecal`) and the contact mask come from the CEILING tier's GLB only.
 - A `tiers` set that is not `TIER_LADDER` prefix-contiguous from `small` throws: `buildMeshes: <key> ships tiers [small, large] — tiers must run contiguously from small`.
 - `main` maps each `MESH_SOURCES` entry's `tiers` through `rawDataPath`; every existing entry becomes `tiers: { small: 'meshes.<key>' }` (same raw key as today's `native`). `buildMeshes`'s stderr line prints `<key>` and its tiers instead of `row.path`.
@@ -81,12 +81,12 @@ Behaviour:
 
 Tests (existing fixtures build GLBs in-memory; give each target `glbPaths: { small: … }`):
 
-- [ ] `it('writes <key>-<px> geometry and slot textures for every source tier')` — a two-tier target (`small`, `medium`) → both `k-2048.*` and `k-4096.*` exist; no unsuffixed `k.mesh`.
+- [ ] `it('writes <key>-<tier> geometry and slot textures for every source tier')` — a two-tier target (`small`, `medium`) → both `k-small.*` and `k-medium.*` exist; no unsuffixed `k.mesh`.
 - [ ] `it('caps each tier's textures at tierToTexturePx(tier)')` — a 4096² source albedo → the small file is 2048 wide, the medium 4096 wide.
 - [ ] `it('takes row metrics from the ceiling tier')` — small and medium GLBs with different lowest vertices → `groundOffsetM` equals the medium one; `tierCeiling === 'medium'`.
 - [ ] `it('refuses a tier set that skips a rung')` — `{ small, large }` → throws the message above.
 - [ ] `it('keeps the contact mask untiered')` — a seated two-tier target writes exactly one `k_contact.webp`.
-- [ ] Update every existing test's target to `glbPaths: { small }` and every asserted path to the `-2048` form; `writes every MESH_TEXTURE_SLOTS suffix…` keeps its intent.
+- [ ] Update every existing test's target to `glbPaths: { small }` and every asserted path to the `-small` form; `writes every MESH_TEXTURE_SLOTS suffix…` keeps its intent.
 - [ ] `npm test -- tests/tools/meshes` green; `npm run typecheck:fast` green.
 - [ ] Commit.
 
@@ -103,7 +103,7 @@ Tests (existing fixtures build GLBs in-memory; give each target `glbPaths: { sma
 
 ```ts
 export type MeshReq = { readonly meshKey: string; readonly tier: Tier };
-/** `meshes/<meshKey>-<px>` — the stem every tiered mesh file hangs off. */
+/** `meshes/<meshKey>-<tier>` — the stem every tiered mesh file hangs off. */
 export function meshTierPrefix(meshKey: string, tier: Tier): string;
 ```
 
@@ -112,7 +112,7 @@ export function meshTierPrefix(meshKey: string, tier: Tier): string;
 
 Tests:
 
-- [ ] `meshFetcher`: `it('fetches the requested tier's geometry and textures')` — `{ meshKey: 'curiosity', tier: 'small' }` → the fetch URLs end `meshes/curiosity-2048.mesh` / `_albedo.webp` …; `it('fetches the contact mask untiered')` → `meshes/curiosity_contact.webp`.
+- [ ] `meshFetcher`: `it('fetches the requested tier's geometry and textures')` — `{ meshKey: 'curiosity', tier: 'small' }` → the fetch URLs end `meshes/curiosity-small.mesh` / `_albedo.webp` …; `it('fetches the contact mask untiered')` → `meshes/curiosity_contact.webp`.
 - [ ] `assetWiring`: `it('clamps a mesh body's tier to its tierCeiling')` — `req('large')` on a small-ceiling body → `tier: 'small'`.
 - [ ] `assetWiring` (Review Focus 2): a tier flip on a resident mesh body changes its `req` → re-trigger, following how the existing file asserts it for body textures (if the file has no such pattern, assert `req('small')` ≠ `req('medium')` on a medium-ceiling fixture row instead and say so in the commit).
 - [ ] `npm test` green; `npm run typecheck:fast` green.
@@ -122,18 +122,18 @@ Tests:
 
 **Files:**
 - Modify (generated): `src/data/bodies/meshAssets.generated.ts`
-- Outputs (gitignored): `public/data/meshes/*-2048.*`, `public/data/manifest.json`
+- Outputs (gitignored): `public/data/meshes/*-small.*`, `public/data/manifest.json`
 
 - [ ] **First**, un-share `public/data`: it is a symlink to main's (`readlink public/data`). Replace it with an APFS clone so the bake cannot touch main's live files: `rm public/data && cp -Rc /Users/rulkens/Development/js/skymap/public/data public/data` (clone = no extra disk).
 - [ ] Raw GLBs: `rawDataPath` resolves against cwd; if `data/raw/meshes/` is missing in this worktree, symlink it from main (`ln -s /Users/rulkens/Development/js/skymap/data/raw/meshes data/raw/meshes`, creating `data/raw/` first).
-- [ ] `npm run build-meshes` → every key writes `-2048` files; the generated table gains `tierCeiling: 'small'` and loses `path`; all other row values byte-identical to before (diff the table).
+- [ ] `npm run build-meshes` → every key writes `-small` files; the generated table gains `tierCeiling: 'small'` and loses `path`; all other row values byte-identical to before (diff the table).
 - [ ] Remove the now-orphaned unsuffixed `meshes/<key>.*` (+hash) files from THIS worktree's `public/data/meshes`, then regenerate the manifest the way `npm run dev`'s predev does (check `package.json` for the script name).
 - [ ] `npm test` green (the round-trip test pins the committed table to the serializer).
 - [ ] Commit the generated table.
 
 ## Definition of Done
 
-- **Deliverables:** `MeshSourceEntry.tiers`, `MeshBuildTarget.glbPaths`, `MeshAssetRow.tierCeiling` (and `path` gone), `MeshReq.tier`, `meshTierPrefix`, regenerated `meshAssets.generated.ts`; every mesh file on disk px-suffixed.
-- **Smoke (user eye-check, dev server in this worktree):** Curiosity and Perseverance on Mars render textured and seated with contact shadows; Hubble and a Voyager render textured; the whale and petunias render; the Network tab shows `-2048` mesh URLs; toggling the tier (small ↔ medium via the tier route) keeps every mesh loaded (medium clamps to small).
-- **Deploy (user, before merging):** `sync-r2-secure` from this worktree with a TRANSITION manifest naming both the old unsuffixed and the new `-2048` files — R2's `manifest.json` is the one production reads, so a manifest without the old names breaks the live (pre-merge) app, and one without the new names breaks the merged app. After the deploy verifies, delete the unsuffixed `meshes/<key>.*` locally, rebuild the manifest, re-sync, and prune the old R2 objects.
+- **Deliverables:** `MeshSourceEntry.tiers`, `MeshBuildTarget.glbPaths`, `MeshAssetRow.tierCeiling` (and `path` gone), `MeshReq.tier`, `meshTierPrefix`, regenerated `meshAssets.generated.ts`; every mesh file on disk tier-suffixed.
+- **Smoke (user eye-check, dev server in this worktree):** Curiosity and Perseverance on Mars render textured and seated with contact shadows; Hubble and a Voyager render textured; the whale and petunias render; the Network tab shows `-small` mesh URLs; toggling the tier (small ↔ medium via the tier route) keeps every mesh loaded (medium clamps to small).
+- **Deploy (user, before merging):** `sync-r2-secure` from this worktree with a TRANSITION manifest naming both the old unsuffixed and the new `-small`/`-medium` files — R2's `manifest.json` is the one production reads, so a manifest without the old names breaks the live (pre-merge) app, and one without the new names breaks the merged app. After the deploy verifies, delete the unsuffixed `meshes/<key>.*` locally, rebuild the manifest, re-sync, and prune the old R2 objects.
 - **Deferral boundary:** no body gains a second tier here — Søndermarken's `small` (decimated 2K) and `medium` (4K) sources, meshoptimizer decimation, computed normals, the terrain hole and placement are PR 2. No change to the Blender prebake's 2048 atlas.

@@ -1,5 +1,5 @@
 /**
- * buildMeshes — bake each tier's source GLB to `public/data/meshes/<key>-<px>.mesh`
+ * buildMeshes — bake each tier's source GLB to `public/data/meshes/<key>-<tier>.mesh`
  * plus one PNG per `MESH_TEXTURE_SLOTS` row, and rewrite
  * `src/data/bodies/meshAssets.generated.ts`.
  *
@@ -515,8 +515,8 @@ function bakeContactDecal(
 }
 
 /**
- * Bake one tier's GLB: geometry to `<key>-<px>.mesh`, every texture slot to
- * `<key>-<px><suffix>.webp` capped at that tier's `tierToTexturePx`. The
+ * Bake one tier's GLB: geometry to `<key>-<tier>.mesh`, every texture slot to
+ * `<key>-<tier><suffix>.webp` capped at that tier's `tierToTexturePx`. The
  * contact mask is UNTIERED and only ever written for the ceiling tier — the
  * caller passes `bakeContact: false` for every other tier so a two-tier body
  * still ends up with exactly one `<key>_contact.webp`.

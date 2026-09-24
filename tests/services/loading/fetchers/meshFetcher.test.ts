@@ -64,10 +64,10 @@ describe('meshFetcher', () => {
     );
 
     const urls = fetch.mock.mock.calls.map((call) => String(call[0]));
-    expect(urls.some((url) => url.endsWith('meshes/curiosity-2048.mesh'))).toBe(true);
-    expect(urls.some((url) => url.endsWith('meshes/curiosity-2048_albedo.webp'))).toBe(true);
-    expect(urls.some((url) => url.endsWith('meshes/curiosity-2048_mr.webp'))).toBe(true);
-    expect(urls.some((url) => url.endsWith('meshes/curiosity-2048_normal.webp'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small.mesh'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_albedo.webp'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_mr.webp'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_normal.webp'))).toBe(true);
   });
 
   it('fetches the contact mask untiered', async () => {
