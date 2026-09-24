@@ -1,5 +1,5 @@
 /**
- * Sgr A* lens pass tuning subsection (see `SgrAStarLensingTuning`'s own
+ * Sgr A* lens pass tuning subsection (see `BlackHoleLensingTuning`'s own
  * docblock). Structural precedent: `src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx`.
  * `cubemapResolutionPx` gets a `<select>` (four meaningful values) instead of
  * riding the generic slider board — the same "bespoke control after the rows"
@@ -12,34 +12,34 @@
  */
 
 import type { ReactElement } from 'react';
-import type { SgrAStarLensingTuning } from '../@types/SgrAStarLensingTuning';
+import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
 import type { HexString } from '../../../@types/math/HexString';
 import { hexToLinearRgb } from '../../../utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../../utils/color/linearRgbToHex';
 import {
-  SGR_A_STAR_LENSING_SLIDER_FIELDS,
-  sgrAStarLensingSliderPatch,
-} from './sgrAStarLensingSliderFields';
+  BLACK_HOLE_LENSING_SLIDER_FIELDS,
+  blackHoleLensingSliderPatch,
+} from './blackHoleLensingSliderFields';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';
 
-export type SgrAStarLensingTuningSectionProps = {
-  tuning: SgrAStarLensingTuning;
-  onChange: (patch: Partial<SgrAStarLensingTuning>) => void;
+export type BlackHoleLensingTuningSectionProps = {
+  tuning: BlackHoleLensingTuning;
+  onChange: (patch: Partial<BlackHoleLensingTuning>) => void;
 };
 
 const CUBEMAP_RESOLUTIONS = [256, 512, 1024, 2048] as const;
 
-export function SgrAStarLensingTuningSection({
+export function BlackHoleLensingTuningSection({
   tuning,
   onChange,
-}: SgrAStarLensingTuningSectionProps): ReactElement {
+}: BlackHoleLensingTuningSectionProps): ReactElement {
   return (
     <DebugTuningSection
       title="Sgr A* lens tuning"
-      fields={SGR_A_STAR_LENSING_SLIDER_FIELDS}
+      fields={BLACK_HOLE_LENSING_SLIDER_FIELDS}
       values={tuning}
-      onSliderChange={(k, v) => onChange(sgrAStarLensingSliderPatch(k, v))}
+      onSliderChange={(k, v) => onChange(blackHoleLensingSliderPatch(k, v))}
     >
       <div
         className={sliderStyles.root}

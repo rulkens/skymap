@@ -326,5 +326,5 @@ Spec §8, §10, and the P1–P6 amendments. The docs ride the PR.
 
 - M87\* and any second row; `Layer.captures`; S-star analytic lensing; the body Layer's own slab candidates off `bodySlabRowOf`; the six static palette inputs onto `search` (spec §7).
 - A `sourceCounts` feed for the Layer (spec §4 Search: no reader).
-- Renaming the `'sgrAStar'` capture key, `SkyCaptureKey`, the `'sgrAStar'` caption kind, `SCALE_FADE_BANDS.sgrAStar*`, the renderer and its WESL. These stay named for the one hole they serve, and renaming them is not part of this PR.
+- Renaming the `'sgrAStar'` capture key, `SkyCaptureKey`, the `'sgrAStar'` caption kind, `SCALE_FADE_BANDS.sgrAStar*`. These stay named for the one hole they serve, and renaming them is not part of this PR. *Amended (D4):* the renderer and its WESL DID rename — `SgrAStarLensing*` → `BlackHoleLensing*` — because `BlackHoleRow.band` becoming `capture: SkyCaptureKey` made the lens stack itself generic; only the fade-band key and the other names above stay Sgr-A\*-specific.
 - No deletion audit until `/feature-done`.

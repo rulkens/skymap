@@ -1,5 +1,5 @@
 /**
- * SgrAStarLensingRenderer — handle for the Sgr A* lens pass: a fullscreen
+ * BlackHoleLensingRenderer — handle for the black-hole lens pass: a fullscreen
  * triangle classifying each ray as captured (black), escaping (a
  * LUT-deflected sample of the captured sky cubemap), or crossing the
  * accretion annulus (bounded-march emission), composited premultiplied-OVER
@@ -14,13 +14,13 @@
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
 
-export type SgrAStarLensingRenderer = Renderer & {
+export type BlackHoleLensingRenderer = Renderer & {
   /** The CPU-side LUT this renderer's texture was built from — see the module header. */
   readonly lut: SchwarzschildDeflectionLut;
   /**
    * Draw the lens triangle into the current (depthless, premultiplied-OVER)
-   * pass. `uniforms` is the packed 176-byte `SgrAStarLensingUniforms`
-   * (`packSgrAStarLensingUniforms`); `skyCubemapView` is this frame's
+   * pass. `uniforms` is the packed 176-byte `BlackHoleLensingUniforms`
+   * (`packBlackHoleLensingUniforms`); `skyCubemapView` is this frame's
    * `dimension: 'cube'` view over the `sky-cubemap` render target
    * (`RenderTargets.cubeViewOf`) — read fresh by the caller every frame and
    * rebound here rather than cached at construction, the same reason

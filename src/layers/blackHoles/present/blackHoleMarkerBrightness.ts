@@ -7,6 +7,7 @@
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
+import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 
@@ -17,7 +18,6 @@ export function blackHoleMarkerBrightness(
 ): number {
   const anchor = states.get(row.anchorId);
   if (anchor === undefined) return 0;
-  return (
-    row.glintBaseIntensity * (1 - fadeBand(row.band, distanceMpc(camPosMpc, anchor.positionMpc)))
-  );
+  const band = CUBEMAP_CAPTURES[row.capture].band;
+  return row.glintBaseIntensity * (1 - fadeBand(band, distanceMpc(camPosMpc, anchor.positionMpc)));
 }

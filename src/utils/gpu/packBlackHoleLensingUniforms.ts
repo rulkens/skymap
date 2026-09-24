@@ -1,6 +1,6 @@
 /**
- * packSgrAStarLensingUniforms — pure packer for the 240-byte
- * `SgrAStarLensingUniforms` struct (`shaders/lib/sgrAStarLensing.wesl`).
+ * packBlackHoleLensingUniforms — pure packer for the 240-byte
+ * `BlackHoleLensingUniforms` struct (`shaders/lib/blackHoleLensing.wesl`).
  *
  * The CPU half of the uniform contract between the Sgr A* lens pass and its
  * WGSL. The struct is the shared
@@ -13,7 +13,7 @@
  * pass rather than a flat quad — this view's camera basis and frustum
  * tangents, which the vertex stage uses to build each fragment's ray.
  *
- * ## Byte layout (must stay byte-exact with `shaders/lib/sgrAStarLensing.wesl`)
+ * ## Byte layout (must stay byte-exact with `shaders/lib/blackHoleLensing.wesl`)
  *
  *   f32  0..15  (byte   0.. 63): cam.viewProj              mat4x4<f32>
  *   f32 16..17  (byte  64.. 71): cam.viewportPx             vec2<f32>
@@ -78,13 +78,13 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../services/gpu/lib/cameraUniforms';
 
-/** f32 count of `SgrAStarLensingUniforms` — 80-byte cam prefix (20) + 12
+/** f32 count of `BlackHoleLensingUniforms` — 80-byte cam prefix (20) + 12
  *  scalars + anchorPosRelCamM (3) + tuning knobs (4 scalars + emissionTint's
  *  3) + edgeFadeEndRs + _pad1 (24) + viewBasis (3 padded 16-B columns, 12) +
  *  frustumTan (4) = 60. */
-export const SGR_A_STAR_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 40;
+export const BLACK_HOLE_LENSING_UNIFORM_FLOATS = CAMERA_UNIFORM_BYTES / 4 + 40;
 
-export function packSgrAStarLensingUniforms(input: {
+export function packBlackHoleLensingUniforms(input: {
   readonly viewProj: Float32Array | Mat4;
   readonly viewportPx: Vec2;
   readonly pxPerRad: number;
@@ -134,7 +134,7 @@ export function packSgrAStarLensingUniforms(input: {
     viewBasis,
     frustum,
   } = input;
-  const out = new Float32Array(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
+  const out = new Float32Array(BLACK_HOLE_LENSING_UNIFORM_FLOATS);
   writeCameraPrefix(out, viewProj, viewportPx, pxPerRad); // f32 0..18; 19 stays zero
   out[20] = schwarzschildRadiusM; // byte 80
   out[21] = innerRs; // byte 84

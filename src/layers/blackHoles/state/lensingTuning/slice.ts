@@ -3,7 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { SgrAStarLensingTuning } from '../../@types/SgrAStarLensingTuning';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
 
 export const blackHoleLensingTuningSlice = createSlice({
   name: 'settings/blackHoleLensingTuning',
@@ -12,7 +12,10 @@ export const blackHoleLensingTuningSlice = createSlice({
   reducers: {
     // Leaf-by-leaf patch, no visibility axis to protect (this cluster is
     // pure knobs, not a singleton overlay).
-    setBlackHoleLensingTuning: (cluster, action: PayloadAction<Partial<SgrAStarLensingTuning>>) => {
+    setBlackHoleLensingTuning: (
+      cluster,
+      action: PayloadAction<Partial<BlackHoleLensingTuning>>,
+    ) => {
       Object.assign(cluster, action.payload);
     },
   },

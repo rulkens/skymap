@@ -42,6 +42,8 @@ export type BlackHoleRow = {
 
 *Amended at PR 2:* `glintBaseIntensity` joined `glintTint` on the row.
 
+*Amended at PR 2 (D4):* the lens stack is generic — `band: FadeBand` became `capture: SkyCaptureKey` (`'sgrAStar'` today), and every reader derives its band via `CUBEMAP_CAPTURES[row.capture].band` instead of reading `row.band` directly. The renderer and its WESL renamed `SgrAStarLensing*` → `BlackHoleLensing*`; the `'sgrAStar'` capture key, `SkyCaptureKey`, the caption kind, and `SCALE_FADE_BANDS.sgrAStar*` (incl. `sgrAStarLensing`) keep their names — they still name the one hole those specific facts belong to.
+
 ### 2.2 The place anchor (core)
 
 ```ts
@@ -137,6 +139,8 @@ The Layer's row: `{ anchorId: 'galactic-centre', drawRadiusM: sgrAStarLensEnvelo
 
 *Amended at PR 2:* the row's footprint stays r_s (P1). Its view-dependent extent is already `drawRadiusM`.
 
+*Amended at PR 2 (D4):* `drawRadiusM` is `blackHoleLensEnvelopeM(row)` — a function of the row, returning the `(distM, pxPerRad) => number` closure — and `activeBand` reads `CUBEMAP_CAPTURES[row.capture].band`, so the "by reference, not a copy" fact above now holds through the row's own `capture` key rather than a hard-coded `sgrAStarLensing` literal.
+
 ### 2.6 Store
 
 `state.engine.layerSearch: Record<string, readonly LayerSearchEntry[]>` keyed by Layer name, whole-snapshot replace per yield; `selectLayerSearchRows` flattens. The key is not deleted at teardown in PR 1 — zero tenants, so a stale row after engine teardown is unreachable; PR 2 adds the delete with the first tenant. `sourceCounts` keeps today's `engineSourceCountReported` action and `sourceCounts` map — three sagas pulse on the action (`watchTierSaga.ts:80`, `watchSelectionRowsSaga.ts:72`, `resolveFocusRefDeferringSaga.ts:19`) and `createLayers`' `contentVersion` bump and `engineStatusChanged` side effects move into the consuming saga unchanged. The Layer's settings: `layers/blackHoles/state/lensingTuning/` (today's `sgrAStarLensingTuning` slice, key renamed) plus the source row's `visible`/`labelEnabled`.
@@ -177,8 +181,10 @@ src/layers/blackHoles/
 
 *Amended at PR 2:* the tree above is the shipped one: the renderer sits under `render/`, and there is no footprint helper.
 
+*Amended at PR 2 (D4):* `render/sgrAStarLensingRenderer.ts` and `ui/SgrAStarLensingTuningSection*.tsx` above are the pre-D4 names — the lens stack renamed `SgrAStarLensing*` → `BlackHoleLensing*` throughout (renderer, WESL, packer, types, UI), so those paths now read `render/blackHoleLensingRenderer.ts` and `ui/BlackHoleLensingTuningSection*.tsx`.
+
 - **Marker** (grill Q8): one additive billboard per row at the anchor's position, brightness `base × (1 − fadeBand(row.band))` (`blackHoleMarkerBrightness`), tint from the row, `drawPick` stamping `packSelection(Source.SgrAStar, rowIndex + PICK_SENTINEL_OFFSET)`. *Amended at PR 2:* the stamp is emitted while the marker OR the caption is visible (`blackHolePickable`, P5). A fullscreen lens cannot stamp a point, and the caption stays full inside the band where the marker has faded, so the caption carries the click there. Deletes `bodyGlintsPass.ts:270-300`'s second packed source, `SGR_A_STAR_GLINT_TINT`, the staging slot and the anchor term in `MAX_GLINTS`; deletes `starPointsPass.ts:325-360`'s anchor stamp and `sgrAStarCaptionPickable`. The S-star exclusion stays in the star Layer (see the bullet below).
-- **Lens**: `sgrAStarLensingPass.ts` moves in as `blackHoleLensingPass.ts`, reading the tuning at its new path and the row's `massSolar`; the pipeline and `sgrAStarLensingRenderer` are unchanged. The frame-graph line `frameSections.ts:191` renames its pass `'black-hole-lensing'`; its position (after the additive roster, before the unwarped glint step) is unchanged.
+- **Lens**: `sgrAStarLensingPass.ts` moves in as `blackHoleLensingPass.ts`, reading the tuning at its new path and the row's `massSolar`; the pipeline and `sgrAStarLensingRenderer` are unchanged. The frame-graph line `frameSections.ts:191` renames its pass `'black-hole-lensing'`; its position (after the additive roster, before the unwarped glint step) is unchanged. *Amended at PR 2 (D4):* `sgrAStarLensingRenderer` renamed `blackHoleLensingRenderer` (with its WESL, packer and types) — the pass now reads `row.capture` rather than a hard-coded `'sgrAStar'`, so a second hole with a different capture needs no branch here.
 - **Caption** (grill Q5, reconcile): the `'sgrAStar'` `ForegroundCaption` leaves `sceneBodyLabels.ts:105-111`; the Layer's `guides.screenLabels` row names slab NEAR0 and reuses `captionFadeRules.ts:133-142`'s rule and `SCALE_FADE_BANDS.sgrAStarCaption`. *Amended at PR 2:* the rule stays in core's closed `CAPTION_FADE_RULES` table, re-keyed to `settings.blackHoles`; only the producer moved (P4). The Layer's caption fade row is keyed `'bodyLabel'`, so tour `bodyLabel` cues also write `blackHoles.items`.
 - **Capture** (grill Q6, deferred): the `sky-cubemap` target row (`renderTargets.ts:223-238`) moves onto `Layer.targets` — its `size` reads the Layer's tuning slice — while `CUBEMAP_CAPTURES.sgrAStar`, `captureRowAllocateWhen('sgrAStar')` and `scheduleSkyCaptures` stay core; the Layer's lens pass samples the core capture. `Layer.captures` prep follows dome #800 and the `2026-09-22-captures-as-views.md` ruling.
 - **Search**: `search: async function* () { yield [{ id: 'blackhole-sgr-a-star', names: [label, detailLabel, ...aliases], class: 'primary' }]; }` (amended at PR 2, §2.4). No `sourceCounts`: nothing reports a count for Sgr A\* today, and a `count: 1` would move the status bar's "ready" total for no reader.

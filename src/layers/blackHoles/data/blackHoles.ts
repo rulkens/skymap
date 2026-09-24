@@ -8,14 +8,13 @@ import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../data/bodies/sgrAStarMassSolar';
 import { SGR_A_STAR_ENTRY } from '../sources/sgrAStar';
-import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 
 export const BLACK_HOLES: readonly BlackHoleRow[] = [
   {
     id: SGR_A_STAR_ENTRY.id,
     anchorId: GALACTIC_CENTRE_ANCHOR.id,
     massSolar: SGR_A_STAR_MASS_SOLAR,
-    band: SCALE_FADE_BANDS.sgrAStarLensing,
+    capture: 'sgrAStar',
     standoffRadii: 2.0,
     focusDistanceRadii: 30.4,
     // Warm orange, tuned to read against the additive HDR field it shares with

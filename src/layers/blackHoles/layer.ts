@@ -24,7 +24,7 @@ import { blackHoleSearch } from './present/blackHoleSearch';
 import { blackHoleFadeRows } from './present/blackHoleFadeRows';
 import { produceBlackHoleCaptions } from './present/produceBlackHoleCaptions';
 import { SKY_CUBEMAP_TARGET } from './render/skyCubemapTarget';
-import SgrAStarLensingTuningSectionContainer from './ui/SgrAStarLensingTuningSectionContainer';
+import BlackHoleLensingTuningSectionContainer from './ui/BlackHoleLensingTuningSectionContainer';
 import BlackHoleDetailCard from './ui/BlackHoleDetailCard/BlackHoleDetailCard';
 import CompactBlackHoleCard from './ui/CompactBlackHoleCard/CompactBlackHoleCard';
 
@@ -46,7 +46,7 @@ export const blackHolesLayer = defineLayer({
   selection: () => [blackHoleSelectionRow()],
   search: () => blackHoleSearch(),
   ui: [
-    { slot: 'debug', content: SgrAStarLensingTuningSectionContainer },
+    { slot: 'debug', content: BlackHoleLensingTuningSectionContainer },
     {
       slot: 'detailCard',
       content: {

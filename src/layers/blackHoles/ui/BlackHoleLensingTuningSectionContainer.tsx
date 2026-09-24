@@ -1,5 +1,5 @@
 /**
- * Store boundary for the DebugPanel's Sgr A* lens tuning knobs. Mirrors
+ * Store boundary for the DebugPanel's black-hole lens tuning knobs. Mirrors
  * `ZoneOfAvoidanceTuningSectionContainer`: `selectBlackHoleLensingTuning`
  * returns the whole cluster (the slider board reads every knob), so this
  * subtree re-renders on any write to it — the right granularity for a small
@@ -7,22 +7,22 @@
  */
 
 import { memo, useCallback } from 'react';
-import { SgrAStarLensingTuningSection } from './SgrAStarLensingTuningSection';
+import { BlackHoleLensingTuningSection } from './BlackHoleLensingTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectBlackHoleLensingTuning } from '../state/lensingTuning/selectors';
 import { setBlackHoleLensingTuning } from '../state/lensingTuning/slice';
-import type { SgrAStarLensingTuning } from '../@types/SgrAStarLensingTuning';
+import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
 
-function SgrAStarLensingTuningSectionContainer(): React.ReactElement {
+function BlackHoleLensingTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const tuning = useAppSelector(selectBlackHoleLensingTuning);
 
   const onChange = useCallback(
-    (patch: Partial<SgrAStarLensingTuning>) => dispatch(setBlackHoleLensingTuning(patch)),
+    (patch: Partial<BlackHoleLensingTuning>) => dispatch(setBlackHoleLensingTuning(patch)),
     [dispatch],
   );
 
-  return <SgrAStarLensingTuningSection tuning={tuning} onChange={onChange} />;
+  return <BlackHoleLensingTuningSection tuning={tuning} onChange={onChange} />;
 }
 
-export default memo(SgrAStarLensingTuningSectionContainer);
+export default memo(BlackHoleLensingTuningSectionContainer);

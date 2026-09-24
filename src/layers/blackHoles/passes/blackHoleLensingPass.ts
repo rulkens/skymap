@@ -15,7 +15,7 @@ import type { BlackHolesRuntime } from '../@types/BlackHolesRuntime';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
-import { packSgrAStarLensingUniforms } from '../../../utils/gpu/packSgrAStarLensingUniforms';
+import { packBlackHoleLensingUniforms } from '../../../utils/gpu/packBlackHoleLensingUniforms';
 import { lensEdgeFadeEndRs } from '../../../utils/lensing/lensEdgeFadeEndRs';
 import { skyCaptureBandAlpha } from '../../../services/engine/frame/skyCaptureBandAlpha';
 
@@ -49,7 +49,7 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
       // the hole's `SlabRow` exists, and that row's `activeBand` is the SAME
       // band object this alpha reads off `CUBEMAP_CAPTURES` — the single gate;
       // the uniform still needs the value (spec §2.5).
-      const bandAlpha = skyCaptureBandAlpha('sgrAStar', state, ctx);
+      const bandAlpha = skyCaptureBandAlpha(row.capture, state, ctx);
 
       // The hole's position relative to the camera, in the SAME body-local
       // frame `view.slab.vp` was built in (camera at the origin) — the
@@ -79,7 +79,7 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
         renderer.lut.maxImpactParamRs,
       );
 
-      const uniforms = packSgrAStarLensingUniforms({
+      const uniforms = packBlackHoleLensingUniforms({
         viewProj: view.vp,
         viewportPx: view.viewportPx,
         pxPerRad: ctx.drawPxPerRad,
@@ -107,7 +107,9 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
 
       // Named by the CAPTURE the lens samples, not by the texture that
       // capture happens to own.
-      const capturedSky = ctx.snapshot.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.sgrAStar.target);
+      const capturedSky = ctx.snapshot.renderTargets.cubeViewOf(
+        CUBEMAP_CAPTURES[row.capture].target,
+      );
       renderer.draw(pass, uniforms, capturedSky);
     },
   };

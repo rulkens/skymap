@@ -1,14 +1,14 @@
 /**
- * SgrAStarLensingTuning — the shipped DebugPanel knobs for the Sgr A* lens
+ * BlackHoleLensingTuning — the shipped DebugPanel knobs for the Sgr A* lens
  * pass. Tier 1 overrides `BLACK_HOLES` at pack time; Tier 2 + emission
- * strength/tint are `SgrAStarLensingUniforms` fields (the 176-byte tail); the
+ * strength/tint are `BlackHoleLensingUniforms` fields (the 176-byte tail); the
  * rest are non-uniform CPU-side knobs on the same settings seam. No
  * `glintTint`/`glintIntensity` — see `bodyGlintsPass.ts`.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-export type SgrAStarLensingTuning = {
+export type BlackHoleLensingTuning = {
   // ── Tier 1 — BLACK_HOLES override, rides the existing uniform fields ────
   innerRs: number;
   outerRs: number;

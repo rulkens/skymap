@@ -1,4 +1,4 @@
-// bodies/sgrAStarLensing/fragment.wesl — Schwarzschild ray classification:
+// bodies/blackHoleLensing/fragment.wesl — Schwarzschild ray classification:
 // capture (black), escape (LUT-deflected sky-cubemap sample), or annulus
 // (bounded emission march), composited over the escape/capture base.
 //
@@ -6,13 +6,13 @@
 // guaranteed to survive a fast-math compiler), so 'CAPTURE_THRESHOLD_RAD' is
 // a threshold check, not an isinf() test.
 
-import package::lib::sgrAStarLensing::SgrAStarLensingUniforms;
+import package::lib::blackHoleLensing::BlackHoleLensingUniforms;
 import package::lib::math::rotateAroundAxis;
 import package::lib::math::saturate;
 import package::lib::math::TAU;
 import package::lib::util::hash21Hq;
 
-@group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
+@group(0) @binding(0) var<uniform> u: BlackHoleLensingUniforms;
 @group(0) @binding(1) var lutTex: texture_2d<f32>;
 @group(0) @binding(2) var skyTex: texture_cube<f32>;
 @group(0) @binding(3) var skySampler: sampler;

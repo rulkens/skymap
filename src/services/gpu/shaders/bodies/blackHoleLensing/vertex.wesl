@@ -1,12 +1,12 @@
-// bodies/sgrAStarLensing/vertex.wesl — fullscreen triangle per view: the
+// bodies/blackHoleLensing/vertex.wesl — fullscreen triangle per view: the
 // lensed region is a solid angle around the hole that a flat billboard
 // cannot cover once the camera sits inside the escape-fade radius. Each
 // fragment's ray is built from the view's own frustum, so five dome faces
 // and the mono canvas share one rule.
 
-import package::lib::sgrAStarLensing::SgrAStarLensingUniforms;
+import package::lib::blackHoleLensing::BlackHoleLensingUniforms;
 
-@group(0) @binding(0) var<uniform> u: SgrAStarLensingUniforms;
+@group(0) @binding(0) var<uniform> u: BlackHoleLensingUniforms;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,

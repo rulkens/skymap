@@ -1,8 +1,8 @@
 import type { SliderField } from '../../../@types/data/SliderField';
-import type { SgrAStarLensingSliderKey } from './SgrAStarLensingSliderKey';
+import type { BlackHoleLensingSliderKey } from './BlackHoleLensingSliderKey';
 
 /**
  * UI metadata for one Sgr A* lens tuning slider, iterated by the DebugPanel
  * section.
  */
-export type SgrAStarLensingSliderField = SliderField<SgrAStarLensingSliderKey>;
+export type BlackHoleLensingSliderField = SliderField<BlackHoleLensingSliderKey>;

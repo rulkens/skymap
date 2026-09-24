@@ -1,5 +1,5 @@
 /**
- * sgrAStarLensingRenderer — the Sgr A* lens pass: one fullscreen-triangle
+ * blackHoleLensingRenderer — the black-hole lens pass: one fullscreen-triangle
  * draw per view classifying capture/escape/annulus rays against the
  * deflection LUT and the sky cubemap. Structural precedent: `bodyGlintRenderer.ts`.
  *
@@ -12,14 +12,14 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { SgrAStarLensingRenderer } from '../@types/SgrAStarLensingRenderer';
+import type { BlackHoleLensingRenderer } from '../@types/BlackHoleLensingRenderer';
 import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
-import vsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl?static';
+import vsCode from '../../../services/gpu/shaders/bodies/blackHoleLensing/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { PREMULTIPLIED_OVER_BLEND } from '../../../services/gpu/lib/blendStates';
 import { buildSchwarzschildDeflectionLut } from '../../../utils/lensing/buildSchwarzschildDeflectionLut';
-import { SGR_A_STAR_LENSING_UNIFORM_FLOATS } from '../../../utils/gpu/packSgrAStarLensingUniforms';
+import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from '../../../utils/gpu/packBlackHoleLensingUniforms';
 
 /**
  * LUT texel count: dense enough that the fragment's 2-tap lerp reads as
@@ -42,7 +42,7 @@ const CAPTURE_SENTINEL_RAD = 1000;
 
 function createLutTexture(device: GPUDevice, lut: SchwarzschildDeflectionLut): GPUTexture {
   const texture = device.createTexture({
-    label: 'sgr-a-star-lensing-lut-texture',
+    label: 'black-hole-lensing-lut-texture',
     format: 'r32float',
     dimension: '2d',
     size: { width: lut.samples.length, height: 1 },
@@ -66,31 +66,31 @@ function createLutTexture(device: GPUDevice, lut: SchwarzschildDeflectionLut): G
   return texture;
 }
 
-export function createSgrAStarLensingRenderer(
+export function createBlackHoleLensingRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
-): SgrAStarLensingRenderer {
+): BlackHoleLensingRenderer {
   const lut = buildSchwarzschildDeflectionLut(LUT_SAMPLE_COUNT);
   const lutTexture = createLutTexture(device, lut);
-  const lutView = lutTexture.createView({ label: 'sgr-a-star-lensing-lut-view' });
+  const lutView = lutTexture.createView({ label: 'black-hole-lensing-lut-view' });
 
   // Sized off the packer's own float count, so a new struct field can't leave
   // this buffer one `writeBuffer` validation error short at runtime.
   const uniformBuffer = device.createBuffer({
-    label: 'sgr-a-star-lensing-uniform-buffer',
-    size: SGR_A_STAR_LENSING_UNIFORM_FLOATS * 4,
+    label: 'black-hole-lensing-uniform-buffer',
+    size: BLACK_HOLE_LENSING_UNIFORM_FLOATS * 4,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const skySampler = device.createSampler({
-    label: 'sgr-a-star-lensing-sky-sampler',
+    label: 'black-hole-lensing-sky-sampler',
     magFilter: 'linear',
     minFilter: 'linear',
   });
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
   const bindGroupLayout = device.createBindGroupLayout({
-    label: 'sgr-a-star-lensing-bgl',
+    label: 'black-hole-lensing-bgl',
     entries: [
       {
         binding: 0,
@@ -113,13 +113,13 @@ export function createSgrAStarLensingRenderer(
     ],
   });
 
-  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'sgrAStarLensing.vertex');
-  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'sgrAStarLensing.fragment');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'blackHoleLensing.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'blackHoleLensing.fragment');
 
   const pipeline = device.createRenderPipeline({
-    label: 'sgr-a-star-lensing-pipeline',
+    label: 'black-hole-lensing-pipeline',
     layout: device.createPipelineLayout({
-      label: 'sgr-a-star-lensing-pipeline-layout',
+      label: 'black-hole-lensing-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
     }),
     vertex: { module: vsModule, entryPoint: 'vs' },
@@ -147,7 +147,7 @@ export function createSgrAStarLensingRenderer(
     // the whole group anyway keeps this one call site simple, and one
     // bind-group alloc per frame for a single-draw pass is negligible.
     const bindGroup = device.createBindGroup({
-      label: 'sgr-a-star-lensing-bg',
+      label: 'black-hole-lensing-bg',
       layout: bindGroupLayout,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
@@ -169,8 +169,8 @@ export function createSgrAStarLensingRenderer(
     uniformBuffer.destroy();
   }
 
-  const renderer: SgrAStarLensingRenderer = {
-    label: 'sgrAStarLensingRenderer',
+  const renderer: BlackHoleLensingRenderer = {
+    label: 'blackHoleLensingRenderer',
     lut,
     draw,
     destroy,

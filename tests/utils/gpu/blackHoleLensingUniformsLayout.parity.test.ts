@@ -1,9 +1,9 @@
 /**
- * SgrAStarLensingUniforms WESL<->packer parity — nothing else reads the WGSL
- * struct itself, so a field reorder in `sgrAStarLensing.wesl` (a field
+ * BlackHoleLensingUniforms WESL<->packer parity — nothing else reads the WGSL
+ * struct itself, so a field reorder in `blackHoleLensing.wesl` (a field
  * inserted ahead of `anchorPosRelCamM`, say) would drift silently past a
  * packer test asserting only its own documented offsets and hand the GPU a
- * shifted struct. This parses `struct SgrAStarLensingUniforms` out of the
+ * shifted struct. This parses `struct BlackHoleLensingUniforms` out of the
  * .wesl file, derives its std140 float offsets, then drives the REAL packer
  * with a distinct sentinel per field and asserts each sentinel lands where
  * the struct — not the packer — says it should. Follows the
@@ -20,18 +20,18 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import {
-  packSgrAStarLensingUniforms,
-  SGR_A_STAR_LENSING_UNIFORM_FLOATS,
-} from '../../../src/utils/gpu/packSgrAStarLensingUniforms';
+  packBlackHoleLensingUniforms,
+  BLACK_HOLE_LENSING_UNIFORM_FLOATS,
+} from '../../../src/utils/gpu/packBlackHoleLensingUniforms';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
-const weslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/sgrAStarLensing.wesl');
+const weslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/blackHoleLensing.wesl');
 
-/** std140 alignment + size for the types SgrAStarLensingUniforms uses.
+/** std140 alignment + size for the types BlackHoleLensingUniforms uses.
  *  `lanes: 0` marks the embedded `CameraUniforms` prefix — its block offset
  *  still comes from this table (it advances the cursor 80 bytes), but its
  *  content is not asserted here; see the module header for why. `lanes: -1`
@@ -51,7 +51,7 @@ function roundUp(value: number, align: number): number {
 
 function structFields(source: string, name: string): Array<{ name: string; type: string }> {
   const body = source.match(new RegExp(`struct\\s+${name}\\s*\\{([^}]*)\\}`))?.[1];
-  if (!body) throw new Error(`struct ${name} not found in sgrAStarLensing.wesl`);
+  if (!body) throw new Error(`struct ${name} not found in blackHoleLensing.wesl`);
   return body
     .split(',')
     .map((line) => line.replace(/\/\/.*$/gm, '').trim())
@@ -59,7 +59,7 @@ function structFields(source: string, name: string): Array<{ name: string; type:
     .map((line) => {
       const [fieldName, type] = line.split(':').map((part) => part.trim());
       if (!fieldName || !type)
-        throw new Error(`unparsable SgrAStarLensingUniforms field: '${line}'`);
+        throw new Error(`unparsable BlackHoleLensingUniforms field: '${line}'`);
       return { name: fieldName, type };
     });
 }
@@ -86,12 +86,12 @@ function structLayout(fields: Array<{ name: string; type: string }>): {
   return { layout, totalFloats: roundUp(cursor, maxAlign) / 4 };
 }
 
-describe('SgrAStarLensingUniforms WESL/packer parity', () => {
+describe('BlackHoleLensingUniforms WESL/packer parity', () => {
   const wesl = readFileSync(weslPath, 'utf8');
-  const { layout, totalFloats } = structLayout(structFields(wesl, 'SgrAStarLensingUniforms'));
+  const { layout, totalFloats } = structLayout(structFields(wesl, 'BlackHoleLensingUniforms'));
 
-  it('struct float count matches SGR_A_STAR_LENSING_UNIFORM_FLOATS', () => {
-    expect(totalFloats).toBe(SGR_A_STAR_LENSING_UNIFORM_FLOATS);
+  it('struct float count matches BLACK_HOLE_LENSING_UNIFORM_FLOATS', () => {
+    expect(totalFloats).toBe(BLACK_HOLE_LENSING_UNIFORM_FLOATS);
   });
 
   it('the real packer writes each field at the offset the struct declares', () => {
@@ -126,7 +126,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
     const viewBasis: Mat3 = [901, 902, 903, 904, 905, 906, 907, 908, 909];
     const frustum = { tanLeft: 910, tanRight: 911, tanDown: 912, tanUp: 913 };
 
-    const rec = packSgrAStarLensingUniforms({
+    const rec = packBlackHoleLensingUniforms({
       viewProj,
       viewportPx,
       pxPerRad,

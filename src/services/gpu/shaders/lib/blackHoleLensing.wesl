@@ -1,5 +1,5 @@
-// lib/sgrAStarLensing.wesl — byte-layout contract (exceeds the usual header
-// budget on that basis, same allowance camera.wesl takes) for the Sgr A*
+// lib/blackHoleLensing.wesl — byte-layout contract (exceeds the usual header
+// budget on that basis, same allowance camera.wesl takes) for the black-hole
 // lens pass's per-frame uniform buffer.
 //
 // This is the struct-only half of the contract. 'SchwarzschildDeflectionLut
@@ -48,7 +48,7 @@
 // so 'anchorPosRelCamM' lands on a 16-byte boundary with no implicit padding
 // — the same "count the scalars before a vec3" check 'camera.wesl' and
 // 'milkyWay/sprites/io.wesl' document. The CPU-side 'Float32Array' must
-// write each field at the matching f32 index (see 'packSgrAStarLensingUniforms.ts',
+// write each field at the matching f32 index (see 'packBlackHoleLensingUniforms.ts',
 // the single source of truth for that half of the contract) or the GPU
 // silently reads garbage — no compile error, no runtime error, just a wrong
 // (or on iOS, dropped) frame.
@@ -60,7 +60,7 @@
 
 import package::lib::camera::CameraUniforms;
 
-struct SgrAStarLensingUniforms {
+struct BlackHoleLensingUniforms {
   cam: CameraUniforms,
   schwarzschildRadiusM: f32,
   innerRs: f32,

@@ -7,16 +7,14 @@
 
 import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
 import type { PlaceId } from '../../../@types/scene/PlaceId';
-import type { FadeBand } from '../../../@types/math/FadeBand';
+import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type BlackHoleRow = {
   readonly id: BlackHoleId;
   readonly anchorId: PlaceId; // the lens's pose key and slab host
   readonly massSolar: number; // solar masses; r_s = schwarzschildRadiusM(massSolar)
-  // By reference: the sky capture holds the same object, so the lens can never
-  // sample a cubemap its band did not capture into.
-  readonly band: FadeBand;
+  readonly capture: SkyCaptureKey; // which sky bake the lens samples and bands against
   // The descent floor, in r_s: the camera may approach to 2 r_s, well inside
   // the Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
   readonly standoffRadii: number;

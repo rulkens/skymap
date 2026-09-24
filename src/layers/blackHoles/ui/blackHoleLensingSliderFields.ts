@@ -1,15 +1,15 @@
 /**
- * SGR_A_STAR_LENSING_SLIDER_FIELDS — UI metadata for the Sgr A* lens pass's
+ * BLACK_HOLE_LENSING_SLIDER_FIELDS — UI metadata for the Sgr A* lens pass's
  * DebugPanel sliders. Same shape as
  * `data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.ts`: label,
  * range, granularity and formatting live in ONE row per knob.
- * `cubemapResolutionPx` isn't here — see `SgrAStarLensingSliderKey`.
+ * `cubemapResolutionPx` isn't here — see `BlackHoleLensingSliderKey`.
  */
-import type { SgrAStarLensingTuning } from '../@types/SgrAStarLensingTuning';
-import type { SgrAStarLensingSliderKey } from '../@types/SgrAStarLensingSliderKey';
-import type { SgrAStarLensingSliderField } from '../@types/SgrAStarLensingSliderField';
+import type { BlackHoleLensingTuning } from '../@types/BlackHoleLensingTuning';
+import type { BlackHoleLensingSliderKey } from '../@types/BlackHoleLensingSliderKey';
+import type { BlackHoleLensingSliderField } from '../@types/BlackHoleLensingSliderField';
 
-export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderField[] = [
+export const BLACK_HOLE_LENSING_SLIDER_FIELDS: readonly BlackHoleLensingSliderField[] = [
   {
     key: 'innerRs',
     label: 'innerRs',
@@ -108,15 +108,15 @@ export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderFie
 ];
 
 /**
- * Build a `SgrAStarLensingTuning` patch for one slider field. The cast is
- * sound: every `SgrAStarLensingSliderKey` addresses a number-valued leaf, but
+ * Build a `BlackHoleLensingTuning` patch for one slider field. The cast is
+ * sound: every `BlackHoleLensingSliderKey` addresses a number-valued leaf, but
  * a computed-key object literal widens to `{ [k: string]: number }`, which
  * the compiler won't narrow on its own — the same trick `zoneOfAvoidanceSliderPatch`
  * uses.
  */
-export function sgrAStarLensingSliderPatch(
-  key: SgrAStarLensingSliderKey,
+export function blackHoleLensingSliderPatch(
+  key: BlackHoleLensingSliderKey,
   value: number,
-): Partial<SgrAStarLensingTuning> {
-  return { [key]: value } as Partial<SgrAStarLensingTuning>;
+): Partial<BlackHoleLensingTuning> {
+  return { [key]: value } as Partial<BlackHoleLensingTuning>;
 }

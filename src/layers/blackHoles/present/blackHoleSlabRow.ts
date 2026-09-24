@@ -7,15 +7,16 @@
 
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
+import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
-import { sgrAStarLensEnvelopeM } from '../../../data/bodies/sgrAStarLensEnvelope';
+import { blackHoleLensEnvelopeM } from './blackHoleLensEnvelopeM';
 
 export function blackHoleSlabRow(row: BlackHoleRow): SlabRow {
   return {
     anchorId: row.anchorId,
-    drawRadiusM: sgrAStarLensEnvelopeM,
+    drawRadiusM: blackHoleLensEnvelopeM(row),
     footprintRadiusM: schwarzschildRadiusM(row.massSolar),
-    activeBand: row.band,
+    activeBand: CUBEMAP_CAPTURES[row.capture].band,
     source: 'lens',
   };
 }
