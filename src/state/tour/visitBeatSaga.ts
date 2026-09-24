@@ -2,7 +2,7 @@
  * visitBeatSaga — the per-beat worker of the guided tour. Returns the outcome
  * the outer loop steers by: `'next'` (advance / auto-advance) or `'prev'`
  * (step back). `exitTakeover` is NOT handled here — it aborts the whole run via
- * `tourBody`'s outer race, which cancels this worker mid-flight.
+ * `tourBodySaga`'s outer race, which cancels this worker mid-flight.
  *
  * ### What each step does and why
  *
@@ -12,7 +12,7 @@
  *    caption is derived (registry + index), so the saga never dispatches caption
  *    text — only the index that selectors resolve it from.
  *
- * 2. **Wait for clip foci AND camera runtime** (`waitUntil`): a clip carrying
+ * 2. **Wait for clip foci AND camera runtime** (`waitUntilSaga`): a clip carrying
  *    `moveTargetId`/`dollyToId`/`focusId` cues cannot resolve until the relevant
  *    catalog data is loaded; `resolveClipFoci` also needs the current FOV, which
  *    is null pre-bootstrap. Poll until both are available. The gate covers BOTH
@@ -49,7 +49,7 @@ import { call, put, race, take, getContext, select } from 'typed-redux-saga';
 
 import { advanceTour, prevBeat } from './tourActions';
 import { pausableDwellSaga } from './pausableDwellSaga';
-import { waitUntil } from './waitUntil';
+import { waitUntilSaga } from './waitUntilSaga';
 import { clipFociReady } from './clipFociReady';
 import { beatChanged, dwellStarted } from './tourSlice';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
@@ -66,7 +66,7 @@ export type { BeatOutcome };
 
 /**
  * Play one beat: announce the index, wait for clip data, resolve foci, fly,
- * then hand off to the pausable dwell. The outer `tourBody` loop adjusts
+ * then hand off to the pausable dwell. The outer `tourBodySaga` loop adjusts
  * its index from the returned outcome.
  */
 export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown, BeatOutcome> {
@@ -81,7 +81,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   // (2) Block until every id-bearing cue — in BOTH clips — resolves AND the
   // camera runtime exists.
   yield* call(
-    waitUntil,
+    waitUntilSaga,
     () =>
       (beat.enterClip === undefined || clipFociReady(beat.enterClip, selection)) &&
       clipFociReady(beat.dwellClip, selection) &&

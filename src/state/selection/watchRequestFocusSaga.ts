@@ -1,7 +1,7 @@
 /**
  * watchRequestFocusSaga — the deep-link / palette FLY command handler.
  * requestFocus carries a durable focus id; this resolves it to a ref via the
- * shared resolveFocusRefDeferring loop, which DEFERS while the id is unresolvable
+ * shared resolveFocusRefDeferringSaga loop, which DEFERS while the id is unresolvable
  * on the catalog-landed pulse — engineSourceCountReported, which every source
  * reports on commit, the Gaia star bin included, so a star deep link resolves too. Once
  * resolved it dispatches updateSelectionFocus(ref); the watchSelectionRowsSaga
@@ -13,11 +13,11 @@ import { takeLatest, put } from 'typed-redux-saga';
 
 import { requestFocus } from './requestFocus';
 import { updateSelectionFocus } from './selectionSlice';
-import { resolveFocusRefDeferring } from './resolveFocusRefDeferring';
+import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 
 export function* watchRequestFocusSaga() {
   yield* takeLatest(requestFocus, function* (action) {
-    const ref = yield* resolveFocusRefDeferring(action.payload);
+    const ref = yield* resolveFocusRefDeferringSaga(action.payload);
     yield* put(updateSelectionFocus(ref));
   });
 }

@@ -4,10 +4,10 @@
  *
  * `id` is the durable handle `startTour(id)` resolves against `tourRegistry`;
  * `label` is the human-readable name a launcher button shows. The `beats` are
- * the itinerary `tourBody` plays in order. Scene preparation (the
+ * the itinerary `tourBodySaga` plays in order. Scene preparation (the
  * establishing strip) is authored INSIDE the first beat's clip as `hide()` /
  * `scene()` cues — one authoring surface; the snapshot/restore pair in
- * `runTakeover` winds every in-tour mutation back on exit regardless of
+ * `runTakeoverSaga` winds every in-tour mutation back on exit regardless of
  * which beat made it. Carrying `id` on the object (redundant with the registry
  * key) lets a whole `Tour` be passed around and still know its own identity —
  * same shape as a `Clip`.

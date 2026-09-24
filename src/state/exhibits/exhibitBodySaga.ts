@@ -1,6 +1,6 @@
 /**
  * exhibitBodySaga — an exhibit's takeover body: apply its settings, fly to its
- * pose, then hold, turning slowly, until the viewer exits. `runTakeover` owns
+ * pose, then hold, turning slowly, until the viewer exits. `runTakeoverSaga` owns
  * the snapshot/start/restore/end bracket; this only decides when the body
  * returns. `exitTakeover` is the only abort arm — an exhibit has no beat loop,
  * so orbiting mid-fly or mid-hold must not end it.
@@ -30,12 +30,12 @@ import type { SagaContext } from '../../store/types';
 const EXHIBIT_SPIN_RATE = -0.0003;
 
 export function* exhibitBodySaga(exhibit: Exhibit): Generator {
-  // Clear the focus slot BEFORE the fly, exactly as `tourBody` does. The boot
+  // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
   // `resting`@0. The clip@95 driver hides that while it plays; the frame it
   // ends on, follow wins and eases the camera off the exhibit's pose toward
-  // Earth's framing. `runTakeover`'s snapshot holds the viewer's focus for the
+  // Earth's framing. `runTakeoverSaga`'s snapshot holds the viewer's focus for the
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
@@ -67,7 +67,7 @@ export function* exhibitBodySaga(exhibit: Exhibit): Generator {
   // The drift is `camera.autoRotate`, not a looping clip: it spins from the
   // frozen `base` the clip just committed, so it needs no duration guessed in
   // advance and cannot drift out of step with a hold of unknown length.
-  // `camera` is NOT in `runTakeover`'s scene snapshot (that covers settings,
+  // `camera` is NOT in `runTakeoverSaga`'s scene snapshot (that covers settings,
   // orientation and focus), so the restore is this body's own — in a `finally`,
   // which a generator runs on cancellation too, so a supersede winds it back
   // as surely as an exit does.

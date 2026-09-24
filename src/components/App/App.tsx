@@ -84,7 +84,7 @@ export function App(): React.ReactElement {
   // A running guided tour hides the whole HUD stack and mounts its own overlay
   // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
   // HUD-hidden is DERIVED from `takeoverActive` (any takeover, tour or
-  // exhibit), not a separate `setUiHidden` write — see runTakeover's module
+  // exhibit), not a separate `setUiHidden` write — see runTakeoverSaga's module
   // header. The overlay and beat rail below stay gated on `tourActive`
   // specifically: they are tour chrome, not generic takeover chrome.
   const tourActive = useAppSelector(selectTourActive);

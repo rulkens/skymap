@@ -1,14 +1,14 @@
 /**
- * tourBody tests — the beat loop, run under `runTakeover` exactly as
+ * tourBodySaga tests — the beat loop, run under `runTakeoverSaga` exactly as
  * `watchTakeoverSaga` composes them for a real tour, so the snapshot/restore
  * round-trip and the `takeoverEnded`/`tour.active` reporting — bracket-owned
- * facts `tourBody` itself never touches — stay observable from this suite.
+ * facts `tourBodySaga` itself never touches — stay observable from this suite.
  *
  * `runTour` below is the test-local composition `watchTakeoverSaga` performs
- * in production: `runTakeover({kind:'tour', id}, () => tourBody(tour, range))`.
+ * in production: `runTakeoverSaga({kind:'tour', id}, () => tourBodySaga(tour, range))`.
  *
  * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
- * `waitUntil(clipFociReady)` exits synchronously on the first predicate check.
+ * `waitUntilSaga(clipFociReady)` exits synchronously on the first predicate check.
  * playClip stubs resolve immediately for the fly and never for the drift — two
  * flushes advance past each beat's fly and one advanceTour dispatched afterwards
  * drives the dwell race so the beat completes. Short dwell beats (dwellDrift(0.001))
@@ -27,8 +27,8 @@ import createSagaMiddleware, { type Task } from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { runTakeover } from '../../../src/state/takeover/runTakeover';
-import { tourBody } from '../../../src/state/tour/tourBody';
+import { runTakeoverSaga } from '../../../src/state/takeover/runTakeoverSaga';
+import { tourBodySaga } from '../../../src/state/tour/tourBodySaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
@@ -60,13 +60,13 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 };
 
 // Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
-// true and waitUntil exits on the first synchronous check.
+// true and waitUntilSaga exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
 };
 
 // Narration clip: empty timeline, no focus ids. clipFociReady returns true
-// immediately so waitUntil does not poll.
+// immediately so waitUntilSaga does not poll.
 const NARRATION_CLIP: ClipData = {
   start: 'live',
   timeline: [],
@@ -112,16 +112,16 @@ function makeTour(beats: readonly BeatData[]): Tour {
 
 // What `watchTakeoverSaga` does for a real `startTour` — reproduced here so
 // this suite still observes the bracket (snapshot/restore, active reporting)
-// around the beat loop under test, even though `tourBody` no longer owns it.
+// around the beat loop under test, even though `tourBodySaga` no longer owns it.
 function runTour(sagaMiddleware: SagaMiddleware, tour: Tour, range?: BeatRange): Task {
   return sagaMiddleware.run(function* () {
-    yield* runTakeover({ kind: 'tour', id: tour.id }, () => tourBody(tour, range));
+    yield* runTakeoverSaga({ kind: 'tour', id: tour.id }, () => tourBodySaga(tour, range));
   });
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe('tourBody', () => {
+describe('tourBodySaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -529,7 +529,7 @@ describe('tourBody', () => {
   // ── (6) beat-boundary reconstruction never raw-writes orientation ────────
 
   it('does not carry orientation in a beat-boundary mergeSnapshot payload, and does not revert a live-set frame', async () => {
-    // Two beats so entering beat 1 fires the reconstruction fold tourBody
+    // Two beats so entering beat 1 fires the reconstruction fold tourBodySaga
     // dispatches at the top of every loop iteration
     // (`mergeSnapshot(computeSceneEntering(...))`) — the exact site of the
     // Critical this test guards: a raw write there used to sweep

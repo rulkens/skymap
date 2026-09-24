@@ -46,7 +46,7 @@ type View = {
 };
 // src/data/views/viewRegistry.ts: Record<ViewId, View>   (mirrors tourRegistry)
 // src/state/takeover/: takeover.active: { kind: 'tour'; id: TourId } | { kind: 'view'; id: ViewId } | null
-//   runTakeover(source, body): the ONE bracket (snapshot → started → body → restore → ended), under one takeLatest
+//   runTakeoverSaga(source, body): the ONE bracket (snapshot → started → body → restore → ended), under one takeLatest
 // src/state/views/viewBody.ts (apply settings, fly, wait) · src/components/ViewOverlay/ViewOverlay.tsx
 ```
 
@@ -92,10 +92,10 @@ A subagent that saw only the requirements, not the code, derived the shapes inde
 **PR3:**
 
 - **P2. Move the scene snapshot helpers.** Move `captureScene`, `captureSettings`, `SceneSnapshot` and `restoreSceneSaga` from `src/state/tour/` to `src/state/scene/` with `npm run move-files`, then grep for the old paths. Behaviour unchanged.
-- **P3. Takeover slice and bracket.** Add `src/state/takeover/` with `takeover.active`, the actions `takeoverStarted(source)` / `takeoverEnded()` / `exitTakeover()`, and `runTakeover(source, body)`.
-  - **The one bracket:** `runTakeover` takes the snapshot, dispatches `takeoverStarted`, runs `body`, and in `finally` restores the snapshot, then dispatches `takeoverEnded` (skipped when the run was cancelled by a newer takeover, as `guidedTourSaga` does today).
-  - **Mutual exclusion:** a single `takeLatest` over start requests (`startTour`, `openView`) runs the matching body under `runTakeover`. Starting any takeover cancels the one running, whose `finally` restores. Neither feature knows about the other.
-  - **Tours move onto it:** `guidedTourSaga` is split into the bracket (moved into `runTakeover`) and a `tourBody(tour, range)` (the beat loop plus its `exitTour` race, which becomes `exitTakeover`).
+- **P3. Takeover slice and bracket.** Add `src/state/takeover/` with `takeover.active`, the actions `takeoverStarted(source)` / `takeoverEnded()` / `exitTakeover()`, and `runTakeoverSaga(source, body)`.
+  - **The one bracket:** `runTakeoverSaga` takes the snapshot, dispatches `takeoverStarted`, runs `body`, and in `finally` restores the snapshot, then dispatches `takeoverEnded` (skipped when the run was cancelled by a newer takeover, as `guidedTourSaga` does today).
+  - **Mutual exclusion:** a single `takeLatest` over start requests (`startTour`, `openView`) runs the matching body under `runTakeoverSaga`. Starting any takeover cancels the one running, whose `finally` restores. Neither feature knows about the other.
+  - **Tours move onto it:** `guidedTourSaga` is split into the bracket (moved into `runTakeoverSaga`) and a `tourBodySaga(tour, range)` (the beat loop plus its `exitTour` race, which becomes `exitTakeover`).
   - **Selectors:** `selectTourActive` becomes `takeover.active?.kind === 'tour'`, and `tour.active` is deleted. Add `selectTakeoverActive`; `App.tsx` hides the UI on `uiHidden || splashVisible || takeoverActive`.
   - **Behaviour unchanged:** the existing tour tests stay green, apart from those that read `tour.active` directly or dispatch `exitTour`.
 
@@ -111,7 +111,7 @@ A subagent that saw only the requirements, not the code, derived the shapes inde
 
 ### 3.8 Design-time entanglement radar (2026-09-19, all five applied)
 
-1. **Each takeover orchestrated its own setup and teardown, and each knew about the other.** Fixed by `runTakeover` plus one `takeLatest` (P3, §7.2).
+1. **Each takeover orchestrated its own setup and teardown, and each knew about the other.** Fixed by `runTakeoverSaga` plus one `takeLatest` (P3, §7.2).
 2. **The capture tool would have rewritten `image` in the hand-edited `featuredTabs.ts`.** Now the image is found by a convention path, `image` is only an override, and the tool writes only webp files (§5.1, §6).
 3. **PR1 would have had two selection types** (card `PaletteAction` vs row focus id). Fixed by moving `actionForRow` (P1) into PR1.
 4. **The grid's column count lived in TS and CSS.** Now the keyboard measures the rendered grid (§5.5).
@@ -244,7 +244,7 @@ A card may carry an optional capture override: `capture?: { pose?: CameraPose; t
 
 ### 7.2 View body
 
-`openView(viewId)` is a takeover start request. The takeover `takeLatest` (P3) runs `viewBody(view)` under `runTakeover({kind: 'view', id})`. The bracket owns everything that isn't view-specific: cancelling a running tour or view (whose `finally` restores first), the snapshot, `takeoverStarted`, the restore, and `takeoverEnded`. `viewBody` does three things:
+`openView(viewId)` is a takeover start request. The takeover `takeLatest` (P3) runs `viewBody(view)` under `runTakeoverSaga({kind: 'view', id})`. The bracket owns everything that isn't view-specific: cancelling a running tour or view (whose `finally` restores first), the snapshot, `takeoverStarted`, the restore, and `takeoverEnded`. `viewBody` does three things:
 
 1. Applies `view.settings` (`mergeSnapshot`).
 2. Plays the pose clip (§7.3).
@@ -274,7 +274,7 @@ A debug-panel button, "Copy view pose". It writes a paste-ready `pose: { … }` 
 - **`cardAliases`:** a famous id gives its names minus the label; a non-famous id gives none.
 - **PR1 `actionForRow`:** covers every `ScoredRow` kind (a table-coverage test). PR3 extends it with `view` and `tour`.
 - **`cardImageSrc`:** returns the override when set, otherwise the convention path.
-- **PR3 `runTakeover`:**
+- **PR3 `runTakeoverSaga`:**
   - Tours and views exclude each other: starting either cancels the running one, and its settings are restored before the new snapshot is taken.
   - A view restores its settings and toggle changes on exit.
   - A superseded run does not dispatch `takeoverEnded`.
@@ -300,7 +300,7 @@ A debug-panel button, "Copy view pose". It writes a paste-ready `pose: { … }` 
    4. Images committed.
 3. **PR3:**
    1. P2 move the scene helpers.
-   2. P3 takeover slice + `runTakeover`, with tours moved onto it.
+   2. P3 takeover slice + `runTakeoverSaga`, with tours moved onto it.
    3. `CameraPose` lifted out of `PerfPose`.
    4. `View` types + registry.
    5. `viewBody` + pose clip.

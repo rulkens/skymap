@@ -1,5 +1,5 @@
 /**
- * resolveFocusRefDeferring — the shared command->ref bridge both selection
+ * resolveFocusRefDeferringSaga — the shared command->ref bridge both selection
  * command sagas (watchRequestFocusSaga, watchRequestSelectSaga) call. Resolves a
  * durable focus id to a SelectionRef via the composed resolver, DEFERRING while
  * it is unresolvable on the one catalog-landed pulse: engineSourceCountReported,
@@ -12,7 +12,7 @@ import { take, getContext } from 'typed-redux-saga';
 import { engineSourceCountReported } from '../engine/engineSlice';
 import type { SagaContext } from '../../store/types';
 
-export function* resolveFocusRefDeferring(focusId: string) {
+export function* resolveFocusRefDeferringSaga(focusId: string) {
   const selection = yield* getContext<SagaContext['selection']>('selection');
   let ref = selection.resolveFocusId(focusId);
   while (!ref) {

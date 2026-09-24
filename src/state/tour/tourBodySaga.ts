@@ -1,5 +1,5 @@
 /**
- * tourBody — the beat loop `runTakeover` runs as a tour's takeover body:
+ * tourBodySaga — the beat loop `runTakeoverSaga` runs as a tour's takeover body:
  * play every beat in order, racing `exitTakeover` the whole time.
  *
  * ### Why a saga and why only exitTakeover aborts
@@ -12,7 +12,7 @@
  *
  * There is no tour-level setup list: the establishing strip is authored inside
  * the first beat's clip as `hide()`/`scene()` cues, so a tour has one authoring
- * surface. `runTakeover`'s snapshot is taken before this body ever runs, so its
+ * surface. `runTakeoverSaga`'s snapshot is taken before this body ever runs, so its
  * restore winds back every in-tour mutation regardless of which beat made it.
  *
  * ### Every beat entry reconstructs its derived scene
@@ -24,9 +24,9 @@
  * unwind) it is the correction. The invariant: the scene at beat i is a pure
  * function of i, never of the navigation path that led there.
  *
- * ### tourStarted/tourEnded stay local, guarded the same way `runTakeover` is
+ * ### tourStarted/tourEnded stay local, guarded the same way `runTakeoverSaga` is
  *
- * `runTakeover` (generic over tour and view) owns the takeover-wide
+ * `runTakeoverSaga` (generic over tour and view) owns the takeover-wide
  * start/restore/end bracket and knows nothing about `tour.tourId`/`beatIndex`,
  * so this body dispatches its OWN `tourStarted`/`tourEnded` around the beat
  * loop. `cancelled()` guards the latter: a superseded run hands the takeover
@@ -67,15 +67,15 @@ import type { BeatRange } from '../../@types/animation/tour/BeatRange';
  * tour progression. Adding a camera-input `take` here would incorrectly end
  * the tour on any background orbit-controls event.
  */
-export function* tourBody(tour: Tour, range?: BeatRange): Generator {
-  // Activate the tour's own bookkeeping (id + beat position). `runTakeover`
+export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
+  // Activate the tour's own bookkeeping (id + beat position). `runTakeoverSaga`
   // already captured the pre-takeover snapshot and marked the takeover source
   // before calling this body.
   yield* put(tourStarted({ tourId: tour.id }));
 
   // Clear any pre-tour selection: the beats only ever write the `focus` slot,
   // so a clicked halo would otherwise float on screen through the whole run.
-  // Focus is cleared with it — `runTakeover`'s snapshot already holds the
+  // Focus is cleared with it — `runTakeoverSaga`'s snapshot already holds the
   // user's value for the exit restore, and beat 1's own focus() re-establishes
   // the tour's. `select` is deliberately NOT restored: like `hover`, it is
   // ephemeral UI state (see `captureScene`).
@@ -103,7 +103,7 @@ export function* tourBody(tour: Tour, range?: BeatRange): Generator {
 
         // The fold's baseline is the settings half of the pre-takeover
         // snapshot — the same read `captureScene` (via `captureSettings`)
-        // takes, re-read here rather than threaded from `runTakeover` so
+        // takes, re-read here rather than threaded from `runTakeoverSaga` so
         // this body stays a single self-contained saga.
         const baselineSettings = yield* select(captureSettings);
 
@@ -134,7 +134,7 @@ export function* tourBody(tour: Tour, range?: BeatRange): Generator {
           // POSITION MATTERS: the recorder discards exactly this much virtual
           // time from the START of a take (tools/record/record.ts settle
           // loop), so this delay must stay a windowed run's FIRST virtual-time
-          // consumer — after any other timer/waitUntil, the film's head desyncs.
+          // consumer — after any other timer/waitUntilSaga, the film's head desyncs.
           if (firstEntry && range !== undefined && from > 0) {
             yield* delay(FOLD_SETTLE_MS);
           }
@@ -154,7 +154,7 @@ export function* tourBody(tour: Tour, range?: BeatRange): Generator {
       exit: take(exitTakeover),
     });
   } finally {
-    // See the module header: guarded the same way `runTakeover` guards
+    // See the module header: guarded the same way `runTakeoverSaga` guards
     // `takeoverEnded`, for the same clobber reason, one level down.
     if (!(yield* cancelled())) {
       yield* put(tourEnded());

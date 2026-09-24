@@ -1,5 +1,5 @@
 /**
- * waitUntil tests — verify the poll loop exits once the predicate turns true.
+ * waitUntilSaga tests — verify the poll loop exits once the predicate turns true.
  *
  * The saga yields `delay(POLL_MS)` effects while the predicate is false and
  * returns as soon as it flips. We drive it with manual generator stepping so
@@ -12,11 +12,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { waitUntil } from '../../../src/state/tour/waitUntil';
+import { waitUntilSaga } from '../../../src/state/tour/waitUntilSaga';
 
-describe('waitUntil', () => {
+describe('waitUntilSaga', () => {
   it('returns immediately when the predicate is already true', () => {
-    const gen = waitUntil(() => true);
+    const gen = waitUntilSaga(() => true);
     const result = gen.next();
     // The predicate is true on entry — the while loop body never executes, so
     // the generator completes on the first `.next()`.
@@ -31,7 +31,7 @@ describe('waitUntil', () => {
       return calls >= 3;
     };
 
-    const gen = waitUntil(pred);
+    const gen = waitUntilSaga(pred);
 
     // First poll: pred() → false (calls=1). Generator yields delay — not done.
     const step1 = gen.next();

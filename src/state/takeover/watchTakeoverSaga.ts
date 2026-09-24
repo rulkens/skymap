@@ -9,8 +9,8 @@
 import { call, cancel, fork, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
-import { runTakeover } from './runTakeover';
-import { tourBody } from '../tour/tourBody';
+import { runTakeoverSaga } from './runTakeoverSaga';
+import { tourBodySaga } from '../tour/tourBodySaga';
 import { startTour } from '../tour/tourActions';
 import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
@@ -38,13 +38,13 @@ export function* watchTakeoverSaga() {
     }
 
     // Branch on the incoming action to build this run's `TakeoverSource` and
-    // body — `runTakeover` itself stays generic over both (see its header).
+    // body — `runTakeoverSaga` itself stays generic over both (see its header).
     let source: TakeoverSource;
     let body: () => Generator;
     if (startTour.match(action)) {
       const tour = tourRegistry[action.payload.id];
       source = { kind: 'tour', id: tour.id };
-      body = () => tourBody(tour, action.payload.beats);
+      body = () => tourBodySaga(tour, action.payload.beats);
     } else if (openExhibit.match(action)) {
       const exhibit = exhibitRegistry[action.payload];
       source = { kind: 'exhibit', id: exhibit.id };
@@ -65,7 +65,7 @@ export function* watchTakeoverSaga() {
     });
     running = yield* fork(function* () {
       try {
-        yield* call(runTakeover, source, body);
+        yield* call(runTakeoverSaga, source, body);
       } finally {
         markSettled();
       }

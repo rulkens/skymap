@@ -978,7 +978,7 @@ from, which still carried a `handle?(runtime)` hook.
 
 7. **D6'1 — readiness is not a row member.** Star focus ids resolve like galaxy ids: the star row's
    `focusId.decode` returns null until the star bin has committed, so every deferral lives at the
-   ref stage in `resolveFocusRefDeferring`. That deletes the `resolveDeps().stars.current() === null`
+   ref stage in `resolveFocusRefDeferringSaga`. That deletes the `resolveDeps().stars.current() === null`
    probe at `watchFocusTweenSaga.ts:89-93` and the star-specific select-now-tween-later path, and it
    repairs the latent `clipFociReady` / `resolveClipFoci` mismatch, where a star id passes the gate
    and then throws in the resolver. The behaviour change — a star deep link selects when the bin

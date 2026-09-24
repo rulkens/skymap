@@ -1,9 +1,9 @@
 /**
- * runTakeover tests — the shared bracket tours and exhibits both run under:
+ * runTakeoverSaga tests — the shared bracket tours and exhibits both run under:
  * snapshot → start → body → restore → end, with `takeoverEnded` suppressed on
  * a superseded (externally cancelled) run.
  *
- * `body` is a plain stub here — `runTakeover` is generic over its caller, so
+ * `body` is a plain stub here — `runTakeoverSaga` is generic over its caller, so
  * these tests drive it directly with synthetic `TakeoverSource` values rather
  * than through the real tour/exhibit registries.
  *
@@ -19,7 +19,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { put, take } from 'typed-redux-saga';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { runTakeover } from '../../../src/state/takeover/runTakeover';
+import { runTakeoverSaga } from '../../../src/state/takeover/runTakeoverSaga';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
@@ -43,7 +43,7 @@ function* waitingBody(): Generator {
   yield* take(exitTakeover);
 }
 
-describe('runTakeover', () => {
+describe('runTakeoverSaga', () => {
   // The poses every takeover flies to are authored at the default lens, and a
   // fit-derived distance clamps silently at MAX_DISTANCE_MPC once the FOV
   // narrows — so a viewer who left the slider narrow must not carry it in.
@@ -53,7 +53,7 @@ describe('runTakeover', () => {
     store.dispatch(setFovDeg(narrowed));
 
     sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'tour', id: 'grandTour' }, waitingBody);
+      yield* runTakeoverSaga({ kind: 'tour', id: 'grandTour' }, waitingBody);
     });
     await flush();
     expect(store.getState().settings.camera.fovDeg).toBe(DEFAULT_FOV_DEG);
@@ -68,7 +68,7 @@ describe('runTakeover', () => {
     store.dispatch(setCosmicWebDensityEnabled(true));
 
     sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'exhibit', id: 'solarSystem' }, function* () {
+      yield* runTakeoverSaga({ kind: 'exhibit', id: 'solarSystem' }, function* () {
         yield* put(setCosmicWebDensityEnabled(false));
         yield* take(exitTakeover);
       });
@@ -85,7 +85,7 @@ describe('runTakeover', () => {
     const { store, sagaMiddleware } = buildStore();
 
     const task = sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'tour', id: 'demo' }, waitingBody);
+      yield* runTakeoverSaga({ kind: 'tour', id: 'demo' }, waitingBody);
     });
     await flush();
     expect(selectTakeoverSource(store.getState())).toEqual({ kind: 'tour', id: 'demo' });
@@ -103,7 +103,7 @@ describe('runTakeover', () => {
     const { store, sagaMiddleware } = buildStore();
 
     sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'tour', id: 'demo' }, waitingBody);
+      yield* runTakeoverSaga({ kind: 'tour', id: 'demo' }, waitingBody);
     });
     await flush();
 

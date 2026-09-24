@@ -79,7 +79,7 @@ describe('focus row', () => {
   });
 
   it('writes the pending id while a request is still resolving', () => {
-    // A galaxy/star request parks in `resolveFocusRefDeferring` until its
+    // A galaxy/star request parks in `resolveFocusRefDeferringSaga` until its
     // catalog pulses, leaving the resolved slot null for the whole boot window.
     // Publishing the in-flight id is what keeps a cold deep link on the URL.
     expect(focusSource.write(stateAfter(requestFocus('m31')))).toBe('m31');

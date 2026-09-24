@@ -1,5 +1,5 @@
 /**
- * waitUntil — saga helper that polls a predicate until it returns true.
+ * waitUntilSaga — saga helper that polls a predicate until it returns true.
  *
  * ### Why poll instead of take-based waiting
  *
@@ -30,7 +30,7 @@ const POLL_MS = 100;
  * Yields until `pred()` returns true, polling every POLL_MS milliseconds.
  * Returns immediately if the predicate is already satisfied on the first call.
  */
-export function* waitUntil(pred: () => boolean): Generator {
+export function* waitUntilSaga(pred: () => boolean): Generator {
   while (!pred()) {
     yield* delay(POLL_MS);
   }

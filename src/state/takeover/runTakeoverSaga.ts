@@ -1,5 +1,5 @@
 /**
- * runTakeover — the snapshot → start → body → restore → end bracket tours and
+ * runTakeoverSaga — the snapshot → start → body → restore → end bracket tours and
  * exhibits share. `body` is caller-supplied and arbitrary, so this file
  * imports nothing tour- or exhibit-specific: neither feature knows the other
  * exists.
@@ -15,7 +15,7 @@ import { takeoverStarted, takeoverEnded } from './takeoverActions';
 import { DEFAULT_FOV_DEG } from '../../data/defaults';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-export function* runTakeover(source: TakeoverSource, body: () => Generator): Generator {
+export function* runTakeoverSaga(source: TakeoverSource, body: () => Generator): Generator {
   const snapshot = yield* select(captureScene);
   yield* put(takeoverStarted(source));
 
