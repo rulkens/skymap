@@ -22,6 +22,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -137,6 +138,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
           id,
           label: id[0]!.toUpperCase() + id.slice(1),
           positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
+          driver: bodyDriverGeometry(id),
         },
       }),
     );

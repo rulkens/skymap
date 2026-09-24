@@ -9,7 +9,7 @@
  * snapshot carries static anchors too, so presence in it is not motion.
  */
 
-import { focusDriverId } from '../../../utils/camera/focusDriverId';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -18,6 +18,6 @@ export function liveBodyPosition(
   focusRow: SelectionRow | null,
   bodies: ReadonlyMap<string, BodyState>,
 ): Vec3 | null {
-  const id = focusDriverId(focusRow);
+  const id = selectionDriver(focusRow)?.poseId ?? null;
   return id === null ? null : (bodies.get(id)?.positionMpc ?? null);
 }

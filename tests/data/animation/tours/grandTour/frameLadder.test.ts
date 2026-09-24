@@ -4,21 +4,21 @@
  *
  * A literal restatement of the authored `frameTo(...)` calls against each
  * clip's timeline cannot catch a bug in how that content gets APPLIED: the
- * Critical this suite guards is `tourBody`'s beat-boundary `mergeSnapshot`
+ * Critical this suite guards is `tourBodySaga`'s beat-boundary `mergeSnapshot`
  * reverting `settings.orientation` to its pre-tour value at every beat
  * boundary, even though the `frameTo` literals themselves stay correct. Per
  * the project's testing convention (a test must be able to fail on a real
  * bug no other test or compiler check catches), that restatement wouldn't
  * earn its place.
  *
- * This version drives the two production mechanisms `tourBody` composes
+ * This version drives the two production mechanisms `tourBodySaga` composes
  * at every beat boundary — the reconstruction fold (`computeSceneEntering` →
- * `mergeSnapshot`, copied verbatim from `tourBody.ts`) and the beat's
+ * `mergeSnapshot`, copied verbatim from `tourBodySaga.ts`) and the beat's
  * own cues actually firing (`applySceneEffect`, the same dispatch table
  * `clipPlayer` calls from) — against the REAL `grandTour` beats, and asserts
  * the resulting `settings.orientation` after each beat.
  *
- * Deliberately NOT run through `tourBody`/`visitBeatSaga` end to end:
+ * Deliberately NOT run through `tourBodySaga`/`visitBeatSaga` end to end:
  * a real playthrough gates every beat's fly behind `resolveClipFoci`, which
  * needs real loaded catalog / famous-galaxy / structure data for every
  * id-bearing cue in EVERY beat (Local Group members, Virgo, Laniakea, …) —
@@ -101,8 +101,8 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
 
     const orientationPerBeat: OrientationFrameId[] = [];
     for (let i = 0; i < grandTour.beats.length; i++) {
-      // The exact beat-boundary dispatch tourBody performs at the top
-      // of every loop iteration (tourBody.ts) — a raw write here would sweep
+      // The exact beat-boundary dispatch tourBodySaga performs at the top
+      // of every loop iteration (tourBodySaga.ts) — a raw write here would sweep
       // `orientation` back to `snapshot`'s pre-tour value on every beat.
       const live = store.getState().settings;
       const baseline = mergeSettingsSnapshot(live, snapshot.settings);

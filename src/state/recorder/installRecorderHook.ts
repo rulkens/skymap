@@ -21,7 +21,7 @@
  * No recorder-specific action exists: the hook dispatches the same
  * `startTour` creator the UI uses and resolves on `selectTourActive`'s
  * true → false transition (derived from the `takeover` slice), which
- * `runTakeover`'s finally guarantees on both natural completion and exit.
+ * `runTakeoverSaga`'s finally guarantees on both natural completion and exit.
  * Watching the slice (rather than adding a "tourFinished" callback seam)
  * keeps the recorder a plain observer of state the app already maintains.
  *
@@ -35,11 +35,11 @@
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
  * `camera.clip` is only written by `clipStarted`, which `playClip` dispatches
- * AFTER `watchClipSaga`'s `waitUntil(clipFociReady && cameraRuntime)` clears —
+ * AFTER `watchClipSaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
  * `selectClipActive` reads false. A second `startClip` in that window would
  * be accepted, `takeLatest` would cancel worker A while it's still inside
- * `waitUntil` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
+ * `waitUntilSaga` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
  * gets no `clipEnded`), and B's normal activate/end cycle would resolve BOTH
  * latches — caller A reports success for a clip it never filmed. So `startClip`
  * ALSO guards on `clipInFlight`, a flag closed over inside
@@ -105,7 +105,7 @@ export function installRecorderHook(store: AppStore): void {
   let clipInFlight = false;
 
   // Same seen-active latch `runTour` uses, guarding against `watchClipSaga`'s
-  // foci/runtime `waitUntil` gate: `camera.clip` stays null across however
+  // foci/runtime `waitUntilSaga` gate: `camera.clip` stays null across however
   // many store updates land before the clip activates, so a latch that
   // resolved on any inactive reading would resolve instantly and film zero
   // frames. Single-flight checks BOTH `clipInFlight` (covers this window) AND

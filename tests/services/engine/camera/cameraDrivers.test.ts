@@ -51,6 +51,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
@@ -418,14 +419,16 @@ const FOLLOW_FOV = 1.0;
 /** A committed base distance nothing else in these fixtures produces. */
 const BASE_DISTANCE = 500;
 
-/** A body focus row (radiusM drives framing; positionMpc is unused — the driver
- * targets the LIVE snapshot position, not the row's). */
+/** A body focus row (`driver` drives framing; positionMpc is unused — the follow
+ * row targets the LIVE snapshot position, not the row's). `radiusM` is the
+ * nominal Earth radius the framing oracle below reads. */
 const EARTH_ROW = {
   type: 'body' as const,
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0] as [number, number, number],
   radiusM: 6371000,
+  driver: bodyDriverGeometry('earth'),
 };
 
 /** The follow row's produce at an elapsed instant. `from` seeds the captured

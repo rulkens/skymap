@@ -21,6 +21,8 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
@@ -197,7 +199,7 @@ describe('extractRow, composed', () => {
   });
 
   it('structure ref → the StructureInfo by id', () => {
-    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
+    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(virgo);
   });
 
   it('milkyWay ref → the singleton tag', () => {
@@ -211,6 +213,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: EARTH_POS,
+      driver: bodyDriverGeometry('earth'),
     });
 
     const laterSimDays = SIM_DAYS + 200;
@@ -221,6 +224,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: [...expectedLater],
+      driver: bodyDriverGeometry('earth'),
     });
   });
 
@@ -247,6 +251,15 @@ describe('extractRow, composed', () => {
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
       absMag: record.absMag,
       bpRp: record.bpRp,
+      // A survey star poses from no table: `poseId` null is what keeps the
+      // follow rows and the approach tilt off it, as `focusDriverId` once did.
+      driver: {
+        poseId: null,
+        boundingRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+        footprintRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+        groundRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+        standoffRadii: SURFACE_STANDOFF_RADII,
+      },
     });
   });
 
@@ -269,6 +282,15 @@ describe('extractRow, composed', () => {
       label: sirius.label,
       positionMpc: [...deriveBodyStates(SIM_DAYS).get('sirius')!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
+      // A seeded star poses from its own seed id — the S-star / famous-star
+      // half of the arm→poseId mapping.
+      driver: {
+        poseId: 'sirius',
+        boundingRadiusM: sirius.surface.datumRadiusM,
+        footprintRadiusM: sirius.surface.datumRadiusM,
+        groundRadiusM: sirius.surface.datumRadiusM,
+        standoffRadii: SURFACE_STANDOFF_RADII,
+      },
     });
   });
 

@@ -71,7 +71,7 @@ import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
 import { clipFociReady } from '../tour/clipFociReady';
-import { waitUntil } from '../tour/waitUntil';
+import { waitUntilSaga } from '../tour/waitUntilSaga';
 import { pause, resume } from '../time/timeSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -105,7 +105,7 @@ export function* watchClipSaga() {
           // Block until every id-bearing cue resolves AND the camera runtime
           // (which carries the FOV resolveClipFoci needs) exists.
           yield* call(
-            waitUntil,
+            waitUntilSaga,
             () => clipFociReady(clip.data, selection) && cameraRuntime() !== null,
           );
           const rt = cameraRuntime()!;

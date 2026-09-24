@@ -17,13 +17,13 @@ import { describe, it, expect } from 'vitest';
 
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
-import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { regionById } from '../../../../src/utils/regions/regionById';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 
-const R0_MPC = distanceMpc(RENDER_ORIGIN_MPC, SGR_A_STAR_ANCHOR.positionMpc);
+const R0_MPC = distanceMpc(RENDER_ORIGIN_MPC, GALACTIC_CENTRE_ANCHOR.positionMpc);
 
 describe('the Galactic Centre caption reaches past the solar system', () => {
   it('is readable from Earth and on arrival alike', () => {

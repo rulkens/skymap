@@ -1,3 +1,4 @@
+import type { DriverGeometry } from './camera/DriverGeometry';
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
@@ -7,14 +8,15 @@ import type { Vec3 } from '../math/Vec3';
  * SelectionRow — the serializable DISPLAY projection of a selected thing, held
  * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
  * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
- * structure arm is the already-serializable `StructureInfo` record used as-is;
- * the Milky Way and the zone of avoidance are each the singleton tag; the body
- * arm carries a seeded scene body's identity, label and live position only. It
- * carries NO size (see `MeshBody.boundingRadiusM`); whoever needs a number
- * resolves the seed by `id` against `SCENE_BODIES` and reads the arm it
- * actually got. The `label` rides the row (not the async
- * meta sidecar) so a star's name shows the instant it is selected, before the
- * JSON has loaded.
+ * structure arm is the already-serializable `StructureInfo` record; the Milky
+ * Way and the zone of avoidance are each the singleton tag; the body arm
+ * carries a seeded scene body's identity, label and live position. The `label`
+ * rides the row (not the async meta sidecar) so a star's name shows the instant
+ * it is selected, before the JSON has loaded.
+ *
+ * `driver` rides only the arms that host the camera (`DrivenSelectionRow`),
+ * filled by the arm's own `extractRow`; readers go through `selectionDriver`,
+ * so no reader resolves a focus id against a body table.
  *
  * Every arm is JSON-serializable (`GalaxyRow.objId` is a string,
  * `StructureInfo` is a plain record, the body arm is flat numbers + strings),
@@ -30,13 +32,14 @@ export type SelectionRow =
       readonly id: string;
       readonly label: string;
       readonly positionMpc: Vec3;
+      readonly driver: DriverGeometry;
     }
   // Star arm — the self-contained display projection of a picked star from any
   // of the four catalogs, its physical fields snapshotted at extract time so
   // framing and card read them directly. `source` + `index` come from the ref
   // (so `buildFocusable` can rebuild it, as GalaxyRow's index does); `id` is the
-  // durable seed id the `star-<seedId>` URL and the camera's driver lookup need,
-  // null for a survey star, which has no identity of its own.
+  // durable seed id the `star-<seedId>` URL needs, null for a survey star,
+  // which has no identity of its own (and so drives with a null `poseId`).
   | {
       readonly type: 'starCatalog';
       readonly source: StarCatalogSourceType;
@@ -52,4 +55,5 @@ export type SelectionRow =
       // curated sidecar or its orbit instead.
       readonly absMag?: number;
       readonly bpRp?: number;
+      readonly driver: DriverGeometry;
     };

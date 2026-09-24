@@ -2,9 +2,8 @@
  * create — the star family's whole construction, in dependency order: the
  * four renderers (the pick renderer must follow the visual renderer — it
  * borrows its exposed BGLs), the boot-seeded point renderer, the survey
- * slots, and the famous-star meta sidecar. The three seeded catalogs (Sun,
- * S-stars, famous stars) report their counts here — they ship no `.bin`, so
- * there is no async slot commit to carry the usual pulse.
+ * slots, and the famous-star meta sidecar. The three seeded catalogs' counts
+ * are the first yields of `starCatalogSourceCounts`, not a call from here.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
@@ -17,7 +16,6 @@ import { CONST_J2000 } from '../../data/time/constJ2000';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { visibleStars } from '../../services/engine/frame/visibleStars';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 
 import { createStarCatalogRenderer } from './render/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer';
@@ -77,16 +75,9 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const catalogs = new Map(
     STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-      ([source]) => [source, createStarCatalogSlot(source, deps, renderer)] as const,
+      ([source]) => [source, createStarCatalogSlot(source, renderer)] as const,
     ),
   );
-
-  // The seeded catalogs ship no `.bin`, so there is no async commit to carry
-  // the usual count pulse — report each here so the Stars panel's count
-  // chips light up for them too.
-  for (const [source, row] of SEEDED_STAR_CATALOGS_BY_SOURCE) {
-    deps.reportSourceCount(source, row.stars.length);
-  }
 
   const famousStarsMeta = createFamousStarsMetaSlot(deps);
 

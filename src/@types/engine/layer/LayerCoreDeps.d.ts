@@ -11,7 +11,6 @@ import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
-import type { SourceType } from '../../data/SourceType';
 import type { AppStore } from '../../../store/types';
 
 export type LayerCoreDeps<Facts = undefined> = {
@@ -25,5 +24,4 @@ export type LayerCoreDeps<Facts = undefined> = {
   readonly store: AppStore;
   /** `state.subsystems.scheduler.requestRender` — core's render-wake. */
   readonly requestRender: () => void;
-  readonly reportSourceCount: (source: SourceType, count: number) => void;
 } & ([Facts] extends [undefined] ? object : { readonly publish: (patch: Partial<Facts>) => void });

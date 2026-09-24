@@ -27,6 +27,7 @@ import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/camera
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
@@ -55,6 +56,7 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 function focusedOn(row: SelectionRow): RootState {
@@ -77,7 +79,7 @@ describe('focus row', () => {
   });
 
   it('writes the pending id while a request is still resolving', () => {
-    // A galaxy/star request parks in `resolveFocusRefDeferring` until its
+    // A galaxy/star request parks in `resolveFocusRefDeferringSaga` until its
     // catalog pulses, leaving the resolved slot null for the whole boot window.
     // Publishing the in-flight id is what keeps a cold deep link on the URL.
     expect(focusSource.write(stateAfter(requestFocus('m31')))).toBe('m31');

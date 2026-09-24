@@ -80,7 +80,7 @@ export function scheduleProbeCapture(input: {
       hostId === subject.id
         ? undefined
         : faceCtx.slabs.find(
-            (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === hostId,
+            (slab) => slab.frame.kind === 'body-m' && slab.frame.hostId === hostId,
           );
     faces.set(face, { ctx: faceCtx, bodySlabs: hostSlab === undefined ? [] : [hostSlab.index] });
   }

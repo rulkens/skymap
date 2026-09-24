@@ -27,6 +27,7 @@ import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { AssetKey } from '../../loading/AssetKey';
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { SlabRow } from '../frame/SlabRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
@@ -106,6 +107,9 @@ export type EngineState = {
    * of the same scope — unlike `computes`, a `plan` line naming nothing here throws. */
   planners: readonly FrameContentPlanner<unknown>[];
   assetRows: readonly AssetWiringRow[];
+  /** `CORE_SLAB_ROWS` then every Layer's `slabs`, composed once by `createLayers`;
+   * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
+  slabRows: readonly SlabRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /** Every Layer's `worldLabels`, in composition order, composed once by

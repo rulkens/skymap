@@ -1,5 +1,7 @@
 import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
+import type { LayerSearchEntry } from './LayerSearchEntry';
 import type { SelectionKindRow } from './SelectionKindRow';
+import type { SourceCountReport } from './SourceCountReport';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
@@ -22,5 +24,9 @@ export type LayerInstance = {
   readonly worldLabels: readonly Label3DProducer[];
   readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
+  /** Bound feeds, absent when the Layer declares no such member; `createLayers`
+   * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
+  readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
+  readonly sourceCounts?: AsyncIterable<SourceCountReport>;
   destroy(): void;
 };

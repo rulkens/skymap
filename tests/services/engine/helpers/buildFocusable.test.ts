@@ -5,13 +5,15 @@ import { MILKY_WAY_INFO } from '../../../../src/data/milkyWay/milkyWayInfo';
 import { apparentMagnitudeFromAbs } from '../../../../src/utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../src/utils/star/spectralClassFromBpRp';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
+import { starRowDriver } from '../../../fixtures/starRowDriver';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { FamousStarMetaEntry } from '../../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../../src/@types/engine/StarInfo';
 import { Source } from '../../../../src/data/sources';
 
-const structure: StructureInfo = {
+const structure = {
   type: 'structure',
   category: 'cluster',
   id: 'abell-2065',
@@ -28,6 +30,7 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 const jupiterRow: SelectionRow = {
@@ -35,6 +38,7 @@ const jupiterRow: SelectionRow = {
   id: 'jupiter',
   label: 'Jupiter',
   positionMpc: [4e-14, 0, 0],
+  driver: bodyDriverGeometry('jupiter'),
 };
 
 const siriusMeta: FamousStarMetaEntry = {
@@ -62,6 +66,7 @@ const gaiaRow: StarRow = {
   radiusM: 696340000,
   absMag: 4.83,
   bpRp: 0.82,
+  driver: starRowDriver(null, 696340000),
 };
 
 const siriusRow: StarRow = {
@@ -72,6 +77,7 @@ const siriusRow: StarRow = {
   label: 'Sirius',
   positionMpc: [2.64 * SCALE_UNITS.PC_TO_MPC, 0, 0],
   radiusM: 1.19e9,
+  driver: starRowDriver('sirius', 1.19e9),
 };
 
 const s2Row: StarRow = {
@@ -82,6 +88,7 @@ const s2Row: StarRow = {
   label: 'S2',
   positionMpc: [0.0025, 0, 0],
   radiusM: 4.2e9,
+  driver: starRowDriver('s2', 4.2e9),
 };
 
 const sunMeta: FamousStarMetaEntry = {
@@ -105,6 +112,7 @@ const sunRow: StarRow = {
   label: 'Sun',
   positionMpc: [0, 0, 0],
   radiusM: 696340000,
+  driver: starRowDriver('sun', 696340000),
 };
 
 describe('buildFocusable', () => {

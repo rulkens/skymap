@@ -4,9 +4,9 @@
  * harness drives through.
  *
  * The store is the REAL `rootReducer` behind a plain `configureStore` (the
- * tourBody suite's buildStore pattern) — no saga middleware, because these
+ * tourBodySaga suite's buildStore pattern) — no saga middleware, because these
  * tests drive the takeover slice directly (`takeoverStarted` / `takeoverEnded`
- * stand in for `runTakeover`'s writes) and running the real root saga would
+ * stand in for `runTakeoverSaga`'s writes) and running the real root saga would
  * need the whole engine context. A recording middleware captures dispatched
  * actions so the `startTour` payload contract (`{ id, beats }`) is asserted
  * on the actual action, not on state.

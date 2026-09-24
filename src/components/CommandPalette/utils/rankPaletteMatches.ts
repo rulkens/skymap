@@ -31,6 +31,7 @@ import type { ScoredRow } from '../paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * The maximum number of alias rows to include in the rendered list.
@@ -62,6 +63,7 @@ export function rankPaletteMatches(
   entries: readonly FamousGalaxyMetaEntry[],
   aliasIndex: readonly AliasIndexEntry[] | undefined,
   structures: readonly StructureSearchEntry[] | undefined,
+  layerRows: readonly LayerSearchEntry[],
   query: string,
 ): ScoredRow[] {
   if (query.trim().length === 0) return [];
@@ -151,6 +153,24 @@ export function rankPaletteMatches(
     return { kind: 'place', entry: place, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
 
+  // Layer-published rows, scored off their own `names` like any primary row.
+  // `class` decides where they land: `primary` merges into the sorted primary
+  // list below, `catalog` is capped beside the alias rows, so a Layer that one
+  // day publishes a loaded catalog cannot drown the named objects.
+  const layerScored: ScoredRow[] = layerRows
+    .map<ScoredRow>((entry) => {
+      const raw = scoreFamousMatch({ id: entry.id, names: entry.names, description: '' }, query);
+      const boost = entry.class === 'primary' ? PRIMARY_TIEBREAK : 0;
+      return { kind: 'layer', entry, score: raw > 0 ? raw + boost : 0 };
+    })
+    .filter((s) => s.score > 0);
+  const layerPrimaryScored = layerScored.filter(
+    (s) => s.kind === 'layer' && s.entry.class === 'primary',
+  );
+  const layerCatalogScored = layerScored.filter(
+    (s) => s.kind === 'layer' && s.entry.class === 'catalog',
+  );
+
   // Famous rows, scene bodies, Earth places, exhibits and tours are one class
   // of primary named object: merge and sort together so an exact match
   // ("earth") outranks a famous row that only matched "earth" in its
@@ -163,6 +183,7 @@ export function rankPaletteMatches(
     ...placeScored,
     ...exhibitScored,
     ...tourScored,
+    ...layerPrimaryScored,
   ].sort((a, b) => b.score - a.score);
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])
@@ -172,8 +193,10 @@ export function rankPaletteMatches(
       score: scoreAliasMatch(entry, query),
     }))
     .filter((s) => s.score > 0);
-  aliasScored.sort((a, b) => b.score - a.score);
-  const aliasCapped = aliasScored.slice(0, MAX_ALIAS_RESULTS);
+  // One capped bucket, not two: a Layer's catalog rows and the alias index are
+  // the same class of bulk row, so they compete for the same DOM budget.
+  const catalogScored = [...aliasScored, ...layerCatalogScored].sort((a, b) => b.score - a.score);
+  const catalogCapped = catalogScored.slice(0, MAX_ALIAS_RESULTS);
 
   // Structures score through the same heuristic as famous rows: we fold the
   // Abell designation into the searchable `names` so 'A1656' and 'Coma' both
@@ -199,7 +222,7 @@ export function rankPaletteMatches(
   return [
     ...(milkyWayRow ? [milkyWayRow] : []),
     ...primaryScored,
-    ...aliasCapped,
+    ...catalogCapped,
     ...structureCapped,
   ];
 }

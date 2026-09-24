@@ -44,6 +44,7 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -59,6 +60,7 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
+  driver: bodyDriverGeometry('earth'),
 };
 
 /** The frame's inputs as `runFrame` would build them, off the harness's live store and aggregator. */

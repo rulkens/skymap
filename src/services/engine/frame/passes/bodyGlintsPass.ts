@@ -279,10 +279,10 @@ export const bodyGlintsPass: ContentPass = {
     // Sgr A*'s far-field glint. It never resolves to a mesh, so it isn't part
     // of `glints` and carries none of the seeded bodies' apparent-size or
     // backdrop terms — see the module header and `sgrAStarGlintBrightness`.
-    // Addressed directly rather than looped over `SCENE_ANCHOR_POINT_BODIES`:
-    // the brightness band and the tint below are Sgr A*'s own, so a second
-    // anchor row would silently inherit them. Give the second anchor its own
-    // band + tint on its data row when there is one.
+    // Addressed directly rather than looped over a roster: the brightness band
+    // and the tint below are Sgr A*'s own, so a second anchor row would
+    // silently inherit them. Give the second anchor its own band + tint on its
+    // data row when there is one — `MAX_GLINTS`'s `+ 1` is this glint.
     const sgrAStarState = states.get(SGR_A_STAR.id);
     const anchorBrightness = sgrAStarGlintBrightness(camPos, states);
     if (

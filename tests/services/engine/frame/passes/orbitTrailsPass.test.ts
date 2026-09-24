@@ -184,7 +184,7 @@ const FAR_DEPTH_VIEW_STUB = {} as GPUTextureView;
 function makeDepthRow(): Slab {
   return makeSlab({
     vp: Float64Array.from([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 5, 6, 7, 1]),
-    frame: { kind: 'body-m', bodyId: 'earth' },
+    frame: { kind: 'body-m', hostId: 'earth' },
   });
 }
 

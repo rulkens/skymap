@@ -3,20 +3,25 @@
  * position driver's host (`meshBodiesPass`, the way `ringsPass` rides Saturn's)
  * when that host owns a row; a body hanging off something rowless — the Sun, or
  * nothing at all — hosts itself and gets a row of its own.
+ *
+ * Static by necessity, not by choice: `HOSTLESS_MESH_BODIES` reads this at
+ * module load, long before `createLayers` composes `state.slabRows`, so a
+ * Layer's own row cannot host a mesh body until the body Layer forms. Do not
+ * thread engine state in here to fix that.
  */
 
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { bodyHostId } from '../../data/bodies/positionDrivers';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../data/bodies/scenePlanets';
-import { SCENE_ANCHOR_POINT_BODIES } from '../../data/bodies/sceneAnchorPointBodies';
+import { CORE_SLAB_ROWS } from '../../data/bodies/coreSlabRows';
 
-// The same three tables `frameContext`'s `slabBodyCandidates` composes — the
-// hosts that can own a `body-m` row at all. Static, so the set is built once.
+// The store halves `frameContext`'s `slabBodyCandidates` composes, plus core's
+// authored rows — the hosts that can own a `body-m` row at all.
 const SLAB_HOST_IDS = new Set<string>([
   SCENE_EARTH.id,
   ...SCENE_PLANETS.map((body) => body.id),
-  ...SCENE_ANCHOR_POINT_BODIES.map((body) => body.id),
+  ...CORE_SLAB_ROWS.map((row) => row.anchorId),
 ]);
 
 export function meshBodySlabHostId(body: MeshBody): string {

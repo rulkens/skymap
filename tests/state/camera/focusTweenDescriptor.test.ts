@@ -19,7 +19,7 @@ const FROM: CameraPose = { target: [9, 9, 9], yaw: 1.23, pitch: -0.4, distance: 
 const FOVY = 0.8;
 const FRAME = 'galactic';
 
-const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
+const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
     source: 1,
     index: 7,
@@ -33,7 +33,7 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
     ...over,
   });
 
-const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
+const structureRow = (over: Partial<StructureInfo> = {}) =>
   ({
     type: 'structure',
     worldPos: [10, -20, 30],

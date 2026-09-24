@@ -1,7 +1,7 @@
 /**
  * Exhibit — an `exhibitRegistry` row: a scene takeover addressed by a pose
  * rather than a focus. `openExhibit` applies `settings` via `mergeSnapshot`,
- * flies to `pose`, and shows `body` in the `ExhibitOverlay`; `runTakeover`
+ * flies to `pose`, and shows `body` in the `ExhibitOverlay`; `runTakeoverSaga`
  * owns restore.
  */
 

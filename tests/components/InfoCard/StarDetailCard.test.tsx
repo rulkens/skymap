@@ -13,6 +13,7 @@ import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusa
 import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/sources';
+import { starRowDriver } from '../../fixtures/starRowDriver';
 import type { FamousStarMetaEntry } from '../../../src/@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../src/@types/engine/StarInfo';
 
@@ -134,6 +135,7 @@ describe('StarDetailCard', () => {
         label: 'S2',
         positionMpc: [0.0025, 0, 0],
         radiusM: 4.2e9,
+        driver: starRowDriver('s2', 4.2e9),
       },
       [],
     ) as StarInfo;

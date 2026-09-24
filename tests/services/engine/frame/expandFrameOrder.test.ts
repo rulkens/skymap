@@ -464,7 +464,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       cosmoVp: new Float32Array(16) as unknown as Mat4,
       altitudeMpc: cam.distance,
       pose: () => null,
-      visibleBodies: [],
+      visibleRows: [],
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
     });

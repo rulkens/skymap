@@ -50,7 +50,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { focusDriverId } from '../../../utils/camera/focusDriverId';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -235,7 +235,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frame's snapshot is focused.
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
-    const focusId = focusDriverId(focusRow);
+    const focusId = selectionDriver(focusRow)?.poseId ?? null;
     if (focusId !== null) {
       const bodyState = sceneBodyStates(state, canvas).get(focusId);
       if (bodyState !== undefined) {
@@ -256,11 +256,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     (
       slab,
     ): slab is Slab & {
-      frame: Extract<SlabFrame, { kind: 'body-m' }> & { bodyId: SurfaceTileBodyId };
-    } => slab.frame.kind === 'body-m' && slab.frame.bodyId in SURFACE_TILE_REGISTRY,
+      frame: Extract<SlabFrame, { kind: 'body-m' }> & { hostId: SurfaceTileBodyId };
+    } => slab.frame.kind === 'body-m' && slab.frame.hostId in SURFACE_TILE_REGISTRY,
   );
   if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
-    const bodyId = surfaceTileSlab.frame.bodyId;
+    const bodyId = surfaceTileSlab.frame.hostId;
     // The same slab view `earthPass.draw` samples into.
     const surfaceTilesView = slabViewOf(canvas, surfaceTileSlab.index);
     if (surfaceTilesEngaged(state, canvas, surfaceTilesView)) {
@@ -281,7 +281,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           const rigViews: { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[] = [];
           for (const view of views) {
             const slab = view.slabs.find(
-              (s) => s.frame.kind === 'body-m' && s.frame.bodyId === bodyId,
+              (s) => s.frame.kind === 'body-m' && s.frame.hostId === bodyId,
             );
             if (slab === undefined) continue;
             const viewSlabView = slabViewOf(view, slab.index);
@@ -321,7 +321,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
   const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
-
 
   renderFrame({
     canvas,

@@ -1046,6 +1046,7 @@ describe('runFrame — the label-director wake fold', () => {
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
+      slabRows: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
@@ -1117,6 +1118,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
+      slabRows: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       layers: [],

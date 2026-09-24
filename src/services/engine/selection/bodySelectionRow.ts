@@ -9,6 +9,7 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../url/bodyFocusId';
+import { bodyDriverGeometry } from '../../../utils/scene/bodyDriverGeometry';
 import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
@@ -36,7 +37,13 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
       const body = SCENE_BODIES.find((b) => b.id === ref.id);
       if (!body) return null;
       const p = deriveBodyStates(simDays).get(body.id)!.positionMpc;
-      return { type: 'body', id: body.id, label: body.label, positionMpc: [p[0], p[1], p[2]] };
+      return {
+        type: 'body',
+        id: body.id,
+        label: body.label,
+        positionMpc: [p[0], p[1], p[2]],
+        driver: bodyDriverGeometry(body.id),
+      };
     },
     focusId: {
       claims: (id) => id.startsWith(BODY_FOCUS_PREFIX),

@@ -13,7 +13,7 @@ written:
 // src/state/selection/watchRequestFocusSaga.ts:19-24
 export function* watchRequestFocusSaga() {
   yield* takeLatest(requestFocus, function* (action) {
-    const ref = yield* resolveFocusRefDeferring(action.payload);
+    const ref = yield* resolveFocusRefDeferringSaga(action.payload);
     yield* put(updateSelectionFocus(ref));
   });
 }
@@ -21,13 +21,13 @@ export function* watchRequestFocusSaga() {
 // src/state/selection/watchRequestSelectSaga.ts:15-20
 export function* watchRequestSelectSaga() {
   yield* takeLatest(requestSelect, function* (action) {
-    const ref = yield* resolveFocusRefDeferring(action.payload);
+    const ref = yield* resolveFocusRefDeferringSaga(action.payload);
     yield* put(updateSelectionSelect(ref));
   });
 }
 ```
 
-Same `takeLatest`, same shared `resolveFocusRefDeferring` loop, same `put` shape. Both are
+Same `takeLatest`, same shared `resolveFocusRefDeferringSaga` loop, same `put` shape. Both are
 forked separately in `rootSaga`, and both are dispatched together by the `focus` hash-param
 source on every deep-link arrival.
 
@@ -51,7 +51,7 @@ export function* watchSelectionRequestsSaga() {
   yield* all(
     REQUEST_ROWS.map((row) =>
       takeLatest(row.request, function* (action) {
-        yield* put(row.commit(yield* resolveFocusRefDeferring(action.payload)));
+        yield* put(row.commit(yield* resolveFocusRefDeferringSaga(action.payload)));
       }),
     ),
   );

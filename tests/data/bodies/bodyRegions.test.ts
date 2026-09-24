@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
-import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -47,7 +47,7 @@ describe('BODY_REGIONS', () => {
     // residual extent to exactly its own distance from the Sun.
     const neighbourhood = regionById('solar-neighbourhood');
     expect(neighbourhood.memberIds).not.toContain('sgr-a-star');
-    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc));
+    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc));
   });
 
   it('the galactic-centre region extent covers the widest S-star orbit, not S2', () => {
@@ -114,20 +114,22 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
   it('has extent 0, not NaN, and never resolves the missing anchor', async () => {
     // `Math.max()` over an empty member list is −Infinity, and every edge that
     // scales off an extent would then read −Infinity too. `galactic-centre` no
-    // longer supplies the case — Sgr A* is seeded, so the region correctly holds
-    // its own anchor at extent 0 — so the empty region is made by taking that
-    // anchor back out, which is also the state `bodyRegions.ts` is written to
-    // tolerate (its anchor id is authored ahead of any seed). Emptiness must be
-    // answered BEFORE the anchor is read, or the row resolves a position nothing
-    // seeds and throws at import, taking the whole file with it.
+    // longer supplies the case — the place and Sgr A* are both seeded, so the
+    // region correctly holds them at extent 0 — so the empty region is made by
+    // taking both anchors back out, which is also the state `bodyRegions.ts` is
+    // written to tolerate (its anchor id is authored ahead of any seed).
+    // Emptiness must be answered BEFORE the anchor is read, or the row resolves
+    // a position nothing seeds and throws at import, taking the whole file with it.
     //
-    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchor gone
-    // but the 39 S-star rows still focused on it, `focusResolveOrder` throws on
-    // the dangling focus before any region is built, so the element table is
-    // mocked in step with the anchor table.
+    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchors
+    // gone but the 39 S-star rows still focused on Sgr A*, `focusResolveOrder`
+    // throws on the dangling focus before any region is built, so the element
+    // table is mocked in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
-      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'sgr-a-star'),
+      SCENE_ANCHORS: SCENE_ANCHORS.filter(
+        (anchor) => anchor.id !== 'sgr-a-star' && anchor.id !== 'galactic-centre',
+      ),
     }));
     vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
       const actual = await vi.importActual<

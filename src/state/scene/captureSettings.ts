@@ -29,9 +29,9 @@
  *
  * Reads `RootState`, not `EngineState`: this is a pure store read with no
  * engine dependency, so it lives beside `captureScene` in `state/scene/`
- * rather than in the engine wiring layer. `tourBody` is a second caller —
+ * rather than in the engine wiring layer. `tourBodySaga` is a second caller —
  * it re-reads the same baseline for its beat-boundary fold, since
- * `runTakeover`'s own snapshot isn't threaded into the body closure.
+ * `runTakeoverSaga`'s own snapshot isn't threaded into the body closure.
  */
 
 import type { RootState } from '../../store/types';

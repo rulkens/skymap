@@ -26,7 +26,7 @@
  *   - `picking`        — which selection kinds a scene click or hover may
  *                         resolve; a takeover drives it and the bracket must
  *                         restore it, exactly what this type is for.
- *   - `camera`         — the FOV. `runTakeover` pins it, because a takeover's
+ *   - `camera`         — the FOV. `runTakeoverSaga` pins it, because a takeover's
  *                         poses are authored at one lens and a viewer who left
  *                         the slider narrow would otherwise get a framing that
  *                         silently clamps (`sphereFitDistance` → the

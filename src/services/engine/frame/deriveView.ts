@@ -24,6 +24,7 @@ import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
+import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { viewBodyPose } from '../camera/viewBodyPose';
 import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
@@ -64,19 +65,23 @@ export function deriveView(
     frustum,
     pxPerRad,
   };
-  const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
+  const gatedRows = visibleSlabBodies({ ...slabGate, rows: slabBodyCandidates });
   // A hosted mesh body owns no slab row — it rides its host's
   // (`meshBodiesPass`), so the host's roster entry is what keeps it drawable; a
   // hostless one keys on itself and is already a candidate. From a 400 km
   // orbit Earth's ~70° angular radius takes it out of the frustum gate around
   // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME
   // gate run over the mesh bodies re-admits their hosts, so there is one cull
-  // applied twice rather than two culls to keep in step.
+  // applied twice rather than two culls to keep in step. The body rides along
+  // on the row so the surviving rows can name their hosts.
   const meshHostIds = new Set(
-    visibleSlabBodies({ ...slabGate, bodies: meshBodies }).map(meshBodySlabHostId),
+    visibleSlabBodies({
+      ...slabGate,
+      rows: meshBodies.map((body) => ({ ...bodySlabRowOf(body), body })),
+    }).map((row) => meshBodySlabHostId(row.body)),
   );
-  const visibleBodies = gatedBodies.concat(
-    slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),
+  const visibleRows = gatedRows.concat(
+    slabBodyCandidates.filter((row) => meshHostIds.has(row.anchorId) && !gatedRows.includes(row)),
   );
 
   // Both providers' output turned and offset alike, so a body arm stays
@@ -95,12 +100,12 @@ export function deriveView(
   // missing entry as `undefined` — see `bodySlabRow`'s `attachedBodies` doc.
   const attachedBodiesByHostId = new Map<string, readonly HostFrameSphere[]>();
   for (const host of slabBodyCandidates) {
-    const attached = meshBodiesAttachedTo(host.id);
+    const attached = meshBodiesAttachedTo(host.anchorId);
     if (attached.length === 0) continue;
-    const hostState = bodyStates.get(host.id);
+    const hostState = bodyStates.get(host.anchorId);
     if (hostState === undefined) continue;
     attachedBodiesByHostId.set(
-      host.id,
+      host.anchorId,
       attached.map((meshBody) => {
         const { posM } = bodyStateInHostFrame(bodyStates.get(meshBody.id)!, hostState);
         return { posM, radiusM: meshBody.boundingRadiusM };
@@ -136,7 +141,7 @@ export function deriveView(
     cosmoVp: vp,
     altitudeMpc: snapshot.altitudeMpc,
     pose: bodyPose,
-    visibleBodies,
+    visibleRows,
     viewportPx: [sizePx.width, sizePx.height] as Vec2,
     starSphereRangeM: starRangeM,
     attachedBodiesByHostId,

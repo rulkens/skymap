@@ -3,8 +3,8 @@
  * middleware, exercising both start-request kinds the watcher handles.
  *
  * `watchTakeoverSaga` is the `startTour`/`openExhibit` watcher: for a tour it
- * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBody`
- * under `runTakeover`. The registry is MOCKED here with two controlled tours —
+ * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBodySaga`
+ * under `runTakeoverSaga`. The registry is MOCKED here with two controlled tours —
  * a `demo` tour whose single narration beat auto-advances, and a `webShowcase`
  * tour whose beat dwells effectively forever — so each test drives timing
  * deterministically without depending on the real (catalog-resolving) tour
@@ -20,13 +20,13 @@
  *
  * ### What we assert
  *
- * 1. `tourBody` ran under `runTakeover`: `selectTourActive` is true
+ * 1. `tourBodySaga` ran under `runTakeoverSaga`: `selectTourActive` is true
  *    synchronously on startTour.
  * 2. A second startTour supersedes a first run: the tour stays active under
  *    the new run and a fresh beat fly fires.
  * 2b. A supersede restores the outgoing run's scene BEFORE the successor
  *    snapshots — the watcher's whole reason to wait on the cancelled bracket.
- * 3. The optional `BeatRange` on the action reaches `tourBody`: a ranged
+ * 3. The optional `BeatRange` on the action reaches `tourBodySaga`: a ranged
  *    start lands on the window's first beat, not beat 0.
  * 4. `openExhibit` reaches the watcher and an exhibit supersedes a running tour with
  *    the same restore-before-snapshot ordering as 2b.
@@ -158,14 +158,14 @@ describe('watchTakeoverSaga', () => {
     vi.useRealTimers();
   });
 
-  // ── (1) tourBody actually ran (tour marked active) ───────────────────────
+  // ── (1) tourBodySaga actually ran (tour marked active) ───────────────────────
 
-  it('runs tourBody under runTakeover: the tour is marked active on startTour', () => {
+  it('runs tourBodySaga under runTakeoverSaga: the tour is marked active on startTour', () => {
     const { store } = buildHarness();
 
     store.dispatch(startTour('demo'));
 
-    // takeoverStarted is dispatched synchronously inside runTakeover before the
+    // takeoverStarted is dispatched synchronously inside runTakeoverSaga before the
     // first beat's async work begins (the App derives HUD-hidden from it).
     expect(selectTourActive(store.getState())).toBe(true);
   });
@@ -260,14 +260,14 @@ describe('watchTakeoverSaga', () => {
     expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 
-  // ── (3) the beat range on the action reaches tourBody ─────────────────────
+  // ── (3) the beat range on the action reaches tourBodySaga ─────────────────────
 
-  it('the beat range on the action reaches tourBody', async () => {
+  it('the beat range on the action reaches tourBodySaga', async () => {
     vi.useFakeTimers();
     const { store } = buildHarness({ playClip: makeAutoFlyStub() });
 
     // webShowcase has two beats; the range selects only the second. The
-    // window reaching tourBody is observable as the first beatChanged: index
+    // window reaching tourBodySaga is observable as the first beatChanged: index
     // 1 — an unranged run would sit at beat 0. Windowed from > 0 runs hold
     // the beat behind the FOLD_SETTLE_MS reconstruction settle, so the index
     // lands only once that delay has elapsed.

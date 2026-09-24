@@ -119,7 +119,7 @@ function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 

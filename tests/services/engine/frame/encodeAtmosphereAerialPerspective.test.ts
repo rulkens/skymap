@@ -89,7 +89,7 @@ function makeBodyPose(): BodyPoseProvider {
  *  invariant), so indexing `ctx.slabs` by that field lands on this row. */
 function makeCtx(withEarthSlab: boolean): FrameView {
   const slabs = withEarthSlab
-    ? [makeSlab({ index: 0, frame: { kind: 'body-m', bodyId: 'earth' } })]
+    ? [makeSlab({ index: 0, frame: { kind: 'body-m', hostId: 'earth' } })]
     : [];
   return {
     bodyPose: makeBodyPose(),
@@ -97,12 +97,14 @@ function makeCtx(withEarthSlab: boolean): FrameView {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
     drawPxPerRad: FIXTURE_PX_PER_RAD,
     slabs,
+    snapshot: { slabBodyCandidates: [] },
   } as unknown as FrameView;
 }
 
 function makeState(init: { renderer: unknown; earth?: EarthBody | null }): EngineState {
   return {
     gpu: { atmosphereShellRenderer: init.renderer },
+    slabRows: [],
     data: { bodies: { earth: 'earth' in init ? (init.earth ?? null) : SEEDED_EARTH, planets: [] } },
     settings: { earth: { atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure } },
   } as unknown as EngineState;

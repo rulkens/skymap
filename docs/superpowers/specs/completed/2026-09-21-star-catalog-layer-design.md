@@ -26,6 +26,8 @@ Contract shapes only. Files are named where the name is the contract.
 
 `Source.SgrAStar = 27` stays a body: it is drawn by the body pipeline and is not a star.
 
+> Reversed by `2026-09-22-black-holes-layer-design.md` §1.
+
 ```ts
 // src/layers/starCatalog/sources/ — one row per file + the rows array
 export const STAR_CATALOG_SOURCE_ROWS = [GAIA_STARS_ENTRY, FAMOUS_STAR_ENTRY, SUN_ENTRY, S_STAR_ENTRY] as const;
@@ -176,6 +178,8 @@ Shaders stay under `src/services/gpu/shaders/`. Seed tables (`sceneStars`, `scen
 ## 5. Captions
 
 The seeded-star rows leave `sceneBodyLabels`; core keeps Earth, the planets, Sgr A\* and the mesh bodies. The Layer's `screenLabels` producer registers on the NEAR0 slab, uses the `star` caption kind and the existing `captionFadeRules.star` rule (which already reads the star settings), and lands after core's producers, which the equal-prominence tiebreak wants. `CaptionKind`, `CAPTION_PRIORITY` and `CAPTION_FADE_RULES` stay core as shared vocabulary (grill Q2; the constellations ruling).
+
+> Reversed by `2026-09-22-black-holes-layer-design.md` §1.
 
 ## 6. Durable focus ids
 

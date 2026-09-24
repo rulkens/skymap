@@ -24,6 +24,7 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
+import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
 import {
   sceneBodyLabels,
@@ -40,6 +41,7 @@ import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/B
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -97,7 +99,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
-    visibleBodies: [earth],
+    visibleRows: [earth].map(bodySlabRowOf),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
     attachedBodiesByHostId: new Map([
@@ -129,6 +131,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
+    driver: bodyDriverGeometry(bodyId),
   } as SelectionRow;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();
@@ -143,7 +146,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     settings: { galaxyCatalogs: { sizePx: 2 } },
   } as unknown as EngineState;
 
-  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.bodyId === 'earth');
+  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
   meshBodiesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 

@@ -4,7 +4,7 @@
  * Outside `rungs/`, ask `rungKindOf` / `isWorldArm` / `hostOf` / `frameKey`.
  * A declaration scan (ts-morph, real AST nodes) rather than a source-text grep,
  * per `conventions/testing.md`: a substring search bans nothing a comment or a
- * string literal couldn't dodge, and would trip on the unrelated `.frame.bodyId`
+ * string literal couldn't dodge, and would trip on the unrelated `.frame.hostId`
  * of the render slabs.
  */
 
@@ -100,7 +100,7 @@ function frameBodyReads(file: string): string[] {
   return [
     ...sourceFile
       .getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)
-      // `body` EXACTLY: `view.slab.frame.bodyId` is the render slab's frame, a
+      // `body` EXACTLY: `view.slab.frame.hostId` is the render slab's frame, a
       // different type with ~30 legitimate sites under `frame/passes/`, and a
       // suffix match would turn this gate into noise on day one.
       .filter((node) => node.getName() === 'body')

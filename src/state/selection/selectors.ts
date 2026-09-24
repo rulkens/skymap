@@ -139,7 +139,7 @@ export const selectIsSelectionActive = createSelector(
  * selectHasSelectionIntent — true when the user has expressed ANY selection
  * intent, resolved OR still in flight: either ref slot holds a SelectionRef,
  * or either pending slot holds a durable id waiting on a deferred resolve
- * (`resolveFocusRefDeferring` parks a galaxy/star id until its catalog pulse
+ * (`resolveFocusRefDeferringSaga` parks a galaxy/star id until its catalog pulse
  * lands, which can outlive a boot phase that only checks the resolved refs).
  *
  * This is the guard a "seed only if nothing is going on" check must use

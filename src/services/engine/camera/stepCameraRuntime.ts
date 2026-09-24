@@ -35,7 +35,7 @@ import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { reencodePose } from '../../../utils/camera/reencodePose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
-import { focusDriverId } from '../../../utils/camera/focusDriverId';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
@@ -118,7 +118,7 @@ export function stepCameraRuntime(
   const rungFields = {
     bodies,
     poseBasis,
-    focusBodyId: focusDriverId(focus) as BodyId | null,
+    focusBodyId: (selectionDriver(focus)?.poseId ?? null) as BodyId | null,
     pivot: pivotFraming(focus),
     viewportPx: canvasPx,
     fovYRad: projection.fovYRad,

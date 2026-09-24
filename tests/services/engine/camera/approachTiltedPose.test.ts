@@ -21,6 +21,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
@@ -37,6 +38,7 @@ const FOCUS_EARTH: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 function centredPoseAt(hr: number, roll = 0.2): FramedCameraPose {

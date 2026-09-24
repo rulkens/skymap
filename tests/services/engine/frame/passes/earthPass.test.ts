@@ -220,7 +220,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   // builds a body-m row's frame.
   const slab: Slab = makeSlab({
     vp: f64Vp,
-    frame: { kind: 'body-m', bodyId: bodyId as BodyId },
+    frame: { kind: 'body-m', hostId: bodyId as BodyId },
   });
   return {
     slab,

@@ -25,12 +25,12 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import { SGR_A_STAR_ANCHOR } from '../bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 
 /**
- * World-space position of the Milky Way's center: the SAME seed the black hole
- * and every S-star orbit hang off (`sceneSgrAStar`), not a second transcription
- * of the sky coordinates.
+ * World-space position of the Milky Way's center: the SAME place seed the
+ * black hole and every S-star orbit hang off (`data/places/galacticCentre`),
+ * not a second transcription of the sky coordinates.
  *
  * This file once carried its own rounded pair — 266.4168 / −29.0078 at a
  * round-numbers 8.0 kpc — on the argument that placing a spiral impostor is a
@@ -39,7 +39,7 @@ import { SGR_A_STAR_ANCHOR } from '../bodies/sceneSgrAStar';
  * offset between the disc's hub and the object it is the hub of. Two spellings
  * of one position is the whole bug: there is no tolerance at which they line up.
  */
-export const MILKY_WAY_CENTER_WORLD: Vec3 = SGR_A_STAR_ANCHOR.positionMpc as Vec3;
+export const MILKY_WAY_CENTER_WORLD: Vec3 = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
 
 /**
  * Camera distance (Mpc) used by the Milky Way focus tween to land the

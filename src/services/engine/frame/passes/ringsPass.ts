@@ -7,7 +7,7 @@
  *
  * The frame program expands a `'body'` layer into one render step per body-m
  * slab row (Task 7); `enabled`/`draw` are called once per body-m row, gated on
- * whether `SCENE_RINGS` has an entry for `view.slab.frame.bodyId` whose
+ * whether `SCENE_RINGS` has an entry for `view.slab.frame.hostId` whose
  * radial strip is resident. The shared `ringRenderer` draws a two-sided
  * translucent annulus in the host body's equatorial plane, with the planet's
  * shadow cast on the ring. Its twin, the ring-on-planet shadow, is baked into
@@ -63,6 +63,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
@@ -86,7 +87,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
 function ringDrawForBody(
   state: PassState,
   ctx: FrameView,
-  bodyId: BodyId,
+  bodyId: SlabHostId,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {
   const ring = SCENE_RINGS.find((r) => r.bodyId === bodyId);
   if (ring === undefined) return null;
@@ -130,13 +131,13 @@ export const ringsPass: ContentPass = {
     // renderer, bare ctx) never touch ctx or the ring inputs.
     if (state.gpu.ringRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    return ringDrawForBody(state, ctx, view.slab.frame.bodyId) !== null;
+    return ringDrawForBody(state, ctx, view.slab.frame.hostId) !== null;
   },
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.ringRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
-    const drawInputs = ringDrawForBody(state, ctx, view.slab.frame.bodyId);
+    const drawInputs = ringDrawForBody(state, ctx, view.slab.frame.hostId);
     if (drawInputs === null) return;
     const { ring, body, pose } = drawInputs;
 

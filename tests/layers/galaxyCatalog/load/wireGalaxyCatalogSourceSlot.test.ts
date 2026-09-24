@@ -1,8 +1,8 @@
 /**
  * wireGalaxyCatalogSourceSlot — the per-source galaxy-catalog slot, built by the
  * Layer's `create`. Every source shares one shape: name = `${entry.id}-points`,
- * upload-on-commit, and the two subscriber writes (core's catalog-landed pulse,
- * the provenance fact).
+ * upload-on-commit, and the subscriber's provenance fact (the catalog-landed
+ * pulse rides the Layer's `sourceCounts` feed instead).
  *
  * The AssetSlot retry policy and race checking are `AssetSlot.test.ts`'s; this
  * suite is about the plumbing between the registry entry, the renderer and the
@@ -44,7 +44,6 @@ function harness() {
   const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
   const bumpCatalogsVersion = vi.fn();
   const deps = {
-    reportSourceCount: vi.fn(),
     publish: vi.fn(),
   } as unknown as LayerCoreDeps<GalaxyCatalogFacts>;
   return { upload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, deps };
@@ -61,7 +60,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(slot.state().kind).toBe('idle');
   });
 
-  it('reports the source count through core’s pulse and publishes the provenance tally', async () => {
+  it('publishes the provenance tally on commit', async () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
 
@@ -69,7 +68,6 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     void slot.load({ source: Source.SDSS, tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    expect(h.deps.reportSourceCount).toHaveBeenCalledWith(Source.SDSS, 42);
     expect(h.deps.publish).toHaveBeenCalledTimes(1);
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
       provenanceCounts: Record<number, unknown>;

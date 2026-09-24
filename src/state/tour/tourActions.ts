@@ -1,12 +1,12 @@
 /**
- * tourActions — the reducer-less signals `tourBody` takes on.
+ * tourActions — the reducer-less signals `tourBodySaga` takes on.
  *
  * `startTour(id, beats?)` launches a new tour run by its `TourId`, optionally
  * windowed to a contiguous `BeatRange` — the recorder hook passes one so a
  * single-beat take doesn't replay the whole tour; omitted means the full run.
  * `watchTakeoverSaga` picks it up via `takeLatest` — a new start supersedes any
  * in-progress takeover automatically — looks the id up in `tourRegistry`, and
- * runs `tourBody` on the resolved tour under `runTakeover`. The action is
+ * runs `tourBodySaga` on the resolved tour under `runTakeoverSaga`. The action is
  * fully serializable (an id plus a plain index range, no callbacks).
  *
  * `advanceTour` asks the tour to step to the next beat. It can come from a
@@ -28,7 +28,7 @@
  * is `exitTakeover` now (`state/takeover/takeoverActions.ts`) — a tour isn't
  * the only thing it can end, so it moved out of this tour-specific file.
  * These three signals are reducer-less: they carry no payload and modify no
- * state; they are pure events consumed by `tourBody`, the single writer of
+ * state; they are pure events consumed by `tourBodySaga`, the single writer of
  * the `tour` slice.
  */
 import { createAction } from '@reduxjs/toolkit';

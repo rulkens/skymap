@@ -17,10 +17,9 @@ import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { ChainRow } from '../../../@types/scene/ChainRow';
-import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
@@ -30,8 +29,6 @@ import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { chainOverlapViolations } from '../../../utils/regions/chainOverlapViolations';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/occlusion/nearestSphereFaceM';
@@ -123,7 +120,7 @@ const COSMO_FAR_MPC = 50000;
 const NEAR_MARGIN_EPS = 1e-3;
 
 /**
- * Build one body's slab row, or `null` when the body has no pose this frame.
+ * Build one `SlabRow`'s slab, or `null` when its anchor has no pose this frame.
  *
  * `vp` is built ABOUT THE EYE, so `lookAt`'s rotation carries no translation and
  * geometry drawn here must already be eye-relative (RTC-native, no rebase). `far`
@@ -132,7 +129,7 @@ const NEAR_MARGIN_EPS = 1e-3;
  * `[Infinity, Infinity]` for `centrePx`, so it never registers a false overlap.
  */
 export function bodySlabRow(input: {
-  readonly body: SceneBody;
+  readonly row: SlabRow;
   readonly pose: BodyPoseProvider;
   readonly frustum: ViewFrustum;
   readonly viewportPx: Readonly<Vec2>;
@@ -153,17 +150,17 @@ export function bodySlabRow(input: {
   readonly chainRow: Omit<ChainRow, 'index'>;
   readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
-  const { body, pose, frustum, viewportPx, attachedBodies, clipYFlip } = input;
-  const relPose = pose(body.id as BodyId);
+  const { row, pose, frustum, viewportPx, attachedBodies, clipYFlip } = input;
+  const relPose = pose(row.anchorId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
 
   const dM = Math.hypot(eyeRelBodyM[0], eyeRelBodyM[1], eyeRelBodyM[2]);
-  // Straight off the tangents — no fovYRad round trip needed at all. Computed
-  // once and shared with the DEV-only radiusPx block below: a body's drawn
-  // envelope (bodyDrawRadiusM) can depend on it just as radiusPx already did.
+  // Straight off the tangents — no fovYRad round trip needed at all. Shared
+  // with the DEV-only radiusPx block below: a row's drawn envelope can depend
+  // on it just as radiusPx already did.
   const pxPerRad = viewportPx[1] / (frustum.tanUp - frustum.tanDown);
-  const rMaxM = bodyDrawRadiusM(body, dM, pxPerRad);
+  const rMaxM = row.drawRadiusM(dM, pxPerRad);
   const forward: Vec3 = [basisM[6], basisM[7], basisM[8]];
   const up: Vec3 = [basisM[3], basisM[4], basisM[5]];
 
@@ -178,7 +175,7 @@ export function bodySlabRow(input: {
   );
   // Whichever drawn shell reaches furthest along the view axis: the
   // PROXY_SCALE-inflated mesh, or a wider un-inflated outer shell (rings, atmosphere).
-  const footprintM = bodyFootprintRadiusM(body);
+  const footprintM = row.footprintRadiusM;
   const marginM = Math.max(PROXY_SCALE * footprintM, rMaxM) * (1 + NEAR_MARGIN_EPS);
   // The altitude-above-the-body term stays radial: it only wins once the camera
   // is inside the outermost shell, a close orbit/descent around THIS body where
@@ -221,7 +218,7 @@ export function bodySlabRow(input: {
       near,
       far: Infinity,
       vp,
-      frame: { kind: 'body-m', bodyId: body.id as BodyId },
+      frame: { kind: 'body-m', hostId: row.anchorId },
       distanceRangeM,
       precision: 'f64',
       reversedZ,
@@ -255,7 +252,7 @@ export function deriveSlabs(input: {
    */
   readonly altitudeMpc: number;
   readonly pose: BodyPoseProvider;
-  readonly visibleBodies: readonly SceneBody[];
+  readonly visibleRows: readonly SlabRow[];
   readonly viewportPx: Readonly<Vec2>;
   readonly starSphereRangeM: readonly [number, number] | null;
   /** Host body id → its attached mesh bodies, already resolved into the
@@ -273,7 +270,7 @@ export function deriveSlabs(input: {
     cosmoVp,
     altitudeMpc,
     pose,
-    visibleBodies,
+    visibleRows,
     viewportPx,
     attachedBodiesByHostId,
     clipYFlip,
@@ -331,14 +328,14 @@ export function deriveSlabs(input: {
   };
 
   // Sorted BEFORE indices are assigned, so index === painter ordinal.
-  const sortedBodyRows = visibleBodies
-    .map((body) =>
+  const sortedBodyRows = visibleRows
+    .map((row) =>
       bodySlabRow({
-        body,
+        row,
         pose,
         frustum,
         viewportPx,
-        attachedBodies: attachedBodiesByHostId?.get(body.id),
+        attachedBodies: attachedBodiesByHostId?.get(row.anchorId),
         clipYFlip,
       }),
     )

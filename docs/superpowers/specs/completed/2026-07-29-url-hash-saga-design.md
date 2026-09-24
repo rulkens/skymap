@@ -326,7 +326,7 @@ verdicts below.
 
 **P1 — `selection.pending` (J1).** The write side has no way to see an in-flight focus
 intent: `selection` holds three _resolved-ref_ slots, and the deferral lives inside
-`resolveFocusRefDeferring`'s local loop (`resolveFocusRefDeferring.ts:22-25`).
+`resolveFocusRefDeferringSaga`'s local loop (`resolveFocusRefDeferringSaga.ts:22-25`).
 
 ```ts
 // SelectionState gains:
