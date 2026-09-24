@@ -25,11 +25,13 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/bodyTextures/hostBodyId';
 import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
+import { MESH_ASSETS } from '../../../../src/data/bodies/meshAssets.generated';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { Tier } from '../../../../src/@types/data/Tier';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -91,6 +93,29 @@ describe('ASSET_WIRING membership', () => {
       expect(row.built).toBe('external');
       // req carries { bodyId, kind, tier } clamped to the (body, kind) ceiling.
       expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
+    }
+  });
+
+  it("clamps a mesh body's tier to its tierCeiling", () => {
+    // Every SCENE_MESH_BODIES entry ships `small` only today, so any app tier
+    // above it must still fetch the `small` files.
+    const row = rowFor(meshBodySlotKey('curiosity'));
+    expect(row.req('large')).toEqual({ meshKey: 'curiosity', tier: 'small' });
+  });
+
+  it('a tier flip on a resident mesh body changes its req (Review Focus 2)', () => {
+    // No mesh body ships a second tier yet (PR 2's job), so there is no real
+    // medium-ceiling row to read `req` off — per the plan's fallback, this
+    // mutates a real row's `tierCeiling` in place (MESH_ASSETS is `readonly`
+    // only at the type level) to observe `req` producing two different
+    // requests, restoring it after so no other test in this file sees it.
+    const row = rowFor(meshBodySlotKey('curiosity'));
+    const original = MESH_ASSETS.curiosity!.tierCeiling;
+    (MESH_ASSETS.curiosity as { tierCeiling: Tier }).tierCeiling = 'medium';
+    try {
+      expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
+    } finally {
+      (MESH_ASSETS.curiosity as { tierCeiling: Tier }).tierCeiling = original;
     }
   });
 });

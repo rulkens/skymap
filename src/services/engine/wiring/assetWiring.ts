@@ -16,6 +16,7 @@ import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlas
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
@@ -101,7 +102,8 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
  * `bodyTextureRow` (demanded inside `loadRadiusMpc`, released past twice it),
  * SIMPLER: a mesh body is in the body-state snapshot whatever drives it, so its
  * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
- * indirection for a ring-style host.
+ * indirection for a ring-style host. `req` clamps the tier to the mesh's own
+ * `tierCeiling`, mirroring `bodyTextureRow`.
  */
 function meshBodyRow(body: MeshBody): AssetWiringRow {
   const bodyPos = (simDays: number): Readonly<Vec3> => {
@@ -115,7 +117,10 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
     key: meshBodySlotKey(body.id),
     built: 'external',
     factory: externalFactory,
-    req: () => ({ meshKey: body.meshKey }),
+    req: (tier) => ({
+      meshKey: body.meshKey,
+      tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
+    }),
     demand: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
     release: (ctx) =>

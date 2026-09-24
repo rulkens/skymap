@@ -1,6 +1,8 @@
 /**
  * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
- * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>.*`.
+ * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>-<px>.*`
+ * (`req.tier` already clamped to the body's ceiling by `meshBodyRow.req`); the
+ * contact mask stays untiered at `<key>_contact.webp`.
  *
  * A slot whose format is not sRGB carries numeric channels rather than a
  * picture, so it decodes with `colorSpaceConversion: 'none'` — the full writeup
@@ -14,6 +16,7 @@ import type { MeshTextureField } from '../../../@types/data/mesh/MeshTextureFiel
 import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { decodeMesh } from '../../../data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
+import { meshTierPrefix } from '../../../utils/meshBodies/meshTierPrefix';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 async function fetchTexture(
@@ -36,7 +39,9 @@ async function fetchTexture(
 }
 
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
-  const prefix = `meshes/${req.meshKey}`;
+  const prefix = meshTierPrefix(req.meshKey, req.tier);
+  // The contact mask stays UNTIERED — one bake, from the ceiling tier only.
+  const contactUrl = dataUrl(`meshes/${req.meshKey}_contact.webp`);
   const hasContactDecal = MESH_ASSETS[req.meshKey]?.contactDecal !== undefined;
 
   const [buf, textures, contactShadow] = await Promise.all([
@@ -59,7 +64,7 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
     ).then((entries) => Object.fromEntries(entries) as Record<MeshTextureField, ImageBitmap>),
     // The shadow is garnish: a missing mask drops it, never the rover.
     hasContactDecal
-      ? fetchTexture(dataUrl(`${prefix}_contact.webp`), signal, true).catch((err: Error) => {
+      ? fetchTexture(contactUrl, signal, true).catch((err: Error) => {
           if (err.name === 'AbortError') throw err;
           return undefined;
         })
