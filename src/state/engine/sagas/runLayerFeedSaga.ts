@@ -1,5 +1,5 @@
 /**
- * runLayerFeed — the one saga both `Layer.search` and `Layer.sourceCounts` run
+ * runLayerFeedSaga — the one saga both `Layer.search` and `Layer.sourceCounts` run
  * through: pull the feed, hand each value to core's own consumer, close the
  * iterator when core cancels the task at teardown.
  *
@@ -11,7 +11,7 @@
 import { call, cancelled } from 'typed-redux-saga';
 import type { SagaIterator } from 'redux-saga';
 
-export function* runLayerFeed<T>(
+export function* runLayerFeedSaga<T>(
   feed: AsyncIterable<T>,
   onValue: (value: T) => SagaIterator,
 ): SagaIterator {
@@ -22,7 +22,7 @@ export function* runLayerFeed<T>(
       try {
         result = yield* call(() => iterator.next());
       } catch (error) {
-        console.warn('runLayerFeed: the feed threw; this Layer stops reporting', error);
+        console.warn('runLayerFeedSaga: the feed threw; this Layer stops reporting', error);
         return;
       }
       if (result.done === true) return;

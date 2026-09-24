@@ -39,7 +39,7 @@ describe('callbackIterable', () => {
   });
 
   it('settles a pending next() when the iterator closes', async () => {
-    // A cancelled `runLayerFeed` is parked on `next()` when it calls `return()`;
+    // A cancelled `runLayerFeedSaga` is parked on `next()` when it calls `return()`;
     // an unsettled promise there would leak the saga's pull forever.
     const iterator = callbackIterable<number>(() => () => {})[Symbol.asyncIterator]();
     const pending = iterator.next();

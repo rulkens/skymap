@@ -4,12 +4,12 @@
  * vocabulary of its own.
  *
  * `subscribe` runs once per iteration, and its unsubscribe runs exactly once,
- * on `return()` — which is what `runLayerFeed` calls when core cancels the feed
+ * on `return()` — which is what `runLayerFeedSaga` calls when core cancels the feed
  * at teardown. Values emitted before the consumer asks are BUFFERED: a slot that
  * commits between two `next()` calls would otherwise drop its report.
  *
  * SINGLE CONSUMER per iterator: one pending `next()` at a time, which is what a
- * `runLayerFeed` pull loop does. A second concurrent `next()` would orphan the
+ * `runLayerFeedSaga` pull loop does. A second concurrent `next()` would orphan the
  * first. `return()` settles a pending `next()` rather than leaving it hanging.
  */
 

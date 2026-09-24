@@ -1,5 +1,5 @@
 /**
- * runLayerFeed — the saga behind both Layer feeds: every yield reaches the
+ * runLayerFeedSaga — the saga behind both Layer feeds: every yield reaches the
  * consumer in order, cancelling the task closes the iterator (the unsubscribe
  * behind `callbackIterable`), and a feed that rejects ends quietly rather than
  * taking the root saga down.
@@ -10,7 +10,7 @@ import { runSaga, stdChannel, type Task } from 'redux-saga';
 import { put } from 'typed-redux-saga';
 import { createAction, type UnknownAction } from '@reduxjs/toolkit';
 
-import { runLayerFeed } from '../../../../src/state/engine/sagas/runLayerFeed';
+import { runLayerFeedSaga } from '../../../../src/state/engine/sagas/runLayerFeedSaga';
 
 const reported = createAction<number>('test/reported');
 
@@ -22,12 +22,12 @@ function run(feed: AsyncIterable<number>): { puts: UnknownAction[]; task: Task }
       dispatch: (action: UnknownAction) => puts.push(action),
       getState: () => ({}),
     },
-    () => runLayerFeed(feed, (value) => put(reported(value))),
+    () => runLayerFeedSaga(feed, (value) => put(reported(value))),
   );
   return { puts, task };
 }
 
-describe('runLayerFeed', () => {
+describe('runLayerFeedSaga', () => {
   it('hands every yield to onValue in order', async () => {
     const { puts, task } = run(
       (async function* () {

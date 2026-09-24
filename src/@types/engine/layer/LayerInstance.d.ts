@@ -25,7 +25,7 @@ export type LayerInstance = {
   readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
   /** Bound feeds, absent when the Layer declares no such member; `createLayers`
-   * runs each as its own `runLayerFeed` task, cancelled with the Layer's sagas. */
+   * runs each as its own `runLayerFeedSaga` task, cancelled with the Layer's sagas. */
   readonly search?: AsyncIterable<readonly LayerSearchEntry[]>;
   readonly sourceCounts?: AsyncIterable<SourceCountReport>;
   destroy(): void;

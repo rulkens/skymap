@@ -30,7 +30,7 @@
 
 - `src/@types/engine/layer/LayerSearchEntry.d.ts`, `SourceCountReport.d.ts`
 - `src/utils/async/callbackIterable.ts` (+ test)
-- `src/state/engine/sagas/runLayerFeed.ts` (+ test) — the one saga both feeds run through
+- `src/state/engine/sagas/runLayerFeedSaga.ts` (+ test) — the one saga both feeds run through
 - `src/@types/engine/frame/SlabRow.d.ts`, `SlabHostId.d.ts`
 - `src/utils/scene/bodySlabRowOf.ts` (+ test) — a store-fed `SceneBody` → `SlabRow`
 - `src/data/bodies/coreSlabRows.ts` — Sgr A*'s row, core until PR 2
@@ -47,7 +47,7 @@
 
 ### Task 1: `search` + `sourceCounts` as async-iterable feeds — **review: yes**
 
-**Files:** create `src/@types/engine/layer/{LayerSearchEntry,SourceCountReport}.d.ts`, `src/utils/async/callbackIterable.ts`, `src/state/engine/sagas/runLayerFeed.ts`, `tests/utils/async/callbackIterable.test.ts`, `tests/state/engine/sagas/runLayerFeed.test.ts`; modify `src/@types/engine/layer/Layer.d.ts` (two members), `LayerCoreDeps.d.ts:28` (delete `reportSourceCount`), `src/services/engine/phases/createLayers.ts:55-74,94,108-110` (the callback body becomes the `sourceCounts` feed's consumer; both feeds start beside `layer.sagas`, tasks pushed to the same `layerSagaTasks` so `engine.ts:459-463` cancels them), `src/state/engine/engineSlice.ts` (+ `layerSearch` reducer, sibling of `engineStructureSearchListChanged` at :84-89), the engine slice state type (+ `layerSearch: Record<string, readonly LayerSearchEntry[]>`), `src/state/engine/selectors.ts` (+ `selectLayerSearchRows`, flattening in Layer order), `src/components/CommandPalette/utils/rankPaletteMatches.ts:62-67,210-217` (fifth parameter), `usePaletteSearch.ts:71-73`, `CommandPalette.tsx:130-133`, `containers/CommandPaletteContainer.tsx:61-68`, `src/layers/galaxyCatalog/load/wireGalaxyCatalogSourceSlot.ts:63-66`, `src/layers/starCatalog/load/starCatalogSlot.ts:20,41`, `src/layers/starCatalog/create.ts:84-90`, `src/layers/starCatalog/layer.ts` + `galaxyCatalog/layer.ts` (add `sourceCounts`), `tests/conventions/layerImportBoundary.test.ts:194` (message), `tests/services/engine/phases/createLayers.sourcePulse.test.ts` (re-target: the pulse now comes from a Layer's `sourceCounts` feed), `tests/components/CommandPalette/utils/rankPaletteMatches.test.ts`.
+**Files:** create `src/@types/engine/layer/{LayerSearchEntry,SourceCountReport}.d.ts`, `src/utils/async/callbackIterable.ts`, `src/state/engine/sagas/runLayerFeedSaga.ts`, `tests/utils/async/callbackIterable.test.ts`, `tests/state/engine/sagas/runLayerFeedSaga.test.ts`; modify `src/@types/engine/layer/Layer.d.ts` (two members), `LayerCoreDeps.d.ts:28` (delete `reportSourceCount`), `src/services/engine/phases/createLayers.ts:55-74,94,108-110` (the callback body becomes the `sourceCounts` feed's consumer; both feeds start beside `layer.sagas`, tasks pushed to the same `layerSagaTasks` so `engine.ts:459-463` cancels them), `src/state/engine/engineSlice.ts` (+ `layerSearch` reducer, sibling of `engineStructureSearchListChanged` at :84-89), the engine slice state type (+ `layerSearch: Record<string, readonly LayerSearchEntry[]>`), `src/state/engine/selectors.ts` (+ `selectLayerSearchRows`, flattening in Layer order), `src/components/CommandPalette/utils/rankPaletteMatches.ts:62-67,210-217` (fifth parameter), `usePaletteSearch.ts:71-73`, `CommandPalette.tsx:130-133`, `containers/CommandPaletteContainer.tsx:61-68`, `src/layers/galaxyCatalog/load/wireGalaxyCatalogSourceSlot.ts:63-66`, `src/layers/starCatalog/load/starCatalogSlot.ts:20,41`, `src/layers/starCatalog/create.ts:84-90`, `src/layers/starCatalog/layer.ts` + `galaxyCatalog/layer.ts` (add `sourceCounts`), `tests/conventions/layerImportBoundary.test.ts:194` (message), `tests/services/engine/phases/createLayers.sourcePulse.test.ts` (re-target: the pulse now comes from a Layer's `sourceCounts` feed), `tests/components/CommandPalette/utils/rankPaletteMatches.test.ts`.
 
 **Interfaces — produces:**
 
@@ -66,8 +66,8 @@ export type SourceCountReport = { readonly source: SourceType; readonly count: n
 
 // utils/async/callbackIterable.ts — turns a subscribe-style source into an async iterable
 export function callbackIterable<T>(subscribe: (emit: (value: T) => void) => () => void): AsyncIterable<T>;
-// sagas/runLayerFeed.ts
-export function* runLayerFeed<T>(feed: AsyncIterable<T>, onValue: (value: T) => Generator): SagaIterator;
+// sagas/runLayerFeedSaga.ts
+export function* runLayerFeedSaga<T>(feed: AsyncIterable<T>, onValue: (value: T) => Generator): SagaIterator;
 // engineSlice
 layerSearchReported: PayloadAction<{ layer: string; rows: readonly LayerSearchEntry[] }>
 // selectors
@@ -77,8 +77,8 @@ export const selectLayerSearchRows: (state: RootState) => readonly LayerSearchEn
 rankPaletteMatches(entries, aliasIndex, structures, layerRows: readonly LayerSearchEntry[], query)
 ```
 
-- [ ] `callbackIterable` tests: `values emitted before the consumer asks are buffered in order`; `return() runs the unsubscribe once`. `runLayerFeed` tests (use `redux-saga`'s `runSaga` with a stub `put`): `each yield reaches onValue in order`; `cancelling the task calls the iterable's return()`; `a rejected next() ends the feed without throwing into the root`.
-- [ ] Implement the helper and the saga. `createLayers` starts `runLayerFeed(layer.search(runtime), rows => put(layerSearchReported({layer: layer.name, rows})))` and `runLayerFeed(layer.sourceCounts(runtime), report => <today's reportSourceCount body>)` only when the member exists — after `instantiateLayer` (the runtime is its result), pushed to `layerSagaTasks`.
+- [ ] `callbackIterable` tests: `values emitted before the consumer asks are buffered in order`; `return() runs the unsubscribe once`. `runLayerFeedSaga` tests (use `redux-saga`'s `runSaga` with a stub `put`): `each yield reaches onValue in order`; `cancelling the task calls the iterable's return()`; `a rejected next() ends the feed without throwing into the root`.
+- [ ] Implement the helper and the saga. `createLayers` starts `runLayerFeedSaga(layer.search(runtime), rows => put(layerSearchReported({layer: layer.name, rows})))` and `runLayerFeedSaga(layer.sourceCounts(runtime), report => <today's reportSourceCount body>)` only when the member exists — after `instantiateLayer` (the runtime is its result), pushed to `layerSagaTasks`.
 - [ ] Migrate the three call sites: the two slot subscriptions become `callbackIterable((emit) => slot.subscribe(...ready → emit({source, count})...))` returned from the Layer's `sourceCounts`; starCatalog's seeded counts (`create.ts:84-90`) become the first yields of the same generator before the slot feed. Delete `reportSourceCount` and the `Pick<LayerCoreDeps, 'reportSourceCount'>` narrowing at `starCatalogSlot.ts:20`.
 - [ ] `rankPaletteMatches`: add the parameter; one test `a primary layer row outranks a capped catalog row` and one `layer rows are absent when the list is empty`. Wire the selector through the container/hook (`useMemo` deps gain the new input).
 - [ ] `layerImportBoundary.test.ts:194`: message now names `sourceCounts`/`deps.publish`. `createLayers.sourcePulse.test.ts`: the fixture Layer declares `sourceCounts: async function* () { yield {source, count}; }`; assertions unchanged (`engineSourceCountReported`, `engineStatusChanged` ready total, `contentVersion` bump).
@@ -199,7 +199,7 @@ export function detailCardTable(layers: readonly Layer<string, unknown>[]): Reco
 
 **Deliverable inventory**
 
-- `Layer.search`, `Layer.sourceCounts`, `Layer.slabs` on the contract; `SelectionRow.driver` on every arm; `LayerUiSlots.detailCard`; `SlabFrame.body-m.hostId: SlabHostId`; `PlaceId`/`GALACTIC_CENTRE_ANCHOR`; `CORE_SLAB_ROWS` (one row); `runLayerFeed`, `callbackIterable`, `bodySlabRowOf`, `slabRowActive`, `bodyDriverGeometry`, `detailCardTable`.
+- `Layer.search`, `Layer.sourceCounts`, `Layer.slabs` on the contract; `SelectionRow.driver` on every arm; `LayerUiSlots.detailCard`; `SlabFrame.body-m.hostId: SlabHostId`; `PlaceId`/`GALACTIC_CENTRE_ANCHOR`; `CORE_SLAB_ROWS` (one row); `runLayerFeedSaga`, `callbackIterable`, `bodySlabRowOf`, `slabRowActive`, `bodyDriverGeometry`, `detailCardTable`.
 - Deleted: `LayerCoreDeps.reportSourceCount`, `focusDriverId.ts`, `sceneAnchorPointBodies.ts`, `BAND_SLAB_FLOOR_MPC`, `BODY_SLAB_CAPACITY` (→ `SLAB_ROW_CEILING`), the ZoA card folders under `components/InfoCard/`.
 
 **Observable behaviours for the smoke pass** (all "unchanged"): palette finds "Galactic Centre", "Sgr A*", Coma, a Gaia alias, and galaxy/star count chips light up after load; flying to Sgr A* descends to the 2 r_s floor and the lens opens/closes at the same distances; Saturn's rings and Earth's whale still draw on their slabs; clicking the Zone of Avoidance band opens its card; `#focus=body-sgr-a-star` still resolves (PR 2 changes it).

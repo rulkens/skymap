@@ -20,7 +20,7 @@ import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DD
 
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
-import { runLayerFeed } from '../../../state/engine/sagas/runLayerFeed';
+import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
 import {
   factsReported,
   layerFactsSeeded,
@@ -128,12 +128,14 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     if (search) {
       layerSagaTasks.push(
         deps.cb.runSaga(() =>
-          runLayerFeed(search, (rows) => put(layerSearchReported({ layer: layer.name, rows }))),
+          runLayerFeedSaga(search, (rows) => put(layerSearchReported({ layer: layer.name, rows }))),
         ),
       );
     }
     if (sourceCounts) {
-      layerSagaTasks.push(deps.cb.runSaga(() => runLayerFeed(sourceCounts, consumeSourceCount)));
+      layerSagaTasks.push(
+        deps.cb.runSaga(() => runLayerFeedSaga(sourceCounts, consumeSourceCount)),
+      );
     }
     return instance;
   });
