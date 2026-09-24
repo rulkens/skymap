@@ -1,18 +1,17 @@
 /**
  * sceneBodyLabels — name captions for the true-scale foreground bodies core
- * still owns: Earth, the planets, Sgr A*, and the mesh bodies (the seeded
- * stars and the Sun caption through the star Layer's own producer now).
+ * still owns: Earth, the planets and the mesh bodies (the seeded stars, the
+ * Sun and the Galactic Centre caption through their Layers' own producers).
  *
  * The scene bodies render true-scale in the foreground/HDR passes, so at
  * almost every zoom level they are sub-pixel and impossible to locate by
  * eye. These labels anchor a name to each body's world position, giving
  * the descent toward the solar system something to aim at.
  *
- * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` + `SGR_A_STAR` +
+ * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` +
  * `SCENE_MESH_BODIES`), each tinted by its own authored colour: a planet's or
- * mesh body's `albedo`, and fixed tints for the two records that carry no
- * colour (Earth, which has a texture instead, and Sgr A*, which has no
- * light). Deriving the tints from the body records keeps this file free of a
+ * mesh body's `albedo`, and a fixed tint for Earth, which carries a texture
+ * instead of a colour. Deriving the tints from the body records keeps this file free of a
  * parallel colour table that would drift from the seeds.
  *
  * ### Why the foreground projection, not the main one
@@ -39,12 +38,12 @@ import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
-import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
@@ -52,14 +51,6 @@ import { bodyCaption } from '../../../utils/labels/bodyCaption';
  * the captions have always used.
  */
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
-
-/**
- * Sgr A*'s caption tint. An `AnchorPointBody` carries no photometry — there is
- * no light to take a colour from — so this is authored: a warm accretion amber,
- * distinct from every blue-to-white star tint so the Galactic Centre reads as a
- * landmark rather than one more name in the star map.
- */
-const SGR_A_STAR_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
 /**
  * The one place the scene-body caption id format lives. `bodyCaption` (which
@@ -87,26 +78,28 @@ function captionRevealBand(revealM: number | undefined): FadeBand | undefined {
  *
  * Every body reads its position from the caller's `bodyStates` snapshot (the
  * per-frame `deriveBodyStates(simDays)` map), so Earth's and the planets'
- * captions FOLLOW them as the sim clock advances; Sgr A*'s anchor is fixed, so
- * its caption sits still at every instant. The caller re-invokes this only
+ * captions FOLLOW them as the sim clock advances. The caller re-invokes this only
  * when the snapshot actually changes — a paused clock returns the same map by
  * reference, so a fresh instant is the only thing that rebuilds the captions
  * (see `foregroundLabelsPass`'s memo).
  */
 export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): ForegroundCaption[] {
   return [
-    bodyCaption(SCENE_EARTH, bodyStates.get(SCENE_EARTH.id)!.positionMpc, EARTH_TINT, 'earth'),
-    ...SCENE_PLANETS.map((planet) =>
-      bodyCaption(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),
-    ),
-    // Sgr A* draws no geometry, so this caption is its ENTIRE on-screen
-    // presence: omitted here it is invisible with nothing to diagnose, which is
-    // why it is emitted from the seed record rather than from a drawn set.
     bodyCaption(
-      SGR_A_STAR,
-      bodyStates.get(SGR_A_STAR.id)!.positionMpc,
-      SGR_A_STAR_TINT,
-      'sgrAStar',
+      SCENE_EARTH,
+      bodyFootprintRadiusM(SCENE_EARTH),
+      bodyStates.get(SCENE_EARTH.id)!.positionMpc,
+      EARTH_TINT,
+      'earth',
+    ),
+    ...SCENE_PLANETS.map((planet) =>
+      bodyCaption(
+        planet,
+        bodyFootprintRadiusM(planet),
+        bodyStates.get(planet.id)!.positionMpc,
+        planet.albedo,
+        'planet',
+      ),
     ),
     // A mesh body's baked `albedo` is a mean over the whole surface — dark
     // skin, or (petunias) an atlas averaging in black gaps — far below a
@@ -115,6 +108,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     ...SCENE_MESH_BODIES.map((body) => ({
       ...bodyCaption(
         body,
+        bodyFootprintRadiusM(body),
         bodyStates.get(body.id)!.positionMpc,
         scaleToUnitMax(body.albedo),
         'meshBody',

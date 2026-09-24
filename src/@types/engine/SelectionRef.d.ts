@@ -1,5 +1,6 @@
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
 
 /**
  * SelectionRef — the identity Intent for a selectable thing. The single
@@ -34,4 +35,5 @@ export type SelectionRef =
       readonly type: 'starCatalog';
       readonly source: StarCatalogSourceType;
       readonly index: number;
-    };
+    }
+  | { readonly type: 'blackHole'; readonly id: BlackHoleId };

@@ -7,14 +7,17 @@
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { SGR_A_STAR_MASS_SOLAR } from '../../../data/bodies/sgrAStarMassSolar';
+import { SGR_A_STAR_ENTRY } from '../sources/sgrAStar';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 
 export const BLACK_HOLES: readonly BlackHoleRow[] = [
   {
-    bodyId: 'sgr-a-star',
+    id: SGR_A_STAR_ENTRY.id,
     anchorId: GALACTIC_CENTRE_ANCHOR.id,
     massSolar: SGR_A_STAR_MASS_SOLAR,
     band: SCALE_FADE_BANDS.sgrAStarLensing,
+    standoffRadii: 2.0,
+    focusDistanceRadii: 30.4,
     emission: {
       // ISCO out to the EHT photon ring; Schwarzschild, no spin.
       innerRs: 3,

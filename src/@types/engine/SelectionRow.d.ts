@@ -2,6 +2,7 @@ import type { DriverGeometry } from './camera/DriverGeometry';
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
 import type { Vec3 } from '../math/Vec3';
 
 /**
@@ -55,5 +56,16 @@ export type SelectionRow =
       // curated sidecar or its orbit instead.
       readonly absMag?: number;
       readonly bpRp?: number;
+      readonly driver: DriverGeometry;
+    }
+  // A black hole poses from its PLACE (`driver.poseId`), not a body table. Names
+  // and mass ride the row so the card builds without reaching into the Layer.
+  | {
+      readonly type: 'blackHole';
+      readonly id: BlackHoleId;
+      readonly label: string;
+      readonly detailLabel: string;
+      readonly massSolar: number;
+      readonly positionMpc: Vec3;
       readonly driver: DriverGeometry;
     };

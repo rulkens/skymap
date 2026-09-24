@@ -17,8 +17,7 @@
  * `SURFACE_STANDOFF_RADII` from the pivot's surface), so the framing distance is
  * always comfortably reachable — the fill factor puts it several radii out.
  *
- * `focusDistanceRadii`, when a caller passes it (`AnchorPointBody`'s optional
- * field), overrides the screen-fill formula with a fixed multiple of the
+ * `focusDistanceRadii`, when a caller passes it (a `BlackHoleRow` field), overrides the screen-fill formula with a fixed multiple of the
  * radius instead — Sgr A*'s arrival distance is an r_s count the user framed
  * live, not a FOV-dependent viewport fraction.
  */

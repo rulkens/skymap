@@ -15,7 +15,6 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
@@ -244,34 +243,6 @@ describe('visibleSlabBodies', () => {
       });
       expect(visible.map((row) => row.anchorId)).toEqual(['wide']);
     });
-  });
-
-  it('admits an AnchorPointBody candidate on the same terms as a planet', () => {
-    const visibleAnchor: AnchorPointBody = {
-      id: 'visible-anchor',
-      label: 'Visible anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const hiddenAnchor: AnchorPointBody = {
-      id: 'hidden-anchor',
-      label: 'Hidden anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const bodyStates = new Map<string, BodyState>([
-      ['visible-anchor', makeState()],
-      ['hidden-anchor', makeState(offAxisPositionMpc(180, 1000))],
-    ]);
-
-    const visible = visibleSlabBodies({
-      rows: [visibleAnchor, hiddenAnchor].map(bodySlabRowOf),
-      bodyStates,
-      camPosMpc: [0, 0, 0],
-      camForwardMpc: FORWARD_X,
-      frustum: SQUARE_90,
-      pxPerRad: PX_PER_RAD_90,
-    });
-
-    expect(visible.map((row) => row.anchorId)).toEqual(['visible-anchor']);
   });
 
   describe("Sgr A*'s lens envelope, not a bypass", () => {

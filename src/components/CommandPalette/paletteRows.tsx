@@ -68,7 +68,7 @@ function namedRowView(
   label: string,
 ): RowView {
   const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
-  const chip = bodyRowChip(id, label);
+  const chip = bodyRowChip(id);
   return {
     key: `${keyPrefix}:${id}`,
     testid: `${testidPrefix}-${id}`,

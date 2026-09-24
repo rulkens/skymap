@@ -1,0 +1,7 @@
+/*
+ * BlackHoleDetailCard.module.css — the hole panel's outer hook. Short content,
+ * so it borrows the structure variant's width floor, as the body card does.
+ */
+.root {
+  composes: infoCardFull structure from '../../../../components/InfoCard/cardChrome.module.css';
+}

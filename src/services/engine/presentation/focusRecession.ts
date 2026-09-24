@@ -46,6 +46,7 @@ const RECESSION_BY_LABEL_LAYER = {
   // declutters by its own mechanism.
   starCatalog: undefined,
   body: undefined,
+  blackHoles: undefined,
 } satisfies Record<LabelLayerId, number | undefined>;
 
 const RECESSION_BY_KIND = {

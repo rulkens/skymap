@@ -7,10 +7,10 @@
  */
 
 import { BLACK_HOLES } from '../../data/blackHoles';
-import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
+import { SGR_A_STAR_ENTRY } from '../../sources/sgrAStar';
 import type { SgrAStarLensingTuning } from '../../@types/SgrAStarLensingTuning';
 
-const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id)!;
+const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.id === SGR_A_STAR_ENTRY.id)!;
 
 export const initialState: SgrAStarLensingTuning = {
   innerRs: SGR_A_STAR_BLACK_HOLE_ROW.emission.innerRs,

@@ -5,17 +5,23 @@
  * (M87*) is a second row, not code.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
 import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { FadeBand } from '../../../@types/math/FadeBand';
 
 export type BlackHoleRow = {
-  readonly bodyId: BodyId;
+  readonly id: BlackHoleId;
   readonly anchorId: PlaceId; // the lens's pose key and slab host
   readonly massSolar: number; // solar masses; r_s = schwarzschildRadiusM(massSolar)
   // By reference: the sky capture holds the same object, so the lens can never
   // sample a cubemap its band did not capture into.
   readonly band: FadeBand;
+  // The descent floor, in r_s: the camera may approach to 2 r_s, well inside
+  // the Earth-tuned global SURFACE_STANDOFF_RADII (~1.0000024).
+  readonly standoffRadii: number;
+  // Arrival distance, in r_s, the user framed live (2026-09-01): outside the
+  // descent floor and deep inside the lensing fade band.
+  readonly focusDistanceRadii: number;
   readonly emission: {
     readonly innerRs: number; // Schwarzschild radii; inner edge of the accretion disc
     readonly outerRs: number; // Schwarzschild radii; photon ring / EHT imaging radius

@@ -99,7 +99,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/fore
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 import { sgrAStarCaptionTarget } from '../../../services/engine/presentation/sgrAStarCaptionTarget';
 import { starExposureRamp } from '../../../utils/star/starExposureRamp';
-import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../data/famousStarPickRadiusPx';
@@ -332,7 +332,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       // caller per submit — so the anchor rides its satellites' single draw.
       let anchorScreenPx: Vec2 | null = null;
       if (sgrAStarCaptionPickable(state, ctx)) {
-        const anchorPos = sceneBodyStates(state, ctx).get(SGR_A_STAR.id)!.positionMpc;
+        const anchorPos = sceneBodyStates(state, ctx).get(GALACTIC_CENTRE_ANCHOR.id)!.positionMpc;
         const anchorRel = relToCam(anchorPos);
         anchorScreenPx = projectToScreenPx(anchorRel, rebasedVp, view.viewportPx);
         pickPoints.push({

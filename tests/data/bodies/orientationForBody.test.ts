@@ -71,12 +71,14 @@ describe('orientationForBody', () => {
     ]);
   });
 
-  it('returns identity for the Sgr A* anchor', () => {
-    // Sgr A* has no rotation row, so the gate above already returns identity
+  it('returns identity for the Galactic Centre anchor', () => {
+    // The place has no rotation row, so the gate above already returns identity
     // for it. This pins that fact so a future accidental rotation-table entry
-    // for 'sgr-a-star' can't silently rotate the body-slab basis
+    // for 'galactic-centre' can't silently rotate the lens slab's basis
     // bodyRelativePose builds from it.
-    expect(orientationForBody('sgr-a-star', CONST_J2000, NO_POSITIONS)).toEqual([...IDENTITY_MAT3]);
+    expect(orientationForBody('galactic-centre', CONST_J2000, NO_POSITIONS)).toEqual([
+      ...IDENTITY_MAT3,
+    ]);
   });
 
   it('orients a body that has a rotation row but no texture entry', () => {

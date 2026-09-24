@@ -34,6 +34,7 @@ const PICK_BAND_AND_GALAXIES = {
     starCatalog: false,
     structure: false,
     milkyWay: false,
+    blackHole: false,
   },
 };
 

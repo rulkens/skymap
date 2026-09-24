@@ -50,6 +50,7 @@ import {
   DEFAULT_ORIENTATION,
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
+import { initialState as blackHolesInitialState } from '../../../src/layers/blackHoles/state/blackHoles/initialState';
 import { initialState as blackHoleLensingTuningInitialState } from '../../../src/layers/blackHoles/state/lensingTuning/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
@@ -111,6 +112,7 @@ export function makeSettingsFixture(
     thumbnails: { ...thumbnailsInitialState },
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
+    blackHoles: { items: { ...blackHolesInitialState.items } },
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },

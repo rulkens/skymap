@@ -13,6 +13,7 @@ import { meanAnomalyAtJ2000 } from '../../../utils/orbit/meanAnomalyAtJ2000';
 import { skyInclinationToFrameInclination } from '../../../utils/orbit/skyInclinationToFrameInclination';
 import { skyPositionAngleToFrameAngle } from '../../../utils/orbit/skyPositionAngleToFrameAngle';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
+import { GALACTIC_CENTRE_ANCHOR } from '../../places/galacticCentre';
 import { sStarAppearance } from '../sStarAppearance';
 import { temperatureToLinearRgb } from '../../../utils/color/temperatureToLinearRgb';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
@@ -54,7 +55,7 @@ function sStarTrailTint(row: SStarSeed): Vec3 {
 export function sStar(row: SStarSeed): OrbitalElements {
   return {
     id: row.id,
-    focusId: 'sgr-a-star',
+    focusId: GALACTIC_CENTRE_ANCHOR.id,
     semiMajorMpc: row.semiMajorArcsec * GC_ARCSEC_TO_MPC,
     eccentricity: row.eccentricity,
     inclinationRad: skyInclinationToFrameInclination(row.inclinationDeg),

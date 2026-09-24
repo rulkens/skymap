@@ -5,5 +5,6 @@
  */
 
 import { blackHoleLensingTuningSlice } from './lensingTuning/slice';
+import { blackHolesSlice } from './blackHoles/slice';
 
-export const blackHolesLayerSettings = [blackHoleLensingTuningSlice] as const;
+export const blackHolesLayerSettings = [blackHolesSlice, blackHoleLensingTuningSlice] as const;

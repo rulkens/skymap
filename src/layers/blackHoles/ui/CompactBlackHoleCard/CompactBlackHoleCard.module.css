@@ -1,0 +1,7 @@
+/*
+ * CompactBlackHoleCard.module.css — the hole hover-preview's outer hook; the
+ * chrome is the shared compactChrome vocabulary.
+ */
+.root {
+  composes: infoCardCompact from '../../../../components/InfoCard/compactChrome.module.css';
+}

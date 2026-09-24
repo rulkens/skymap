@@ -11,7 +11,6 @@ import { describe, it, expect } from 'vitest';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
-import { SGR_A_STAR } from '../../../src/data/bodies/sceneSgrAStar';
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 
@@ -43,18 +42,5 @@ describe('bodyDriverGeometry', () => {
       standoffRadii: WHALE.standoffRadii,
     });
     expect(WHALE.standoffRadii).not.toBe(SURFACE_STANDOFF_RADII); // an override, not the global
-  });
-
-  it('Sgr A* carries its arrival distance and descent floor off the seed', () => {
-    const driver = bodyDriverGeometry('sgr-a-star');
-    expect(driver.focusDistanceRadii).toBe(30.4);
-    expect(driver.standoffRadii).toBe(2);
-    expect(driver.groundRadiusM).toBe(SGR_A_STAR.surface.datumRadiusM);
-  });
-
-  it('leaves focusDistanceRadii absent for a body with no arrival override', () => {
-    // An `undefined` key would be a serialized row field the store carries for
-    // every body; absence is what `bodyLikeFraming`'s optional argument reads.
-    expect('focusDistanceRadii' in bodyDriverGeometry('mars')).toBe(false);
   });
 });

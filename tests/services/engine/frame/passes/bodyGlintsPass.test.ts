@@ -31,7 +31,6 @@ import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { Source } from '../../../../../src/data/sources';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticCentre';
-import { SGR_A_STAR } from '../../../../../src/data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -72,16 +71,11 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
     // origin keeps the anchor INERT by default (distance 0 is deep inside
     // `sgrAStarLensing.fullAt`, 100 AU) — the far-field-glint tests below move
     // it out explicitly via `statesWithAnchorPinnedAt`.
-    // BOTH ids, the way `deriveBodyStates` carries them until PR 2: the band
-    // keys on the PLACE (the region's anchor), the packed glint position on
-    // the body.
-    for (const id of [GALACTIC_CENTRE_ANCHOR.id, SGR_A_STAR.id]) {
-      m.set(id, {
-        positionMpc: [0, 0, 0],
-        orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
-        meanAnomalyRad: 0,
-      });
-    }
+    m.set(GALACTIC_CENTRE_ANCHOR.id, {
+      positionMpc: [0, 0, 0],
+      orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
+      meanAnomalyRad: 0,
+    });
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }
@@ -205,9 +199,11 @@ function statesWithAnchorPinnedAt(
   return (state) => {
     const m = new Map<string, BodyState>();
     m.set('sun', { positionMpc: [0, 0, 0], orientation: IDENTITY, meanAnomalyRad: 0 });
-    for (const id of [GALACTIC_CENTRE_ANCHOR.id, SGR_A_STAR.id]) {
-      m.set(id, { positionMpc: anchorPositionMpc, orientation: IDENTITY, meanAnomalyRad: 0 });
-    }
+    m.set(GALACTIC_CENTRE_ANCHOR.id, {
+      positionMpc: anchorPositionMpc,
+      orientation: IDENTITY,
+      meanAnomalyRad: 0,
+    });
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
       m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
     }

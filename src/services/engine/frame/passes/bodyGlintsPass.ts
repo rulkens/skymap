@@ -79,7 +79,7 @@ import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../data/places/galacticCentre';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -121,8 +121,8 @@ const GLINT_BACKDROP_REGION = regionById('solar-system');
 // against (see the module header).
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
-// A fixed warm-orange marker, not a photometric measurement — an anchor
-// carries no albedo (`AnchorPointBody`'s header) to derive one from. Tuned to
+// A fixed warm-orange marker, not a photometric measurement — a black hole
+// carries no albedo to derive one from. Tuned to
 // read clearly against the additive HDR field it shares with the seeded-body
 // glints.
 const SGR_A_STAR_GLINT_TINT: Vec3 = [1, 0.55, 0.2];
@@ -283,7 +283,7 @@ export const bodyGlintsPass: ContentPass = {
     // and the tint below are Sgr A*'s own, so a second anchor row would
     // silently inherit them. Give the second anchor its own band + tint on its
     // data row when there is one — `MAX_GLINTS`'s `+ 1` is this glint.
-    const sgrAStarState = states.get(SGR_A_STAR.id);
+    const sgrAStarState = states.get(GALACTIC_CENTRE_ANCHOR.id);
     const anchorBrightness = sgrAStarGlintBrightness(camPos, states);
     if (
       count < MAX_GLINTS &&

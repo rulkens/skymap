@@ -41,7 +41,7 @@ import { visibleStars } from '../../../../src/services/engine/frame/visibleStars
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
-import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
+import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { Source } from '../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
@@ -199,13 +199,14 @@ function makeRenderer() {
 }
 
 /** `PassState` carrying the star-catalog settings and the core `bodyPickRenderer` handle. */
-function makeState(
-  catalogs: Catalogs = MAP_AND_SUN,
-  bodyItems: Record<string, unknown> = makeBodyItems(),
-): EngineState {
+function makeState(catalogs: Catalogs = MAP_AND_SUN, sgrAStarLabel = true): EngineState {
   return {
     gpu: { bodyPickRenderer: { drawPoints: vi.fn() } },
-    settings: { starCatalogs: starSettings(catalogs), bodies: { items: bodyItems } },
+    settings: {
+      starCatalogs: starSettings(catalogs),
+      bodies: { items: makeBodyItems() },
+      blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: sgrAStarLabel } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -550,9 +551,9 @@ describe('the Galactic Centre pick stamp', () => {
     catalogs: Catalogs,
     camPos: Vec3,
     view = makeNear0View(camPos),
-    bodyItems?: Record<string, unknown>,
+    sgrAStarLabel = true,
   ): number[] => {
-    const state = bodyItems ? makeState(catalogs, bodyItems) : makeState(catalogs);
+    const state = makeState(catalogs, sgrAStarLabel);
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
     const renderer = state.gpu.bodyPickRenderer as unknown as {
@@ -583,11 +584,8 @@ describe('the Galactic Centre pick stamp', () => {
   });
 
   it('follows the label toggle — pick tracks the affordance, not the anchor', () => {
-    const bodyItems = makeBodyItems((id) =>
-      id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {},
-    );
     expect(
-      stampedIds(MAP_AND_SUN, AT_GALACTIC_CENTRE, makeNear0View(AT_GALACTIC_CENTRE), bodyItems),
+      stampedIds(MAP_AND_SUN, AT_GALACTIC_CENTRE, makeNear0View(AT_GALACTIC_CENTRE), false),
     ).not.toContain(ANCHOR_ID);
   });
 
