@@ -12,7 +12,7 @@
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { SgrAStarLensingRenderer } from '../../../@types/rendering/SgrAStarLensingRenderer';
+import type { SgrAStarLensingRenderer } from '../@types/SgrAStarLensingRenderer';
 import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
 import vsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl?static';

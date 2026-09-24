@@ -32,7 +32,7 @@ export type SgrAStarLensingTuning = {
   // ── Non-uniform, same settings seam ──────────────────────────────────────
   /**
    * The `sky-cubemap` render-target row's per-axis pixel size (256/512/1024/2048).
-   * Read by `renderTargets.ts`'s state-driven `fixedSizePx.size` resolver, so
+   * Read by the Layer's `sky-cubemap` target (`fixedSizePx.size`), so
    * a change takes effect on the next `reconcile()` — no reload needed.
    */
   cubemapResolutionPx: number;
