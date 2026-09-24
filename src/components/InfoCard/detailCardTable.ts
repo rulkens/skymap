@@ -31,6 +31,7 @@ import { createElement } from 'react';
 import type { Layer } from '../../@types/engine/layer/Layer';
 import type { FocusableTargetType } from '../../@types/engine/FocusableTargetType';
 import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCardEntry';
+import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
@@ -126,20 +127,6 @@ const CORE_DETAIL_CARDS: Partial<Record<FocusableTargetType, DetailCardEntry>> =
   },
 };
 
-/** The full `FocusableTargetType` union has no runtime enumeration (it's a
- * derived string-literal type), so this is the one place that spells its
- * members out — to check the fold below is total. A new arm widens
- * `FocusableTarget` and must be added here too, or `detailCardTable` throws
- * at boot for every composition that doesn't also add the matching `ui` row. */
-const FOCUSABLE_TARGET_TYPES: readonly FocusableTargetType[] = [
-  'galaxyCatalog',
-  'structure',
-  'milkyWay',
-  'zoneOfAvoidance',
-  'body',
-  'starCatalog',
-];
-
 /** Folds `CORE_DETAIL_CARDS` with every composed Layer's `detailCard` ui-slot
  * entry into the table InfoCard dispatches on. Throws if the composition
  * leaves any `FocusableTargetType` arm — core or Layer — unclaimed. */
@@ -151,7 +138,7 @@ export function detailCardTable(
     table[type] = entry;
   }
 
-  const missing = FOCUSABLE_TARGET_TYPES.filter((type) => table[type] === undefined);
+  const missing = SELECTION_KINDS.filter((type) => table[type] === undefined);
   if (missing.length > 0) {
     throw new Error(`detailCardTable: no detailCard arm for "${missing.join(', ')}"`);
   }
