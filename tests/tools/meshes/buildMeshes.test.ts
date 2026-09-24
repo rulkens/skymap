@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { Tier } from '../../../src/@types/data/Tier';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
@@ -150,24 +151,28 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function writeGlb(doc: Document): Promise<string> {
-  const glbPath = join(dir, 'source.glb');
+async function writeGlbNamed(doc: Document, name: string): Promise<string> {
+  const glbPath = join(dir, name);
   await new NodeIO().write(glbPath, doc);
   return glbPath;
 }
 
+async function writeGlb(doc: Document): Promise<string> {
+  return writeGlbNamed(doc, 'source.glb');
+}
+
 /** Node's Buffer is a view into a shared pool — hand decodeMesh only its own bytes. */
 function readMesh(): ArrayBuffer {
-  const bytes = readFileSync(join(dir, 'out', 'testmesh.mesh'));
+  const bytes = readFileSync(join(dir, 'out', 'testmesh-2048.mesh'));
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function run(glbPath: string, bodyFromSource?: Mat3, groundUp?: Vec3) {
+function runTiers(glbPaths: Partial<Record<Tier, string>>, bodyFromSource?: Mat3, groundUp?: Vec3) {
   return buildMeshes({
     targets: [
       {
         key: 'testmesh',
-        glbPath,
+        glbPaths,
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
@@ -178,6 +183,10 @@ function run(glbPath: string, bodyFromSource?: Mat3, groundUp?: Vec3) {
     outDir: join(dir, 'out'),
     generatedPath: join(dir, 'meshAssets.generated.ts'),
   });
+}
+
+function run(glbPath: string, bodyFromSource?: Mat3, groundUp?: Vec3) {
+  return runTiers({ small: glbPath }, bodyFromSource, groundUp);
 }
 
 describe('buildMeshes()', () => {
@@ -504,10 +513,10 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.substituted).toEqual(['metalRough', 'normalMap']);
-    const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.webp'))
+    const normalPx = await sharp(join(dir, 'out', 'testmesh-2048_normal.webp'))
       .raw()
       .toBuffer();
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
       .raw()
       .toBuffer();
     expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
@@ -519,7 +528,7 @@ describe('buildMeshes()', () => {
     // lossy codec.
     row.meanAlbedo.forEach((c, i) => expect(c).toBeCloseTo([1, 0, 0][i]!, 2));
     expect(readFileSync(join(dir, 'meshAssets.generated.ts'), 'utf8')).toContain(
-      "path: 'meshes/testmesh.mesh'",
+      "tierCeiling: 'small'",
     );
   });
 
@@ -546,7 +555,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
@@ -567,7 +576,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-2048_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([77, 255, 0]);
@@ -583,7 +592,7 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
 
     for (const slot of MESH_TEXTURE_SLOTS) {
-      expect(existsSync(join(dir, 'out', `testmesh${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-2048${slot.suffix}.webp`))).toBe(true);
     }
   });
 
@@ -677,5 +686,133 @@ describe('buildMeshes()', () => {
     await expect(run(await writeGlb(doc))).rejects.toThrow(
       'has one of aoGroundUp/contactDecal without the other (missing aoGroundUp)',
     );
+  });
+
+  it('writes <key>-<px> geometry and slot textures for every source tier', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await runTiers({ small: glbPath, medium: glbPath });
+
+    expect(existsSync(join(dir, 'out', 'testmesh-2048.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh-4096.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh.mesh'))).toBe(false);
+    for (const slot of MESH_TEXTURE_SLOTS) {
+      expect(existsSync(join(dir, 'out', `testmesh-2048${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-4096${slot.suffix}.webp`))).toBe(true);
+    }
+  });
+
+  it("caps each tier's textures at tierToTexturePx(tier)", async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = doc.createMaterial('one');
+    const bigAlbedo = await sharp({
+      create: { width: 4096, height: 4096, channels: 3, background: { r: 200, g: 100, b: 50 } },
+    })
+      .png()
+      .toBuffer();
+    material.setBaseColorTexture(
+      doc.createTexture('albedo').setImage(new Uint8Array(bigAlbedo)).setMimeType('image/png'),
+    );
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await runTiers({ small: glbPath, medium: glbPath });
+
+    const small = await sharp(join(dir, 'out', 'testmesh-2048_albedo.webp')).metadata();
+    const medium = await sharp(join(dir, 'out', 'testmesh-4096_albedo.webp')).metadata();
+    expect(small.width).toBe(2048);
+    expect(medium.width).toBe(4096);
+  });
+
+  it('takes row metrics from the ceiling tier', async () => {
+    // Both triangles share xy so only z (hence groundOffsetM) differs: small's
+    // centred minimum sits 2 m below its centroid, medium's 6 m below.
+    const smallDoc = new Document();
+    smallDoc.createBuffer();
+    const smallMaterial = await withBaseColour(smallDoc, smallDoc.createMaterial('one'));
+    const smallPrim = addPrim(smallDoc, smallMaterial, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, -3],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    smallDoc
+      .createScene('s')
+      .addChild(smallDoc.createNode('n').setMesh(smallDoc.createMesh('m').addPrimitive(smallPrim)));
+
+    const mediumDoc = new Document();
+    mediumDoc.createBuffer();
+    const mediumMaterial = await withBaseColour(mediumDoc, mediumDoc.createMaterial('one'));
+    const mediumPrim = addPrim(mediumDoc, mediumMaterial, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, -9],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    mediumDoc
+      .createScene('s')
+      .addChild(
+        mediumDoc.createNode('n').setMesh(mediumDoc.createMesh('m').addPrimitive(mediumPrim)),
+      );
+
+    const row = (
+      await runTiers({
+        small: await writeGlbNamed(smallDoc, 'small.glb'),
+        medium: await writeGlbNamed(mediumDoc, 'medium.glb'),
+      })
+    )[0]!;
+
+    expect(row.tierCeiling).toBe('medium');
+    expect(row.groundOffsetM).toBeCloseTo(6, 4);
+  });
+
+  it('refuses a tier set that skips a rung', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await expect(runTiers({ small: glbPath, large: glbPath })).rejects.toThrow(
+      'buildMeshes: testmesh ships tiers [small, large] — tiers must run contiguously from small',
+    );
+  });
+
+  it('keeps the contact mask untiered', async () => {
+    const seatedDoc = () => {
+      const doc = new Document();
+      doc.createBuffer();
+      return withBaseColour(doc, doc.createMaterial('one')).then((material) => {
+        const prim = addPrim(doc, material, {
+          positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+          normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+        });
+        const node = doc
+          .createNode('n')
+          .setMesh(doc.createMesh('m').addPrimitive(prim))
+          .setExtras({
+            aoGroundUp: [0, 1, 0],
+            contactDecal: { centre: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] },
+          });
+        doc.createScene('s').addChild(node);
+        return doc;
+      });
+    };
+
+    const smallGlb = await writeGlbNamed(await seatedDoc(), 'small.glb');
+    const mediumGlb = await writeGlbNamed(await seatedDoc(), 'medium.glb');
+    // Only the CEILING tier's sibling .contact.png exists — if a non-ceiling
+    // tier still tried to bake a contact mask it would throw for a missing file.
+    await sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 1, g: 1, b: 1 } } })
+      .png()
+      .toFile(mediumGlb.replace(/\.glb$/, '.contact.png'));
+
+    await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, [0, 1, 0]);
+
+    expect(existsSync(join(dir, 'out', 'testmesh_contact.webp'))).toBe(true);
   });
 });

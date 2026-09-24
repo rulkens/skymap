@@ -1,6 +1,6 @@
 /**
- * buildMeshes — bake a source GLB to `public/data/meshes/<key>.mesh` plus one
- * PNG per `MESH_TEXTURE_SLOTS` row, and rewrite
+ * buildMeshes — bake each tier's source GLB to `public/data/meshes/<key>-<px>.mesh`
+ * plus one PNG per `MESH_TEXTURE_SLOTS` row, and rewrite
  * `src/data/bodies/meshAssets.generated.ts`.
  *
  * The runtime never parses glTF: everything `@gltf-transform` knows (node
@@ -22,10 +22,13 @@ import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
 import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
+import type { Tier } from '../../src/@types/data/Tier';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
+import { TIER_LADDER } from '../../src/data/tierLadder';
+import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
@@ -36,8 +39,6 @@ import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
 
-/** Matches the 2048^2 atlas the prebake emits; the triangle budget is `MESH_TRIANGLE_BUDGET`. */
-const TEXTURE_SIZE_BUDGET = 2048;
 // The contact shadow is a soft blur under a few-metre footprint: 512^2 is
 // ~1 cm/texel there, and nothing sharper survives the blur.
 const CONTACT_SIZE_BUDGET = 512;
@@ -52,7 +53,10 @@ const FLAT_NORMAL = { r: 128, g: 128, b: 255 };
 
 export type MeshBuildTarget = {
   readonly key: string;
-  readonly glbPath: string;
+  /** One source GLB per tier this body ships; must be a contiguous prefix of
+   *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). */
+  readonly glbPaths: Readonly<Partial<Record<Tier, string>>>;
+  /** The CEILING tier's RAW_DATA upstream. */
   readonly source: string;
   readonly licence: string;
   readonly attribution: string;
@@ -437,14 +441,15 @@ async function writeTexture(
   texture: Texture | null,
   fallback: { r: number; g: number; b: number },
   path: string,
+  px: number,
   lossless: boolean,
   forceR255 = false,
 ): Promise<void> {
   const image = texture?.getImage();
   const pipeline = image
     ? sharp(image).resize({
-        width: TEXTURE_SIZE_BUDGET,
-        height: TEXTURE_SIZE_BUDGET,
+        width: px,
+        height: px,
         fit: 'inside',
         withoutEnlargement: true,
       })
@@ -452,6 +457,22 @@ async function writeTexture(
   await (forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline)
     .webp(lossless ? LOSSLESS_WEBP : LOSSY_WEBP)
     .toFile(path);
+}
+
+/**
+ * `target.glbPaths`' present tiers, in ladder order — throws unless they form
+ * a contiguous `TIER_LADDER` prefix starting at `small`: a gap (`small` +
+ * `large`, no `medium`) would leave `clampTier` handing a `medium` request a
+ * file that was never built, a silent 404.
+ */
+function orderedTiers(glbPaths: MeshBuildTarget['glbPaths'], key: string): readonly Tier[] {
+  const present = TIER_LADDER.filter((tier) => glbPaths[tier] !== undefined);
+  if (present.length !== TIER_LADDER.indexOf(present[present.length - 1] ?? 'small') + 1) {
+    throw new Error(
+      `buildMeshes: ${key} ships tiers [${present.join(', ')}] — tiers must run contiguously from small`,
+    );
+  }
+  return present;
 }
 
 /**
@@ -503,9 +524,27 @@ function bakeContactDecal(
   };
 }
 
-async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
+/**
+ * Bake one tier's GLB: geometry to `<key>-<px>.mesh`, every texture slot to
+ * `<key>-<px><suffix>.webp` capped at that tier's `tierToTexturePx`. The
+ * contact mask is UNTIERED and only ever written for the ceiling tier — the
+ * caller passes `bakeContact: false` for every other tier so a two-tier body
+ * still ends up with exactly one `<key>_contact.webp`.
+ */
+async function bakeTier(
+  target: MeshBuildTarget,
+  tier: Tier,
+  glbPath: string,
+  outDir: string,
+  bakeContact: boolean,
+): Promise<{
+  geometry: Geometry;
+  substituted: readonly MeshTextureField[];
+  mean: Vec3;
+  contactDecal?: ContactDecal;
+}> {
   const { key } = target;
-  const doc = await new NodeIO().read(target.glbPath);
+  const doc = await new NodeIO().read(glbPath);
   const stamp = readGroundUpStamp(doc);
   if (groundUpDiffers(stamp, target.groundUp)) {
     throw new Error(
@@ -532,14 +571,15 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   }
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);
-  writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
+  const px = tierToTexturePx(tier);
+  writeFileSync(join(outDir, `${key}-${px}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
 
   const contactDecal =
-    decalStamp === undefined
-      ? undefined
-      : bakeContactDecal(decalStamp, target.bodyFromSource, geometry.centroidM);
+    bakeContact && decalStamp !== undefined
+      ? bakeContactDecal(decalStamp, target.bodyFromSource, geometry.centroidM)
+      : undefined;
   if (contactDecal !== undefined) {
-    const contactSourcePath = target.glbPath.replace(/\.glb$/, '.contact.png');
+    const contactSourcePath = glbPath.replace(/\.glb$/, '.contact.png');
     if (!existsSync(contactSourcePath)) {
       throw new Error(`buildMeshes: ${key} has a contactDecal but no file at ${contactSourcePath}`);
     }
@@ -586,12 +626,13 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   let albedoPath = '';
   for (const slot of MESH_TEXTURE_SLOTS) {
     const { texture, fallback } = sources[slot.field];
-    const path = join(outDir, `${key}${slot.suffix}.webp`);
+    const path = join(outDir, `${key}-${px}${slot.suffix}.webp`);
     if (slot.field === 'albedo') albedoPath = path;
     await writeTexture(
       texture,
       fallback,
       path,
+      px,
       !slot.format.endsWith('-srgb'),
       slot.field === 'metalRough' && !occlusionPacked,
     );
@@ -617,17 +658,43 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   ).map((c, i) => (baseColorTexture ? c * factor[i]! : c)) as Vec3;
 
   return {
+    geometry,
+    substituted,
+    mean: mean.map((c) => Number(c.toFixed(6))) as Vec3,
+    contactDecal,
+  };
+}
+
+/**
+ * Bake every tier a source ships. Row metrics (bounding radius, ground offset,
+ * mean albedo, triangle count, substituted list) and the contact decal come
+ * from the CEILING tier ONLY — a decimated `small` tier could otherwise seat a
+ * rover at a different height per tier, an asymmetry the row must not carry.
+ */
+async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
+  const { key } = target;
+  const tiers = orderedTiers(target.glbPaths, key);
+  const ceiling = tiers[tiers.length - 1]!;
+
+  let ceilingResult: Awaited<ReturnType<typeof bakeTier>> | undefined;
+  for (const tier of tiers) {
+    const result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
+    if (tier === ceiling) ceilingResult = result;
+  }
+  const { geometry, substituted, mean, contactDecal } = ceilingResult!;
+
+  return {
     key,
-    path: `meshes/${key}.mesh`,
     boundingRadiusM: geometry.boundingRadiusM,
     groundOffsetM: geometry.groundOffsetM,
-    meanAlbedo: mean.map((c) => Number(c.toFixed(6))) as Vec3,
+    meanAlbedo: mean,
     triangleCount: geometry.indices.length / 3,
     substituted,
     contactDecal,
     source: target.source,
     licence: target.licence,
     attribution: target.attribution,
+    tierCeiling: ceiling,
   };
 }
 
@@ -686,6 +753,7 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
     "import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';\n" +
     "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
+    "import type { Tier } from '../../@types/data/Tier';\n" +
     '\n' +
     `export type MeshAssetRow = {\n${rowType}};\n` +
     '\n' +
@@ -716,8 +784,9 @@ export async function buildMeshes(options: {
   for (const target of options.targets) {
     const row = await bake(target, options.outDir);
     rows.push(row);
+    const tiers = TIER_LADDER.filter((tier) => target.glbPaths[tier] !== undefined).join(', ');
     process.stderr.write(
-      `  ok   ${row.path}  ${row.triangleCount} tris  r=${row.boundingRadiusM.toFixed(3)} m  ` +
+      `  ok   ${row.key}  [${tiers}]  ${row.triangleCount} tris  r=${row.boundingRadiusM.toFixed(3)} m  ` +
         `ground=${row.groundOffsetM.toFixed(3)} m\n`,
     );
   }
@@ -729,10 +798,14 @@ export async function buildMeshes(options: {
 
 async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
-    const raw: RawDataEntry = RAW_DATA[entry.native];
+    const present = TIER_LADDER.filter((tier) => entry.tiers[tier] !== undefined);
+    const glbPaths = Object.fromEntries(
+      present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!)]),
+    ) as MeshBuildTarget['glbPaths'];
+    const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!];
     return {
       key,
-      glbPath: rawDataPath(entry.native),
+      glbPaths,
       source: raw.upstream ?? raw.path,
       licence: entry.licence,
       attribution: entry.attribution,

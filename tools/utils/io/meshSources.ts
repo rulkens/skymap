@@ -1,16 +1,19 @@
 /**
- * meshSources — one row per baked mesh body: the raw GLB it comes from and the
- * credit its licence obliges. `buildMeshes` derives its work list from here and
- * copies both onto the generated `MeshAssetRow` that the credit surface reads,
- * so a row that skipped them would silently ship an uncredited CC BY asset.
- * `source` is not repeated — it is `RAW_DATA[native].upstream`.
+ * meshSources — one row per baked mesh body: the raw GLB per tier it comes
+ * from and the credit its licence obliges. `buildMeshes` derives its work list
+ * from here and copies both onto the generated `MeshAssetRow` that the credit
+ * surface reads, so a row that skipped them would silently ship an uncredited
+ * CC BY asset. `source` is not repeated — it is the ceiling tier's
+ * `RAW_DATA[...].upstream`.
  */
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { Tier } from '../../../src/@types/data/Tier';
 import type { RawDataKey } from './rawDataRegistry';
 
 export type MeshSourceEntry = {
-  readonly native: RawDataKey;
+  /** One raw GLB per tier this body ships; must be contiguous from `small`. */
+  readonly tiers: Readonly<Partial<Record<Tier, RawDataKey>>>;
   readonly licence: string;
   /** Author + profile URL; empty string for CC0. */
   readonly attribution: string;
@@ -29,7 +32,7 @@ export type MeshSourceEntry = {
  */
 export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
   whale: {
-    native: 'meshes.whale',
+    tiers: { small: 'meshes.whale' },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0',
@@ -39,13 +42,13 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 0, 1, 0, -1, 0, 1, 0, 0],
   },
   petunias: {
-    native: 'meshes.petunias',
+    tiers: { small: 'meshes.petunias' },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0',
   },
   voyager: {
-    native: 'meshes.voyager',
+    tiers: { small: 'meshes.voyager' },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA / Michael D. Carbajal (NASA Headquarters), "Voyager Probe (B)" (https://science.nasa.gov/3d-resources/voyager-probe-b/)',
@@ -54,7 +57,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   hubble: {
-    native: 'meshes.hubble',
+    tiers: { small: 'meshes.hubble' },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA, "Hubble Space Telescope (A)" — NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A))',
@@ -63,7 +66,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   perseverance: {
-    native: 'meshes.perseverance',
+    tiers: { small: 'meshes.perseverance' },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
@@ -72,7 +75,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   curiosity: {
-    native: 'meshes.curiosity',
+    tiers: { small: 'meshes.curiosity' },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
@@ -80,7 +83,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   mer: {
-    native: 'meshes.mer',
+    tiers: { small: 'meshes.mer' },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
