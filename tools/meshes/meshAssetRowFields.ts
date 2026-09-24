@@ -22,7 +22,12 @@ export type MeshAssetRowField = {
 
 export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
   { name: 'key', tsType: 'string', emit: (row) => quote(row.key) },
-  { name: 'path', tsType: 'string', emit: (row) => quote(row.path) },
+  {
+    name: 'tierCeiling',
+    tsType: 'Tier',
+    doc: ['The highest tier this body ships; `meshBodyRow.req` clamps to it.'],
+    emit: (row) => quote(row.tierCeiling),
+  },
   { name: 'boundingRadiusM', tsType: 'number', emit: (row) => String(row.boundingRadiusM) },
   {
     name: 'groundOffsetM',

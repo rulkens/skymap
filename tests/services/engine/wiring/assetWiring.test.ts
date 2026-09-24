@@ -15,7 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { sameRequest } from '../../../../src/utils/loading/sameRequest';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
@@ -92,6 +91,13 @@ describe('ASSET_WIRING membership', () => {
       // req carries { bodyId, kind, tier } clamped to the (body, kind) ceiling.
       expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
+  });
+
+  it("clamps a mesh body's tier to its tierCeiling", () => {
+    // Every SCENE_MESH_BODIES entry ships `small` only today, so any app tier
+    // above it must still fetch the `small` files.
+    const row = rowFor(meshBodySlotKey('curiosity'));
+    expect(row.req('large')).toEqual({ meshKey: 'curiosity', tier: 'small' });
   });
 });
 

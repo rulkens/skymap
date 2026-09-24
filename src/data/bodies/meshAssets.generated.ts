@@ -5,10 +5,12 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
+import type { Tier } from '../../@types/data/Tier';
 
 export type MeshAssetRow = {
   readonly key: string;
-  readonly path: string;
+  /** The highest tier this body ships; `meshBodyRow.req` clamps to it. */
+  readonly tierCeiling: Tier;
   readonly boundingRadiusM: number;
   /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,
    *  metres, ≥ 0. A surface-locked body is lifted by this so it rests on the
@@ -30,7 +32,7 @@ export type MeshAssetRow = {
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   whale: {
     key: 'whale',
-    path: 'meshes/whale.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 7.236827809308258,
     groundOffsetM: 2.135997295379639,
     meanAlbedo: [0.099099, 0.093083, 0.087187],
@@ -43,7 +45,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   petunias: {
     key: 'petunias',
-    path: 'meshes/petunias.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 0.4978227272024157,
     groundOffsetM: 0.26998705849627713,
     meanAlbedo: [0.184625, 0.20743, 0.132015],
@@ -56,7 +58,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   voyager: {
     key: 'voyager',
-    path: 'meshes/voyager.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 14.544853697326353,
     groundOffsetM: 4.791086139044178,
     meanAlbedo: [0.104209, 0.100278, 0.094753],
@@ -69,7 +71,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   hubble: {
     key: 'hubble',
-    path: 'meshes/hubble.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 8.786712680737544,
     groundOffsetM: 6.5379468441961155,
     meanAlbedo: [0.154997, 0.143332, 0.12433],
@@ -83,7 +85,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   perseverance: {
     key: 'perseverance',
-    path: 'meshes/perseverance.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 1.9901394895098548,
     groundOffsetM: 0.9143134790374972,
     meanAlbedo: [0.260541, 0.252103, 0.246785],
@@ -101,7 +103,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   curiosity: {
     key: 'curiosity',
-    path: 'meshes/curiosity.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 2.4789837008600912,
     groundOffsetM: 0.8980751162248013,
     meanAlbedo: [0.170078, 0.166912, 0.163265],
@@ -119,7 +121,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   },
   mer: {
     key: 'mer',
-    path: 'meshes/mer.mesh',
+    tierCeiling: 'small',
     boundingRadiusM: 1.2008228521056163,
     groundOffsetM: 0.574356440144803,
     meanAlbedo: [0.167542, 0.140955, 0.10138],

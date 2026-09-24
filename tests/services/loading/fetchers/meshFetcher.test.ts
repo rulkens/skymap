@@ -8,7 +8,7 @@ vi.mock('../../../../src/data/mesh/meshBinaryFormat', () => ({
 
 const fetch = useFetchMock();
 
-/** `perseverance` ships a contact decal; its `_contact.webp` answers `contact`. */
+/** `perseverance`/`curiosity` both ship a contact decal; its `_contact.webp` answers `contact`. */
 function serve(contact: () => Promise<Response>): void {
   fetch.mock.mockImplementation((url: RequestInfo | URL) =>
     String(url).endsWith('_contact.webp')
@@ -36,7 +36,7 @@ describe('meshFetcher', () => {
   it('a missing contact mask drops the shadow, not the mesh', async () => {
     serve(() => Promise.resolve(new Response('', { status: 404 })));
     const asset = await meshFetcher(
-      { meshKey: 'perseverance' },
+      { meshKey: 'perseverance', tier: 'small' },
       new AbortController().signal,
       () => {},
     );
@@ -47,7 +47,42 @@ describe('meshFetcher', () => {
   it('an aborted contact-mask fetch still aborts the load', async () => {
     serve(() => Promise.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
     await expect(
-      meshFetcher({ meshKey: 'perseverance' }, new AbortController().signal, () => {}),
+      meshFetcher(
+        { meshKey: 'perseverance', tier: 'small' },
+        new AbortController().signal,
+        () => {},
+      ),
     ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it("fetches the requested tier's geometry and textures", async () => {
+    serve(() => Promise.resolve(new Response('', { status: 404 })));
+    await meshFetcher(
+      { meshKey: 'curiosity', tier: 'small' },
+      new AbortController().signal,
+      () => {},
+    );
+
+    const urls = fetch.mock.mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small.mesh'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_albedo.webp'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_mr.webp'))).toBe(true);
+    expect(urls.some((url) => url.endsWith('meshes/curiosity-small_normal.webp'))).toBe(true);
+  });
+
+  it('fetches the contact mask untiered', async () => {
+    serve(() =>
+      Promise.resolve(
+        new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/png' } }),
+      ),
+    );
+    await meshFetcher(
+      { meshKey: 'curiosity', tier: 'small' },
+      new AbortController().signal,
+      () => {},
+    );
+
+    const urls = fetch.mock.mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.endsWith('meshes/curiosity_contact.webp'))).toBe(true);
   });
 });
