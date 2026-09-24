@@ -12,19 +12,20 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../services/engine/frame/foregroundMaxDistance';
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
+import { CAPTION_FADE_RULES } from '../../../services/engine/presentation/captionFadeRules';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
+import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { blackHoleMarkerBrightness } from './blackHoleMarkerBrightness';
-import { sgrAStarCaptionTarget } from './sgrAStarCaptionTarget';
 
 export function blackHolePickable(row: BlackHoleRow, state: PassState, ctx: FrameView): boolean {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-  const markerBrightness = blackHoleMarkerBrightness(
-    row,
-    ctx.drawCamPos,
-    sceneBodyStates(state, ctx),
-  );
-  return (
-    markerBrightness > GLINT_MIN_BRIGHTNESS ||
-    sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0
-  );
+  const states = sceneBodyStates(state, ctx);
+  if (blackHoleMarkerBrightness(row, ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS) return true;
+  const anchor = states.get(row.anchorId);
+  if (anchor === undefined) return false;
+  // The caption's own rules row, not a re-spelled gate and band, so the click
+  // cannot outlive the name or the name outlive the click.
+  const rule = CAPTION_FADE_RULES.sgrAStar;
+  if (!rule.labelEnabled(state.settings) || !rule.subjectVisible(state.settings)) return false;
+  return rule.fadeTarget(distanceMpc(ctx.drawCamPos, anchor.positionMpc), ctx.cam.distance) > 0;
 }

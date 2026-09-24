@@ -243,8 +243,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
     // `starSpheresPass`'s sphere pick).
     //
     // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit —
-    // this layer's call and the body-glint layer's call claim DIFFERENT slots
-    // (see `bodyPickRenderer`'s module header). This layer calls it exactly once
+    // each caller claims its own slot (see `bodyPickRenderer`'s module header). This layer calls it exactly once
     // per `drawPick`.
     //
     // Each point's packed id carries the source + STABLE seed-table index its
@@ -281,7 +280,9 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, camPos));
 
       // Where the Galactic Centre projects: its click target (the blackHoles
-      // Layer's marker stamp) is centred there.
+      // Layer's marker stamp) is centred there. The exclusion below runs even
+      // when the hole takes no clicks (inside the band, label off), on purpose:
+      // it is this Layer's own rule about its satellites.
       const anchorScreenPx = projectToScreenPx(
         relToCam(sceneBodyStates(state, ctx).get(GALACTIC_CENTRE_ANCHOR.id)!.positionMpc),
         rebasedVp,

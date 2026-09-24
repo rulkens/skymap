@@ -193,10 +193,9 @@ export const SCENE: FrameSection = {
     // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
     // bodies (the glints branch of the body partition) as brightness-scaled
     // additive points, sibling of `star-points`, and the black holes' far-field
-    // markers. Outside the band the lens line
-    // emits nothing and this merges back into the roster above — see
-    // `expandFrameOrder`'s merge rule, which is what keeps the pass count
-    // unchanged there.
+    // markers. Outside the band the lens line emits nothing and this merges back
+    // into the roster above — see `expandFrameOrder`'s merge rule, which is what
+    // keeps the pass count unchanged there.
     {
       kind: 'render',
       target: 'hdr',

@@ -1,10 +1,8 @@
 /**
  * produceBlackHoleCaptions — the blackHoles Layer's NEAR0 `screenLabels`
  * producer: one caption per hole at its place, composed through
- * `composeForegroundCaption` like the star and body captions. The hole draws
- * nothing inside its lens band's far side, so this caption is often its whole
- * on-screen presence, and it is the pick surface there (the stamp packs the
- * same `Source.SgrAStar` + row index `blackHoleSelectionRow` resolves).
+ * `composeForegroundCaption` like the star and body captions. Inside the lens
+ * band, where the marker has faded, the caption is what marks the hole.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
