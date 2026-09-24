@@ -711,8 +711,12 @@ describe('buildMeshes()', () => {
     const doc = new Document();
     doc.createBuffer();
     const material = doc.createMaterial('one');
+    // A thin strip, not a full 4096x4096 square: `fit: 'inside'` still caps
+    // width at 2048/4096 per tier (the strip's height is never the binding
+    // dimension), and encoding it as webp is orders of magnitude cheaper —
+    // a full square blew CI's 5000 ms per-test timeout.
     const bigAlbedo = await sharp({
-      create: { width: 4096, height: 4096, channels: 3, background: { r: 200, g: 100, b: 50 } },
+      create: { width: 4096, height: 8, channels: 3, background: { r: 200, g: 100, b: 50 } },
     })
       .png()
       .toBuffer();

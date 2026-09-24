@@ -40,7 +40,6 @@ async function fetchTexture(
 
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
   const prefix = meshTierPrefix(req.meshKey, req.tier);
-  // The contact mask stays UNTIERED — one bake, from the ceiling tier only.
   const contactUrl = dataUrl(`meshes/${req.meshKey}_contact.webp`);
   const hasContactDecal = MESH_ASSETS[req.meshKey]?.contactDecal !== undefined;
 

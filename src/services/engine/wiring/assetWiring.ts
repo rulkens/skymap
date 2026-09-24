@@ -102,8 +102,7 @@ function bodyTextureRow(entry: BodyTextureKey): AssetWiringRow {
  * `bodyTextureRow` (demanded inside `loadRadiusMpc`, released past twice it),
  * SIMPLER: a mesh body is in the body-state snapshot whatever drives it, so its
  * position comes straight off `deriveBodyStates`, no `bodyPosOf`/`hostBodyId`
- * indirection for a ring-style host. `req` clamps the tier to the mesh's own
- * `tierCeiling`, mirroring `bodyTextureRow`.
+ * indirection for a ring-style host.
  */
 function meshBodyRow(body: MeshBody): AssetWiringRow {
   const bodyPos = (simDays: number): Readonly<Vec3> => {

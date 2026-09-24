@@ -13,7 +13,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-transform/core';
 import sharp from 'sharp';
@@ -24,11 +24,13 @@ import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
+import { meshTierPrefix } from '../../src/utils/meshBodies/meshTierPrefix';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
@@ -65,7 +67,7 @@ export type MeshBuildTarget = {
   readonly groundUp?: Vec3;
 };
 
-type Geometry = {
+export type Geometry = {
   readonly positions: Float32Array;
   readonly normals: Float32Array;
   readonly tangents: Float32Array;
@@ -537,12 +539,7 @@ async function bakeTier(
   glbPath: string,
   outDir: string,
   bakeContact: boolean,
-): Promise<{
-  geometry: Geometry;
-  substituted: readonly MeshTextureField[];
-  mean: Vec3;
-  contactDecal?: ContactDecal;
-}> {
+): Promise<BakeTierResult> {
   const { key } = target;
   const doc = await new NodeIO().read(glbPath);
   const stamp = readGroundUpStamp(doc);
@@ -572,7 +569,8 @@ async function bakeTier(
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);
   const px = tierToTexturePx(tier);
-  writeFileSync(join(outDir, `${key}-${px}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
+  const stem = basename(meshTierPrefix(key, tier));
+  writeFileSync(join(outDir, `${stem}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
 
   const contactDecal =
     bakeContact && decalStamp !== undefined
@@ -626,7 +624,7 @@ async function bakeTier(
   let albedoPath = '';
   for (const slot of MESH_TEXTURE_SLOTS) {
     const { texture, fallback } = sources[slot.field];
-    const path = join(outDir, `${key}-${px}${slot.suffix}.webp`);
+    const path = join(outDir, `${stem}${slot.suffix}.webp`);
     if (slot.field === 'albedo') albedoPath = path;
     await writeTexture(
       texture,
@@ -676,12 +674,13 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   const tiers = orderedTiers(target.glbPaths, key);
   const ceiling = tiers[tiers.length - 1]!;
 
-  let ceilingResult: Awaited<ReturnType<typeof bakeTier>> | undefined;
+  // `tiers` is ladder-ordered (`orderedTiers`), so the last iteration is
+  // always the ceiling — no need to track which pass that was separately.
+  let result: BakeTierResult | undefined;
   for (const tier of tiers) {
-    const result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
-    if (tier === ceiling) ceilingResult = result;
+    result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
   }
-  const { geometry, substituted, mean, contactDecal } = ceilingResult!;
+  const { geometry, substituted, mean, contactDecal } = result!;
 
   return {
     key,
@@ -784,10 +783,9 @@ export async function buildMeshes(options: {
   for (const target of options.targets) {
     const row = await bake(target, options.outDir);
     rows.push(row);
-    const tiers = TIER_LADDER.filter((tier) => target.glbPaths[tier] !== undefined).join(', ');
     process.stderr.write(
-      `  ok   ${row.key}  [${tiers}]  ${row.triangleCount} tris  r=${row.boundingRadiusM.toFixed(3)} m  ` +
-        `ground=${row.groundOffsetM.toFixed(3)} m\n`,
+      `  ok   ${row.key}  ceiling=${row.tierCeiling}  ${row.triangleCount} tris  ` +
+        `r=${row.boundingRadiusM.toFixed(3)} m  ground=${row.groundOffsetM.toFixed(3)} m\n`,
     );
   }
 
@@ -798,7 +796,7 @@ export async function buildMeshes(options: {
 
 async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
-    const present = TIER_LADDER.filter((tier) => entry.tiers[tier] !== undefined);
+    const present = orderedTiers(entry.tiers, key);
     const glbPaths = Object.fromEntries(
       present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!)]),
     ) as MeshBuildTarget['glbPaths'];
