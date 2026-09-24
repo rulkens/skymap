@@ -41,6 +41,7 @@ export function blackHoleSelectionRow(): SelectionKindRow<
         label: entry.label,
         detailLabel: entry.detailLabel,
         massSolar: row.massSolar,
+        schwarzschildRadiusM: rS,
         positionMpc: [p[0], p[1], p[2]],
         driver: {
           poseId: row.anchorId,

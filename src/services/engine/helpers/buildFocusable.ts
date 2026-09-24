@@ -3,10 +3,10 @@
  * from a stored SelectionRow. Table-dispatched on the row tag: the galaxy arm
  * runs buildGalaxyInfo (the pure formatter); the structure arm IS already a
  * StructureInfo so it passes through; the Milky Way arm is the singleton const;
- * the body arm builds a `BodyInfo` for Earth, a planet or a mesh body; the star
- * arm builds one `StarInfo` for every star, survey or seeded, whose `detail`
- * block is chosen by what the star HAS rather than by its catalog; the
- * black-hole arm adds the horizon radius its mass implies.
+ * the body and black-hole arms ARE their Info plus the camera `driver`, which
+ * they drop; the star arm builds one `StarInfo` for every star, survey or
+ * seeded, whose `detail` block is chosen by what the star HAS rather than by
+ * its catalog.
  *
  * `famousStarsMeta` is joined in here rather than read by the card, the way the
  * galaxy card's meta join happens at the selector: the card stays presentational
@@ -23,10 +23,8 @@ import { sStarOrbitInfo } from '../../../data/bodies/sStarOrbitInfo';
 import { apparentMagnitudeFromAbs } from '../../../utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../utils/star/spectralClassFromBpRp';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
-import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import type { StarInfo } from '../../../@types/engine/StarInfo';
 import type { StarInfoDetail } from '../../../@types/engine/StarInfoDetail';
@@ -67,12 +65,7 @@ const BUILD_FOCUSABLE: {
   structure: (row) => row,
   milkyWay: () => MILKY_WAY_INFO,
   zoneOfAvoidance: () => ZONE_OF_AVOIDANCE_INFO,
-  body: (row): BodyInfo => ({
-    type: 'body',
-    id: row.id,
-    label: row.label,
-    positionMpc: row.positionMpc,
-  }),
+  body: ({ driver: _driver, ...info }) => info,
   starCatalog: (row, famousStarsMeta): StarInfo => {
     const [x, y, z] = row.positionMpc;
     const distancePc = Math.hypot(x, y, z) / SCALE_UNITS.PC_TO_MPC;
@@ -89,15 +82,7 @@ const BUILD_FOCUSABLE: {
       detail: starDetail(row, distancePc, famousStarsMeta),
     };
   },
-  blackHole: (row) => ({
-    type: 'blackHole',
-    id: row.id,
-    label: row.label,
-    detailLabel: row.detailLabel,
-    positionMpc: row.positionMpc,
-    massSolar: row.massSolar,
-    schwarzschildRadiusM: schwarzschildRadiusM(row.massSolar),
-  }),
+  blackHole: ({ driver: _driver, ...info }) => info,
 };
 
 export function buildFocusable(
