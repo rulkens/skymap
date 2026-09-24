@@ -5,6 +5,7 @@
  * reason).
  */
 
+import { blackHolesLayerSettings } from '../layers/blackHoles/state/slices';
 import { bodyLayerSettings } from '../layers/body/state/slices';
 import { constellationsLayerSettings } from '../layers/constellations/state/slices';
 import { cosmicWebFilamentsLayerSettings } from '../layers/cosmicWebFilaments/state/slices';
@@ -18,6 +19,7 @@ import { cosmicWebDensityLayerSettings } from '../layers/cosmicWebDensity/state/
 import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/slices';
 
 export const APP_SETTINGS_SLICES = [
+  ...blackHolesLayerSettings,
   ...bodyLayerSettings,
   ...constellationsLayerSettings,
   ...cosmicWebFilamentsLayerSettings,

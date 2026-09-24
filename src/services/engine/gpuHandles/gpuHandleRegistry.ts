@@ -31,7 +31,6 @@ import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/at
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
-import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -236,14 +235,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    // Boot-eager like every other renderer row, deliberately: the deflection
-    // LUT build + its 2 KB texture + two pipelines are a one-off cost, unlike
-    // the 50 MB `sky-cubemap` target, which is lazy (`allocateWhen`).
-    key: 'sgrAStarLensingRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Draws into a probe's cube (`meshBodyRenderer` mints it in this format).

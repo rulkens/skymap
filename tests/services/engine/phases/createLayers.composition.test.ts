@@ -14,7 +14,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
-import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../../src/data/rendering/layerSlabRowHeadroom';
 import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 
@@ -181,29 +180,22 @@ describe('createLayers composition', () => {
     expect(state.label3DProducers.map((producer) => producer.id)).toEqual(['a-world', 'b-world']);
   });
 
-  it("composes CORE_SLAB_ROWS then every Layer's slabs, in tuple order", async () => {
+  it("composes every Layer's slabs, in tuple order", async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const layers = [slabRowLayer('a', ['a-anchor']), slabRowLayer('b', ['b-anchor'])];
 
     await createLayers(state, makeDeps(layers, store));
 
-    expect(state.slabRows.map((row) => row.anchorId)).toEqual([
-      ...CORE_SLAB_ROWS.map((row) => row.anchorId),
-      'a-anchor',
-      'b-anchor',
-    ]);
+    expect(state.slabRows.map((row) => row.anchorId)).toEqual(['a-anchor', 'b-anchor']);
   });
 
   it('throws at boot when a composition’s slab rows exceed the ceiling', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    // One past the headroom, counting core's own rows — the GPU query set is
-    // already sized, so the overflow row would draw into nothing.
-    const anchorIds = Array.from(
-      { length: LAYER_SLAB_ROW_HEADROOM - CORE_SLAB_ROWS.length + 1 },
-      (_, k) => `over-${k}`,
-    );
+    // One past the headroom — the GPU query set is already sized, so the
+    // overflow row would draw into nothing.
+    const anchorIds = Array.from({ length: LAYER_SLAB_ROW_HEADROOM + 1 }, (_, k) => `over-${k}`);
 
     await expect(
       createLayers(state, makeDeps([slabRowLayer('over', anchorIds)], store)),

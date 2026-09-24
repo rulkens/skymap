@@ -32,7 +32,6 @@ import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSele
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
-import { CORE_SLAB_ROWS } from '../../../data/bodies/coreSlabRows';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
@@ -174,10 +173,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
   // headroom that reserved; a duplicate `anchorId` would give two rows one
   // pose and one `SlabFrame.hostId`, with the second silently unreachable.
-  const slabRows = concatUniqueRows('createLayers: slab rows', (row) => row.anchorId, [
-    CORE_SLAB_ROWS,
-    ...deps.composition.layers.map((layer) => layer.slabs ?? []),
-  ]);
+  const slabRows = concatUniqueRows(
+    'createLayers: slab rows',
+    (row) => row.anchorId,
+    deps.composition.layers.map((layer) => layer.slabs ?? []),
+  );
   if (slabRows.length > LAYER_SLAB_ROW_HEADROOM) {
     throw new Error(
       `createLayers: slab rows exceed LAYER_SLAB_ROW_HEADROOM — ${slabRows.length} composed rows, ` +

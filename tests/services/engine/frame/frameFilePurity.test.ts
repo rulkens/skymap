@@ -63,7 +63,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/orbitTrailsPass': 1,
   'frame/passes/planetsPass': 1,
   'frame/passes/ringsPass': 1,
-  'frame/passes/sgrAStarLensingPass': 3,
   'frame/passes/texturedBodiesPass': 2,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
   'layers/starCatalog/passes/starPointsPass': 3,

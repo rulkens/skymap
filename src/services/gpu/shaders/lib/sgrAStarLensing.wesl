@@ -20,7 +20,7 @@
 //   offset 100 : flickerAmp               f32
 //   offset 104 : _pad0                    f32  — unread; flickerTimescaleS only
 //                                                 feeds the CPU-side flickerPhase
-//                                                 precompute (sgrAStarLensingPass.ts),
+//                                                 precompute (blackHoleLensingPass.ts),
 //                                                 never sampled by this shader
 //   offset 108 : flickerPhase             f32  — sim-clock-derived, per-frame
 //   offset 112 : lutMinImpactParamRs      f32  — SchwarzschildDeflectionLut.minImpactParamRs
@@ -54,7 +54,7 @@
 // (or on iOS, dropped) frame.
 //
 // Every field from 'diskScaleHeightRs' through 'emissionTint' is either a
-// DebugPanel tuning knob ('settings.sgrAStarLensingTuning') or a per-frame
+// DebugPanel tuning knob ('settings.blackHoleLensingTuning') or a per-frame
 // layer-derived scalar, as marked above; 'viewBasis'/'frustumTan' feed the
 // per-view fullscreen-triangle pass's own ray reconstruction.
 

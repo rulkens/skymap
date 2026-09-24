@@ -6,7 +6,7 @@
  * `glintTint`/`glintIntensity` — see `bodyGlintsPass.ts`.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type SgrAStarLensingTuning = {
   // ── Tier 1 — BLACK_HOLES override, rides the existing uniform fields ────

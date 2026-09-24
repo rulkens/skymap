@@ -8,7 +8,8 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
@@ -278,8 +279,10 @@ describe('visibleSlabBodies', () => {
     // shell, so candidacy tracks where the LENSED SPHERE actually reaches
     // rather than bypassing for any position inside the band, which would
     // keep a hole directly behind the camera.
-    const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id);
-    if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no galactic-centre row');
+    const lensRow = BLACK_HOLES.map(blackHoleSlabRow).find(
+      (row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id,
+    );
+    if (lensRow === undefined) throw new Error('BLACK_HOLES carries no galactic-centre row');
     const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 

@@ -181,14 +181,15 @@ export const SCENE: FrameSection = {
         'constellations',
       ],
     },
-    // The Sgr A* lens, on its own body-slab row(s) and blended OVER rather than
-    // additively — so its position IS load-bearing in both directions. It draws
-    // AFTER the roster above, so captured rays occlude the additive light already
-    // accumulated behind them and escaping rays sample a sky-cubemap this frame
-    // wrote; and BEFORE the line below, so those stay unwarped on top of it.
+    // The blackHoles Layer's lens, on its own body-slab row(s) and blended OVER
+    // rather than additively — so its position IS load-bearing in both
+    // directions. It draws AFTER the roster above, so captured rays occlude the
+    // additive light already accumulated behind them and escaping rays sample a
+    // sky-cubemap this frame wrote; and BEFORE the line below, so those stay
+    // unwarped on top of it.
     // Outside the fade band the frame resolves no lensing row and this emits
     // nothing.
-    { kind: 'render', target: 'hdr', slab: 'lens', passes: ['sgr-a-star-lensing'] },
+    { kind: 'render', target: 'hdr', slab: 'lens', passes: ['black-hole-lensing'] },
     // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
     // bodies (the glints branch of the body partition) as brightness-scaled
     // additive points, sibling of `star-points`. Outside the band the lens line

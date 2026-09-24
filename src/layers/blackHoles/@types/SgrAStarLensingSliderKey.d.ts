@@ -1,4 +1,4 @@
-import type { SgrAStarLensingTuning } from '../../settings/SgrAStarLensingTuning';
+import type { SgrAStarLensingTuning } from './SgrAStarLensingTuning';
 
 /**
  * Keys of `SgrAStarLensingTuning` that surface as numeric DebugPanel

@@ -5,9 +5,9 @@
  * range, granularity and formatting live in ONE row per knob.
  * `cubemapResolutionPx` isn't here — see `SgrAStarLensingSliderKey`.
  */
-import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
-import type { SgrAStarLensingSliderKey } from '../../@types/data/sgrAStarLensing/SgrAStarLensingSliderKey';
-import type { SgrAStarLensingSliderField } from '../../@types/data/sgrAStarLensing/SgrAStarLensingSliderField';
+import type { SgrAStarLensingTuning } from '../@types/SgrAStarLensingTuning';
+import type { SgrAStarLensingSliderKey } from '../@types/SgrAStarLensingSliderKey';
+import type { SgrAStarLensingSliderField } from '../@types/SgrAStarLensingSliderField';
 
 export const SGR_A_STAR_LENSING_SLIDER_FIELDS: readonly SgrAStarLensingSliderField[] = [
   {

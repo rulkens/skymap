@@ -8,6 +8,7 @@
 
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
+import { blackHolesLayer } from '../layers/blackHoles/layer';
 import { constellationsLayer } from '../layers/constellations/layer';
 import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
@@ -27,6 +28,7 @@ export const APP_COMPOSITION = {
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     constellationsLayer,
+    blackHolesLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -39,5 +41,6 @@ export const APP_COMPOSITION = {
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof constellationsLayer,
+    typeof blackHolesLayer,
   ]
 >;

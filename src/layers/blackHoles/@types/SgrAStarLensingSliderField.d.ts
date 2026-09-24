@@ -1,4 +1,4 @@
-import type { SliderField } from '../SliderField';
+import type { SliderField } from '../../../@types/data/SliderField';
 import type { SgrAStarLensingSliderKey } from './SgrAStarLensingSliderKey';
 
 /**

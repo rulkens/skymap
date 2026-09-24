@@ -40,7 +40,7 @@
  * the ride is consistent with existing policy rather than a new one.
  *
  * The remaining clusters (`tonemap`, `bloom`, `hdr`, `bias`, `earth`,
- * `sgrAStarLensingTuning`, `thumbnails`, `debug`) are deliberately excluded:
+ * `blackHoleLensingTuning`, `thumbnails`, `debug`) are deliberately excluded:
  * the tour neither drives nor restores them, so capturing them would invite a
  * restore that stomps a value the tour never meant to own. That test is what
  * admitted `camera` — excluded on the same grounds until the bracket started

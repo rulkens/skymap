@@ -176,7 +176,7 @@ describe('SgrAStarLensingUniforms WESL/packer parity', () => {
       edgeFadeEndRs,
     };
     // `_pad0`/`_pad1` are unwritten — `_pad0` because flickerTimescaleS lives
-    // CPU-side (sgrAStarLensingPass.ts's flickerPhase precompute) and is
+    // CPU-side (blackHoleLensingPass.ts's flickerPhase precompute) and is
     // never sampled by the shader; `_pad1` is unread.
     const zeroPadFields = new Set<string>(['_pad0', '_pad1']);
 

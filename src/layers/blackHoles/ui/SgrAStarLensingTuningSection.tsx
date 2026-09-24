@@ -12,16 +12,16 @@
  */
 
 import type { ReactElement } from 'react';
-import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
-import type { HexString } from '../../@types/math/HexString';
-import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
+import type { SgrAStarLensingTuning } from '../@types/SgrAStarLensingTuning';
+import type { HexString } from '../../../@types/math/HexString';
+import { hexToLinearRgb } from '../../../utils/color/hexToLinearRgb';
+import { linearRgbToHex } from '../../../utils/color/linearRgbToHex';
 import {
   SGR_A_STAR_LENSING_SLIDER_FIELDS,
   sgrAStarLensingSliderPatch,
-} from '../../data/sgrAStarLensing/sgrAStarLensingSliderFields';
-import DebugTuningSection from './DebugTuningSection';
-import sliderStyles from './DebugSlider.module.css';
+} from './sgrAStarLensingSliderFields';
+import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
+import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';
 
 export type SgrAStarLensingTuningSectionProps = {
   tuning: SgrAStarLensingTuning;

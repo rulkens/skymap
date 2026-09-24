@@ -14,15 +14,10 @@ import type { MeshBody } from '../../@types/scene/MeshBody';
 import { bodyHostId } from '../../data/bodies/positionDrivers';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../data/bodies/scenePlanets';
-import { CORE_SLAB_ROWS } from '../../data/bodies/coreSlabRows';
 
-// The store halves `frameContext`'s `slabBodyCandidates` composes, plus core's
-// authored rows — the hosts that can own a `body-m` row at all.
-const SLAB_HOST_IDS = new Set<string>([
-  SCENE_EARTH.id,
-  ...SCENE_PLANETS.map((body) => body.id),
-  ...CORE_SLAB_ROWS.map((row) => row.anchorId),
-]);
+// The store halves `frameContext`'s `slabBodyCandidates` composes — the hosts
+// that can own a `body-m` row and a mesh body alike.
+const SLAB_HOST_IDS = new Set<string>([SCENE_EARTH.id, ...SCENE_PLANETS.map((body) => body.id)]);
 
 export function meshBodySlabHostId(body: MeshBody): string {
   const host = bodyHostId(body.id);

@@ -11,15 +11,15 @@
  * overload and WebKit rejects the `texture_1d` Chrome accepts.
  */
 
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { SgrAStarLensingRenderer } from '../../../../@types/rendering/SgrAStarLensingRenderer';
-import type { SchwarzschildDeflectionLut } from '../../../../@types/lensing/SchwarzschildDeflectionLut';
-import vsCode from '../../shaders/bodies/sgrAStarLensing/vertex.wesl?static';
-import fsCode from '../../shaders/bodies/sgrAStarLensing/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
-import { buildSchwarzschildDeflectionLut } from '../../../../utils/lensing/buildSchwarzschildDeflectionLut';
-import { SGR_A_STAR_LENSING_UNIFORM_FLOATS } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { SgrAStarLensingRenderer } from '../../../@types/rendering/SgrAStarLensingRenderer';
+import type { SchwarzschildDeflectionLut } from '../../../@types/lensing/SchwarzschildDeflectionLut';
+import vsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { PREMULTIPLIED_OVER_BLEND } from '../../../services/gpu/lib/blendStates';
+import { buildSchwarzschildDeflectionLut } from '../../../utils/lensing/buildSchwarzschildDeflectionLut';
+import { SGR_A_STAR_LENSING_UNIFORM_FLOATS } from '../../../utils/gpu/packSgrAStarLensingUniforms';
 
 /**
  * LUT texel count: dense enough that the fragment's 2-tap lerp reads as

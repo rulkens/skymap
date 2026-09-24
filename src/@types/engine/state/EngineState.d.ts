@@ -107,7 +107,7 @@ export type EngineState = {
    * of the same scope — unlike `computes`, a `plan` line naming nothing here throws. */
   planners: readonly FrameContentPlanner<unknown>[];
   assetRows: readonly AssetWiringRow[];
-  /** `CORE_SLAB_ROWS` then every Layer's `slabs`, composed once by `createLayers`;
+  /** Every Layer's `slabs`, composed once by `createLayers`;
    * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
   slabRows: readonly SlabRow[];
   fadeRows: readonly FadeLayer<unknown>[];

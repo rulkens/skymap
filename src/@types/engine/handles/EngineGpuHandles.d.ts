@@ -38,7 +38,6 @@ import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
 import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
-import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
@@ -452,15 +451,6 @@ export type EngineGpuHandles = {
    * uniform buffers).
    */
   bodyGlintRenderer: BodyGlintRenderer | null;
-  /**
-   * The Sgr A* lens pass (Task 13): a single billboard draw classifying
-   * capture/escape/annulus rays against the Task 9 LUT and the Task 11 sky
-   * cubemap, premultiplied-OVER into the depthless `hdr` target on Sgr A*'s
-   * own body-m slab row (`sgr-a-star-lensing` layer). Null until `initGpu`
-   * constructs it; excluded from `isEngineReady` and null-checked at use by
-   * `sgrAStarLensingPass`.
-   */
-  sgrAStarLensingRenderer: SgrAStarLensingRenderer | null;
   /**
    * The covering-triangle cube blit `skyCubemapBlitPass` lays the solar-system
    * sky under a probe capture with. Draws into a probe's own cube, whose

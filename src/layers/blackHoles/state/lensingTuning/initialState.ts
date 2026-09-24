@@ -6,9 +6,9 @@
  * seeds the `sky-cubemap` render-target row's declared size (1024).
  */
 
-import { BLACK_HOLES } from '../../../../data/blackHoles';
+import { BLACK_HOLES } from '../../data/blackHoles';
 import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
-import type { SgrAStarLensingTuning } from '../../../../@types/settings/SgrAStarLensingTuning';
+import type { SgrAStarLensingTuning } from '../../@types/SgrAStarLensingTuning';
 
 const SGR_A_STAR_BLACK_HOLE_ROW = BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id)!;
 
