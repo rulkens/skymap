@@ -26,6 +26,7 @@ import type { Tier } from '../../src/@types/data/Tier';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
+import type { Geometry } from './@types/Geometry';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { TIER_LADDER } from '../../src/data/tierLadder';
@@ -65,19 +66,6 @@ export type MeshBuildTarget = {
   readonly bodyFromSource?: Mat3;
   /** Undefined for a floating source; see `meshGroundUpSource`. */
   readonly groundUp?: Vec3;
-};
-
-export type Geometry = {
-  readonly positions: Float32Array;
-  readonly normals: Float32Array;
-  readonly tangents: Float32Array;
-  readonly uvs: Float32Array;
-  readonly indices: Uint32Array;
-  readonly boundingRadiusM: number;
-  readonly groundOffsetM: number;
-  /** The area-weighted centroid `mergeGeometry` subtracted, body frame — the
-   *  contact decal shifts by the same amount rather than recomputing it. */
-  readonly centroidM: Vec3;
 };
 
 /**
