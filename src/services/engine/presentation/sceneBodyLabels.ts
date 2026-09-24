@@ -53,15 +53,6 @@ import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM'
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
 
 /**
- * The one place the scene-body caption id format lives. `bodyCaption` (which
- * stamps each caption) derives from it, so a consumer that must recognise a
- * caption by body id never re-hardcodes the `sceneBody-` prefix.
- */
-export function sceneBodyLabelId(bodyId: string): string {
-  return `sceneBody-${bodyId}`;
-}
-
-/**
  * Turn a seed's authored reveal distance into the caption's band: alpha 0 at
  * twice it, 1 at it. The ×2 is the ONE place the band's width lives, so a seed
  * tune stays a single number.

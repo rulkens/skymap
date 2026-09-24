@@ -31,7 +31,6 @@ import { createLabel2DDirector } from '../../../../src/services/engine/subsystem
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { sceneBodyLabelId } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
@@ -174,7 +173,7 @@ function farVisibleStar(): { id: string; worldPos: Vec3; distPc: number } {
   const candidates = SCENE_STARS.map((star) => {
     const worldPos = [...J2000_STATES.get(star.id)!.positionMpc] as Vec3;
     return {
-      id: sceneBodyLabelId(star.id),
+      id: `sceneBody-${star.id}`,
       worldPos,
       distPc:
         Math.hypot(
@@ -283,7 +282,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     // the same ratio, so em/clipW — hence the drawn px size — matches the
     // true-depth value.
     const star = farVisibleStar();
-    const starBody = SCENE_STARS.find((s) => sceneBodyLabelId(s.id) === star.id)!;
+    const starBody = SCENE_STARS.find((s) => `sceneBody-${s.id}` === star.id)!;
     const trueWorldEmMpc = bodyFootprintRadiusM(starBody) * SCALE_UNITS.M_TO_MPC;
     const eye: Vec3 = [...EARTH_POS] as Vec3;
     const slab = makeRealNear0Slab(eye, star.worldPos);

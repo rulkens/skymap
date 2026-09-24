@@ -22,10 +22,7 @@ import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/pres
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
 import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-} from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -47,12 +44,12 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const BASE = sceneBodyLabels(J2000_STATES);
 
-const EARTH_LABEL_ID = sceneBodyLabelId('earth');
+const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
-  SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
+  SCENE_PLANETS.map((p) => `sceneBody-${p.id}`),
 );
-const SGR_A_STAR_LABEL_ID = sceneBodyLabelId(SGR_A_STAR_ENTRY.id);
-const PETUNIAS_LABEL_ID = sceneBodyLabelId('petunias');
+const SGR_A_STAR_LABEL_ID = `sceneBody-${SGR_A_STAR_ENTRY.id}`;
+const PETUNIAS_LABEL_ID = 'sceneBody-petunias';
 
 function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
@@ -335,8 +332,8 @@ describe('produceSceneBodyCaptions', () => {
  * is the producer's verdict on that, and these are its two real poses.
  */
 describe('produceSceneBodyCaptions occlude weight', () => {
-  const WHALE_LABEL_ID = sceneBodyLabelId('whale');
-  const MOON_LABEL_ID = sceneBodyLabelId('moon');
+  const WHALE_LABEL_ID = 'sceneBody-whale';
+  const MOON_LABEL_ID = 'sceneBody-moon';
   const EARTH_POS = worldPosOf(EARTH_LABEL_ID);
 
   /** Unit vector from `a` to `b`, in the Mpc frame the captions live in. */
