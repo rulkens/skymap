@@ -7,7 +7,7 @@
  * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
-import { cancelled, put } from 'typed-redux-saga';
+import { put } from 'typed-redux-saga';
 import type { SagaIterator, Task } from 'redux-saga';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -21,11 +21,10 @@ import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DD
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
+import { runLayerSearchSaga } from '../../../state/engine/sagas/runLayerSearchSaga';
 import {
   factsReported,
   layerFactsSeeded,
-  layerSearchReported,
-  layerSearchCleared,
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
@@ -125,20 +124,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     // The feeds are tasks like `sagas`, on the same array, so `engine.ts`'s
     // teardown cancels them the same way — which is what closes each iterator.
     const { search, sourceCounts } = instance;
-    // A static feed ends after one yield and its rows must stay, so only the
-    // teardown cancel clears them.
     if (search) {
-      layerSagaTasks.push(
-        deps.cb.runSaga(function* () {
-          try {
-            yield* runLayerFeedSaga(search, (rows) =>
-              put(layerSearchReported({ layer: layer.name, rows })),
-            );
-          } finally {
-            if (yield* cancelled()) yield* put(layerSearchCleared({ layer: layer.name }));
-          }
-        }),
-      );
+      layerSagaTasks.push(deps.cb.runSaga(() => runLayerSearchSaga(layer.name, search)));
     }
     if (sourceCounts) {
       layerSagaTasks.push(

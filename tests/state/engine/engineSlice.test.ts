@@ -21,12 +21,7 @@ import reducer, {
   engineStructureSearchListChanged,
   factsReported,
   layerFactsSeeded,
-  layerSearchReported,
-  layerSearchCleared,
 } from '../../../src/state/engine/engineSlice';
-import { selectLayerSearchRows } from '../../../src/state/engine/selectors';
-import { engineRoute } from '../../../src/store/constants';
-import type { RootState } from '../../../src/store/types';
 import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import { Source } from '../../../src/data/source';
@@ -138,16 +133,5 @@ describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 6)', () =
       factsReported({ layer: 'stub', patch: { b: 9 } }),
     ) as unknown as WithStubFacts;
     expect(patched.stub).toEqual({ a: 1, b: 9 });
-  });
-});
-
-describe('engineSlice — layerSearch teardown', () => {
-  it("teardown deletes the Layer's search rows", () => {
-    const rows = [
-      { id: 'blackhole-sgr-a-star', names: ['Galactic Centre'], class: 'primary' as const },
-    ];
-    const reported = reducer(base(), layerSearchReported({ layer: 'blackHoles', rows }));
-    const torn = reducer(reported, layerSearchCleared({ layer: 'blackHoles' }));
-    expect(selectLayerSearchRows({ [engineRoute]: torn } as unknown as RootState)).toEqual([]);
   });
 });

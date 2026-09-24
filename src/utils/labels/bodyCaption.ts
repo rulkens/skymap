@@ -28,10 +28,11 @@ const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
 
 /**
  * `position`/`tint` are parameters because no `SceneBody` arm carries either
- * (each seed table derives its own colour); `footprintRadiusM` sizes the em, and
- * is a parameter so a subject with no body record (a black hole) can caption. `pickId` defaults through the
- * shared body-pick registry; a star's caller packs its own (source + seed
- * index) instead, since only it knows which seed table it walked.
+ * (each seed table derives its own colour); `footprintRadiusM` sizes the em,
+ * and is a parameter so a subject with no body record (a black hole) can
+ * caption. `pickId` defaults through the shared body-pick registry; a star's
+ * caller packs its own (source + seed index) instead, since only it knows
+ * which seed table it walked.
  */
 export function bodyCaption(
   body: { readonly id: string; readonly label: string },

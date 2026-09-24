@@ -99,6 +99,7 @@ function makeState(
       // The bodyLabel fade row seeds per CAPTION-BEARING BodyId; every body row
       // is populated anyway, for the same reason the structure items are.
       bodies: { items: bodyItems() },
+      blackHoles: { items: { 'sgr-a-star': { labelEnabled: true } } },
       structures: { enabled: true, items },
     },
     subsystems: {
@@ -143,6 +144,7 @@ function makeSettings(
     galaxyCatalogs: { items: galaxyItems },
     starCatalogs: { enabled: true, items: starCatalogItems() },
     bodies: { items: bodyItems() },
+    blackHoles: { items: { 'sgr-a-star': { labelEnabled: true } } },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
     cosmicWebDensity: { enabled: true, items: {} },

@@ -4,9 +4,9 @@
  *
  * Owns all Redux reach for the Labels & Guides group: reads
  * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
- * `selectBodyItems`, `selectBlackHoleItems` and `selectMilkyWayLabelEnabled`, bundles them into the
- * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
- * `useCallback`. It also owns the orbit-trails guide row — a flat singleton
+ * `selectBodyItems`, `selectBlackHoleItems` and `selectMilkyWayLabelEnabled`,
+ * bundles them into the `LabelHomes` the label-projection reads, and wraps the
+ * label dispatch in a `useCallback`. It also owns the orbit-trails guide row — a flat singleton
  * setting that routes straight to its own setter. All of it is assembled into
  * one uniform `SectionRow` array; the presentational `LabelsAndGuidesSection`
  * imports nothing from `store/` or `state/` and has no notion of where any
@@ -18,10 +18,9 @@
  * Label visibility lives in several authoritative homes — structure items, the
  * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), the
  * body items (Earth, the planets, the Sun), the black-hole items, and the
- * milkyWay scalar. The
- * projection (`projectLabelCategoryVisibility`) merges them into the flat
- * `Record<LabelCategory, boolean>` the row-building memo below reads. The
- * `useMemo` rebuilds only when any of those stable-reference inputs change —
+ * milkyWay scalar. The projection (`projectLabelCategoryVisibility`) merges
+ * them into the flat `Record<LabelCategory, boolean>` the row-building memo
+ * below reads. The `useMemo` rebuilds only when any of those stable-reference inputs change —
  * each is a per-cluster selector output, never `state.settings` itself, which
  * Immer re-identifies on every write.
  *

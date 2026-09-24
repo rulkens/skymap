@@ -46,6 +46,7 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
+      blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
       picking: { ...f.picking },
       camera: { ...f.camera, fovDeg: f.camera.fovDeg + 13 },

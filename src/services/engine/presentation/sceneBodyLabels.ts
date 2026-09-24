@@ -11,8 +11,8 @@
  * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` +
  * `SCENE_MESH_BODIES`), each tinted by its own authored colour: a planet's or
  * mesh body's `albedo`, and a fixed tint for Earth, which carries a texture
- * instead of a colour. Deriving the tints from the body records keeps this file free of a
- * parallel colour table that would drift from the seeds.
+ * instead of a colour. Deriving the tints from the body records keeps this
+ * file free of a parallel colour table that would drift from the seeds.
  *
  * ### Why the foreground projection, not the main one
  *

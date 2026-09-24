@@ -22,6 +22,7 @@
  *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
  *   - `bodies`         — per-body visibility + caption toggles.
+ *   - `blackHoles`     — per-hole caption toggles; a `bodyLabel` cue writes them.
  *   - `labels`         — cross-cutting label-presentation mode (focusedOnly).
  *   - `picking`        — which selection kinds a scene click or hover may
  *                         resolve; a takeover drives it and the bracket must
@@ -40,7 +41,7 @@
  * the ride is consistent with existing policy rather than a new one.
  *
  * The remaining clusters (`tonemap`, `bloom`, `hdr`, `bias`, `earth`,
- * `blackHoles`, `blackHoleLensingTuning`, `thumbnails`, `debug`) are deliberately excluded:
+ * `blackHoleLensingTuning`, `thumbnails`, `debug`) are deliberately excluded:
  * the tour neither drives nor restores them, so capturing them would invite a
  * restore that stomps a value the tour never meant to own. That test is what
  * admitted `camera` — excluded on the same grounds until the bracket started
@@ -87,6 +88,7 @@ export type SettingsSnapshot = Readonly<
     | 'orbitTrails'
     | 'starCatalogs'
     | 'bodies'
+    | 'blackHoles'
     | 'labels'
     | 'picking'
     | 'camera'

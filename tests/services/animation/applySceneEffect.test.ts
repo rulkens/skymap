@@ -25,6 +25,8 @@ vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', async (import
 
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
 import { frameTo } from '../../../src/services/engine/animation/effectHelpers';
+import settingsReducer from '../../../src/state/settings/settingsReducer';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { VISIBILITY_ACTION_ROW } from '../../../src/services/animation/visibilityActionRow';
 import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
@@ -413,5 +415,14 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     ) as ReturnType<typeof writeCosmicWebDensityField>[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'mcpm', patch: { enabled: true } });
+  });
+
+  it('a bodyLabel hide cue also turns the Galactic Centre caption off', () => {
+    // The caption is full at R0, so a `hideLabels` beat that skipped it would
+    // leave the one name on an otherwise bare galaxy view.
+    const hidden = VISIBILITY_ACTION_ROW['bodyLabel']
+      .actions(false, INITIAL_SETTINGS)
+      .reduce(settingsReducer, INITIAL_SETTINGS);
+    expect(hidden.blackHoles.items['sgr-a-star'].labelEnabled).toBe(false);
   });
 });

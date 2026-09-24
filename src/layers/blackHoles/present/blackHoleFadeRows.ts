@@ -1,8 +1,8 @@
 /**
  * The Layer's one fade row: the holes' captions, so a Labels toggle eases the
- * name out rather than popping it. Keyed `bodyLabel` because a tour cue treats
- * the Galactic Centre caption as a near-field caption, as it did while Sgr A*
- * was a body.
+ * name out rather than popping it. Keyed `bodyLabel`, whose tour action row
+ * writes `blackHoles.items` beside `bodies.items`, so a `hide(['labels'])` cue
+ * hides the Galactic Centre caption and the snapshot restores it.
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
