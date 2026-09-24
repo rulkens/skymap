@@ -85,27 +85,17 @@ import {
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
+import { MARKER_LINE_INSTANCE_LAYOUT } from '../../lib/markerLineInstanceLayout';
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 
 /**
- * Per-instance vertex buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
- *
- *   bytes  0..15  fromAndWidth  vec4<f32> — fromWorld.xyz, pixelWidth
- *   bytes 16..31  toAndAlpha    vec4<f32> — toWorld.xyz, fadeAlpha
- *   bytes 32..47  color         vec4<f32> — rgba premultiplied
- *   bytes 48..51  occludeWeight f32       — share of the scene attenuation
- *   bytes 52..55  occludeNearKm f32       — the sampled-depth channel's cutoff
- *
- * 3 × vec4 + two scalars = 56 bytes/instance.  A vertex-buffer stride only has
- * to be a multiple of 4, so the scalars ride alone rather than costing a padded
- * vec4.
- *
+ * Per-instance stride — see `lib/markerLineInstanceLayout.ts` for the byte map.
  * Packing pixelWidth and fadeAlpha into the trailing slot of the world-position
  * vec3s saves 16 bytes per instance versus carrying them as separate vec4
  * attributes — same trick as the filament renderer's density field.
  */
-const LINE_INSTANCE_BYTES = 56;
+const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
@@ -235,20 +225,8 @@ export function createMarkerLineRenderer(
       // Provides (x,y) unit-square corners to location 0 (`uv`).
       // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
       UNIT_QUAD_VERTEX_LAYOUT,
-      // Buffer 1: per-instance line data, stepMode 'instance'.
-      // Provides fromAndWidth, toAndAlpha, color, occludeWeight,
-      // occludeNearKm to locations 1–5.
-      {
-        arrayStride: LINE_INSTANCE_BYTES, // 56 bytes = 3 × vec4 + 2 × f32
-        stepMode: 'instance',
-        attributes: [
-          { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
-          { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
-          { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
-          { shaderLocation: 4, offset: 48, format: 'float32' }, // occludeWeight
-          { shaderLocation: 5, offset: 52, format: 'float32' }, // occludeNearKm
-        ],
-      },
+      // Buffer 1: per-instance line data to locations 1–5.
+      MARKER_LINE_INSTANCE_LAYOUT,
     ];
     // Premultiplied-alpha OVER blend.  Marker lines are UI overlay, not
     // emissive content: at alpha=0 they should be fully transparent against
