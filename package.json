@@ -155,6 +155,7 @@
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
+    "wgslender": "1.4.1",
     "wrangler": "4.123.0",
     "xatlas-wasm": "0.1.3"
   },
