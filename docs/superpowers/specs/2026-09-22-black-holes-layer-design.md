@@ -33,11 +33,14 @@ export type BlackHoleRow = {
   readonly massSolar: number;                 // r_s = schwarzschildRadiusM(massSolar)
   readonly band: FadeBand;                    // lens open / marker fading, one band (SCALE_FADE_BANDS.sgrAStarLensing)
   readonly glintTint: Vec3;
+  readonly glintBaseIntensity: number;        // 0.8, the marker outside the band
   readonly standoffRadii: number;             // 2.0
   readonly focusDistanceRadii: number;        // 30.4
   readonly emission: { … as today … };
 };
 ```
+
+*Amended at PR 2:* `glintBaseIntensity` joined `glintTint` on the row.
 
 ### 2.2 The place anchor (core)
 
@@ -62,13 +65,15 @@ The Layer's `SelectionKindRow` (`present/blackHoleSelectionRow.ts`): `pickSource
 
 ```ts
 // on the extracted SelectionRow:
-driver: { poseId: row.anchorId, boundingRadiusM: rS, footprintRadiusM: blackHoleFootprintRadiusM(row),
+driver: { poseId: row.anchorId, boundingRadiusM: rS, footprintRadiusM: rS,
           groundRadiusM: rS, standoffRadii: row.standoffRadii, focusDistanceRadii: row.focusDistanceRadii },
 ```
 
-`driver` travels on the extracted row rather than as a `SelectionKindRow` method so the five focus-generic camera readers (`cameraDrivers`, `approachTiltedPose`, `focusFraming`, `selectionHaloTable`, `pivotRadiusMpc`) stay pure functions of the row — no resolver threaded through them. The three readers that take a *body id* by contract (`bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung`: go-home, fly-to-lon/lat, surface rung) keep reading `SCENE_BODIES`. `poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string | null`, not `SlabHostId`, null for a survey star (which has no id; the camera then holds its base pose, as today); whether the camera engages a metre frame is the slab table's answer, not the driver's. `blackHoleFootprintRadiusM(row)` (= `LENS_QUAD_MAX_RS × rS`) is the one home for the quad's extent; the slab row (§2.5) reads the same helper.
+`driver` travels on the extracted row rather than as a `SelectionKindRow` method so the five focus-generic camera readers (`cameraDrivers`, `approachTiltedPose`, `focusFraming`, `selectionHaloTable`, `pivotRadiusMpc`) stay pure functions of the row — no resolver threaded through them. The three readers that take a *body id* by contract (`bodyHomePose`, `watchFlyToLonLatSaga`, `bodyRung`: go-home, fly-to-lon/lat, surface rung) keep reading `SCENE_BODIES`. `poseId` is a `deriveBodyStates` key — a `SlabHostId` when a slab row names it (Earth, the hole), a seeded star's id when none does — so it is `string | null`, not `SlabHostId`, null for a survey star (which has no id; the camera then holds its base pose, as today); whether the camera engages a metre frame is the slab table's answer, not the driver's. The driver's `footprintRadiusM` is r_s: arrival is `focusDistanceRadii × footprintRadiusM`, so a wider footprint would move arrival from 30.4 r_s to ~1520 r_s.
 
-Core gains one row each in `URL_HASH_FOR`, `targetIdentityKey` and `focusFraming` (the `blackHole` case delegates to `bodyLikeFraming` with `radiusM` + `focusDistanceRadii`, as `star` does). The 39 S-stars' `focusId: 'sgr-a-star'` (`makers/sStar.ts:57`) becomes `'blackhole-sgr-a-star'`; the two featured cards (`featuredTabs.ts:153-157, 418-422`) follow.
+Core gains one row each in `URL_HASH_FOR`, `targetIdentityKey` and `focusFraming` (the `blackHole` case delegates to `bodyLikeFraming` with `radiusM` + `focusDistanceRadii`, as `star` does). The 39 S-stars' `focusId: 'sgr-a-star'` (`makers/sStar.ts:57`) becomes `'galactic-centre'`: it is the orbit's focus in `deriveBodyStates`, not a URL focus id. The two featured cards (`featuredTabs.ts:153-157, 418-422`) focus `blackhole-sgr-a-star`.
+
+*Amended at PR 2:* the plan's P1 and P2. No footprint helper exists: the lens has been a fullscreen triangle since #800, so there was no `LENS_QUAD_MAX_RS` quad extent to size it by. The S-star re-point deleted `SGR_A_STAR_ALIAS`. The `blackHole` `SelectionRow` carries `label`, `detailLabel` and `massSolar`, and core computes r_s from the mass, so no core reader imports the Layer.
 
 ### 2.4 The contract
 
@@ -82,7 +87,7 @@ sourceCounts?(runtime: Runtime): AsyncIterable<SourceCountReport>;
 readonly slabs?: readonly SlabRow[];
 
 // src/@types/engine/layer/LayerSearchEntry.d.ts
-export type LayerSearchEntry = { id: string; names: readonly string[]; ref: SelectionRef; class: 'primary' | 'catalog' };
+export type LayerSearchEntry = { id: string; names: readonly string[]; class: 'primary' | 'catalog' };
 // src/@types/engine/layer/SourceCountReport.d.ts
 export type SourceCountReport = { source: SourceType; count: number };
 
@@ -107,6 +112,8 @@ detailCard: { readonly type: FocusableTargetType; readonly Detail: DetailCard; r
 
 `class` is the ranker's existing distinction: `primary` rows get `PRIMARY_TIEBREAK` and no cap, `catalog` rows are capped at `MAX_*_RESULTS`. The three loaded palette inputs that already cross the store (`famousGalaxiesMeta`, `aliasIndex`, `structureSearchList`) and the six static ones (`MILKY_WAY_NAMES`, `SCENE_BODIES`, seeded stars, exhibits, tours, `EARTH_PLACES`) keep their paths in this feature and are named in the contract doc as intended tenants.
 
+*Amended at PR 2:* `LayerSearchEntry` has no `ref` (it had no reader). `id` is the palette focus id, which `actionForRow` focuses verbatim, so the hole's row id is `'blackhole-sgr-a-star'` (P3).
+
 ### 2.5 The slab row
 
 ```ts
@@ -126,11 +133,15 @@ export type SlabHostId = BodyId | PlaceId;
 
 Camera fields are deliberately absent: driving the camera (§2.4 `driver`) and hosting a metre frame vary independently — seeded stars drive without a slab, S-star riders draw on a slab without driving (R14, amending grill Q7's seven-field row). Core keeps: the frame-graph lines and their order, painter order, the capacity ceiling. A Layer needing a new *line* edits core frame data, as every pass name does. Riders (the backlogged S-star lensing, a landing site) are passes on the consuming line filtering `view.slab.frame.hostId`; no contract field.
 
-The Layer's row: `{ anchorId: 'galactic-centre', drawRadiusM: sgrAStarLensEnvelopeM, footprintRadiusM: blackHoleFootprintRadiusM(row), activeBand: SCALE_FADE_BANDS.sgrAStarLensing, source: 'lens' }`, one per `BLACK_HOLES` row. `activeBand` is the **only** gate on the lens step: the row exists iff the band is open, so the pass drops today's own `skyCaptureBandAlpha('sgrAStar') > 0` check (`sgrAStarLensingPass.ts:45`) — one fact, one reader. The core capture row holds the same band object (`cubemapCaptures.ts:32`), by reference, not a copy.
+The Layer's row: `{ anchorId: 'galactic-centre', drawRadiusM: sgrAStarLensEnvelopeM, footprintRadiusM: rS, activeBand: SCALE_FADE_BANDS.sgrAStarLensing, source: 'lens' }`, one per `BLACK_HOLES` row. `activeBand` is the **only** gate on the lens step: the row exists iff the band is open, so the pass drops today's own `skyCaptureBandAlpha('sgrAStar') > 0` check (`sgrAStarLensingPass.ts:45`) — one fact, one reader. The core capture row holds the same band object (`cubemapCaptures.ts:32`), by reference, not a copy.
+
+*Amended at PR 2:* the row's footprint stays r_s (P1). Its view-dependent extent is already `drawRadiusM`.
 
 ### 2.6 Store
 
 `state.engine.layerSearch: Record<string, readonly LayerSearchEntry[]>` keyed by Layer name, whole-snapshot replace per yield; `selectLayerSearchRows` flattens. The key is not deleted at teardown in PR 1 — zero tenants, so a stale row after engine teardown is unreachable; PR 2 adds the delete with the first tenant. `sourceCounts` keeps today's `engineSourceCountReported` action and `sourceCounts` map — three sagas pulse on the action (`watchTierSaga.ts:80`, `watchSelectionRowsSaga.ts:72`, `resolveFocusRefDeferringSaga.ts:19`) and `createLayers`' `contentVersion` bump and `engineStatusChanged` side effects move into the consuming saga unchanged. The Layer's settings: `layers/blackHoles/state/lensingTuning/` (today's `sgrAStarLensingTuning` slice, key renamed) plus the source row's `visible`/`labelEnabled`.
+
+*Amended at PR 2:* the settings are `blackHoles: { items: Record<BlackHoleId, { labelEnabled }> }` only; `visible` had no reader (P6). The tuning key is `blackHoleLensingTuning`. `blackHoles` is a captured tour-snapshot cluster. The search saga stays parked after its feed ends, so the teardown cancel is what clears the Layer's `layerSearch` rows.
 
 ## 3. Ground preparation — PR 1
 
@@ -152,19 +163,25 @@ src/layers/blackHoles/
   data/blackHoles.ts     BLACK_HOLES rows (§2.1)
   sources/sgrAStar.ts    the registry row, type 'blackHole'
   state/lensingTuning/   {slice,initialState,selectors}.ts, state/slices.ts
+  state/blackHoles/      the label setting
   passes/blackHoleLensingPass.ts   'black-hole-lensing' on the 'lens' line; filters frame.hostId === row.anchorId
   passes/blackHoleMarkerPass.ts    'black-hole-marker' on the glint line; marker + pick surface
   present/blackHoleSelectionRow.ts  §2.3
-  present/blackHoleCaption.ts       guides.screenLabels row (grill Q5)
-  ui/BlackHoleDetailCard/ ui/CompactBlackHoleCard/ ui/LensingTuningSection*.tsx
-  @types/BlackHolesRuntime.ts, BlackHoleRow.ts, BlackHoleInfo.ts
+  present/produceBlackHoleCaptions.ts  guides.screenLabels row (grill Q5)
+  present/blackHoleMarkerBrightness.ts, blackHolePickable.ts, sgrAStarCaptionTarget.ts
+  present/blackHoleSlabRow.ts, blackHoleSearch.ts, blackHoleFadeRows.ts
+  render/sgrAStarLensingRenderer.ts, render/skyCubemapTarget.ts
+  ui/BlackHoleDetailCard/ ui/CompactBlackHoleCard/ ui/SgrAStarLensingTuningSection*.tsx
+  @types/BlackHolesRuntime.ts, BlackHoleRow.ts (BlackHoleInfo lives in src/@types/)
 ```
 
-- **Marker** (grill Q8): one additive billboard per row at the anchor's position, brightness `base × (1 − fadeBand(row.band))` via `sgrAStarGlintBrightness`' existing curve, tint from the row, `drawPick` stamping `packSelection(Source.SgrAStar, rowIndex + PICK_SENTINEL_OFFSET)`. Inside the band the lens quad is the pick surface. Deletes `bodyGlintsPass.ts:270-300`'s second packed source, `SGR_A_STAR_GLINT_TINT`, the staging slot and the anchor term in `MAX_GLINTS`; deletes `starPointsPass.ts:325-360`'s anchor stamp and `sgrAStarCaptionPickable`/`sgrAStarCaptionTarget` (the S-star "inside the anchor's footprint" exclusion stays, keyed on the marker's projected position the same way).
+*Amended at PR 2:* the tree above is the shipped one: the renderer sits under `render/`, and there is no footprint helper.
+
+- **Marker** (grill Q8): one additive billboard per row at the anchor's position, brightness `base × (1 − fadeBand(row.band))` via `sgrAStarGlintBrightness`' existing curve, tint from the row, `drawPick` stamping `packSelection(Source.SgrAStar, rowIndex + PICK_SENTINEL_OFFSET)`. *Amended at PR 2:* the stamp is emitted while the marker OR the caption is visible (`blackHolePickable`, P5). A fullscreen lens cannot stamp a point, and the caption stays full inside the band where the marker has faded, so the caption carries the click there. `sgrAStarCaptionTarget` moved into the Layer's `present/` as that gate's caption half. Deletes `bodyGlintsPass.ts:270-300`'s second packed source, `SGR_A_STAR_GLINT_TINT`, the staging slot and the anchor term in `MAX_GLINTS`; deletes `starPointsPass.ts:325-360`'s anchor stamp and `sgrAStarCaptionPickable`/`sgrAStarCaptionTarget` (the S-star "inside the anchor's footprint" exclusion stays, keyed on the marker's projected position the same way).
 - **Lens**: `sgrAStarLensingPass.ts` moves in as `blackHoleLensingPass.ts`, reading the tuning at its new path and the row's `massSolar`; the pipeline and `sgrAStarLensingRenderer` are unchanged. The frame-graph line `frameSections.ts:191` renames its pass `'black-hole-lensing'`; its position (after the additive roster, before the unwarped glint step) is unchanged.
-- **Caption** (grill Q5, reconcile): the `'sgrAStar'` `ForegroundCaption` leaves `sceneBodyLabels.ts:105-111`; the Layer's `guides.screenLabels` row names slab NEAR0 and reuses `captionFadeRules.ts:133-142`'s rule (moved with it) and `SCALE_FADE_BANDS.sgrAStarCaption`.
+- **Caption** (grill Q5, reconcile): the `'sgrAStar'` `ForegroundCaption` leaves `sceneBodyLabels.ts:105-111`; the Layer's `guides.screenLabels` row names slab NEAR0 and reuses `captionFadeRules.ts:133-142`'s rule and `SCALE_FADE_BANDS.sgrAStarCaption`. *Amended at PR 2:* the rule stays in core's closed `CAPTION_FADE_RULES` table, re-keyed to `settings.blackHoles`; only the producer moved (P4). The Layer's caption fade row is keyed `'bodyLabel'`, so tour `bodyLabel` cues also write `blackHoles.items`.
 - **Capture** (grill Q6, deferred): the `sky-cubemap` target row (`renderTargets.ts:223-238`) moves onto `Layer.targets` — its `size` reads the Layer's tuning slice — while `CUBEMAP_CAPTURES.sgrAStar`, `captureRowAllocateWhen('sgrAStar')` and `scheduleSkyCaptures` stay core; the Layer's lens pass samples the core capture. `Layer.captures` prep follows dome #800 and the `2026-09-22-captures-as-views.md` ruling.
-- **Search**: `search: async function* () { yield [{ id: 'sgr-a-star', names: [label, detailLabel, ...aliases], ref, class: 'primary' }]; }`. No `sourceCounts`: nothing reports a count for Sgr A\* today, and a `count: 1` would move the status bar's "ready" total for no reader.
+- **Search**: `search: async function* () { yield [{ id: 'blackhole-sgr-a-star', names: [label, detailLabel, ...aliases], class: 'primary' }]; }` (amended at PR 2, §2.4). No `sourceCounts`: nothing reports a count for Sgr A\* today, and a `count: 1` would move the status bar's "ready" total for no reader.
 - **S-star click exclusion** (`starPointsPass.ts:346-360`): stays in the star Layer, keyed on the projected position of the core place `'galactic-centre'` (a `deriveBodyStates` read, not a Layer read) with the star Layer's own exclusion radius — the rule is "a satellite inside its anchor's click target is not separately aimable", the star Layer's rule about its satellites; the marker's pick footprint is the hole Layer's own size. Pick stamps are depth-tested nearer-wins (`bodyPickRenderer.ts:251`), so draw order alone cannot replace the rule.
 - **UI**: `ui: [{ slot: 'detailCard', content: { type: 'blackHole', Detail, Compact } }, { slot: 'debug', content: LensingTuningSection }]`; the cards show label, designation, mass, r_s, distance; `settings.bodies.items['sgr-a-star']` row is deleted.
 
@@ -174,7 +191,7 @@ Deleted from core: `sceneSgrAStar.ts`, `sceneAnchorPointBodies.ts`, `AnchorPoint
 
 - `#focus=body-sgr-a-star` stops resolving; `#focus=blackhole-sgr-a-star` replaces it (grill Q9). No alias.
 - The far-field marker is pickable everywhere it is visible (today only the caption is, and only while `sgrAStarCaptionPickable`).
-- The hole's slab `footprintRadiusM` becomes the lens quad's extent (`LENS_QUAD_MAX_RS × rS`) instead of r_s (`reliefM: [0, 0]` today), so the row's near bracket widens by `PROXY_SCALE × footprint` — eye-check the band-entry frame. PR 1 keeps r_s so the prep stays neutral.
+- ~~The hole's slab footprint widens to the lens extent.~~ *Amended at PR 2:* dropped (P1): the footprint stays r_s, so the near bracket, arrival and band entry are unchanged.
 - Nothing else visible changes: same lens, same band, same descent floor and arrival, same caption fade.
 
 ## 6. Testing
