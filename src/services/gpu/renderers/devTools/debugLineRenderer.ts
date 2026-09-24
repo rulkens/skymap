@@ -16,7 +16,7 @@
  *
  * The GPU technique is identical, so this REUSES the marker-line WESL shaders
  * (`shaders/markerLines/{vertex,fragment}.wesl`) and the same 80-byte
- * CameraUniforms prefix + 48-byte instance stride. The only divergences are the
+ * CameraUniforms prefix + instance layout. The only divergences are the
  * input type (no id/fade) and a larger default `maxLines` — a clip path is
  * hundreds of route segments, not the 1–3 lines a marker overlay carries.
  *
@@ -35,15 +35,9 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
+import { MARKER_LINE_INSTANCE_LAYOUT } from '../../lib/markerLineInstanceLayout';
 
-/**
- * Per-instance stride, matching `VsIn` attributes 1–3 in markerLines/io.wesl:
- *   bytes  0..15  fromAndWidth  vec4<f32> — from.xyz, pixelWidth
- *   bytes 16..31  toAndAlpha    vec4<f32> — to.xyz, fadeAlpha (always 1 here)
- *   bytes 32..47  color         vec4<f32> — premultiplied rgba
- * 3 × vec4 = 48 bytes/instance.
- */
-const LINE_INSTANCE_BYTES = 48;
+const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
 
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength;
 
@@ -98,18 +92,7 @@ export function createDebugLineRenderer(
       vertex: {
         module: vsModule,
         entryPoint: 'vs',
-        buffers: [
-          UNIT_QUAD_VERTEX_LAYOUT,
-          {
-            arrayStride: LINE_INSTANCE_BYTES,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
-              { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
-              { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
-            ],
-          },
-        ],
+        buffers: [UNIT_QUAD_VERTEX_LAYOUT, MARKER_LINE_INSTANCE_LAYOUT],
       },
       fragment: {
         module: fsModule,
@@ -157,7 +140,7 @@ export function createDebugLineRenderer(
     const count = Math.min(lines.length, maxLines);
     for (let i = 0; i < count; i++) {
       const line = lines[i]!;
-      const base = i * (LINE_INSTANCE_BYTES / 4); // 12 f32s per instance
+      const base = i * (LINE_INSTANCE_BYTES / 4);
       instanceBuf[base + 0] = line.from[0];
       instanceBuf[base + 1] = line.from[1];
       instanceBuf[base + 2] = line.from[2];
@@ -171,6 +154,9 @@ export function createDebugLineRenderer(
       instanceBuf[base + 9] = line.color[1]!;
       instanceBuf[base + 10] = line.color[2]!;
       instanceBuf[base + 11] = line.color[3]!;
+      // occludeWeight / occludeNearKm: the plain `vs` pipeline never occludes.
+      instanceBuf[base + 12] = 0;
+      instanceBuf[base + 13] = 0;
       currentLineCount++;
     }
 
