@@ -62,6 +62,10 @@ describe('allowDataFile', () => {
     expect(allowDataFile('meshes/mer_contact.webp')).toBe(true);
   });
 
+  it('accepts a georeferenced mesh terrain-hole mask under meshes/', () => {
+    expect(allowDataFile('meshes/soendermarken_hole.webp')).toBe(true);
+  });
+
   it('rejects an unrelated webp under meshes/', () => {
     expect(allowDataFile('meshes/whale_thumbnail.webp')).toBe(false);
   });

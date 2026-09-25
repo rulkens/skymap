@@ -12,7 +12,7 @@ import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
-import { buildMeshes } from '../../../tools/meshes/buildMeshes';
+import { buildMeshes, type MeshBuildTarget } from '../../../tools/meshes/buildMeshes';
 import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
 import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
 import { nearestVertex } from '../../helpers/meshes/nearestVertex';
@@ -199,6 +199,7 @@ function runTiers(
   groundUp?: Vec3,
   tierTriangles?: Partial<Record<Tier, number>>,
   georeferencedOffsetM?: Vec2,
+  hole?: MeshBuildTarget['hole'],
 ) {
   return buildMeshes({
     targets: [
@@ -212,6 +213,7 @@ function runTiers(
         bodyFromSource,
         groundUp,
         georeferencedOffsetM,
+        hole,
       },
     ],
     outDir: join(dir, 'out'),
@@ -913,5 +915,51 @@ describe('buildMeshes()', () => {
     // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
     expect(row.groundOffsetM).toBeCloseTo(0, 6);
+  });
+
+  it('bakes a terrain-hole mask and emits its lat/lon rect on the row', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    const R = 6_371_000;
+    const row = (
+      await runTiers({ small: glbPath }, undefined, undefined, undefined, undefined, {
+        ringM: [
+          [0, 0],
+          [100, 0],
+          [100, 100],
+          [0, 100],
+        ],
+        siteLatDeg: 0,
+        siteLonDeg: 0,
+        radiusM: R,
+      })
+    )[0]!;
+
+    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(true);
+    const metresPerDeg = (Math.PI / 180) * R;
+    expect(row.hole).toBeDefined();
+    expect(row.hole!.lonMinDeg).toBeCloseTo(0, 6);
+    expect(row.hole!.latMinDeg).toBeCloseTo(0, 6);
+    expect(row.hole!.lonSpanDeg).toBeCloseTo(100 / metresPerDeg, 6);
+    expect(row.hole!.latSpanDeg).toBeCloseTo(100 / metresPerDeg, 6);
+  });
+
+  it('leaves hole undefined for a target with no crop outline', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    const row = (await runTiers({ small: glbPath }))[0]!;
+
+    expect(row.hole).toBeUndefined();
+    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(false);
   });
 });

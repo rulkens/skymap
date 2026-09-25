@@ -112,9 +112,9 @@ export function rasterizeHoleMask(ringEnuM: readonly [number, number][], metresP
   { mask: Uint8Array; width: number; height: number; minEnuM: [number, number]; sizeEnuM: [number, number] };
 // row 0 = NORTH edge (texture v = 0 at the rect's max latitude); 255 = hole, 0 = keep terrain
 ```
-- [ ] Tests: a 100 × 100 m square ring at 1 m/px, erode 0 → a 100×100 mask of all 255 inside (border px ±1); erode 2 → the 2 m band along every edge is 0; an L-shaped ring leaves its notch 0; row 0 is the north edge (ring asymmetric in y, assert which rows are filled).
-- [ ] `buildMeshes` for a georeferenced key: read `holeOutline` (`ringM`), shift it by the same `[−e, −n]`, rasterise at 0.5 m/px with erode 2 m, write `public/data/meshes/<key>_hole.webp` (lossless, single channel via sharp), convert the ENU rect to lat/lon (inverse of `enuOffsetM` around the site) and emit `hole` on the row.
-- [ ] Commit `feat(meshes): bake a terrain-hole mask for georeferenced meshes`.
+- [x] Tests: a 100 × 100 m square ring at 1 m/px, erode 0 → a 100×100 mask of all 255 inside (border px ±1); erode 2 → the 2 m band along every edge is 0; an L-shaped ring leaves its notch 0; row 0 is the north edge (ring asymmetric in y, assert which rows are filled).
+- [x] `buildMeshes` for a georeferenced key: read `holeOutline` (`ringM`), shift it by the same `[−e, −n]`, rasterise at 0.5 m/px with erode 2 m, write `public/data/meshes/<key>_hole.webp` (lossless, single channel via sharp), convert the ENU rect to lat/lon (inverse of `enuOffsetM` around the site) and emit `hole` on the row.
+- [x] Commit `feat(meshes): bake a terrain-hole mask for georeferenced meshes`.
 
 ### Task 7: anchored site heights
 

@@ -11,7 +11,7 @@
  * docs/superpowers/specs/2026-09-10-mesh-bodies-design.md ("Tool").
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { basename, join, resolve } from 'node:path';
 
@@ -28,13 +28,16 @@ import sharp from 'sharp';
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
 import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
+import type { MeshHoleRect } from '../../src/@types/data/mesh/MeshHoleRect';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
+import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
 import type { Tier } from '../../src/@types/data/Tier';
 import type { Vec2 } from '../../src/@types/math/Vec2';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import type { Geometry } from './@types/Geometry';
+import type { HoleMaskTarget } from './@types/HoleMaskTarget';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { TIER_LADDER } from '../../src/data/tierLadder';
@@ -49,6 +52,7 @@ import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
 import { enuOffsetM } from '../utils/geo/enuOffsetM';
 import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
+import { rasterizeHoleMask } from '../utils/meshes/rasterizeHoleMask';
 import { simplifyToTriangles } from '../utils/meshes/simplifyToTriangles';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
@@ -71,6 +75,15 @@ const FLAT_NORMAL = { r: 128, g: 128, b: 255 };
 /** How far a tier's simplified triangle count may miss its target before
  *  `bakeTier` refuses the build rather than ship a silently off-budget tier. */
 const SIMPLIFY_TOLERANCE = 0.05;
+
+// A terrain hole only needs to resolve the crop's own metre-scale edge, not
+// the mesh's own triangle density — 0.5 m/px is already finer than the
+// surface tile's own ground resolution near Søndermarken. Eroding 2 m keeps
+// the (unmoving) terrain drawn a little past the (LOD-jittery) mesh rim, so
+// the seam between them is a terrain step, never a gap of bare globe.
+const HOLE_MASK_METRES_PER_PX = 0.5;
+const HOLE_MASK_ERODE_M = 2;
+const DEG_TO_RAD = Math.PI / 180;
 
 export type MeshBuildTarget = {
   readonly key: string;
@@ -95,6 +108,9 @@ export type MeshBuildTarget = {
    * negated so `mergeGeometry` can add it with no sign to remember.
    */
   readonly georeferencedOffsetM?: Vec2;
+  /** Present for a georeferenced source with a crop outline to cut a terrain
+   *  hole under: the ring `bakeTier` rasterises into `<key>_hole.webp`. */
+  readonly hole?: HoleMaskTarget;
 };
 
 /**
@@ -585,6 +601,60 @@ function bakeContactDecal(
   };
 }
 
+/** The inverse of `enuOffsetM`: the geodetic point `eastM`/`northM` away from
+ *  `site`, same small-angle tangent-plane approximation, same radius. */
+function enuToLonLatDeg(
+  site: { readonly latDeg: number; readonly lonDeg: number },
+  eastM: number,
+  northM: number,
+  radiusM: number,
+): { latDeg: number; lonDeg: number } {
+  const metresPerDegLat = DEG_TO_RAD * radiusM;
+  const metresPerDegLon = metresPerDegLat * Math.cos(site.latDeg * DEG_TO_RAD);
+  return {
+    latDeg: site.latDeg + northM / metresPerDegLat,
+    lonDeg: site.lonDeg + eastM / metresPerDegLon,
+  };
+}
+
+/**
+ * Rasterise a georeferenced target's crop ring into `<key>_hole.webp` and the
+ * lat/lon rect it covers — a no-op (undefined) for a target with no `hole`.
+ * Independent of the GLB itself, so `bakeTier` calls it once, on the ceiling
+ * pass, the same way it gates the untiered contact mask.
+ */
+async function bakeHoleMask(
+  target: MeshBuildTarget,
+  outDir: string,
+): Promise<MeshHoleRect | undefined> {
+  const { hole, key } = target;
+  if (hole === undefined) return undefined;
+
+  const { mask, width, height, minEnuM, sizeEnuM } = rasterizeHoleMask(
+    hole.ringM,
+    HOLE_MASK_METRES_PER_PX,
+    HOLE_MASK_ERODE_M,
+  );
+  await sharp(Buffer.from(mask), { raw: { width, height, channels: 1 } })
+    .webp(LOSSLESS_WEBP)
+    .toFile(join(outDir, `${key}_hole.webp`));
+
+  const site = { latDeg: hole.siteLatDeg, lonDeg: hole.siteLonDeg };
+  const min = enuToLonLatDeg(site, minEnuM[0], minEnuM[1], hole.radiusM);
+  const max = enuToLonLatDeg(
+    site,
+    minEnuM[0] + sizeEnuM[0],
+    minEnuM[1] + sizeEnuM[1],
+    hole.radiusM,
+  );
+  return {
+    lonMinDeg: min.lonDeg,
+    latMinDeg: min.latDeg,
+    lonSpanDeg: max.lonDeg - min.lonDeg,
+    latSpanDeg: max.latDeg - min.latDeg,
+  };
+}
+
 /**
  * Decimate a merged tier to its `tierTriangles` budget, if the tier has one —
  * geometry itself (positions/normals/uvs/tangents) is untouched, only
@@ -687,6 +757,7 @@ async function bakeTier(
       .webp(LOSSY_WEBP)
       .toFile(join(outDir, `${key}_contact.webp`));
   }
+  const hole = bakeContact ? await bakeHoleMask(target, outDir) : undefined;
 
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();
@@ -755,6 +826,7 @@ async function bakeTier(
     substituted,
     mean: mean.map((c) => Number(c.toFixed(6))) as Vec3,
     contactDecal,
+    hole,
   };
 }
 
@@ -775,7 +847,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   for (const tier of tiers) {
     result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
   }
-  const { geometry, substituted, mean, contactDecal } = result!;
+  const { geometry, substituted, mean, contactDecal, hole } = result!;
 
   return {
     key,
@@ -785,6 +857,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     triangleCount: geometry.indices.length / 3,
     substituted,
     contactDecal,
+    hole,
     source: target.source,
     licence: target.licence,
     attribution: target.attribution,
@@ -846,6 +919,7 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
     GENERATED_BANNER +
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
     "import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';\n" +
+    "import type { MeshHoleRect } from '../../@types/data/mesh/MeshHoleRect';\n" +
     "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
     "import type { Tier } from '../../@types/data/Tier';\n" +
     '\n' +
@@ -890,18 +964,33 @@ export async function buildMeshes(options: {
 }
 
 /**
- * The XY vector a georeferenced key's merge adds instead of its usual
- * centroid recentre — undefined for every other key. `meshAnchorSite` is the
- * single place the anchored-site guards live; this just turns its answer
- * into the translation `mergeGeometry` wants.
+ * The site a georeferenced key's merge shifts onto, its ENU offset from the
+ * source anchor (negated: the translation `mergeGeometry` adds), and the
+ * host's datum radius the same offset math needs again for the hole rect —
+ * undefined for every other key. `meshAnchorSite` is the single place the
+ * anchored-site guards live; this just turns its answer into what the rest
+ * of `main` wants.
  */
-function georeferencedOffsetFor(key: string): Vec2 | undefined {
+function georeferencedTargetInfo(
+  key: string,
+):
+  | { readonly site: SurfaceFixedSite; readonly offsetM: Vec2; readonly radiusM: number }
+  | undefined {
   const site = meshAnchorSite(key);
   if (site === undefined) return undefined;
   const anchor = MESH_SOURCES[key]!.georeferenced!.anchor;
   const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildMeshes');
   const [e, n] = enuOffsetM(anchor, site, host.surface.datumRadiusM);
-  return [-e, -n];
+  return { site, offsetM: [-e, -n], radiusM: host.surface.datumRadiusM };
+}
+
+/** The committed crop ring, shifted by the same anchor -> site translation
+ *  the mesh itself gets, ready for `rasterizeHoleMask`. */
+function readHoleOutlineRing(repoPath: string, offsetM: Vec2): (readonly [number, number])[] {
+  const parsed = JSON.parse(readFileSync(resolve(repoPath), 'utf8')) as {
+    ringM: [number, number][];
+  };
+  return parsed.ringM.map(([x, y]) => [x + offsetM[0], y + offsetM[1]] as const);
 }
 
 async function main(): Promise<void> {
@@ -916,6 +1005,16 @@ async function main(): Promise<void> {
         .map((tier) => [tier, entry.tiers[tier]!.triangles]),
     ) as MeshBuildTarget['tierTriangles'];
     const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!.raw];
+    const georeferenced = georeferencedTargetInfo(key);
+    const hole =
+      georeferenced && entry.georeferenced
+        ? {
+            ringM: readHoleOutlineRing(entry.georeferenced.holeOutline, georeferenced.offsetM),
+            siteLatDeg: georeferenced.site.latDeg,
+            siteLonDeg: georeferenced.site.lonDeg,
+            radiusM: georeferenced.radiusM,
+          }
+        : undefined;
     return {
       key,
       glbPaths,
@@ -925,7 +1024,8 @@ async function main(): Promise<void> {
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
       groundUp: meshGroundUpSource(key),
-      georeferencedOffsetM: georeferencedOffsetFor(key),
+      georeferencedOffsetM: georeferenced?.offsetM,
+      hole,
     };
   });
   await buildMeshes({

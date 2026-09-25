@@ -4,6 +4,7 @@
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
+import type { MeshHoleRect } from '../../@types/data/mesh/MeshHoleRect';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../@types/data/Tier';
 
@@ -27,6 +28,9 @@ export type MeshAssetRow = {
   /** The ground-contact box `contactShadow` projects into, body frame,
    *  metres; absent for a floating mesh. */
   readonly contactDecal?: ContactDecal;
+  /** The lat/lon rect `<key>_hole.webp` covers; absent for a mesh with no
+   *  terrain hole to cut. */
+  readonly hole?: MeshHoleRect;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
