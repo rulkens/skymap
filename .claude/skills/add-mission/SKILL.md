@@ -145,8 +145,8 @@ Every step is a literal edit site. Tick them all.
    one `MESH_TRIANGLE_BUDGET` (`src/data/mesh/meshTriangleBudget.ts`).
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
    log: extent in metres must match the fact sheet.
-5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small:
-'meshes.<key>' }`, licence, the attribution string, and `bodyFromSource` as a
+5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small: {
+raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` as a
    column-major **proper** rotation (det +1) from the axis table. Same source
    frame as a rover (up +Y, forward +Z) → `[0, 1, 0, 0, 0, 1, 1, 0, 0]`;
    dish/boresight on +Y, up +Z → `[0, -1, 0, 1, 0, 0, 0, 0, 1]`.

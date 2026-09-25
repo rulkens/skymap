@@ -63,9 +63,9 @@ export type MeshTierSource = {
 };
 // MeshSourceEntry.tiers: Readonly<Partial<Record<Tier, MeshTierSource>>>
 ```
-- [ ] 7 rows become `tiers: { small: { raw: 'meshes.<key>' } }`. `buildMeshes` reads `.raw`. No behaviour change, no new test (type sweep); existing tests updated to the new shape.
-- [ ] Docs: DEPLOY.md and the add-mission skill show the new row shape.
-- [ ] Commit `refactor(meshes): per-tier source spec objects`.
+- [x] 7 rows become `tiers: { small: { raw: 'meshes.<key>' } }`. `buildMeshes` reads `.raw`. No behaviour change, no new test (type sweep); existing tests updated to the new shape.
+- [x] Docs: DEPLOY.md and the add-mission skill show the new row shape. (DEPLOY.md never showed a row-shape literal — nothing there to update; add-mission's row example updated.)
+- [x] Commit `refactor(meshes): per-tier source spec objects`.
 
 ### Task 4: simplify a tier to a triangle target
 

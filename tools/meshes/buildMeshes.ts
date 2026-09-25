@@ -486,13 +486,15 @@ async function writeTexture(
 }
 
 /**
- * `target.glbPaths`' present tiers, in ladder order — throws unless they form
+ * A per-tier record's present tiers, in ladder order — throws unless they form
  * a contiguous `TIER_LADDER` prefix starting at `small`: a gap (`small` +
  * `large`, no `medium`) would leave `clampTier` handing a `medium` request a
- * file that was never built, a silent 404.
+ * file that was never built, a silent 404. Generic over the record's value
+ * (a built GLB path, or a `MeshSourceEntry`'s `MeshTierSource`) — only which
+ * tier keys are present matters here.
  */
-function orderedTiers(glbPaths: MeshBuildTarget['glbPaths'], key: string): readonly Tier[] {
-  const present = TIER_LADDER.filter((tier) => glbPaths[tier] !== undefined);
+function orderedTiers<T>(tiers: Readonly<Partial<Record<Tier, T>>>, key: string): readonly Tier[] {
+  const present = TIER_LADDER.filter((tier) => tiers[tier] !== undefined);
   if (present.length !== TIER_LADDER.indexOf(present[present.length - 1] ?? 'small') + 1) {
     throw new Error(
       `buildMeshes: ${key} ships tiers [${present.join(', ')}] — tiers must run contiguously from small`,
@@ -822,9 +824,9 @@ async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
     const present = orderedTiers(entry.tiers, key);
     const glbPaths = Object.fromEntries(
-      present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!)]),
+      present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!.raw)]),
     ) as MeshBuildTarget['glbPaths'];
-    const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!];
+    const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!.raw];
     return {
       key,
       glbPaths,

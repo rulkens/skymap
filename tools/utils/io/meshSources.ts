@@ -9,11 +9,11 @@
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
-import type { RawDataKey } from './rawDataRegistry';
+import type { MeshTierSource } from '../../meshes/@types/MeshTierSource';
 
 export type MeshSourceEntry = {
   /** One raw GLB per tier this body ships; must be contiguous from `small`. */
-  readonly tiers: Readonly<Partial<Record<Tier, RawDataKey>>>;
+  readonly tiers: Readonly<Partial<Record<Tier, MeshTierSource>>>;
   readonly licence: string;
   /** Author + profile URL; empty string for CC0. */
   readonly attribution: string;
@@ -32,7 +32,7 @@ export type MeshSourceEntry = {
  */
 export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
   whale: {
-    tiers: { small: 'meshes.whale' },
+    tiers: { small: { raw: 'meshes.whale' } },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0',
@@ -42,13 +42,13 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 0, 1, 0, -1, 0, 1, 0, 0],
   },
   petunias: {
-    tiers: { small: 'meshes.petunias' },
+    tiers: { small: { raw: 'meshes.petunias' } },
     licence: 'CC BY 4.0',
     attribution:
       'This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0',
   },
   voyager: {
-    tiers: { small: 'meshes.voyager' },
+    tiers: { small: { raw: 'meshes.voyager' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA / Michael D. Carbajal (NASA Headquarters), "Voyager Probe (B)" (https://science.nasa.gov/3d-resources/voyager-probe-b/)',
@@ -57,7 +57,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   hubble: {
-    tiers: { small: 'meshes.hubble' },
+    tiers: { small: { raw: 'meshes.hubble' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA, "Hubble Space Telescope (A)" — NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A))',
@@ -66,7 +66,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
   perseverance: {
-    tiers: { small: 'meshes.perseverance' },
+    tiers: { small: { raw: 'meshes.perseverance' } },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
@@ -75,7 +75,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   curiosity: {
-    tiers: { small: 'meshes.curiosity' },
+    tiers: { small: { raw: 'meshes.curiosity' } },
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
@@ -83,7 +83,7 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
   mer: {
-    tiers: { small: 'meshes.mer' },
+    tiers: { small: { raw: 'meshes.mer' } },
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
