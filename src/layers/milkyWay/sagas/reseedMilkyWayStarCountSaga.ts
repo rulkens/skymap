@@ -1,10 +1,7 @@
 /**
  * reseedMilkyWayStarCountSaga — `starCount` is an absolute count with nothing
  * tying it to the tier automatically, so every confirmed `setTier` write
- * re-seeds it from `MILKY_WAY_STARS_PER_TIER[tier]`; otherwise a device
- * dropping to the small tier would keep whatever count a previous DebugPanel
- * session left dialled in. The Layer's own planner `reconcile`s the cloud
- * against the seed; this saga only owns the write.
+ * re-seeds it from `MILKY_WAY_STARS_PER_TIER[tier]`.
  */
 import { takeEvery, put } from 'typed-redux-saga';
 

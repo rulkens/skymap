@@ -1,7 +1,6 @@
 /**
- * milkyWayFadeRows — the two seed/intent pairs moved verbatim from
- * `fadeLayers.test.ts`: a default-off session must not flash either the disk
- * or its label on frame 1.
+ * milkyWayFadeRows — the two seed/intent pairs: a default-off session must
+ * not flash either the disk or its label on frame 1.
  */
 import { describe, it, expect } from 'vitest';
 import { milkyWayFadeRows } from '../../../../src/layers/milkyWay/present/milkyWayFadeRows';

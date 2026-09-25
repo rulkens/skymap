@@ -318,8 +318,8 @@ export function createEngine(
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
   // the director declutters by prominence otherwise. Every Layer's own COSMO
-  // producer (the milkyWay label included) registers later, from `createLayers`,
-  // so this core row wins any tie. The constellation figure NAMES are
+  // producer registers later, from `createLayers`, so this core row wins any
+  // tie. The constellation figure NAMES are
   // deliberately NOT here: their anchors sit at parsec distances, inside the
   // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw —
   // they register on `foregroundLabelDirector` (NEAR0) from the constellations
@@ -365,8 +365,9 @@ export function createEngine(
 
   // The one row array core owns (D5); createLayers appends each Layer's rows
   // once, in tuple order, over the empty composition today. `selection` reads
-  // it lazily (never rebuilds a list), so a deep link resolving during the
-  // boot window — before createLayers has run — still sees the core rows.
+  // it lazily (never rebuilds a list), so a deep link seen before createLayers
+  // sees only core rows — a Layer-only id instead waits on
+  // resolveFocusRefDeferringSaga's engineStatusChanged pulse to resolve.
   state.selectionKindRows = coreSelectionRows(resolveDeps);
   const selection = composeSelectionRows(
     () => state.selectionKindRows,

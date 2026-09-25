@@ -1,6 +1,5 @@
 /**
- * reseedMilkyWayStarCountSaga — the re-seed half moved out of
- * `watchTierSaga.test.ts`: every confirmed `setTier` write re-seeds
+ * reseedMilkyWayStarCountSaga — every confirmed `setTier` write re-seeds
  * `starCount` from `MILKY_WAY_STARS_PER_TIER[tier]`.
  */
 import { describe, it, expect, beforeEach } from 'vitest';

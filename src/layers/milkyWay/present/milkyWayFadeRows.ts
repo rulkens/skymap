@@ -1,7 +1,7 @@
 /**
- * The Layer's two fade rows, moved verbatim from `fadeLayers.ts`: the disk
- * and its "You are here" label fade independently, each seeded from its own
- * settings toggle so a disabled row never flashes in on frame 1.
+ * The Layer's two fade rows: the disk and its "You are here" label fade
+ * independently, each seeded from its own settings toggle so a disabled row
+ * never flashes in on frame 1.
  */
 
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';

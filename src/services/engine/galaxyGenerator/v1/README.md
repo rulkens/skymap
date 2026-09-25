@@ -80,5 +80,5 @@ called with `extra = null`, placement is entirely draw-side. The tool's
 background extras do the opposite and fold their transform into the UBO.
 
 **`milkyWayCloud` carries no notion of `Tier`.** `settings.milkyWay.starCount` is
-an absolute count; `watchTierSaga` re-seeds it from
+an absolute count; `reseedMilkyWayStarCountSaga` re-seeds it from
 `milkyWayCalibration`'s per-tier table on an explicit tier change.

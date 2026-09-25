@@ -10,9 +10,9 @@
  * generation directly — `generate` indexed `MILKY_WAY_STARS_PER_TIER[tier]`
  * and scaled it. Now that `starCount` is absolute, generation has no use for
  * the tier at all; the tier only matters upstream, as the SOURCE of a
- * starting value (`watchTierSaga` re-seeds `settings.milkyWay.starCount` from
- * `MILKY_WAY_STARS_PER_TIER[tier]` on an explicit tier change) — a fact this
- * handle doesn't need to know to do its job.
+ * starting value (`reseedMilkyWayStarCountSaga` re-seeds
+ * `settings.milkyWay.starCount` from `MILKY_WAY_STARS_PER_TIER[tier]` on an
+ * explicit tier change) — a fact this handle doesn't need to know to do its job.
  *
  * `buffers()` returns the CURRENT generation's buffers as a snapshot; the draw
  * side calls it each frame and never caches across a `regenerate`. `starCount()`
