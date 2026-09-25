@@ -6,24 +6,24 @@
  * rather than silently losing a hole.
  */
 
-import type { MeshBody } from '../../@types/scene/MeshBody';
+import type { HoledMeshBody } from '../../@types/scene/HoledMeshBody';
+import { ANCHORED_MESH_BODY_IDS } from './anchoredMeshBodyIds';
 import { MESH_ASSETS } from './meshAssets.generated';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from './surfaceFixedSites';
 
-export const HOLED_MESH_BODY_BY_HOST: ReadonlyMap<string, MeshBody> = SURFACE_FIXED_SITES.reduce(
-  (acc, site) => {
+export const HOLED_MESH_BODY_BY_HOST: ReadonlyMap<string, HoledMeshBody> =
+  SURFACE_FIXED_SITES.reduce((acc, site) => {
     const body = SCENE_MESH_BODIES.find((b) => b.id === site.id);
-    if (site.seat !== 'anchored' || body === undefined) return acc;
-    if (MESH_ASSETS[body.meshKey]?.hole === undefined) return acc;
+    if (body === undefined || !ANCHORED_MESH_BODY_IDS.has(body.id)) return acc;
+    const rect = MESH_ASSETS[body.meshKey]?.hole;
+    if (rect === undefined) return acc;
     const taken = acc.get(site.hostId);
     if (taken !== undefined) {
       throw new Error(
-        `HOLED_MESH_BODY_BY_HOST: '${site.hostId}' already cuts a hole for '${taken.id}'; ` +
+        `HOLED_MESH_BODY_BY_HOST: '${site.hostId}' already cuts a hole for '${taken.body.id}'; ` +
           `'${body.id}' would be a second`,
       );
     }
-    return acc.set(site.hostId, body);
-  },
-  new Map<string, MeshBody>(),
-);
+    return acc.set(site.hostId, { body, rect });
+  }, new Map<string, HoledMeshBody>());

@@ -43,6 +43,9 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
+    discard;
+  }
   let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let equirectUv = dirToEquirectUv(Ng);
 
@@ -83,10 +86,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let cloudAlphaHere = textureSample(cloudTexture, baseSampler, equirectUv).a;
   let emissive = nightLights(nightColour, sunUp, cloudAlphaHere);
 
-  // Last: an implicit-derivative 'textureSample' placed after a discard
-  // branch would no longer sit in uniform control flow.
-  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
-    discard;
-  }
   return vec4<f32>(tileLodOverlay(colour + emissive, in.atlasUvScale.x, u.debugLodOverlay), 1.0);
 }

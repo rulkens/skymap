@@ -23,6 +23,9 @@ import package::lib::pbr::MIN_ROUGHNESS;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
+    discard;
+  }
   let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let baseAlbedo = tileAlbedo(
     surfaceTexture,
@@ -43,10 +46,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let direct = pbrDirect(n, v, l, baseAlbedo, roughness, vec3<f32>(u.f0));
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
-  // Last: an implicit-derivative 'textureSample' placed after a discard
-  // branch would no longer sit in uniform control flow.
-  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
-    discard;
-  }
   return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, u.debugLodOverlay), 1.0);
 }

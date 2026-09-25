@@ -171,9 +171,9 @@ fn vs(
   out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // From the same f32 lattice words the position is built from, with the rect
-  // origin subtracted BEFORE the offset is added: the difference of two
-  // nearby angles is exact in f32, where (lat - latMin) of a finished lat
-  // would carry the full angle's rounding (~0.4 m on Earth) into the mask.
+  // origin subtracted BEFORE the offset is added, so the full angle's f32
+  // rounding (~0.4 m on Earth) never enters the difference. The f32 rect
+  // origin itself still carries ~0.2 m, which the mask's 2 m erosion absorbs.
   out.holeUv = vec2<f32>(
     ((inst.lon0Rad - hole.lonLatMinRad.x) + s * inst.dLonRad) * hole.invSpanRad.x,
     1.0 - ((inst.lat0Rad - hole.lonLatMinRad.y) + t * inst.dLatRad) * hole.invSpanRad.y,

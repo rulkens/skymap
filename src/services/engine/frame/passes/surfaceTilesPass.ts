@@ -14,7 +14,9 @@
  * covers the cap. The engaged body's `SURFACE_TILE_REGISTRY` row is the
  * predicate and picks the shading; the effect maps come from `earthRenderer`,
  * the only body whose maps exist today. The host's holed mesh cuts its hole
- * only while resident: unloaded, the terrain is whole and the mesh undrawn.
+ * only while `drawableMeshBodies` draws it: whenever the mesh is not drawn
+ * (unloaded, or gated out by the partition) the terrain stays whole, or the
+ * base globe 430 m down would show through.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -31,13 +33,13 @@ import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
 import { HOLED_MESH_BODY_BY_HOST } from '../../../../data/bodies/holedMeshBodyByHost';
-import { MESH_ASSETS } from '../../../../data/bodies/meshAssets.generated';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from './earthPass';
+import { drawableMeshBodies } from '../drawableMeshBodies';
 
 export const surfaceTilesPass: ContentPass = {
   name: 'surface-tiles',
@@ -113,8 +115,12 @@ export const surfaceTilesPass: ContentPass = {
             }),
           };
 
-    const holed = HOLED_MESH_BODY_BY_HOST.get(view.slab.frame.hostId);
-    const holeMask = holed && state.gpu.meshBodyRenderer?.holeMaskOf(holed.id);
+    const hostId = view.slab.frame.hostId;
+    const holed = HOLED_MESH_BODY_BY_HOST.get(hostId);
+    const drawn =
+      holed !== undefined &&
+      drawableMeshBodies(state, ctx, hostId).some((body) => body.id === holed.body.id);
+    const holeMask = drawn ? state.gpu.meshBodyRenderer?.holeMaskOf(holed.body.id) : null;
 
     tileRenderer.draw(pass, {
       tiles: surfaceTiles.getLastCut(),
@@ -136,8 +142,7 @@ export const surfaceTilesPass: ContentPass = {
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
       surfaceAtlasView: surfaceTiles.getAtlasView()!,
       heightAtlasView: surfaceTiles.getHeightAtlasView()!,
-      // The map only holds bodies whose row has a `hole`, hence the `!`.
-      hole: holeMask ? { mask: holeMask, rect: MESH_ASSETS[holed.meshKey]!.hole! } : null,
+      hole: holeMask && holed ? { mask: holeMask, rect: holed.rect } : null,
     });
   },
 };

@@ -17,7 +17,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
-import { SURFACE_FIXED_SITES } from '../../../../data/bodies/surfaceFixedSites';
+import { ANCHORED_MESH_BODY_IDS } from '../../../../data/bodies/anchoredMeshBodyIds';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../../utils/camera/composeMeshMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
@@ -117,7 +117,7 @@ export const meshBodiesPass: ContentPass = {
     if (hostPose === null) return;
 
     for (const body of bodies) {
-      if (SURFACE_FIXED_SITES.find((site) => site.id === body.id)?.seat === 'anchored') continue;
+      if (ANCHORED_MESH_BODY_IDS.has(body.id)) continue;
       const { posM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);
       const { mvp, camPosLocal } = bodySlabFlooredPick(
         view.slab.vp,
