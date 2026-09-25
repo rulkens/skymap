@@ -30,6 +30,7 @@ import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../src/@types/data/Tier';
+import type { Vec2 } from '../../src/@types/math/Vec2';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
@@ -40,9 +41,13 @@ import { TIER_LADDER } from '../../src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { meshTierPrefix } from '../../src/utils/meshBodies/meshTierPrefix';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
+import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
+import { findByIdOrThrow } from '../../src/utils/object/findByIdOrThrow';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
+import { enuOffsetM } from '../utils/geo/enuOffsetM';
+import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { simplifyToTriangles } from '../utils/meshes/simplifyToTriangles';
 import { quote } from '../utils/codegen/quote';
@@ -82,6 +87,14 @@ export type MeshBuildTarget = {
   readonly bodyFromSource?: Mat3;
   /** Undefined for a floating source; see `meshGroundUpSource`. */
   readonly groundUp?: Vec3;
+  /**
+   * Present for a georeferenced source: the XY vector to ADD to every merged
+   * vertex instead of the usual area-weighted centroid recentre, so the
+   * mesh's origin lands on its `SurfaceFixedSite` rather than its own source
+   * anchor. `[-e, -n]` where `[e, n] = enuOffsetM(anchor, site)` — already
+   * negated so `mergeGeometry` can add it with no sign to remember.
+   */
+  readonly georeferencedOffsetM?: Vec2;
 };
 
 /**
@@ -333,6 +346,9 @@ function localGeometry(
  * long thin appendage (the whale's tail) drag the origin — and with it the
  * selection ring, pick sphere and caption anchor it all shares — off the
  * visible mass; weighting by triangle area keeps it on the surface instead.
+ * A georeferenced source (`georeferencedOffsetM` set) skips this hunt for a
+ * mass centre entirely: its origin is already meaningful (the source's real
+ * anchor), so the shift is the fixed, precomputed offset onto its site.
  *
  * Recentring is also why `groundOffsetM` is measured HERE: after it the origin
  * sits inside the mesh, and this is the last place that knows how far the
@@ -342,7 +358,11 @@ function localGeometry(
  * source has none on EVERY primitive, since regenerating over a good frame
  * silently breaks normal-mapped shading.
  */
-function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
+function mergeGeometry(
+  doc: Document,
+  bodyFromSource?: Mat3,
+  georeferencedOffsetM?: Vec2,
+): Geometry {
   const prims = listPrimitives(doc);
   const positions: number[] = [];
   const normals: number[] = [];
@@ -403,30 +423,35 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
   }
 
   // sum(triangleArea * triangleCentroid) / sum(triangleArea) — see the docblock
-  // above for why this beats a bbox centre.
+  // above for why this beats a bbox centre. Skipped for a georeferenced
+  // source, which translates by its precomputed site offset instead.
   let cx = 0;
   let cy = 0;
   let cz = 0;
-  let totalArea = 0;
-  for (let i = 0; i < indices.length; i += 3) {
-    const a = indices[i]! * 3;
-    const b = indices[i + 1]! * 3;
-    const c = indices[i + 2]! * 3;
-    const ux = positions[b]! - positions[a]!;
-    const uy = positions[b + 1]! - positions[a + 1]!;
-    const uz = positions[b + 2]! - positions[a + 2]!;
-    const vx = positions[c]! - positions[a]!;
-    const vy = positions[c + 1]! - positions[a + 1]!;
-    const vz = positions[c + 2]! - positions[a + 2]!;
-    const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
-    cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
-    cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
-    cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
-    totalArea += area;
+  if (georeferencedOffsetM) {
+    [cx, cy] = [-georeferencedOffsetM[0], -georeferencedOffsetM[1]];
+  } else {
+    let totalArea = 0;
+    for (let i = 0; i < indices.length; i += 3) {
+      const a = indices[i]! * 3;
+      const b = indices[i + 1]! * 3;
+      const c = indices[i + 2]! * 3;
+      const ux = positions[b]! - positions[a]!;
+      const uy = positions[b + 1]! - positions[a + 1]!;
+      const uz = positions[b + 2]! - positions[a + 2]!;
+      const vx = positions[c]! - positions[a]!;
+      const vy = positions[c + 1]! - positions[a + 1]!;
+      const vz = positions[c + 2]! - positions[a + 2]!;
+      const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+      cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
+      cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
+      cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
+      totalArea += area;
+    }
+    cx /= totalArea;
+    cy /= totalArea;
+    cz /= totalArea;
   }
-  cx /= totalArea;
-  cy /= totalArea;
-  cz /= totalArea;
 
   const centred = new Float32Array(positions.length);
   let radiusSq = 0;
@@ -636,7 +661,7 @@ async function bakeTier(
     );
   }
 
-  const merged = mergeGeometry(doc, target.bodyFromSource);
+  const merged = mergeGeometry(doc, target.bodyFromSource, target.georeferencedOffsetM);
   const geometry = await simplifyTier(target, key, tier, merged);
   const px = tierToTexturePx(tier);
   const stem = basename(meshTierPrefix(key, tier));
@@ -864,6 +889,21 @@ export async function buildMeshes(options: {
   return rows;
 }
 
+/**
+ * The XY vector a georeferenced key's merge adds instead of its usual
+ * centroid recentre — undefined for every other key. `meshAnchorSite` is the
+ * single place the anchored-site guards live; this just turns its answer
+ * into the translation `mergeGeometry` wants.
+ */
+function georeferencedOffsetFor(key: string): Vec2 | undefined {
+  const site = meshAnchorSite(key);
+  if (site === undefined) return undefined;
+  const anchor = MESH_SOURCES[key]!.georeferenced!.anchor;
+  const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildMeshes');
+  const [e, n] = enuOffsetM(anchor, site, host.surface.datumRadiusM);
+  return [-e, -n];
+}
+
 async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
     const present = orderedTiers(entry.tiers, key);
@@ -885,6 +925,7 @@ async function main(): Promise<void> {
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
       groundUp: meshGroundUpSource(key),
+      georeferencedOffsetM: georeferencedOffsetFor(key),
     };
   });
   await buildMeshes({

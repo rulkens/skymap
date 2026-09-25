@@ -1515,6 +1515,22 @@ export const RAW_DATA = {
     description:
       'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
   },
+  'meshes.soendermarken': {
+    path: 'data/raw/meshes/soendermarken/mesh.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The scene-workbench crop of the 2019 leaf-on Søndermarken photogrammetry (group soendermarken-crop-2019, asset mesh-cropped) — 470,046 tris, one material, ENU metres. Copied from the workbench output rather than fetched; buildMeshes reads it directly, no pre-bake.',
+    upstream: 'https://dataforsyningen.dk/ (Skråfotos 2019, via the scene-workbench bake)',
+    readme: 'meshes.soendermarken.readme',
+  },
+  'meshes.soendermarken.readme': {
+    path: 'data/raw/meshes/soendermarken/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Søndermarken scan — workbench group, crop outline, ENU frame and anchor, licence, checksum.',
+  },
   'meshes.sha256': {
     path: 'data/raw/meshes/meshes.sha256',
     kind: 'file',

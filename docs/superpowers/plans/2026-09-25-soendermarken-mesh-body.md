@@ -96,11 +96,11 @@ export type GeoreferencedMeshSource = {
 /** East/north metres of `to` from `from` on the local tangent plane at `from` (sphere radius R). */
 export function enuOffsetM(from: {latDeg;lonDeg}, to: {latDeg;lonDeg}, radiusM: number): [number, number];
 ```
-- [ ] `enuOffsetM` tests: 0.001° of latitude at R = 6,371,008.8 m → north 111.19 m (±0.01), east 0; 0.001° of longitude at lat 55.67° → east 62.73 m (±0.02). Use the Earth mean radius constant the app uses for Earth's sphere (find it; do not add a new one).
-- [ ] Registry row `meshes.soendermarken` (file, gitignored, upstream = the workbench group id + Dataforsyningen skråfoto, readme row).
-- [ ] `buildMeshes`: for a georeferenced key, find its body's `SurfaceFixedSite` (join through `SCENE_MESH_BODIES`, like `meshGroundUpSource`); skip the centroid recentre; translate by `[−e, −n, 0]` with `[e, n] = enuOffsetM(anchor, site)`. `boundingRadiusM`, `minZ` measured from that origin.
-- [ ] Guards (throw, tested): georeferenced key whose site is not `anchored`; an `anchored` site whose key is not georeferenced; georeferenced key with no site.
-- [ ] Commit `feat(meshes): georeferenced sources keep their anchor, shifted onto the site`.
+- [x] `enuOffsetM` tests: 0.001° of latitude at R = 6,371,008.8 m → north 111.19 m (±0.01), east 0; 0.001° of longitude at lat 55.67° → east 62.73 m (±0.02). Use the Earth mean radius constant the app uses for Earth's sphere (find it; do not add a new one).
+- [x] Registry row `meshes.soendermarken` (file, gitignored, upstream = the workbench group id + Dataforsyningen skråfoto, readme row).
+- [x] `buildMeshes`: for a georeferenced key, find its body's `SurfaceFixedSite` (join through `SCENE_MESH_BODIES`, like `meshGroundUpSource`); skip the centroid recentre; translate by `[−e, −n, 0]` with `[e, n] = enuOffsetM(anchor, site)`. `boundingRadiusM`, `minZ` measured from that origin.
+- [x] Guards (throw, tested): georeferenced key whose site is not `anchored`; an `anchored` site whose key is not georeferenced; georeferenced key with no site.
+- [x] Commit `feat(meshes): georeferenced sources keep their anchor, shifted onto the site`.
 
 ### Task 6: hole mask bake
 

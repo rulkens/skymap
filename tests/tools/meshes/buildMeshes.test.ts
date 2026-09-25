@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
@@ -197,6 +198,7 @@ function runTiers(
   bodyFromSource?: Mat3,
   groundUp?: Vec3,
   tierTriangles?: Partial<Record<Tier, number>>,
+  georeferencedOffsetM?: Vec2,
 ) {
   return buildMeshes({
     targets: [
@@ -209,6 +211,7 @@ function runTiers(
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
         groundUp,
+        georeferencedOffsetM,
       },
     ],
     outDir: join(dir, 'out'),
@@ -882,5 +885,33 @@ describe('buildMeshes()', () => {
     await expect(
       runTiers({ small: glbPath }, undefined, undefined, { small: 500 }),
     ).rejects.toThrow(/missing its 500-tri target/);
+  });
+
+  it('translates a georeferenced source by its offset instead of recentring on the mass centroid', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    const row = (
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [5, -3])
+    )[0]!;
+    const decoded = await decodeMesh(readMesh());
+
+    // Every vertex shifts by the fixed offset — not the area-weighted mass
+    // centroid, which for this triangle would sit at (2/3, 2/3, 0).
+    expectVertexNear(readMesh(), decoded, [5, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [7, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [5, -1, 0]);
+    // boundingRadiusM/minZ are measured from the new (site) origin: the
+    // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
+    expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
+    expect(row.groundOffsetM).toBeCloseTo(0, 6);
   });
 });

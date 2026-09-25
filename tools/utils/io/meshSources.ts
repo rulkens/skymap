@@ -9,6 +9,7 @@
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
+import type { GeoreferencedMeshSource } from '../../meshes/@types/GeoreferencedMeshSource';
 import type { MeshTierSource } from '../../meshes/@types/MeshTierSource';
 
 export type MeshSourceEntry = {
@@ -23,6 +24,9 @@ export type MeshSourceEntry = {
    * frame, which is the frame `rotationElements.ts` aims.
    */
   readonly bodyFromSource?: Mat3;
+  /** Present iff an `anchored` `SurfaceFixedSite` uses this key: the source's
+   *  real-world anchor and its terrain-hole crop outline. */
+  readonly georeferenced?: GeoreferencedMeshSource;
 };
 
 /**
