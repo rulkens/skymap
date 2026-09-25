@@ -15,7 +15,14 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { basename, join, resolve } from 'node:path';
 
-import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-transform/core';
+import {
+  Document,
+  NodeIO,
+  Primitive,
+  type Accessor,
+  type Material,
+  type Texture,
+} from '@gltf-transform/core';
 import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
@@ -35,6 +42,7 @@ import { meshTierPrefix } from '../../src/utils/meshBodies/meshTierPrefix';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
@@ -287,6 +295,30 @@ function windingFollowsNormal(
 }
 
 /**
+ * A primitive's own POSITION and index buffers, in local (pre-node-transform)
+ * space — what `computeSmoothNormals` needs when NORMAL is missing; an
+ * authored NORMAL is local for the same reason, until `transformNormal`
+ * converts it below.
+ */
+function localGeometry(
+  prim: Primitive,
+  pos: Accessor,
+): { positions: Float32Array; indices: Uint32Array } {
+  const positions = new Float32Array(pos.getCount() * 3);
+  for (let v = 0; v < pos.getCount(); v++) {
+    const p = pos.getElement(v, [0, 0, 0]);
+    positions[v * 3] = p[0]!;
+    positions[v * 3 + 1] = p[1]!;
+    positions[v * 3 + 2] = p[2]!;
+  }
+  const idx = prim.getIndices();
+  const count = idx ? idx.getCount() : pos.getCount();
+  const indices = new Uint32Array(count);
+  for (let i = 0; i < count; i++) indices[i] = idx ? idx.getScalar(i) : i;
+  return { positions, indices };
+}
+
+/**
  * Merge every primitive into one vertex/index buffer with node transforms — and
  * the source's optional body-frame remap — baked in, then RECENTRE on the
  * AREA-WEIGHTED SURFACE CENTROID of its triangles. A bbox centre would let a
@@ -321,13 +353,17 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     const uv = prim.getAttribute('TEXCOORD_0');
     const tan = prim.getAttribute('TANGENT');
     if (!pos) throw new Error('buildMeshes: primitive without POSITION');
+    const local = nrm ? null : localGeometry(prim, pos);
+    const computedNormals = local ? computeSmoothNormals(local.positions, local.indices) : null;
 
     for (let v = 0; v < pos.getCount(); v++) {
       const p = pos.getElement(v, [0, 0, 0]);
       const world = transformPoint(matrix, p[0]!, p[1]!, p[2]!);
       positions.push(...world);
 
-      const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
+      const n = nrm
+        ? nrm.getElement(v, [0, 0, 0])
+        : [computedNormals![v * 3]!, computedNormals![v * 3 + 1]!, computedNormals![v * 3 + 2]!];
       const normal = transformNormal(matrix, mirrorSign, n[0]!, n[1]!, n[2]!);
       normals.push(...normal);
 

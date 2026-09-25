@@ -47,9 +47,9 @@ export type MeshSeatKind = 'resting' | 'anchored';
 ```ts
 export function computeSmoothNormals(positions: Float32Array, indices: Uint32Array): Float32Array; // area-weighted, unit length, per vertex
 ```
-- [ ] Tests: a flat CCW quad in the XY plane → all normals `[0,0,1]`; a vertex shared by two triangles at 90° → the normalized sum of the face normals weighted by area; a degenerate (zero-area) triangle contributes nothing and yields no NaN.
-- [ ] `buildMeshes`: a primitive without `NORMAL` gets `computeSmoothNormals` instead of `[0,0,1]`. Today's meshes all carry normals — no generated output changes (verify: `meshAssets.generated.ts` untouched is not required to be re-run; the typecheck + existing tests are the gate).
-- [ ] Commit `fix(meshes): compute smooth normals for a GLB without NORMAL`.
+- [x] Tests: a flat CCW quad in the XY plane → all normals `[0,0,1]`; a vertex shared by two triangles at 90° → the normalized sum of the face normals weighted by area; a degenerate (zero-area) triangle contributes nothing and yields no NaN.
+- [x] `buildMeshes`: a primitive without `NORMAL` gets `computeSmoothNormals` instead of `[0,0,1]`. Today's meshes all carry normals — no generated output changes (verify: `meshAssets.generated.ts` untouched is not required to be re-run; the typecheck + existing tests are the gate).
+- [x] Commit `fix(meshes): compute smooth normals for a GLB without NORMAL`.
 
 ### Task 3: tier spec objects (prep)
 
