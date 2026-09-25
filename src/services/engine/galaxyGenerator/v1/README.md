@@ -20,7 +20,7 @@ particles.
 ## Flow (app side)
 
 ```
-createMilkyWayCloud(device, starCount)          ← src/services/engine/phases/initGpu.ts
+createMilkyWayCloud(device, starCount)          ← src/layers/milkyWay/create.ts
   createGenerationPipelines(device)             once: two compute pipelines
   regenerate(count):
     galaxyPopulationCountShares, splitStarBudget,
@@ -29,7 +29,7 @@ createMilkyWayCloud(device, starCount)          ← src/services/engine/phases/i
     queue.writeBuffer(ubo, packGenerationUniforms(shared/describeGalaxy(params), ...))
     encodeGeneration(...)                       two compute passes
     queue.submit
-      → MilkyWayCloudBuffers → gpu/renderers/milkyWay/milkyWayCloudRenderer.ts
+      → MilkyWayCloudBuffers → src/layers/milkyWay/render/milkyWayCloudRenderer.ts
 ```
 
 Every word in that pure-CPU step is a sprite-allocation word, and all of it is
