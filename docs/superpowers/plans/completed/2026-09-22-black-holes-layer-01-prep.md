@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Redux Toolkit + redux-saga, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-09-22-black-holes-layer-design.md` §2 (shapes) and §3 (this PR). Decisions: `docs/grill-sessions/black-holes-layer-2026-09-22.md` R4, R7, R13–R16.
+**Spec:** `docs/superpowers/specs/completed/2026-09-22-black-holes-layer-design.md` §2 (shapes) and §3 (this PR). Decisions: `docs/grill-sessions/black-holes-layer-2026-09-22.md` R4, R7, R13–R16.
 
 ## Global Constraints
 

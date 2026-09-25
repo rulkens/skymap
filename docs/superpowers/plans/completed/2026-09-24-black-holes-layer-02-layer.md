@@ -8,7 +8,7 @@
 
 **Tech Stack:** TS, RTK slices, React (InfoCard, DebugPanel), Vitest, WebGPU pass files. No shader changes.
 
-**Spec:** `docs/superpowers/specs/2026-09-22-black-holes-layer-design.md` §2 (data delta), §4 (the Layer), §5 (behaviour changes), §6 (testing), §7 (non-goals), §8 (backlog), §10 (docs). Rulings ledger: `docs/grill-sessions/black-holes-layer-2026-09-22.md` (Q1–Q12, R13–R16). PR 1 plan: `docs/superpowers/plans/2026-09-22-black-holes-layer-01-prep.md`.
+**Spec:** `docs/superpowers/specs/completed/2026-09-22-black-holes-layer-design.md` §2 (data delta), §4 (the Layer), §5 (behaviour changes), §6 (testing), §7 (non-goals), §8 (backlog), §10 (docs). Rulings ledger: `docs/grill-sessions/black-holes-layer-2026-09-22.md` (Q1–Q12, R13–R16). PR 1 plan: `docs/superpowers/plans/completed/2026-09-22-black-holes-layer-01-prep.md`.
 
 ## Plan-time rulings (spec text the current code contradicts)
 
@@ -98,10 +98,10 @@ defineLayer({
 - `SLAB_ROW_CEILING` / `LAYER_SLAB_ROW_HEADROOM` are unchanged, and the boot assert now counts one Layer row.
 - No new test: the move is covered by the re-targeted slab-row test (row present iff band open, `drawRadiusM` honoured) and the frame-order tests. The compiler catches every stale handle read.
 
-- [ ] Move the files (dry-run first), create the Layer shell, re-point the target, slab row and handle, and register the Layer.
-- [ ] Grep `sgrAStarLensingTuning`, `sgrAStarLensingRenderer`, `CORE_SLAB_ROWS`, `'sgr-a-star-lensing'`, `data/blackHoles` across `src tests tools docs/RENDERER.md` and fix every hit. Only the renderer's GPU labels (`'sgr-a-star-lensing-*'`) may stay.
-- [ ] `npm run typecheck:fast && npx vitest run tests/layers tests/services/engine/frame tests/services/gpu tests/conventions tests/data` → green.
-- [ ] Commit: `refactor(blackHoles): the Layer forms around the Sgr A* lens`.
+- [x] Move the files (dry-run first), create the Layer shell, re-point the target, slab row and handle, and register the Layer.
+- [x] Grep `sgrAStarLensingTuning`, `sgrAStarLensingRenderer`, `CORE_SLAB_ROWS`, `'sgr-a-star-lensing'`, `data/blackHoles` across `src tests tools docs/RENDERER.md` and fix every hit. Only the renderer's GPU labels (`'sgr-a-star-lensing-*'`) may stay.
+- [x] `npm run typecheck:fast && npx vitest run tests/layers tests/services/engine/frame tests/services/gpu tests/conventions tests/data` → green.
+- [x] Commit: `refactor(blackHoles): the Layer forms around the Sgr A* lens`.
 
 ---
 
@@ -190,11 +190,11 @@ export type BlackHoleItemSettings = { readonly labelEnabled: boolean };   // def
 - `tests/services/url/urlHashFor.test.ts` (extend): `blackHole ref encodes blackhole-<id>`.
 - The existing `deriveBodyStates` / `bodyRegions` tests must show `'sgr-a-star'` absent from the state map and every S-star's region `'galactic-centre'`. Edit their expectations; do not add new tests.
 
-- [ ] Write the four new tests and run them red.
-- [ ] Retype and move the registry row, add the ids and the arm, work through the compiler's list of exhaustive tables, then add the Layer's selection, search, cards, settings and caption.
-- [ ] Delete the body-side plumbing listed above. Grep `sgr-a-star`, `SGR_A_STAR\b`, `AnchorPointBody`, `body-sgr-a-star` across `src tests tools`. The only hits allowed are the registry `id` value, `BODY_FACTS`' key, the renderer's GPU labels, and the `Source.SgrAStar` / `'sgrAStar'` capture and caption keys.
-- [ ] `npm run typecheck:fast && npx vitest run` → green.
-- [ ] Commit: `feat(blackHoles): Sgr A* is a black hole — selection arm, blackhole- links, search, card, caption`.
+- [x] Write the four new tests and run them red.
+- [x] Retype and move the registry row, add the ids and the arm, work through the compiler's list of exhaustive tables, then add the Layer's selection, search, cards, settings and caption.
+- [x] Delete the body-side plumbing listed above. Grep `sgr-a-star`, `SGR_A_STAR\b`, `AnchorPointBody`, `body-sgr-a-star` across `src tests tools`. The only hits allowed are the registry `id` value, `BODY_FACTS`' key, the renderer's GPU labels, and the `Source.SgrAStar` / `'sgrAStar'` capture and caption keys.
+- [x] `npm run typecheck:fast && npx vitest run` → green.
+- [x] Commit: `feat(blackHoles): Sgr A* is a black hole — selection arm, blackhole- links, search, card, caption`.
 
 ---
 
@@ -245,11 +245,11 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass;
   - `far-field pick follows the marker with the label off` — at R₀ with the label disabled, one stamp.
 - `tests/layers/starCatalog/passes/starPointsPass.test.ts` (extend): `an S-star inside the galactic-centre footprint is not stamped` — zoomed out, no S-star stamp within `FAMOUS_STAR_PICK_RADIUS_PX` of the projected place. A famous star outside the region, at the same screen spot, keeps its stamp.
 
-- [ ] Write the tests and run them red.
-- [ ] Build the marker pass and gates, delete the two old blocks, re-key the exclusion.
-- [ ] Grep `sgrAStarGlintBrightness`, `SGR_A_STAR_GLINT`, `sgrAStarCaptionPickable`, `sgrAStarCaptionTarget` → only the Layer's own files.
-- [ ] `npm run typecheck:fast && npx vitest run` → green.
-- [ ] Commit: `feat(blackHoles): the far-field marker draws and picks from the Layer`.
+- [x] Write the tests and run them red.
+- [x] Build the marker pass and gates, delete the two old blocks, re-key the exclusion.
+- [x] Grep `sgrAStarGlintBrightness`, `SGR_A_STAR_GLINT`, `sgrAStarCaptionPickable`, `sgrAStarCaptionTarget` → only the Layer's own files.
+- [x] `npm run typecheck:fast && npx vitest run` → green.
+- [x] Commit: `feat(blackHoles): the far-field marker draws and picks from the Layer`.
 
 ---
 
@@ -259,7 +259,7 @@ Spec §8, §10, and the P1–P6 amendments. The docs ride the PR.
 
 **Files:**
 
-- Modify: `docs/superpowers/specs/2026-09-22-black-holes-layer-design.md`:
+- Modify: `docs/superpowers/specs/completed/2026-09-22-black-holes-layer-design.md`:
   - §2.3: the driver `footprintRadiusM` is r_s (P1), and the S-star `focusId` is `'galactic-centre'` (P2).
   - §2.4: `LayerSearchEntry` has no `ref`, and `id` is the focus id (P3).
   - §2.5: the row footprint is r_s (P1).
@@ -279,9 +279,9 @@ Spec §8, §10, and the P1–P6 amendments. The docs ride the PR.
   - each gets an index line.
 - Verify only: `completed/2026-09-21-star-catalog-layer-design.md` :27/:174 already carry PR 1's reversal note.
 
-- [ ] Edits as listed. Grep `LENS_QUAD_MAX_RS` and `blackHoleFootprintRadiusM` across `docs/` → zero hits outside the amendment markers.
-- [ ] `npx vitest run tests/conventions` → green.
-- [ ] Commit: `docs(blackHoles): Layer formed — spec amendments, RENDERER lens line, backlog`.
+- [x] Edits as listed. Grep `LENS_QUAD_MAX_RS` and `blackHoleFootprintRadiusM` across `docs/` → zero hits outside the amendment markers.
+- [x] `npx vitest run tests/conventions` → green.
+- [x] Commit: `docs(blackHoles): Layer formed — spec amendments, RENDERER lens line, backlog`.
 
 ---
 
