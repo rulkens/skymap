@@ -17,6 +17,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
+import { SURFACE_FIXED_SITES } from '../../../../data/bodies/surfaceFixedSites';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
 import { composeMeshMvp } from '../../../../utils/camera/composeMeshMvp';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
@@ -96,9 +97,11 @@ export const meshBodiesPass: ContentPass = {
   },
 
   /**
-   * Pick set = draw set, so no `pickEnabled` override. The proxy sphere sits at
-   * the mesh body's own centre while riding the host's row — that is what the
-   * `eyeRelBodyM − posM` argument encodes. No −1 seed-index guard: `bodies`
+   * Pick set = draw set minus `anchored` sites, so no `pickEnabled` override:
+   * an anchored mesh is ground (a park scan), and its ~160 m proxy sphere
+   * would swallow every click on the terrain around it. The proxy sphere sits
+   * at the mesh body's own centre while riding the host's row — that is what
+   * the `eyeRelBodyM − posM` argument encodes. No −1 seed-index guard: `bodies`
    * came out of `SCENE_MESH_BODIES.filter`, so every id is in that table.
    */
   drawPick(pass, view, ctx, state) {
@@ -114,6 +117,7 @@ export const meshBodiesPass: ContentPass = {
     if (hostPose === null) return;
 
     for (const body of bodies) {
+      if (SURFACE_FIXED_SITES.find((site) => site.id === body.id)?.seat === 'anchored') continue;
       const { posM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);
       const { mvp, camPosLocal } = bodySlabFlooredPick(
         view.slab.vp,

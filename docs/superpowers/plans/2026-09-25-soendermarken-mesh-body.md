@@ -166,8 +166,8 @@ Contract:
 
 **Files:** modify `src/services/engine/frame/passes/meshBodiesPass.ts` (`drawPick`), maybe a tiny `src/utils/meshBodies/isAnchoredBody.ts` (+ test only if it can fail).
 
-- [ ] `drawPick` skips bodies whose `SurfaceFixedSite.seat === 'anchored'`. Update the "Pick set = draw set" doc comment. No new test unless a helper is extracted.
-- [ ] Commit `feat(meshes): anchored mesh bodies are not pickable`.
+- [x] `drawPick` skips bodies whose `SurfaceFixedSite.seat === 'anchored'`. Update the "Pick set = draw set" doc comment. No new test unless a helper is extracted.
+- [x] Commit `feat(meshes): anchored mesh bodies are not pickable`.
 
 ### Task 12: docs
 
