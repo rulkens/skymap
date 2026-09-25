@@ -39,6 +39,7 @@ import type { ForegroundCaption } from './foregroundCaption';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -95,8 +96,9 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
     // A mesh body's baked `albedo` is a mean over the whole surface — dark
     // skin, or (petunias) an atlas averaging in black gaps — far below a
     // planet's, so it is scaled to full brightness first; the caption keeps
-    // the hue, just not the darkness.
-    ...SCENE_MESH_BODIES.map((body) => ({
+    // the hue, just not the darkness. An anchored scan is ground, not an
+    // object on it, so it goes uncaptioned (and unpicked, see meshBodiesPass).
+    ...SCENE_MESH_BODIES.filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id)).map((body) => ({
       ...bodyCaption(
         body,
         bodyFootprintRadiusM(body),
