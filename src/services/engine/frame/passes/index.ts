@@ -30,7 +30,6 @@ import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
 import { aerialPerspectivePass } from './aerialPerspectivePass';
-import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 import { domeResamplePass } from './domeResamplePass';
 
@@ -44,7 +43,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   milkyWayAggregatePass,
   milkyWayUpsamplePass,
   milkyWayPass,
-  sgrAStarLensingPass,
   orbitTrailsPass,
   bodyGlintsPass,
   selectionRingPass,

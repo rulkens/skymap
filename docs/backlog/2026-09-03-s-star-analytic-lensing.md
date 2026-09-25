@@ -85,8 +85,10 @@ closed unmerged, branch kept). User ruling: not now.
 
 ## Note (2026-09-22, `blackHoles` Layer ground prep)
 
-The S-star lensing rider rides the hole's `SlabRow`, filtering `frame.hostId`;
-no contract field — see `2026-09-22-black-holes-layer-design.md` §2.5.
+The S-star lensing rider rides the hole's `SlabRow` (the blackHoles Layer's
+`blackHoleSlabRow`), filtering `view.slab.frame.hostId === 'galactic-centre'`;
+no contract field — see `2026-09-22-black-holes-layer-design.md` §2.5. The
+S-stars' orbit `focusId` is `'galactic-centre'` too.
 
 ## Follow-on
 

@@ -206,7 +206,6 @@ export function createEngine(
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
       bodyGlintRenderer: null,
-      sgrAStarLensingRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
       bodyPickRenderer: null,

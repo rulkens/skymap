@@ -1,7 +1,7 @@
 /**
  * produceSceneBodyCaptions — `Label2DProducer` candidate math for Earth, the
- * planets, Sgr A*, and the mesh bodies (the seeded stars and the Sun caption
- * through the star Layer's `produceStarCaptions` now, sharing the per-caption
+ * planets and the mesh bodies (the seeded stars and the Sun caption through
+ * the star Layer's `produceStarCaptions` now, sharing the per-caption
  * compose `composeForegroundCaption`). Declutter, envelope and lift run in
  * `label2DDirector`; every candidate emits even at target 0 (a dropped id eases out instead of popping).
  */

@@ -14,6 +14,7 @@ import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
 import type { StarInfo } from '../../../src/@types/engine/StarInfo';
+import type { BlackHoleInfo } from '../../../src/@types/engine/BlackHoleInfo';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
 
@@ -86,5 +87,10 @@ describe('URL_HASH_FOR', () => {
       displayName: 'Sirius',
     } as unknown as StarInfo;
     expect(URL_HASH_FOR.starCatalog(sirius)).toBe('star-sirius');
+  });
+
+  it('blackHole ref encodes blackhole-<id>', () => {
+    const sgrAStar = { type: 'blackHole', id: 'sgr-a-star' } as unknown as BlackHoleInfo;
+    expect(URL_HASH_FOR.blackHole(sgrAStar)).toBe('blackhole-sgr-a-star');
   });
 });

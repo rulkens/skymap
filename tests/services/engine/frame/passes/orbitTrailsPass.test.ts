@@ -641,7 +641,7 @@ describe('orbitTrailsPass.draw', () => {
     // widest), so a 1e-4 Mpc window around the anchor catches all 39 and no
     // heliocentric or geocentric orbit — those centre within ~1.5e-9 Mpc of the
     // render origin, four decades of separation away.
-    const sgrAPos = deriveBodyStates(CONST_J2000).get('sgr-a-star')!.positionMpc;
+    const sgrAPos = deriveBodyStates(CONST_J2000).get('galactic-centre')!.positionMpc;
     const galacticCentreConics = composeMock.mock.calls.filter((call) => {
       const c = call[1] as unknown as Vec3;
       return Math.hypot(c[0] - sgrAPos[0], c[1] - sgrAPos[1], c[2] - sgrAPos[2]) < 1e-4;

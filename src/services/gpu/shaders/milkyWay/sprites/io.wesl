@@ -116,7 +116,7 @@ struct Uniforms {
 // plane. A view-plane basis differs per dome face or VR eye, so one blob on a
 // seam tilted two ways; an eye-facing basis depends only on the instance-
 // to-eye direction, so every view of one blob agrees. Mirrors
-// bodies/sgrAStarLensing/vertex.wesl.
+// bodies/blackHoleLensing/vertex.wesl.
 //
 // Built in MODEL space, where the eye is 'camPosModel' and the disk normal is
 // the +y the generator emits into, then rotated to world where the corner is

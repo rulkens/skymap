@@ -102,6 +102,11 @@ const engineSlice = createSlice({
       const byLayer = state.layerSearch as Record<string, readonly LayerSearchEntry[]>;
       byLayer[action.payload.layer] = [...action.payload.rows];
     },
+    // Teardown drops the Layer's key, or an engine re-create (HMR, exhibit
+    // switch) would leave the old rows beside the fresh feed's.
+    layerSearchCleared: (state, action: PayloadAction<{ layer: string }>) => {
+      delete (state.layerSearch as Record<string, unknown>)[action.payload.layer];
+    },
 
     // ── scale bar ────────────────────────────────────────────────────────────
     // DEDUP-ON-WRITE: skip the mutation when both scalar fields are unchanged.
@@ -170,6 +175,7 @@ export const {
   engineLoadProgressChanged,
   engineStructureSearchListChanged,
   layerSearchReported,
+  layerSearchCleared,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineHdrCapabilityChanged,

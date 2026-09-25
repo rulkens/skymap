@@ -24,11 +24,13 @@ import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 import type { StarCatalogItemSettings } from './StarCatalogItemSettings';
 import type { BodyItemSettings } from './BodyItemSettings';
+import type { BlackHolesSettings } from './BlackHolesSettings';
 
 export type LabelHomes = {
   readonly structures: Record<StructureId, StructureItemSettings>;
   readonly galaxyCatalogs: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   readonly starCatalogs: Record<StarCatalogId, StarCatalogItemSettings>;
   readonly bodies: Record<BodyId, BodyItemSettings>;
+  readonly blackHoles: BlackHolesSettings['items'];
   readonly milkyWayLabelEnabled: boolean;
 };

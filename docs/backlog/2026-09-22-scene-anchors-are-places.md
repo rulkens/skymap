@@ -10,9 +10,9 @@ folder still say "body".
 - `src/data/bodies/sceneAnchors.ts` exports `SCENE_ANCHORS: readonly
   AnchorBody[]` — "roots of the focus graph: positions stated outright, not
   derived from `OrbitalElements`". It holds the seeded star map, the Sun's own
-  row, and now `GALACTIC_CENTRE_ANCHOR` (a `PlaceId`, not a `BodyId`) plus
-  `SGR_A_STAR_ALIAS`, a body row that aliases the place's own `positionMpc` by
-  reference.
+  row, and now `GALACTIC_CENTRE_ANCHOR` (a `PlaceId`, not a `BodyId`).
+  The `SGR_A_STAR_ALIAS` body row that aliased it was deleted by the
+  `blackHoles` Layer PR (#825).
 - `src/@types/scene/AnchorBody.d.ts`'s `id` is a bare `string` — it was never
   typed as `BodyId`, so nothing in the type forced this file to be
   body-only. The mixing was possible from the start; the black-hole prep is
@@ -30,8 +30,8 @@ only bodies in it? If the latter, it wants a name and location that says so
 (`data/places/sceneAnchors.ts`? folded into `data/places/` entirely?) and
 `AnchorBody.id` wants retyping to the union rather than `string`. If the
 former, the `blackHoles` PR 2 should be the one to give `galactic-centre` its
-own small table instead of borrowing this one, and `SGR_A_STAR_ALIAS` is a
-temporary wart to delete in the same PR (its own comment already says so).
+own small table instead of borrowing this one. (That PR did delete
+`SGR_A_STAR_ALIAS`, but left `galactic-centre` in this table.)
 
 Not blocking PR 2: `galacticCenter.ts`, `bodyRegions.ts` and
 `scaleFadeBands.ts` all read `GALACTIC_CENTRE_ANCHOR` directly, not through

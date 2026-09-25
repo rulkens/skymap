@@ -568,6 +568,7 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         starCatalog: true,
+        blackHole: true,
       }),
     );
     expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
@@ -581,6 +582,7 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         starCatalog: true,
+        blackHole: true,
       }),
     );
     expect(structureDisabled.resolvePick(pick)).toBeNull();
@@ -596,6 +598,7 @@ describe('composeSelectionRows — picking gate', () => {
         zoneOfAvoidance: true,
         body: true,
         starCatalog: true,
+        blackHole: true,
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);

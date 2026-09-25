@@ -63,6 +63,9 @@ const VISIBILITY_KEY_BY_LABEL_LAYER = {
   starCatalog: 'starCatalogLabel',
   // Per-item body captions likewise: one cue for all near-field captions.
   body: 'bodyLabel',
+  // The Galactic Centre caption is a near-field caption to a tour cue, as it
+  // was while Sgr A* was a body.
+  blackHoles: 'bodyLabel',
 } satisfies Record<LabelLayerId, VisibilityLayerKey>;
 
 /**

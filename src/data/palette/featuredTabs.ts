@@ -150,11 +150,11 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         capture: VOYAGER1_CAPTURE,
       },
       {
-        id: 'body-sgr-a-star',
+        id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
         blurb:
           "The black hole at the centre of the Milky Way, about four million times the Sun's mass. Its mass is measured from the orbits of the stars around it.",
-        action: { kind: 'focus', focusId: 'body-sgr-a-star' },
+        action: { kind: 'focus', focusId: 'blackhole-sgr-a-star' },
       },
       {
         id: MILKY_WAY_FOCUS_ID,
@@ -415,11 +415,11 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'exhibit', exhibitId: 'zoneOfAvoidance' },
       },
       {
-        id: 'body-sgr-a-star',
+        id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
         blurb:
           "The black hole at the centre of the Milky Way, about four million times the Sun's mass. Its mass is measured from the orbits of the stars around it.",
-        action: { kind: 'focus', focusId: 'body-sgr-a-star' },
+        action: { kind: 'focus', focusId: 'blackhole-sgr-a-star' },
       },
       {
         id: 'star-s2',

@@ -24,6 +24,7 @@
  *                   foreground-labels layer on the NEAR0 slab.
  *   - body        — scene-body captions (Sun, Earth, planets), likewise on the
  *                   foreground-labels layer.
+ *   - blackHoles  — the black holes' captions (the Galactic Centre), likewise.
  *   - scaleBar    — the on-screen scale-bar HUD. Constructed by React,
  *                   not a GPU layer; reserved for tour integration.
  */
@@ -33,4 +34,5 @@ export type LabelLayerId =
   | 'galaxy'
   | 'starCatalog'
   | 'body'
+  | 'blackHoles'
   | 'scaleBar';

@@ -21,10 +21,10 @@ import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DD
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
+import { runLayerSearchSaga } from '../../../state/engine/sagas/runLayerSearchSaga';
 import {
   factsReported,
   layerFactsSeeded,
-  layerSearchReported,
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
@@ -32,7 +32,6 @@ import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSele
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
-import { CORE_SLAB_ROWS } from '../../../data/bodies/coreSlabRows';
 import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
@@ -126,11 +125,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     // teardown cancels them the same way — which is what closes each iterator.
     const { search, sourceCounts } = instance;
     if (search) {
-      layerSagaTasks.push(
-        deps.cb.runSaga(() =>
-          runLayerFeedSaga(search, (rows) => put(layerSearchReported({ layer: layer.name, rows }))),
-        ),
-      );
+      layerSagaTasks.push(deps.cb.runSaga(() => runLayerSearchSaga(layer.name, search)));
     }
     if (sourceCounts) {
       layerSagaTasks.push(
@@ -174,10 +169,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
   // headroom that reserved; a duplicate `anchorId` would give two rows one
   // pose and one `SlabFrame.hostId`, with the second silently unreachable.
-  const slabRows = concatUniqueRows('createLayers: slab rows', (row) => row.anchorId, [
-    CORE_SLAB_ROWS,
-    ...deps.composition.layers.map((layer) => layer.slabs ?? []),
-  ]);
+  const slabRows = concatUniqueRows(
+    'createLayers: slab rows',
+    (row) => row.anchorId,
+    deps.composition.layers.map((layer) => layer.slabs ?? []),
+  );
   if (slabRows.length > LAYER_SLAB_ROW_HEADROOM) {
     throw new Error(
       `createLayers: slab rows exceed LAYER_SLAB_ROW_HEADROOM — ${slabRows.length} composed rows, ` +

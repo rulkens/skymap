@@ -124,8 +124,8 @@ fn toRect(p: vec2<f32>) -> vec2<f32> {
 // ── rotateAroundAxis ─────────────────────────────────────────────────
 //
 // Rodrigues' rotation formula: rotate 'v' by 'angleRad' about 'axis'
-// (right-hand rule). First consumer: the Sgr A* lens fragment
-// (bodies/sgrAStarLensing/fragment.wesl), which has no camera-basis
+// (right-hand rule). First consumer: the black-hole lens fragment
+// (bodies/blackHoleLensing/fragment.wesl), which has no camera-basis
 // uniform to build a billboard/deflection frame from and derives both
 // from a single direction vector instead — a general enough primitive
 // to live beside 'rot2' rather than inline in that one shader.

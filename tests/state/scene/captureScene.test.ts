@@ -1,12 +1,12 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate the fifteen settings clusters, `settings.orientation`
+ * A tour beat may mutate the sixteen settings clusters, `settings.orientation`
  * (via a `frameTo` cue), AND `selection.focus`; restore must wind all three
  * back. These tests pin the properties that make the scene-level capture
  * sound:
  *
- *   1. *Scope* — the snapshot carries all fifteen settings clusters (via
+ *   1. *Scope* — the snapshot carries all sixteen settings clusters (via
  *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
  *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
  *      `state.selection.focus`.
@@ -23,6 +23,7 @@ import { captureScene } from '../../../src/state/scene/captureScene';
 
 const SNAPSHOT_SETTINGS_KEYS = [
   'bodies',
+  'blackHoles',
   'cosmicWebFilaments',
   'flow',
   'localBubble',
@@ -42,7 +43,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the fifteen tour-owned settings clusters plus a
+ * A minimal state carrying the sixteen tour-owned settings clusters plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
@@ -58,6 +59,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       orbitTrails: { enabled: true },
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
+      blackHoles: { items: {} },
       orientation: 'galactic',
       tonemap: { exposure: 1.2 },
     },
@@ -66,7 +68,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the fifteen settings clusters + orientation + selection.focus', () => {
+  it('captures the sixteen settings clusters + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 

@@ -21,7 +21,8 @@ import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/f
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
-import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { slabRowActive } from '../../../../src/utils/frame/slabRowActive';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -50,7 +51,7 @@ function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
   return {
     snapshot: {
       simDays: SIM_DAYS,
-      slabBodyCandidates: CORE_SLAB_ROWS.filter((row) =>
+      slabBodyCandidates: BLACK_HOLES.map(blackHoleSlabRow).filter((row) =>
         slabRowActive(row, camPos, deriveBodyStates(SIM_DAYS)),
       ),
     },

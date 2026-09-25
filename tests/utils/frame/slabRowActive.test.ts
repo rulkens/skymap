@@ -13,7 +13,7 @@ import type { SlabRow } from '../../../src/@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
-const ANCHOR_ID = 'sgr-a-star';
+const ANCHOR_ID = 'galactic-centre';
 const BAND = SCALE_FADE_BANDS.sgrAStarLensing;
 
 const ROW: SlabRow = {
