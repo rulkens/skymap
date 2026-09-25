@@ -12,13 +12,6 @@
  * was loaded AT); the `prev === payload` guard makes re-selecting the current
  * tier a no-op.
  *
- * `settings.milkyWay.starCount` is an absolute count with nothing tying it
- * to the tier automatically, so it's re-seeded here from
- * `MILKY_WAY_STARS_PER_TIER[tier]` on every confirmed tier change — otherwise
- * a device dropping to the small tier would keep whatever count a previous
- * DebugPanel session left dialled in. The cloud's own `reconcile` is what
- * actually regenerates the cloud; this saga only owns the seed.
- *
  * A galaxy `SelectionRef` is POSITIONAL (source + index), so when a tier swap
  * replaces a source's cloud in place the same index points at a different
  * galaxy (or none). To preserve intent: capture each affected ref's durable
@@ -39,9 +32,7 @@ import { selectTier } from './selectors';
 import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
-import { setMilkyWayTuning } from '../../layers/milkyWay/state/milkyWay/slice';
 import { engineSourceCountReported } from '../engine/engineSlice';
-import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchTierSaga() {
@@ -64,11 +55,6 @@ export function* watchTierSaga() {
     yield* put(updateSelectionHover(null));
 
     yield* put(setTier(action.payload));
-    // Re-seed the Milky-Way star count from the new tier's budget — see the
-    // module header for why an absolute count needs this. The cloud's own
-    // `reconcile` picks up the write on its own next-frame call, so nothing
-    // here talks to the GPU cloud directly.
-    yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
 
     // Re-anchor each captured galaxy slot once its source's new cloud lands.
     // Bounded: only drifting sources were captured, so the count pulse for that

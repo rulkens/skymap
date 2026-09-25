@@ -15,16 +15,16 @@
  */
 
 import type { ReactElement } from 'react';
-import type { MilkyWaySettings } from '../../@types/settings/MilkyWaySettings';
-import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
+import type { MilkyWaySettings } from '../../../@types/settings/MilkyWaySettings';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 import {
   MILKY_WAY_SLIDER_FIELDS,
   milkyWaySliderPatch,
-} from '../../data/milkyWay/milkyWaySliderFields';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { formatMilkyWayTuningDefaults } from '../../utils/format/formatMilkyWayTuningDefaults';
-import CopyButton from '../common/CopyButton/CopyButton';
-import DebugTuningSection from './DebugTuningSection';
+} from '../../../data/milkyWay/milkyWaySliderFields';
+import { MILKY_WAY_TUNING_DEFAULTS } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { formatMilkyWayTuningDefaults } from '../../../utils/format/formatMilkyWayTuningDefaults';
+import CopyButton from '../../../components/common/CopyButton/CopyButton';
+import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 
 export type MilkyWayTuningSectionProps = {
   milkyWay: MilkyWaySettings;

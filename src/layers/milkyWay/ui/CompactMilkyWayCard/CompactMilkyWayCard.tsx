@@ -5,9 +5,9 @@
  */
 
 import type { ReactNode } from 'react';
-import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
-import CardRow from '../CardRow/CardRow';
-import styles from '../compactChrome.module.css';
+import type { MilkyWayInfo } from '../../../../@types/engine/MilkyWayInfo';
+import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import styles from '../../../../components/InfoCard/compactChrome.module.css';
 import local from './CompactMilkyWayCard.module.css';
 
 export type CompactMilkyWayCardProps = {

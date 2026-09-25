@@ -1,0 +1,19 @@
+/**
+ * reseedMilkyWayStarCountSaga — `starCount` is an absolute count with nothing
+ * tying it to the tier automatically, so every confirmed `setTier` write
+ * re-seeds it from `MILKY_WAY_STARS_PER_TIER[tier]`; otherwise a device
+ * dropping to the small tier would keep whatever count a previous DebugPanel
+ * session left dialled in. The Layer's own planner `reconcile`s the cloud
+ * against the seed; this saga only owns the write.
+ */
+import { takeEvery, put } from 'typed-redux-saga';
+
+import { setTier } from '../../../state/tier/tierSlice';
+import { setMilkyWayTuning } from '../state/milkyWay/slice';
+import { MILKY_WAY_STARS_PER_TIER } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+
+export function* reseedMilkyWayStarCountSaga() {
+  yield* takeEvery(setTier, function* (action) {
+    yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
+  });
+}

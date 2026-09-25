@@ -12,18 +12,18 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
-import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
-import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
-import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
-import CardHeader from '../CardHeader/CardHeader';
-import CardRow from '../CardRow/CardRow';
-import Thumbnail from '../Thumbnail/Thumbnail';
-import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
-import { InfoTip } from '../../InfoTip/InfoTip';
-import { TIPS } from '../tooltips';
-import styles from '../cardChrome.module.css';
+import type { MilkyWayInfo } from '../../../../@types/engine/MilkyWayInfo';
+import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
+import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
+import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
+import { MILKY_WAY_FOCUS_ID } from '../../../../services/url/milkyWayFocusId';
+import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../../../components/InfoTip/InfoTip';
+import { TIPS } from '../../../../components/InfoCard/tooltips';
+import styles from '../../../../components/InfoCard/cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {
