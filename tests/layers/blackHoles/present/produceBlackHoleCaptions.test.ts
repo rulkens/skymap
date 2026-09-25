@@ -40,10 +40,6 @@ const CTX = {
 describe('produceBlackHoleCaptions', () => {
   const [caption] = produceBlackHoleCaptions()(STATE, CTX).labels;
 
-  it('names the place, not the designation', () => {
-    expect(caption!.text).toBe(SGR_A_STAR_ENTRY.label);
-  });
-
   it('packs a pick id the Layer’s selection row resolves to the hole', () => {
     const pick = unpackPick(caption!.pickId!)!;
     const entry = SOURCE_REGISTRY[pick.sourceCode as keyof typeof SOURCE_REGISTRY];

@@ -19,7 +19,7 @@ export type BlackHoleLensingRenderer = Renderer & {
   readonly lut: SchwarzschildDeflectionLut;
   /**
    * Draw the lens triangle into the current (depthless, premultiplied-OVER)
-   * pass. `uniforms` is the packed 176-byte `BlackHoleLensingUniforms`
+   * pass. `uniforms` is the packed `BlackHoleLensingUniforms`
    * (`packBlackHoleLensingUniforms`); `skyCubemapView` is this frame's
    * `dimension: 'cube'` view over the `sky-cubemap` render target
    * (`RenderTargets.cubeViewOf`) — read fresh by the caller every frame and

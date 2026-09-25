@@ -2,11 +2,9 @@
  * LabelsAndGuidesSectionContainer — store boundary for the Labels & Guides
  * settings section.
  *
- * Owns all Redux reach for the Labels & Guides group: reads
- * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
- * `selectBodyItems`, `selectBlackHoleItems` and `selectMilkyWayLabelEnabled`,
- * bundles them into the `LabelHomes` the label-projection reads, and wraps the
- * label dispatch in a `useCallback`. It also owns the orbit-trails guide row — a flat singleton
+ * Owns all Redux reach for the Labels & Guides group: reads each label home's
+ * items, bundles them into the `LabelHomes` the label-projection reads, and
+ * wraps the label dispatch in a `useCallback`. It also owns the orbit-trails guide row — a flat singleton
  * setting that routes straight to its own setter. All of it is assembled into
  * one uniform `SectionRow` array; the presentational `LabelsAndGuidesSection`
  * imports nothing from `store/` or `state/` and has no notion of where any

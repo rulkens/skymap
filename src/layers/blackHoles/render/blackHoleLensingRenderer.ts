@@ -21,23 +21,11 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../../services/gpu/lib/blendStates'
 import { buildSchwarzschildDeflectionLut } from '../../../utils/lensing/buildSchwarzschildDeflectionLut';
 import { BLACK_HOLE_LENSING_UNIFORM_FLOATS } from '../../../utils/gpu/packBlackHoleLensingUniforms';
 
-/**
- * LUT texel count: dense enough that the fragment's 2-tap lerp reads as
- * smooth across the escape region without the strong near-critical
- * curvature aliasing (Simpson quadrature is cheap CPU-side and this runs
- * once at construction, so there is no reason to skimp).
- */
+// Dense enough for the fragment's 2-tap lerp to look smooth near the critical
+// impact parameter; quadrature is cheap CPU-side, so no reason to skimp.
 const LUT_SAMPLE_COUNT = 512;
 
-/**
- * Stand-in for a captured LUT sample once uploaded to the `r32float`
- * texture — see the module header's "Infinity encoding" section. Comfortably
- * larger than any finite bend angle `buildSchwarzschildDeflectionLut` can
- * produce (the quadrature stays a low-two-digit-radian value even one grid
- * step from the critical impact parameter) and comfortably smaller than
- * `f32`'s own range, so the value survives the GPU upload with no risk of
- * becoming `inf` itself.
- */
+// 1000 rad: finite, and far beyond any bend angle the LUT can produce.
 const CAPTURE_SENTINEL_RAD = 1000;
 
 function createLutTexture(device: GPUDevice, lut: SchwarzschildDeflectionLut): GPUTexture {
@@ -139,13 +127,8 @@ export function createBlackHoleLensingRenderer(
   ): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 
-    // Rebuilt every draw because `skyCubemapView` is the caller's fresh
-    // per-frame read of `RenderTargets.cubeViewOf` — the SAME reason
-    // `additiveUpsample`'s bind group is rebuilt per draw rather than cached
-    // (a cached bind group risks binding a view a `reconcile()` replaced).
-    // The LUT view and sampler are stable renderer-owned resources; rebuilding
-    // the whole group anyway keeps this one call site simple, and one
-    // bind-group alloc per frame for a single-draw pass is negligible.
+    // skyCubemapView changes every frame (see BlackHoleLensingRenderer.d.ts);
+    // rebuilding the whole group here keeps this one call site simple.
     const bindGroup = device.createBindGroup({
       label: 'black-hole-lensing-bg',
       layout: bindGroupLayout,

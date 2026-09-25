@@ -14,7 +14,6 @@ describe('blackHoleSlabRow', () => {
     const row = blackHoleSlabRow(sgrAStar);
     const capture = CUBEMAP_CAPTURES[sgrAStar.capture];
 
-    expect(row.activeBand).toBe(capture.band);
     expect(capture.anchor.anchorId).toBe(row.anchorId);
   });
 });

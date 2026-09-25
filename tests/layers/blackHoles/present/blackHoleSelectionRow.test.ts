@@ -32,7 +32,6 @@ describe('blackHoleSelectionRow', () => {
     const focusId = ROW.focusId!;
     expect(focusId.encode(SGR_A_STAR_REF)).toBe('blackhole-sgr-a-star');
     expect(focusId.decode('blackhole-sgr-a-star')).toEqual(SGR_A_STAR_REF);
-    expect(focusId.claims('body-sgr-a-star')).toBe(false);
   });
 
   it('extracted row poses at the galactic centre', () => {

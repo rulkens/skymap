@@ -180,7 +180,7 @@ export type EngineGpuHandles = {
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
    * view-projection.  Shared by core's `sceneBodyLabels` set (Earth, the
-   * planets, Sgr A*, the mesh bodies) and the star Layer's own producer (the
+   * planets, the mesh bodies) and the star Layer's own producer (the
    * curated map, the Sun); `foregroundLabelsPass` re-uploads both, merged,
    * camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
