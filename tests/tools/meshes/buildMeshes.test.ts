@@ -72,6 +72,31 @@ function addPrim(
   return prim;
 }
 
+/** A flat `size` x `size`-cell grid in the XY plane — plenty of coplanar
+ *  triangles for the simplifier to collapse with no geometric detail lost. */
+function addGrid(doc: Document, material: Material, size: number): Primitive {
+  const verts = size + 1;
+  const positions: number[] = [];
+  const normals: number[] = [];
+  for (let y = 0; y <= size; y++) {
+    for (let x = 0; x <= size; x++) {
+      positions.push(x, y, 0);
+      normals.push(0, 0, 1);
+    }
+  }
+  const indices: number[] = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const a = y * verts + x;
+      const b = a + 1;
+      const c = a + verts;
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+  return addPrim(doc, material, { positions, normals, indices });
+}
+
 /**
  * The first triangle's geometric normal dotted with its first vertex's normal:
  * positive when the winding agrees with the shading. The writer may reorder and
@@ -167,12 +192,18 @@ function readMesh(): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function runTiers(glbPaths: Partial<Record<Tier, string>>, bodyFromSource?: Mat3, groundUp?: Vec3) {
+function runTiers(
+  glbPaths: Partial<Record<Tier, string>>,
+  bodyFromSource?: Mat3,
+  groundUp?: Vec3,
+  tierTriangles?: Partial<Record<Tier, number>>,
+) {
   return buildMeshes({
     targets: [
       {
         key: 'testmesh',
         glbPaths,
+        tierTriangles,
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
@@ -818,5 +849,38 @@ describe('buildMeshes()', () => {
     await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, [0, 1, 0]);
 
     expect(existsSync(join(dir, 'out', 'testmesh_contact.webp'))).toBe(true);
+  });
+
+  it('simplifies only the tier whose glbPaths entry carries a triangle target', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 8));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const smallGlb = await writeGlbNamed(gridDoc, 'small.glb');
+    const mediumGlb = await writeGlbNamed(gridDoc, 'medium.glb');
+
+    const row = (
+      await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, undefined, { small: 20 })
+    )[0]!;
+
+    // Row metrics come from the ceiling tier (medium), which was never
+    // simplified — the full 128-triangle grid.
+    expect(row.triangleCount).toBe(128);
+  });
+
+  it('refuses a tier whose simplified count misses its target by more than 5%', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 8));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(gridDoc);
+
+    // The grid has 128 triangles; a 500-triangle target can never be reached
+    // by a simplifier that only ever removes triangles.
+    await expect(
+      runTiers({ small: glbPath }, undefined, undefined, { small: 500 }),
+    ).rejects.toThrow(/missing its 500-tri target/);
   });
 });

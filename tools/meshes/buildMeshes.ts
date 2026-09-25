@@ -44,6 +44,7 @@ import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataReg
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
+import { simplifyToTriangles } from '../utils/meshes/simplifyToTriangles';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
@@ -62,11 +63,18 @@ const LOSSLESS_WEBP = { lossless: true };
 /** Tangent-space "straight out", the substitute for a missing normal map. */
 const FLAT_NORMAL = { r: 128, g: 128, b: 255 };
 
+/** How far a tier's simplified triangle count may miss its target before
+ *  `bakeTier` refuses the build rather than ship a silently off-budget tier. */
+const SIMPLIFY_TOLERANCE = 0.05;
+
 export type MeshBuildTarget = {
   readonly key: string;
   /** One source GLB per tier this body ships; must be a contiguous prefix of
    *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). */
   readonly glbPaths: Readonly<Partial<Record<Tier, string>>>;
+  /** A tier present here is meshopt-simplified to this many triangles after
+   *  merge; a tier absent (or absent from `glbPaths`) bakes at full density. */
+  readonly tierTriangles?: Readonly<Partial<Record<Tier, number>>>;
   /** The CEILING tier's RAW_DATA upstream. */
   readonly source: string;
   readonly licence: string;
@@ -553,6 +561,41 @@ function bakeContactDecal(
 }
 
 /**
+ * Decimate a merged tier to its `tierTriangles` budget, if the tier has one —
+ * geometry itself (positions/normals/uvs/tangents) is untouched, only
+ * `indices` shrinks; `writeMeshBinary`'s reorder pass drops whatever that
+ * leaves unreferenced. A miss past `SIMPLIFY_TOLERANCE` throws rather than
+ * ship a tier silently off its triangle budget.
+ */
+async function simplifyTier(
+  target: MeshBuildTarget,
+  key: string,
+  tier: Tier,
+  geometry: Geometry,
+): Promise<Geometry> {
+  const targetTriangles = target.tierTriangles?.[tier];
+  if (targetTriangles === undefined) return geometry;
+  const sourceTriangles = geometry.indices.length / 3;
+  const { indices, triangleCount } = await simplifyToTriangles(
+    geometry.positions,
+    geometry.uvs,
+    geometry.indices,
+    targetTriangles,
+  );
+  process.stderr.write(
+    `  simplify ${key}-${tier}  ${sourceTriangles} -> ${triangleCount} tris (target ${targetTriangles})\n`,
+  );
+  const miss = Math.abs(triangleCount - targetTriangles) / targetTriangles;
+  if (miss > SIMPLIFY_TOLERANCE) {
+    throw new Error(
+      `buildMeshes: ${key}-${tier} simplified to ${triangleCount} tris, missing its ` +
+        `${targetTriangles}-tri target by ${(miss * 100).toFixed(1)}% (over ${(SIMPLIFY_TOLERANCE * 100).toFixed(0)}%)`,
+    );
+  }
+  return { ...geometry, indices };
+}
+
+/**
  * Bake one tier's GLB: geometry to `<key>-<tier>.mesh`, every texture slot to
  * `<key>-<tier><suffix>.webp` capped at that tier's `tierToTexturePx`. The
  * contact mask is UNTIERED and only ever written for the ceiling tier — the
@@ -593,7 +636,8 @@ async function bakeTier(
     );
   }
 
-  const geometry = mergeGeometry(doc, target.bodyFromSource);
+  const merged = mergeGeometry(doc, target.bodyFromSource);
+  const geometry = await simplifyTier(target, key, tier, merged);
   const px = tierToTexturePx(tier);
   const stem = basename(meshTierPrefix(key, tier));
   writeFileSync(join(outDir, `${stem}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
@@ -826,10 +870,16 @@ async function main(): Promise<void> {
     const glbPaths = Object.fromEntries(
       present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!.raw)]),
     ) as MeshBuildTarget['glbPaths'];
+    const tierTriangles = Object.fromEntries(
+      present
+        .filter((tier) => entry.tiers[tier]!.triangles !== undefined)
+        .map((tier) => [tier, entry.tiers[tier]!.triangles]),
+    ) as MeshBuildTarget['tierTriangles'];
     const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!.raw];
     return {
       key,
       glbPaths,
+      tierTriangles,
       source: raw.upstream ?? raw.path,
       licence: entry.licence,
       attribution: entry.attribution,

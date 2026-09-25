@@ -76,10 +76,10 @@ export function simplifyToTriangles(
   positions: Float32Array, uvs: Float32Array, indices: Uint32Array, targetTriangles: number,
 ): { indices: Uint32Array; triangleCount: number }; // vertices unchanged (caller compacts or keeps)
 ```
-- [ ] Use `MeshoptSimplifier` from `meshoptimizer` 1.2.0 (`await MeshoptSimplifier.ready`), `simplifyWithAttributes` with the UVs as attributes (weight ~1 per UV channel) so seams hold; if seams stall the count above target, weld positions for the topology pass (meshopt's position remap) while keeping UV-split vertices for output. Target error large enough to reach the count.
-- [ ] Tests: a 64×64 grid (8192 tris) simplified to 2000 → count within ±5 % of 2000; a grid whose UVs split along a seam column keeps every output triangle's UVs from one side of the seam (no triangle spans UV u < 0.5 and u > 0.5 when the seam is at u = 0.5 with duplicated vertices).
-- [ ] `bakeTier`: when the tier's `triangles` is set, simplify after merge and before tangents; drop unreferenced vertices. Log kept/source counts. Refuse (throw) when the result misses the target by > 5 %.
-- [ ] Commit `feat(meshes): simplify a tier to a triangle target`.
+- [x] Use `MeshoptSimplifier` from `meshoptimizer` 1.2.0 (`await MeshoptSimplifier.ready`), `simplifyWithAttributes` with the UVs as attributes (weight ~1 per UV channel) so seams hold; if seams stall the count above target, weld positions for the topology pass (meshopt's position remap) while keeping UV-split vertices for output. Target error large enough to reach the count.
+- [x] Tests: a 64×64 grid (8192 tris) simplified to 2000 → count within ±5 % of 2000; a grid whose UVs split along a seam column keeps every output triangle's UVs from one side of the seam (no triangle spans UV u < 0.5 and u > 0.5 when the seam is at u = 0.5 with duplicated vertices).
+- [x] `bakeTier`: when the tier's `triangles` is set, simplify after merge and before tangents; drop unreferenced vertices. Log kept/source counts. Refuse (throw) when the result misses the target by > 5 %.
+- [x] Commit `feat(meshes): simplify a tier to a triangle target`.
 
 ### Task 5: georeferenced sources — anchored origin shift
 
