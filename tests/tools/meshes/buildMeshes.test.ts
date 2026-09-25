@@ -8,10 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
-import { buildMeshes } from '../../../tools/meshes/buildMeshes';
+import { buildMeshes, type MeshBuildTarget } from '../../../tools/meshes/buildMeshes';
 import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
 import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
 import { nearestVertex } from '../../helpers/meshes/nearestVertex';
@@ -70,6 +71,31 @@ function addPrim(
     .setMaterial(material);
   if (data.tangents) prim.setAttribute('TANGENT', accessor('VEC4', data.tangents));
   return prim;
+}
+
+/** A flat `size` x `size`-cell grid in the XY plane — plenty of coplanar
+ *  triangles for the simplifier to collapse with no geometric detail lost. */
+function addGrid(doc: Document, material: Material, size: number): Primitive {
+  const verts = size + 1;
+  const positions: number[] = [];
+  const normals: number[] = [];
+  for (let y = 0; y <= size; y++) {
+    for (let x = 0; x <= size; x++) {
+      positions.push(x, y, 0);
+      normals.push(0, 0, 1);
+    }
+  }
+  const indices: number[] = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const a = y * verts + x;
+      const b = a + 1;
+      const c = a + verts;
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+  return addPrim(doc, material, { positions, normals, indices });
 }
 
 /**
@@ -167,17 +193,32 @@ function readMesh(): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function runTiers(glbPaths: Partial<Record<Tier, string>>, bodyFromSource?: Mat3, groundUp?: Vec3) {
+function runTiers(
+  glbPaths: Partial<Record<Tier, string>>,
+  bodyFromSource?: Mat3,
+  groundUp?: Vec3,
+  tierTriangles?: Partial<Record<Tier, number>>,
+  georeferencedOffsetM?: Vec2,
+  hole?: MeshBuildTarget['hole'],
+) {
+  const tiers = Object.fromEntries(
+    Object.entries(glbPaths).map(([tier, path]) => [
+      tier,
+      { path, triangles: tierTriangles?.[tier as Tier] },
+    ]),
+  ) as MeshBuildTarget['tiers'];
   return buildMeshes({
     targets: [
       {
         key: 'testmesh',
-        glbPaths,
+        tiers,
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
         groundUp,
+        georeferencedOffsetM,
+        hole,
       },
     ],
     outDir: join(dir, 'out'),
@@ -818,5 +859,124 @@ describe('buildMeshes()', () => {
     await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, [0, 1, 0]);
 
     expect(existsSync(join(dir, 'out', 'testmesh_contact.webp'))).toBe(true);
+  });
+
+  it('simplifies only the tier whose tiers entry carries a triangle target', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    // A 5x5 grid (50 tris): small enough that LockBorder's pinned perimeter
+    // still leaves room to reach the 20-tri target below.
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 5));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const smallGlb = await writeGlbNamed(gridDoc, 'small.glb');
+    const mediumGlb = await writeGlbNamed(gridDoc, 'medium.glb');
+
+    const row = (
+      await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, undefined, { small: 20 })
+    )[0]!;
+
+    // Row metrics come from the ceiling tier (medium), which was never
+    // simplified — the full 50-triangle grid.
+    expect(row.triangleCount).toBe(50);
+    // The small tier actually ran simplification, rather than the wiring
+    // silently passing the source through untouched.
+    const smallTriangleCount = (await decodeMesh(readMesh())).indexCount / 3;
+    expect(smallTriangleCount).toBeGreaterThanOrEqual(19);
+    expect(smallTriangleCount).toBeLessThanOrEqual(21);
+  });
+
+  it('refuses a tier whose simplified count misses its target by more than 5%', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 8));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(gridDoc);
+
+    // The grid has 128 triangles; a 500-triangle target can never be reached
+    // by a simplifier that only ever removes triangles.
+    await expect(
+      runTiers({ small: glbPath }, undefined, undefined, { small: 500 }),
+    ).rejects.toThrow(/missing its 500-tri target/);
+  });
+
+  it('translates a georeferenced source by its offset instead of recentring on the mass centroid', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    const row = (
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [5, -3])
+    )[0]!;
+    const decoded = await decodeMesh(readMesh());
+
+    // Every vertex shifts by the fixed offset — not the area-weighted mass
+    // centroid, which for this triangle would sit at (2/3, 2/3, 0).
+    expectVertexNear(readMesh(), decoded, [5, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [7, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [5, -1, 0]);
+    // boundingRadiusM/minZ are measured from the new (site) origin: the
+    // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
+    expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
+    expect(row.groundOffsetM).toBeCloseTo(0, 6);
+  });
+
+  it('bakes a terrain-hole mask and emits its lat/lon rect on the row', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    const R = 6_371_000;
+    const siteLatDeg = 55.67;
+    // A non-square ring (200 m east x 100 m north) at a non-zero latitude: a
+    // lon/lat axis swap, or a missing cos(lat) foreshortening on the east
+    // span, would both pass a square ring at the equator but not this one.
+    const row = (
+      await runTiers({ small: glbPath }, undefined, undefined, undefined, undefined, {
+        ringM: [
+          [0, 0],
+          [200, 0],
+          [200, 100],
+          [0, 100],
+        ],
+        siteLatDeg,
+        siteLonDeg: 12.53,
+        radiusM: R,
+      })
+    )[0]!;
+
+    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(true);
+    const metresPerDegLat = (Math.PI / 180) * R;
+    const metresPerDegLon = metresPerDegLat * Math.cos((siteLatDeg * Math.PI) / 180);
+    expect(row.hole).toBeDefined();
+    expect(row.hole!.lonMinDeg).toBeCloseTo(12.53, 6);
+    expect(row.hole!.latMinDeg).toBeCloseTo(siteLatDeg, 6);
+    expect(row.hole!.lonSpanDeg).toBeCloseTo(200 / metresPerDegLon, 6);
+    expect(row.hole!.latSpanDeg).toBeCloseTo(100 / metresPerDegLat, 6);
+  });
+
+  it('leaves hole undefined for a target with no crop outline', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    const row = (await runTiers({ small: glbPath }))[0]!;
+
+    expect(row.hole).toBeUndefined();
+    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(false);
   });
 });

@@ -145,8 +145,8 @@ Every step is a literal edit site. Tick them all.
    one `MESH_TRIANGLE_BUDGET` (`src/data/mesh/meshTriangleBudget.ts`).
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
    log: extent in metres must match the fact sheet.
-5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small:
-'meshes.<key>' }`, licence, the attribution string, and `bodyFromSource` as a
+5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small: {
+raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` as a
    column-major **proper** rotation (det +1) from the axis table. Same source
    frame as a rover (up +Y, forward +Z) → `[0, 1, 0, 0, 0, 1, 1, 0, 0]`;
    dish/boresight on +Y, up +Z → `[0, -1, 0, 1, 0, 0, 0, 0, 1]`.
@@ -169,7 +169,9 @@ Every step is a literal edit site. Tick them all.
 8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
    row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
    `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+   `seat: 'resting'` for a lander or rover set down on the terrain — `'anchored'`
+   is for a georeferenced scan that carries its own height and cuts a terrain
+   hole; host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
 9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
    chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
    boresight (+X) somewhere means putting the pole PERPENDICULAR to it and

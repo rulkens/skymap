@@ -81,6 +81,13 @@ vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
 vi.mock('../../../../../src/utils/camera/bodySlabCamLocal', () => ({
   bodySlabCamLocal: vi.fn<() => Vec3>(() => MOCK_CAM_LOCAL),
 }));
+// Whether the holed mesh is drawn this frame is the hole's gate; the real
+// derivation (partition + residency) is not what these tests are about.
+vi.mock('../../../../../src/services/engine/frame/drawableMeshBodies', () => ({
+  drawableMeshBodies: vi.fn(() => []),
+}));
+import { drawableMeshBodies } from '../../../../../src/services/engine/frame/drawableMeshBodies';
+import { HOLED_MESH_BODY_BY_HOST } from '../../../../../src/data/bodies/holedMeshBodyByHost';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../../src/utils/camera/bodySlabCamLocal';
 
@@ -680,6 +687,30 @@ describe('surfaceTilesPass', () => {
     ] = true;
     surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
+  });
+
+  it('cuts the terrain hole only while the holed mesh is drawn, not merely loaded', () => {
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
+    const view = makeEarthBodyView('earth');
+    const base = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+    });
+    const mask = {} as GPUTexture;
+    const state = {
+      ...base,
+      gpu: { ...base.gpu, meshBodyRenderer: { holeMaskOf: () => mask } },
+    } as unknown as EngineState;
+    const holed = HOLED_MESH_BODY_BY_HOST.get('earth')!;
+
+    vi.mocked(drawableMeshBodies).mockReturnValueOnce([]);
+    surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[0]![1].hole).toBeNull();
+
+    vi.mocked(drawableMeshBodies).mockReturnValueOnce([holed.body]);
+    surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
+    expect(tileDraw.mock.calls[1]![1].hole).toEqual({ mask, rect: holed.rect });
   });
 
   it('is disabled until the cut AND both atlases are live', () => {

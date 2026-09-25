@@ -71,4 +71,18 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
           `      halfU: [${row.contactDecal.halfU.join(', ')}],\n` +
           `      halfV: [${row.contactDecal.halfV.join(', ')}],\n    }`,
   },
+  {
+    name: 'hole',
+    tsType: 'MeshHoleRect',
+    optional: true,
+    doc: [
+      'The lat/lon rect `<key>_hole.webp` covers; absent for a mesh with no',
+      'terrain hole to cut.',
+    ],
+    emit: (row) =>
+      row.hole === undefined
+        ? undefined
+        : `{\n      lonMinDeg: ${row.hole.lonMinDeg},\n      latMinDeg: ${row.hole.latMinDeg},\n` +
+          `      lonSpanDeg: ${row.hole.lonSpanDeg},\n      latSpanDeg: ${row.hole.latSpanDeg},\n    }`,
+  },
 ];

@@ -17,6 +17,7 @@ const SITE: SurfaceFixedSite = {
   latDeg: -12,
   lonDeg: 143,
   altitudeM: 3,
+  seat: 'resting',
 };
 
 describe('sitePoseToBodyArm', () => {

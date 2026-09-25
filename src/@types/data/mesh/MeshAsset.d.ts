@@ -18,4 +18,7 @@ export type MeshAsset = {
    *  `contactDecal`; not a `MESH_TEXTURE_SLOTS` entry — the mesh shader never
    *  binds it, only the separate contact-shadows pass does. */
   readonly contactShadow?: ImageBitmap;
+  /** R8 terrain-hole mask over the row's `hole` rect (row 0 = north, 255 =
+   *  cut), fetched only when the row has one; the surface-tile pass binds it. */
+  readonly holeMask?: ImageBitmap;
 } & { readonly [K in MeshTextureField]: ImageBitmap };

@@ -18,4 +18,7 @@ export type MeshResources = {
   /** Present only when the asset shipped a ground-contact mask; the
    *  contact-shadows pass binds it, not the mesh's own bind group. */
   contactShadow?: ContactShadowResources;
+  /** Present only when the asset shipped a terrain-hole mask; bound by the
+   *  surface-tile pass, never by this mesh's own draws. */
+  holeMask?: GPUTexture;
 };

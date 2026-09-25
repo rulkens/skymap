@@ -8,6 +8,7 @@ import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
 import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
+import package::bodies::surfaceTile::hole::inTerrainHole;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 
@@ -15,9 +16,16 @@ import package::lib::pbr::MIN_ROUGHNESS;
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
+// The host's terrain-hole mask (group 1, shared by every variant; a 1x1 zero
+// mask on a host with no holed mesh). Binding 2, its rect, is the vertex's.
+@group(1) @binding(0) var holeMask: texture_2d<f32>;
+@group(1) @binding(1) var holeSampler: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
+    discard;
+  }
   let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let baseAlbedo = tileAlbedo(
     surfaceTexture,

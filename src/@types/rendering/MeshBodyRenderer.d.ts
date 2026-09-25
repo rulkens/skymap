@@ -20,6 +20,9 @@ export type MeshBodyRenderer = Renderer & {
   setMesh(id: string, asset: MeshAsset): void;
   clearMesh(id: string): void;
   hasMesh(id: string): boolean;
+  /** The terrain-hole mask uploaded with `setMesh` (the surface-tile pass
+   *  binds it); `null` while not resident or for a mesh without one. */
+  holeMaskOf(id: string): GPUTexture | null;
   /** The probe minted with `setMesh`; `null` while the id is not resident. */
   probeOf(id: string): MeshProbe | null;
   draw(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array): void;

@@ -85,4 +85,24 @@ describe('meshFetcher', () => {
     const urls = fetch.mock.mock.calls.map((call) => String(call[0]));
     expect(urls.some((url) => url.endsWith('meshes/curiosity_contact.webp'))).toBe(true);
   });
+
+  it('fetches the hole mask only for a row with a hole', async () => {
+    serve(() => Promise.resolve(new Response('', { status: 404 })));
+    const holed = await meshFetcher(
+      { meshKey: 'soendermarken', tier: 'small' },
+      new AbortController().signal,
+      () => {},
+    );
+    await meshFetcher(
+      { meshKey: 'curiosity', tier: 'small' },
+      new AbortController().signal,
+      () => {},
+    );
+
+    const urls = fetch.mock.mock.calls.map((call) => String(call[0]));
+    expect(urls.filter((url) => url.endsWith('_hole.webp'))).toEqual([
+      expect.stringMatching(/meshes\/soendermarken_hole\.webp$/),
+    ]);
+    expect('holeMask' in holed).toBe(true);
+  });
 });

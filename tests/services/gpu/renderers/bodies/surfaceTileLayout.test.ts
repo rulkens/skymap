@@ -29,7 +29,9 @@ import { dirname, resolve } from 'node:path';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
+  TERRAIN_HOLE_UNIFORM_BYTES,
   writePatchInstance,
+  writeTerrainHoleUniforms,
 } from '../../../../../src/services/gpu/renderers/bodies/surfaceTileLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -263,5 +265,40 @@ describe('SurfaceTileUniforms CPU/WESL layout parity', () => {
   it('SURFACE_TILE_UNIFORM_BYTES stride equals the struct size', () => {
     const { structSize } = structLayout(structFields(ioWesl, 'SurfaceTileUniforms'));
     expect(SURFACE_TILE_UNIFORM_BYTES).toBe(structSize);
+  });
+});
+
+describe('writeTerrainHoleUniforms', () => {
+  const words = (hole: Parameters<typeof writeTerrainHoleUniforms>[1]): number[] => {
+    const view = new DataView(new ArrayBuffer(TERRAIN_HOLE_UNIFORM_BYTES));
+    writeTerrainHoleUniforms(view, hole);
+    return [0, 4, 8, 12].map((offset) => view.getFloat32(offset, true));
+  };
+
+  // Asymmetric lon/lat values: a lon<->lat or min<->span swap would cut the
+  // hole mirrored or stretched with no other signal.
+  it('writes the rect origin then the inverse spans, in radians', () => {
+    const rad = Math.PI / 180;
+    const [lonMin, latMin, invLon, invLat] = words({
+      lonMinDeg: 12.5,
+      latMinDeg: 55.6,
+      lonSpanDeg: 0.004,
+      latSpanDeg: 0.002,
+    });
+    expect(lonMin).toBeCloseTo(12.5 * rad, 6);
+    expect(latMin).toBeCloseTo(55.6 * rad, 6);
+    expect(invLon).toBeCloseTo(1 / (0.004 * rad), 0);
+    expect(invLat).toBeCloseTo(1 / (0.002 * rad), 0);
+  });
+
+  it('writes zeros for a host with no hole', () => {
+    expect(words(null)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('TERRAIN_HOLE_UNIFORM_BYTES equals the struct size', () => {
+    const { structSize } = structLayout(
+      structFields(readFileSync(ioWeslPath, 'utf8'), 'TerrainHoleUniforms'),
+    );
+    expect(TERRAIN_HOLE_UNIFORM_BYTES).toBe(structSize);
   });
 });

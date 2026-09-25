@@ -4,6 +4,7 @@
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
+import type { MeshHoleRect } from '../../@types/data/mesh/MeshHoleRect';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../@types/data/Tier';
 
@@ -27,6 +28,9 @@ export type MeshAssetRow = {
   /** The ground-contact box `contactShadow` projects into, body frame,
    *  metres; absent for a floating mesh. */
   readonly contactDecal?: ContactDecal;
+  /** The lat/lon rect `<key>_hole.webp` covers; absent for a mesh with no
+   *  terrain hole to cut. */
+  readonly hole?: MeshHoleRect;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
@@ -135,6 +139,25 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
       centre: [-0.07798823068739452, -0.01337763976239624, -0.5743564252436418],
       halfU: [0, 1.709266185760498, 0],
       halfV: [-1.709266185760498, 0, 0],
+    },
+  },
+  soendermarken: {
+    key: 'soendermarken',
+    tierCeiling: 'medium',
+    boundingRadiusM: 162.5717065451265,
+    groundOffsetM: 0,
+    meanAlbedo: [0.067019, 0.07109, 0.065298],
+    triangleCount: 470046,
+    substituted: ['metalRough', 'normalMap'],
+    source: 'https://dataforsyningen.dk/ (Skråfotos 2019, via the scene-workbench bake)',
+    licence: 'CC BY 4.0',
+    attribution:
+      'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
+    hole: {
+      lonMinDeg: 12.523172510948879,
+      latMinDeg: 55.6686959789349,
+      lonSpanDeg: 0.003524198067005102,
+      latSpanDeg: 0.0022617938388833636,
     },
   },
 };
