@@ -1,12 +1,8 @@
 /**
- * MILKY_WAY_AGGREGATE_TARGET — the `mw-aggregate` row. The cloud stands in
- * for ~1e11 stars with a budget in the hundreds of thousands, so wherever
- * the disc covers real screen area the sprites go sub-pixel and the wall
- * is fill, not instance count; the summed glow is low-frequency, so 1/
- * `aggregateDivisor` plus a bilinear upsample (`milkyWayUpsamplePass`) cuts
- * fragments by the divisor squared. The divisor is a live setting, resolved
- * on every `reconcile`, and trades against the star shader's TARGET-pixel
- * `starPxMin`/`starPxMax` clamps. Dust stays full-res in HDR (`milkyWayPass`).
+ * `mw-aggregate`: the sub-pixel star sprites are fill-bound and their summed
+ * glow is low-frequency, so drawing at 1/`aggregateDivisor` and upsampling
+ * (`milkyWayUpsamplePass`) cuts fragments by the divisor squared. The
+ * star shader's `starPxMin`/`starPxMax` clamps are in THIS target's pixels.
  */
 
 import type { RenderTargetSpec } from '../../../@types/engine/frame/RenderTargetSpec';
