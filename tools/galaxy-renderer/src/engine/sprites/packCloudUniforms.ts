@@ -47,7 +47,7 @@
  */
 
 import { writeCameraPrefix } from '../../../../../src/services/gpu/lib/cameraUniforms';
-import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/data/milkyWay/milkyWayCloudUniformBufferSize';
 import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';

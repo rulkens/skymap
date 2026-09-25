@@ -47,12 +47,12 @@ export default defineConfig(({ command }) => ({
     // that id back out to src/services/..., which would undo the alias.
     //
     // The aliases are needed because the RUNTIME modules this tool reuses
-    // (createGenerationPipelines, bloomPyramid, compositor, additiveUpsample,
-    // and — for its uniform-buffer size const — milkyWayCloudRenderer) spell
-    // their `?static` imports relative to the runtime tree. A shader this tool
-    // imports by its own relative path is already inside the root and needs no
-    // alias — that is why `lib/camera.wesl` and `lib/tonemap.wesl`, reached
-    // only through the linker's `package::lib::…`, have no entry here.
+    // (createGenerationPipelines, bloomPyramid, compositor, additiveUpsample)
+    // spell their `?static` imports relative to the runtime tree. A shader
+    // this tool imports by its own relative path is already inside the root
+    // and needs no alias — that is why `lib/camera.wesl` and
+    // `lib/tonemap.wesl`, reached only through the linker's
+    // `package::lib::…`, have no entry here.
     //
     // `milkyWay` is one family entry covering all three tier dirs: the trailing
     // capture takes the rest of the path, so `sprites/`, `field/` and `ismMap/`

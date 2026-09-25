@@ -72,6 +72,7 @@ import type { MilkyWayCloudRenderer } from '../../../../@types/rendering/MilkyWa
 import type { MilkyWayCloudDrawArgs } from '../../../../@types/rendering/MilkyWayCloudDrawArgs';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../data/milkyWay/milkyWayCloudUniformBufferSize';
 
 type Init = {
   device: GPUDevice;
@@ -82,16 +83,6 @@ type Init = {
    */
   targetFormat: GPUTextureFormat;
 };
-
-/**
- * On-the-wire uniform buffer size, matching `io.wesl`'s `Uniforms` struct
- * byte-for-byte: CameraUniforms 80 B (viewProj + viewportPx + 2 pad) + model
- * mat4 64 B + camRight/camUp vec4 32 B + params0/params1 vec4 32 B = 208 B.
- * The const lives in the renderer module (not a type file) because it pins a
- * runtime layout the packer writes against.
- */
-export const MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE = 208;
-
 // The shared corner quad: two triangles covering [-1, 1]^2, matching the tool's
 // 'galaxy:quad' winding/order verbatim. Each pass expands one generated record
 // into a camera-facing billboard by pushing these corners along camRight/camUp.
