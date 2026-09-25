@@ -6,5 +6,5 @@
  */
 
 .root {
-  composes: infoCardFull structure from '../cardChrome.module.css';
+  composes: infoCardFull structure from '../../../../components/InfoCard/cardChrome.module.css';
 }

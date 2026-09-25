@@ -20,6 +20,7 @@ import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { cameraRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { Source } from '../../../src/data/sources';
@@ -89,7 +90,11 @@ describe('watchFocusTweenSaga', () => {
     mw.setContext({
       resolveDeps,
       selection: composeSelectionRows(
-        () => [...coreSelectionRows(resolveDeps), starCatalogSelectionRow(NO_SURVEY_STARS)],
+        () => [
+          ...coreSelectionRows(resolveDeps),
+          milkyWaySelectionRow(),
+          starCatalogSelectionRow(NO_SURVEY_STARS),
+        ],
         () => ALL_KINDS_ENABLED,
       ),
       cameraRuntime: () => cameraRuntime(),
