@@ -250,18 +250,6 @@ vi.mock(
     createBodyGlintRenderer: vi.fn(() => makeStub('bodyGlintRenderer')),
   }),
 );
-// The Sgr A* lens renderer's constructor builds a real LUT texture
-// (createTexture + writeTexture), which the plain stub device above doesn't
-// support — mock the factory like every other renderer here.
-vi.mock(
-  '../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer')
-    >()),
-    createSgrAStarLensingRenderer: vi.fn(() => makeStub('sgrAStarLensingRenderer')),
-  }),
-);
 // The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
 // sphere path + an instanced point path) against the full device API the plain
 // stub device can't service, so mock the factory like the other pick providers.

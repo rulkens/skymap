@@ -1,6 +1,6 @@
 /**
  * schwarzschildLutDomain — the Schwarzschild deflection LUT's impact-parameter
- * domain in r_s. `sgrAStarLensEnvelopeM` reads the same MAX for its
+ * domain in r_s. `blackHoleLensEnvelopeM` reads the same MAX for its
  * slab-envelope floor; a second copy could drift and reopen the near-plane
  * clip that envelope exists to close.
  */

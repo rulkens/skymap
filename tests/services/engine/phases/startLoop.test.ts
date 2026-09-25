@@ -56,7 +56,8 @@ import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { goLive } from '../../../../src/state/time/timeSlice';
-import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
+import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
+import { APP_COMPOSITION } from '../../../../src/compositions/app';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 
@@ -87,7 +88,14 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
   }
   return {
     sources: { catalogs },
-    gpu: { renderTargets: { specs: renderTargetRows('bgra8unorm') } },
+    gpu: {
+      renderTargets: {
+        specs: composeRenderTargetRows(
+          'bgra8unorm',
+          APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
+        ),
+      },
+    },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
     },

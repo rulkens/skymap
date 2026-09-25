@@ -50,7 +50,8 @@ import {
   DEFAULT_ORIENTATION,
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
-import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/layers/body/state/sgrAStarLensingTuning/initialState';
+import { initialState as blackHolesInitialState } from '../../../src/layers/blackHoles/state/blackHoles/initialState';
+import { initialState as blackHoleLensingTuningInitialState } from '../../../src/layers/blackHoles/state/lensingTuning/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
@@ -111,7 +112,8 @@ export function makeSettingsFixture(
     thumbnails: { ...thumbnailsInitialState },
     milkyWay: { ...milkyWayInitialState },
     zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
-    sgrAStarLensingTuning: { ...sgrAStarLensingTuningInitialState },
+    blackHoles: { items: { ...blackHolesInitialState.items } },
+    blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
     constellations: { ...constellationsInitialState },

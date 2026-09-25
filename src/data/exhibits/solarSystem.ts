@@ -51,6 +51,7 @@ export const solarSystem: Exhibit = {
         structure: false,
         milkyWay: false,
         zoneOfAvoidance: false,
+        blackHole: true,
       },
     },
   },

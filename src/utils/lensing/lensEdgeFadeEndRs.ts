@@ -2,7 +2,7 @@
  * lensEdgeFadeEndRs — where the Sgr A* lens's escape fade must reach zero, in
  * r_s. Weak-field deflection is 2/b rad (b in r_s), so it drops below one
  * screen pixel at b = 2·pxPerRad. Capped at 0.6× the anchor distance so the
- * lensed sphere (`sgrAStarLensEnvelopeM`'s radius) never reaches past the
+ * lensed sphere (`blackHoleLensEnvelopeM`'s radius) never reaches past the
  * camera itself, and floored at the LUT's own max so the fade never cuts
  * into the LUT-resolved strong-field region during a close descent — fading
  * at the raw LUT edge blends a sky still deflected ~40 px into the true sky.

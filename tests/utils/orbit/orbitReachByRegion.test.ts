@@ -12,7 +12,7 @@ import type { OrbitalElements } from '../../../src/@types/scene/OrbitalElements'
 // whatever the seeded S-star table currently holds.
 const SYNTHETIC_ANCHORS: readonly AnchorBody[] = [
   { id: 'sun', positionMpc: [0, 0, 0] },
-  { id: 'sgr-a-star', positionMpc: [8.178e-3, 0, 0] },
+  { id: 'galactic-centre', positionMpc: [8.178e-3, 0, 0] },
 ];
 
 function makeElements(id: string, focusId: string, semiMajorMpc: number): OrbitalElements {
@@ -36,9 +36,12 @@ function makeRegion(id: BodyRegion['id'], anchorId: string, memberIds: string[])
 describe('orbitReachByRegion', () => {
   it('a Galactic Centre orbit does not inflate the solar-system trail reach', () => {
     const nearOrbit = makeElements('neptune', 'sun', 1e-10);
-    const farOrbit = makeElements('s2', 'sgr-a-star', 3e-9);
+    const farOrbit = makeElements('s2', 'galactic-centre', 3e-9);
     const solarSystem = makeRegion('solar-system', 'sun', ['sun', 'neptune']);
-    const galacticCentre = makeRegion('galactic-centre', 'sgr-a-star', ['sgr-a-star', 's2']);
+    const galacticCentre = makeRegion('galactic-centre', 'galactic-centre', [
+      'galactic-centre',
+      's2',
+    ]);
     const regionOf = (bodyId: string): BodyRegion | null =>
       [solarSystem, galacticCentre].find((region) => region.memberIds.includes(bodyId)) ?? null;
 

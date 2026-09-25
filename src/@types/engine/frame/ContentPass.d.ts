@@ -64,8 +64,8 @@ export type ContentPass = {
    *  - `bodyGlintsPass` draws only the `glints` branch but also stamps
    *    Earth's caption-range pick footprint, so it must be admitted even with
    *    an empty `glints` branch when the Earth caption is on;
-   *  - `starPointsPass` draws the star roster but also stamps Sgr A*, which
-   *    draws nothing anywhere and is invited by its caption alone.
+   *  - `blackHoleMarkerPass` stops drawing inside a hole's lens band, but its
+   *    stamp stays while the hole's caption still invites the click.
    *
    * Keeping `enabled` narrow (draw set) preserves the executor's "a row that
    * would draw zero bodies must leave the VISUAL pass plan" invariant; the

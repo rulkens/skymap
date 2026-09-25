@@ -5,8 +5,5 @@ import { SURFACE_STANDOFF_RADII } from '../camera/clampDistance';
 import type { SceneBody } from '../../@types/scene/SceneBody';
 
 export function bodyStandoffRadii(body: SceneBody): number {
-  // `in` alone widens the arms that lack the field to `unknown`, hence the typeof.
-  return 'standoffRadii' in body && typeof body.standoffRadii === 'number'
-    ? body.standoffRadii
-    : SURFACE_STANDOFF_RADII;
+  return 'standoffRadii' in body ? body.standoffRadii : SURFACE_STANDOFF_RADII;
 }

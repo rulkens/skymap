@@ -17,14 +17,14 @@ const anchorState = (positionMpc: Vec3): BodyState => ({
   meanAnomalyRad: 0,
 });
 
-// Sgr A* is authored ahead of its seed, so a synthetic stands in for the off-origin
-// case the real table cannot yet exercise.
+// A synthetic Galactic Centre pins the off-origin case by hand, not by the
+// real table's current contents.
 const GALACTIC_CENTRE_AT: Vec3 = [8178 * PC, 0, 0];
 const syntheticRegion: BodyRegion = {
   id: 'galactic-centre',
   label: 'Galactic Centre',
-  anchorId: 'sgr-a-star',
-  memberIds: ['sgr-a-star'],
+  anchorId: 'galactic-centre',
+  memberIds: ['galactic-centre'],
   extentMpc: 0,
 };
 
@@ -46,7 +46,9 @@ describe('regionRelativeDistanceMpc', () => {
     // The whole point: a camera a parsec from the Galactic Centre is a parsec
     // from THAT region, not the 8178 pc the render origin would report — which
     // is off the far end of every near-field band.
-    const states = new Map<string, BodyState>([['sgr-a-star', anchorState(GALACTIC_CENTRE_AT)]]);
+    const states = new Map<string, BodyState>([
+      ['galactic-centre', anchorState(GALACTIC_CENTRE_AT)],
+    ]);
     const camPos: Vec3 = [8179 * PC, 0, 0];
 
     expect(regionRelativeDistanceMpc(camPos, syntheticRegion, states) / PC).toBeCloseTo(1, 6);

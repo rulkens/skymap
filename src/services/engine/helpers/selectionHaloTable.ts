@@ -55,6 +55,7 @@ type MilkyWayRow = { readonly type: 'milkyWay' };
 type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
+type BlackHoleRow = Extract<SelectionRow, { type: 'blackHole' }>;
 
 // Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
 // and returns a descriptor (or null for the structure/zoneOfAvoidance arms,
@@ -67,6 +68,7 @@ const SELECTION_HALO_TABLE: {
   zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
   starCatalog: (row: StarCatalogRow) => SelectionHalo;
+  blackHole: (row: BlackHoleRow) => SelectionHalo;
 } = {
   // `max(diameterKpc, 30)` handles any pre-v4-format galaxy without a measured
   // size; *2 = diameter→radius span.
@@ -95,9 +97,11 @@ const SELECTION_HALO_TABLE: {
   // layers stay slab-exclusive on the shared renderer.
   body: nearFieldHalo,
   starCatalog: nearFieldHalo,
+  // A hole's footprint is r_s: the ring hugs the horizon on close approach.
+  blackHole: nearFieldHalo,
 };
 
-function nearFieldHalo(row: BodyRow | StarCatalogRow): SelectionHalo {
+function nearFieldHalo(row: BodyRow | StarCatalogRow | BlackHoleRow): SelectionHalo {
   return {
     radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
     worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],

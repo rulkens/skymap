@@ -2,21 +2,16 @@
  * bodyGlintsPass — the `glints` branch of the per-frame body partition as
  * brightness-scaled additive point sprites in the depthless HDR accumulation.
  *
- * ### What it draws — the sub-pixel bodies, plus Sgr A*'s far-field marker
+ * ### What it draws — the sub-pixel bodies
  *
  * The `glints` branch of `sceneBodyPartition` — every seeded body whose apparent
  * diameter stays below `BODY_GLINT_MAX_PX`. Its siblings `planetsPass` /
  * `texturedBodiesPass` draw the `flat` / `textured` branches of the SAME
  * partition, so a body is a glint XOR a mesh by construction — the interim gap
  * where sub-pixel bodies simply vanished (the mesh culled them and nothing drew
- * the glint) is closed here.
- *
- * A SECOND, independent source rides the same buffer: Sgr A*, the one scene
- * anchor. An anchor never resolves to a mesh, so the partition's
- * XOR doesn't apply to it — it gets its own fixed tint/intensity, crossfading
- * OUT as the black-hole lens pass engages on close approach, with none of the
- * seeded glints' apparent-size or solar-system-backdrop fades (it is meant to
- * read from anywhere, not just near the Sun).
+ * the glint) is closed here. The black holes' far-field markers share this
+ * renderer's pipeline but not this pass: they are the blackHoles Layer's
+ * `black-hole-marker`.
  *
  * ### Brightness = apparent size x albedo x phase, then the cross-fade
  *
@@ -73,13 +68,11 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { sceneBodyPartition } from '../sceneBodyPartition';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -96,6 +89,7 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../solarSystemLabelMaxDistance';
+import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
 import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyGlintRenderer';
 
 // Reused across frames — the engine hot path allocates nothing here. Sized for
@@ -103,30 +97,10 @@ import { MAX_GLINTS, INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/bodyG
 // albedo tint + brightness) is rewritten in place before the single draw.
 const staging = new Float32Array(MAX_GLINTS * INSTANCE_FLOATS);
 
-// A glint whose final brightness (phase x cross-fade) is at or below this rounds
-// to nothing in the HDR accumulation — it contributes no pixels. Both sites read
-// this ONE constant so their skip thresholds cannot drift: `draw` always omits
-// the instance, and `drawPick` omits the pick footprint only BEYOND the caption
-// range (within it the label carries the click — see `drawPick`). The opacity-0
-// house rule, deferred to the label where a label still invites the click.
-const GLINT_MIN_BRIGHTNESS = 1e-4;
-
 // The scale regime the glints belong to. Both the band's edges (the planet
 // extent) and the distance it keys on come from this one region, so the fade
 // stays attached to the content it dissolves rather than to the render origin.
 const GLINT_BACKDROP_REGION = regionById('solar-system');
-
-// Sgr A*'s far-field glint keys on distance from ITS OWN region — independent
-// of `GLINT_BACKDROP_REGION`, which the anchor's marker does not dissolve
-// against (see the module header).
-const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
-
-// A fixed warm-orange marker, not a photometric measurement — an anchor
-// carries no albedo (`AnchorPointBody`'s header) to derive one from. Tuned to
-// read clearly against the additive HDR field it shares with the seeded-body
-// glints.
-const SGR_A_STAR_GLINT_TINT: Vec3 = [1, 0.55, 0.2];
-const SGR_A_STAR_GLINT_BASE_INTENSITY = 0.8;
 
 /**
  * The one fact "the Earth caption invites a click": the seeded Earth exists AND
@@ -141,42 +115,15 @@ function earthCaptionPickable(state: PassState, ctx: FrameView): boolean {
   return state.data.bodies.earth !== null && ctx.cam.distance < SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC;
 }
 
-/**
- * Sgr A*'s far-field glint alpha: the fixed base intensity crossfaded OUT as
- * the black-hole lens pass engages on close approach (spec §"The fade band").
- * `enabled`'s widening and `draw`'s pack loop both call this — the same
- * "the gate and the emit cannot disagree" contract `GLINT_BACKDROP_REGION`'s
- * check already keeps for the seeded glints (see the module header).
- */
-function sgrAStarGlintBrightness(
-  camPosMpc: Readonly<Vec3>,
-  states: ReadonlyMap<string, BodyState>,
-): number {
-  const distMpc = regionRelativeDistanceMpc(camPosMpc, GALACTIC_CENTRE_REGION, states);
-  return (
-    SGR_A_STAR_GLINT_BASE_INTENSITY * (1 - fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, distMpc))
-  );
-}
-
 export const bodyGlintsPass: ContentPass = {
   name: 'body-glints',
 
   enabled(state, ctx, _view) {
     // Handle first (short-circuits before any ctx / state.data read — matches
-    // starPointsPass), shared distance gate second, the anchor widening
-    // third, far-dissolve band fourth, partition last.
+    // starPointsPass), shared distance gate second, far-dissolve band third,
+    // partition last.
     if (state.gpu.bodyGlintRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
-    const states = sceneBodyStates(state, ctx);
-    // Sgr A*'s far-field glint is unconditional on the solar-system backdrop
-    // (a scene anchor never resolves to a mesh, so the near/far
-    // dissolves built for the seeded planets don't apply — module header), so
-    // it is checked BEFORE that gate: an empty `glints` partition, or a camera
-    // the backdrop has already dissolved, must not drop the row while the
-    // anchor's own crossfade is still positive. Mirrors `pickEnabled`'s
-    // Earth-caption widening, which bypasses the same gate for the same
-    // reason (the caption's own visibility criterion is independent of it).
-    if (sgrAStarGlintBrightness(ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS) return true;
     // Once the far-dissolve band has zeroed the glint backdrop, DISABLE the layer
     // rather than pack invisible points — the "opacity 0 ⇒ no render" house rule,
     // mirroring `starPointsPass`'s `starBackdrop` gate (which also empties the
@@ -187,7 +134,11 @@ export const bodyGlintsPass: ContentPass = {
     // `bodyGlintBackdrop` completes deep inside `FOREGROUND_MAX_DISTANCE_MPC`, so
     // this is the binding — and smooth — gate for the glints; without it they draw
     // at full additive brightness all the way to the coarse gate.
-    const regionDistMpc = regionRelativeDistanceMpc(ctx.drawCamPos, GLINT_BACKDROP_REGION, states);
+    const regionDistMpc = regionRelativeDistanceMpc(
+      ctx.drawCamPos,
+      GLINT_BACKDROP_REGION,
+      sceneBodyStates(state, ctx),
+    );
     if (fadeBand(SCALE_FADE_BANDS.bodyGlintBackdrop, regionDistMpc) <= 0) return false;
     return sceneBodyPartition(state, ctx).glints.length > 0;
   },
@@ -229,9 +180,7 @@ export const bodyGlintsPass: ContentPass = {
     // glint shares one camera), so it is hoisted OUT of the per-body loop. It
     // scales every glint's brightness so the whole sub-pixel body field dissolves
     // as the camera pulls back from the solar system, mirroring
-    // `starPointsPass`'s backdrop fade. May be 0 when only the Sgr A* anchor
-    // glint keeps the layer alive (`enabled`'s widening); the seeded glints
-    // then all fall out on the `GLINT_MIN_BRIGHTNESS` skip below.
+    // `starPointsPass`'s backdrop fade.
     const backdropFade = fadeBand(
       SCALE_FADE_BANDS.bodyGlintBackdrop,
       regionRelativeDistanceMpc(camPos, GLINT_BACKDROP_REGION, states),
@@ -275,31 +224,6 @@ export const bodyGlintsPass: ContentPass = {
       count++;
     }
 
-    // A second, independent packed source, appended to the SAME buffer/count:
-    // Sgr A*'s far-field glint. It never resolves to a mesh, so it isn't part
-    // of `glints` and carries none of the seeded bodies' apparent-size or
-    // backdrop terms — see the module header and `sgrAStarGlintBrightness`.
-    // Addressed directly rather than looped over a roster: the brightness band
-    // and the tint below are Sgr A*'s own, so a second anchor row would
-    // silently inherit them. Give the second anchor its own band + tint on its
-    // data row when there is one — `MAX_GLINTS`'s `+ 1` is this glint.
-    const sgrAStarState = states.get(SGR_A_STAR.id);
-    const anchorBrightness = sgrAStarGlintBrightness(camPos, states);
-    if (
-      count < MAX_GLINTS &&
-      sgrAStarState !== undefined &&
-      anchorBrightness > GLINT_MIN_BRIGHTNESS
-    ) {
-      const base = count * INSTANCE_FLOATS;
-      staging[base + 0] = sgrAStarState.positionMpc[0] - camPos[0];
-      staging[base + 1] = sgrAStarState.positionMpc[1] - camPos[1];
-      staging[base + 2] = sgrAStarState.positionMpc[2] - camPos[2];
-      staging[base + 3] = SGR_A_STAR_GLINT_TINT[0];
-      staging[base + 4] = SGR_A_STAR_GLINT_TINT[1];
-      staging[base + 5] = SGR_A_STAR_GLINT_TINT[2];
-      staging[base + 6] = anchorBrightness;
-      count++;
-    }
     if (count === 0) return;
 
     // Fold the eye offset into the vp so it pairs with the camera-relative
@@ -358,8 +282,7 @@ export const bodyGlintsPass: ContentPass = {
   // points appear in this list carries no priority. See `starPointPick.wesl`.
   //
   // `bodyPickRenderer.drawPoints` is safe to call multiple times per submit
-  // (see its module header); this layer and `starPointsPass` are its two
-  // callers, each calling exactly once per `drawPick`.
+  // (see its module header); this layer calls it exactly once per `drawPick`.
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.bodyPickRenderer;
     if (pickRenderer === null) return;

@@ -39,7 +39,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   // One `hdr·BODY[k]` row per capacity slot — today only the black-hole lens
-  // (`sgrAStarLensingPass`) targets `hdr` on a body-m slab, so every slot
+  // (`blackHoleLensingPass`) targets `hdr` on a body-m slab, so every slot
   // buckets under one title regardless of which row Sgr A* lands in this
   // frame, same reasoning as the `foreground:0·BODY[k]` block below.
   ...Object.fromEntries(

@@ -3,25 +3,13 @@
  * scores a query against, and the aliases a row shows in its secondary slot.
  *
  * One map over every seeded star table's `names[]` plus an authored table for
- * bodies with no seed row at all. `names[0]` is the display label. Authoring
- * here rather than in a star seed is load-bearing — a seed row would make its
- * body a DRAWN star and a `solar-neighbourhood` member, which for Sgr A* would
- * take that region's extent to 8 kpc and drag the NEAR0 far plane with it.
+ * bodies with no seed row at all. `names[0]` is the display label.
  */
 
 import { FAMOUS_STARS_GENERATED } from './famousStars.generated';
 import { SUN_GENERATED } from './sun.generated';
-import { SGR_A_STAR_ENTRY } from '../sources/sgr-a-star';
 
-// The place name now leads (it IS the row's label — see the registry row), with
-// the designation and its spellings behind it, so both "galactic centre" and
-// "Sgr A*" find the same body. Both the British and American spellings are
-// listed because a query matches a NAME verbatim, not a normalised form.
 const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
-  [
-    SGR_A_STAR_ENTRY.id,
-    [SGR_A_STAR_ENTRY.label, 'Galactic Center', 'Sagittarius A*', 'Sgr A*', 'SgrA*'],
-  ],
   // Petunias' aliases are what a reader who knows the joke will actually type;
   // the whale needs none — its label alone already scores the match.
   ['petunias', ['petunias', 'bowl of petunias', 'oh no not again']],

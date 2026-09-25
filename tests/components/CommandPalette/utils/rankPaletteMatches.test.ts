@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { blackHoleSearch } from '../../../../src/layers/blackHoles/present/blackHoleSearch';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
 import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -129,12 +130,15 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sun')).toBe(false);
   });
 
-  it('finds Sgr A* by its Sagittarius alias', () => {
-    // Sgr A* has no famous-star row, so before the alias lookup widened it was
-    // scored on its label 'Sgr A*' alone and this query matched nothing — its id
-    // ('sgr-a-star') does not contain 'sagittarius' either.
-    const rows = rankPaletteMatches([M31], [], [], [], 'sagittarius');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
+  it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {
+    // Its label is the place name and its id ('blackhole-sgr-a-star') does not
+    // contain 'sagittarius', so only the Layer row's names can score this query.
+    const layerRows = [];
+    for await (const rows of blackHoleSearch()) layerRows.push(...rows);
+    const rows = rankPaletteMatches([M31], [], [], layerRows, 'sagittarius');
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'blackhole-sgr-a-star')).toBe(
+      true,
+    );
   });
 
   it('keeps dev tours out of search while user-facing ones rank', () => {
@@ -149,7 +153,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
 
 describe('rankPaletteMatches — Layer-published rows', () => {
   function layerRow(id: string, cls: 'primary' | 'catalog'): LayerSearchEntry {
-    return { id, names: ['Zztest'], ref: { type: 'milkyWay' }, class: cls };
+    return { id, names: ['Zztest'], class: cls };
   }
 
   it('a primary layer row outranks a capped catalog row', () => {

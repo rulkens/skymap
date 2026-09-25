@@ -22,7 +22,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
 | `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
 | `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
-| `search?`       | `load/`                                        | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                    |
+| `search?`       | `present/`                                     | Palette rows, an async iterable; each yield replaces the Layer's previous snapshot                                    |
 | `sourceCounts?` | `load/`                                        | Per-source counts, an async iterable, on the same terms as `search?`                                                  |
 | `slabs?`        | `layer.ts`                                     | Static `readonly SlabRow[]` — metre-frame hosts this Layer draws on; no runtime needed (data, not a closure)          |
 | `ui?`           | `ui/`                                          | SettingsPanel/DebugPanel sections, a `labelsAndGuides` row, or a `detailCard` InfoCard arm — hand-written             |
@@ -87,6 +87,7 @@ and expect both to be ruled on when the Layer structure is cleaned up:
 ## Status
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
-`flow`, `zoneOfAvoidance`, `localBubble`, and `constellations` are formed.
+`flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, and `blackHoles`
+are formed.
 The other three folders (`body`, `milkyWay`, `structure`) are settings-only
 stubs from prep step (c) and are filled in one Layer at a time.

@@ -18,6 +18,7 @@ import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarC
 import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
+import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { STAR_CAPTION_KIND } from './starCaptionKinds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -47,7 +48,14 @@ function baseCaptionsFor(bodyStates: ReadonlyMap<string, BodyState>): readonly F
     row.stars.forEach((star, seedIndex) => {
       const pickId = packSelection(row.source, seedIndex + PICK_SENTINEL_OFFSET);
       built.push(
-        bodyCaption(star, bodyStates.get(star.id)!.positionMpc, star.color, row.kind, pickId),
+        bodyCaption(
+          star,
+          bodyFootprintRadiusM(star),
+          bodyStates.get(star.id)!.positionMpc,
+          star.color,
+          row.kind,
+          pickId,
+        ),
       );
     });
   }

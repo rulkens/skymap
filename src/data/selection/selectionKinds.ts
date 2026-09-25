@@ -11,4 +11,5 @@ export const SELECTION_KINDS = [
   'zoneOfAvoidance',
   'body',
   'starCatalog',
+  'blackHole',
 ] as const;

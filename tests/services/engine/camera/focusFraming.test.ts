@@ -18,7 +18,9 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/sources';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
@@ -160,20 +162,21 @@ describe('focusFraming', () => {
     expect(result.radius).toBeCloseTo(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, 20);
   });
 
-  it('body arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
+  const sgrAStarRow = () =>
+    blackHoleSelectionRow().extractRow({ type: 'blackHole', id: 'sgr-a-star' }, 0)!;
+
+  it('blackHole arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
     // Sgr A*'s arrival distance is an r_s count the user framed live, not a
     // FOV-dependent viewport fraction — this pins that the override replaces
-    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it. The
-    // multiple rides the SEED, so the row no longer carries it.
-    const radiusMpc = bodyFootprintRadiusM(SGR_A_STAR) * SCALE_UNITS.M_TO_MPC;
-    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
-    const result = focusFraming(row, FOVY);
-    expect(result.distance).toBe(radiusMpc * SGR_A_STAR.focusDistanceRadii!);
+    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it.
+    const radiusMpc = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC;
+    const result = focusFraming(sgrAStarRow(), FOVY);
+    expect(result.distance / (radiusMpc * 30.4)).toBeCloseTo(1, 12);
     expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, FOVY));
   });
 
-  it('body arm — focusDistanceRadii override is independent of FOV', () => {
-    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
+  it('blackHole arm — focusDistanceRadii override is independent of FOV', () => {
+    const row = sgrAStarRow();
     const atFovA = focusFraming(row, 0.5).distance;
     const atFovB = focusFraming(row, 1.4).distance;
     expect(atFovA).toBe(atFovB);

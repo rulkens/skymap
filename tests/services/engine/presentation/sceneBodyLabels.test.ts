@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-} from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
@@ -19,23 +15,11 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per core scene body (Earth + planets + Sgr A* + mesh bodies)', () => {
+  it('emits one label per core scene body (Earth + planets + mesh bodies)', () => {
     // The seeded stars and the Sun caption from the star Layer's own producer
     // (`produceStarCaptions`) now, not here — core keeps only the bodies whose
     // identity core owns.
-    expect(labels).toHaveLength(1 + SCENE_PLANETS.length + 1 + SCENE_MESH_BODIES.length);
-  });
-
-  it("gives the Galactic Centre its own caption kind, not the star map's", () => {
-    // It draws nothing, so this caption is the whole object on screen — and
-    // riding `'star'` would route it through the famous-star catalog's gates and
-    // a 2.3 kpc band it sits 8 kpc outside. The text is the PLACE name, which is
-    // the whole point of the caption for a reader who has not met "Sgr A*";
-    // read off the registry row so a rename carries rather than fails here.
-    const sgrA = labels.find((label) => label.id === 'sceneBody-sgr-a-star')!;
-    expect(sgrA.kind).toBe('sgrAStar');
-    expect(sgrA.text).toBe(SGR_A_STAR_ENTRY.label);
-    expect(sgrA.text).not.toContain('Sgr');
+    expect(labels).toHaveLength(1 + SCENE_PLANETS.length + SCENE_MESH_BODIES.length);
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {
@@ -48,8 +32,7 @@ describe('sceneBodyLabels', () => {
   it('a body caption position tracks the snapshot when simDays changes', () => {
     // Earth + planets read their anchor from the passed snapshot, so a DIFFERENT
     // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
-    // to the new world position — the label FOLLOWS the body. Sgr A* is a fixed
-    // anchor, so its caption anchor is identical across instants.
+    // to the new world position — the label FOLLOWS the body.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
     const laterLabels = sceneBodyLabels(laterStates);
 
@@ -58,12 +41,6 @@ describe('sceneBodyLabels', () => {
     // RENDER_ORIGIN is the Sun, so worldPos == the snapshot position exactly.
     expect(earthLater.worldPos).toEqual([...laterStates.get('earth')!.positionMpc]);
     expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
-
-    const sgrANow = labels.find((label) => label.id === sceneBodyLabelId(SGR_A_STAR_ENTRY.id))!;
-    const sgrALater = laterLabels.find(
-      (label) => label.id === sceneBodyLabelId(SGR_A_STAR_ENTRY.id),
-    )!;
-    expect(sgrALater.worldPos).toEqual(sgrANow.worldPos);
   });
 
   it('tints each label from its body record (albedo / Earth blue)', () => {

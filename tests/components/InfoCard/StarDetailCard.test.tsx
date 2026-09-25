@@ -10,7 +10,7 @@ import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import StarDetailCard from '../../../src/components/InfoCard/StarDetailCard/StarDetailCard';
 import { buildFocusable } from '../../../src/services/engine/helpers/buildFocusable';
-import { SGR_A_STAR_ENTRY } from '../../../src/data/sources/sgr-a-star';
+import { SGR_A_STAR_ENTRY } from '../../../src/layers/blackHoles/sources/sgrAStar';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/sources';
 import { starRowDriver } from '../../fixtures/starRowDriver';

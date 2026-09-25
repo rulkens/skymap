@@ -4,6 +4,7 @@ import type { MilkyWayInfo } from './MilkyWayInfo';
 import type { ZoneOfAvoidanceInfo } from './ZoneOfAvoidanceInfo';
 import type { BodyInfo } from './BodyInfo';
 import type { StarInfo } from './StarInfo';
+import type { BlackHoleInfo } from './BlackHoleInfo';
 
 /**
  * FocusableTarget — TAGGED discriminated union of the things the camera can
@@ -14,7 +15,7 @@ import type { StarInfo } from './StarInfo';
  * effect with no `x`/`y`/`z`, so it carries no Focus target), a seeded scene
  * body (`type: 'body'` — the BodyInfo arm: Earth, a planet, a mesh body), or a
  * star (`type: 'starCatalog'` — the StarInfo arm, one for every catalog, named
- * or anonymous).
+ * or anonymous), or a black hole (`type: 'blackHole'`).
  *
  * The union is tagged on `type: FocusableTargetType`, so dispatch is a `type`
  * narrow or a table lookup on the tag (`DETAIL_CARD[t.type]`,
@@ -30,4 +31,5 @@ export type FocusableTarget =
   | MilkyWayInfo
   | ZoneOfAvoidanceInfo
   | BodyInfo
-  | StarInfo;
+  | StarInfo
+  | BlackHoleInfo;

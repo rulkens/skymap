@@ -17,7 +17,7 @@
  * items record, which would pretend the overlay is a catalog.
  *
  * The `as StructureId` / `as GalaxyCatalogId` / `as StarCatalogId` / `as
- * BodyId` casts are the table's one
+ * BodyId` / `as BlackHoleId` casts are the table's one
  * unavoidable seam: `LabelHome.read` is uniform over `LabelCategory` (that is
  * what makes the table a `Record`), while each row indexes a record keyed by
  * its own narrower id union. The registry lookup that selects the row is what
@@ -27,6 +27,7 @@
 import type { LabelHome } from '../../@types/settings/LabelHome';
 import type { LabelBearingSourceType } from '../../@types/data/LabelBearingSourceType';
 import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BlackHoleId } from '../../@types/data/blackHole/BlackHoleId';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
@@ -35,6 +36,7 @@ import { setMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/sl
 import { setGalaxyCatalogLabelEnabled } from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/state/starCatalogs/slice';
 import { setBodyLabelEnabled } from '../../layers/body/state/bodies/slice';
+import { setBlackHoleLabelEnabled } from '../../layers/blackHoles/state/blackHoles/slice';
 
 export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
   structure: {
@@ -52,6 +54,10 @@ export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, 
   body: {
     read: (homes, id) => homes.bodies[id as BodyId].labelEnabled,
     write: (id, enabled) => setBodyLabelEnabled({ id: id as BodyId, enabled }),
+  },
+  blackHole: {
+    read: (homes, id) => homes.blackHoles[id as BlackHoleId].labelEnabled,
+    write: (id, enabled) => setBlackHoleLabelEnabled({ id: id as BlackHoleId, enabled }),
   },
   // The singleton overlay: one scalar, no per-record row to index.
   milkyWay: {

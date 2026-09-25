@@ -113,6 +113,7 @@ describe('expandFrameOrder', () => {
       'star-upsample',
       'constellations',
       'body-glints',
+      'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
     // authors no slot, and the merge keeps the first line's.

@@ -8,13 +8,13 @@ import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { CORE_SLAB_ROWS } from '../../../../src/data/bodies/coreSlabRows';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
@@ -245,41 +245,15 @@ describe('visibleSlabBodies', () => {
     });
   });
 
-  it('admits an AnchorPointBody candidate on the same terms as a planet', () => {
-    const visibleAnchor: AnchorPointBody = {
-      id: 'visible-anchor',
-      label: 'Visible anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const hiddenAnchor: AnchorPointBody = {
-      id: 'hidden-anchor',
-      label: 'Hidden anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const bodyStates = new Map<string, BodyState>([
-      ['visible-anchor', makeState()],
-      ['hidden-anchor', makeState(offAxisPositionMpc(180, 1000))],
-    ]);
-
-    const visible = visibleSlabBodies({
-      rows: [visibleAnchor, hiddenAnchor].map(bodySlabRowOf),
-      bodyStates,
-      camPosMpc: [0, 0, 0],
-      camForwardMpc: FORWARD_X,
-      frustum: SQUARE_90,
-      pxPerRad: PX_PER_RAD_90,
-    });
-
-    expect(visible.map((row) => row.anchorId)).toEqual(['visible-anchor']);
-  });
-
   describe("Sgr A*'s lens envelope, not a bypass", () => {
     // Both culls read the lens row's `drawRadiusM` like any other row's
     // shell, so candidacy tracks where the LENSED SPHERE actually reaches
     // rather than bypassing for any position inside the band, which would
     // keep a hole directly behind the camera.
-    const lensRow = CORE_SLAB_ROWS.find((row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id);
-    if (lensRow === undefined) throw new Error('CORE_SLAB_ROWS carries no galactic-centre row');
+    const lensRow = BLACK_HOLES.map(blackHoleSlabRow).find(
+      (row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id,
+    );
+    if (lensRow === undefined) throw new Error('BLACK_HOLES carries no galactic-centre row');
     const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 

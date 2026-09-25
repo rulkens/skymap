@@ -47,9 +47,11 @@ hand-maintained list that a new Layer must remember to join is the bug.
 - The body Layer owns four clusters: `bodies earth orbitTrails
   sgrAStarLensingTuning`. Two are captured, two are not — so "capture every
   Layer cluster" is NOT today's behaviour, and adopting it is a real change.
-- A `blackHoles` visibility key arrives with the `blackHoles` Layer (PR 2 of
-  `2026-09-22-black-holes-layer-design.md`) — join it to the captured/not-
-  captured lists above alongside the other body-Layer clusters it splits from.
+- Since the `blackHoles` Layer (2026-09-24) the counts above are stale: that
+  Layer's `blackHoles` cluster (the caption toggles, which a `bodyLabel` cue
+  writes) is captured, and `sgrAStarLensingTuning` left the body Layer as the
+  blackHoles Layer's `blackHoleLensingTuning`, still not captured. Recount
+  before answering the checkpoint.
 - `captureSettings` (`src/state/scene/captureSettings.ts`) destructures the
   clusters by name and `structuredClone`s them. `restoreSceneSaga` puts them
   back in one `mergeSnapshot`.
@@ -60,7 +62,7 @@ hand-maintained list that a new Layer must remember to join is the bug.
 ## The checkpoint — answer before writing code
 
 1. **Price the newly-swept clusters.** A derivation over Layer slices pulls in
-   `earth` and `sgrAStarLensingTuning`. Capturing a cluster the takeover never
+   `earth` and `blackHoleLensingTuning`. Capturing a cluster the takeover never
    writes is a no-op on restore — UNLESS something outside the takeover writes
    it concurrently, in which case restore stomps that write. That concurrent-
    writer hazard is the stated reason for today's exclusions
