@@ -169,7 +169,9 @@ raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` 
 8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
    row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
    `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+   `seat: 'resting'` for a lander or rover set down on the terrain — `'anchored'`
+   is for a georeferenced scan that carries its own height and cuts a terrain
+   hole; host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
 9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
    chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
    boresight (+X) somewhere means putting the pole PERPENDICULAR to it and

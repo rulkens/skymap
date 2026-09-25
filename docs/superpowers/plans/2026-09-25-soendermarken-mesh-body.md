@@ -172,7 +172,7 @@ Contract:
 ### Task 12: docs
 
 **Files:** `docs/DATA.md` or `docs/DEPLOY.md` (the `_hole.webp` companion + georeferenced source), `docs/RENDERER.md` (terrain-hole group, one line in the surface-tile section), `.claude/skills/add-mission/SKILL.md` (the `seat` field on a site row).
-- [ ] Commit `docs: georeferenced mesh bodies and the terrain hole`.
+- [x] Commit `docs: georeferenced mesh bodies and the terrain hole`.
 
 ## Definition of Done
 
