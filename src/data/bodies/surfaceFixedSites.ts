@@ -27,6 +27,7 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     latDeg: -4.8246,
     lonDeg: 137.38848,
     altitudeM: groundOffsetM('curiosity'),
+    seat: 'resting',
   },
   // Sol 1980 end-of-drive (RMC 91_970, ~2026-09-14), Jezero crater:
   // mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json.
@@ -36,6 +37,7 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     latDeg: 18.43687,
     lonDeg: 77.23205,
     altitudeM: groundOffsetM('perseverance'),
+    seat: 'resting',
   },
   // Final resting place at Troy, on Home Plate's west edge, Gusev crater
   // (Arvidson et al. 2010, doi:10.1029/2010JE003633). A proxy — no lat/lon
@@ -47,6 +49,7 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     latDeg: -14.60036,
     lonDeg: 175.52576,
     altitudeM: groundOffsetM('mer'),
+    seat: 'resting',
   },
   // Final resting place, Perseverance Valley on Endeavour's rim: the centre
   // of HiRISE ESP_087985_1780 "Opportunity Rover Position" (uahirise.org). A
@@ -57,5 +60,6 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     latDeg: -2.336,
     lonDeg: 354.619,
     altitudeM: groundOffsetM('mer'),
+    seat: 'resting',
   },
 ];

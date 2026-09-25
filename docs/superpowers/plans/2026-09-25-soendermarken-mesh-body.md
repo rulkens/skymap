@@ -34,11 +34,11 @@
 export type MeshSeatKind = 'resting' | 'anchored';
 // SurfaceFixedSite: + readonly seat: MeshSeatKind  (doc both arms in the type file, see spec §Data)
 ```
-- [ ] Add the type (doc comment: resting = seated on the highest ground in the footprint, AO/contact prebake required; anchored = georeferenced source placed by the build, height from its anchor, no prebake, not pickable).
-- [ ] All 4 rover rows `seat: 'resting'`. Fix `latDeg` doc: "Latitude, degrees — planetocentric on Mars; geodetic (WGS84) on Earth, which the Earth tiles map straight onto the sphere."
-- [ ] `meshGroundUpSource`: "seated" = the body's site exists AND `seat === 'resting'`. An anchored site's key returns `undefined` (not seated).
-- [ ] Test: `meshGroundUpSource` returns undefined for a key whose only body sits on an `anchored` site (use `vi.mock` of the site table, as the existing test does or equivalent).
-- [ ] Commit `refactor(bodies): MeshSeatKind on surface sites`.
+- [x] Add the type (doc comment: resting = seated on the highest ground in the footprint, AO/contact prebake required; anchored = georeferenced source placed by the build, height from its anchor, no prebake, not pickable).
+- [x] All 4 rover rows `seat: 'resting'`. Fix `latDeg` doc: "Latitude, degrees — planetocentric on Mars; geodetic (WGS84) on Earth, which the Earth tiles map straight onto the sphere."
+- [x] `meshGroundUpSource`: "seated" = the body's site exists AND `seat === 'resting'`. An anchored site's key returns `undefined` (not seated).
+- [x] Test: `meshGroundUpSource` returns undefined for a key whose only body sits on an `anchored` site (use `vi.mock` of the site table, as the existing test does or equivalent).
+- [x] Commit `refactor(bodies): MeshSeatKind on surface sites`.
 
 ### Task 2: computed smooth normals (prep)
 
