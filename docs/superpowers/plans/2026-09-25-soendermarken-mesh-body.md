@@ -120,9 +120,9 @@ export function rasterizeHoleMask(ringEnuM: readonly [number, number][], metresP
 
 **Files:** modify `tools/textures/buildSiteGroundHeights.ts` (+ its test if one exists; else add `tests/tools/textures/buildSiteGroundHeights.test.ts` only for the anchored arm).
 
-- [ ] One dispatch on `site.seat`: `resting` → unchanged; `anchored` → height = the key's `georeferenced.anchor.heightM`; up = `normalize([−e/R, −n/R, 1])` with `[e, n] = enuOffsetM(anchor, site, R)`. No tile manifest read for anchored rows.
-- [ ] Test: the anchored arm returns 18.53 and an up tilted by e/R ≈ −5.0e-5 in east for a site 320 m east of its anchor (factor the per-site computation out so it is testable without manifests).
-- [ ] Commit `feat(bodies): anchored sites take their source anchor's height`.
+- [x] One dispatch on `site.seat`: `resting` → unchanged; `anchored` → height = the key's `georeferenced.anchor.heightM`; up = `normalize([−e/R, −n/R, 1])` with `[e, n] = enuOffsetM(anchor, site, R)`. No tile manifest read for anchored rows.
+- [x] Test: the anchored arm returns 18.53 and an up tilted by e/R ≈ −5.0e-5 in east for a site 320 m east of its anchor (factor the per-site computation out so it is testable without manifests).
+- [x] Commit `feat(bodies): anchored sites take their source anchor's height`.
 
 ### Task 8: rows + bake
 

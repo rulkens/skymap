@@ -1,20 +1,61 @@
 /**
  * buildSiteGroundHeights — bakes each `SURFACE_FIXED_SITES` row's ground up
- * vector and seat height (metres above its host's datum) from the deepest
- * baked height tile under it, into `siteGroundHeights.generated.ts`.
+ * vector and seat height (metres above its host's datum) into
+ * `siteGroundHeights.generated.ts`. A `resting` site reads it from the
+ * deepest baked height tile under it; an `anchored` site already carries its
+ * own real-world height and needs no terrain sample — see `anchoredSeat`.
  */
 
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { GeodeticAnchor } from '../../src/@types/geo/GeodeticAnchor';
+import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
+import { SCENE_MESH_BODIES } from '../../src/data/bodies/sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
+import { normalize3 } from '../../src/utils/math/normalize3';
+import { findByIdOrThrow } from '../../src/utils/object/findByIdOrThrow';
+import { enuOffsetM } from '../utils/geo/enuOffsetM';
+import { MESH_SOURCES } from '../utils/io/meshSources';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
 import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
 import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
 
 const RAD_TO_DEG = 180 / Math.PI;
+
+/** The `GeodeticAnchor` an `anchored` site's own mesh source carries, joined
+ *  through `SCENE_MESH_BODIES` the same direction `meshAnchorSite` joins the
+ *  other way (key -> site). */
+function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
+  const body = SCENE_MESH_BODIES.find((b) => b.id === site.id);
+  const anchor = body && MESH_SOURCES[body.meshKey]?.georeferenced?.anchor;
+  if (anchor === undefined) {
+    throw new Error(
+      `buildSiteGroundHeights: anchored site '${site.id}' has no georeferenced mesh source`,
+    );
+  }
+  return anchor;
+}
+
+/**
+ * anchoredSeat — an anchored site's height and up with NO terrain sample:
+ * height is the source anchor's own DVR90 height; up is the anchor's own
+ * straight-up as seen from the site, which tilts a hair off true vertical
+ * because the site sits `enuOffsetM(anchor, site)` away from where that
+ * "straight up" was measured. Exported standalone (no manifest argument) so
+ * it is testable with no baked tiles on disk.
+ */
+export function anchoredSeat(
+  site: SurfaceFixedSite,
+  anchor: GeodeticAnchor,
+  radiusM: number,
+): { readonly heightM: number; readonly up: Vec3 } {
+  const [e, n] = enuOffsetM(anchor, site, radiusM);
+  return { heightM: anchor.heightM, up: normalize3([-e / radiusM, -n / radiusM, 1]) };
+}
 
 const GENERATED_BANNER =
   '// src/data/bodies/siteGroundHeights.generated.ts\n' +
@@ -48,9 +89,16 @@ export async function buildSiteGroundHeights(): Promise<void> {
   const heights = new Map<string, number>();
   const ups = new Map<string, Vec3>();
   for (const site of SURFACE_FIXED_SITES) {
-    const manifest = readSurfaceTileManifest(site.hostId);
-    const up = await siteGroundUpEnu(site, manifest);
-    const m = await siteSeatHeightM(site, manifest, up);
+    let m: number;
+    let up: Vec3;
+    if (site.seat === 'anchored') {
+      const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildSiteGroundHeights');
+      ({ heightM: m, up } = anchoredSeat(site, anchorForSite(site), host.surface.datumRadiusM));
+    } else {
+      const manifest = readSurfaceTileManifest(site.hostId);
+      up = await siteGroundUpEnu(site, manifest);
+      m = await siteSeatHeightM(site, manifest, up);
+    }
     heights.set(site.id, m);
     ups.set(site.id, up);
     const tiltDeg = Math.acos(Math.min(1, up[2])) * RAD_TO_DEG;
