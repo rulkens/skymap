@@ -13,7 +13,8 @@
  * picture, not an error: `enabled` returns false and the base globe alone
  * covers the cap. The engaged body's `SURFACE_TILE_REGISTRY` row is the
  * predicate and picks the shading; the effect maps come from `earthRenderer`,
- * the only body whose maps exist today.
+ * the only body whose maps exist today. The host's holed mesh cuts its hole
+ * only while resident: unloaded, the terrain is whole and the mesh undrawn.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -29,6 +30,8 @@ import { BODY_AMBIENT_LIGHT } from '../../../../data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
+import { HOLED_MESH_BODY_BY_HOST } from '../../../../data/bodies/holedMeshBodyByHost';
+import { MESH_ASSETS } from '../../../../data/bodies/meshAssets.generated';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
@@ -110,6 +113,9 @@ export const surfaceTilesPass: ContentPass = {
             }),
           };
 
+    const holed = HOLED_MESH_BODY_BY_HOST.get(view.slab.frame.hostId);
+    const holeMask = holed && state.gpu.meshBodyRenderer?.holeMaskOf(holed.id);
+
     tileRenderer.draw(pass, {
       tiles: surfaceTiles.getLastCut(),
       // The slab vp is already eye-relative by construction (body-m rows build
@@ -130,6 +136,8 @@ export const surfaceTilesPass: ContentPass = {
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
       surfaceAtlasView: surfaceTiles.getAtlasView()!,
       heightAtlasView: surfaceTiles.getHeightAtlasView()!,
+      // The map only holds bodies whose row has a `hole`, hence the `!`.
+      hole: holeMask ? { mask: holeMask, rect: MESH_ASSETS[holed.meshKey]!.hole! } : null,
     });
   },
 };

@@ -8,6 +8,7 @@ import package::bodies::surfaceTile::io::SurfaceTileUniforms;
 import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
 import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
 import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
+import package::bodies::surfaceTile::hole::inTerrainHole;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 
@@ -15,6 +16,10 @@ import package::lib::pbr::MIN_ROUGHNESS;
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
+// The host's terrain-hole mask (group 1, shared by every variant; a 1x1 zero
+// mask on a host with no holed mesh). Binding 2, its rect, is the vertex's.
+@group(1) @binding(0) var holeMask: texture_2d<f32>;
+@group(1) @binding(1) var holeSampler: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
@@ -38,5 +43,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let direct = pbrDirect(n, v, l, baseAlbedo, roughness, vec3<f32>(u.f0));
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
+  // Last: an implicit-derivative 'textureSample' placed after a discard
+  // branch would no longer sit in uniform control flow.
+  if (inTerrainHole(holeMask, holeSampler, in.holeUv)) {
+    discard;
+  }
   return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, u.debugLodOverlay), 1.0);
 }

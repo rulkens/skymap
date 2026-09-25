@@ -8,7 +8,7 @@
  * the base globe's nominal radius, so ties must resolve in ITS favour. It
  * owns neither the tile atlas nor any effect map — both arrive on every
  * `draw` call. One pipeline per effects set (`SURFACE_TILE_SHADER_VARIANTS`),
- * built on first use.
+ * built on first use; group 1, the terrain hole, is the same on every variant.
  *
  * @module
  */
@@ -26,8 +26,10 @@ import vsCode from '../../shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
+  TERRAIN_HOLE_UNIFORM_BYTES,
   writePatchInstance,
   writeSurfaceTileUniforms,
+  writeTerrainHoleUniforms,
 } from './surfaceTileLayout';
 import {
   SURFACE_TILE_CROSSFADE_MS,
@@ -120,6 +122,53 @@ export function createSurfaceTileRenderer(
     9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
   };
 
+  // ── Terrain hole (group 1, every variant) ────────────────────────────
+  // A separate group rather than more group-0 bindings so no variant's
+  // binding list (or key) changes; a host with no holed mesh binds the 1×1
+  // mask below, which WebGPU zero-initialises, so the fragment never cuts.
+  const holeBindGroupLayout = device.createBindGroupLayout({
+    label: 'surface-tile-hole-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.VERTEX,
+        buffer: { type: 'uniform', minBindingSize: TERRAIN_HOLE_UNIFORM_BYTES },
+      },
+    ],
+  });
+  const noHoleMask = device.createTexture({
+    label: 'surface-tile-no-hole-mask',
+    size: [1, 1, 1],
+    format: 'r8unorm',
+    usage: GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const holeUniformBuffer = device.createBuffer({
+    label: 'surface-tile-hole-uniform-buffer',
+    size: TERRAIN_HOLE_UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const holeUniformScratch = new ArrayBuffer(TERRAIN_HOLE_UNIFORM_BYTES);
+  // Rebuilt only when the bound mask changes (a mesh load or eviction).
+  let holeBindGroup: { mask: GPUTexture; group: GPUBindGroup } | null = null;
+
+  function holeBindGroupFor(mask: GPUTexture): GPUBindGroup {
+    if (holeBindGroup?.mask === mask) return holeBindGroup.group;
+    const group = device.createBindGroup({
+      label: 'surface-tile-hole-bg',
+      layout: holeBindGroupLayout,
+      entries: [
+        { binding: 0, resource: mask.createView() },
+        // Linear + clamp: the mask's edge texels must not wrap across the rect.
+        { binding: 1, resource: atlasSampler },
+        { binding: 2, resource: { buffer: holeUniformBuffer } },
+      ],
+    });
+    holeBindGroup = { mask, group };
+    return group;
+  }
+
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'surfaceTile.vertex');
 
   function buildVariant(key: string) {
@@ -143,7 +192,7 @@ export function createSurfaceTileRenderer(
       label: `surface-tile-pipeline[${key}]`,
       layout: device.createPipelineLayout({
         label: `surface-tile-pipeline-layout[${key}]`,
-        bindGroupLayouts: [bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayout, holeBindGroupLayout],
       }),
       // Positions are derived from the instance record — no vertex buffers.
       vertex: { module: vsModule, entryPoint: 'vs' },
@@ -220,6 +269,7 @@ export function createSurfaceTileRenderer(
       noSkirts,
       surfaceAtlasView,
       heightAtlasView,
+      hole,
     } = args;
     const tileCount = tiles.length;
     if (tileCount === 0) return;
@@ -326,6 +376,8 @@ export function createSurfaceTileRenderer(
       noSkirts,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
+    writeTerrainHoleUniforms(new DataView(holeUniformScratch), hole?.rect ?? null);
+    device.queue.writeBuffer(holeUniformBuffer, 0, holeUniformScratch);
 
     // Bind group rebuilt every draw: the storage buffer may have grown,
     // and the texture views are supplied fresh per call (this renderer owns
@@ -358,6 +410,7 @@ export function createSurfaceTileRenderer(
 
     pass.setPipeline(variant.pipeline);
     pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(1, holeBindGroupFor(hole?.mask ?? noHoleMask));
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, tileCount);
   }
@@ -366,6 +419,8 @@ export function createSurfaceTileRenderer(
     patchBuffer?.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
+    holeUniformBuffer.destroy();
+    noHoleMask.destroy();
   }
 
   const renderer: SurfaceTileRenderer = {

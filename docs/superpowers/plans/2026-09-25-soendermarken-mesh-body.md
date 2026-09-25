@@ -158,9 +158,9 @@ Contract:
 - Fragment (both variants): `if (all(holeUv >= 0) && all(holeUv <= 1) && textureSample(mask, s, holeUv).r > 0.5) { discard; }` — sample in uniform control flow (sample first, branch after).
 - Host with no resident holed mesh: 1×1 zero mask + zero uniform, created once.
 - `surfaceTilesPass`: the host's holed mesh = the body on this host whose site is `anchored` and whose `MeshAsset.holeMask` is loaded; > 1 holed mesh on a host → throw at module load (derive from `SURFACE_FIXED_SITES` + `MESH_ASSETS`).
-- [ ] Test: the uniform packer writes `[lonMin, latMin, 1/lonSpan, 1/latSpan]` in radians for a row's `hole`, and zeros for none.
-- [ ] Load the `wesl-shaders` skill guidance: read `.claude/skills/wesl-shaders/SKILL.md` before editing shaders.
-- [ ] Commit `feat(terrain): cut a hole under a georeferenced mesh`.
+- [x] Test: the uniform packer writes `[lonMin, latMin, 1/lonSpan, 1/latSpan]` in radians for a row's `hole`, and zeros for none.
+- [x] Load the `wesl-shaders` skill guidance: read `.claude/skills/wesl-shaders/SKILL.md` before editing shaders.
+- [x] Commit `feat(terrain): cut a hole under a georeferenced mesh`.
 
 ### Task 11: anchored bodies skip picking
 

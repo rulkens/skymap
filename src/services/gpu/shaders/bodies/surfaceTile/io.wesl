@@ -98,6 +98,20 @@ struct VSOut {
   // constants, so flat; a u32 cannot interpolate at all.
   @location(9) @interpolate(flat) heightLattice: vec3<u32>,
   @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
+  // Where this point falls in the host's terrain-hole mask: [0, 1]^2 inside
+  // the rect, v = 0 on its NORTH edge (the mask's row 0). See vertex.wesl.
+  @location(11) holeUv: vec2<f32>,
+};
+
+// TerrainHoleUniforms -- the holed mesh's lat/lon rect, group 1 binding 2.
+// 'invSpanRad' is (1/lonSpan, 1/latSpan); all zeros on a host with no hole,
+// which pins 'holeUv' to (0, 1) over a 1x1 zero mask. CPU packer:
+// 'writeTerrainHoleUniforms' in 'surfaceTileLayout.ts'.
+//   offset 0..7:  lonLatMinRad  vec2<f32>
+//   offset 8..15: invSpanRad    vec2<f32>
+struct TerrainHoleUniforms {
+  lonLatMinRad: vec2<f32>,
+  invSpanRad: vec2<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

@@ -3,6 +3,7 @@ import type { Vec3 } from '../../math/Vec3';
 import type { SurfaceEffect } from '../../data/SurfaceEffect';
 import type { SurfaceTileShading } from '../../data/SurfaceTileShading';
 import type { SurfaceEffectInputs } from '../SurfaceEffectInputs';
+import type { SurfaceTileHole } from './SurfaceTileHole';
 
 /**
  * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
@@ -52,4 +53,7 @@ export type SurfaceTileDrawArgs = {
    *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
    *  reads it, so a cut must never be drawn without it. Not owned here. */
   readonly heightAtlasView: GPUTextureView;
+  /** The host's holed mesh while it is resident; `null` binds the renderer's
+   *  own 1×1 zero mask, so every host draws through the same layout. */
+  readonly hole: SurfaceTileHole | null;
 };

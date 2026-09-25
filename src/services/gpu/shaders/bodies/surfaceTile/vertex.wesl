@@ -6,6 +6,7 @@
 import package::bodies::surfaceTile::io::VSOut;
 import package::bodies::surfaceTile::io::PatchInstance;
 import package::bodies::surfaceTile::io::SurfaceTileUniforms;
+import package::bodies::surfaceTile::io::TerrainHoleUniforms;
 import package::bodies::surfaceTile::lattice::latticeHeightM;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
@@ -15,6 +16,8 @@ import package::bodies::surfaceTile::lattice::latticeHeightM;
 // hardware bilinear in a slot atlas bleeds the neighbouring slot in along
 // every patch edge (spec section 5.5 -- three independent reasons).
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
+// The mask and its sampler (bindings 0, 1) are the fragment stage's.
+@group(1) @binding(2) var<uniform> hole: TerrainHoleUniforms;
 
 // Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (surfaceTileParams.ts),
 // parity-tested -- it is the eye-check's one tuning knob (F2-R3).
@@ -167,6 +170,14 @@ fn vs(
   out.fadeWeight = inst.fadeWeight;
   out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
+  // From the same f32 lattice words the position is built from, with the rect
+  // origin subtracted BEFORE the offset is added: the difference of two
+  // nearby angles is exact in f32, where (lat - latMin) of a finished lat
+  // would carry the full angle's rounding (~0.4 m on Earth) into the mask.
+  out.holeUv = vec2<f32>(
+    ((inst.lon0Rad - hole.lonLatMinRad.x) + s * inst.dLonRad) * hole.invSpanRad.x,
+    1.0 - ((inst.lat0Rad - hole.lonLatMinRad.y) + t * inst.dLatRad) * hole.invSpanRad.y,
+  );
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the
   // 'camPosLocal - Ng' this replaced (two near-unit f32 vectors).

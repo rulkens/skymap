@@ -2,9 +2,9 @@
  * surfaceTileLayout — the CPU-side byte layout for every GPU-visible
  * record `surfaceTileRenderer` writes: the per-frame
  * `array<PatchInstance>` storage buffer (one 64-byte record per cut patch)
- * and the per-draw `SurfaceTileUniforms` uniform block. The authoritative
- * layout is each WESL struct in `shaders/surfaceTile/io.wesl`; this
- * module is the CPU's single matching statement of both, in the shape
+ * and the per-draw `SurfaceTileUniforms` and `TerrainHoleUniforms` blocks.
+ * The authoritative layout is each WESL struct in `shaders/surfaceTile/io.wesl`;
+ * this module is the CPU's single matching statement of them, in the shape
  * `starCatalogLayout.ts` set for the star pipeline — see
  * `surfaceTileLayout.test.ts` for the parity guard between the two.
  *
@@ -13,6 +13,8 @@
 
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { MeshHoleRect } from '../../../../@types/data/mesh/MeshHoleRect';
+import { degToRad } from '../../../../utils/math/degToRad';
 
 /**
  * Bytes of one `PatchInstance` element: `originRelEyeM` vec3 (0..11) +
@@ -168,4 +170,21 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(164, noDisplacement ? 1.0 : 0.0, true);
   view.setFloat32(168, noSkirts ? 1.0 : 0.0, true);
   // Bytes 172..175 stay the scratch ArrayBuffer's zero fill (true padding).
+}
+
+/** Bytes of the `TerrainHoleUniforms` block (`io.wesl`): `lonLatMinRad`
+ *  vec2 (0..7) + `invSpanRad` vec2 (8..15). */
+export const TERRAIN_HOLE_UNIFORM_BYTES = 16;
+
+/**
+ * Pack `TerrainHoleUniforms` for `hole`, or all zeros for none: a zero
+ * `invSpanRad` pins every vertex's `holeUv` to (0, 1), which samples the
+ * 1×1 zero mask bound alongside it and cuts nothing. Degrees become radians
+ * here in f64, so the one f32 rounding is the write itself.
+ */
+export function writeTerrainHoleUniforms(view: DataView, hole: MeshHoleRect | null): void {
+  view.setFloat32(0, hole === null ? 0 : degToRad(hole.lonMinDeg), true);
+  view.setFloat32(4, hole === null ? 0 : degToRad(hole.latMinDeg), true);
+  view.setFloat32(8, hole === null ? 0 : 1 / degToRad(hole.lonSpanDeg), true);
+  view.setFloat32(12, hole === null ? 0 : 1 / degToRad(hole.latSpanDeg), true);
 }
