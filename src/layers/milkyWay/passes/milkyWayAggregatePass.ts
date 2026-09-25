@@ -11,8 +11,8 @@
  * A summed additive glow field is low-frequency, so rendering at `1/scale`
  * and bilinearly upsampling buys back the square of the divisor in fragment
  * cost — the same split the survey star pass makes (`starAggregatesPass` →
- * `star-aggregates` → `starAggregateUpsamplePass`); full rationale on the
- * `mw-aggregate` spec row in `renderTargets.ts`. The DUST pass stays in
+ * `star-aggregates` → `starAggregateUpsamplePass`); full rationale in
+ * `milkyWayAggregateTarget.ts`. The DUST pass stays in
  * `milkyWayPass`, full-res in HDR, since its multiplicative transmittance
  * has to land on the real cosmological accumulation.
  *

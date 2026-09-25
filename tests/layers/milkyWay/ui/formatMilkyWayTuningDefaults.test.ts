@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatMilkyWayTuningDefaults } from '../../../src/utils/format/formatMilkyWayTuningDefaults';
-import type { MilkyWayTuning } from '../../../src/@types/settings/MilkyWayTuning';
+import { formatMilkyWayTuningDefaults } from '../../../../src/layers/milkyWay/ui/formatMilkyWayTuningDefaults';
+import type { MilkyWayTuning } from '../../../../src/@types/settings/MilkyWayTuning';
 
 const defaults: MilkyWayTuning = {
   starSizeScale: 0.7,

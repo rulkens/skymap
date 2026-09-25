@@ -1,7 +1,7 @@
 /**
- * create — the four handles, in the order core's registry built them:
- * the pick impostor, the generated cloud, its two-pass renderer, and the
- * aggregate offscreen's upsample.
+ * create — the four handles, in construction order: the pick impostor, the
+ * generated cloud, its two-pass renderer, and the aggregate offscreen's
+ * upsample.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

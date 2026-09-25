@@ -8,10 +8,10 @@
  * ## The two passes render into DIFFERENT targets
  *
  * Stars go into the reduced-resolution `mw-aggregate` offscreen; dust goes
- * full-res into HDR. The rationale lives on the `mw-aggregate` spec row in
- * `renderTargets.ts` — in short, the summed star glow is a low-frequency field
- * and is the fill-bound half, while dust must multiply the real cosmological
- * accumulation and so has to land in HDR itself.
+ * full-res into HDR. The rationale lives in `milkyWayAggregateTarget.ts` — in
+ * short, the summed star glow is a low-frequency field and is the fill-bound
+ * half, while dust must multiply the real cosmological accumulation and so
+ * has to land in HDR itself.
  *
  * Both targets are `rgba16float`, so ONE `targetFormat` still describes both
  * pipelines. If the aggregate row's format ever diverges from HDR's, this
@@ -69,7 +69,7 @@ import { GEN_RECORD_BYTES } from '../../../services/engine/galaxyGenerator/v1/ge
 import { MILKY_WAY_MODEL_SCALE } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../@types/MilkyWayCloudRenderer';
-import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
+import type { MilkyWayCloudDrawArgs } from '../@types/MilkyWayCloudDrawArgs';
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../data/milkyWay/milkyWayCloudUniformBufferSize';

@@ -26,34 +26,6 @@
  * of ±65 504 — plenty for additive billboard sums peaking at a few hundred
  * in dense cluster cores.
  *
- * ### Why the mw-aggregate row renders at reduced resolution
- *
- * The Milky Way cloud stands in for ~1e11 stars with a budget in the hundreds
- * of thousands, so at any framing where the disc covers real screen area the
- * sprites are sub-pixel and the field reads as discrete particles rather than
- * as a galaxy. The only cure is more overlap per pixel — bigger, softer, fewer
- * sprites — and measurement says that wall is FILL, not vertex count: at ~5x
- * the baseline sprite area the frame rate collapses while the instance count is
- * going DOWN.
- *
- * That is the same shape the starCatalog Layer's `star-aggregates` target
- * exists for (`render/starAggregatesTarget.ts`), and the same remedy applies:
- * a smooth summed-glow field is low-frequency, so rendering it at 1/scale and
- * bilinearly upsampling is visually free while the fragment cost drops by the
- * square of the divisor. The DUST pass stays full-res in HDR — its
- * multiplicative transmittance has to land on the real cosmological
- * accumulation, and it is not the fill-bound half.
- *
- * A row's `scale` can be a function of live settings rather than a constant —
- * this is the mechanism `mw-aggregate` uses, now declared by the milkyWay
- * Layer (`layers/milkyWay/render/milkyWayAggregateTarget.ts`) rather than in
- * this table: it reads `settings.milkyWay.aggregateDivisor`, resolved afresh by
- * every `reconcile`. The divisor trades against the star shader's `starPxMin` /
- * `starPxMax` clamps, stated in TARGET pixels and already live sliders, so the
- * three move together against a moving frame. No 'last applied' record exists
- * anywhere: the allocated texture size (`sizeOf`) is the record of the size in
- * force, and `reconcile` compares against it.
- *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass

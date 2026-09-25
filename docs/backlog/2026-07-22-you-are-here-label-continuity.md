@@ -8,9 +8,9 @@ The "You are here" label marks our location in the Milky Way, but it vanishes as
 
 ## Verified current state
 
-- `src/services/engine/presentation/produceMilkyWayLabel.ts:58` — `LABEL_TEXT = 'You are here'`, produced per-frame with id `'milkyWay'`.
-- Visibility is the product of two fades (`produceMilkyWayLabel.ts:83-106`):
-  - **Far fade**: `milkyWayLabelAlpha(camDist)` — full at 0.6 Mpc, gone by 2.0 Mpc (`src/services/gpu/labelLayout/milkyWayLabelVisibility.ts:16-17`).
+- `src/layers/milkyWay/present/produceMilkyWayLabel.ts` — `LABEL_TEXT = 'You are here'`, produced per-frame with id `'milkyWay'`.
+- Visibility is the product of two fades (`produceMilkyWayLabel.ts`):
+  - **Far fade**: `milkyWayLabelAlpha(camDist)` — full at 0.6 Mpc, gone by 2.0 Mpc (`src/layers/milkyWay/present/milkyWayLabelVisibility.ts`).
   - **Near fade (the disappearance in question)**: `fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDist)` — fully gone by 2 kpc (`scaleFadeBands.ts:60`, `goneAt: 0.002`). The label is origin-anchored COSMO-slab content, so it cannot survive inside the cosmological near plane; the fade hides it before it clips.
 - The grand tour has a beat built around it: `src/data/animation/tours/grandTour/youAreHere.ts`.
 

@@ -22,7 +22,7 @@ import {
   milkyWaySliderPatch,
 } from '../../../data/milkyWay/milkyWaySliderFields';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { formatMilkyWayTuningDefaults } from '../../../utils/format/formatMilkyWayTuningDefaults';
+import { formatMilkyWayTuningDefaults } from './formatMilkyWayTuningDefaults';
 import CopyButton from '../../../components/common/CopyButton/CopyButton';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 

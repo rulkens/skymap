@@ -22,25 +22,25 @@ export const APP_COMPOSITION = {
   layers: [
     galaxyCatalogLayer,
     starCatalogLayer,
-    milkyWayLayer,
     cosmicWebDensityLayer,
     cosmicWebFilamentsLayer,
     flowLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     constellationsLayer,
+    milkyWayLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
   readonly [
     typeof galaxyCatalogLayer,
     typeof starCatalogLayer,
-    typeof milkyWayLayer,
     typeof cosmicWebDensityLayer,
     typeof cosmicWebFilamentsLayer,
     typeof flowLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof constellationsLayer,
+    typeof milkyWayLayer,
   ]
 >;

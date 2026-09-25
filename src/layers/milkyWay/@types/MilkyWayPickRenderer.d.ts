@@ -4,8 +4,8 @@
  * the r32uint pick texture, identity `(Source.MilkyWay << 26) | PICK_SENTINEL_OFFSET`.
  */
 
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type MilkyWayPickRenderer = {
   readonly label: string;

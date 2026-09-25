@@ -319,11 +319,11 @@ export function createEngine(
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
   // the director declutters by prominence otherwise. Every Layer's own COSMO
   // producer registers later, from `createLayers`, so this core row wins any
-  // tie. The constellation figure NAMES are
-  // deliberately NOT here: their anchors sit at parsec distances, inside the
-  // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw —
-  // they register on `foregroundLabelDirector` (NEAR0) from the constellations
-  // Layer, later in boot (`createLayers`).
+  // tie. The constellation figure NAMES are deliberately NOT here: their
+  // anchors sit at parsec distances, inside the COSMO slab's fixed 0.01-Mpc
+  // near plane, so a label here could never draw — they register on
+  // `foregroundLabelDirector` (NEAR0) from the constellations Layer, later in
+  // boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,

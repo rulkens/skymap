@@ -255,8 +255,8 @@ function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
 }
 
 /**
- * Stub the generated-cloud handle the milky-way pass reads off
- * `state.gpu.milkyWayCloud`. `buffers()` returns an inert snapshot — the
+ * Stub the generated-cloud handle the milky-way passes read off
+ * `MilkyWayRuntime.cloud`. `buffers()` returns an inert snapshot — the
  * renderer mock never touches its contents.
  */
 function makeMockMilkyWayCloud() {
@@ -378,7 +378,7 @@ function makeInput(
   } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
-  // The milkyWay Layer's passes close over its own runtime now, mirroring
+  // The milkyWay Layer's passes close over their own runtime, mirroring
   // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
   // fixtures free of an upsample blit they don't assert on (the layer's guard
   // is `=== null`, which `undefined` would slip past); `pickRenderer` is never

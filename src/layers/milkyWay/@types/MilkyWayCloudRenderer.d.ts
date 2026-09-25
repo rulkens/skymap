@@ -11,7 +11,7 @@
  * The two passes render into DIFFERENT TARGETS, so they cannot share a render
  * pass encoder. Stars draw into the reduced-resolution `mw-aggregate`
  * offscreen (their summed glow is a low-frequency field, and they are the
- * fill-bound half — see the `mw-aggregate` row in `renderTargets.ts`); dust
+ * fill-bound half — see `milkyWayAggregateTarget.ts`); dust
  * draws full-res into HDR, where its transmittance multiplies the real
  * cosmological accumulation. Each entry point writes its OWN uniform buffer,
  * so neither depends on the other having run first.
@@ -19,7 +19,7 @@
  * Satisfies the shared `Renderer` contract (`label` + `destroy`).
  */
 
-import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
+import type { MilkyWayCloudDrawArgs } from './MilkyWayCloudDrawArgs';
 
 export type MilkyWayCloudRenderer = {
   /** Human-readable identifier (`'milkyWayCloudRenderer'`). Part of the `Renderer` contract. */

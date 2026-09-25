@@ -175,11 +175,9 @@ function makeState(): EngineState {
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
       // aggregateDivisor is what the `mw-aggregate` row's `scale` function
-      // resolves on every reconcile, and starCount is read every frame by the
-      // cloud-regenerate branch (whenever milkyWayCloud is non-null), so the
-      // fixture carries both boot values rather than leaving either reader to
-      // resolve undefined.
-      milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
+      // resolves on every reconcile, so the fixture carries its boot value
+      // rather than leaving that reader to resolve undefined.
+      milkyWay: { enabled: false, aggregateDivisor: 2 },
       cosmicWebFilaments: { enabled: false, intensity: 1 },
       cosmicWebDensity: { enabled: false },
     },
@@ -871,10 +869,6 @@ describe('runFrame — render-target reconcile', () => {
     expect(reconcile).toHaveBeenCalledWith(state, { width: 800, height: 600 });
   });
 });
-
-// The milky-way star-count reconcile moved from this per-frame call to
-// `milkyWayPlanner`'s once-plan row; its regenerate/steady-state coverage
-// moved with it to `tests/layers/milkyWay/frame.test.ts`.
 
 describe('runFrame — engineScaleChanged dispatch', () => {
   // The scale-dispatch block fires inside the `if (state.booted)` guard —

@@ -340,9 +340,9 @@ describe('createRenderTargets', () => {
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    // mw-aggregate is the milkyWay Layer's own target now — composed in
-    // beside the density row so this test still exercises its state-driven
-    // divisor against the real row.
+    // mw-aggregate is a Layer-owned target, composed in beside the density
+    // row so this test still exercises its state-driven divisor against the
+    // real row.
     const targets = createRenderTargets(
       device,
       composeRenderTargetRows(SWAP_FORMAT, [[MILKY_WAY_AGGREGATE_TARGET], DENSITY_TARGETS]),

@@ -7,7 +7,7 @@
 
 import type { MilkyWayCloud } from '../../../@types/galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from './MilkyWayCloudRenderer';
-import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
+import type { MilkyWayPickRenderer } from './MilkyWayPickRenderer';
 import type { AdditiveUpsample } from '../../../@types/rendering/AdditiveUpsample';
 
 export type MilkyWayRuntime = {

@@ -27,10 +27,10 @@
  * no-op.
  */
 
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
-import type { MilkyWayCloudBuffers } from '../galaxy/MilkyWayCloudBuffers';
-import type { MilkyWayTuning } from '../settings/MilkyWayTuning';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { MilkyWayCloudBuffers } from '../../../@types/galaxy/MilkyWayCloudBuffers';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
 export type MilkyWayCloudDrawArgs = {
   /** Combined view-projection matrix (16 floats) — `ctx.vp`. */

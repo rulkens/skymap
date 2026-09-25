@@ -1,6 +1,6 @@
 /**
  * destroy — WebGPU frees nothing on GC, so every handle is released by
- * hand, in reverse construction order (mirroring core's old teardown walk).
+ * hand, in reverse construction order.
  */
 
 import type { MilkyWayRuntime } from './@types/MilkyWayRuntime';

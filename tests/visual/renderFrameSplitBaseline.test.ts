@@ -315,16 +315,17 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    // milkyWayAggregateUpsample is the state.gpu handle milkyWayUpsamplePass.draw
-    // calls directly, the twin of the density upsample below — wired with a logging
-    // draw so the snapshot captures the offscreen's merge back into HDR.
-    const milkyWayAggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
-    // The milkyWay Layer's passes close over its own runtime now — the same
+    // The upsample handle milkyWayUpsamplePass.draw calls through
+    // `runtime.aggregateUpsample`, the twin of the density upsample below —
+    // wired with a logging draw so the snapshot captures the offscreen's
+    // merge back into HDR.
+    const aggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    // The milkyWay Layer's passes close over their own runtime — the same
     // logging renderers above ride it instead of `state.gpu`.
     const milkyWayRuntime = {
       cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
       cloudRenderer: milkyWayCloudRenderer,
-      aggregateUpsample: milkyWayAggregateUpsample,
+      aggregateUpsample,
       pickRenderer: { pickMilkyWay: vi.fn() },
     } as unknown as MilkyWayRuntime;
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');

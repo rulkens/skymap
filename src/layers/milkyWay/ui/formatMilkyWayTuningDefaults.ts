@@ -23,7 +23,7 @@
  * once pasted into source. The two live one file apart; don't reach for the
  * display one here.
  */
-import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
+import type { MilkyWayTuning } from '../../../@types/settings/MilkyWayTuning';
 
 export function formatMilkyWayTuningDefaults(
   tuning: MilkyWayTuning,

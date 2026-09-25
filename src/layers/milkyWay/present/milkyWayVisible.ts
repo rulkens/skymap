@@ -9,7 +9,7 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
+import { milkyWayFadeAlpha } from '../../../services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
 
 export function milkyWayVisible(
   state: PassState,

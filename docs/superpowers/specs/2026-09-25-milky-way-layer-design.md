@@ -67,16 +67,16 @@ src/layers/milkyWay/
                            create, destroy, planners, passes, fades, guides, selection, sagas, ui })
   create.ts / destroy.ts   the 4 handles: pickRenderer, cloud, cloudRenderer, aggregateUpsample
   frame.ts                 milkyWayPlanner: runtime.cloud.reconcile(settings.milkyWay.starCount)
-  @types/MilkyWayRuntime.d.ts
+  @types/MilkyWayRuntime.d.ts  MilkyWayPickRenderer.d.ts  MilkyWayCloudDrawArgs.d.ts
   passes/  milkyWayAggregatePass.ts  milkyWayUpsamplePass.ts  milkyWayPass.ts
   present/ milkyWayCloudLiveness.ts  milkyWayFadeRows.ts  produceMilkyWayLabel.ts
-           milkyWaySelectionRow.ts
+           milkyWaySelectionRow.ts  milkyWayVisible.ts
   render/  milkyWayAggregateTarget.ts  milkyWayCloudRenderer.ts  milkyWayPickRenderer.ts
   sagas/   reseedMilkyWayStarCountSaga.ts   (setTier → setMilkyWayTuning({ starCount }))
   sources/ milky-way.ts  milkyWaySourceRows.ts
   state/   (as today)
   ui/      MilkyWayTuningSection.tsx  MilkyWayTuningSectionContainer.tsx
-           MilkyWayDetailCard/  CompactMilkyWayCard/
+           formatMilkyWayTuningDefaults.ts  MilkyWayDetailCard/  CompactMilkyWayCard/
 ```
 
 Where a file ends up follows one rule: **it moves only if every remaining importer is inside
@@ -84,7 +84,6 @@ the Layer or in `tests/`.** The plan confirms this per file with `npm run refact
 Files that still have a core or tool reader stay where they are:
 
 - `milkyWayFadeAlpha`, which `horizonShellFadeAlpha` and the tool also read;
-- `milkyWayVisible`;
 - `milkyWayInfo`, because core's `buildFocusable` imports it;
 - `milkyWayLabelVisibility` and `milkyWayLabelStyle`, if a core reader remains;
 - the whole of `galaxyGenerator/v1/`, which the tool shares and whose README pins it;
@@ -114,7 +113,8 @@ behind. None of them is a new special case:
 
 1. **Label tiebreak (user-accepted 2026-09-25).** Layer screen-label producers register after
    core's (`engine.ts:324-326`). When prominence is equal, the Milky Way label now loses the tie
-   to `structureLabels`. This is checked by eye at the Milky Way scale.
+   to `structureLabels` and to every earlier label producer, including the galaxyCatalog Layer's
+   `famousLabels`. This is checked by eye at the Milky Way scale.
 2. **Reconcile timing.** The star-count reconcile moves from `runFrame.ts:101` (before
    `deriveFrameContext`) to plan time. The cloud regenerates on the same frame either way,
    because once-plan rows run before any encode. `runFrame.test.ts:~880-910` moves with it.

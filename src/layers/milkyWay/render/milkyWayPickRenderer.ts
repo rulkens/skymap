@@ -10,7 +10,7 @@
 
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
+import type { MilkyWayPickRenderer } from '../@types/MilkyWayPickRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';

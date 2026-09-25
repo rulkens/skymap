@@ -76,9 +76,7 @@ const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
 export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
   // Shared with the aggregate producer and its upsample consumer — see
-  // `milkyWayCloudLiveness` on why all three must answer identically. Named
-  // so `pickEnabled` can call it directly instead of self-referencing the
-  // returned pass object.
+  // `milkyWayCloudLiveness` on why all three must answer identically.
   function enabled(state: PassState, ctx: FrameView, _view: SlabView): boolean {
     return deriveMilkyWayCloudAlpha(state, ctx) !== null;
   }

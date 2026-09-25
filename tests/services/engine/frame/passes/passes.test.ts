@@ -129,10 +129,6 @@ const PASS_STUB = {
 // matching the convention used by every other entry in `passes/`). The
 // hdr-target layers check above pins the name in canonical order.
 
-// milkyWayPass's `enabled`/`draw`/`pickEnabled` coverage moved to
-// `tests/layers/milkyWay/passes/milkyWayPass.test.ts` with the rest of the
-// milkyWay Layer's own pass tests.
-
 describe('horizonShellPass.enabled', () => {
   it('returns false near the origin — the inverse of the Milky-Way band', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of

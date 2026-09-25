@@ -11,7 +11,7 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { milkyWayVisible } from '../../../services/engine/helpers/milkyWayVisible';
+import { milkyWayVisible } from './milkyWayVisible';
 import { milkyWayFadeAlpha } from '../../../services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';

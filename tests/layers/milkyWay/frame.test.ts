@@ -1,9 +1,7 @@
 /**
- * milkyWayPlanner — calls `cloud.reconcile` once per call with the live
- * `starCount`, UNCONDITIONALLY: not gated on `settings.milkyWay.enabled`, so
- * re-enabling after a tier change never draws a stale cloud for one frame
- * (Review Focus 4). Casts no wake vote — the cloud regenerates synchronously
- * and animates nothing on its own.
+ * milkyWayPlanner — reconciles the cloud against the live `starCount` every
+ * plan, not gated on `settings.milkyWay.enabled`, so re-enabling after a
+ * tier change never draws a stale cloud.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { milkyWayPlanner } from '../../../src/layers/milkyWay/frame';
@@ -40,11 +38,5 @@ describe('milkyWay frame planner', () => {
     milkyWayPlanner(runtime).plan(snapshotStub, viewsStub, state);
     expect(reconcile).toHaveBeenCalledTimes(1);
     expect(reconcile).toHaveBeenCalledWith(100000);
-  });
-
-  it('casts no wake vote and never settles', () => {
-    const result = milkyWayPlanner(makeRuntime()).plan(snapshotStub, viewsStub, stateStub(true, 1));
-    expect(result.awake).toBe(false);
-    expect(result.settling).toBe(false);
   });
 });

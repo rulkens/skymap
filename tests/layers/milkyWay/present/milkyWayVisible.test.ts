@@ -1,7 +1,8 @@
 /**
  * milkyWayVisible — the ONE home of the MW visibility predicate, reached
- * through `milkyWayPass.enabled`, which the draw program runs against the
- * frame camera and the pick program runs against the replayed pick camera.
+ * through `deriveMilkyWayCloudAlpha` (`present/milkyWayCloudLiveness.ts`),
+ * which all three passes share, run against the frame camera and, for pick,
+ * the replayed pick camera.
  * These tests pin the predicate itself — the toggle/fade-tail gate and the
  * apparent-size fade band — against an injected camera and clock, the way
  * both programs use it (each hands in its own ctx camera + nowMs; the fade
@@ -12,7 +13,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { milkyWayVisible } from '../../../../src/services/engine/helpers/milkyWayVisible';
+import { milkyWayVisible } from '../../../../src/layers/milkyWay/present/milkyWayVisible';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,

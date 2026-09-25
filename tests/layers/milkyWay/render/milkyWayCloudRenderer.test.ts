@@ -3,7 +3,7 @@ import { createMilkyWayCloudRenderer } from '../../../../src/layers/milkyWay/ren
 import { GEN_RECORD_BYTES } from '../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
 import { MILKY_WAY_MODEL_SCALE } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { MilkyWayCloudBuffers } from '../../../../src/@types/galaxy/MilkyWayCloudBuffers';
-import type { MilkyWayCloudDrawArgs } from '../../../../src/@types/rendering/MilkyWayCloudDrawArgs';
+import type { MilkyWayCloudDrawArgs } from '../../../../src/layers/milkyWay/@types/MilkyWayCloudDrawArgs';
 
 /**
  * The pipeline descriptors the renderer hands to `createRenderPipeline`, keyed
