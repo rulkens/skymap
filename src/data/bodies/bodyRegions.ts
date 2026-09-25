@@ -22,11 +22,6 @@ import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 
 const SUN_ID = 'sun';
 
-// The S-star elements still focus on the BODY (PR 2 re-points them), so the
-// subtree is gathered from `sgr-a-star` while the region is anchored on the
-// place. Both ids end up claimed, which is what keeps the neighbourhood's
-// residual set from picking either one up.
-const SGR_A_STAR_ID = 'sgr-a-star';
 const GALACTIC_CENTRE_ID = GALACTIC_CENTRE_ANCHOR.id;
 
 // The rate-less J2000 snapshot `foregroundMaxDistance` already reads. Extents
@@ -65,10 +60,7 @@ const anchoredMemberIds = (anchorId: string): readonly string[] => {
 
 const SOLAR_SYSTEM_IDS: readonly string[] = anchoredMemberIds(SUN_ID);
 
-const GALACTIC_CENTRE_IDS: readonly string[] = [
-  ...anchoredMemberIds(GALACTIC_CENTRE_ID),
-  ...anchoredMemberIds(SGR_A_STAR_ID),
-];
+const GALACTIC_CENTRE_IDS: readonly string[] = anchoredMemberIds(GALACTIC_CENTRE_ID);
 
 // Every seeded star anchor no tighter region has claimed. The subtraction must cover EVERY
 // anchored region, or a fallen-through anchor inflates the extent the NEAR0 far plane reads.

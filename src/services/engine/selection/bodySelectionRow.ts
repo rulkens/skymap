@@ -1,6 +1,6 @@
 /**
- * bodySelectionRow — scene bodies only: Earth, the planets, Sgr A* and the mesh
- * bodies. A star is a `starCatalog` ref wherever it comes from (spec §7), so
+ * bodySelectionRow — scene bodies only: Earth, the planets and the mesh bodies
+ * (Sgr A* is the blackHoles Layer's own `blackHole` kind). A star is a `starCatalog` ref wherever it comes from (spec §7), so
  * `body-sirius` no longer decodes. Position is re-derived at `extractRow`'s own
  * `simDays`, never cached.
  */

@@ -14,6 +14,7 @@ import { composeRenderTargetRows } from '../../../src/services/engine/layer/comp
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
 import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/render/milkyWayAggregateTarget';
 import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
+import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
@@ -43,8 +44,8 @@ const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 // and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
 
-// The production `sky-cubemap` row's `fixedSizePx.size` reads
-// `settings.sgrAStarLensingTuning.cubemapResolutionPx` — every
+// The blackHoles Layer's `sky-cubemap` row's `fixedSizePx.size` reads
+// `settings.blackHoleLensingTuning.cubemapResolutionPx` — every
 // `createRenderTargets`/`reconcile` call below goes through the real table,
 // so this fixture needs the field even in tests that don't care about the
 // sky-cubemap row itself.
@@ -66,7 +67,7 @@ function stateWithDivisor(
   return {
     settings: {
       milkyWay: { aggregateDivisor },
-      sgrAStarLensingTuning: { cubemapResolutionPx },
+      blackHoleLensingTuning: { cubemapResolutionPx },
     },
     cubemapCaptures: makeCubemapCaptureRuntimes({
       sgrAStar: { lastBandActive, lastAnchorDistanceMpc },
@@ -88,7 +89,10 @@ describe('renderTargetRows', () => {
 // The density Layer's reduced-res target: the tests below use it as the
 // scale-3 offscreen row, composed in as `composeRenderTargetRows` does at boot.
 const DENSITY_TARGETS = cosmicWebDensityLayer.targets!;
-const DENSITY_ROWS = composeRenderTargetRows(SWAP_FORMAT, [DENSITY_TARGETS]);
+// The blackHoles Layer's `sky-cubemap` row, composed in beside core's as at boot.
+const LENS_TARGETS = blackHolesLayer.targets!;
+const CORE_AND_LENS_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS]);
+const DENSITY_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS, DENSITY_TARGETS]);
 
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
@@ -117,6 +121,7 @@ describe('createRenderTargets', () => {
     const targets = createRenderTargets(
       device,
       composeRenderTargetRows(SWAP_FORMAT, [
+        LENS_TARGETS,
         [STAR_AGGREGATES_TARGET],
         [MILKY_WAY_AGGREGATE_TARGET],
         DENSITY_TARGETS,
@@ -179,7 +184,7 @@ describe('createRenderTargets', () => {
     const device = mockDevice();
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -205,7 +210,7 @@ describe('createRenderTargets', () => {
     };
     const targets = createRenderTargets(
       device,
-      [...renderTargetRows(SWAP_FORMAT), layeredRow],
+      [...CORE_AND_LENS_ROWS, layeredRow],
       { width: 64, height: 64 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -239,7 +244,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR, 256),
     );
@@ -268,7 +273,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false),
     );
@@ -312,7 +317,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true, 0),
     );
@@ -379,7 +384,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -411,7 +416,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -453,7 +458,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -518,7 +523,7 @@ describe('createRenderTargets', () => {
     };
     const targets = createRenderTargets(
       device,
-      [...renderTargetRows(SWAP_FORMAT), stubRow],
+      [...CORE_AND_LENS_ROWS, stubRow],
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -553,7 +558,7 @@ describe('createRenderTargets', () => {
   it('only hdr, swap, and dome-cube clear to opaque alpha', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      renderTargetRows(SWAP_FORMAT),
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -576,7 +581,7 @@ describe('createRenderTargets', () => {
     // held size already matches, so reconcile allocates NOTHING — isolating
     // the assertion to the placeholder alone, which `reconcile` never touches.
     const size = { width: 640, height: 480 };
-    const targets = createRenderTargets(device, renderTargetRows(SWAP_FORMAT), size, state);
+    const targets = createRenderTargets(device, CORE_AND_LENS_ROWS, size, state);
     const before = (device.createTexture as ReturnType<typeof vi.fn>).mock.calls.length;
     const a = targets.farDepthView();
     targets.reconcile(state, size);

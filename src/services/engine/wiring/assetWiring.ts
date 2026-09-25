@@ -16,6 +16,7 @@ import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlas
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
@@ -115,7 +116,10 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
     key: meshBodySlotKey(body.id),
     built: 'external',
     factory: externalFactory,
-    req: () => ({ meshKey: body.meshKey }),
+    req: (tier) => ({
+      meshKey: body.meshKey,
+      tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
+    }),
     demand: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
     release: (ctx) =>

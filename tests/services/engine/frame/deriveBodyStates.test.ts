@@ -35,15 +35,11 @@ describe('deriveBodyStates', () => {
     }
   });
 
-  it('galactic-centre and sgr-a-star resolve to the same position', () => {
-    // The dual-state alias PR 2 removes: the region, the bands and the lens
-    // slab row key on the PLACE while the S-star focus graph, the glint, the
-    // caption and the pick stamp still name the BODY. Two positions here is
-    // the whole failure mode — the impostor hub 178 pc off the hole it hubs.
-    const place = states.get('galactic-centre');
-    const body = states.get('sgr-a-star');
-    expect(place).toBeDefined();
-    expect(body?.positionMpc).toBe(place?.positionMpc);
+  it('the Galactic Centre is one state, the place — Sgr A* has none of its own', () => {
+    // A second id at the centre is how a second position creeps back in: the
+    // impostor hub 178 pc off the hole it hubs.
+    expect(states.get('galactic-centre')).toBeDefined();
+    expect(states.has('sgr-a-star')).toBe(false);
   });
 
   it('every element row derives a body state', () => {

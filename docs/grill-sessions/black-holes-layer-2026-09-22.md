@@ -524,7 +524,7 @@ looks duplicated (unverified); `rankPaletteMatches`' six static inputs are futur
 
 ## Next
 
-Spec (`docs/superpowers/specs/2026-09-22-black-holes-layer-design.md`) against the
+Spec (`docs/superpowers/specs/completed/2026-09-22-black-holes-layer-design.md`) against the
 post-prep architecture, Ground preparation = R16's six commits; then `writing-plans`.
 Worktree `black-holes-layer` (branch `worktree-black-holes-layer`, `public/data` linked
 to main).

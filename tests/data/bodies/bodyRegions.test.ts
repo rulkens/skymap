@@ -43,10 +43,10 @@ describe('BODY_REGIONS', () => {
       expect(anchoredRegions.some((r) => r.memberIds.includes(region.anchorId))).toBe(true);
     }
 
-    // The consequence, pinned directly. A fallen-through Sgr A* would set the
-    // residual extent to exactly its own distance from the Sun.
+    // The consequence, pinned directly. A fallen-through Galactic Centre would
+    // set the residual extent to exactly its own distance from the Sun.
     const neighbourhood = regionById('solar-neighbourhood');
-    expect(neighbourhood.memberIds).not.toContain('sgr-a-star');
+    expect(neighbourhood.memberIds).not.toContain('galactic-centre');
     expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc));
   });
 
@@ -122,14 +122,12 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
     // a position nothing seeds and throws at import, taking the whole file with it.
     //
     // "Ahead of the seed" means ahead of BOTH halves of it: with the anchors
-    // gone but the 39 S-star rows still focused on Sgr A*, `focusResolveOrder`
+    // gone but the 39 S-star rows still focused on the place, `focusResolveOrder`
     // throws on the dangling focus before any region is built, so the element
     // table is mocked in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
-      SCENE_ANCHORS: SCENE_ANCHORS.filter(
-        (anchor) => anchor.id !== 'sgr-a-star' && anchor.id !== 'galactic-centre',
-      ),
+      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'galactic-centre'),
     }));
     vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
       const actual = await vi.importActual<
@@ -137,7 +135,7 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
       >('../../../src/data/bodies/orbitalElements');
       return {
         ...actual,
-        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'sgr-a-star'),
+        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'galactic-centre'),
       };
     });
     const { BODY_REGIONS: unseeded } = await import('../../../src/data/bodies/bodyRegions');

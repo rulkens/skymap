@@ -22,7 +22,7 @@
  *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
  *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
- *   - body / starCatalog: both are discrete near-field objects framed on their
+ *   - body / starCatalog / blackHole: discrete near-field objects framed on their
  *     row's driver geometry through the FOV, so they share one case and
  *     `bodyLikeFraming` — unclamped pure math, because at ~2e-16 Mpc (Earth) any
  *     Mpc-scale floor would swallow the framing. `radius` is the physical
@@ -102,6 +102,7 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
       };
     case 'body':
     case 'starCatalog':
+    case 'blackHole':
       return bodyLikeFraming(
         row.positionMpc,
         row.driver.footprintRadiusM,

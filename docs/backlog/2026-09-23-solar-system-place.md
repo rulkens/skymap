@@ -31,8 +31,8 @@ A second `PlaceId` member, `'solar-system'`, positioned at the heliocentre:
 - `SOLAR_SYSTEM_ANCHOR` in `src/data/places/`, `positionMpc` `[0, 0, 0]` —
   its own array, not the render origin's (the same reasoning as the
   `sceneAnchors.ts` header).
-- The Sun's anchor row aliases the place's array by reference, the
-  `SGR_A_STAR_ALIAS` pattern — never a second coordinate.
+- The Sun's anchor row aliases the place's array by reference, never a second
+  coordinate (the pattern `SGR_A_STAR_ALIAS` used until #825 deleted it).
 - The eleven element rows and both regions re-key from `'sun'` to
   `'solar-system'`; `deriveBodyStates` carries a `'solar-system'` state like
   it carries `'galactic-centre'` today.

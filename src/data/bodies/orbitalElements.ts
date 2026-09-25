@@ -707,6 +707,6 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
 
   // The 39 bound S-stars: their per-row facts live in `sStarElements.ts` beside the verbatim
   // Gillessen lines, converted once in `sStarOrbitalElements.ts` (also the star Layer's trail
-  // roster). Their focus is `sgr-a-star`, so they join the `galactic-centre` region by existing.
+  // roster). Their focus is the `galactic-centre` place, so they join the `galactic-centre` region by existing.
   ...S_STAR_ORBITAL_ELEMENTS,
 ];

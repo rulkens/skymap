@@ -25,7 +25,9 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/sources';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../fixtures/starRowDriver';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
@@ -75,22 +77,12 @@ describe('pivotFraming', () => {
     );
   });
 
-  it('floors a body row at its own override — Sgr A’s Q10 descent floor (2 r_s)', () => {
-    // Far outside the Earth-tuned global ratio, so a body that opts in must be
-    // floored at ITS OWN multiple, not the shared constant.
-    const sgrAStar: SelectionRow = {
-      type: 'body',
-      id: 'sgr-a-star',
-      label: 'Sagittarius A*',
-      positionMpc: [0, 0, 0],
-      driver: bodyDriverGeometry('sgr-a-star'),
-    };
-    const radiusMpc = SGR_A_STAR.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
-    expect(pivotFraming(sgrAStar)).toEqual({
-      radiusMpc,
-      floorMpc: radiusMpc * SGR_A_STAR.standoffRadii!,
-    });
-    expect(SGR_A_STAR.standoffRadii).toBe(2.0); // the override, not the shared constant
+  it('floors a black hole at its own override — Sgr A’s Q10 descent floor (2 r_s)', () => {
+    // Far outside the Earth-tuned global ratio, so the hole must be floored at
+    // ITS OWN multiple, not the shared constant.
+    const sgrAStar = blackHoleSelectionRow().extractRow({ type: 'blackHole', id: 'sgr-a-star' }, 0);
+    const radiusMpc = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC;
+    expect(pivotFraming(sgrAStar)).toEqual({ radiusMpc, floorMpc: radiusMpc * 2 });
   });
 
   it('a mesh body reports NO surface radius, and floors on its bounding sphere', () => {

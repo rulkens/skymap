@@ -2,6 +2,8 @@ import type { DriverGeometry } from './camera/DriverGeometry';
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
+import type { BodyInfo } from './BodyInfo';
+import type { BlackHoleInfo } from './BlackHoleInfo';
 import type { Vec3 } from '../math/Vec3';
 
 /**
@@ -9,8 +11,8 @@ import type { Vec3 } from '../math/Vec3';
  * in the saga-owned `selectionRows` derived cache. The galaxy arm is the small
  * `GalaxyRow` (built React-side into a `GalaxyInfo` by `buildFocusable`); the
  * structure arm is the already-serializable `StructureInfo` record; the Milky
- * Way and the zone of avoidance are each the singleton tag; the body arm
- * carries a seeded scene body's identity, label and live position. The `label`
+ * Way and the zone of avoidance are each the singleton tag; the body and
+ * black-hole arms are their card record plus the camera `driver`. The `label`
  * rides the row (not the async meta sidecar) so a star's name shows the instant
  * it is selected, before the JSON has loaded.
  *
@@ -27,13 +29,7 @@ export type SelectionRow =
   | StructureInfo
   | { readonly type: 'milkyWay' }
   | { readonly type: 'zoneOfAvoidance' }
-  | {
-      readonly type: 'body';
-      readonly id: string;
-      readonly label: string;
-      readonly positionMpc: Vec3;
-      readonly driver: DriverGeometry;
-    }
+  | (BodyInfo & { readonly driver: DriverGeometry })
   // Star arm — the self-contained display projection of a picked star from any
   // of the four catalogs, its physical fields snapshotted at extract time so
   // framing and card read them directly. `source` + `index` come from the ref
@@ -56,4 +52,7 @@ export type SelectionRow =
       readonly absMag?: number;
       readonly bpRp?: number;
       readonly driver: DriverGeometry;
-    };
+    }
+  // A black hole poses from its PLACE (`driver.poseId`), not a body table. Its
+  // card fields ride the row so the card builds without reaching into the Layer.
+  | (BlackHoleInfo & { readonly driver: DriverGeometry });

@@ -26,10 +26,7 @@ import { bodyRelativePose } from '../../../../../src/services/engine/camera/body
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-} from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -158,7 +155,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `foregroundLabelsPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = sceneBodyLabels(states).find((l) => l.id === sceneBodyLabelId(bodyId))!;
+  const caption = sceneBodyLabels(states).find((l) => l.id === `sceneBody-${bodyId}`)!;
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],

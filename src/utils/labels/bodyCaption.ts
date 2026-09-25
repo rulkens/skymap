@@ -1,21 +1,19 @@
 /**
  * bodyCaption — the shared `ForegroundCaption` builder for a seeded scene
- * body: position, tint, kind and pick id are the caller's own; font, outline,
- * size clamps and alignment are authored once here. Both `sceneBodyLabels`
- * (core) and `produceStarCaptions` (the star Layer) call this rather than
- * growing their own copy, so a caption reads the same regardless of producer.
+ * subject: position, size, tint, kind and pick id are the caller's own; font,
+ * outline, size clamps and alignment are authored once here. `sceneBodyLabels`
+ * (core), `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
+ * than growing their own copy, so a caption reads the same regardless of producer.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { SceneBody } from '../../@types/scene/SceneBody';
 import type { CaptionKind } from '../../services/engine/presentation/captionPriority';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../services/engine/presentation/famousLabelStyle';
 import { sceneBodyPickId } from '../picking/sceneBodyPickId';
-import { bodyFootprintRadiusM } from '../scene/bodyFootprintRadiusM';
 
 /**
  * Vertical stagger so captions of bodies sharing a sub-pixel screen spot
@@ -30,12 +28,15 @@ const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
 
 /**
  * `position`/`tint` are parameters because no `SceneBody` arm carries either
- * (each seed table derives its own colour). `pickId` defaults through the
- * shared body-pick registry; a star's caller packs its own (source + seed
- * index) instead, since only it knows which seed table it walked.
+ * (each seed table derives its own colour); `footprintRadiusM` sizes the em,
+ * and is a parameter so a subject with no body record (a black hole) can
+ * caption. `pickId` defaults through the shared body-pick registry; a star's
+ * caller packs its own (source + seed index) instead, since only it knows
+ * which seed table it walked.
  */
 export function bodyCaption(
-  body: SceneBody,
+  body: { readonly id: string; readonly label: string },
+  footprintRadiusM: number,
   positionMpc: Readonly<Vec3>,
   tint: Readonly<Vec3>,
   kind: CaptionKind,
@@ -61,7 +62,7 @@ export function bodyCaption(
     // Clamp band BORROWED from `FAMOUS_LABEL_STYLE` (not a private pair) so a
     // scene-body caption matches a nearby famous-galaxy label's size, and a
     // future retune of the famous band carries here automatically.
-    worldEmMpc: bodyFootprintRadiusM(body) * SCALE_UNITS.M_TO_MPC,
+    worldEmMpc: footprintRadiusM * SCALE_UNITS.M_TO_MPC,
     minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
     maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',

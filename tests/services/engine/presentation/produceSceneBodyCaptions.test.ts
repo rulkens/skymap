@@ -1,6 +1,8 @@
 /**
  * produceSceneBodyCaptions — candidate math for the true-scale foreground
- * bodies core owns (Earth, the planets, Sgr A*, the mesh bodies). The seeded
+ * bodies core owns (Earth, the planets, the mesh bodies), read beside the
+ * blackHoles Layer's Galactic Centre caption where a case needs a control
+ * whose reach is not the solar system's. The seeded
  * stars and the Sun moved to the star Layer's `produceStarCaptions` —
  * `produceStarCaptions.test.ts` covers their kind routing, pick ids and
  * clip-channel split; the shared fade-band / occlusion / registry-ramp
@@ -16,20 +18,18 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
+import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
 import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
 import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-} from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
+import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
@@ -44,12 +44,12 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const BASE = sceneBodyLabels(J2000_STATES);
 
-const EARTH_LABEL_ID = sceneBodyLabelId('earth');
+const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
-  SCENE_PLANETS.map((p) => sceneBodyLabelId(p.id)),
+  SCENE_PLANETS.map((p) => `sceneBody-${p.id}`),
 );
-const SGR_A_STAR_LABEL_ID = sceneBodyLabelId(SGR_A_STAR_ENTRY.id);
-const PETUNIAS_LABEL_ID = sceneBodyLabelId('petunias');
+const SGR_A_STAR_LABEL_ID = `sceneBody-${SGR_A_STAR_ENTRY.id}`;
+const PETUNIAS_LABEL_ID = 'sceneBody-petunias';
 
 function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
@@ -107,6 +107,7 @@ function makeState(
     },
     settings: {
       bodies: { items: bodyItems },
+      blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: true } } },
       starCatalogs: {
         enabled: true,
         items: {
@@ -133,6 +134,11 @@ function makeState(
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;
+}
+
+/** The Galactic Centre caption, from its own Layer's producer. */
+function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
+  return fadeAlphaOf(produceBlackHoleCaptions()(state, ctx).labels, SGR_A_STAR_LABEL_ID);
 }
 
 describe('produceSceneBodyCaptions', () => {
@@ -176,11 +182,9 @@ describe('produceSceneBodyCaptions', () => {
     // SEPARATE quantity Earth/planet's SOLAR_SYSTEM_REACH gate reads — is
     // pushed past the gate, so Earth and the planets must read exactly 0.
     const camPos = worldPosOf(EARTH_LABEL_ID);
-    const out = produceSceneBodyCaptions(
-      makeState(),
-      makeCtx(camPos, SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2),
-    );
-    expect(fadeAlphaOf(out.labels, SGR_A_STAR_LABEL_ID)).toBeGreaterThan(0);
+    const ctx = makeCtx(camPos, SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC * 2);
+    const out = produceSceneBodyCaptions(makeState(), ctx);
+    expect(sgrAStarAlpha(makeState(), ctx)).toBeGreaterThan(0);
     expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBe(0);
     for (const id of PLANET_LABEL_IDS) expect(fadeAlphaOf(out.labels, id)).toBe(0);
   });
@@ -223,19 +227,16 @@ describe('produceSceneBodyCaptions', () => {
     const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
     const revealMpc =
       SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
+    const ctxAt = (distMpc: number): FrameView =>
+      makeCtx([pot.worldPos[0] + distMpc, pot.worldPos[1], pot.worldPos[2]]);
     const labelsAt = (distMpc: number): readonly Label2D[] =>
-      produceSceneBodyCaptions(
-        makeState(),
-        makeCtx([pot.worldPos[0] + distMpc, pot.worldPos[1], pot.worldPos[2]]),
-      ).labels;
+      produceSceneBodyCaptions(makeState(), ctxAt(distMpc)).labels;
 
     // Past twice the reveal distance the pot's name is gone; at it, full.
-    const far = labelsAt(3 * revealMpc);
-    const near = labelsAt(revealMpc);
-    expect(fadeAlphaOf(far, PETUNIAS_LABEL_ID)).toBe(0);
-    expect(fadeAlphaOf(near, PETUNIAS_LABEL_ID)).toBe(1);
-    expect(fadeAlphaOf(far, SGR_A_STAR_LABEL_ID)).toBe(1);
-    expect(fadeAlphaOf(near, SGR_A_STAR_LABEL_ID)).toBe(1);
+    expect(fadeAlphaOf(labelsAt(3 * revealMpc), PETUNIAS_LABEL_ID)).toBe(0);
+    expect(fadeAlphaOf(labelsAt(revealMpc), PETUNIAS_LABEL_ID)).toBe(1);
+    expect(sgrAStarAlpha(makeState(), ctxAt(3 * revealMpc))).toBe(1);
+    expect(sgrAStarAlpha(makeState(), ctxAt(revealMpc))).toBe(1);
   });
 
   it('emits a zero-target caption rather than omitting it', () => {
@@ -331,8 +332,8 @@ describe('produceSceneBodyCaptions', () => {
  * is the producer's verdict on that, and these are its two real poses.
  */
 describe('produceSceneBodyCaptions occlude weight', () => {
-  const WHALE_LABEL_ID = sceneBodyLabelId('whale');
-  const MOON_LABEL_ID = sceneBodyLabelId('moon');
+  const WHALE_LABEL_ID = 'sceneBody-whale';
+  const MOON_LABEL_ID = 'sceneBody-moon';
   const EARTH_POS = worldPosOf(EARTH_LABEL_ID);
 
   /** Unit vector from `a` to `b`, in the Mpc frame the captions live in. */

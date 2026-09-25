@@ -50,7 +50,8 @@ export type CoreEngineSliceState = {
   /**
    * Palette rows published by each Layer's `search` feed, keyed by Layer name
    * — a whole-snapshot replace per yield, so a Layer that clears its rows
-   * yields an empty array rather than deleting a key. `selectLayerSearchRows`
+   * yields an empty array rather than deleting a key; only teardown drops the
+   * Layer's key (`layerSearchCleared`). `selectLayerSearchRows`
    * flattens it for the ranker.
    */
   layerSearch: Record<string, readonly LayerSearchEntry[]>;

@@ -150,6 +150,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'src/services/engine/camera/pivotRadiusMpc.ts',
     "framing-bridge precedent — the SelectionRow's radiusM to Mpc bridge feeding clampDistance's floor argument (zoom floor, pinch floor, follow driver's distance target all derive from it), not a pose re-derivation",
   ],
+  [
+    'src/layers/blackHoles/present/blackHoleLensEnvelopeM.ts',
+    'fade precedent — bridges a metre distance to Mpc only to test it against the capture band Mpc goneAt, no slab MVP involved',
+  ],
 ]);
 
 function scaleUnitsMembersUsed(file: string): string[] {

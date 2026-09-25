@@ -54,18 +54,17 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
   'frame/visibleStars': 0,
-  'frame/passes/bodyGlintsPass': 8,
+  'frame/passes/bodyGlintsPass': 3,
   'frame/passes/cloudShellPass': 1,
   'frame/passes/earthPass': 4,
   'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
   'frame/passes/planetsPass': 1,
   'frame/passes/ringsPass': 1,
-  'frame/passes/sgrAStarLensingPass': 3,
   'frame/passes/texturedBodiesPass': 2,
   'layers/milkyWay/passes/milkyWayPass': 1,
   'layers/starCatalog/passes/fieldStarSpherePass': 6,
-  'layers/starCatalog/passes/starPointsPass': 3,
+  'layers/starCatalog/passes/starPointsPass': 2,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };

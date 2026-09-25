@@ -41,7 +41,6 @@ import { visibleStars } from '../../../../src/services/engine/frame/visibleStars
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../src/utils/camera/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../src/data/famousStarPickRadiusPx';
-import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { Source } from '../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
@@ -199,13 +198,13 @@ function makeRenderer() {
 }
 
 /** `PassState` carrying the star-catalog settings and the core `bodyPickRenderer` handle. */
-function makeState(
-  catalogs: Catalogs = MAP_AND_SUN,
-  bodyItems: Record<string, unknown> = makeBodyItems(),
-): EngineState {
+function makeState(catalogs: Catalogs = MAP_AND_SUN): EngineState {
   return {
     gpu: { bodyPickRenderer: { drawPoints: vi.fn() } },
-    settings: { starCatalogs: starSettings(catalogs), bodies: { items: bodyItems } },
+    settings: {
+      starCatalogs: starSettings(catalogs),
+      bodies: { items: makeBodyItems() },
+    },
   } as unknown as EngineState;
 }
 
@@ -504,15 +503,12 @@ describe('starPointsPass.draw', () => {
 });
 
 /**
- * The Galactic Centre draws NOTHING at any zoom, so this stamp is the entire
- * mechanism that makes it clickable — delete it and the anchor silently becomes
- * selectable only from the command palette, with no visual symptom to catch it.
- * Its gate is the caption's, because the caption is the only mark on screen
- * inviting the click.
+ * A satellite inside the Galactic Centre's click target (the blackHoles Layer's
+ * marker stamp) is not stamped here, or one S-star would win the centre pixel
+ * and steal the hole's click. The rule is a screen-separation fact scoped to
+ * the anchor's own region.
  */
-describe('the Galactic Centre pick stamp', () => {
-  const ANCHOR_ID = packSelection(Source.SgrAStar, 0 + PICK_SENTINEL_OFFSET);
-
+describe('the Galactic Centre footprint exclusion', () => {
   // A camera sitting on the anchor: the caption's own distance is ~0, so the
   // approach band reads full.
   const AT_GALACTIC_CENTRE = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
@@ -546,13 +542,8 @@ describe('the Galactic Centre pick stamp', () => {
     return { ...makeNear0View(camPos), slab: { ...makeNear0View(camPos).slab, vp } };
   };
 
-  const stampedIds = (
-    catalogs: Catalogs,
-    camPos: Vec3,
-    view = makeNear0View(camPos),
-    bodyItems?: Record<string, unknown>,
-  ): number[] => {
-    const state = bodyItems ? makeState(catalogs, bodyItems) : makeState(catalogs);
+  const stampedIds = (catalogs: Catalogs, camPos: Vec3, view = makeNear0View(camPos)): number[] => {
+    const state = makeState(catalogs);
     const pass = starPointsPass(makeRuntime(makeRenderer()));
     pass.drawPick!(PASS_STUB, view, makeCtx(camPos), state);
     const renderer = state.gpu.bodyPickRenderer as unknown as {
@@ -567,41 +558,15 @@ describe('the Galactic Centre pick stamp', () => {
       stamped.includes(packSelection(Source.SStar, seedIndex + PICK_SENTINEL_OFFSET)),
     ).map((star) => star.id);
 
-  it('stamps the anchor from the solar system, where its name is already readable', () => {
-    // The caption is at full alpha from Earth (`SCALE_FADE_BANDS.sgrAStarCaption`
-    // opens at R₀), and pick follows the affordance — so the click target is
-    // there for the whole approach, not only on arrival.
-    expect(stampedIds(MAP_AND_SUN, [0, 0, 5e-3] as Vec3)).toContain(ANCHOR_ID);
-    expect(stampedIds(MAP_AND_SUN, AT_GALACTIC_CENTRE)).toContain(ANCHOR_ID);
-  });
-
-  it('drops the stamp once the galaxy is one object among many', () => {
-    // Past the band's far edge nothing names the spot, and an 18 px target in
-    // empty sky would be a trap. Derived from the band so a retune carries.
-    const farMpc = SCALE_FADE_BANDS.sgrAStarCaption.goneAt * 2;
-    expect(stampedIds(MAP_AND_SUN, [0, 0, farMpc] as Vec3)).not.toContain(ANCHOR_ID);
-  });
-
-  it('follows the label toggle — pick tracks the affordance, not the anchor', () => {
-    const bodyItems = makeBodyItems((id) =>
-      id === SGR_A_STAR_ENTRY.id ? { labelEnabled: false } : {},
-    );
-    expect(
-      stampedIds(MAP_AND_SUN, AT_GALACTIC_CENTRE, makeNear0View(AT_GALACTIC_CENTRE), bodyItems),
-    ).not.toContain(ANCHOR_ID);
-  });
-
-  it('claims its own footprint from S-stars that collapse inside it', () => {
+  it('an S-star inside the galactic-centre footprint is not stamped', () => {
     // Zoomed out, all 39 orbits fall well within the anchor's 18 px target and
-    // one of them wins the centre pixel on true depth — the black hole becomes
-    // unclickable exactly where it is the only thing you could mean. Suppressing
-    // them there is what makes the anchor's stamp reachable at all.
+    // one of them would win the centre pixel on true depth, taking the hole's
+    // click.
     const zoomedOut = stampedIds(
       EVERY_SEEDED,
       NEAR_GALACTIC_CENTRE,
       makeProjectedView(NEAR_GALACTIC_CENTRE),
     );
-    expect(zoomedOut).toContain(ANCHOR_ID);
     expect(sStarIdsIn(zoomedOut)).toEqual([]);
 
     // Zoomed in, the orbits clear the footprint and their stars are aimable
@@ -611,7 +576,6 @@ describe('the Galactic Centre pick stamp', () => {
       INSIDE_THE_CLUSTER,
       makeProjectedView(INSIDE_THE_CLUSTER),
     );
-    expect(zoomedIn).toContain(ANCHOR_ID);
     expect(sStarIdsIn(zoomedIn).length).toBeGreaterThan(0);
   });
 
@@ -646,19 +610,6 @@ describe('the Galactic Centre pick stamp', () => {
     const [sx, sy] = screenOf(SIRIUS.positionMpc);
     expect(Math.hypot(sx - ax, sy - ay)).toBeLessThan(FAMOUS_STAR_PICK_RADIUS_PX);
 
-    expect(stamped).toContain(ANCHOR_ID);
     expect(stamped).toContain(packedIdOf(SIRIUS));
-  });
-
-  it('keeps the row in the pick pass when the star partition is empty', () => {
-    // Every star row muted: `enabled` goes false (nothing to draw, and the
-    // visual step must not carry a zero-star row), but the caption is still on
-    // screen — so `pickEnabled` must admit the layer anyway or the stamp never
-    // reaches the pick texture.
-    const allStarsMuted = makeState({});
-    const pass = starPointsPass(makeRuntime(makeRenderer()));
-    const ctx = makeCtx(AT_GALACTIC_CENTRE);
-    expect(pass.enabled(allStarsMuted, ctx, VIEW_STUB)).toBe(false);
-    expect(pass.pickEnabled!(allStarsMuted, ctx, VIEW_STUB)).toBe(true);
   });
 });

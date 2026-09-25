@@ -19,7 +19,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
-const SGR_A_STAR_POS = deriveBodyStates(CONST_J2000).get('sgr-a-star')!.positionMpc;
+const GALACTIC_CENTRE_POS = deriveBodyStates(CONST_J2000).get('galactic-centre')!.positionMpc;
 
 // Comfortably above the disc's apparent-size gate (12 px) and with every
 // clip/focus/fade term pinned at 1, so the returned alpha isolates the
@@ -49,7 +49,7 @@ function makeCtx(camPosMpc: Vec3): FrameView {
 
 /** A point `distMpc` from Sgr A*, offset along its own local x-axis. */
 function nearGalacticCentre(distMpc: number): Vec3 {
-  return [SGR_A_STAR_POS[0] + distMpc, SGR_A_STAR_POS[1], SGR_A_STAR_POS[2]];
+  return [GALACTIC_CENTRE_POS[0] + distMpc, GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]];
 }
 
 describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
@@ -72,8 +72,8 @@ describe('deriveMilkyWayCloudAlpha — galactic-centre approach fade', () => {
     // pose outside BOTH bands must sit on the far side of the Sun from the
     // Centre: 5 kpc anti-GC-ward is 13.2 kpc from Sgr A* and 5 kpc from the
     // Sun — outside each band's fullAt.
-    const r0 = Math.hypot(SGR_A_STAR_POS[0], SGR_A_STAR_POS[1], SGR_A_STAR_POS[2]);
-    const awayFromGc = SGR_A_STAR_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
+    const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
+    const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
     const alpha = deriveMilkyWayCloudAlpha(makeState(), makeCtx(awayFromGc));
     expect(alpha).toBe(1);
   });

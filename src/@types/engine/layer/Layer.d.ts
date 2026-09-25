@@ -49,7 +49,7 @@ export type Layer<
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
    * folded into `rootSaga`. Factories, not running sagas. */
   readonly sagas?: readonly SagaFactory[];
-  /** Candidate `body-m` slab rows, joined to `CORE_SLAB_ROWS` in `state.slabRows`.
+  /** Candidate `body-m` slab rows, composed across Layers into `state.slabRows`.
    * `anchorId`s are globally unique and the composed total must fit
    * `LAYER_SLAB_ROW_HEADROOM` — both throw at boot. */
   readonly slabs?: readonly SlabRow[];

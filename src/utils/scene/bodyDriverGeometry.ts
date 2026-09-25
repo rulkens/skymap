@@ -21,9 +21,5 @@ export function bodyDriverGeometry(bodyId: string): DriverGeometry {
     footprintRadiusM,
     groundRadiusM: isMeshBody(body) ? null : body.surface.datumRadiusM,
     standoffRadii: bodyStandoffRadii(body),
-    // An absent arrival override stays absent — no `focusDistanceRadii: undefined` key.
-    ...('focusDistanceRadii' in body && body.focusDistanceRadii !== undefined
-      ? { focusDistanceRadii: body.focusDistanceRadii }
-      : {}),
   };
 }

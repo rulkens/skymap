@@ -10,26 +10,32 @@ import { timedSlotsOf } from '../../../../../src/services/engine/frame/timing/ti
 import { expandFrameOrder } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
+import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/passes/blackHoleLensingPass';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { FrameInputs } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep';
 import type { ContentPass } from '../../../../../src/@types/engine/frame/ContentPass';
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
+import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
-// The milkyWay Layer's passes: `resolvePassNames` matches by `name` alone, so
-// a name-only stub keeps the (hdr, NEAR0) roster's group-total slot alive
-// without a real runtime — this file never invokes `draw`/`enabled`.
+// The Layers' passes join core's registry, as `createLayers` does; expansion
+// matches by `name` and never reaches `draw`, so no runtime is read.
 const MILKY_WAY_STUB_PASSES: readonly ContentPass[] = [
   'milky-way-aggregate',
   'milky-way-upsample',
   'milky-way',
 ].map((name) => ({ name }) as unknown as ContentPass);
+const PASSES = [
+  ...CONTENT_PASSES,
+  blackHoleLensingPass({} as BlackHolesRuntime),
+  ...MILKY_WAY_STUB_PASSES,
+];
 
 /** The real order + registry, with only the per-frame lists varied. */
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
-  return expandFrameOrder(FRAME_ORDER, [...CONTENT_PASSES, ...MILKY_WAY_STUB_PASSES], {
+  return expandFrameOrder(FRAME_ORDER, PASSES, {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
@@ -40,15 +46,15 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
 }
 
 describe('timedSlotsOf', () => {
-  it('reaches sgrAStarLensingPass once a body slab is passed', () => {
+  it('reaches blackHoleLensingPass once a body slab is passed', () => {
     // Until the lens got its own `FRAME_ORDER` line, no step ever matched
-    // `sgrAStarLensingPass` — the pass compiled and registered but was
+    // `blackHoleLensingPass` — the pass compiled and registered but was
     // structurally unreachable. Passing a body-slab index (4, arbitrary) must
     // surface its row right after the (hdr, NEAR0) group's own slot.
     const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
     const rosterIdx = slots.indexOf('hdr·NEAR0');
     expect(rosterIdx).toBeGreaterThanOrEqual(0);
-    expect(slots[rosterIdx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
+    expect(slots[rosterIdx + 1]).toBe('black-hole-lensing·BODY[2]');
     expect(slots[rosterIdx + 2]).toBe('hdr·BODY[2]');
   });
 
@@ -58,7 +64,7 @@ describe('timedSlotsOf', () => {
     // past the lens — checked against the REAL registry, so moving either back
     // into the roster line fails this.
     const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
-    const lensIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
+    const lensIdx = slots.indexOf('black-hole-lensing·BODY[2]');
     expect(lensIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensIdx);
     expect(slots.indexOf('body-glints')).toBeGreaterThan(lensIdx);

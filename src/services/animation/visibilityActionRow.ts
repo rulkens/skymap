@@ -14,6 +14,7 @@ import type { EngineSettingsState } from '../../@types/settings/EngineSettingsSt
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BlackHoleId } from '../../@types/data/blackHole/BlackHoleId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
 import {
@@ -23,7 +24,10 @@ import {
 import { setCosmicWebFilamentsEnabled } from '../../layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
 import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
-import { setCosmicWebDensityEnabled, writeCosmicWebDensityField } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import {
+  setCosmicWebDensityEnabled,
+  writeCosmicWebDensityField,
+} from '../../layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setFlowEnabled } from '../../layers/flow/state/flow/slice';
 import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
 import {
@@ -32,6 +36,7 @@ import {
 } from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/state/starCatalogs/slice';
 import { setBodyLabelEnabled } from '../../layers/body/state/bodies/slice';
+import { setBlackHoleLabelEnabled } from '../../layers/blackHoles/state/blackHoles/slice';
 import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
@@ -77,11 +82,17 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
       ),
   },
 
+  // The Galactic Centre caption rides the near-field key, so the cue writes
+  // the black holes' label bits beside the bodies'.
   bodyLabel: {
-    actions: (on, settings) =>
-      Object.keys(settings.bodies.items).map((id) =>
+    actions: (on, settings) => [
+      ...Object.keys(settings.bodies.items).map((id) =>
         setBodyLabelEnabled({ id: id as BodyId, enabled: on }),
       ),
+      ...Object.keys(settings.blackHoles.items).map((id) =>
+        setBlackHoleLabelEnabled({ id: id as BlackHoleId, enabled: on }),
+      ),
+    ],
   },
 
   structureRing: {

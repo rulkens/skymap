@@ -2,11 +2,9 @@
  * LabelsAndGuidesSectionContainer — store boundary for the Labels & Guides
  * settings section.
  *
- * Owns all Redux reach for the Labels & Guides group: reads
- * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
- * `selectBodyItems` and `selectMilkyWayLabelEnabled`, bundles them into the
- * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
- * `useCallback`. It also owns the orbit-trails guide row — a flat singleton
+ * Owns all Redux reach for the Labels & Guides group: reads each label home's
+ * items, bundles them into the `LabelHomes` the label-projection reads, and
+ * wraps the label dispatch in a `useCallback`. It also owns the orbit-trails guide row — a flat singleton
  * setting that routes straight to its own setter. All of it is assembled into
  * one uniform `SectionRow` array; the presentational `LabelsAndGuidesSection`
  * imports nothing from `store/` or `state/` and has no notion of where any
@@ -17,10 +15,10 @@
  *
  * Label visibility lives in several authoritative homes — structure items, the
  * galaxy catalog items (famousGalaxy), the star catalog items (famousStar), the
- * body items (Earth, the planets, the Sun), and the milkyWay scalar. The
- * projection (`projectLabelCategoryVisibility`) merges them into the flat
- * `Record<LabelCategory, boolean>` the row-building memo below reads. The
- * `useMemo` rebuilds only when any of those stable-reference inputs change —
+ * body items (Earth, the planets, the Sun), the black-hole items, and the
+ * milkyWay scalar. The projection (`projectLabelCategoryVisibility`) merges
+ * them into the flat `Record<LabelCategory, boolean>` the row-building memo
+ * below reads. The `useMemo` rebuilds only when any of those stable-reference inputs change —
  * each is a per-cluster selector output, never `state.settings` itself, which
  * Immer re-identifies on every write.
  *
@@ -57,6 +55,7 @@ import { selectStructureItems } from '../../layers/structure/state/structures/se
 import { selectGalaxyCatalogItems } from '../../layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatalogs/selectors';
 import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
+import { selectBlackHoleItems } from '../../layers/blackHoles/state/blackHoles/selectors';
 import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
 import { selectOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/selectors';
 import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
@@ -83,6 +82,7 @@ function LabelsAndGuidesSectionContainer({
   const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
   const starCatalogItems = useAppSelector(selectStarCatalogItems);
   const bodyItems = useAppSelector(selectBodyItems);
+  const blackHoleItems = useAppSelector(selectBlackHoleItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
@@ -94,9 +94,17 @@ function LabelsAndGuidesSectionContainer({
       galaxyCatalogs: galaxyCatalogItems,
       starCatalogs: starCatalogItems,
       bodies: bodyItems,
+      blackHoles: blackHoleItems,
       milkyWayLabelEnabled,
     }),
-    [structureItems, galaxyCatalogItems, starCatalogItems, bodyItems, milkyWayLabelEnabled],
+    [
+      structureItems,
+      galaxyCatalogItems,
+      starCatalogItems,
+      bodyItems,
+      blackHoleItems,
+      milkyWayLabelEnabled,
+    ],
   );
 
   const labelCategoryVisibility = useMemo(

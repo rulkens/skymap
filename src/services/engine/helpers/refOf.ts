@@ -27,6 +27,7 @@ import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
 import type { ZoneOfAvoidanceInfo } from '../../../@types/engine/ZoneOfAvoidanceInfo';
 import type { BodyInfo } from '../../../@types/engine/BodyInfo';
 import type { StarInfo } from '../../../@types/engine/StarInfo';
+import type { BlackHoleInfo } from '../../../@types/engine/BlackHoleInfo';
 
 const REF_OF: {
   galaxyCatalog: (t: GalaxyInfo) => SelectionRef;
@@ -35,6 +36,7 @@ const REF_OF: {
   zoneOfAvoidance: (t: ZoneOfAvoidanceInfo) => SelectionRef;
   body: (t: BodyInfo) => SelectionRef;
   starCatalog: (t: StarInfo) => SelectionRef;
+  blackHole: (t: BlackHoleInfo) => SelectionRef;
 } = {
   galaxyCatalog: (t) => ({
     type: 'galaxyCatalog',
@@ -50,6 +52,7 @@ const REF_OF: {
   // A star ref is the source + index pair the pick texture packs; the durable
   // seed id (when there is one) rides the row, not the ref.
   starCatalog: (t) => ({ type: 'starCatalog', source: t.source, index: t.index }),
+  blackHole: (t) => ({ type: 'blackHole', id: t.id }),
 };
 
 export function refOf(target: FocusableTarget): SelectionRef {
