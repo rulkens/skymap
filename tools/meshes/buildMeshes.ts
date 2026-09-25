@@ -50,6 +50,7 @@ import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataReg
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
 import { enuOffsetM } from '../utils/geo/enuOffsetM';
+import { enuToLonLatDeg } from '../utils/geo/enuToLonLatDeg';
 import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { rasterizeHoleMask } from '../utils/meshes/rasterizeHoleMask';
@@ -83,16 +84,16 @@ const SIMPLIFY_TOLERANCE = 0.05;
 // the seam between them is a terrain step, never a gap of bare globe.
 const HOLE_MASK_METRES_PER_PX = 0.5;
 const HOLE_MASK_ERODE_M = 2;
-const DEG_TO_RAD = Math.PI / 180;
 
 export type MeshBuildTarget = {
   readonly key: string;
-  /** One source GLB per tier this body ships; must be a contiguous prefix of
-   *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). */
-  readonly glbPaths: Readonly<Partial<Record<Tier, string>>>;
-  /** A tier present here is meshopt-simplified to this many triangles after
-   *  merge; a tier absent (or absent from `glbPaths`) bakes at full density. */
-  readonly tierTriangles?: Readonly<Partial<Record<Tier, number>>>;
+  /** One entry per tier this body ships; must be a contiguous prefix of
+   *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). A tier's
+   *  `triangles`, if present, is the count `simplifyTier` meshopt-simplifies
+   *  it to after merge; absent bakes that tier at full density. */
+  readonly tiers: Readonly<
+    Partial<Record<Tier, { readonly path: string; readonly triangles?: number }>>
+  >;
   /** The CEILING tier's RAW_DATA upstream. */
   readonly source: string;
   readonly licence: string;
@@ -331,16 +332,9 @@ function windingFollowsNormal(
   return cx * nx + cy * ny + cz * nz >= 0;
 }
 
-/**
- * A primitive's own POSITION and index buffers, in local (pre-node-transform)
- * space — what `computeSmoothNormals` needs when NORMAL is missing; an
- * authored NORMAL is local for the same reason, until `transformNormal`
- * converts it below.
- */
-function localGeometry(
-  prim: Primitive,
-  pos: Accessor,
-): { positions: Float32Array; indices: Uint32Array } {
+/** A primitive's own POSITION buffer, in local (pre-node-transform) space —
+ *  what `computeSmoothNormals` needs when NORMAL is missing. */
+function localPositions(pos: Accessor): Float32Array {
   const positions = new Float32Array(pos.getCount() * 3);
   for (let v = 0; v < pos.getCount(); v++) {
     const p = pos.getElement(v, [0, 0, 0]);
@@ -348,11 +342,18 @@ function localGeometry(
     positions[v * 3 + 1] = p[1]!;
     positions[v * 3 + 2] = p[2]!;
   }
+  return positions;
+}
+
+/** A primitive's own index run, indexed or flat — read from the accessor
+ *  exactly once and reused below both for `computeSmoothNormals` and for the
+ *  merged index buffer, rather than re-deriving it a second time per use. */
+function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
   const idx = prim.getIndices();
-  const count = idx ? idx.getCount() : pos.getCount();
+  const count = idx ? idx.getCount() : vertexCount;
   const indices = new Uint32Array(count);
   for (let i = 0; i < count; i++) indices[i] = idx ? idx.getScalar(i) : i;
-  return { positions, indices };
+  return indices;
 }
 
 /**
@@ -397,8 +398,8 @@ function mergeGeometry(
     const uv = prim.getAttribute('TEXCOORD_0');
     const tan = prim.getAttribute('TANGENT');
     if (!pos) throw new Error('buildMeshes: primitive without POSITION');
-    const local = nrm ? null : localGeometry(prim, pos);
-    const computedNormals = local ? computeSmoothNormals(local.positions, local.indices) : null;
+    const indices3 = localIndices(prim, pos.getCount());
+    const computedNormals = nrm ? null : computeSmoothNormals(localPositions(pos), indices3);
 
     for (let v = 0; v < pos.getCount(); v++) {
       const p = pos.getElement(v, [0, 0, 0]);
@@ -426,10 +427,8 @@ function mergeGeometry(
 
     // A mirrored node also inverts triangle winding, so undo that first; the
     // per-face normalisation then judges the geometry as it will be drawn.
-    const idx = prim.getIndices();
-    const count = idx ? idx.getCount() : pos.getCount();
-    const at = (i: number) => base + (idx ? idx.getScalar(i) : i);
-    for (let i = 0; i < count; i += 3) {
+    const at = (i: number) => base + indices3[i]!;
+    for (let i = 0; i < indices3.length; i += 3) {
       const i0 = at(i);
       const i1 = at(mirrored ? i + 2 : i + 1);
       const i2 = at(mirrored ? i + 1 : i + 2);
@@ -601,22 +600,6 @@ function bakeContactDecal(
   };
 }
 
-/** The inverse of `enuOffsetM`: the geodetic point `eastM`/`northM` away from
- *  `site`, same small-angle tangent-plane approximation, same radius. */
-function enuToLonLatDeg(
-  site: { readonly latDeg: number; readonly lonDeg: number },
-  eastM: number,
-  northM: number,
-  radiusM: number,
-): { latDeg: number; lonDeg: number } {
-  const metresPerDegLat = DEG_TO_RAD * radiusM;
-  const metresPerDegLon = metresPerDegLat * Math.cos(site.latDeg * DEG_TO_RAD);
-  return {
-    latDeg: site.latDeg + northM / metresPerDegLat,
-    lonDeg: site.lonDeg + eastM / metresPerDegLon,
-  };
-}
-
 /**
  * Rasterise a georeferenced target's crop ring into `<key>_hole.webp` and the
  * lat/lon rect it covers — a no-op (undefined) for a target with no `hole`.
@@ -656,11 +639,11 @@ async function bakeHoleMask(
 }
 
 /**
- * Decimate a merged tier to its `tierTriangles` budget, if the tier has one —
- * geometry itself (positions/normals/uvs/tangents) is untouched, only
- * `indices` shrinks; `writeMeshBinary`'s reorder pass drops whatever that
- * leaves unreferenced. A miss past `SIMPLIFY_TOLERANCE` throws rather than
- * ship a tier silently off its triangle budget.
+ * Decimate a merged tier to its `tiers[tier].triangles` budget, if the tier
+ * has one — geometry itself (positions/normals/uvs/tangents) is untouched,
+ * only `indices` shrinks; `writeMeshBinary`'s reorder pass drops whatever
+ * that leaves unreferenced. A miss past `SIMPLIFY_TOLERANCE` throws rather
+ * than ship a tier silently off its triangle budget.
  */
 async function simplifyTier(
   target: MeshBuildTarget,
@@ -668,7 +651,7 @@ async function simplifyTier(
   tier: Tier,
   geometry: Geometry,
 ): Promise<Geometry> {
-  const targetTriangles = target.tierTriangles?.[tier];
+  const targetTriangles = target.tiers[tier]?.triangles;
   if (targetTriangles === undefined) return geometry;
   const sourceTriangles = geometry.indices.length / 3;
   const { indices, triangleCount } = await simplifyToTriangles(
@@ -838,14 +821,14 @@ async function bakeTier(
  */
 async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
   const { key } = target;
-  const tiers = orderedTiers(target.glbPaths, key);
+  const tiers = orderedTiers(target.tiers, key);
   const ceiling = tiers[tiers.length - 1]!;
 
   // `tiers` is ladder-ordered (`orderedTiers`), so the last iteration is
   // always the ceiling — no need to track which pass that was separately.
   let result: BakeTierResult | undefined;
   for (const tier of tiers) {
-    result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
+    result = await bakeTier(target, tier, target.tiers[tier]!.path, outDir, tier === ceiling);
   }
   const { geometry, substituted, mean, contactDecal, hole } = result!;
 
@@ -996,29 +979,28 @@ function readHoleOutlineRing(repoPath: string, offsetM: Vec2): (readonly [number
 async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
     const present = orderedTiers(entry.tiers, key);
-    const glbPaths = Object.fromEntries(
-      present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!.raw)]),
-    ) as MeshBuildTarget['glbPaths'];
-    const tierTriangles = Object.fromEntries(
-      present
-        .filter((tier) => entry.tiers[tier]!.triangles !== undefined)
-        .map((tier) => [tier, entry.tiers[tier]!.triangles]),
-    ) as MeshBuildTarget['tierTriangles'];
+    const tiers = Object.fromEntries(
+      present.map((tier) => [
+        tier,
+        { path: rawDataPath(entry.tiers[tier]!.raw), triangles: entry.tiers[tier]!.triangles },
+      ]),
+    ) as MeshBuildTarget['tiers'];
     const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!.raw];
+    // `georeferencedTargetInfo` only ever returns a value when `entry.georeferenced`
+    // is set — `meshAnchorSite` throws for every other mismatch — so no second
+    // check of `entry.georeferenced` is needed to use it below.
     const georeferenced = georeferencedTargetInfo(key);
-    const hole =
-      georeferenced && entry.georeferenced
-        ? {
-            ringM: readHoleOutlineRing(entry.georeferenced.holeOutline, georeferenced.offsetM),
-            siteLatDeg: georeferenced.site.latDeg,
-            siteLonDeg: georeferenced.site.lonDeg,
-            radiusM: georeferenced.radiusM,
-          }
-        : undefined;
+    const hole = georeferenced
+      ? {
+          ringM: readHoleOutlineRing(entry.georeferenced!.holeOutline, georeferenced.offsetM),
+          siteLatDeg: georeferenced.site.latDeg,
+          siteLonDeg: georeferenced.site.lonDeg,
+          radiusM: georeferenced.radiusM,
+        }
+      : undefined;
     return {
       key,
-      glbPaths,
-      tierTriangles,
+      tiers,
       source: raw.upstream ?? raw.path,
       licence: entry.licence,
       attribution: entry.attribution,

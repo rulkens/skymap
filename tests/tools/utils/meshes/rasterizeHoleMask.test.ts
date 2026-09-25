@@ -23,11 +23,26 @@ describe('rasterizeHoleMask', () => {
     ];
     const { mask, width, height } = rasterizeHoleMask(ring, 1, 0);
 
-    expect(width).toBeGreaterThanOrEqual(99);
-    expect(width).toBeLessThanOrEqual(101);
-    expect(height).toBeGreaterThanOrEqual(99);
-    expect(height).toBeLessThanOrEqual(101);
+    expect(width).toBe(100);
+    expect(height).toBe(100);
     for (let i = 0; i < mask.length; i++) expect(mask[i]).toBe(255);
+  });
+
+  it('sizeEnuM is the whole-pixel grid extent, not the raw ring extent', () => {
+    // 101 m at 2 m/px ceils to a 51-px row: the grid covers 102 m, a metre
+    // more than the ring itself — reporting the ring's own 101 m instead
+    // would leave the crop rim up to half a pixel narrower than the mask.
+    const ring: [number, number][] = [
+      [0, 0],
+      [101, 0],
+      [101, 101],
+      [0, 101],
+    ];
+    const { width, height, sizeEnuM } = rasterizeHoleMask(ring, 2, 0);
+
+    expect(width).toBe(51);
+    expect(height).toBe(51);
+    expect(sizeEnuM).toEqual([102, 102]);
   });
 
   it('erode 2 clears a 2 m band along every edge', () => {

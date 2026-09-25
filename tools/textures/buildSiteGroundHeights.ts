@@ -14,30 +14,30 @@ import type { GeodeticAnchor } from '../../src/@types/geo/GeodeticAnchor';
 import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
-import { SCENE_MESH_BODIES } from '../../src/data/bodies/sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { normalize3 } from '../../src/utils/math/normalize3';
 import { findByIdOrThrow } from '../../src/utils/object/findByIdOrThrow';
 import { enuOffsetM } from '../utils/geo/enuOffsetM';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
 import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
 import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
-/** The `GeodeticAnchor` an `anchored` site's own mesh source carries, joined
- *  through `SCENE_MESH_BODIES` the same direction `meshAnchorSite` joins the
- *  other way (key -> site). */
+/** The `GeodeticAnchor` an `anchored` site's own mesh source carries, found by
+ *  running `meshAnchorSite` (key -> site) over every key until one answers
+ *  with this site — the site -> key direction, with no separate join or
+ *  error message of its own to drift from that one's. */
 function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
-  const body = SCENE_MESH_BODIES.find((b) => b.id === site.id);
-  const anchor = body && MESH_SOURCES[body.meshKey]?.georeferenced?.anchor;
-  if (anchor === undefined) {
+  const meshKey = Object.keys(MESH_SOURCES).find((key) => meshAnchorSite(key)?.id === site.id);
+  if (meshKey === undefined) {
     throw new Error(
       `buildSiteGroundHeights: anchored site '${site.id}' has no georeferenced mesh source`,
     );
   }
-  return anchor;
+  return MESH_SOURCES[meshKey]!.georeferenced!.anchor;
 }
 
 /**

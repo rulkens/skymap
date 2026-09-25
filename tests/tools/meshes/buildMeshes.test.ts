@@ -201,12 +201,17 @@ function runTiers(
   georeferencedOffsetM?: Vec2,
   hole?: MeshBuildTarget['hole'],
 ) {
+  const tiers = Object.fromEntries(
+    Object.entries(glbPaths).map(([tier, path]) => [
+      tier,
+      { path, triangles: tierTriangles?.[tier as Tier] },
+    ]),
+  ) as MeshBuildTarget['tiers'];
   return buildMeshes({
     targets: [
       {
         key: 'testmesh',
-        glbPaths,
-        tierTriangles,
+        tiers,
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
@@ -856,11 +861,13 @@ describe('buildMeshes()', () => {
     expect(existsSync(join(dir, 'out', 'testmesh_contact.webp'))).toBe(true);
   });
 
-  it('simplifies only the tier whose glbPaths entry carries a triangle target', async () => {
+  it('simplifies only the tier whose tiers entry carries a triangle target', async () => {
     const gridDoc = new Document();
     gridDoc.createBuffer();
     const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
-    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 8));
+    // A 5x5 grid (50 tris): small enough that LockBorder's pinned perimeter
+    // still leaves room to reach the 20-tri target below.
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 5));
     gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
     const smallGlb = await writeGlbNamed(gridDoc, 'small.glb');
     const mediumGlb = await writeGlbNamed(gridDoc, 'medium.glb');
@@ -870,8 +877,13 @@ describe('buildMeshes()', () => {
     )[0]!;
 
     // Row metrics come from the ceiling tier (medium), which was never
-    // simplified — the full 128-triangle grid.
-    expect(row.triangleCount).toBe(128);
+    // simplified — the full 50-triangle grid.
+    expect(row.triangleCount).toBe(50);
+    // The small tier actually ran simplification, rather than the wiring
+    // silently passing the source through untouched.
+    const smallTriangleCount = (await decodeMesh(readMesh())).indexCount / 3;
+    expect(smallTriangleCount).toBeGreaterThanOrEqual(19);
+    expect(smallTriangleCount).toBeLessThanOrEqual(21);
   });
 
   it('refuses a tier whose simplified count misses its target by more than 5%', async () => {
@@ -926,27 +938,32 @@ describe('buildMeshes()', () => {
     const glbPath = await writeGlb(doc);
 
     const R = 6_371_000;
+    const siteLatDeg = 55.67;
+    // A non-square ring (200 m east x 100 m north) at a non-zero latitude: a
+    // lon/lat axis swap, or a missing cos(lat) foreshortening on the east
+    // span, would both pass a square ring at the equator but not this one.
     const row = (
       await runTiers({ small: glbPath }, undefined, undefined, undefined, undefined, {
         ringM: [
           [0, 0],
-          [100, 0],
-          [100, 100],
+          [200, 0],
+          [200, 100],
           [0, 100],
         ],
-        siteLatDeg: 0,
-        siteLonDeg: 0,
+        siteLatDeg,
+        siteLonDeg: 12.53,
         radiusM: R,
       })
     )[0]!;
 
     expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(true);
-    const metresPerDeg = (Math.PI / 180) * R;
+    const metresPerDegLat = (Math.PI / 180) * R;
+    const metresPerDegLon = metresPerDegLat * Math.cos((siteLatDeg * Math.PI) / 180);
     expect(row.hole).toBeDefined();
-    expect(row.hole!.lonMinDeg).toBeCloseTo(0, 6);
-    expect(row.hole!.latMinDeg).toBeCloseTo(0, 6);
-    expect(row.hole!.lonSpanDeg).toBeCloseTo(100 / metresPerDeg, 6);
-    expect(row.hole!.latSpanDeg).toBeCloseTo(100 / metresPerDeg, 6);
+    expect(row.hole!.lonMinDeg).toBeCloseTo(12.53, 6);
+    expect(row.hole!.latMinDeg).toBeCloseTo(siteLatDeg, 6);
+    expect(row.hole!.lonSpanDeg).toBeCloseTo(200 / metresPerDegLon, 6);
+    expect(row.hole!.latSpanDeg).toBeCloseTo(100 / metresPerDegLat, 6);
   });
 
   it('leaves hole undefined for a target with no crop outline', async () => {

@@ -5,7 +5,7 @@
  * edge), not a pixel-grid morphological approximation, so a concave corner
  * shrinks the same as a straight edge. Row 0 is the NORTH edge (max Y) —
  * `buildMeshes` writes the mask so texture v = 0 sits at the hole rect's max
- * latitude, matching how the surface-tile shader will sample it.
+ * latitude, matching the surface-tile shader's own v = 0 convention.
  */
 
 /** Even-odd ray-casting point-in-polygon; `ring` is implicitly closed
@@ -74,8 +74,11 @@ export function rasterizeHoleMask(
     minY = Math.min(minY, y);
     maxY = Math.max(maxY, y);
   }
-  const width = Math.max(1, Math.round((maxX - minX) / metresPerPx));
-  const height = Math.max(1, Math.round((maxY - minY) / metresPerPx));
+  // Ceil, not round: `sizeEnuM` below reports the whole-pixel extent the
+  // grid actually covers, and rounding down would understate it by up to
+  // half a pixel.
+  const width = Math.max(1, Math.ceil((maxX - minX) / metresPerPx));
+  const height = Math.max(1, Math.ceil((maxY - minY) / metresPerPx));
 
   const mask = new Uint8Array(width * height);
   for (let row = 0; row < height; row++) {
@@ -87,5 +90,11 @@ export function rasterizeHoleMask(
       mask[row * width + col] = 255;
     }
   }
-  return { mask, width, height, minEnuM: [minX, minY], sizeEnuM: [maxX - minX, maxY - minY] };
+  return {
+    mask,
+    width,
+    height,
+    minEnuM: [minX, minY],
+    sizeEnuM: [width * metresPerPx, height * metresPerPx],
+  };
 }

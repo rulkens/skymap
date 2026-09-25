@@ -31,6 +31,9 @@ export async function simplifyToTriangles(
   // ABOVE the source (simplification only ever removes triangles) is a caller
   // mistake the tolerance check downstream should report, not a crash here.
   const targetIndexCount = Math.min(targetTriangles * 3, indices.length);
+  // LockBorder pins every open-boundary vertex: the crop rim a terrain hole
+  // is eroded against (see HOLE_MASK_ERODE_M in buildMeshes.ts) must not pull
+  // inward under decimation, or the mesh's own edge drifts past the hole.
   const [simplified] = MeshoptSimplifier.simplifyWithAttributes(
     indices,
     positions,
@@ -41,6 +44,7 @@ export async function simplifyToTriangles(
     null,
     targetIndexCount,
     UNBOUNDED_ERROR,
+    ['LockBorder'],
   );
   return { indices: simplified, triangleCount: simplified.length / 3 };
 }

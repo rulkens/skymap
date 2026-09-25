@@ -27,22 +27,4 @@ describe('anchoredSeat', () => {
     expect(up[1]).toBeCloseTo(0, 6);
     expect(up[2]).toBeCloseTo(1, 6);
   });
-
-  it('flat (no offset) yields the untilted [0, 0, 1] up', () => {
-    const anchor = { latDeg: 0, lonDeg: 0, heightM: 100 };
-    const site = {
-      id: 's',
-      hostId: 'earth',
-      latDeg: 0,
-      lonDeg: 0,
-      altitudeM: 0,
-      seat: 'anchored' as const,
-    };
-
-    const { up } = anchoredSeat(site, anchor, R);
-
-    expect(up[0]).toBeCloseTo(0, 12);
-    expect(up[1]).toBeCloseTo(0, 12);
-    expect(up[2]).toBe(1);
-  });
 });

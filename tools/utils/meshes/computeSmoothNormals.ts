@@ -1,9 +1,8 @@
 /**
  * computeSmoothNormals — per-vertex normals for a GLB primitive with no
- * NORMAL attribute, replacing `buildMeshes`'s old flat-up `[0,0,1]` guess.
- * Accumulating the UN-normalized face normal (its length is twice the
- * triangle's area) folds the area weight and the direction into one
- * accumulate-then-normalize pass, so a degenerate (zero-area) triangle's
+ * NORMAL attribute. Accumulating the UN-normalized face normal (its length
+ * is twice the triangle's area) folds the area weight and the direction into
+ * one accumulate-then-normalize pass, so a degenerate (zero-area) triangle's
  * zero-length cross product drops out on its own — no separate area check.
  */
 

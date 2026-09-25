@@ -156,8 +156,8 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     hole: {
       lonMinDeg: 12.523172510948879,
       latMinDeg: 55.6686959789349,
-      lonSpanDeg: 0.003523109328964935,
-      latSpanDeg: 0.0022577473389944203,
+      lonSpanDeg: 0.003524198067005102,
+      latSpanDeg: 0.0022617938388833636,
     },
   },
 };
