@@ -11,12 +11,12 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { milkyWayVisible } from '../helpers/milkyWayVisible';
-import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
+import { milkyWayVisible } from '../../../services/engine/helpers/milkyWayVisible';
+import { milkyWayFadeAlpha } from '../../../services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
-import { resolveLayerOpacity } from '../presentation/focusRecession';
-import { sceneBodyStates } from './sceneBodyStates';
+import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
+import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { regionById } from '../../../utils/regions/regionById';
 

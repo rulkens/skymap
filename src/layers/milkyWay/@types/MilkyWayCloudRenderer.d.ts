@@ -19,7 +19,7 @@
  * Satisfies the shared `Renderer` contract (`label` + `destroy`).
  */
 
-import type { MilkyWayCloudDrawArgs } from './MilkyWayCloudDrawArgs';
+import type { MilkyWayCloudDrawArgs } from '../../../@types/rendering/MilkyWayCloudDrawArgs';
 
 export type MilkyWayCloudRenderer = {
   /** Human-readable identifier (`'milkyWayCloudRenderer'`). Part of the `Renderer` contract. */

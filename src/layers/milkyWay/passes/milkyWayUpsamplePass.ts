@@ -12,14 +12,18 @@
  * can never disagree about whether the offscreen was written this frame.
  */
 
-import { createUpsamplePass } from './createUpsamplePass';
-import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { MilkyWayRuntime } from '../@types/MilkyWayRuntime';
+import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
+import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 
-export const milkyWayUpsamplePass = createUpsamplePass({
-  name: 'milky-way-upsample',
-  sourceTargetId: 'mw-aggregate',
-  handleOf: (state) => state.gpu.milkyWayAggregateUpsample,
-  enabled(state, ctx) {
-    return deriveMilkyWayCloudAlpha(state, ctx) !== null;
-  },
-});
+export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass {
+  return createUpsamplePass({
+    name: 'milky-way-upsample',
+    sourceTargetId: 'mw-aggregate',
+    handleOf: () => runtime.aggregateUpsample,
+    enabled(state, ctx) {
+      return deriveMilkyWayCloudAlpha(state, ctx) !== null;
+    },
+  });
+}

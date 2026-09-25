@@ -13,13 +13,23 @@ import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes'
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { FrameInputs } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep';
+import type { ContentPass } from '../../../../../src/@types/engine/frame/ContentPass';
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
+// The milkyWay Layer's passes: `resolvePassNames` matches by `name` alone, so
+// a name-only stub keeps the (hdr, NEAR0) roster's group-total slot alive
+// without a real runtime — this file never invokes `draw`/`enabled`.
+const MILKY_WAY_STUB_PASSES: readonly ContentPass[] = [
+  'milky-way-aggregate',
+  'milky-way-upsample',
+  'milky-way',
+].map((name) => ({ name }) as unknown as ContentPass);
+
 /** The real order + registry, with only the per-frame lists varied. */
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
-  return expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+  return expandFrameOrder(FRAME_ORDER, [...CONTENT_PASSES, ...MILKY_WAY_STUB_PASSES], {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],

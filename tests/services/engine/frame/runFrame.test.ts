@@ -872,49 +872,9 @@ describe('runFrame — render-target reconcile', () => {
   });
 });
 
-describe('runFrame — milky-way star count', () => {
-  it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
-    // starCount feeds generation, not a uniform or a render target — a
-    // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
-    // reaches the screen is runFrame's per-frame `reconcile` call: the cloud
-    // notices the setting has outrun the buffers and calls regenerate. A knob
-    // with no branch wired to it would silently do nothing, which is the failure
-    // this test exists to catch. The steady-state half matters just as much as
-    // the mw-aggregate divisor test's: comparing against `cloud.starCount()`
-    // (what the CURRENT buffers were generated with) has to settle once the
-    // regenerate lands, or every frame after a drag would regenerate again.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(store);
-
-    let currentCount = 150000;
-    const regenerate = vi.fn((count: number) => {
-      currentCount = count;
-    });
-    state.gpu.milkyWayCloud = {
-      buffers: vi.fn(),
-      starCount: () => currentCount,
-      regenerate,
-      reconcile: (wantedCount: number) => {
-        if (currentCount !== wantedCount) {
-          regenerate(wantedCount);
-        }
-      },
-      destroy: vi.fn(),
-    } as unknown as EngineState['gpu']['milkyWayCloud'];
-
-    state.settings.milkyWay.starCount = 40000;
-    runFrame(state, deps, 0);
-
-    expect(regenerate).toHaveBeenCalledTimes(1);
-    expect(regenerate).toHaveBeenCalledWith(40000);
-    expect(currentCount).toBe(40000);
-
-    // A frame with the setting unchanged must not regenerate again.
-    runFrame(state, deps, 16);
-    expect(regenerate).toHaveBeenCalledTimes(1);
-  });
-});
+// The milky-way star-count reconcile moved from this per-frame call to
+// `milkyWayPlanner`'s once-plan row; its regenerate/steady-state coverage
+// moved with it to `tests/layers/milkyWay/frame.test.ts`.
 
 describe('runFrame — engineScaleChanged dispatch', () => {
   // The scale-dispatch block fires inside the `if (state.booted)` guard —

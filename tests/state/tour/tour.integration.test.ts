@@ -21,7 +21,7 @@ import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';

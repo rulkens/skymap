@@ -38,9 +38,13 @@ import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texture
 import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../src/layers/milkyWay/passes/milkyWayPass';
 import type { CosmicWebDensityRuntime } from '../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
+import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 
 // ── Recording harness ──────────────────────────────────────────────────────
@@ -315,6 +319,14 @@ describe('renderFrame visual baseline', () => {
     // calls directly, the twin of the density upsample below — wired with a logging
     // draw so the snapshot captures the offscreen's merge back into HDR.
     const milkyWayAggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    // The milkyWay Layer's passes close over its own runtime now — the same
+    // logging renderers above ride it instead of `state.gpu`.
+    const milkyWayRuntime = {
+      cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
+      cloudRenderer: milkyWayCloudRenderer,
+      aggregateUpsample: milkyWayAggregateUpsample,
+      pickRenderer: { pickMilkyWay: vi.fn() },
+    } as unknown as MilkyWayRuntime;
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -474,21 +486,15 @@ describe('renderFrame visual baseline', () => {
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
-          milkyWayCloud: {
-            buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
-          },
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `renderFrame` input field duplication;
           // see `RenderFrameInput`'s slimmed shape). The local names below
-          // (`milkyWayCloudRenderer`, `horizonShellRenderer`,
-          // `proceduralDiskRenderer`, `texturedDiskRenderer`) are the same
-          // logging-renderer instances declared above, so their `argShape`
-          // entries land in `records`. A Layer's renderer is not among them:
-          // it reaches its pass through the runtime, not through `state.gpu`.
-          milkyWayCloudRenderer,
-          milkyWayAggregateUpsample,
+          // (`horizonShellRenderer`, `proceduralDiskRenderer`,
+          // `texturedDiskRenderer`) are the same logging-renderer instances
+          // declared above, so their `argShape` entries land in `records`.
+          // The milkyWay Layer's renderers reach their passes through
+          // `milkyWayRuntime` instead, not through `state.gpu`.
           horizonShellRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
@@ -560,6 +566,9 @@ describe('renderFrame visual baseline', () => {
           } as unknown as CosmicWebFilamentsRuntime),
           cosmicWebDensityPass(densityRuntime),
           cosmicWebDensityUpsamplePass(densityRuntime),
+          milkyWayAggregatePass(milkyWayRuntime),
+          milkyWayUpsamplePass(milkyWayRuntime),
+          milkyWayPass(milkyWayRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,

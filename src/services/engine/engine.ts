@@ -158,7 +158,6 @@ export function createEngine(
       // downstream; the rest are optional and null-checked at their use site. See
       // `@types/EngineGpuHandles.d.ts` for the lifecycle.
       pickProgram: null,
-      milkyWayPickRenderer: null,
       // Canonical bind-group layouts, threaded into every renderer's
       // createPipelineLayout so consumers share one layout identity — see
       // services/gpu/bindGroupLayouts/fadeUniforms.ts (the layout:'auto' trap).
@@ -185,11 +184,8 @@ export function createEngine(
       debugLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      milkyWayCloud: null,
-      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
-      milkyWayAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
       bloomPyramid: null,

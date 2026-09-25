@@ -44,8 +44,10 @@
  * multiplicative transmittance has to land on the real cosmological
  * accumulation, and it is not the fill-bound half.
  *
- * This is the one row whose divisor is NOT a constant here: its `scale` is a
- * function of the live `settings.milkyWay.aggregateDivisor`, resolved afresh by
+ * A row's `scale` can be a function of live settings rather than a constant —
+ * this is the mechanism `mw-aggregate` uses, now declared by the milkyWay
+ * Layer (`layers/milkyWay/render/milkyWayAggregateTarget.ts`) rather than in
+ * this table: it reads `settings.milkyWay.aggregateDivisor`, resolved afresh by
  * every `reconcile`. The divisor trades against the star shader's `starPxMin` /
  * `starPxMax` clamps, stated in TARGET pixels and already live sliders, so the
  * three move together against a moving frame. No 'last applied' record exists
@@ -143,16 +145,6 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       depth: null,
       scale: 1,
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
-    },
-    // The starCatalog Layer's own `star-aggregates` target composes in here
-    // (see `layers/starCatalog/render/starAggregatesTarget.ts`): the Milky
-    // Way's star billboards draw additively into this row.
-    {
-      id: 'mw-aggregate',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: (state) => state.settings.milkyWay.aggregateDivisor,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
     // Transparent (a=0) so the later OVER composite leaves every pixel the
     // foreground did not draw unchanged — an empty foreground frame

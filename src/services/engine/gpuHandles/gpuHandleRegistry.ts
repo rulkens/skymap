@@ -11,13 +11,8 @@
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
-import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
-import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
-import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
-import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
@@ -178,11 +173,6 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
-    key: 'milkyWayPickRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayPickRenderer(deps.ctx, deps.fadeBgl, SLAB_REVERSED_Z[NEAR0]!),
-  },
-  {
     key: 'horizonShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
@@ -193,24 +183,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'label3DRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
-  },
-  {
-    // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `state.settings.milkyWay`:
-    // runFrame regenerates the cloud on divergence from the live setting, so
-    // reading settings here would just add a second path to the same answer.
-    key: 'milkyWayCloud',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayCloud(deps.ctx.device, MILKY_WAY_TUNING_DEFAULTS.starCount),
-  },
-  {
-    key: 'milkyWayCloudRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
-  },
-  {
-    key: 'milkyWayAggregateUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'bloomPyramid',

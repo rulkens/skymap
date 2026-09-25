@@ -144,14 +144,6 @@ vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () =>
   createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
 }));
 
-vi.mock('../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud', () => ({
-  createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer', () => ({
-  createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
   createLabelRenderer: vi.fn(() => makeStub('labelRenderer')),
 }));
@@ -174,10 +166,6 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
 
 vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer', () => ({
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', () => ({
-  createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
@@ -331,7 +319,6 @@ function makeState(): EngineState {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
       pickProgram: null,
-      milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
       labelRenderer: null,
@@ -342,8 +329,6 @@ function makeState(): EngineState {
       structureMarkerRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayCloud: null,
-      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
       pickDebugOverlay: null,
       earthRenderer: null,

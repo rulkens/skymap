@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { deriveMilkyWayCloudAlpha } from '../../../../src/services/engine/frame/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
