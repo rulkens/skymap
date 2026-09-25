@@ -138,8 +138,8 @@ export function rasterizeHoleMask(ringEnuM: readonly [number, number][], metresP
 
 **Files:** modify `src/services/loading/fetchers/meshFetcher.ts`, `src/@types/data/mesh/MeshAsset*.d.ts`, `tests/services/loading/fetchers/meshFetcher.test.ts`.
 
-- [ ] When the row has `hole`, fetch `meshes/<key>_hole.webp` (untiered, via the manifest like `_contact`) and decode to an `ImageBitmap` (or whatever form `_contact` takes); `MeshAsset.holeMask?`. Test: a row with `hole` fetches the `_hole` URL; without `hole`, no request.
-- [ ] Commit `feat(meshes): load the terrain-hole mask with the mesh`.
+- [x] When the row has `hole`, fetch `meshes/<key>_hole.webp` (untiered, via the manifest like `_contact`) and decode to an `ImageBitmap` (or whatever form `_contact` takes); `MeshAsset.holeMask?`. Test: a row with `hole` fetches the `_hole` URL; without `hole`, no request.
+- [x] Commit `feat(meshes): load the terrain-hole mask with the mesh`.
 
 ### Task 10: terrain-hole bind group — `review: yes`
 
