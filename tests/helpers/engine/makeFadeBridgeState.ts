@@ -17,6 +17,7 @@ import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present
 import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
 import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 import { cosmicWebDensityFadeRows } from '../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import { milkyWayFadeRows } from '../../../src/layers/milkyWay/present/milkyWayFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
@@ -118,6 +119,7 @@ export function makeFadeBridgeState(): {
       ...filamentsFadeRows(FILAMENTS_RUNTIME),
       ...flowFadeRows(FLOW_RUNTIME),
       ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...milkyWayFadeRows(),
     ],
   } as unknown as FadeBridgeState;
 

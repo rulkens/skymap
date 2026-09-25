@@ -1,5 +1,5 @@
-import type { MilkyWaySourceEntry } from '../../@types/data/milkyWay/MilkyWaySourceEntry';
-import { Source } from '../source';
+import type { MilkyWaySourceEntry } from '../../../@types/data/milkyWay/MilkyWaySourceEntry';
+import { Source } from '../../../data/source';
 
 export const MILKY_WAY_ENTRY = {
   type: 'milkyWay',

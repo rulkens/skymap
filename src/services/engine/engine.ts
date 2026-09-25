@@ -27,7 +27,6 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
@@ -318,15 +317,13 @@ export function createEngine(
   canvas.dataset.viewRig = state.viewRig;
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
-  // the director declutters by prominence otherwise. The constellation figure NAMES
-  // are deliberately NOT here: their anchors sit at parsec distances, inside the
-  // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw — they
-  // register on `foregroundLabelDirector` (NEAR0) from the constellations Layer,
-  // later in boot (`createLayers`).
-  state.subsystems.cosmoLabelDirector.registerProducer({
-    id: 'milkyWayLabel',
-    produceLabels: produceMilkyWayLabel,
-  });
+  // the director declutters by prominence otherwise. Every Layer's own COSMO
+  // producer (the milkyWay label included) registers later, from `createLayers`,
+  // so this core row wins any tie. The constellation figure NAMES are
+  // deliberately NOT here: their anchors sit at parsec distances, inside the
+  // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw —
+  // they register on `foregroundLabelDirector` (NEAR0) from the constellations
+  // Layer, later in boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,

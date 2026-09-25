@@ -1,12 +1,14 @@
 /**
  * The milkyWay Layer: the v1 sprite Milky Way — the generated point cloud,
  * its two-pass renderer, the `mw-aggregate` target and its upsample, the
- * star-count reconcile, and the three draw/pick passes. Settings only so
- * far; fades, the label, selection and UI join in later plan tasks.
+ * star-count reconcile, the three draw/pick passes, both fade rows, the
+ * "You are here" COSMO label, the selection row and the source entry.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { COSMO } from '../../services/engine/frame/slabs';
 import { milkyWayLayerSettings } from './state/slices';
+import { MILKY_WAY_SOURCE_ROWS } from './sources/milkyWaySourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { milkyWayPlanner } from './frame';
@@ -14,10 +16,14 @@ import { MILKY_WAY_AGGREGATE_TARGET } from './render/milkyWayAggregateTarget';
 import { milkyWayAggregatePass } from './passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './passes/milkyWayPass';
+import { milkyWayFadeRows } from './present/milkyWayFadeRows';
+import { produceMilkyWayLabel } from './present/produceMilkyWayLabel';
+import { milkyWaySelectionRow } from './present/milkyWaySelectionRow';
 
 export const milkyWayLayer = defineLayer({
   name: 'milkyWay',
   settings: milkyWayLayerSettings,
+  sources: MILKY_WAY_SOURCE_ROWS,
   targets: [MILKY_WAY_AGGREGATE_TARGET],
   create,
   destroy,
@@ -27,4 +33,9 @@ export const milkyWayLayer = defineLayer({
     milkyWayUpsamplePass(runtime),
     milkyWayPass(runtime),
   ],
+  fades: milkyWayFadeRows,
+  guides: () => ({
+    screenLabels: [{ slab: COSMO, id: 'milkyWayLabel', produceLabels: produceMilkyWayLabel }],
+  }),
+  selection: () => [milkyWaySelectionRow()],
 });

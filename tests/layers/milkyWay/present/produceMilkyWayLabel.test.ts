@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
-import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
-import { MILKY_WAY_LABEL_STYLE } from '../../../../src/services/engine/presentation/milkyWayLabelStyle';
-import { milkyWayLabelAlpha } from '../../../../src/services/gpu/labelLayout/milkyWayLabelVisibility';
+import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
+import { MILKY_WAY_LABEL_STYLE } from '../../../../src/layers/milkyWay/present/milkyWayLabelStyle';
+import { milkyWayLabelAlpha } from '../../../../src/layers/milkyWay/present/milkyWayLabelVisibility';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import {

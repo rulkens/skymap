@@ -1,6 +1,6 @@
 /**
- * produceMilkyWayLabel — the per-frame "You are here" label + stem, a bare
- * function registered with the `cosmoLabelDirector` in `engine.ts`.
+ * produceMilkyWayLabel — the per-frame "You are here" label + stem, registered
+ * on the COSMO slab's director via the Layer's `guides.screenLabels`.
  *
  * It only READS `fades.opacityOf(LAYER_ID)`; `syncVisibilityFades` is the sole
  * writer of that intent opacity. The two distance bands stay here — pure functions
@@ -18,11 +18,11 @@ import { Source } from '../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
-import { liftedLabelPlacement } from './liftedLabelPlacement';
-import { milkyWayLabelAlpha } from '../../gpu/labelLayout/milkyWayLabelVisibility';
+import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
+import { milkyWayLabelAlpha } from './milkyWayLabelVisibility';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
-import { resolveLayerOpacity } from './focusRecession';
+import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
+import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.

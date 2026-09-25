@@ -24,13 +24,6 @@ const LABEL_BEARING_BODY_IDS = SOURCE_ENTRIES.filter((e) => e.type === 'body' &&
 
 export const FADE_LAYERS = [
   fadeLayerRow({
-    key: 'milkyWayDisk',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'milkyWay' }),
-    seed: (s) => (s.milkyWay.enabled ? 1 : 0),
-    intent: (s) => s.milkyWay.enabled,
-  }),
-  fadeLayerRow({
     key: 'proceduralDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'proceduralDisks' }),
@@ -41,13 +34,6 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'texturedDisks' }),
     seed: () => 1,
-  }),
-  fadeLayerRow({
-    key: 'milkyWayLabel',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
-    seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
-    intent: (s) => s.milkyWay.labelEnabled,
   }),
   // scene-body captions — per LABEL-BEARING BodyId, settings-derived seed
   // (bodies are seeded in code, so no demand-loaded guard). Not every body row
