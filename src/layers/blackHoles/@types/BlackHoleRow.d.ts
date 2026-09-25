@@ -1,18 +1,17 @@
 /**
  * `BlackHoleRow` — one supermassive black hole in the scene: where it sits, how
- * heavy it is, when its lens draws, how its far-field marker looks, and its
- * disk-emission parameters. Every shared loop (lens pass, marker pass, slab
- * rows) iterates `BLACK_HOLES`, so a second hole (M87*) is a second row, not code.
+ * heavy it is, when its lens draws, and how its far-field marker looks. Every
+ * shared loop (lens pass, marker pass, slab rows) iterates `BLACK_HOLES`, so a
+ * second hole (M87*) is a second row, not code. The pose key is derived from
+ * `capture` (`blackHoleAnchorId`), not carried here — see deletion-audit N2.
  */
 
 import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
-import type { PlaceId } from '../../../@types/scene/PlaceId';
 import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 export type BlackHoleRow = {
   readonly id: BlackHoleId;
-  readonly anchorId: PlaceId; // the lens's pose key and slab host
   readonly massSolar: number; // solar masses; r_s = schwarzschildRadiusM(massSolar)
   readonly capture: SkyCaptureKey; // which sky bake the lens samples and bands against
   // The descent floor, in r_s: the camera may approach to 2 r_s, well inside
@@ -25,12 +24,4 @@ export type BlackHoleRow = {
   // albedo to derive one from. Linear RGB.
   readonly glintTint: Readonly<Vec3>;
   readonly glintBaseIntensity: number; // marker brightness outside the lens band
-  readonly emission: {
-    readonly innerRs: number; // Schwarzschild radii; inner edge of the accretion disc
-    readonly outerRs: number; // Schwarzschild radii; photon ring / EHT imaging radius
-    readonly inclinationRad: number; // radians; face-on view ≲30° per EHT observations
-    readonly positionAngleRad: number; // radians; major-axis orientation angle (unconstrained, tuned for visual)
-    readonly flickerAmp: number; // fractional brightness modulation (0..1)
-    readonly flickerTimescaleS: number; // seconds; typical timescale of flicker variations
-  };
 };

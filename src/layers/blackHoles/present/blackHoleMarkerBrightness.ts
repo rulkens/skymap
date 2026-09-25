@@ -10,13 +10,14 @@ import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { blackHoleAnchorId } from './blackHoleAnchorId';
 
 export function blackHoleMarkerBrightness(
   row: BlackHoleRow,
   camPosMpc: Readonly<Vec3>,
   states: ReadonlyMap<string, BodyState>,
 ): number {
-  const anchor = states.get(row.anchorId);
+  const anchor = states.get(blackHoleAnchorId(row));
   if (anchor === undefined) return 0;
   const band = CUBEMAP_CAPTURES[row.capture].band;
   return row.glintBaseIntensity * (1 - fadeBand(band, distanceMpc(camPosMpc, anchor.positionMpc)));

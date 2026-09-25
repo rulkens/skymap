@@ -15,13 +15,14 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { CAPTION_FADE_RULES } from '../../../services/engine/presentation/captionFadeRules';
 import { GLINT_MIN_BRIGHTNESS } from '../../../data/rendering/glintMinBrightness';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { blackHoleAnchorId } from './blackHoleAnchorId';
 import { blackHoleMarkerBrightness } from './blackHoleMarkerBrightness';
 
 export function blackHolePickable(row: BlackHoleRow, state: PassState, ctx: FrameView): boolean {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
   const states = sceneBodyStates(state, ctx);
   if (blackHoleMarkerBrightness(row, ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS) return true;
-  const anchor = states.get(row.anchorId);
+  const anchor = states.get(blackHoleAnchorId(row));
   if (anchor === undefined) return false;
   // The caption's own rules row, not a re-spelled gate and band, so the click
   // cannot outlive the name or the name outlive the click.

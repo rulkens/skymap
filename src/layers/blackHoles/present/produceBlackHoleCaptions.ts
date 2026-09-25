@@ -21,6 +21,7 @@ import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadius
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { BLACK_HOLE_SOURCE_ROWS } from '../sources/blackHoleSourceRows';
+import { blackHoleAnchorId } from './blackHoleAnchorId';
 
 /**
  * A hole has no light to take a colour from, so the tint is authored: a warm
@@ -55,7 +56,7 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
         bodyCaption(
           findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
           schwarzschildRadiusM(row.massSolar),
-          states.get(row.anchorId)!.positionMpc,
+          states.get(blackHoleAnchorId(row))!.positionMpc,
           BLACK_HOLE_CAPTION_TINT,
           'sgrAStar',
           packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),

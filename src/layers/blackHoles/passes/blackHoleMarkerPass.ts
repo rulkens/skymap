@@ -22,6 +22,7 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { INSTANCE_FLOATS } from '../../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
+import { blackHoleAnchorId } from '../present/blackHoleAnchorId';
 import { blackHoleMarkerBrightness } from '../present/blackHoleMarkerBrightness';
 import { blackHolePickable } from '../present/blackHolePickable';
 
@@ -52,7 +53,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
       for (const row of BLACK_HOLES) {
         const brightness = blackHoleMarkerBrightness(row, camPos, states);
         if (brightness <= GLINT_MIN_BRIGHTNESS) continue;
-        const positionMpc = states.get(row.anchorId)!.positionMpc;
+        const positionMpc = states.get(blackHoleAnchorId(row))!.positionMpc;
         const base = count * INSTANCE_FLOATS;
         staging[base + 0] = positionMpc[0] - camPos[0];
         staging[base + 1] = positionMpc[1] - camPos[1];
@@ -83,7 +84,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
       const points: BodyPointPick[] = [];
       BLACK_HOLES.forEach((row, rowIndex) => {
         if (!blackHolePickable(row, state, ctx)) return;
-        const positionMpc = states.get(row.anchorId)!.positionMpc;
+        const positionMpc = states.get(blackHoleAnchorId(row))!.positionMpc;
         points.push({
           posRelCamMpc: [
             positionMpc[0] - camPos[0],

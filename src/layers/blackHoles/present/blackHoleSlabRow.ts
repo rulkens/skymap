@@ -9,11 +9,12 @@ import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import type { BlackHoleRow } from '../@types/BlackHoleRow';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
+import { blackHoleAnchorId } from './blackHoleAnchorId';
 import { blackHoleLensEnvelopeM } from './blackHoleLensEnvelopeM';
 
 export function blackHoleSlabRow(row: BlackHoleRow): SlabRow {
   return {
-    anchorId: row.anchorId,
+    anchorId: blackHoleAnchorId(row),
     drawRadiusM: blackHoleLensEnvelopeM(row),
     footprintRadiusM: schwarzschildRadiusM(row.massSolar),
     activeBand: CUBEMAP_CAPTURES[row.capture].band,

@@ -18,6 +18,7 @@ import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadius
 import { packBlackHoleLensingUniforms } from '../../../utils/gpu/packBlackHoleLensingUniforms';
 import { lensEdgeFadeEndRs } from '../../../utils/lensing/lensEdgeFadeEndRs';
 import { skyCaptureBandAlpha } from '../../../services/engine/frame/skyCaptureBandAlpha';
+import { blackHoleAnchorId } from '../present/blackHoleAnchorId';
 
 export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
   // `ctx.snapshot.simDays` is Julian days; `flickerTimescaleS` is seconds.
@@ -29,13 +30,13 @@ export function blackHoleLensingPass(runtime: BlackHolesRuntime): ContentPass {
     enabled(_state, _ctx, view) {
       if (view.slab.frame.kind !== 'body-m') return false;
       const hostId = view.slab.frame.hostId;
-      return BLACK_HOLES.some((row) => row.anchorId === hostId);
+      return BLACK_HOLES.some((row) => blackHoleAnchorId(row) === hostId);
     },
 
     draw(pass, view, ctx, state) {
       if (view.slab.frame.kind !== 'body-m') return;
       const hostId = view.slab.frame.hostId;
-      const row = BLACK_HOLES.find((candidate) => candidate.anchorId === hostId);
+      const row = BLACK_HOLES.find((candidate) => blackHoleAnchorId(candidate) === hostId);
       if (row === undefined) return;
       const renderer = runtime.lensRenderer;
       const schwarzschildM = schwarzschildRadiusM(row.massSolar);
