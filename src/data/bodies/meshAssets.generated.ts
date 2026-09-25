@@ -141,4 +141,23 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
       halfV: [-1.709266185760498, 0, 0],
     },
   },
+  soendermarken: {
+    key: 'soendermarken',
+    tierCeiling: 'medium',
+    boundingRadiusM: 162.5717065451265,
+    groundOffsetM: 0,
+    meanAlbedo: [0.067019, 0.07109, 0.065298],
+    triangleCount: 470046,
+    substituted: ['metalRough', 'normalMap'],
+    source: 'https://dataforsyningen.dk/ (Skråfotos 2019, via the scene-workbench bake)',
+    licence: 'CC BY 4.0',
+    attribution:
+      'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
+    hole: {
+      lonMinDeg: 12.523172510948879,
+      latMinDeg: 55.6686959789349,
+      lonSpanDeg: 0.003523109328964935,
+      latSpanDeg: 0.0022577473389944203,
+    },
+  },
 };

@@ -62,4 +62,16 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     altitudeM: groundOffsetM('mer'),
     seat: 'resting',
   },
+  // Crop-bounds centre of the 2019 leaf-on photogrammetry scan (not the
+  // source's own anchor, ~320 m east — see MESH_SOURCES.soendermarken).
+  // altitudeM is 0: an anchored seat's height comes from the source anchor's
+  // own DVR90 height (buildSiteGroundHeights), not a wheel lift.
+  {
+    id: 'soendermarken',
+    hostId: 'earth',
+    latDeg: 55.670015,
+    lonDeg: 12.524611,
+    altitudeM: 0,
+    seat: 'anchored',
+  },
 ];

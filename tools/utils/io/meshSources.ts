@@ -94,4 +94,18 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     // Same source orientation as perseverance: up +Y → +Z, forward +Z → +X.
     bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
   },
+  soendermarken: {
+    tiers: {
+      small: { raw: 'meshes.soendermarken', triangles: 150_000 },
+      medium: { raw: 'meshes.soendermarken' },
+    },
+    licence: 'CC BY 4.0',
+    attribution:
+      'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
+    // Already authored in the body frame (+X east, +Z up) — no remap.
+    georeferenced: {
+      anchor: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
+      holeOutline: 'data/geo3d/soendermarken-crop-2019/mesh.outline.json',
+    },
+  },
 };

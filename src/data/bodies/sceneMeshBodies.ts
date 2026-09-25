@@ -33,6 +33,9 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
   { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
   { id: 'spirit', label: 'Spirit', meshKey: 'mer' },
   { id: 'opportunity', label: 'Opportunity', meshKey: 'mer' },
+  // ~170 m bounding radius: the default 2-radii standoff would park the
+  // camera the better part of a km up, well past where the park reads.
+  { id: 'soendermarken', label: 'Søndermarken', meshKey: 'soendermarken', standoffRadii: 1.5 },
 ];
 
 export const SCENE_MESH_BODIES: readonly MeshBody[] = SEED_MESH_BODIES.map(meshBody);

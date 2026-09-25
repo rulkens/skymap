@@ -14,6 +14,7 @@ export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {
   perseverance: 4259.82301156924,
   spirit: 4267.150660739002,
   opportunity: 4713.81073991086,
+  soendermarken: 18.53,
 };
 
 /** Site id -> the ground's up in the site's radial (east, north, up) frame,
@@ -23,4 +24,5 @@ export const SITE_GROUND_UPS_ENU: Readonly<Record<string, Readonly<Vec3>>> = {
   perseverance: [-0.09227919142659319, -0.14385560359738123, 0.9852868192274203],
   spirit: [0.04647436555169493, 0.0454836873522199, 0.9978834438607611],
   opportunity: [0, 0.00909252388406329, 0.9999586621502999],
+  soendermarken: [0.00005304356556104682, -2.617993873899241e-7, 0.9999999985931558],
 };
