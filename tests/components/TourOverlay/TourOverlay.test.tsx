@@ -42,7 +42,7 @@ describe('TourCaption', () => {
     const caption: BeatCaption = { title: 'The Virgo Cluster' };
     render(
       <TourCaption
-        chrome={false}
+        hasChrome={false}
         caption={caption}
         label="The Local Universe"
         index={1}
@@ -153,8 +153,8 @@ describe('TourOverlay', () => {
     expect(captionRoot.classList.contains(styles.captionNoChrome!)).toBe(false);
   });
 
-  it('cinema presentation (chrome=false): caption only — no buttons, no counter', () => {
-    render(<TourOverlay {...baseProps()} chrome={false} dwellNonce={1} />);
+  it('cinema presentation (hasChrome=false): caption only — no buttons, no counter', () => {
+    render(<TourOverlay {...baseProps()} hasChrome={false} dwellNonce={1} />);
 
     expect(screen.getByText('The Virgo Cluster')).toBeInTheDocument();
     expect(screen.getByText('The Local Universe')).toBeInTheDocument();

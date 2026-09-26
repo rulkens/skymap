@@ -51,13 +51,6 @@ export type InfoCardProps = {
    */
   selected: FocusableTarget | null;
   /**
-   * Catalogued galaxy count for the pinned structure (cluster / supercluster
-   * / void), or null/undefined when not applicable.  Forwarded to
-   * StructureDetailCard, which renders it as the "Galaxies" row.  Ignored for
-   * galaxy selections (GalaxyDetailCard has no such row).
-   */
-  selectedMemberCount?: number | null;
-  /**
    * Optional callback fired when the user clicks the "Focus" pill on the pinned
    * card.  App dispatches `updateSelectionFocus(refOf(target))`.
    */
@@ -70,29 +63,17 @@ export type InfoCardProps = {
   onClose?: () => void;
 };
 
-function InfoCard({
-  hovered,
-  selected,
-  selectedMemberCount,
-  onFocus,
-  onClose,
-}: InfoCardProps): ReactNode {
+function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
 
   // Mobile has no hover cursor: only the pinned target matters, and it shows as
   // a single MobileSheet wrapping the same Detail card the desktop branch uses.
   if (isMobile) {
     if (selected === null) return null;
+    const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
       <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        {detailCardFor(DETAIL_CARD, selected).Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          chrome: false,
-          onFocus,
-          onClose,
-        })}
+        <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
       </MobileSheet>
     );
   }
@@ -105,19 +86,15 @@ function InfoCard({
   // (`targetEq` suppresses the redundant preview of an already-pinned target).
   // Adding a focusable kind is a DETAIL_CARD row, never a branch here.
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
+  const Detail = selected ? detailCardFor(DETAIL_CARD, selected).Detail : null;
+  const Compact = compactTarget ? detailCardFor(DETAIL_CARD, compactTarget).Compact : null;
 
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
-      {selected &&
-        detailCardFor(DETAIL_CARD, selected).Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          onFocus,
-          onClose,
-        })}
-      {compactTarget &&
-        detailCardFor(DETAIL_CARD, compactTarget).Compact({ target: compactTarget })}
+      {selected && Detail && (
+        <Detail target={selected} isPinned onFocus={onFocus} onClose={onClose} />
+      )}
+      {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>
   );
 }

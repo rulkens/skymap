@@ -209,7 +209,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## UI & UX
 
 - [ ] **Richer Milky Way info card** `needs-design` — after #826 lands: the card has one description line and no fact rows; pick the facts and source them. → [details](backlog/2026-09-26-richer-milky-way-info-card.md)
-- [ ] **Detail-card entries as components** `ready` — after #826 lands: type `DetailCardEntry.Detail`/`Compact` as `ComponentType` and render them as JSX, dropping every `createElement` wrapper, as the `debug` slot already works. → [details](backlog/2026-09-26-detail-card-entries-as-components.md)
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
 - [ ] **Settings row order is source-code order** `deferred` — panel rows follow `Source` enum value ascending (codes are append-only), so a chosen order needs a display-order mechanism that does not exist.

@@ -9,8 +9,6 @@ describe('detailCardTable', () => {
 
     for (const type of SELECTION_KINDS) {
       expect(table[type]).toBeDefined();
-      expect(typeof table[type].Detail).toBe('function');
-      expect(typeof table[type].Compact).toBe('function');
     }
   });
 

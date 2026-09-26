@@ -45,8 +45,8 @@ import local from './BodyDetailCard.module.css';
 
 export type BodyDetailCardProps = {
   target: BodyInfo;
-  pinned?: boolean;
-  chrome?: boolean;
+  isPinned?: boolean;
+  hasChrome?: boolean;
   /**
    * Live camera→body distance in Mpc off the throttled time pub, or null when no
    * distance is published. Rendered as a row on the non-star body branch only.
@@ -58,8 +58,8 @@ export type BodyDetailCardProps = {
 
 function BodyDetailCard({
   target,
-  pinned = false,
-  chrome = true,
+  isPinned = false,
+  hasChrome = true,
   distanceMpc = null,
   onFocus,
   onClose,
@@ -98,15 +98,15 @@ function BodyDetailCard({
     });
   }
 
-  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Body"
-        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
-        onClose={pinned ? onClose : undefined}
+        onClose={isPinned ? onClose : undefined}
       />
 
       <CardRow type="headline">{target.label}</CardRow>

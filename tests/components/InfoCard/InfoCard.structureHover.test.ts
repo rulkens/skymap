@@ -20,10 +20,20 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createElement } from 'react';
+import { createElement, type ReactNode } from 'react';
+import { Provider } from 'react-redux';
 import InfoCard from '../../../src/components/InfoCard/InfoCard';
+import { createAppStore } from '../../../src/store/createAppStore';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
+
+// A pinned structure renders its Detail through StructureDetailCardContainer
+// (the member-count fact is a store read), so every render below needs a
+// store in context even when the structure isn't the case under test.
+function withStore(children: ReactNode) {
+  const { store } = createAppStore();
+  return createElement(Provider, { store, children });
+}
 
 const virgo: StructureInfo = {
   type: 'structure',
@@ -89,10 +99,12 @@ const galaxyStub = {
 describe('InfoCard hovered structure', () => {
   it('renders the structure hover preview when only a hovered structure is set', () => {
     render(
-      createElement(InfoCard, {
-        hovered: virgo,
-        selected: null,
-      }),
+      withStore(
+        createElement(InfoCard, {
+          hovered: virgo,
+          selected: null,
+        }),
+      ),
     );
     // Virgo's name appears in the compact preview headline.
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
@@ -103,10 +115,12 @@ describe('InfoCard hovered structure', () => {
 
   it('suppresses the structure hover preview when the SAME structure is already pinned', () => {
     render(
-      createElement(InfoCard, {
-        hovered: virgo,
-        selected: virgo,
-      }),
+      withStore(
+        createElement(InfoCard, {
+          hovered: virgo,
+          selected: virgo,
+        }),
+      ),
     );
     // Pinned full card shows "Virgo Cluster" once.  The compact preview
     // (which would also show "Virgo Cluster") MUST NOT appear.  Assert
@@ -120,10 +134,12 @@ describe('InfoCard hovered structure', () => {
 
   it('shows the structure hover preview alongside a pinned DIFFERENT structure', () => {
     render(
-      createElement(InfoCard, {
-        hovered: virgo,
-        selected: coma,
-      }),
+      withStore(
+        createElement(InfoCard, {
+          hovered: virgo,
+          selected: coma,
+        }),
+      ),
     );
     // Both names appear: Coma in the pinned full card, Virgo in the
     // compact hover preview below it.
@@ -133,10 +149,12 @@ describe('InfoCard hovered structure', () => {
 
   it('shows the structure hover preview alongside a pinned galaxy', () => {
     render(
-      createElement(InfoCard, {
-        hovered: virgo,
-        selected: galaxyStub,
-      }),
+      withStore(
+        createElement(InfoCard, {
+          hovered: virgo,
+          selected: galaxyStub,
+        }),
+      ),
     );
     // Virgo's name appears in the compact structure preview, stacked below
     // the pinned galaxy's full card.

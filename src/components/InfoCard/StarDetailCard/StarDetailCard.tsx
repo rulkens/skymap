@@ -37,8 +37,8 @@ import local from './StarDetailCard.module.css';
 
 type StarDetailCardProps = {
   target: StarInfo;
-  pinned?: boolean;
-  chrome?: boolean;
+  isPinned?: boolean;
+  hasChrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -181,12 +181,12 @@ function detailBlock(
 
 function StarDetailCard({
   target,
-  pinned = false,
-  chrome = true,
+  isPinned = false,
+  hasChrome = true,
   onFocus,
   onClose,
 }: StarDetailCardProps): ReactNode {
-  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
   const { detail } = target;
   const aliases = detail.kind === 'curated' ? detail.meta.names.slice(1) : [];
 
@@ -229,9 +229,9 @@ function StarDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Star"
-        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
-        onClose={pinned ? onClose : undefined}
+        onClose={isPinned ? onClose : undefined}
       />
 
       <CardRow
