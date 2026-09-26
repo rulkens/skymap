@@ -24,7 +24,7 @@ export function atmosphereShellUniforms(
   ctx: FrameView,
   state: PassState,
 ): Float32Array {
-  const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;
+  const { body, params, atmosphereTopM, camLocal, sunLocal, sunCosRadius } = entry;
   // An entry exists only where bodyPose resolved (atmosphereDrawList skips a body with no pose).
   const pose = ctx.bodyPose(body.id as BodyId)!;
 
@@ -49,6 +49,7 @@ export function atmosphereShellUniforms(
     narrowMat4(invMvp),
     sunLocal,
     camLocal,
+    sunCosRadius,
     bottomRadius,
     exposure,
     ringInnerRatio,

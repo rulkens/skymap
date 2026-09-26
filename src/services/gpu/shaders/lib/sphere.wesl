@@ -455,7 +455,7 @@ struct AtmosphereUniforms {
   sunDirLocal: vec3<f32>,
   bottomRadius: f32,
   camPosLocal: vec3<f32>,
-  _pad1: f32,
+  sunCosRadius: f32,
   exposure: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,

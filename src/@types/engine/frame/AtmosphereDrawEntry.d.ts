@@ -20,6 +20,8 @@ export type AtmosphereDrawEntry = {
   readonly camLocal: Vec3;
   /** Sun direction in the body's local frame (sunDirLocal, unit). */
   readonly sunLocal: Vec3;
+  /** Cosine of the Sun's angular radius from this body — the sky's Sun disc. */
+  readonly sunCosRadius: number;
   /** Camera inside the shell's handoff ratio (isInsideAtmosphereShell(camLocal)). */
   readonly inside: boolean;
 };

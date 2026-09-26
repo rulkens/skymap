@@ -39,6 +39,7 @@ for (let i = 0; i < 16; i++) INV_MVP[i] = i + 17;
 // (swap-proof) rather than needing a tolerance, yet no two sentinels are equal.
 const SUN_DIR: Vec3 = [0.5, 0.25, 0.75];
 const CAM_POS: Vec3 = [1.5, 2.5, 3.5];
+const SUN_COS_RADIUS = 0.9999953125; // cos of the Sun's angular radius
 const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
 const EXPOSURE = 0.625;
 const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the shell)
@@ -52,6 +53,7 @@ describe('AtmosphereUniforms byte offsets', () => {
       INV_MVP,
       SUN_DIR,
       CAM_POS,
+      SUN_COS_RADIUS,
       BOTTOM_RADIUS,
       EXPOSURE,
       RING_INNER,
@@ -83,8 +85,8 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec[21]).toBe(CAM_POS[1]); // byte 84
     expect(rec[22]).toBe(CAM_POS[2]); // byte 88
 
-    // the vec3 tail pad — was sunIrradiance, structural not content
-    expect(rec[23]).toBe(0); // byte 92
+    // sunCosRadius — a real field in camPosLocal's vec3 tail.
+    expect(rec[23]).toBe(Math.fround(SUN_COS_RADIUS)); // byte 92
     expect(rec[24]).toBe(EXPOSURE); // byte 96
 
     // Ring ratios — the host's ring annulus in atmosphere-top units (0 = no

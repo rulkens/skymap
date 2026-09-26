@@ -19,6 +19,7 @@ import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
 import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmosphereShell';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
+import { sunCosRadius } from '../../../utils/camera/sunCosRadius';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
@@ -69,6 +70,7 @@ export function atmosphereDrawList(
       atmosphereTopM,
       camLocal,
       sunLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
+      sunCosRadius: sunCosRadius(bodyState.positionMpc),
       inside: isInsideAtmosphereShell(camLocal),
     };
 

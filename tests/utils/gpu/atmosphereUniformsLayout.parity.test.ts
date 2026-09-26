@@ -89,6 +89,7 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
     const invMvp = Float32Array.from({ length: 16 }, (_, i) => i + 101); // 101..116
     const sunDirLocal: Vec3 = [201, 202, 203];
     const camPosLocal: Vec3 = [301, 302, 303];
+    const sunCosRadius = 406;
     const bottomRadius = 401;
     const exposure = 402;
     const ringInnerRatio = 403;
@@ -100,6 +101,7 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
       invMvp,
       sunDirLocal,
       camPosLocal,
+      sunCosRadius,
       bottomRadius,
       exposure,
       ringInnerRatio,
@@ -110,13 +112,13 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
     const matrixByField: Record<string, Float32Array> = { mvp, invMvp };
     const vectorByField: Record<string, Vec3> = { sunDirLocal, camPosLocal };
     const scalarByField: Record<string, number> = {
+      sunCosRadius,
       bottomRadius,
       exposure,
       ringInnerRatio,
       ringOuterRatio,
       froxelSliceKm,
     };
-    const zeroPadFields = new Set(['_pad1']);
 
     for (const field of layout) {
       if (field.lanes === 0) {
@@ -128,8 +130,6 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
         const vec = vectorByField[field.name];
         if (!vec) throw new Error(`no sentinel vector for field '${field.name}'`);
         for (let lane = 0; lane < 3; lane++) expect(rec[field.floatOffset + lane]).toBe(vec[lane]);
-      } else if (zeroPadFields.has(field.name)) {
-        expect(rec[field.floatOffset]).toBe(0);
       } else {
         const value = scalarByField[field.name];
         if (value === undefined) throw new Error(`no sentinel for field '${field.name}'`);

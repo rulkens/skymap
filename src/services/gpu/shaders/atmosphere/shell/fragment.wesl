@@ -86,6 +86,7 @@
 // header for why this task keeps them separate).
 
 import package::lib::sphere::AtmosphereUniforms;
+import package::lib::math::PI;
 import package::lib::util::raySphere;
 import package::lib::sceneDepthRay::FAR_DEPTH;
 import package::lib::sceneDepthRay::sceneRayDistance;
@@ -310,6 +311,16 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   let gain = SKY_ADAPTATION_GAIN * exp(-altitudeFrac / SKY_ADAPTATION_SCALE);
   let adaptation = 1.0 + gain * dot(out.emission, LUMINANCE);
   out.coverage = 1.0 - dot(out.transmit, LUMINANCE) / adaptation;
+  // The Sun draws BEHIND the sky, so that washout erases it like any star.
+  // Paint its disc here for exactly the fraction washed out (none from space,
+  // where the star renderer's own Sun stands), at its true radiance in the
+  // LUTs' units — unit irradiance over the disc's solid angle, ~1e4 — seen
+  // through the segment's per-channel extinction, so it reddens as it sets.
+  if (!intersectsGround && dot(dir, u.sunDirLocal) > u.sunCosRadius) {
+    let washout = 1.0 - 1.0 / adaptation;
+    let discSolidAngle = 2.0 * PI * (1.0 - u.sunCosRadius);
+    out.emission += segTransmittance * (ringVis * u.exposure * washout / discSolidAngle);
+  }
   out.hit = true;
   return out;
 }
