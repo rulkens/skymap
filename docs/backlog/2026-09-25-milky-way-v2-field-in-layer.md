@@ -2,7 +2,7 @@
 
 `needs-design`, but the design is mostly ruled. It was brainstormed on 2026-09-25 in the
 `milky-way-layer-v2` worktree, then deferred when that effort was cut down to the v1
-port (`docs/superpowers/specs/2026-09-25-milky-way-layer-design.md`). This is Track C
+port (`docs/superpowers/specs/completed/2026-09-25-milky-way-layer-design.md`). This is Track C
 of `docs/research/engine/decisions.md`, with one change: v1 is kept for a
 side-by-side comparison rather than being deleted in the same effort.
 

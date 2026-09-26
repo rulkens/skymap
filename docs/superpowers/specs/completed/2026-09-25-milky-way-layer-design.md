@@ -1,11 +1,11 @@
 # The `milkyWay` Layer — design spec
 
-Parent: [`2026-09-09-layer-composition-design.md`](2026-09-09-layer-composition-design.md) §10, the
+Parent: [`2026-09-09-layer-composition-design.md`](../2026-09-09-layer-composition-design.md) §10, the
 `milkyWay` settings-only stub. Everything the parent says about the `Layer` contract,
 `createLayers`, fades and selection rows holds unless this spec says otherwise. The shape
 follows the precedents set by
-[zoneOfAvoidance](completed/2026-08-13-zone-of-avoidance-guide-layer.md) and
-[starCatalog](completed/2026-09-21-star-catalog-layer-design.md).
+[zoneOfAvoidance](2026-08-13-zone-of-avoidance-guide-layer.md) and
+[starCatalog](2026-09-21-star-catalog-layer-design.md).
 
 ## 1. What this is
 
@@ -27,7 +27,7 @@ tuning, the fades, picking, the InfoCard and the tier re-seed all stay the same.
 **Out of scope:** the v2 analytic field. The brainstorm first covered v1 and v2 side by side,
 and the user cut the scope on 2026-09-25 to "v1 to a layer, pick up v2 later". The rulings and
 the joints that v2 needs are parked in
-[`docs/backlog/2026-09-25-milky-way-v2-field-in-layer.md`](../../backlog/2026-09-25-milky-way-v2-field-in-layer.md).
+[`docs/backlog/2026-09-25-milky-way-v2-field-in-layer.md`](../../../backlog/2026-09-25-milky-way-v2-field-in-layer.md).
 This spec must not pre-build any v2 seam.
 
 ## 2. Ground preparation

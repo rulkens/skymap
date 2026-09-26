@@ -15,7 +15,7 @@
 
 **Tech Stack:** TS, RTK slices and sagas, React (DebugPanel, InfoCard), Vitest, WebGPU pass files. No shader changes.
 
-**Spec:** `docs/superpowers/specs/2026-09-25-milky-way-layer-design.md`. It has §2 (verdict table), §3 (folder and the placement rule), §4 (what stays in core), §5 (the two accepted behaviour changes), §6 (deletions), §7 (testing) and §8 (docs). Its parent is `docs/superpowers/specs/2026-09-09-layer-composition-design.md`. The deferred v2 work is `docs/backlog/2026-09-25-milky-way-v2-field-in-layer.md`, and nothing in it is pre-built here.
+**Spec:** `docs/superpowers/specs/completed/2026-09-25-milky-way-layer-design.md`. It has §2 (verdict table), §3 (folder and the placement rule), §4 (what stays in core), §5 (the two accepted behaviour changes), §6 (deletions), §7 (testing) and §8 (docs). Its parent is `docs/superpowers/specs/2026-09-09-layer-composition-design.md`. The deferred v2 work is `docs/backlog/2026-09-25-milky-way-v2-field-in-layer.md`, and nothing in it is pre-built here.
 
 ## Global Constraints
 
@@ -58,10 +58,10 @@ Moving the constant out of the renderer file lets Task 2 move the renderer into 
 - Create: `src/data/milkyWay/milkyWayCloudUniformBufferSize.ts` (exports `MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE`)
 - Modify: `src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts`, where the constant and its derivation comment leave, and the renderer imports it. Also modify the two tool files and `tools/galaxy-renderer/vite.config.ts:51` (comment only).
 
-- [ ] Extract with `npm run refactor -- extract` (see `.claude/skills/refactor/SKILL.md`), keeping the byte-layout comment beside the constant. Read the current derivation at the top of `milkyWayCloudRenderer.ts` for it; `sprites/io.wesl:35-47` says 208 B.
-- [ ] No new test: the compiler rejects a stale import, and the value itself is unchanged.
-- [ ] Run `npm run typecheck` (both the src and tools projects) and confirm it's green.
-- [ ] Commit: `refactor(milky-way): the cloud uniform size lives in src/data`.
+- [x] Extract with `npm run refactor -- extract` (see `.claude/skills/refactor/SKILL.md`), keeping the byte-layout comment beside the constant. Read the current derivation at the top of `milkyWayCloudRenderer.ts` for it; `sprites/io.wesl:35-47` says 208 B.
+- [x] No new test: the compiler rejects a stale import, and the value itself is unchanged.
+- [x] Run `npm run typecheck` (both the src and tools projects) and confirm it's green.
+- [x] Commit: `refactor(milky-way): the cloud uniform size lives in src/data`.
 
 ---
 
@@ -127,12 +127,12 @@ export function milkyWayPlanner(runtime: MilkyWayRuntime): Extract<FrameContentP
   - `it('reconciles even while the Milky Way is disabled')`: with `enabled: false` it still calls `reconcile` (Review Focus 4).
 - No other new test. Boot-time pass-name uniqueness (`createLayers`) and the frame-order walker catch a half-migrated pass or a missing plan line, and every moved test keeps its assertions.
 
-- [ ] Run `npm run move-files -- --dry` for each move, then run the moves. Grep for the old paths afterwards.
-- [ ] Add the runtime type, `create`/`destroy`, the target row, the planner, `layer.ts` (name, settings, targets, create, destroy, planners, passes) and the `APP_COMPOSITION` entry.
-- [ ] Delete the core rows, seeds, fields, target row, `runFrame` line and `CONTENT_PASSES` entries. Add the plan line.
-- [ ] Update the fixtures and write the two planner tests.
-- [ ] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/services/engine tests/services/gpu tests/visual tests/conventions` and confirm it's green.
-- [ ] Commit: `refactor(milky-way): the Layer owns the cloud, its target and its passes`.
+- [x] Run `npm run move-files -- --dry` for each move, then run the moves. Grep for the old paths afterwards.
+- [x] Add the runtime type, `create`/`destroy`, the target row, the planner, `layer.ts` (name, settings, targets, create, destroy, planners, passes) and the `APP_COMPOSITION` entry.
+- [x] Delete the core rows, seeds, fields, target row, `runFrame` line and `CONTENT_PASSES` entries. Add the plan line.
+- [x] Update the fixtures and write the two planner tests.
+- [x] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/services/engine tests/services/gpu tests/visual tests/conventions` and confirm it's green.
+- [x] Commit: `refactor(milky-way): the Layer owns the cloud, its target and its passes`.
 
 ---
 
@@ -163,11 +163,11 @@ Behaviour-neutral, except for the accepted label tiebreak (spec §5.1).
 - The `milkyWay` selection per-kind records (`refOf`, `buildFocusable`, `targetIdentityKey`, `selectionHaloTable`, `rowFocusable`, `urlHashFor`, `focusFraming`, palette) stay unchanged too.
 - No new test: the moved tests keep their assertions, and `createLayers` throws on a duplicated label id or selection row.
 
-- [ ] Do the moves (`--dry` first) and create the fade-row and source-row files. Grep for the old paths.
-- [ ] Delete the core rows and the registration, and add the four `layer.ts` members.
-- [ ] Update the tests as listed.
-- [ ] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/services/engine/wiring tests/services/engine/selection tests/services/engine/presentation tests/data tests/conventions` and confirm it's green.
-- [ ] Commit: `refactor(milky-way): the Layer declares its fades, label, selection and source row`.
+- [x] Do the moves (`--dry` first) and create the fade-row and source-row files. Grep for the old paths.
+- [x] Delete the core rows and the registration, and add the four `layer.ts` members.
+- [x] Update the tests as listed.
+- [x] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/services/engine/wiring tests/services/engine/selection tests/services/engine/presentation tests/data tests/conventions` and confirm it's green.
+- [x] Commit: `refactor(milky-way): the Layer declares its fades, label, selection and source row`.
 
 ---
 
@@ -207,11 +207,11 @@ export function reseedMilkyWayStarCountSaga(): SagaGenerator<void>;
   - `watchTierSaga.test.ts` keeps only its galaxy-focus re-anchor cases, and asserts it no longer puts `setMilkyWayTuning`.
 - The label toggle stays in core's label-category registry (`LABEL_HOME_BY_SOURCE_TYPE.milkyWay`, `LabelsAndGuidesSectionContainer.tsx:60,86`), per spec §4. Do not add a `labelsAndGuides` slot.
 
-- [ ] Do the moves (`--dry` first, since these are folders) and grep for the old paths, including the `.module.css` imports.
-- [ ] Write the saga, add the `layer.ts` members, and delete the core sites and the allow-row.
-- [ ] Update the tests as listed.
-- [ ] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/state/tier tests/components tests/utils/infoCard tests/conventions` and confirm it's green.
-- [ ] Commit: `refactor(milky-way): the Layer owns its DebugPanel section, detail cards and tier re-seed`.
+- [x] Do the moves (`--dry` first, since these are folders) and grep for the old paths, including the `.module.css` imports.
+- [x] Write the saga, add the `layer.ts` members, and delete the core sites and the allow-row.
+- [x] Update the tests as listed.
+- [x] Run `npm run typecheck:fast && npx vitest run tests/layers/milkyWay tests/state/tier tests/components tests/utils/infoCard tests/conventions` and confirm it's green.
+- [x] Commit: `refactor(milky-way): the Layer owns its DebugPanel section, detail cards and tier re-seed`.
 
 ---
 
@@ -219,9 +219,9 @@ export function reseedMilkyWayStarCountSaga(): SagaGenerator<void>;
 
 **Files:** `src/layers/README.md` (Status paragraph), `docs/RENDERER.md` (any path to the three passes, the target or the two renderers), `src/services/engine/galaxyGenerator/v1/README.md` ("Flow (app side)": the handles are built in `src/layers/milkyWay/create.ts`, not `initGpu.ts`).
 
-- [ ] Search `docs/` and `src/**/README.md` for the old paths (`frame/passes/milkyWay`, `renderers/milkyWay/milkyWayCloud`, `milkyWayCloudLiveness`, `produceMilkyWayLabel`, `milkyWaySelectionRow`) and fix every live reference. Leave `docs/**/completed/` and `docs/research/**` history alone.
-- [ ] No test.
-- [ ] Commit: `docs(milky-way): the milkyWay Layer is formed`.
+- [x] Search `docs/` and `src/**/README.md` for the old paths (`frame/passes/milkyWay`, `renderers/milkyWay/milkyWayCloud`, `milkyWayCloudLiveness`, `produceMilkyWayLabel`, `milkyWaySelectionRow`) and fix every live reference. Leave `docs/**/completed/` and `docs/research/**` history alone.
+- [x] No test.
+- [x] Commit: `docs(milky-way): the milkyWay Layer is formed`.
 
 ---
 
