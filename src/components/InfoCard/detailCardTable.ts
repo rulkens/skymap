@@ -27,8 +27,8 @@ import type { DetailCardEntry } from '../../@types/components/infoCard/DetailCar
 import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
-import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
 import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
+import StructureDetailCardContainer from '../containers/StructureDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
@@ -44,7 +44,10 @@ const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
     Compact: CompactCard,
   },
   structure: {
-    Detail: StructureDetailCard,
+    // Detail renders through a store container: the "N galaxies" figure is a
+    // live-computed fact, not part of every arm's shared props (store-boundary
+    // rule — same shape as the body arm below).
+    Detail: StructureDetailCardContainer,
     Compact: CompactStructureCard,
   },
   body: {

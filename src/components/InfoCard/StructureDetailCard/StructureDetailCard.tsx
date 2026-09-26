@@ -27,7 +27,7 @@ export type StructureDetailCardProps = {
    * (famous-galaxy structure, or catalogs not loaded yet) — in which case the
    * row is omitted rather than flashing a misleading "0".
    */
-  selectedMemberCount?: number | null;
+  memberCount?: number | null;
   chrome?: boolean;
   onFocus?: (target: StructureInfo) => void;
   onClose?: () => void;
@@ -36,7 +36,7 @@ export type StructureDetailCardProps = {
 function StructureDetailCard({
   target,
   pinned = false,
-  selectedMemberCount,
+  memberCount,
   chrome = true,
   onFocus,
   onClose,
@@ -66,10 +66,10 @@ function StructureDetailCard({
           label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
           value={formatDistance(target.physicalRadiusMpc)}
         />
-        {selectedMemberCount != null && (
+        {memberCount != null && (
           <CardRow
             label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
-            value={selectedMemberCount.toLocaleString()}
+            value={memberCount.toLocaleString()}
           />
         )}
         {target.category === 'cluster' && target.abell !== undefined && (

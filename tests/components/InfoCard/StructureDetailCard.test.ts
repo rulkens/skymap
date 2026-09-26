@@ -48,20 +48,20 @@ describe('StructureDetailCard', () => {
   });
 
   it('shows the Galaxies row when a member count is supplied', () => {
-    render(createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: 42 }));
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 42 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
   it('omits the Galaxies row when the count is null (not yet computable)', () => {
     const { container } = render(
-      createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: null }),
+      createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: null }),
     );
     expect(container.textContent).not.toMatch(/Galaxies/);
   });
 
   it('renders a zero count truthfully (empty sphere over loaded data)', () => {
-    render(createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: 0 }));
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 0 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
   });

@@ -51,13 +51,6 @@ export type InfoCardProps = {
    */
   selected: FocusableTarget | null;
   /**
-   * Catalogued galaxy count for the pinned structure (cluster / supercluster
-   * / void), or null/undefined when not applicable.  Forwarded to
-   * StructureDetailCard, which renders it as the "Galaxies" row.  Ignored for
-   * galaxy selections (GalaxyDetailCard has no such row).
-   */
-  selectedMemberCount?: number | null;
-  /**
    * Optional callback fired when the user clicks the "Focus" pill on the pinned
    * card.  App dispatches `updateSelectionFocus(refOf(target))`.
    */
@@ -70,13 +63,7 @@ export type InfoCardProps = {
   onClose?: () => void;
 };
 
-function InfoCard({
-  hovered,
-  selected,
-  selectedMemberCount,
-  onFocus,
-  onClose,
-}: InfoCardProps): ReactNode {
+function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
 
   // Mobile has no hover cursor: only the pinned target matters, and it shows as
@@ -86,14 +73,7 @@ function InfoCard({
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
       <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        <Detail
-          target={selected}
-          pinned
-          selectedMemberCount={selectedMemberCount}
-          chrome={false}
-          onFocus={onFocus}
-          onClose={onClose}
-        />
+        <Detail target={selected} pinned chrome={false} onFocus={onFocus} onClose={onClose} />
       </MobileSheet>
     );
   }
@@ -112,13 +92,7 @@ function InfoCard({
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
       {selected && Detail && (
-        <Detail
-          target={selected}
-          pinned
-          selectedMemberCount={selectedMemberCount}
-          onFocus={onFocus}
-          onClose={onClose}
-        />
+        <Detail target={selected} pinned onFocus={onFocus} onClose={onClose} />
       )}
       {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>
