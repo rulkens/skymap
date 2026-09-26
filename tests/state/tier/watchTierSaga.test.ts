@@ -4,10 +4,9 @@
  * Rather than driving the generator by hand (which couples the test to the
  * exact effect sequence), these tests run the watcher inside an actual store
  * wired with `redux-saga`, dispatch the `requestTier` command, and assert on
- * the observable store outcome: the tier write, the Milky-Way re-seed, the
- * hover clear and the re-anchored selection. That keeps the tests honest about
- * the command/write split and the same-tier no-op without freezing the saga's
- * internal steps.
+ * the observable store outcome: the tier write, the hover clear and the
+ * re-anchored selection. That keeps the tests honest about the command/write
+ * split and the same-tier no-op without freezing the saga's internal steps.
  *
  * Each test builds a FRESH store, because `takeLatest` carries per-store
  * worker state and the same-tier no-op test depends on the watcher's prior view
@@ -42,7 +41,6 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
-import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
@@ -117,20 +115,6 @@ describe('watchTierSaga', () => {
     await flush();
 
     expect(selectTier(store.getState())).toBe('large');
-  });
-
-  it('re-seeds the Milky-Way star count from the new tier budget', async () => {
-    // settings.milkyWay.starCount is an absolute count with no built-in tie to
-    // the tier — this saga's re-seed is what keeps it meaningful across a
-    // tier change. Assert the END state only, after `flush()`: redux-saga
-    // queues nested `put`s, so this saga's own setTier/setMilkyWayTuning pair
-    // is not guaranteed to land in source order relative to other watchers
-    // reacting to `setTier` — but both are guaranteed to have landed by the
-    // time the dispatched worker has run to completion.
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    expect(store.getState().settings.milkyWay.starCount).toBe(MILKY_WAY_STARS_PER_TIER.large);
   });
 
   it('is a no-op for a same-tier request', async () => {

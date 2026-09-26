@@ -22,7 +22,7 @@ export type MarkerLine = {
   pixelWidth: number;
   /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
   readonly color: Vec4;
-  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Defaults to 1. */
+  /** Fade multiplier in [0,1] driven by produceMilkyWayLabel. Defaults to 1. */
   fadeAlpha?: number;
   /**
    * Share of the per-pixel scene attenuation this line takes (default 1) — the

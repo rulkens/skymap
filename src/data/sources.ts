@@ -21,7 +21,7 @@ import { GROUP_ENTRY } from './sources/group';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
-import { MILKY_WAY_ENTRY } from './sources/milky-way';
+import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySourceRows';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
@@ -69,7 +69,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
@@ -81,6 +80,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
   ...sourceRecordOf(FLOW_SOURCE_ROWS),
+  ...sourceRecordOf(MILKY_WAY_SOURCE_ROWS),
   ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),
   ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
   ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),

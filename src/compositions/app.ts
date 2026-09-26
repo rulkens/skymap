@@ -15,6 +15,7 @@ import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
+import { milkyWayLayer } from '../layers/milkyWay/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
@@ -29,6 +30,7 @@ export const APP_COMPOSITION = {
     localBubbleLayer,
     constellationsLayer,
     blackHolesLayer,
+    milkyWayLayer,
   ] as const,
   home: EARTH_HOME,
 } satisfies EngineComposition<
@@ -42,5 +44,6 @@ export const APP_COMPOSITION = {
     typeof localBubbleLayer,
     typeof constellationsLayer,
     typeof blackHolesLayer,
+    typeof milkyWayLayer,
   ]
 >;

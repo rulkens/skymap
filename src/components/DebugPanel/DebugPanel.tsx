@@ -24,7 +24,6 @@ import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSect
 import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
-import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
 import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
@@ -72,7 +71,6 @@ function DebugPanel({
       {layerUiContents(APP_COMPOSITION.layers, 'debug').map((Section, index) => (
         <Section key={index} />
       ))}
-      <MilkyWayTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
       <TerrainPickMarkerTuningSectionContainer engineHandleRef={engineHandleRef} />

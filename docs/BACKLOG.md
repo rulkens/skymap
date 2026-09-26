@@ -95,6 +95,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`dirToEquirectUv` lives twice in WESL** `ready` — copied verbatim from `earth/fragment.wesl` into `earthSurfaceTile/fragment.wesl` (both load-bearing); extract to `shaders/lib/`.
 - [ ] **Renderer landmines from the Quest VR spike** `ready` — three hard-won traps to add to docs/RENDERER.md: per-camera (not per-frame) ctx memos, rebase-origin carrying, writeBuffer-at-submit ordering. → [details](backlog/2026-08-23-renderer-landmine-docs.md)
 - [ ] **Frame-assembly walker needs target-format-parity validation** `needs-design` — render-target formats are hand-matched at construction and never checked against the baked pipeline. → [details](backlog/2026-08-20-frame-assembly-blend-format-validation.md)
+- [ ] **Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1** `needs-design` — mostly ruled 2026-09-25 (v1/v2/both debug toggle, shared host promoted from the tool); three prep joints named: model-space per-view field camera, `{view,size}` targets, host into `src/`. → [details](backlog/2026-09-25-milky-way-v2-field-in-layer.md)
 - [ ] **`MilkyWayTuning` is one flat bag** `needs-design` — eight sprite knobs shared by consumers that ignore nearly all of them; a third radiance contributor is the second special case. → [details](backlog/2026-07-31-milkyway-tuning-is-one-flat-bag.md)
 - [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
@@ -207,6 +208,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## UI & UX
 
+- [ ] **Richer Milky Way info card** `needs-design` — after #826 lands: the card has one description line and no fact rows; pick the facts and source them. → [details](backlog/2026-09-26-richer-milky-way-info-card.md)
+- [ ] **Detail-card entries as components** `ready` — after #826 lands: type `DetailCardEntry.Detail`/`Compact` as `ComponentType` and render them as JSX, dropping every `createElement` wrapper, as the `debug` slot already works. → [details](backlog/2026-09-26-detail-card-entries-as-components.md)
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (`surveyDeepZoom` band); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)
 - [ ] **Settings row order is source-code order** `deferred` — panel rows follow `Source` enum value ascending (codes are append-only), so a chosen order needs a display-order mechanism that does not exist.

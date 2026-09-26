@@ -1,6 +1,7 @@
 /**
- * The milkyWay Layer's settings tuple, folded into `appSettingsSlices` from here.
- * Settings-only so far — its render and load code still lives in core.
+ * The Layer's settings tuple — ONE authority, two readers: `layer.ts` and
+ * `appSettingsSlices`, which folds it in from HERE for the circular-alias
+ * reason `galaxyCatalogLayerSettings`'s header spells out.
  */
 
 import { milkyWaySlice } from './milkyWay/slice';

@@ -13,12 +13,14 @@ export const PRELUDE: FrameSection = {
   steps: [
     // The section's plan rows, always first (`checkFrameOrder`'s boot rule):
     // the galaxy catalog's disk-planner walk, the flow renderer's
-    // reconcile-and-vote and the star LOD fade advance, before any GPU step
-    // reads what they publish (`runPlanSteps`).
+    // reconcile-and-vote, the star LOD fade advance, and the Milky Way
+    // cloud's star-count reconcile, before any GPU step reads what they
+    // publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
     { kind: 'plan', name: 'flow' },
     // Ahead of the sky captures below, which read the cut it sets.
     { kind: 'plan', name: 'star-catalog' },
+    { kind: 'plan', name: 'milky-way' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
     // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
     // direction and so re-bakes every frame (unlike the once-baked transmittance

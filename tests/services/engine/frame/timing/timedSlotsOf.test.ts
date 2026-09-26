@@ -14,14 +14,24 @@ import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/passe
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { FrameInputs } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep';
+import type { ContentPass } from '../../../../../src/@types/engine/frame/ContentPass';
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
 import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
-// The blackHoles Layer's lens pass joins core's registry, as `createLayers` does;
-// expansion never reaches `draw`, so the runtime is never read.
-const PASSES = [...CONTENT_PASSES, blackHoleLensingPass({} as BlackHolesRuntime)];
+// The Layers' passes join core's registry, as `createLayers` does; expansion
+// matches by `name` and never reaches `draw`, so no runtime is read.
+const MILKY_WAY_STUB_PASSES: readonly ContentPass[] = [
+  'milky-way-aggregate',
+  'milky-way-upsample',
+  'milky-way',
+].map((name) => ({ name }) as unknown as ContentPass);
+const PASSES = [
+  ...CONTENT_PASSES,
+  blackHoleLensingPass({} as BlackHolesRuntime),
+  ...MILKY_WAY_STUB_PASSES,
+];
 
 /** The real order + registry, with only the per-frame lists varied. */
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {

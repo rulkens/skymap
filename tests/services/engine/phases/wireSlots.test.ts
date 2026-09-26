@@ -140,6 +140,7 @@ import { structureCatalogFetcher } from '../../../../src/services/loading/fetche
 import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
 import { cosmicWebDensityFadeRows } from '../../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import { milkyWayFadeRows } from '../../../../src/layers/milkyWay/present/milkyWayFadeRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/load/filamentFetcher';
@@ -433,6 +434,7 @@ function makeState(
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(galaxyRuntime),
       ...cosmicWebDensityFadeRows(densityRuntime),
+      ...milkyWayFadeRows(),
     ],
     layerSlots,
   } as unknown as EngineState;

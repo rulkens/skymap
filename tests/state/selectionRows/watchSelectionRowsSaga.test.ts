@@ -27,6 +27,7 @@ import {
 import {
   engineSourceCountReported,
   engineStructureCountsChanged,
+  engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
@@ -208,6 +209,35 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(engineStructureCountsChanged({ cluster: 1 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
+  });
+
+  it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {
+    // A Layer-kind ref (milkyWay) is unresolvable until createLayers appends
+    // its row — this flag stands in for that, flipped once "createLayers" has
+    // run. `wireSlots` dispatches 'loading' synchronously right after, with
+    // no catalog pulse involved, so this gap-fill's own wake needs its own
+    // resolver stub rather than riding the shared `build()` fixture.
+    let layerRowsLanded = false;
+    const sagaMiddleware = createSagaMiddleware();
+    const layerStore = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(sagaMiddleware),
+    });
+    sagaMiddleware.run(watchSelectionRowsSaga);
+    sagaMiddleware.setContext({
+      selection: {
+        extractRow: () => (layerRowsLanded ? { type: 'milkyWay' } : null),
+      },
+    });
+
+    layerStore.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(layerStore.getState()[selectionRowsRoute].focus).toBeNull();
+
+    layerRowsLanded = true;
+    layerStore.dispatch(engineStatusChanged({ kind: 'loading' }));
+    await flush();
+    expect(layerStore.getState()[selectionRowsRoute].focus).toMatchObject({ type: 'milkyWay' });
   });
 
   it('a body ref resolves its position at the LIVE sim instant, not a fixed epoch', async () => {

@@ -1,0 +1,10 @@
+/*
+ * MilkyWayDetailCard.module.css — Milky-Way-specific styling.
+ *
+ * The card's chrome comes entirely from the shared cardChrome vocabulary,
+ * composed into .root; this card owns no styling of its own.
+ */
+
+.root {
+  composes: infoCardFull structure from '../../../../components/InfoCard/cardChrome.module.css';
+}

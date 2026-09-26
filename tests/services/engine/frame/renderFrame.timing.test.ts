@@ -19,7 +19,11 @@ import { createFramePlannerResultStore } from '../../../../src/services/engine/f
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
 import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
@@ -245,6 +249,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   // The cloud renderer's two passes target two different textures, so it has
   // two entry points rather than one `draw`.
   const milkyWayCloudRenderer = { drawStars: vi.fn(), drawDust: vi.fn() };
+  // The milkyWay Layer's passes close over its own runtime — see
+  // `densityRuntime` above for the same shape.
+  const milkyWayRuntime = {
+    cloud: { buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }) },
+    cloudRenderer: milkyWayCloudRenderer,
+    aggregateUpsample: null,
+  } as unknown as MilkyWayRuntime;
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
@@ -351,19 +362,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         atmosphereShellRenderer: null,
         orbitTrailRenderer: null,
         foregroundLabelRenderer: null,
-        // milkyWayPass.draw reads the generated cloud buffers off this handle.
-        milkyWayCloud: {
-          buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }),
-        },
-        // milkyWayUpsamplePass shares the cloud's liveness gate, so it is
-        // enabled here and bills its own timed pass; the null handle makes its
-        // `draw` self-guard and issue no blit. The key must EXIST — the guard
-        // is `=== null`, which `undefined` would slip past.
-        milkyWayAggregateUpsample: null,
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
-        // wired in (no top-level `input.*` duplication).
-        milkyWayCloudRenderer,
+        // wired in (no top-level `input.*` duplication). The milkyWay Layer's
+        // passes close over `milkyWayRuntime` instead — see the `passes`
+        // array below.
         horizonShellRenderer,
         // The FRAME program's hdr→swap composite reads state.gpu.compositor.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
@@ -432,6 +435,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         } as unknown as GalaxyCatalogRuntime),
         cosmicWebDensityPass(densityRuntime),
         cosmicWebDensityUpsamplePass(densityRuntime),
+        milkyWayAggregatePass(milkyWayRuntime),
+        milkyWayUpsamplePass(milkyWayRuntime),
+        milkyWayPass(milkyWayRuntime),
       ],
       computes: CORE_COMPUTES,
       planners: STUB_PLANNERS,

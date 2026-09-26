@@ -10,7 +10,7 @@
  */
 import { ADDITIVE_BLEND } from '../../../../../src/services/gpu/lib/blendStates';
 import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
-import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/data/milkyWay/milkyWayCloudUniformBufferSize';
 
 import starWgsl from '../shaders/milkyWay/sprites/stars.wesl?static';
 import dustWgsl from '../shaders/milkyWay/sprites/dust.wesl?static';

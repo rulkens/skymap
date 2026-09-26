@@ -72,7 +72,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
 
   const state = {
     settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
+    gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
       clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },

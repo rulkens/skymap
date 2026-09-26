@@ -61,8 +61,6 @@ function bodyItems(): Record<string, { enabled: boolean; labelEnabled: boolean }
 
 function makeState(
   opts: {
-    milkyWayEnabled?: boolean;
-    milkyWayLabelEnabled?: boolean;
     surveyLabelEnabled?: boolean;
     cosmicWebDensityEnabled?: boolean;
     orbitTrailsEnabled?: boolean;
@@ -79,10 +77,6 @@ function makeState(
   }
   return {
     settings: {
-      milkyWay: {
-        enabled: opts.milkyWayEnabled ?? true,
-        labelEnabled: opts.milkyWayLabelEnabled ?? true,
-      },
       cosmicWebDensity: { enabled: opts.cosmicWebDensityEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
@@ -127,7 +121,6 @@ function makeSettings(
   opts: {
     sdssEnabled?: boolean;
     famousLabelEnabled?: boolean;
-    milkyWayEnabled?: boolean;
     orbitTrailsEnabled?: boolean;
   } = {},
 ): EngineSettingsState {
@@ -146,7 +139,6 @@ function makeSettings(
     bodies: { items: bodyItems() },
     blackHoles: { items: { 'sgr-a-star': { labelEnabled: true } } },
     structures: { enabled: true, items: structureItems },
-    milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
     cosmicWebDensity: { enabled: true, items: {} },
     cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
@@ -157,23 +149,6 @@ function makeSettings(
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('seedFades', () => {
-  // ── milkyWay disk gating ─────────────────────────────────────────
-
-  it('seeds the milkyWay disk at 0 when disabled', () => {
-    // A default-off session must not flash the Milky Way on frame 1.
-    const state = makeState({ milkyWayEnabled: false });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'milkyWay' })).toBe(0);
-  });
-
-  // ── label-layer handles ──────────────────────────────────────────
-
-  it('seeds the milkyWay label at 0 when settings.milkyWay.labelEnabled is false', () => {
-    const state = makeState({ milkyWayLabelEnabled: false });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
-  });
-
   // ── per-structure ring + label handles ───────────────────────────
 
   // ── the body caption domain ──────────────────────────────────────

@@ -6,9 +6,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { milkyWayPass } from './milkyWayPass';
-import { milkyWayAggregatePass } from './milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from './milkyWayUpsamplePass';
 import { horizonShellPass } from './horizonShellPass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
@@ -40,9 +37,6 @@ import { domeResamplePass } from './domeResamplePass';
 export const CONTENT_PASSES: readonly ContentPass[] = [
   horizonShellPass,
   structureMarkersPass,
-  milkyWayAggregatePass,
-  milkyWayUpsamplePass,
-  milkyWayPass,
   orbitTrailsPass,
   bodyGlintsPass,
   selectionRingPass,

@@ -346,7 +346,6 @@ describe('wireInput', () => {
   it('wires the camera and the input bindings when the pick renderers are absent', async () => {
     // No renderer must never mean no input and no error.
     const state = makeState();
-    state.gpu.milkyWayPickRenderer = null;
     const deps = makeDeps();
     attachOrbitControlsSpy.mockClear();
 

@@ -86,13 +86,7 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-// Dispatches an action creator a Layer owns — core writing INTO a Layer's
-// cluster. Not a decision: milkyWay is still a settings-only folder, so there
-// is nowhere else for the work to live. DELETE the row as the Layer forms —
-// the tier -> milkyWay put becomes a `milkyWay/sagas/` watcher.
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  'state/tier/watchTierSaga': 1,
-};
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
   const files = [...walk('src/services/engine'), ...walk('src/state')];

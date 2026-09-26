@@ -31,8 +31,12 @@ import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
 import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
@@ -251,8 +255,8 @@ function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
 }
 
 /**
- * Stub the generated-cloud handle the milky-way pass reads off
- * `state.gpu.milkyWayCloud`. `buffers()` returns an inert snapshot — the
+ * Stub the generated-cloud handle the milky-way passes read off
+ * `MilkyWayRuntime.cloud`. `buffers()` returns an inert snapshot — the
  * renderer mock never touches its contents.
  */
 function makeMockMilkyWayCloud() {
@@ -374,6 +378,15 @@ function makeInput(
   } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
+  // The milkyWay Layer's passes close over their own runtime, mirroring
+  // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
+  // fixtures free of an upsample blit they don't assert on (the layer's guard
+  // is `=== null`, which `undefined` would slip past).
+  const milkyWayRuntime = {
+    cloud: milkyWayCloud,
+    cloudRenderer: milkyWayCloudRenderer,
+    aggregateUpsample: null,
+  } as unknown as MilkyWayRuntime;
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const compositor = makeMockCompositor(callLog);
   // The render-target table backing views. The density row's default view is
@@ -563,20 +576,12 @@ function makeInput(
           atmosphereShellRenderer: null,
           orbitTrailRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
-          milkyWayCloud,
-          // milkyWayUpsamplePass shares the cloud's liveness gate, so it is
-          // enabled here; a null handle makes its `draw` self-guard and issue
-          // nothing, keeping these fixtures free of an upsample blit they
-          // don't assert on. The key must EXIST — the layer's guard is
-          // `=== null`, which `undefined` would slip past.
-          milkyWayAggregateUpsample: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
-          // `RenderFrameInput`'s slimmed shape).
+          // `RenderFrameInput`'s slimmed shape). The milkyWay Layer's passes
+          // close over `milkyWayRuntime` instead — see the `passes` array below.
           galaxyPointRenderer,
-          milkyWayCloudRenderer,
           horizonShellRenderer,
           texturedDiskRenderer,
           proceduralDiskRenderer,
@@ -658,6 +663,9 @@ function makeInput(
           texturedDisksPass(galaxyRuntime),
           cosmicWebDensityPass(densityRuntime),
           cosmicWebDensityUpsamplePass(densityRuntime),
+          milkyWayAggregatePass(milkyWayRuntime),
+          milkyWayUpsamplePass(milkyWayRuntime),
+          milkyWayPass(milkyWayRuntime),
         ],
         computes: CORE_COMPUTES,
         planners: STUB_PLANNERS,

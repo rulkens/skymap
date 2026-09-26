@@ -1,5 +1,5 @@
 /**
- * detailCardTable — folds core's five FocusableTarget arms with every Layer's
+ * detailCardTable — folds core's four FocusableTarget arms with every Layer's
  * `detailCard` ui-slot contribution into the `DetailCardTable` InfoCard
  * dispatches on. Called once at module load (`InfoCard.tsx`), so a missing arm
  * throws at boot naming the union member nobody claimed — a composition
@@ -36,18 +36,16 @@ import { SELECTION_KINDS } from '../../data/selection/selectionKinds';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
 import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
-import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
 import BodyDetailCardContainer from '../containers/BodyDetailCardContainer';
 import StarDetailCard from './StarDetailCard/StarDetailCard';
 import CompactCard from './CompactCard/CompactCard';
 import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
-import CompactMilkyWayCard from './CompactMilkyWayCard/CompactMilkyWayCard';
 import CompactBodyCard from './CompactBodyCard/CompactBodyCard';
 import CompactStarCard from './CompactStarCard/CompactStarCard';
 
-/** The five focusable kinds core still owns outright — no Layer claims them.
- * `zoneOfAvoidance` is the one arm missing here: it arrives via
- * `layerUiContents`, from the zoneOfAvoidance Layer's own `ui` entry. */
+/** The four focusable kinds core still owns outright — no Layer claims them.
+ * `zoneOfAvoidance` and `milkyWay` are the arms missing here: they arrive via
+ * `layerUiContents`, from their own Layer's `ui` entry. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
     Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
@@ -71,17 +69,6 @@ const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
         onClose,
       }),
     Compact: ({ target }) => createElement(CompactStructureCard, { structure: target }),
-  },
-  milkyWay: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-      createElement(MilkyWayDetailCard, {
-        target,
-        pinned,
-        chrome,
-        onFocus,
-        onClose,
-      }),
-    Compact: ({ target }) => createElement(CompactMilkyWayCard, { target }),
   },
   body: {
     // The body arm renders through a store container: a focused body's distance

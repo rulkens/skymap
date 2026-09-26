@@ -14,7 +14,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMilkyWayPickRenderer } from '../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer';
+import { createMilkyWayPickRenderer } from '../../../../src/layers/milkyWay/render/milkyWayPickRenderer';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';

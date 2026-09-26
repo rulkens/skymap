@@ -72,7 +72,7 @@ Three kinds of content share the scene; this section says which is which.
 ### Milky Way
 
 - **Gaussian splats, no raymarch**: disc, bulge, arm, dust, and HII components are instanced Gaussian ellipsoids; each fragment evaluates its Gaussian along the view ray in closed form ([fieldSplat](../src/services/gpu/shaders/milkyWay/field/fieldSplat/fragment.wesl)).
-- **Two passes**: emission accumulates additively at reduced resolution; dust is a separate multiplicative pass applying per-channel transmittance ([milkyWayCloudRenderer.ts](../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts)).
+- **Two passes**: emission accumulates additively at reduced resolution; dust is a separate multiplicative pass applying per-channel transmittance ([milkyWayCloudRenderer.ts](../src/layers/milkyWay/render/milkyWayCloudRenderer.ts)).
 - **Workbench**: the analytic-galaxy machinery was developed at [/galaxy/](https://skymap.rulkens.com/galaxy/) ([tools/galaxy-renderer/](../tools/galaxy-renderer/)), which renders full procedural Hubble-sequence galaxies.
 
 ### Solar system

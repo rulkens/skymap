@@ -10,23 +10,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { structureMarkersPlanner } from '../../../../../src/services/engine/frame/planners/structureMarkersPlanner';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
-import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
+import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
-import {
-  MILKY_WAY_FADE_FULL_PX,
-  MILKY_WAY_FADE_GONE_PX,
-  MILKY_WAY_RADIUS_MPC,
-} from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -82,10 +76,9 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
     viewKind: 'frame',
     cam,
     vp,
-    // Index 0 (NEAR0) duplicates the cosmological row: the milky-way draw
-    // tests resolve slabViewOf(ctx, NEAR0) (the layer's slab), and reusing
-    // the cosmo fixture there gives them a real vp without a bespoke
-    // near-field double.
+    // NEAR0 duplicates the cosmological row — nothing in this file resolves
+    // it, but a real `Slab` at both indices keeps `ctx.slabs` shaped like a
+    // live frame without a bespoke near-field double.
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos,
@@ -96,26 +89,6 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
     ...overrides,
   } as unknown as FrameView;
 }
-
-// Knob-derived camera distances for the Milky-Way apparent-size fade band,
-// under the stub ctx's camera (60° vertical fov, 720-px-tall viewport).
-// Inverting apparentDiameterPx: the disc (diameter 2·R) spans exactly `px`
-// on screen at distance 2·R·pxPerRad / px. Deriving the fixtures from the
-// calibration knobs (rather than hardcoding Mpc values) keeps these tests
-// green across visual-gate re-tunes of the band edges.
-const MW_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
-const MW_FULL_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_FULL_PX;
-const MW_GONE_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_GONE_PX;
-
-// The generated star/dust buffers the milky-way layer reads off
-// `state.gpu.milkyWayCloud.buffers()`. A stable reference so `draw` tests can
-// assert the exact snapshot was forwarded to the renderer.
-const MW_CLOUD_BUFFERS = {
-  starBuf: {} as GPUBuffer,
-  starCount: 3,
-  dustBuf: null,
-  dustCount: 0,
-};
 
 // `state` is forwarded through — most passes ignore it, but a fades stub
 // returning full opacity lets the ones that ask run without a live
@@ -128,22 +101,12 @@ const STATE_STUB = {
     },
     clipPlayer: { clipOpacityOf: () => 1 },
   },
-  // The Milky-Way rows' `draw` now goes through the same
-  // `deriveMilkyWayCloudAlpha` gate their `enabled` does (one liveness
-  // projection shared by the aggregate producer, its upsample consumer, and
-  // the dust pass), and that gate reads `settings.milkyWay.enabled` — so the
-  // baseline stub has to carry it or `draw` throws before reaching the
-  // renderer. Tests that need the toggle off override `settings` wholesale.
-  settings: { milkyWay: { enabled: true } },
   // Passes bind the shared focus group off state.gpu.focusUniform; an opaque
   // bind group is all they read. The nullable GPU renderer fields default to
   // null (pre-bootstrap shape); individual draw tests override the one they
   // exercise.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
-    // milkyWayPass.draw reads the generated cloud buffers off this handle.
-    milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
-    milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
   },
 } as unknown as EngineState;
@@ -165,99 +128,6 @@ const PASS_STUB = {
 // `texturedDisksPass.test.ts` (one test file per ContentPass module,
 // matching the convention used by every other entry in `passes/`). The
 // hdr-target layers check above pins the name in canonical order.
-
-describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {
-    // Half the FULL-threshold distance → apparent diameter is twice
-    // MILKY_WAY_FADE_FULL_PX, safely full-alpha. Both gates pass.
-    const stateOn = {
-      ...STATE_STUB,
-      settings: { milkyWay: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
-    });
-    expect(milkyWayPass.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
-  });
-
-  it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
-    // fades.opacityOf returns 0 so the gate doesn't keep the layer alive
-    // through a fade-out tail; toggle is also off — both conditions false.
-    const stateOffZeroFade = {
-      subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
-      settings: { milkyWay: { enabled: false } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(milkyWayPass.enabled(stateOffZeroFade, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
-  });
-
-  it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
-    // opacityOf = 1 simulates a toggle fade-out still in flight, and the
-    // apparent-size fadeAlpha also passes (camera well inside the FULL
-    // distance), so the gate's second condition is non-zero — the layer
-    // renders.
-    const stateOffFading = {
-      ...STATE_STUB,
-      settings: { milkyWay: { enabled: false } },
-    } as unknown as EngineState;
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
-    });
-    expect(milkyWayPass.enabled(stateOffFading, ctx, slabViewOf(ctx, NEAR0))).toBe(true);
-  });
-
-  it('returns false once the disc shrinks past the GONE apparent size (no empty render pass)', () => {
-    // Twice the GONE-threshold distance → apparent diameter is half
-    // MILKY_WAY_FADE_GONE_PX, safely past the band → alpha 0. Gating in
-    // `enabled` (not just `draw`) skips the empty beginRenderPass +
-    // timestamp-write on the split-encoder path.
-    const stateOn = {
-      ...STATE_STUB,
-      settings: { milkyWay: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx({
-      drawCamPos: [MW_GONE_DIST_MPC * 2, 0, 0] as Readonly<[number, number, number]>,
-    });
-    expect(milkyWayPass.enabled(stateOn, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
-  });
-});
-
-describe('milkyWayPass.draw', () => {
-  it('calls state.gpu.milkyWayCloudRenderer.drawDust with the packed args when the disc is above the FULL apparent size', () => {
-    // Half the FULL-threshold distance → apparent diameter is twice
-    // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
-    const drawSpy = vi.fn();
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
-    });
-    // NEAR0 — the layer's slab since the fixed COSMO near plane clipped the
-    // disc mid-descent (the fixture duplicates the cosmo row at index 0, so
-    // the resolved view carries the same vp).
-    const view = slabViewOf(ctx, NEAR0);
-    const state = {
-      ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, milkyWayCloudRenderer: { drawDust: drawSpy } },
-    } as unknown as EngineState;
-    milkyWayPass.draw(PASS_STUB, view, ctx, state);
-    expect(drawSpy).toHaveBeenCalledTimes(1);
-    // This row draws ONLY the dust pass now — the additive star pass moved to
-    // milkyWayAggregatePass, which renders it into the reduced-resolution
-    // `mw-aggregate` offscreen. Signature: drawDust(pass, MilkyWayCloudDrawArgs).
-    const [passArg, args] = drawSpy.mock.calls[0]!;
-    expect(passArg).toBe(PASS_STUB);
-    expect(args.vp).toBe(view.vp);
-    expect(args.viewportPx).toEqual(view.viewportPx);
-    // fadeAlpha above the FULL threshold is 1.0 (full strength).
-    expect(args.fadeAlpha).toBe(1.0);
-    // The generated buffer snapshot is forwarded verbatim.
-    expect(args.buffers).toBe(MW_CLOUD_BUFFERS);
-    // The model-space eye (from milkyWayCamPosModel(ctx.drawCamPos)) + the
-    // fixed model matrix are packed as a plain vector / a 16-float
-    // column-major matrix.
-    expect(args.camPosModel).toHaveLength(3);
-    expect(args.model).toHaveLength(16);
-  });
-});
 
 describe('horizonShellPass.enabled', () => {
   it('returns false near the origin — the inverse of the Milky-Way band', () => {

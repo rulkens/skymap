@@ -2,6 +2,7 @@ import { composeSelectionRows } from '../../src/services/engine/selection/compos
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { starCatalogSelectionRow } from '../../src/layers/starCatalog/present/starCatalogSelectionRow';
+import { milkyWaySelectionRow } from '../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -31,6 +32,7 @@ export function selectionResolverOver(
   return composeSelectionRows(
     () => [
       ...coreSelectionRows(() => deps),
+      milkyWaySelectionRow(),
       ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxies)]),
       ...(stars === undefined ? [] : [starCatalogSelectionRow(stars)]),
     ],

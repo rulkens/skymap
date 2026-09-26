@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
 import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
+import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/render/milkyWayAggregateTarget';
 import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
 import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
@@ -113,14 +114,16 @@ describe('createRenderTargets', () => {
   it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    // `star-aggregates` and `cosmic-web-density` are Layer-owned targets —
-    // composed in exactly as `composeRenderTargetRows` does at boot, so this
-    // test still exercises their scale/divisor math against the real rows.
+    // `star-aggregates`, `mw-aggregate` and `cosmic-web-density` are
+    // Layer-owned targets — composed in exactly as `composeRenderTargetRows`
+    // does at boot, so this test still exercises their scale/divisor math
+    // against the real rows.
     const targets = createRenderTargets(
       device,
       composeRenderTargetRows(SWAP_FORMAT, [
         LENS_TARGETS,
         [STAR_AGGREGATES_TARGET],
+        [MILKY_WAY_AGGREGATE_TARGET],
         DENSITY_TARGETS,
       ]),
       { width: 900, height: 600 },
@@ -342,9 +345,12 @@ describe('createRenderTargets', () => {
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
+    // mw-aggregate is a Layer-owned target, composed in beside the density
+    // row so this test still exercises its state-driven divisor against the
+    // real row.
     const targets = createRenderTargets(
       device,
-      DENSITY_ROWS,
+      composeRenderTargetRows(SWAP_FORMAT, [[MILKY_WAY_AGGREGATE_TARGET], DENSITY_TARGETS]),
       { width: 800, height: 600 },
       stateWithDivisor(2),
     );
