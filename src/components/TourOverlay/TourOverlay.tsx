@@ -18,7 +18,7 @@
  *   - `dwellNonce` bumps    → the dwell has landed     → show the caption.
  *
  * The nav, by contrast, is always visible (you can scrub or exit mid-fly) —
- * in an interactive session. `chrome=false` (cinema mode, the recorder's
+ * in an interactive session. `hasChrome={false}` (cinema mode, the recorder's
  * capture surface) is the same overlay in its recorded-film presentation:
  * the caption stays, the transport nav and the beat counter are not mounted
  * at all. A boolean prop rather than a second overlay component, because the
@@ -43,7 +43,7 @@ export type TourOverlayProps = {
    * `false` = cinema presentation (caption only). Defaults to true so the
    * interactive path needs no opt-in.
    */
-  readonly chrome?: boolean;
+  readonly hasChrome?: boolean;
   readonly caption: BeatCaption | null;
   readonly label: string | null;
   readonly index: number;
@@ -69,7 +69,7 @@ const VIGNETTE_CLASS = {
 } as const;
 
 function TourOverlay({
-  chrome = true,
+  hasChrome = true,
   caption,
   label,
   index,
@@ -111,7 +111,7 @@ function TourOverlay({
            */}
           <TourCaption
             key={index}
-            chrome={chrome}
+            hasChrome={hasChrome}
             caption={caption}
             label={label}
             index={index}
@@ -122,7 +122,7 @@ function TourOverlay({
 
       {/* Not merely hidden in cinema mode — the recorder screenshots the
           page, so unmounted is the only presentation that can't leak. */}
-      {chrome ? (
+      {hasChrome ? (
         <TourNav
           paused={paused}
           dwellSec={dwellSec}

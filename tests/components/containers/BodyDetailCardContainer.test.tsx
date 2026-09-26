@@ -61,7 +61,7 @@ describe('BodyDetailCardContainer', () => {
     const { store } = createAppStore();
     store.dispatch(engineBodyDistanceReported(NEAR_DISTANCE_MPC));
 
-    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+    render(createElement(BodyDetailCardContainer, { target: jupiter, isPinned: true }), {
       wrapper: makeWrapper(store),
     });
 
@@ -84,7 +84,7 @@ describe('BodyDetailCardContainer', () => {
     const { store } = createAppStore();
     store.dispatch(engineBodyDistanceReported(NEAR_DISTANCE_MPC));
 
-    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+    render(createElement(BodyDetailCardContainer, { target: jupiter, isPinned: true }), {
       wrapper: makeWrapper(store),
     });
 
@@ -106,7 +106,7 @@ describe('BodyDetailCardContainer', () => {
   it('drops the distance row when no body distance is published', () => {
     const { store } = createAppStore();
     // Initial store report has focusedBodyDistanceMpc = null (no focus yet).
-    render(createElement(BodyDetailCardContainer, { target: jupiter, pinned: true }), {
+    render(createElement(BodyDetailCardContainer, { target: jupiter, isPinned: true }), {
       wrapper: makeWrapper(store),
     });
 

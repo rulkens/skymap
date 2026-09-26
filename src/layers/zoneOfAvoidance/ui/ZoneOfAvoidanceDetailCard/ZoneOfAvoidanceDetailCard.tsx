@@ -21,22 +21,22 @@ import zoa from './ZoneOfAvoidanceDetailCard.module.css';
 
 export type ZoneOfAvoidanceDetailCardProps = {
   target: ZoneOfAvoidanceInfo;
-  pinned?: boolean;
-  chrome?: boolean;
+  isPinned?: boolean;
+  hasChrome?: boolean;
   onClose?: () => void;
 };
 
 function ZoneOfAvoidanceDetailCard({
   target,
-  pinned = false,
-  chrome = true,
+  isPinned = false,
+  hasChrome = true,
   onClose,
 }: ZoneOfAvoidanceDetailCardProps): ReactNode {
-  const outerClass = cx(zoa.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(zoa.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
-      <CardHeader eyebrow="Guide Layer" onClose={pinned ? onClose : undefined} />
+      <CardHeader eyebrow="Guide Layer" onClose={isPinned ? onClose : undefined} />
 
       <CardRow type="headline">{target.displayName}</CardRow>
 

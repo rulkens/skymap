@@ -20,7 +20,7 @@ import local from './StructureDetailCard.module.css';
 
 export type StructureDetailCardProps = {
   target: StructureInfo;
-  pinned?: boolean;
+  isPinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
    * current tier + galaxy catalog visibility, or null/undefined when not countable
@@ -28,29 +28,29 @@ export type StructureDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
-  chrome?: boolean;
+  hasChrome?: boolean;
   onFocus?: (target: StructureInfo) => void;
   onClose?: () => void;
 };
 
 function StructureDetailCard({
   target,
-  pinned = false,
+  isPinned = false,
   memberCount,
-  chrome = true,
+  hasChrome = true,
   onFocus,
   onClose,
 }: StructureDetailCardProps): ReactNode {
   const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
-  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Structure"
-        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.name}`}
-        onClose={pinned ? onClose : undefined}
+        onClose={isPinned ? onClose : undefined}
       />
 
       <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[target.category].label}>

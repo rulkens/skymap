@@ -39,16 +39,10 @@ function Frame({ children }: { children: ReactNode }) {
 const noop = () => {};
 
 /** One pinned card for a single target. */
-function card(target: FocusableTarget, memberCount?: number) {
+function card(target: FocusableTarget) {
   return (
     <Frame>
-      <InfoCard
-        selected={target}
-        hovered={null}
-        selectedMemberCount={memberCount}
-        onFocus={noop}
-        onClose={noop}
-      />
+      <InfoCard selected={target} hovered={null} onFocus={noop} onClose={noop} />
     </Frame>
   );
 }
@@ -62,7 +56,7 @@ export const MilliquasAGN = () => card(fixtures.milliquasAgn);
 export const DesiTracer = () => card(fixtures.desiTracer);
 
 // ── Extended structures ─────────────────────────────────────────────────────
-export const Cluster = () => card(fixtures.cluster, 1274);
+export const Cluster = () => card(fixtures.cluster);
 export const Supercluster = () => card(fixtures.supercluster);
 export const Void = () => card(fixtures.cosmicVoid);
 export const Group = () => card(fixtures.group);
@@ -81,7 +75,6 @@ export const HoverPair = () => (
     <InfoCard
       selected={fixtures.famousGalaxy}
       hovered={fixtures.cluster}
-      selectedMemberCount={1274}
       onFocus={noop}
       onClose={noop}
     />

@@ -73,7 +73,7 @@ function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): React
     const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
       <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        <Detail target={selected} pinned chrome={false} onFocus={onFocus} onClose={onClose} />
+        <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
       </MobileSheet>
     );
   }
@@ -92,7 +92,7 @@ function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): React
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
       {selected && Detail && (
-        <Detail target={selected} pinned onFocus={onFocus} onClose={onClose} />
+        <Detail target={selected} isPinned onFocus={onFocus} onClose={onClose} />
       )}
       {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>

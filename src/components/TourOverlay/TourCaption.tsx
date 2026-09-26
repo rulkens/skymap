@@ -28,7 +28,7 @@ export type TourCaptionProps = {
    * — while the series label stays: it's editorial, like the title. Bottom
    * anchors also shed their nav clearance (`captionNoChrome` in the module).
    */
-  readonly chrome?: boolean;
+  readonly hasChrome?: boolean;
   readonly caption: BeatCaption;
   readonly label: string | null;
   readonly index: number;
@@ -49,7 +49,13 @@ const HORIZONTAL_CLASS = {
   right: styles.captionRight,
 } as const;
 
-function TourCaption({ chrome = true, caption, label, index, total }: TourCaptionProps): ReactNode {
+function TourCaption({
+  hasChrome = true,
+  caption,
+  label,
+  index,
+  total,
+}: TourCaptionProps): ReactNode {
   const { vertical, horizontal } = captionAnchor(caption.position ?? 'bottom-left');
 
   // Zero-padded "01 / 03" readout. The kicker prefixes the tour's label
@@ -59,7 +65,7 @@ function TourCaption({ chrome = true, caption, label, index, total }: TourCaptio
   const current = String(index + 1).padStart(2, '0');
   const grand = String(total).padStart(2, '0');
   const readout = `${current} / ${grand}`;
-  const kicker = chrome ? (label ? `${label} · ${readout}` : readout) : label;
+  const kicker = hasChrome ? (label ? `${label} · ${readout}` : readout) : label;
 
   return (
     <div
@@ -69,7 +75,7 @@ function TourCaption({ chrome = true, caption, label, index, total }: TourCaptio
         HORIZONTAL_CLASS[horizontal],
         // Without chrome the nav is unmounted, so bottom anchors drop their
         // nav clearance and sit at the frame's own margin (see the module).
-        !chrome && styles.captionNoChrome,
+        !hasChrome && styles.captionNoChrome,
       )}
     >
       {kicker ? <div className={styles.label}>{kicker}</div> : null}

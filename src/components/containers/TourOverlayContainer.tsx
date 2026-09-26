@@ -58,7 +58,7 @@ function TourOverlayContainer(): React.ReactElement {
 
   return (
     <TourOverlay
-      chrome={!isCinemaMode()}
+      hasChrome={!isCinemaMode()}
       caption={caption}
       label={label}
       index={index}

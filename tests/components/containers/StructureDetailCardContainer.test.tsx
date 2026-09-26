@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 //
-// StructureDetailCardContainer — store-boundary coverage for the pinned
-// structure card's live "Galaxies" row.
+// StructureDetailCardContainer — store-boundary coverage.
 //
 // The container's whole job is to read the galaxyCatalog Layer's published
 // `structureMemberCount` fact and hand it to the pure card as `memberCount`.
 // These tests drive a real store (createAppStore + <Provider>), seed and patch
 // the fact via `layerFactsSeeded`/`factsReported` (the same actions the Layer's
-// frame reconcile dispatches), and assert the rendered row tracks it while the
-// identity rows (name, distance) stay put.
+// frame reconcile dispatches), and assert the read tracks the fact and the
+// selector's dedup suppresses a same-value re-render. The card's own rendering
+// rules (row shown/hidden, formatting) belong to StructureDetailCard.test.ts.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
@@ -62,15 +62,14 @@ function seedMemberCount(store: ReturnType<typeof createAppStore>['store'], coun
 }
 
 describe('StructureDetailCardContainer', () => {
-  it('Galaxies row updates from the structureMemberCount fact', () => {
+  it('reads the structureMemberCount fact and hands it to the card as memberCount', () => {
     const { store } = createAppStore();
     seedMemberCount(store, 3);
 
-    render(createElement(StructureDetailCardContainer, { target: virgo, pinned: true }), {
+    render(createElement(StructureDetailCardContainer, { target: virgo, isPinned: true }), {
       wrapper: makeWrapper(store),
     });
 
-    expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
 
     act(() => {
@@ -79,14 +78,13 @@ describe('StructureDetailCardContainer', () => {
 
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.queryByText('3')).not.toBeInTheDocument();
-    expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
   });
 
-  it('identity rows do not re-render when the fact patch repeats the same count', () => {
+  it('does not re-render the card when the fact patch repeats the same count', () => {
     const { store } = createAppStore();
     seedMemberCount(store, 3);
 
-    render(createElement(StructureDetailCardContainer, { target: virgo, pinned: true }), {
+    render(createElement(StructureDetailCardContainer, { target: virgo, isPinned: true }), {
       wrapper: makeWrapper(store),
     });
 
@@ -97,16 +95,5 @@ describe('StructureDetailCardContainer', () => {
     });
 
     expect(mockCardRenderProbe.count).toBe(rendersBeforeTick);
-    expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-  });
-
-  it('drops the Galaxies row when the count is not yet computable', () => {
-    render(createElement(StructureDetailCardContainer, { target: virgo, pinned: true }), {
-      wrapper: makeWrapper(createAppStore().store),
-    });
-
-    expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
-    expect(screen.queryByText('Galaxies')).toBeNull();
   });
 });

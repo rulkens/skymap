@@ -25,20 +25,20 @@ import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
   target: GalaxyInfo;
-  pinned?: boolean;
-  chrome?: boolean;
+  isPinned?: boolean;
+  hasChrome?: boolean;
   onFocus?: (target: GalaxyInfo) => void;
   onClose?: () => void;
 };
 
 function GalaxyDetailCard({
   target,
-  pinned = false,
-  chrome = true,
+  isPinned = false,
+  hasChrome = true,
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   const famousAliases = target.famous?.names.filter((n) => n !== target.displayName) ?? [];
 
@@ -46,9 +46,9 @@ function GalaxyDetailCard({
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Galaxy"
-        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
-        onClose={pinned ? onClose : undefined}
+        onClose={isPinned ? onClose : undefined}
       />
 
       <CardRow type="headline" badge={target.sourceLabel}>

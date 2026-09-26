@@ -28,28 +28,28 @@ import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {
   target: MilkyWayInfo;
-  pinned?: boolean;
-  chrome?: boolean;
+  isPinned?: boolean;
+  hasChrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
 
 function MilkyWayDetailCard({
   target,
-  pinned = false,
-  chrome = true,
+  isPinned = false,
+  hasChrome = true,
   onFocus,
   onClose,
 }: MilkyWayDetailCardProps): ReactNode {
-  const outerClass = cx(mw.root, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(mw.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Home Galaxy"
-        onFocus={pinned && onFocus ? () => onFocus(MILKY_WAY_INFO) : undefined}
+        onFocus={isPinned && onFocus ? () => onFocus(MILKY_WAY_INFO) : undefined}
         focusAriaLabel={`Focus camera on ${target.displayName}`}
-        onClose={pinned ? onClose : undefined}
+        onClose={isPinned ? onClose : undefined}
       />
 
       <CardRow type="headline">{target.displayName}</CardRow>
