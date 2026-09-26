@@ -184,13 +184,6 @@ describe('produceMilkyWayLabel', () => {
     expect(out.labels[0]!.id).toBe('milkyWay');
   });
 
-  it('reports awake: false across the fade band', () => {
-    for (const r of [0.1, 0.5, 0.8, 1.1, 1.5]) {
-      const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(r));
-      expect(out.awake).toBe(false);
-    }
-  });
-
   it('lifts the label straight up in screen space under a rolled camera', () => {
     // A rolled camera is exactly where the retired world +Y anchor failed:
     // world-up projects diagonally, so a world offset would lay the stem over

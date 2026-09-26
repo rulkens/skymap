@@ -9,8 +9,7 @@
  * orientation.  Values are tuneable; tweak after visual review.
  *
  * The fade band uses `smoothstep` for ease-in/ease-out so the marker
- * doesn't pop in or snap out — render-on-demand will keep the frame
- * loop awake as long as alpha is mid-transition.
+ * doesn't pop in or snap out.
  */
 
 export const MILKY_WAY_LABEL_NEAR_MPC = 0.6;

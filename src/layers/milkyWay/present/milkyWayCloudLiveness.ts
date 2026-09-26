@@ -2,8 +2,8 @@
  * milkyWayCloudLiveness — the ONE derivation of "is the Milky Way point cloud live
  * this frame, and at what opacity?", shared by the aggregate producer, the upsample
  * consumer and the dust pass, so the upsample can never composite an offscreen
- * nobody wrote. The fade-out tail is held open by `milkyWayVisible`'s RAW toggle
- * read, not by this product.
+ * nobody wrote. The fade-out tail is held open by this derivation's own
+ * `resolveLayerOpacity` multiply, keyed off the same clock `milkyWayVisible` reads.
  *
  * Uses the CANVAS height, not the slab view's viewport: the aggregate layer renders
  * into a FRACTION of the canvas, so `view.viewportPx` would split the three gates.

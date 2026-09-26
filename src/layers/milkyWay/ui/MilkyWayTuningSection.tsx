@@ -1,17 +1,9 @@
 /**
  * MilkyWayTuningSection — DebugPanel subsection exposing the Milky-Way star
- * cloud's tuning knobs (look + the perf levers that trade against it),
- * instantiating the shared `DebugTuningSection` board with
- * `MILKY_WAY_SLIDER_FIELDS`. Dev-only; the explorer-facing SettingsPanel
- * surfaces only the visibility toggle.
- *
- * The copy-to-clipboard button promotes a tuned session to code:
- * `formatMilkyWayTuningDefaults` diffs the live values against
- * `MILKY_WAY_TUNING_DEFAULTS` for paste-ready lines. Imported straight from
- * `services/` rather than routed through the container, matching
- * `AssetLoadingSection` / `GpuTimingsSection` / `RenderTogglesSection`: a
- * presentational DebugPanel section reads a module constant directly when
- * it isn't store state.
+ * cloud's tuning knobs via the shared `DebugTuningSection` board. Dev-only;
+ * the explorer-facing SettingsPanel surfaces only the visibility toggle.
+ * The copy button promotes a tuned session to code via
+ * `formatMilkyWayTuningDefaults`.
  */
 
 import type { ReactElement } from 'react';
@@ -43,12 +35,6 @@ export function MilkyWayTuningSection({
       values={milkyWay}
       onSliderChange={(k, v) => onChange(milkyWaySliderPatch(k, v))}
     >
-      {
-        // CopyButton itself disables on an empty `text` — nothing else to
-        // decide here beyond feeding it the diff. That reads correctly at
-        // rest (no session yet) and after every knob is reset back to its
-        // default, not just as an initial state.
-      }
       <CopyButton
         text={diff}
         label="Copy changed defaults"

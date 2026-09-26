@@ -1,15 +1,11 @@
 /**
  * milkyWayUpsamplePass — HDR composite of the half-res `mw-aggregate`
- * offscreen (`milkyWayAggregatePass`'s additive star field). A plain
- * additive blit is correct here, unlike `starAggregateUpsamplePass`'s knee:
- * the cloud's records aren't Gaia photometry and don't need the LOD-symmetry
- * fix, so this draws through its OWN handle rather than sharing that one.
- *
- * Position: immediately before `milkyWayPass`'s dust pass, so dust
- * transmittance multiplies the upsampled starlight too.
- *
- * `enabled` shares `deriveMilkyWayCloudAlpha` with the producer, so the two
- * can never disagree about whether the offscreen was written this frame.
+ * offscreen (`milkyWayAggregatePass`'s star field). A plain additive blit is
+ * correct here — unlike `starAggregateUpsamplePass`, these records aren't
+ * Gaia photometry and need no LOD-symmetry fix — so this draws through its
+ * own handle. Runs immediately before `milkyWayPass`'s dust pass, so dust
+ * multiplies the upsampled starlight too; `enabled` shares
+ * `deriveMilkyWayCloudAlpha` with the producer so the two can't disagree.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

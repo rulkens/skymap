@@ -326,7 +326,6 @@ describe('renderFrame visual baseline', () => {
       cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
       cloudRenderer: milkyWayCloudRenderer,
       aggregateUpsample,
-      pickRenderer: { pickMilkyWay: vi.fn() },
     } as unknown as MilkyWayRuntime;
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');

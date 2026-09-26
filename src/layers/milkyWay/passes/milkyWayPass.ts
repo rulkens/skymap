@@ -1,49 +1,23 @@
 /**
- * milkyWayPass — the Milky Way point cloud's DUST pass, plus the cloud's pick
- * aspect, at the galactic centre (`MILKY_WAY_CENTER_WORLD`, the ~8 kpc Sgr A*
- * offset from the observer origin, applied via the model matrix).
+ * milkyWayPass — the Milky Way cloud's DUST pass, plus its pick aspect, at
+ * the galactic centre (`MILKY_WAY_CENTER_WORLD`).
  *
- * The MULTIPLICATIVE dust pass stays here, full-res in HDR, because its
- * per-channel transmittance has to land on the real cosmological
- * accumulation; the ADDITIVE star pass lives in `milkyWayAggregatePass`
- * instead (see that layer's header for why). Dust sprites are camera-facing
- * billboards from the live camera basis; the cloud's world placement is
- * `milkyWayModelCached`, shared with the aggregate layer.
+ * Dust stays here, full-res in HDR — its per-channel transmittance has to
+ * land on the real cosmological accumulation; the ADDITIVE star pass lives in
+ * `milkyWayAggregatePass` (see that layer's header). `enabled` delegates to
+ * `deriveMilkyWayCloudAlpha`, shared with the aggregate producer and its
+ * upsample consumer so the three can't disagree (`milkyWayCloudLiveness`).
  *
- * `enabled` delegates to `deriveMilkyWayCloudAlpha` — the ONE home of the
- * cloud's visibility question, shared with the aggregate producer and its
- * upsample consumer so the three can never disagree (`milkyWayCloudLiveness`).
- * The pick program runs the SAME gate against the pick-time camera, so draw
- * and pick can't drift. A null result skips the whole layer: no
- * `beginRenderPass`, no tile-RAM round-trip, no idle timestamp slot.
+ * Slab is NEAR0, not COSMO: COSMO's near plane (10 kpc) would slice the
+ * disc's ~9.5 kpc near edge mid-crossfade with the approach fade. NEAR0's
+ * adaptive far plane can pull inside the disc's far edge on a deep descent,
+ * so both vertex stages clamp clip-z just inside it (safe — both passes are
+ * depthless).
  *
- * `pickEnabled` is the one place draw and pick diverge: `enabled` AND a floor
- * on the camera's origin distance (`MILKY_WAY_PICK_MIN_DISTANCE_MPC`) — the
- * only registry gate where the pick set is NARROWER than the draw set (see
- * `ContentPass.pickEnabled` on why that direction needs its own
- * justification).
- *
- * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc
- * (`COSMO_NEAR_MPC`, slabs.ts), but the disc's near edge sits only ~9.5 kpc
- * from the heliocentric origin, so on the way down that plane would slice
- * visibly through the clumps while the approach fade (full to 2 kpc) still
- * shows them — a hard clip mid-crossfade. NEAR0's near/far track the camera's
- * orbit distance instead, the same fix `starPointsPass`, `starCatalogPass`,
- * `orbitTrailsPass`, and `foregroundLabelsPass` each carry. Unlike those
- * four there is no f64 rebase seam here: the cloud's kpc-scale anchors bound
- * the f32 large-minus-large cancellation at ~1e-9 Mpc, deeply sub-pixel
- * against a kpc-sized disc. NEAR0's adaptive far plane is the one hazard it
- * adds: on a deep descent it can pull inside the disc's far edge, so the
- * star/dust vertex stages clamp clip-z just inside it — safe because both
- * passes are depthless (stars.wesl / dust.wesl).
- *
- * Drawn FIRST inside the (hdr, NEAR0) group, which runs after the whole (hdr,
- * COSMO) group: the dust pass's multiplicative transmittance should darken the
- * full cosmological accumulation behind it, but must NOT darken the near-field
- * starfield (star-points / star-catalog) that sits between the camera and the
- * dust during descent — so this layer leads the group and those draw after.
- * `milkyWayUpsamplePass` is the one row that must still precede it: it adds
- * the cloud's own starlight into HDR, which the dust then has to multiply too.
+ * Drawn FIRST in the (hdr, NEAR0) group, after the whole (hdr, COSMO) group
+ * and after `milkyWayUpsamplePass`: dust must darken the cosmological
+ * accumulation and the cloud's own upsampled starlight, but not the
+ * near-field starfield between the camera and the dust.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -75,8 +49,6 @@ import { milkyWayModelCached } from '../../../services/engine/galaxyGenerator/v1
 const MILKY_WAY_PICK_MIN_DISTANCE_MPC = 0.0271;
 
 export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
-  // Shared with the aggregate producer and its upsample consumer — see
-  // `milkyWayCloudLiveness` on why all three must answer identically.
   function enabled(state: PassState, ctx: FrameView, _view: SlabView): boolean {
     return deriveMilkyWayCloudAlpha(state, ctx) !== null;
   }
@@ -86,12 +58,8 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
 
     enabled,
 
-    // Pick gate — NARROWER than `enabled`, the only row in the registry that way
-    // round (see `ContentPass.pickEnabled`). The disc stays DRAWN all the way
-    // down to the 200 pc approach fade, but stops taking clicks once the camera
-    // is inside it: `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above carries the why.
-    // Composed over `enabled` rather than restating its three terms, so the
-    // shared gates cannot drift and pick stays a strict subset of draw.
+    // Narrower than `enabled` — composed over it so pick stays a strict
+    // subset of draw; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
     pickEnabled(state, ctx, view) {
       if (!enabled(state, ctx, view)) return false;
       const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
@@ -99,17 +67,12 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      // Defensive re-derivation, mirroring the sibling layers: `enabled` already
-      // proved liveness, but re-deriving keeps this a pure function of
-      // (state, ctx) with no reliance on gate ordering.
       const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);
       if (fadeAlpha === null) return;
 
       runtime.cloudRenderer.drawDust(pass, {
         vp: view.vp,
-        // Full-res into HDR, so the canvas viewport is the target viewport. (The
-        // dust pass's own size clamp is in NDC, not pixels, so this only feeds
-        // the shared camera prefix — but keeping it honest costs nothing.)
+        // Full-res into HDR — canvas viewport is the target viewport.
         viewportPx: view.viewportPx,
         pxPerRad: ctx.drawPxPerRad,
         // The eye, not a view plane: every sprite builds its own basis from it,
@@ -126,18 +89,9 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass {
     },
 
     // Pick aspect — stamps the single invisible pick billboard at the
-    // galactic centre. `pickMilkyWay` sizes it on the GPU from the pick-camera
-    // uniform, so there is no CPU size argument.
-    //
-    // This row SELF-BINDS its @group(0) pick camera, like every other pickable
-    // row, so pick rows are order-independent within a pass. The camera facts
-    // come from THIS row's slab view, so the billboard's in-shader sizing reads
-    // the same values the point pick reads, just projected through NEAR0.
-    //
-    // Visibility is NOT re-checked here: the pick program filters by this row's
-    // `pickEnabled`, evaluated against the pick-time camera. That gate composes
-    // over `enabled` — the same derivation the draw program runs — so the pick
-    // answer can only ever be a SUBSET of the draw answer, never a drift from it.
+    // galactic centre; self-binds its @group(0) pick camera like every other
+    // pickable row. Visibility isn't re-checked here — `pickEnabled` above
+    // already gates the pick program's call into this row.
     drawPick(pass, view, ctx) {
       runtime.pickRenderer.pickMilkyWay(
         pass,

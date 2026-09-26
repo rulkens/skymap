@@ -1,24 +1,12 @@
 /**
- * milkyWayLabelStyle — visual style for the Milky Way "You are here" label.
+ * milkyWayLabelStyle — visual style for the Milky Way "You are here" label:
+ * a single text label lifted off the origin by a marker-line stem, no ring
+ * or halo. `produceMilkyWayLabel` supplies the anchor + fade; this module
+ * owns only the static appearance.
  *
- * Like the famous-galaxy presentation, this is label-only: a single text
- * label lifted off the origin by a short marker-line stem, with no ring or
- * halo and none of the marker apparent-radius fade fields. The producer
- * (`produceMilkyWayLabel`) supplies the origin anchor + stem geometry and the
- * distance/layer fade; this module owns only the static appearance.
- *
- * ### LDR display colours
- *
- * Marker-lines and labels render in the swap render step AFTER the tone-map
- * composite (see `services/engine/frame/executeFrame.ts`), so they composite
- * directly onto the swap chain without going through the exposure curve.
- * `[1, 1, 1, 1]` is display white at any tone-map setting — no overshoot hack
- * needed. The soft black drop-shadow keeps the glyphs legible against the
- * starfield; re-tune by editing this module.
- *
- * Consolidating these constants into a style module matches the per-producer
- * style-module pattern the structure / famous producers already use, instead
- * of loose producer-scope consts.
+ * Marker-lines and labels render AFTER the tone-map composite (see
+ * `executeFrame.ts`), so `[1, 1, 1, 1]` is display white directly — no
+ * exposure curve, no overshoot hack needed.
  */
 
 import type { Vec4 } from '../../../@types/math/Vec4';

@@ -1,22 +1,8 @@
 /**
- * MilkyWayCloudRenderer — public handle for the Milky Way point-cloud draw.
- *
- * The cloud is drawn as two instanced-billboard passes over the generated
- * star/dust records: an ADDITIVE star pass (soft radial glows that sum their
- * light) and a MULTIPLICATIVE dust pass (per-channel transmittance that
- * darkens + reddens the light behind it).
- *
- * ### Why two entry points rather than one `draw`
- *
- * The two passes render into DIFFERENT TARGETS, so they cannot share a render
- * pass encoder. Stars draw into the reduced-resolution `mw-aggregate`
- * offscreen (their summed glow is a low-frequency field, and they are the
- * fill-bound half — see `milkyWayAggregateTarget.ts`); dust
- * draws full-res into HDR, where its transmittance multiplies the real
- * cosmological accumulation. Each entry point writes its OWN uniform buffer,
- * so neither depends on the other having run first.
- *
- * Satisfies the shared `Renderer` contract (`label` + `destroy`).
+ * MilkyWayCloudRenderer — public handle for the Milky Way point-cloud draw:
+ * two entry points (additive stars, multiplicative dust), one per target,
+ * each writing its own uniform buffer — see `milkyWayCloudRenderer.ts`'s
+ * module header for why. Satisfies the shared `Renderer` contract.
  */
 
 import type { MilkyWayCloudDrawArgs } from './MilkyWayCloudDrawArgs';

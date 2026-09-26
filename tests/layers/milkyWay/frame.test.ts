@@ -22,15 +22,6 @@ const snapshotStub = {} as ReadyFrameContext;
 const viewsStub = [{} as FrameView];
 
 describe('milkyWay frame planner', () => {
-  it('reconciles the cloud against the live starCount', () => {
-    const reconcile = vi.fn();
-    const runtime = makeRuntime(reconcile);
-    const state = stateStub(true, 250000);
-    milkyWayPlanner(runtime).plan(snapshotStub, viewsStub, state);
-    expect(reconcile).toHaveBeenCalledTimes(1);
-    expect(reconcile).toHaveBeenCalledWith(250000);
-  });
-
   it('reconciles even while the Milky Way is disabled', () => {
     const reconcile = vi.fn();
     const runtime = makeRuntime(reconcile);

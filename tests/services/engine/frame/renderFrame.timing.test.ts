@@ -255,7 +255,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     cloud: { buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }) },
     cloudRenderer: milkyWayCloudRenderer,
     aggregateUpsample: null,
-    pickRenderer: { pickMilkyWay: vi.fn() },
   } as unknown as MilkyWayRuntime;
   const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();

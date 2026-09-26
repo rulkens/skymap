@@ -109,10 +109,8 @@ export function createMilkyWayPickRenderer(
       bindGroupLayouts: [cameraBgl, fadeBgl, mwBgl],
     });
 
-    // Separate GPUShaderModule per pipeline — the one-module-per-pipeline
-    // convention that structurally sidesteps the 'auto'-layout trap (our
-    // layout is explicit, but the convention keeps any future 'auto'
-    // pipeline from inheriting a poisoned module).
+    // Separate GPUShaderModule per pipeline (this layout is explicit, but the
+    // convention sidesteps the 'auto'-layout trap regardless).
     const vs = createShaderModuleWithDevLog(device, vsCode, 'milkyWayPick.vertex');
     const fs = createShaderModuleWithDevLog(device, pickFsCode, 'milkyWayPick.pick');
 
@@ -130,12 +128,9 @@ export function createMilkyWayPickRenderer(
       },
       primitive: { topology: 'triangle-list' },
       // depth32float matches the NEAR0 pick target's depth attachment
-      // (NEAR0_DEPTH_FORMAT in pickProgram.ts — the pass this pipeline
-      // draws in since the layer moved to the NEAR0 slab; a mismatched
-      // format is a validation error). The MW is the pass's sole occupant
-      // over a cleared-to-1.0 depth, so the test is near-vestigial here;
-      // cross-slab occlusion is resolved by the pick program's CPU fold,
-      // not this attachment.
+      // (NEAR0_DEPTH_FORMAT in pickProgram.ts; a mismatch is a validation
+      // error). Cross-slab occlusion is resolved by the pick program's CPU
+      // fold, not this attachment.
       depthStencil: {
         format: 'depth32float',
         depthWriteEnabled: true,

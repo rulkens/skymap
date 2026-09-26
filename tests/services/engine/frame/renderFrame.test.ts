@@ -381,13 +381,11 @@ function makeInput(
   // The milkyWay Layer's passes close over their own runtime, mirroring
   // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
   // fixtures free of an upsample blit they don't assert on (the layer's guard
-  // is `=== null`, which `undefined` would slip past); `pickRenderer` is never
-  // exercised here — `renderFrame` walks `draw`, never `drawPick`.
+  // is `=== null`, which `undefined` would slip past).
   const milkyWayRuntime = {
     cloud: milkyWayCloud,
     cloudRenderer: milkyWayCloudRenderer,
     aggregateUpsample: null,
-    pickRenderer: { pickMilkyWay: vi.fn() },
   } as unknown as MilkyWayRuntime;
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const compositor = makeMockCompositor(callLog);

@@ -1,65 +1,27 @@
 /**
- * milkyWayCloudRenderer — the two-pass draw for the generated Milky Way point
- * cloud. The star/dust billboard model draws as an ADDITIVE star pass (soft
- * radial glows that sum their light) and a MULTIPLICATIVE-transmittance dust
- * pass (per-channel absorption that darkens + reddens the light already in the
- * target).
+ * milkyWayCloudRenderer — two-pass draw for the generated Milky Way point
+ * cloud: an ADDITIVE star pass (into `mw-aggregate` — rationale in
+ * `milkyWayAggregateTarget.ts`) and a MULTIPLICATIVE-transmittance dust pass
+ * (full-res HDR). Both targets are `rgba16float`, so one `targetFormat`
+ * describes both pipelines.
  *
- * ## The two passes render into DIFFERENT targets
+ * Stars and dust compile from two DISJOINT WESL modules sharing only
+ * `io.wesl`'s uniform declaration — they can't share a module: WebGPU's
+ * `layout: 'auto'` derives a bind-group layout per module, and a module used
+ * by two pipelines with divergent stage visibility fails the
+ * group-equivalent check. An `auto` layout is also PIPELINE-SPECIFIC, so each
+ * pipeline owns its own bind group AND its own uniform buffer:
+ * `queue.writeBuffer` orders against `queue.submit`, not the passes encoded
+ * in between, so two writes to one buffer within a frame would both land
+ * before either pass ran and the second would silently win for both.
  *
- * Stars go into the reduced-resolution `mw-aggregate` offscreen; dust goes
- * full-res into HDR. The rationale lives in `milkyWayAggregateTarget.ts` — in
- * short, the summed star glow is a low-frequency field and is the fill-bound
- * half, while dust must multiply the real cosmological accumulation and so
- * has to land in HDR itself.
+ * Dust's blend is a pinned per-channel MULTIPLY (`srcFactor: 'dst'`,
+ * `dstFactor: 'zero'`): the fragment's transmittance T composes as `T * dst`,
+ * exactly how extinction works (no light behind dust ⇒ 0). Swapped factors
+ * give a plausible but physically-wrong image with no error — pinned in tests.
  *
- * Both targets are `rgba16float`, so ONE `targetFormat` still describes both
- * pipelines. If the aggregate row's format ever diverges from HDR's, this
- * factory needs two formats, not one.
- *
- * ## Two pipelines, two bind groups, two uniform buffers
- *
- * Stars and dust compile from two DISJOINT WESL modules (`stars.wesl` /
- * `dust.wesl`) that share only the `io.wesl` uniform declaration. They cannot
- * share a GPUShaderModule: WebGPU's `layout: 'auto'` derives a bind-group
- * layout from the entry points a module exposes, and two pipelines that share
- * a module but reference the binding with divergent stage visibility fail the
- * group-equivalent check (the auto-layout trap in project memory). Disjoint
- * modules dodge it.
- *
- * The consequence for the CPU side: an `auto`-derived bind-group layout is
- * PIPELINE-SPECIFIC — a bind group built from `starPipeline.getBindGroupLayout(0)`
- * is not accepted by the dust pipeline and vice versa. So each pass owns its
- * bind group.
- *
- * Each pass also owns its own UNIFORM BUFFER, which the single-target version
- * did not need. `queue.writeBuffer` is ordered against `queue.submit`, not
- * against the passes encoded in between: two writes to one buffer inside a
- * frame would both land before either pass executed, so the second would win
- * for BOTH. Sharing one buffer would therefore make the star pass silently
- * read the dust pass's viewport (the two now differ — the star pass is sized
- * to the reduced-resolution target). Two buffers make the passes independent
- * of each other's ordering, which is also what lets either be skipped.
- *
- * ## The dust blend algebra (load-bearing, silent if wrong)
- *
- * Stars use `src + dst` (`one`/`one`) — additive emission. Dust uses
- * `src*dst` on colour (`srcFactor: 'dst'`, `dstFactor: 'zero'`): the fragment
- * outputs a per-channel transmittance T, and the blend computes
- * `T * dst + 0 * src = T * dst`, i.e. it MULTIPLIES the framebuffer by T. That
- * is exactly how extinction works — no light behind the dust (dst 0) means
- * `T * 0 = 0`, so dust is invisible except silhouetted against the glow it
- * blocks. The alpha channel uses `zero`/`one` (`0*src + 1*dst`) so the target
- * alpha passes through untouched. Swapping either factor produces a plausible
- * but physically-wrong image with no error, so the pinned values are asserted
- * in the tests.
- *
- * ## No depth state
- *
- * Neither pipeline declares `depthStencil`: the cloud is emissive/transmissive
- * glow, order-independent under its blends, and shares its targets with passes
- * that manage their own depth. A depth test would incorrectly cull sprites
- * behind nearer ones that should still sum/multiply.
+ * Neither pipeline declares `depthStencil`: order-independent glow sharing
+ * targets with passes that manage their own depth.
  */
 
 import starsCode from '../../../services/gpu/shaders/milkyWay/sprites/stars.wesl?static';
@@ -88,10 +50,7 @@ type Init = {
 // into a camera-facing billboard by pushing these corners along camRight/camUp.
 const CORNER_QUAD = new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]);
 
-// The star pass uses the shared additive emission blend (ADDITIVE_BLEND). The
-// dust pass is a pinned per-channel MULTIPLY (see the module header for the
-// extinction algebra) whose factors match no shared descriptor, so it stays
-// inline here.
+// Dust's MULTIPLY blend (see module header) matches no shared descriptor.
 const DUST_BLEND: GPUBlendState = {
   color: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
   alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
@@ -142,9 +101,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   ): GPURenderPipeline =>
     device.createRenderPipeline({
       label,
-      // 'auto' layout — the derived bind-group layout is pipeline-specific, so
-      // each pipeline gets its own bind group below (never shared across the two).
-      layout: 'auto',
+      layout: 'auto', // pipeline-specific — see module header
       vertex: {
         module,
         entryPoint: 'vs',
@@ -181,9 +138,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   new Float32Array(cornerBuffer.getMappedRange()).set(CORNER_QUAD);
   cornerBuffer.unmap();
 
-  // One uniform buffer per pass — see the module header on why sharing one
-  // across two render passes would make the star pass read the dust pass's
-  // viewport.
+  // One uniform buffer per pass — see the module header.
   const makeUniformBuffer = (label: string): GPUBuffer =>
     device.createBuffer({
       label,
@@ -193,8 +148,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   const starUniformBuffer = makeUniformBuffer('milkyWayCloud-star-uniforms');
   const dustUniformBuffer = makeUniformBuffer('milkyWayCloud-dust-uniforms');
 
-  // Each bind group is built from its OWN pipeline's auto layout (auto layouts
-  // never cross pipelines; see the module header).
+  // Each bind group is built from its own pipeline's auto layout (see module header).
   const starBindGroup = device.createBindGroup({
     label: 'milkyWayCloud-star-bg',
     layout: starPipeline.getBindGroupLayout(0),
@@ -206,11 +160,8 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     entries: [{ binding: 0, resource: { buffer: dustUniformBuffer } }],
   });
 
-  // Scratch uniform view, reused per frame to avoid churning the GC. Written
-  // whole each draw, so stale bytes from the previous frame never leak. Safe to
-  // share between the two entry points because each fills it completely and
-  // uploads before returning — the same non-reentrant discipline the rest of
-  // the frame path uses.
+  // Reused per frame to avoid churning the GC; each entry point fills it
+  // whole before uploading, so no stale bytes leak between frames or passes.
   const uniformScratch = new Float32Array(MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE / 4);
 
   // Pack io.wesl's Uniforms into the scratch and upload it to `target`. Both
@@ -229,9 +180,8 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     // pad can't rely on zero-init the way a fresh Float32Array can.
     f32[19] = 0;
     f32.set(model, 20);
-    // camPosModel is a vec4 (the eye point + an unused w) so it lands on a
-    // clean 16-byte slot; 40..43 is the reserved slot the second basis vector
-    // used to hold, written zero because this scratch is reused across frames.
+    // camPosModel is a vec4 (padded w) landing on a clean 16-byte slot;
+    // 40..43 reserved, written zero (scratch reused across frames).
     f32[36] = camPosModel[0];
     f32[37] = camPosModel[1];
     f32[38] = camPosModel[2];

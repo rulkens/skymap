@@ -1,31 +1,13 @@
 /**
- * milkyWayAggregatePass — the Milky Way point cloud's ADDITIVE star pass,
- * drawn into the reduced-resolution `mw-aggregate` offscreen.
+ * milkyWayAggregatePass — the Milky Way cloud's ADDITIVE star pass, drawn
+ * into the reduced-resolution `mw-aggregate` offscreen (full rationale in
+ * `milkyWayAggregateTarget.ts`). The DUST pass stays in `milkyWayPass`,
+ * full-res in HDR, since its multiplicative transmittance has to land on the
+ * real cosmological accumulation.
  *
- * The cloud stands in for ~1e11 stars with a budget in the hundreds of
- * thousands, so wherever the disc covers real screen area its sprites fall
- * below one per pixel and read as discrete particles rather than a galaxy.
- * The cure is more overlap per pixel (bigger, softer, fewer sprites), and the
- * wall that stops you is FILL, not instance count — measured, ~5x the
- * baseline sprite area collapses the frame rate while instance count drops.
- * A summed additive glow field is low-frequency, so rendering at `1/scale`
- * and bilinearly upsampling buys back the square of the divisor in fragment
- * cost — the same split the survey star pass makes (`starAggregatesPass` →
- * `star-aggregates` → `starAggregateUpsamplePass`); full rationale in
- * `milkyWayAggregateTarget.ts`. The DUST pass stays in
- * `milkyWayPass`, full-res in HDR, since its multiplicative transmittance
- * has to land on the real cosmological accumulation.
- *
- * Viewport is the DOWNSCALED size, not the canvas: `stars.wesl` clamps each
- * sprite's half-extent to `[starPxMin, starPxMax]` pixels OF THE TARGET BEING
- * RENDERED, so the canvas size would make every clamped sprite `scale` times
- * too big once upsampled — read via `ctx.snapshot.renderTargets.sizeOf('mw-aggregate')`.
- *
- * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc, but the
- * disc's near edge sits ~9.5 kpc out, so that plane would slice the cloud
- * mid-descent while the approach fade still shows it — see `milkyWayPass`'s
- * header for the full note, including why NEAR0's adaptive far plane means
- * both shaders clamp clip-z.
+ * Viewport is the DOWNSCALED size, not the canvas — `stars.wesl` clamps each
+ * sprite in pixels OF THE TARGET BEING RENDERED (see `milkyWayAggregateTarget.ts`).
+ * Slab is NEAR0, not COSMO — see `milkyWayPass`'s header for the full note.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -45,15 +27,10 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      // Defensive re-derivation, mirroring `createScalarVolumePass`: `enabled` already
-      // proved liveness, but re-deriving keeps this a pure function of
-      // (state, ctx) with no reliance on gate ordering.
       const fadeAlpha = deriveMilkyWayCloudAlpha(state, ctx);
       if (fadeAlpha === null) return;
 
-      // Viewport is the mw-aggregate target's allocated size (see `sizeOf`) —
-      // see the module header on why the px sprite clamp makes this
-      // load-bearing rather than cosmetic.
+      // Load-bearing size, not cosmetic — see the module header.
       const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('mw-aggregate');
 
       runtime.cloudRenderer.drawStars(pass, {

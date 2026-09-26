@@ -37,23 +37,24 @@ const PASS = milkyWayPass({} as unknown as MilkyWayRuntime);
 const STATE = {
   settings: { milkyWay: { enabled: true } },
   subsystems: {
-    fades: { opacityOf: vi.fn(() => 1) },
+    fades: { opacityOf: () => 1, isAnyAnimating: () => false },
     clipPlayer: { clipOpacityOf: () => 1 },
   },
 } as unknown as EngineState;
 
 // 720-px viewport, 60° fovY, tangent-exact.
-const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+const MW_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(camDistMpc: number): FrameView {
-  const camPos: Vec3 = [0, 0, camDistMpc];
+function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
     // resolveLayerOpacity lerps its recession factor on snapshot.focusBlend;
     // an absent one makes the composed alpha NaN.
     snapshot: { nowMs: 0, focusBlend: 0 },
-    cam: { distance: camDistMpc },
+    cam: { distance: Math.hypot(...camPos) },
     drawCamPos: camPos,
-    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    drawPxPerRad: MW_PX_PER_RAD,
+    canvasSize: { width: 1280, height: 720 },
+    viewportPx: [1280, 720],
   } as unknown as FrameView;
 }
 
@@ -61,13 +62,13 @@ describe('milkyWayPass pick vs draw', () => {
   it('keeps drawing but stops taking clicks once the camera is inside the disc', () => {
     // Well inside the impostor, still an order of magnitude outside the 2 kpc
     // approach fade: the disc is DRAWN at full strength here.
-    const inside = makeCtx(0.02);
+    const inside = makeCtx([0, 0, 0.02]);
     expect(inside.cam.distance).toBeGreaterThan(SCALE_FADE_BANDS.milkyWayApproachSun.fullAt);
     expect(PASS.enabled(STATE, inside, VIEW_STUB)).toBe(true);
     expect(PASS.pickEnabled!(STATE, inside, VIEW_STUB)).toBe(false);
 
     // Framing the galaxy from outside: draw and pick agree again.
-    const outside = makeCtx(0.15);
+    const outside = makeCtx([0, 0, 0.15]);
     expect(PASS.enabled(STATE, outside, VIEW_STUB)).toBe(true);
     expect(PASS.pickEnabled!(STATE, outside, VIEW_STUB)).toBe(true);
   });
@@ -75,19 +76,14 @@ describe('milkyWayPass pick vs draw', () => {
   it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
     // `pickEnabled` composes over `enabled` rather than restating its terms, so an
     // invisible disc cannot come back as a click target.
-    const dissolved = makeCtx(SCALE_FADE_BANDS.milkyWayApproachSun.goneAt / 2);
+    const dissolved = makeCtx([0, 0, SCALE_FADE_BANDS.milkyWayApproachSun.goneAt / 2]);
     expect(PASS.enabled(STATE, dissolved, VIEW_STUB)).toBe(false);
     expect(PASS.pickEnabled!(STATE, dissolved, VIEW_STUB)).toBe(false);
   });
 });
 
-// Knob-derived camera distances for the Milky-Way apparent-size fade band,
-// under a 60°-vertical-fov, 720-px-tall viewport. Inverting
-// apparentDiameterPx: the disc (diameter 2·R) spans exactly `px` on screen
-// at distance 2·R·pxPerRad / px. Deriving the fixtures from the calibration
-// knobs (rather than hardcoding Mpc values) keeps these tests green across
-// visual-gate re-tunes of the band edges.
-const MW_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+// Fade-band camera distances derived from the calibration knobs — see
+// `milkyWayVisible.test.ts` for the apparentDiameterPx inversion this reuses.
 const MW_FULL_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_FULL_PX;
 const MW_GONE_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_GONE_PX;
 
@@ -101,33 +97,12 @@ const MW_CLOUD_BUFFERS = {
   dustCount: 0,
 };
 
-function makeApparentSizeCtx(
-  camPos: Readonly<[number, number, number]> = [0, 0, MW_FULL_DIST_MPC / 2],
-): FrameView {
-  return {
-    snapshot: { nowMs: 0, focusBlend: 0 },
-    cam: { distance: Math.hypot(...camPos) },
-    drawCamPos: camPos,
-    drawPxPerRad: MW_PX_PER_RAD,
-    canvasSize: { width: 1280, height: 720 },
-    viewportPx: [1280, 720],
-  } as unknown as FrameView;
-}
-
-const APPARENT_SIZE_STATE = {
-  settings: { milkyWay: { enabled: true } },
-  subsystems: {
-    fades: { opacityOf: () => 1, isAnyAnimating: () => false },
-    clipPlayer: { clipOpacityOf: () => 1 },
-  },
-} as unknown as EngineState;
-
 describe('milkyWayPass.enabled — apparent-size band', () => {
   it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX, safely full-alpha. Both gates pass.
-    const ctx = makeApparentSizeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
-    expect(PASS.enabled(APPARENT_SIZE_STATE, ctx, VIEW_STUB)).toBe(true);
+    const ctx = makeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
+    expect(PASS.enabled(STATE, ctx, VIEW_STUB)).toBe(true);
   });
 
   it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
@@ -137,7 +112,7 @@ describe('milkyWayPass.enabled — apparent-size band', () => {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    const ctx = makeApparentSizeCtx();
+    const ctx = makeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
     expect(PASS.enabled(stateOffZeroFade, ctx, VIEW_STUB)).toBe(false);
   });
 
@@ -147,10 +122,10 @@ describe('milkyWayPass.enabled — apparent-size band', () => {
     // distance), so the gate's second condition is non-zero — the layer
     // renders.
     const stateOffFading = {
-      ...APPARENT_SIZE_STATE,
+      ...STATE,
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
-    const ctx = makeApparentSizeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
+    const ctx = makeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
     expect(PASS.enabled(stateOffFading, ctx, VIEW_STUB)).toBe(true);
   });
 
@@ -159,8 +134,8 @@ describe('milkyWayPass.enabled — apparent-size band', () => {
     // MILKY_WAY_FADE_GONE_PX, safely past the band → alpha 0. Gating in
     // `enabled` (not just `draw`) skips the empty beginRenderPass +
     // timestamp-write on the split-encoder path.
-    const ctx = makeApparentSizeCtx([MW_GONE_DIST_MPC * 2, 0, 0]);
-    expect(PASS.enabled(APPARENT_SIZE_STATE, ctx, VIEW_STUB)).toBe(false);
+    const ctx = makeCtx([MW_GONE_DIST_MPC * 2, 0, 0]);
+    expect(PASS.enabled(STATE, ctx, VIEW_STUB)).toBe(false);
   });
 });
 
@@ -169,7 +144,7 @@ describe('milkyWayPass.draw', () => {
     // Half the FULL-threshold distance → apparent diameter is twice
     // MILKY_WAY_FADE_FULL_PX — fadeAlpha should be 1.0.
     const drawSpy = vi.fn();
-    const ctx = makeApparentSizeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
+    const ctx = makeCtx([0, 0, MW_FULL_DIST_MPC / 2]);
     const view = {
       vp: {} as unknown as FrameView['drawCamPos'],
       viewportPx: [1280, 720],
@@ -184,7 +159,7 @@ describe('milkyWayPass.draw', () => {
       cloud: { buffers: () => MW_CLOUD_BUFFERS },
       cloudRenderer: { drawDust: drawSpy },
     } as unknown as MilkyWayRuntime;
-    milkyWayPass(runtime).draw(passStub, view, ctx, APPARENT_SIZE_STATE);
+    milkyWayPass(runtime).draw(passStub, view, ctx, STATE);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // This row draws ONLY the dust pass — the additive star pass lives in
     // milkyWayAggregatePass, which renders it into the reduced-resolution
