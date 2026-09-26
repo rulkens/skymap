@@ -22,12 +22,12 @@ import type { AtmosphereParams } from '../../../src/@types/scene/AtmosphereParam
 import type { AtmosphereConstituent } from '../../../src/@types/scene/AtmosphereConstituent';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
-// Exponential profile + Henyey-Greenstein phase — tags (0, 1).
+// Exponential profile + per-channel Henyey-Greenstein phase — tags (0, 1).
 const AEROSOL = {
   scatter: [6 / 16, 7 / 16, 8 / 16] as Vec3,
   absorb: [9 / 16, 10 / 16, 11 / 16] as Vec3,
   profile: { kind: 'exponential', scaleHeightKm: 12 / 16 },
-  phase: { kind: 'henyeyGreenstein', g: 13 / 16 },
+  phase: { kind: 'henyeyGreenstein', g: [13 / 16, 22 / 16, 23 / 16] as Vec3 },
 } satisfies AtmosphereConstituent;
 
 // Tent profile + Rayleigh phase — tags (1, 0), the opposite corner.
@@ -51,10 +51,10 @@ const PARAMS = {
 >;
 
 describe('ScatteringParams byte offsets', () => {
-  it('packs a 224-byte record in the WESL struct field order', () => {
+  it('packs a 288-byte record in the WESL struct field order', () => {
     const buf = packScatteringParams(PARAMS);
     expect(buf.byteLength).toBe(SCATTERING_PARAMS_BYTES);
-    expect(buf.byteLength).toBe(224);
+    expect(buf.byteLength).toBe(288);
 
     const f = new Float32Array(buf);
     const u = new Uint32Array(buf);
@@ -67,40 +67,48 @@ describe('ScatteringParams byte offsets', () => {
     expect(f[4]).toBe(PARAMS.atmosphereTopKm);
     expect(u[5]).toBe(2); // constituentCount
 
-    // Constituent 0 at byte 32 (f32 slot 8); stride 48 B = 12 f32.
+    // Constituent 0 at byte 32 (f32 slot 8); stride 64 B = 16 f32.
     expect(f[8]).toBe(AEROSOL.scatter[0]);
     expect(f[9]).toBe(AEROSOL.scatter[1]);
     expect(f[10]).toBe(AEROSOL.scatter[2]);
-    expect(f[11]).toBe(AEROSOL.phase.g);
+    expect(f[11]).toBe(AEROSOL.profile.scaleHeightKm);
     expect(f[12]).toBe(AEROSOL.absorb[0]);
     expect(f[13]).toBe(AEROSOL.absorb[1]);
     expect(f[14]).toBe(AEROSOL.absorb[2]);
-    expect(f[15]).toBe(AEROSOL.profile.scaleHeightKm);
-    expect(f[16]).toBe(0); // centerKm — an exponential profile has none
-    expect(f[17]).toBe(0); // widthKm
-    expect(u[18]).toBe(0); // profileKind: exponential
-    expect(u[19]).toBe(1); // phaseKind: henyeyGreenstein
+    expect(f[15]).toBe(0); // centerKm — an exponential profile has none
+    expect(f[16]).toBe(AEROSOL.phase.g[0]);
+    expect(f[17]).toBe(AEROSOL.phase.g[1]);
+    expect(f[18]).toBe(AEROSOL.phase.g[2]);
+    expect(f[19]).toBe(0); // widthKm
+    expect(u[20]).toBe(0); // profileKind: exponential
+    expect(u[21]).toBe(1); // phaseKind: henyeyGreenstein
 
-    // Constituent 1 at byte 80 (f32 slot 20).
-    expect(f[20]).toBe(LAYER.scatter[0]);
-    expect(f[21]).toBe(LAYER.scatter[1]);
-    expect(f[22]).toBe(LAYER.scatter[2]);
-    expect(f[23]).toBe(0); // phaseG — the Rayleigh phase takes no parameter
-    expect(f[24]).toBe(LAYER.absorb[0]);
-    expect(f[25]).toBe(LAYER.absorb[1]);
-    expect(f[26]).toBe(LAYER.absorb[2]);
+    // Constituent 1 at byte 96 (f32 slot 24).
+    expect(f[24]).toBe(LAYER.scatter[0]);
+    expect(f[25]).toBe(LAYER.scatter[1]);
+    expect(f[26]).toBe(LAYER.scatter[2]);
     // A tent packs a FINITE scale height it never reads — see the packer header.
     expect(f[27]).toBe(1);
-    expect(f[28]).toBe(LAYER.profile.centerKm);
-    expect(f[29]).toBe(LAYER.profile.widthKm);
-    expect(u[30]).toBe(1); // profileKind: tent
-    expect(u[31]).toBe(0); // phaseKind: rayleigh
+    expect(f[28]).toBe(LAYER.absorb[0]);
+    expect(f[29]).toBe(LAYER.absorb[1]);
+    expect(f[30]).toBe(LAYER.absorb[2]);
+    expect(f[31]).toBe(LAYER.profile.centerKm);
+    expect([f[32], f[33], f[34]]).toEqual([0, 0, 0]); // phaseG — Rayleigh takes none
+    expect(f[35]).toBe(LAYER.profile.widthKm);
+    expect(u[36]).toBe(1); // profileKind: tent
+    expect(u[37]).toBe(0); // phaseKind: rayleigh
 
     // Unused slots stay zero — the shader loop bounds on constituentCount and
     // never reads them, but a non-zero here would mean a stride error.
-    for (let i = 32; i < SCATTERING_PARAMS_BYTES / 4; i++) {
+    for (let i = 38; i < SCATTERING_PARAMS_BYTES / 4; i++) {
       expect(f[i]).toBe(0);
     }
+  });
+
+  it('broadcasts a scalar g to all three channels', () => {
+    const grey = { ...AEROSOL, phase: { kind: 'henyeyGreenstein', g: 13 / 16 } } as const;
+    const f = new Float32Array(packScatteringParams({ ...PARAMS, constituents: [grey] }));
+    expect([f[16], f[17], f[18]]).toEqual([13 / 16, 13 / 16, 13 / 16]);
   });
 
   it('rejects a row carrying more constituents than the uniform holds', () => {

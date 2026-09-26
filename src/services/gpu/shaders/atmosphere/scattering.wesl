@@ -49,20 +49,21 @@ const PROFILE_TENT: u32 = 1u;
 const PHASE_RAYLEIGH: u32 = 0u;
 const PHASE_HENYEY_GREENSTEIN: u32 = 1u;
 
-// 48 bytes, align 16 — so 'array<Constituent, 4>' gets a 48-byte stride, which
-// WGSL's uniform address space requires to be a multiple of 16.
+// 64 bytes, align 16 — so 'array<Constituent, 4>' gets a 64-byte stride, which
+// WGSL's uniform address space requires to be a multiple of 16. 'phaseG' is
+// per channel because a dust lobe narrows toward the blue (Mars's blue sunset).
 struct Constituent {
   scatter: vec3<f32>,
-  phaseG: f32,
-  absorb: vec3<f32>,
   scaleHeightKm: f32,
+  absorb: vec3<f32>,
   centerKm: f32,
+  phaseG: vec3<f32>,
   widthKm: f32,
   profileKind: u32,
   phaseKind: u32,
 };
 
-// 224 bytes: a 32-byte header, then the array (which must start 16-aligned,
+// 288 bytes: a 32-byte header, then the array (which must start 16-aligned,
 // hence the explicit pad at 24).
 struct ScatteringParams {
   groundAlbedo: vec3<f32>,
@@ -107,10 +108,10 @@ fn rayleighPhase(cosTheta: f32) -> f32 {
 // ringing the sun and the silver lining on haze. 'cosTheta' as above; 'g' in
 // (-1, 1). The denominator base '1 + g^2 - 2*g*cos' stays positive for any g in
 // that range, so no guard is needed.
-fn miePhase(cosTheta: f32, g: f32) -> f32 {
+fn miePhase(cosTheta: f32, g: vec3<f32>) -> vec3<f32> {
   let g2 = g * g;
   let denom = 1.0 + g2 - 2.0 * g * cosTheta;
-  return (1.0 - g2) / (4.0 * PI * pow(max(denom, 0.0), 1.5));
+  return (1.0 - g2) / (4.0 * PI * pow(max(denom, vec3<f32>(0.0)), vec3<f32>(1.5)));
 }
 
 // ── density profiles ─────────────────────────────────────────────────
@@ -144,11 +145,11 @@ fn constituentDensity(c: Constituent, altitudeKm: f32) -> f32 {
   return densityExponential(altitudeKm, c.scaleHeightKm);
 }
 
-fn constituentPhase(c: Constituent, cosTheta: f32) -> f32 {
+fn constituentPhase(c: Constituent, cosTheta: f32) -> vec3<f32> {
   if (c.phaseKind == PHASE_HENYEY_GREENSTEIN) {
     return miePhase(cosTheta, c.phaseG);
   }
-  return rayleighPhase(cosTheta);
+  return vec3<f32>(rayleighPhase(cosTheta));
 }
 
 // accumulateMedium — the optical properties at 'posKm' (a position in km,

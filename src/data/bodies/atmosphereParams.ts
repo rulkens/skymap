@@ -125,24 +125,17 @@ export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
         phase: { kind: 'rayleigh' },
       },
       {
-        // Dust, forward lobe. TWO lobes because one g cannot make the sunset blue: g rises
-        // toward the blue (0.766 @440 vs 0.700 @680), so a single g gives a butterscotch sky
-        // AND a butterscotch sunset. Lobe g's are Chen-Chen+19's measured DHG, the split their
-        // alpha(lambda). [M] Extinction is grey (Angstrom -0.09, five Mars years), deliberately
-        // overriding Wolff09's Q_ext, whose red bump is one narrow size bin's Mie resonance.
-        scatter: [0.022541, 0.019934, 0.019163], // [D]
-        absorb: [0.000623, 0.002516, 0.005506], // [D] omega_0 0.97 red / 0.78 blue = butterscotch
+        // Dust. g is PER CHANNEL because the 1.5 um grains' diffraction lobe narrows toward
+        // the blue (Wolff09 g(lambda)): that is the blue sunset — blue/red 1.30 at the Sun,
+        // 0.57 across the sky. Lobes sharing a g across channels (Chen-Chen+19's DHG) match
+        // the MEAN g but not the peak height, and leave the Sun's glow red (0.85); the
+        // atmosphereParams test pins this. [M] Extinction is grey (Angstrom -0.09, five Mars
+        // years), deliberately overriding Wolff09's Q_ext, whose red bump is one size bin's
+        // Mie resonance.
+        scatter: [0.029548, 0.026451, 0.022681], // [D]
+        absorb: [0.000816, 0.003338, 0.006516], // [D] omega_0 0.97 red / 0.78 blue = butterscotch
         profile: { kind: 'exponential', scaleHeightKm: 13 }, // [M] MSL's adopted value
-        phase: { kind: 'henyeyGreenstein', g: 0.889 }, // [M] Chen-Chen+19
-      },
-      {
-        // Dust, broad lobe — same profile and same single-scattering albedo as the forward
-        // lobe, only g differs. The pair is one aerosol split by alpha, so the two rows'
-        // scatter+absorb SUM to the dust column; changing one alone breaks the extinction.
-        scatter: [0.007007, 0.006518, 0.003518], // [D]
-        absorb: [0.000194, 0.000823, 0.001011], // [D]
-        profile: { kind: 'exponential', scaleHeightKm: 13 },
-        phase: { kind: 'henyeyGreenstein', g: 0.094 }, // [M] Chen-Chen+19
+        phase: { kind: 'henyeyGreenstein', g: [0.7005, 0.6931, 0.7657] }, // [M] Wolff09
       },
     ],
     groundAlbedo: seededPlanet('mars').albedo,

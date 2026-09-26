@@ -250,7 +250,13 @@ butterscotch sunset. **A single Henyey-Greenstein g per constituent cannot produ
 sunset.** The uniform layout has one `phaseG: f32` per constituent, so this is a real constraint,
 not a tuning preference.
 
-**Fix, and it costs one extra constituent, not a schema change.** Split the dust into two
+> **Superseded (2026-09-26): the two-lobe split below does NOT make the sunset blue.** With g₁, g₂
+> shared across channels, α(λ) reproduces the mean g but not the forward peak's height: blue/red at
+> θ = 0° comes out **0.85**, not 1.30, and reaching 1.30 would need α(440) > 1. The shipped fix is a
+> per-channel `g` (`PhaseFunction.g: number | Vec3`) on ONE dust row, g = [0.7005, 0.6931, 0.7657];
+> `tests/data/bodies/atmosphereParams.test.ts` pins the ratio. The original proposal follows.
+
+**Original proposal — one extra constituent, not a schema change.** Split the dust into two
 constituents that share the profile and differ only in g — which is what the literature's DHG fit
 already is. Fix the two lobes at the _measured_ values g₁ = 0.889 and g₂ = 0.094, then choose the
 per-channel forward weight so the mixture's asymmetry parameter reproduces the table:

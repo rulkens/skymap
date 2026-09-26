@@ -13,11 +13,11 @@ import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
 /** Uniform slots for constituents. Neptune spends all four; no row has headroom past it. */
 export const MAX_CONSTITUENTS = 4;
 
-/** Byte size of `ScatteringParams` — 32-byte header + 4 × 48-byte constituents. */
-export const SCATTERING_PARAMS_BYTES = 224;
+/** Byte size of `ScatteringParams` — 32-byte header + 4 × 64-byte constituents. */
+export const SCATTERING_PARAMS_BYTES = 288;
 
 const CONSTITUENT_BASE_F32 = 8; // byte 32
-const CONSTITUENT_STRIDE_F32 = 12; // 48 bytes
+const CONSTITUENT_STRIDE_F32 = 16; // 64 bytes
 
 /** The subset of a row this buffer carries: geometry plus the constituent list. */
 type ScatteringInput = Pick<
@@ -48,22 +48,23 @@ export function packScatteringParams(params: ScatteringInput): ArrayBuffer {
     const c = params.constituents[i];
     if (c === undefined) continue;
     const b = CONSTITUENT_BASE_F32 + i * CONSTITUENT_STRIDE_F32;
+    const g = c.phase.kind === 'henyeyGreenstein' ? c.phase.g : 0;
     f[b] = c.scatter[0];
     f[b + 1] = c.scatter[1];
     f[b + 2] = c.scatter[2];
-    f[b + 3] = c.phase.kind === 'henyeyGreenstein' ? c.phase.g : 0;
-    f[b + 4] = c.absorb[0];
-    f[b + 5] = c.absorb[1];
-    f[b + 6] = c.absorb[2];
     // A tent's scale height is never read, but it must be FINITE: a compiler
     // that flattens the profile branch into a `select` evaluates both sides, and
     // `exp(-altitude / 0)` is the indeterminate-value trap that `densityTent`'s
     // own zero-width guard exists for. 1 is the cheapest finite value.
-    f[b + 7] = c.profile.kind === 'exponential' ? c.profile.scaleHeightKm : 1;
-    f[b + 8] = c.profile.kind === 'tent' ? c.profile.centerKm : 0;
-    f[b + 9] = c.profile.kind === 'tent' ? c.profile.widthKm : 0;
-    u[b + 10] = c.profile.kind === 'tent' ? 1 : 0;
-    u[b + 11] = c.phase.kind === 'henyeyGreenstein' ? 1 : 0;
+    f[b + 3] = c.profile.kind === 'exponential' ? c.profile.scaleHeightKm : 1;
+    f[b + 4] = c.absorb[0];
+    f[b + 5] = c.absorb[1];
+    f[b + 6] = c.absorb[2];
+    f[b + 7] = c.profile.kind === 'tent' ? c.profile.centerKm : 0;
+    f.set(typeof g === 'number' ? [g, g, g] : g, b + 8);
+    f[b + 11] = c.profile.kind === 'tent' ? c.profile.widthKm : 0;
+    u[b + 12] = c.profile.kind === 'tent' ? 1 : 0;
+    u[b + 13] = c.phase.kind === 'henyeyGreenstein' ? 1 : 0;
   }
 
   return buf;
