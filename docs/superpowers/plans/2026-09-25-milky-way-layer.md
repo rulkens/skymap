@@ -24,8 +24,8 @@
   - the star-count reconcile runs at plan time instead of at `runFrame.ts:101`.
 - **Keys and names.** The keys `{kind:'milkyWay'}`, `milkyWayDisk` and `milkyWayLabel` stay unchanged, because tours and clips script them. The pass names `milky-way-aggregate`, `milky-way-upsample` and `milky-way` also stay unchanged. The `mw-aggregate` target id stays unchanged.
 - **Placement rule (spec §3).** A file moves into the Layer only if every remaining importer is inside the Layer or under `tests/`. Check this with `npm run refactor -- refs <file>` before each move.
-  - Files that stay put: `galaxyGenerator/v1/**`, `milkyWayFadeAlpha`, `milkyWayVisible`, `data/milkyWay/milkyWayInfo.ts`, the settings types under `src/@types/settings/`, and all shaders.
-  - `milkyWayLabelVisibility` and `milkyWayLabelStyle` move only if the refs check passes.
+  - Files that stay put: `galaxyGenerator/v1/**`, `milkyWayFadeAlpha`, `data/milkyWay/milkyWayInfo.ts`, the settings types under `src/@types/settings/`, and all shaders.
+  - `milkyWayLabelStyle` moves only if the refs check passes.
 - **Core per-kind arms stay in core (spec §4).** Do not try to move the `FadeId`/visibility unions, the selection per-kind records, the label home, the `FRAME_ORDER` lines or `passGroupTitles`.
 - **One commit per task, in the order below.** Adjacent findings go to `docs/backlog/`, never into a task.
 - **Pass files.** `passes/` and every `src/services/engine/frame/**` file export only the one symbol they are named for (`tests/services/engine/frame/frameFilePurity.test.ts`).
@@ -146,7 +146,7 @@ Behaviour-neutral, except for the accepted label tiebreak (spec §5.1).
   - `src/services/engine/presentation/produceMilkyWayLabel.ts` → `src/layers/milkyWay/present/`
   - `src/services/engine/selection/milkyWaySelectionRow.ts` → `src/layers/milkyWay/present/`
   - `src/data/sources/milky-way.ts` → `src/layers/milkyWay/sources/milky-way.ts`, plus a new `sources/milkyWaySourceRows.ts` shaped like `zoneOfAvoidanceSourceRows.ts`
-  - `milkyWayLabelVisibility.ts` and `milkyWayLabelStyle.ts` → `src/layers/milkyWay/present/`, only if `npm run refactor -- refs` shows no remaining core reader
+  - `milkyWayLabelStyle.ts` → `src/layers/milkyWay/present/`, only if `npm run refactor -- refs` shows no remaining core reader
 - Modify:
   - `src/services/engine/wiring/fadeLayers.ts`: two rows leave.
   - `src/services/engine/engine.ts:30,330-333`: the `cosmoLabelDirector` registration leaves.

@@ -86,7 +86,7 @@ export type Label2D = {
    * bounded by the clamps.  Defaults to 0.01 in the renderer if absent.
    */
   readonly worldEmMpc?: number;
-  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Default 1. */
+  /** Fade multiplier in [0,1] driven by produceMilkyWayLabel. Default 1. */
   readonly fadeAlpha?: number;
   /**
    * How much of the occlusion-variant fragment stage's per-pixel scene

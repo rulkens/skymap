@@ -70,7 +70,7 @@ src/layers/milkyWay/
   @types/MilkyWayRuntime.d.ts  MilkyWayPickRenderer.d.ts  MilkyWayCloudDrawArgs.d.ts
   passes/  milkyWayAggregatePass.ts  milkyWayUpsamplePass.ts  milkyWayPass.ts
   present/ milkyWayCloudLiveness.ts  milkyWayFadeRows.ts  produceMilkyWayLabel.ts
-           milkyWaySelectionRow.ts  milkyWayVisible.ts
+           milkyWaySelectionRow.ts
   render/  milkyWayAggregateTarget.ts  milkyWayCloudRenderer.ts  milkyWayPickRenderer.ts
   sagas/   reseedMilkyWayStarCountSaga.ts   (setTier → setMilkyWayTuning({ starCount }))
   sources/ milky-way.ts  milkyWaySourceRows.ts
@@ -85,7 +85,7 @@ Files that still have a core or tool reader stay where they are:
 
 - `milkyWayFadeAlpha`, which `horizonShellFadeAlpha` and the tool also read;
 - `milkyWayInfo`, because core's `buildFocusable` imports it;
-- `milkyWayLabelVisibility` and `milkyWayLabelStyle`, if a core reader remains;
+- `milkyWayLabelStyle`, if a core reader remains;
 - the whole of `galaxyGenerator/v1/`, which the tool shares and whose README pins it;
 - shaders, by the Layer rule.
 

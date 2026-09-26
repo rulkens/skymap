@@ -82,8 +82,9 @@ describe('milkyWayPass pick vs draw', () => {
   });
 });
 
-// Fade-band camera distances derived from the calibration knobs — see
-// `milkyWayVisible.test.ts` for the apparentDiameterPx inversion this reuses.
+// Fade-band camera distances derived from the calibration knobs. Inverting
+// apparentDiameterPx: the disc (diameter 2·R) spans exactly `px` on screen
+// at distance 2·R·pxPerRad / px.
 const MW_FULL_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_FULL_PX;
 const MW_GONE_DIST_MPC = (2 * MILKY_WAY_RADIUS_MPC * MW_PX_PER_RAD) / MILKY_WAY_FADE_GONE_PX;
 
@@ -109,7 +110,10 @@ describe('milkyWayPass.enabled — apparent-size band', () => {
     // fades.opacityOf returns 0 so the gate doesn't keep the layer alive
     // through a fade-out tail; toggle is also off — both conditions false.
     const stateOffZeroFade = {
-      subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+      subsystems: {
+        fades: { opacityOf: () => 0, isAnyAnimating: () => false },
+        clipPlayer: { clipOpacityOf: () => 1 },
+      },
       settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     const ctx = makeCtx([0, 0, MW_FULL_DIST_MPC / 2]);

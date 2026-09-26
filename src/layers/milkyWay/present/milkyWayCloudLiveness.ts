@@ -3,7 +3,8 @@
  * this frame, and at what opacity?", shared by the aggregate producer, the upsample
  * consumer and the dust pass, so the upsample can never composite an offscreen
  * nobody wrote. The fade-out tail is held open by this derivation's own
- * `resolveLayerOpacity` multiply, keyed off the same clock `milkyWayVisible` reads.
+ * `resolveLayerOpacity` multiply, not a separate toggle read — the final
+ * `alpha > 0` gate below already covers both the toggle and the apparent-size band.
  *
  * Uses the CANVAS height, not the slab view's viewport: the aggregate layer renders
  * into a FRACTION of the canvas, so `view.viewportPx` would split the three gates.
@@ -11,7 +12,6 @@
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import { milkyWayVisible } from './milkyWayVisible';
 import { milkyWayFadeAlpha } from '../../../services/engine/galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
@@ -23,10 +23,6 @@ import { regionById } from '../../../utils/regions/regionById';
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
 export function deriveMilkyWayCloudAlpha(state: PassState, ctx: FrameView): number | null {
-  if (!milkyWayVisible(state, ctx.drawCamPos, ctx.drawPxPerRad, ctx.snapshot.nowMs)) {
-    return null;
-  }
-
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   // Two independent near-side approach fades, combined by MIN: the Sun's own
   // descent (`milkyWayApproachSun`, keyed on the origin — the Sun sits there —

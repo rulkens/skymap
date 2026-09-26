@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
 import { MILKY_WAY_LABEL_STYLE } from '../../../../src/layers/milkyWay/present/milkyWayLabelStyle';
-import { milkyWayLabelAlpha } from '../../../../src/layers/milkyWay/present/milkyWayLabelVisibility';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import {
@@ -104,7 +103,7 @@ function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
   return 1.5 * (30 / (camDistMpc * 1000)) * pxPerRad;
 }
 
-// The producer composes fadeAlpha = milkyWayLabelAlpha(dist) ·
+// The producer composes fadeAlpha = fadeBand(its own 0.6-2.0 Mpc band, dist) ·
 // fadeBand(surveyDeepZoom, dist) · layerOpacity. The surveyDeepZoom band's FULL
 // edge tracks FOREGROUND_MAX_DISTANCE_MPC, which the famous-stars seed roster
 // grows (Deneb at 802 pc now pushes the gate to ~0.8 Mpc, above the Milky-Way
@@ -112,8 +111,12 @@ function expectedLiftPx(camDistMpc: number, viewportHeightPx: number): number {
 // DERIVED here rather than pinned at 1 — keeping these expectations green as the
 // gate moves. (NOTE the coupling flagged for the spec owner: the label no longer
 // reaches full alpha at 0.5 Mpc.)
+//
+// The { fullAt: 0.6, goneAt: 2.0 } band mirrors produceMilkyWayLabel's own
+// MILKY_WAY_LABEL_FADE_BAND, which stays private to that module.
 const distanceFadeAt = (camDistMpc: number): number =>
-  milkyWayLabelAlpha(camDistMpc) * fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
+  fadeBand({ fullAt: 0.6, goneAt: 2.0 }, camDistMpc) *
+  fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
 describe('produceMilkyWayLabel', () => {
   it('emits one label carrying a leader at the composed distance fade when close and enabled', () => {

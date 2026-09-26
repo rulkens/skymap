@@ -11,6 +11,7 @@
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { FadeBand } from '../../../@types/math/FadeBand';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
@@ -19,7 +20,6 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
-import { milkyWayLabelAlpha } from './milkyWayLabelVisibility';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
@@ -27,6 +27,11 @@ import { resolveLayerOpacity } from '../../../services/engine/presentation/focus
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.
 const MILKY_WAY_DIAMETER_KPC = 30;
+
+// Far fade: full inside the Local Group (<0.6 Mpc), gone once large-scale
+// structure fills the view (>2 Mpc) — a label there would be visual noise.
+// A recede fade (`fullAt < goneAt`): fades OUT as distance RISES.
+const MILKY_WAY_LABEL_FADE_BAND: FadeBand = { fullAt: 0.6, goneAt: 2.0 };
 
 const LABEL_TEXT = 'You are here';
 
@@ -49,7 +54,7 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
     return { labels: [], awake: false };
 
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-  const distAlpha = milkyWayLabelAlpha(camDist);
+  const distAlpha = fadeBand(MILKY_WAY_LABEL_FADE_BAND, camDist);
   // Near-side cull. This annotation is COSMO-slab content anchored at the world
   // origin, and once the camera descends inside COSMO_NEAR_MPC (0.01 Mpc) the
   // origin no longer projects validly: the stem's endpoints land at a degenerate
