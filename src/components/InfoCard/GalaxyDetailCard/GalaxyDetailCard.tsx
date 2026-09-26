@@ -24,15 +24,15 @@ import styles from '../cardChrome.module.css';
 import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
-  info: GalaxyInfo;
+  target: GalaxyInfo;
   pinned?: boolean;
   chrome?: boolean;
-  onFocus?: (info: GalaxyInfo) => void;
+  onFocus?: (target: GalaxyInfo) => void;
   onClose?: () => void;
 };
 
 function GalaxyDetailCard({
-  info,
+  target,
   pinned = false,
   chrome = true,
   onFocus,
@@ -40,19 +40,19 @@ function GalaxyDetailCard({
 }: GalaxyDetailCardProps): ReactNode {
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
-  const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
+  const famousAliases = target.famous?.names.filter((n) => n !== target.displayName) ?? [];
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Galaxy"
-        onFocus={pinned && onFocus ? () => onFocus(info) : undefined}
-        focusAriaLabel={`Focus camera on ${info.displayName}`}
+        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        focusAriaLabel={`Focus camera on ${target.displayName}`}
         onClose={pinned ? onClose : undefined}
       />
 
-      <CardRow type="headline" badge={info.sourceLabel}>
-        {info.displayName}
+      <CardRow type="headline" badge={target.sourceLabel}>
+        {target.displayName}
         {famousAliases.map((alias) => (
           <span key={alias} className={styles.headlineAlias}>
             {' · '}
@@ -61,34 +61,35 @@ function GalaxyDetailCard({
         ))}
       </CardRow>
 
-      {info.famous?.description && (
+      {target.famous?.description && (
         <div className={styles.cardSection}>
-          <DescriptionBlock text={info.famous.description} />
+          <DescriptionBlock text={target.famous.description} />
         </div>
       )}
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
         <Thumbnail
-          url={info.thumbnailUrl}
-          fallbackUrl={info.thumbnailFallbackUrl}
-          href={info.skyViewUrl}
+          url={target.thumbnailUrl}
+          fallbackUrl={target.thumbnailFallbackUrl}
+          href={target.skyViewUrl}
           alt="Galaxy thumbnail"
         />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
-            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(info.lookbackGyr)} ago
+            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {formatLookback(target.lookbackGyr)}{' '}
+            ago
           </div>
           <div className={styles.cardLookbackEra}>
-            — <InfoTip {...TIPS.earthEra!}>{info.earthEra}</InfoTip>
+            — <InfoTip {...TIPS.earthEra!}>{target.earthEra}</InfoTip>
           </div>
           <div className={styles.cardDistLine}>
-            <InfoTip {...TIPS.distance!}>{formatDistance(info.distanceMpc)}</InfoTip> &middot;{' '}
+            <InfoTip {...TIPS.distance!}>{formatDistance(target.distanceMpc)}</InfoTip> &middot;{' '}
             <InfoTip {...TIPS.hubbleVelocity!}>
-              {Math.round(info.hubbleVelocityKmS).toLocaleString()} km/s away
+              {Math.round(target.hubbleVelocityKmS).toLocaleString()} km/s away
             </InfoTip>
           </div>
           <div className={styles.cardTypeLine}>
-            {info.morphology ?? info.galaxyType.description}
+            {target.morphology ?? target.galaxyType.description}
           </div>
         </div>
       </div>
@@ -97,8 +98,8 @@ function GalaxyDetailCard({
         <CardRow
           label="Catalogues"
           value={
-            info.catalogues.length > 0 ? (
-              info.catalogues.map((link, idx) => (
+            target.catalogues.length > 0 ? (
+              target.catalogues.map((link, idx) => (
                 <Fragment key={link.label}>
                   {idx > 0 && ' · '}
                   <a
@@ -126,20 +127,20 @@ function GalaxyDetailCard({
         orientation are reference data for the curious and live below the fold.
       */}
       <div className={styles.cardSection}>
-        {info.agnClass && (
-          <CardRow label={<InfoTip {...TIPS.agnClass!}>Class</InfoTip>} value={info.agnClass} />
+        {target.agnClass && (
+          <CardRow label={<InfoTip {...TIPS.agnClass!}>Class</InfoTip>} value={target.agnClass} />
         )}
         <CardRow
           label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
-          value={info.redshift.toFixed(4)}
+          value={target.redshift.toFixed(4)}
         />
         <CardRow
           label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>}
           value={
             <>
-              {formatDiameterKpc(info.diameterKpc)}
+              {formatDiameterKpc(target.diameterKpc)}
               <br />
-              <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.diameterProvenance}</span>
+              <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{target.diameterProvenance}</span>
             </>
           }
         />
@@ -153,7 +154,7 @@ function GalaxyDetailCard({
             label={<InfoTip {...TIPS.ra!}>RA</InfoTip>}
             value={
               <>
-                {info.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.ra.toFixed(4)}&deg;
+                {target.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{target.ra.toFixed(4)}&deg;
               </>
             }
           />
@@ -161,30 +162,36 @@ function GalaxyDetailCard({
             label={<InfoTip {...TIPS.dec!}>Dec</InfoTip>}
             value={
               <>
-                {info.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.dec.toFixed(4)}&deg;
+                {target.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{target.dec.toFixed(4)}&deg;
               </>
             }
           />
           {/* Rows with no real photometry (DESI LRG/ELG/QSO — their .bin mags
               are synthetic display constants) swap the magnitude rows for the
               builder's note, so a constant is never presented as a measurement. */}
-          {info.photometryNote ? (
-            <CardRow label="Photometry" value={info.photometryNote} />
+          {target.photometryNote ? (
+            <CardRow label="Photometry" value={target.photometryNote} />
           ) : (
             <>
               {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
               <CardRow
-                label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
-                value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
+                label={
+                  <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${target.bands.g})`}</InfoTip>
+                }
+                value={Number.isFinite(target.magG) ? target.magG.toFixed(2) : 'N/A'}
               />
               <CardRow
-                label={<InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>}
-                value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
+                label={
+                  <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${target.bands.g})`}</InfoTip>
+                }
+                value={
+                  Number.isFinite(target.absoluteMagG) ? target.absoluteMagG.toFixed(2) : 'N/A'
+                }
               />
-              {info.colours.length > 0 && (
+              {target.colours.length > 0 && (
                 <CardRow
                   label={<InfoTip {...TIPS.colour!}>Colour</InfoTip>}
-                  value={info.colours.map((c, idx) => (
+                  value={target.colours.map((c, idx) => (
                     <span key={c.label}>
                       {idx > 0 && <>&nbsp;&nbsp;</>}
                       {c.label}&nbsp;{c.value.toFixed(2)}
@@ -198,18 +205,18 @@ function GalaxyDetailCard({
             label={<InfoTip {...TIPS.orientation!}>Orientation</InfoTip>}
             value={
               <>
-                b/a&nbsp;{info.orientation.axisRatio.toFixed(2)}
-                &nbsp;&nbsp;PA&nbsp;{info.orientation.positionAngleDeg.toFixed(0)}&deg;
+                b/a&nbsp;{target.orientation.axisRatio.toFixed(2)}
+                &nbsp;&nbsp;PA&nbsp;{target.orientation.positionAngleDeg.toFixed(0)}&deg;
                 <br />
                 <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
-                  {info.orientation.provenance}
+                  {target.orientation.provenance}
                 </span>
               </>
             }
           />
           <CardRow
             label="ObjID"
-            value={<code className={styles.cardObjid}>{String(info.objID)}</code>}
+            value={<code className={styles.cardObjid}>{String(target.objID)}</code>}
           />
         </div>
       </details>

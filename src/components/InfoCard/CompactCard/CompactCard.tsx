@@ -13,24 +13,25 @@ import styles from '../compactChrome.module.css';
 import local from './CompactCard.module.css';
 
 export type CompactCardProps = {
-  info: GalaxyInfo;
+  target: GalaxyInfo;
 };
 
-function CompactCard({ info }: CompactCardProps): ReactNode {
+function CompactCard({ target }: CompactCardProps): ReactNode {
   return (
     <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <CardRow type="headline" badge={info.sourceLabel}>
-        {info.displayName}
+      <CardRow type="headline" badge={target.sourceLabel}>
+        {target.displayName}
       </CardRow>
       <div className={styles.cardLookbackLine}>
-        Light left {formatLookback(info.lookbackGyr)} ago
+        Light left {formatLookback(target.lookbackGyr)} ago
       </div>
-      <div className={styles.cardLookbackEra}>— {info.earthEra}</div>
+      <div className={styles.cardLookbackEra}>— {target.earthEra}</div>
       <div className={styles.cardDistLine}>
-        {formatDistance(info.distanceMpc)} &middot; {info.morphology ?? info.galaxyType.description}
+        {formatDistance(target.distanceMpc)} &middot;{' '}
+        {target.morphology ?? target.galaxyType.description}
       </div>
     </div>
   );

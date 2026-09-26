@@ -13,10 +13,10 @@ import styles from '../compactChrome.module.css';
 import local from './CompactStarCard.module.css';
 
 type CompactStarCardProps = {
-  info: StarInfo;
+  target: StarInfo;
 };
 
-function CompactStarCard({ info }: CompactStarCardProps): ReactNode {
+function CompactStarCard({ target }: CompactStarCardProps): ReactNode {
   return (
     <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
@@ -24,12 +24,14 @@ function CompactStarCard({ info }: CompactStarCardProps): ReactNode {
       </div>
       <CardRow
         type="headline"
-        badge={info.detail.kind === 'photometry' ? info.detail.spectralClass : undefined}
+        badge={target.detail.kind === 'photometry' ? target.detail.spectralClass : undefined}
       >
-        {info.displayName}
+        {target.displayName}
       </CardRow>
-      {info.distancePc > 0 && (
-        <div className={styles.cardDistLine}>{Math.round(info.distancePc).toLocaleString()} pc</div>
+      {target.distancePc > 0 && (
+        <div className={styles.cardDistLine}>
+          {Math.round(target.distancePc).toLocaleString()} pc
+        </div>
       )}
     </div>
   );

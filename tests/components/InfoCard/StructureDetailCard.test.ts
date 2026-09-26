@@ -37,31 +37,31 @@ const virgoNoAbell: StructureInfo = {
 
 describe('StructureDetailCard', () => {
   it('shows the expanded Abell designation for a cluster carrying one', () => {
-    render(createElement(StructureDetailCard, { structure: comaWithAbell }));
+    render(createElement(StructureDetailCard, { target: comaWithAbell }));
     expect(screen.getByText('Abell')).toBeInTheDocument();
     expect(screen.getByText('Abell 1656')).toBeInTheDocument();
   });
 
   it('omits the Abell row for a cluster without an Abell designation', () => {
-    const { container } = render(createElement(StructureDetailCard, { structure: virgoNoAbell }));
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
     expect(container.textContent).not.toMatch(/Abell/);
   });
 
   it('shows the Galaxies row when a member count is supplied', () => {
-    render(createElement(StructureDetailCard, { structure: virgoNoAbell, memberCount: 42 }));
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: 42 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
   it('omits the Galaxies row when the count is null (not yet computable)', () => {
     const { container } = render(
-      createElement(StructureDetailCard, { structure: virgoNoAbell, memberCount: null }),
+      createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: null }),
     );
     expect(container.textContent).not.toMatch(/Galaxies/);
   });
 
   it('renders a zero count truthfully (empty sphere over loaded data)', () => {
-    render(createElement(StructureDetailCard, { structure: virgoNoAbell, memberCount: 0 }));
+    render(createElement(StructureDetailCard, { target: virgoNoAbell, selectedMemberCount: 0 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
   });

@@ -19,7 +19,7 @@ import styles from '../cardChrome.module.css';
 import local from './StructureDetailCard.module.css';
 
 export type StructureDetailCardProps = {
-  structure: StructureInfo;
+  target: StructureInfo;
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
@@ -27,38 +27,34 @@ export type StructureDetailCardProps = {
    * (famous-galaxy structure, or catalogs not loaded yet) — in which case the
    * row is omitted rather than flashing a misleading "0".
    */
-  memberCount?: number | null;
+  selectedMemberCount?: number | null;
   chrome?: boolean;
-  onFocus?: (structure: StructureInfo) => void;
+  onFocus?: (target: StructureInfo) => void;
   onClose?: () => void;
 };
 
 function StructureDetailCard({
-  structure,
+  target,
   pinned = false,
-  memberCount,
+  selectedMemberCount,
   chrome = true,
   onFocus,
   onClose,
 }: StructureDetailCardProps): ReactNode {
-  const distanceMpc = Math.hypot(
-    structure.worldPos[0],
-    structure.worldPos[1],
-    structure.worldPos[2],
-  );
+  const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
   const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
         eyebrow="Structure"
-        onFocus={pinned && onFocus ? () => onFocus(structure) : undefined}
-        focusAriaLabel={`Focus camera on ${structure.name}`}
+        onFocus={pinned && onFocus ? () => onFocus(target) : undefined}
+        focusAriaLabel={`Focus camera on ${target.name}`}
         onClose={pinned ? onClose : undefined}
       />
 
-      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].label}>
-        {structure.name}
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[target.category].label}>
+        {target.name}
       </CardRow>
 
       <div className={styles.cardSection}>
@@ -68,25 +64,25 @@ function StructureDetailCard({
         />
         <CardRow
           label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
-          value={formatDistance(structure.physicalRadiusMpc)}
+          value={formatDistance(target.physicalRadiusMpc)}
         />
-        {memberCount != null && (
+        {selectedMemberCount != null && (
           <CardRow
             label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
-            value={memberCount.toLocaleString()}
+            value={selectedMemberCount.toLocaleString()}
           />
         )}
-        {structure.category === 'cluster' && structure.abell !== undefined && (
+        {target.category === 'cluster' && target.abell !== undefined && (
           <CardRow
             label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
-            value={formatAbellDesignation(structure.abell)}
+            value={formatAbellDesignation(target.abell)}
           />
         )}
-        {structure.description && (
+        {target.description && (
           // Curated Wikipedia-lead blurb (featured anchors) or the build's
           // auto one-liner (bulk entries).  Shares DescriptionBlock with
           // GalaxyDetailCard so the show-more toggle sits in the same place.
-          <DescriptionBlock text={structure.description} />
+          <DescriptionBlock text={target.description} />
         )}
       </div>
     </div>

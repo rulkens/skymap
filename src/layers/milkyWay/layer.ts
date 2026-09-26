@@ -6,7 +6,6 @@
  * DebugPanel tuning section, the InfoCard detail cards and the tier re-seed.
  */
 
-import { createElement } from 'react';
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { COSMO } from '../../services/engine/frame/slabs';
 import { milkyWayLayerSettings } from './state/slices';
@@ -51,9 +50,8 @@ export const milkyWayLayer = defineLayer({
       slot: 'detailCard',
       content: {
         type: 'milkyWay',
-        Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-          createElement(MilkyWayDetailCard, { target, pinned, chrome, onFocus, onClose }),
-        Compact: ({ target }) => createElement(CompactMilkyWayCard, { target }),
+        Detail: MilkyWayDetailCard,
+        Compact: CompactMilkyWayCard,
       },
     },
   ],

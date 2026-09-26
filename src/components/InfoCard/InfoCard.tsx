@@ -83,16 +83,17 @@ function InfoCard({
   // a single MobileSheet wrapping the same Detail card the desktop branch uses.
   if (isMobile) {
     if (selected === null) return null;
+    const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
       <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        {detailCardFor(DETAIL_CARD, selected).Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          chrome: false,
-          onFocus,
-          onClose,
-        })}
+        <Detail
+          target={selected}
+          pinned
+          selectedMemberCount={selectedMemberCount}
+          chrome={false}
+          onFocus={onFocus}
+          onClose={onClose}
+        />
       </MobileSheet>
     );
   }
@@ -105,19 +106,21 @@ function InfoCard({
   // (`targetEq` suppresses the redundant preview of an already-pinned target).
   // Adding a focusable kind is a DETAIL_CARD row, never a branch here.
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
+  const Detail = selected ? detailCardFor(DETAIL_CARD, selected).Detail : null;
+  const Compact = compactTarget ? detailCardFor(DETAIL_CARD, compactTarget).Compact : null;
 
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
-      {selected &&
-        detailCardFor(DETAIL_CARD, selected).Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          onFocus,
-          onClose,
-        })}
-      {compactTarget &&
-        detailCardFor(DETAIL_CARD, compactTarget).Compact({ target: compactTarget })}
+      {selected && Detail && (
+        <Detail
+          target={selected}
+          pinned
+          selectedMemberCount={selectedMemberCount}
+          onFocus={onFocus}
+          onClose={onClose}
+        />
+      )}
+      {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>
   );
 }

@@ -5,7 +5,6 @@
  * its settings and its two DebugPanel/Labels-and-guides UI slots.
  */
 
-import { createElement } from 'react';
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { zoneOfAvoidanceLayerSettings } from './state/slices';
@@ -54,12 +53,11 @@ export const zoneOfAvoidanceLayer = defineLayer({
       slot: 'detailCard',
       content: {
         type: 'zoneOfAvoidance',
-        // No `onFocus` destructured: the band has no x/y/z (see
-        // ZoneOfAvoidanceInfo), so this arm never wires CardHeader's Focus
-        // pill, unlike every other row.
-        Detail: ({ target, pinned, chrome, onClose }) =>
-          createElement(ZoneOfAvoidanceDetailCard, { target, pinned, chrome, onClose }),
-        Compact: ({ target }) => createElement(CompactZoneOfAvoidanceCard, { target }),
+        // ZoneOfAvoidanceDetailCard's own props type has no `onFocus`: the band
+        // has no x/y/z (see ZoneOfAvoidanceInfo), so this arm never wires
+        // CardHeader's Focus pill, unlike every other row.
+        Detail: ZoneOfAvoidanceDetailCard,
+        Compact: CompactZoneOfAvoidanceCard,
       },
     },
   ],

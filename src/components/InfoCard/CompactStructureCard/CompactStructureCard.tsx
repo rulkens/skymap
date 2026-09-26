@@ -13,27 +13,23 @@ import styles from '../compactChrome.module.css';
 import local from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {
-  structure: StructureInfo;
+  target: StructureInfo;
 };
 
-function CompactStructureCard({ structure }: CompactStructureCardProps): ReactNode {
-  const distanceMpc = Math.hypot(
-    structure.worldPos[0],
-    structure.worldPos[1],
-    structure.worldPos[2],
-  );
+function CompactStructureCard({ target }: CompactStructureCardProps): ReactNode {
+  const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
 
   return (
     <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].shortLabel}>
-        {structure.name}
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[target.category].shortLabel}>
+        {target.name}
       </CardRow>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
-        <> &middot; r {formatDistance(structure.physicalRadiusMpc)}</>
+        <> &middot; r {formatDistance(target.physicalRadiusMpc)}</>
       </div>
     </div>
   );

@@ -5,11 +5,12 @@
  * throws at boot naming the union member nobody claimed — a composition
  * wiring bug, not one to surface per-render.
  *
- * Each core entry renders its arm's cards straight from `target` — the table
- * key is the narrowing proof, so no entry re-checks `target.type` —
- * `GalaxyDetailCard` / `CompactCard` for a galaxy, `StructureDetailCard` /
- * `CompactStructureCard` for a structure. The structure `Detail` threads the
- * structure-only `selectedMemberCount` through; the other core arms ignore it.
+ * Each core entry is the card component itself — `GalaxyDetailCard` /
+ * `CompactCard` for a galaxy, `StructureDetailCard` / `CompactStructureCard`
+ * for a structure, and so on — InfoCard renders `entry.Detail`/`entry.Compact`
+ * as JSX, so every card's own props type must already match
+ * `DetailCardProps<K>`/`CompactCardProps<K>` (the table key `K` is the
+ * narrowing proof; a card never re-checks `target.type`).
  *
  * Dispatching on `target.type` through a `DetailCardTable` follows the
  * simplicity convention's table-dispatch rule (item 7): a new focusable kind
@@ -17,17 +18,8 @@
  * keeps the outer-wrapper-stable contract and the
  * hover/pinned stacking around this lookup; the table only decides which card
  * a given target renders as.
- *
- * Each entry returns a bare card element with no wrapper of its own, so it
- * drops straight into InfoCard's existing single-wrapper layout (the stable
- * outer 'div' that keeps the native 'details' open-state alive across hover ↔
- * pin transitions).
- *
- * Built with `createElement` rather than JSX so the table stays a plain '.ts'
- * module sitting next to the data-flow code it dispatches, not a component file.
  */
 
-import { createElement } from 'react';
 import type { Layer } from '../../@types/engine/layer/Layer';
 import type { SelectionKind } from '../../@types/engine/SelectionKind';
 import type { DetailCardTable } from '../../@types/components/infoCard/DetailCardTable';
@@ -48,53 +40,23 @@ import CompactStarCard from './CompactStarCard/CompactStarCard';
  * `layerUiContents`, from their own Layer's `ui` entry. */
 const CORE_DETAIL_CARDS: Partial<DetailCardTable> = {
   galaxyCatalog: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-      createElement(GalaxyDetailCard, {
-        info: target,
-        pinned,
-        chrome,
-        onFocus: pinned ? onFocus : undefined,
-        onClose: pinned ? onClose : undefined,
-      }),
-    Compact: ({ target }) => createElement(CompactCard, { info: target }),
+    Detail: GalaxyDetailCard,
+    Compact: CompactCard,
   },
   structure: {
-    Detail: ({ target, pinned, selectedMemberCount, chrome, onFocus, onClose }) =>
-      createElement(StructureDetailCard, {
-        structure: target,
-        pinned,
-        memberCount: selectedMemberCount,
-        chrome,
-        onFocus,
-        onClose,
-      }),
-    Compact: ({ target }) => createElement(CompactStructureCard, { structure: target }),
+    Detail: StructureDetailCard,
+    Compact: CompactStructureCard,
   },
   body: {
-    // The body arm renders through a store container: a focused body's distance
-    // is time-dependent and re-derived live off the throttled time pub, which a
-    // presentational card cannot read (store-boundary rule). The container reads
-    // it and passes it as a prop; identity rows stay on the pure card.
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-      createElement(BodyDetailCardContainer, {
-        target,
-        pinned,
-        chrome,
-        onFocus,
-        onClose,
-      }),
-    Compact: ({ target }) => createElement(CompactBodyCard, { target }),
+    // Detail renders through a store container: a focused body's distance is
+    // time-dependent, re-derived live off the throttled time pub, which a
+    // presentational card cannot read (store-boundary rule).
+    Detail: BodyDetailCardContainer,
+    Compact: CompactBodyCard,
   },
   starCatalog: {
-    Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-      createElement(StarDetailCard, {
-        target,
-        pinned,
-        chrome,
-        onFocus,
-        onClose,
-      }),
-    Compact: ({ target }) => createElement(CompactStarCard, { info: target }),
+    Detail: StarDetailCard,
+    Compact: CompactStarCard,
   },
 };
 

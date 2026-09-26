@@ -8,7 +8,6 @@
  * fills the cubemap stays in core (`CUBEMAP_CAPTURES`).
  */
 
-import { createElement } from 'react';
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { blackHolesLayerSettings } from './state/slices';
@@ -51,9 +50,8 @@ export const blackHolesLayer = defineLayer({
       slot: 'detailCard',
       content: {
         type: 'blackHole',
-        Detail: ({ target, pinned, chrome, onFocus, onClose }) =>
-          createElement(BlackHoleDetailCard, { target, pinned, chrome, onFocus, onClose }),
-        Compact: ({ target }) => createElement(CompactBlackHoleCard, { target }),
+        Detail: BlackHoleDetailCard,
+        Compact: CompactBlackHoleCard,
       },
     },
   ],

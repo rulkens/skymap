@@ -9,8 +9,10 @@ describe('detailCardTable', () => {
 
     for (const type of SELECTION_KINDS) {
       expect(table[type]).toBeDefined();
-      expect(typeof table[type].Detail).toBe('function');
-      expect(typeof table[type].Compact).toBe('function');
+      // A component is a function OR a memo/exotic object (BodyDetailCardContainer
+      // is `memo(...)`'d) — assert it's set rather than pin one runtime shape.
+      expect(table[type].Detail).toBeDefined();
+      expect(table[type].Compact).toBeDefined();
     }
   });
 
