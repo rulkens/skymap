@@ -1,0 +1,497 @@
+/**
+ * Albedo Bench — visual stylesheet, ported from the throwaway prototype the
+ * user preferred (light default + dark media query, terracotta accent, a
+ * mid-grey "well" so neither texture is judged against a tinted surround).
+ */
+:root {
+  --ground: #e9ebee;
+  --panel: #f7f8f9;
+  --ink: #1a1d21;
+  --muted: #5d646d;
+  --rule: #cfd4da;
+  --accent: #b34e2a;
+  --accent-ink: #ffffff;
+  --well: #7f7f7f;
+  --focus: #2b6cb0;
+  --bench-arrow: #2b6cb0;
+  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ground: #131518;
+    --panel: #1b1e22;
+    --ink: #e4e6e9;
+    --muted: #979ea7;
+    --rule: #2e3339;
+    --accent: #e07a52;
+    --accent-ink: #1a0f0a;
+    --focus: #7fb0ea;
+    --bench-arrow: #7fb0ea;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font: 14px/1.5 var(--sans);
+}
+
+.wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+  display: grid;
+  gap: 18px;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.bench-error {
+  color: #c0392b;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .bench {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Viewer toolbar — segmented toggle groups, prototype-style. */
+.viewer {
+  display: grid;
+  gap: 10px;
+}
+
+.view-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.seg button {
+  font: 500 12px var(--sans);
+  color: var(--ink);
+  background: var(--panel);
+  border: 0;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.seg button + button {
+  border-left: 1px solid var(--rule);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+button:focus-visible,
+input:focus-visible,
+[role='slider']:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.coords {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.coords label {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.coords input[type='number'] {
+  width: 68px;
+  font: 12px var(--mono);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+/* Sun panel — its own seg toggle, optional manual controls, and the
+ * lighting-preview lightbox card. */
+.sun-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.manual-sun {
+  display: grid;
+  gap: 6px;
+}
+
+.lightbox {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.lightbox .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lightbox .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 22px;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.switch input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+/* Well — the grey surround for the comparison stage(s). */
+.well {
+  background: var(--well);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.stage:active {
+  cursor: grabbing;
+}
+
+.stage > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Panning is a pointer drag on the stage, so the browser's own image drag
+   (a ghost thumbnail that hijacks the gesture) has to be off everywhere. */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.clip img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  cursor: ew-resize;
+}
+
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.tag {
+  position: absolute;
+  top: 8px;
+  font: 500 11px var(--mono);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 2px 7px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.tag.l {
+  left: 8px;
+}
+
+.tag.r {
+  right: 8px;
+}
+
+/* The stale image keeps showing through, dimmed, so a pan or zoom never looks
+   finished before its render is. */
+.pending-veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  background: rgba(20, 22, 25, 0.45);
+  color: #fff;
+  font: 500 11px var(--mono);
+  pointer-events: none;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+/* Subtle — the CSS-transformed stale image is still fully visible under it. */
+.pending-badge {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 500 11px var(--mono);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.bench-arrows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Unobtrusive — sits with the arrows it describes, never fights for attention
+   with the pending badge above it. */
+.coarse-fit-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 500 10px var(--mono);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pair figure {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.pair figcaption {
+  font: 500 11px var(--mono);
+  color: #fff;
+}
+
+.flip-stage {
+  cursor: pointer;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.bench-compare-loading {
+  color: var(--muted);
+  padding: 24px;
+}
+
+/* Controls aside — grouped sliders, prototype's .panel/.body/.group/.ctl. */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+
+.body {
+  padding: 14px;
+  display: grid;
+  gap: 16px;
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+}
+
+.group + .group {
+  border-top: 1px solid var(--rule);
+  padding-top: 14px;
+}
+
+.ctl {
+  display: grid;
+  grid-template-columns: 74px 1fr 52px;
+  gap: 8px;
+  align-items: center;
+}
+
+.ctl label {
+  font-size: 12px;
+}
+
+.ctl output {
+  font: 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.foot {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn {
+  font: 600 12px var(--sans);
+  border-radius: 5px;
+  padding: 7px 12px;
+  cursor: pointer;
+  border: 1px solid var(--rule);
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}

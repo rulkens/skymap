@@ -1,0 +1,267 @@
+/**
+ * Albedo Bench App — loads the committed recipe, then debounces (150 ms) an
+ * `original` /api/render call keyed on `box` alone, an `adjusted` one keyed
+ * on the recipe too (any slider refits it), and a field refit keyed on
+ * `sunFit` alone (a grade slider never refits). Save POSTs the recipe; Load
+ * (on mount) restores every slider.
+ */
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import { defaultApi, type FieldArrow, type RenderLight } from './api';
+import { boxFromView, type ViewState } from './viewPresets';
+import { Navigator, type ViewMode } from './components/Navigator';
+import { CompareView, hintFor } from './components/CompareView';
+import { SunPanel, type SunMode } from './components/SunPanel';
+import { RecipeSliders } from './components/RecipeSliders';
+
+const PX = 512;
+const DEBOUNCE_MS = 150;
+const DEFAULT_LIGHT: RenderLight = { azDeg: 315, elDeg: 45, roughness: 0.9, ambient: 0.08 };
+
+// Manual `g` points down-sun (away from it), so negating turns the slider
+// into the same "sun azimuth" the lighting-preview slider already means.
+function manualGFrom(azDeg: number, strength: number): readonly [number, number] {
+  const az = (azDeg * Math.PI) / 180;
+  return [-strength * Math.sin(az), -strength * Math.cos(az)];
+}
+
+function boxEquals(a: LonLatBounds, b: LonLatBounds): boolean {
+  return a.west === b.west && a.east === b.east && a.south === b.south && a.north === b.north;
+}
+
+export function App() {
+  const [recipe, setRecipe] = useState<AlbedoRecipe>();
+  const recipeRef = useRef(recipe);
+  recipeRef.current = recipe;
+  const [loadError, setLoadError] = useState<string>();
+  const [view, setView] = useState<ViewState>({ lon: 137.4, lat: -4.6, spanDeg: 2 });
+  const [viewMode, setViewMode] = useState<ViewMode>('wipe');
+  const [sunMode, setSunMode] = useState<SunMode>('fitted');
+  const [manualAzDeg, setManualAzDeg] = useState(0);
+  const [manualStrength, setManualStrength] = useState(1);
+  const [lightOn, setLightOn] = useState(false);
+  const [light, setLight] = useState<RenderLight>(DEFAULT_LIGHT);
+  const [originalUrl, setOriginalUrl] = useState<string>();
+  const [adjustedUrl, setAdjustedUrl] = useState<string>();
+  // The box each displayed image was actually rendered for — they lag `box`
+  // while a pan/zoom's render is in flight, and they lag SEPARATELY: at wide
+  // spans `original` returns in milliseconds while `adjusted` still has a sun
+  // fit to run, so the pair is only caught up once both agree.
+  const [originalBox, setOriginalBox] = useState<LonLatBounds>();
+  const [adjustedBox, setAdjustedBox] = useState<LonLatBounds>();
+  const [arrows, setArrows] = useState<readonly FieldArrow[]>([]);
+  const [fitCoarsened, setFitCoarsened] = useState(false);
+  const [showArrows, setShowArrows] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [renderError, setRenderError] = useState<string>();
+
+  const box = useMemo(() => boxFromView(view), [view]);
+  const manualG = useMemo(
+    () => manualGFrom(manualAzDeg, manualStrength),
+    [manualAzDeg, manualStrength],
+  );
+  const recipeLoaded = recipe !== undefined;
+  const sunFit = recipe?.sunFit;
+  const pending =
+    originalBox === undefined ||
+    adjustedBox === undefined ||
+    !boxEquals(originalBox, box) ||
+    !boxEquals(adjustedBox, box);
+  // The transform anchors on what is actually on screen, so it follows the
+  // image that has NOT caught up yet whenever the two disagree.
+  const renderedBox = pending ? (adjustedBox ?? originalBox) : box;
+
+  useEffect(() => {
+    let cancelled = false;
+    defaultApi
+      .getRecipe()
+      .then((r) => {
+        if (!cancelled) setRecipe(r);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // `original` never depends on the recipe, only on the box — read the
+  // latest recipe through a ref so a grade-slider edit can't retrigger this.
+  useEffect(() => {
+    if (!recipeLoaded) return;
+    const currentRecipe = recipeRef.current;
+    if (currentRecipe === undefined) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      defaultApi
+        .renderPng({ box, px: PX, recipe: currentRecipe, variant: 'original' })
+        .then((blob) => {
+          if (cancelled) return;
+          setOriginalUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(blob);
+          });
+          setOriginalBox(box);
+        })
+        .catch((err) => {
+          if (!cancelled) setRenderError(String(err));
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [box, recipeLoaded]);
+
+  useEffect(() => {
+    if (recipe === undefined) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      defaultApi
+        .renderPng({
+          box,
+          px: PX,
+          recipe,
+          variant: 'adjusted',
+          light: lightOn ? light : undefined,
+          manualG: sunMode === 'manual' ? manualG : undefined,
+        })
+        .then((blob) => {
+          if (cancelled) return;
+          setAdjustedUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(blob);
+          });
+          setAdjustedBox(box);
+          setRenderError(undefined);
+        })
+        .catch((err) => {
+          if (!cancelled) setRenderError(String(err));
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [recipe, box, sunMode, manualG, lightOn, light]);
+
+  // Field refit — box or sunFit only. `sunFit` (not `recipe`) is the
+  // dependency so an unrelated slider edit, which replaces `recipe`'s object
+  // identity without touching `sunFit`, never refits. Overlay off skips the
+  // fit outright — the fast way to pan/zoom without paying for one.
+  useEffect(() => {
+    if (sunFit === undefined || !showArrows) {
+      setArrows([]);
+      setFitCoarsened(false);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      defaultApi
+        .getField(box, sunFit)
+        .then((r) => {
+          if (!cancelled) {
+            setArrows(r.arrows);
+            setFitCoarsened(r.coarsened);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) setRenderError(String(err));
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [box, sunFit, showArrows]);
+
+  async function onSave(): Promise<void> {
+    if (recipe === undefined) return;
+    setSaveStatus('Saving…');
+    try {
+      const saved = await defaultApi.saveRecipe(recipe);
+      setRecipe(saved);
+      setSaveStatus('Saved.');
+    } catch (err) {
+      setSaveStatus(`Save failed: ${String(err)}`);
+    }
+  }
+
+  if (loadError !== undefined) {
+    return <div className="wrap">Failed to load recipe: {loadError}</div>;
+  }
+  if (recipe === undefined) {
+    return <div className="wrap">Loading recipe…</div>;
+  }
+
+  return (
+    <div className="wrap">
+      <header>
+        <h1>Albedo Bench</h1>
+        {renderError !== undefined ? <div className="bench-error">{renderError}</div> : null}
+      </header>
+      <div className="bench">
+        <section className="viewer" aria-label="Comparison">
+          <div className="view-panel">
+            <span className="label">View</span>
+            <div className="toolbar">
+              <Navigator
+                view={view}
+                onView={setView}
+                viewMode={viewMode}
+                onViewMode={setViewMode}
+              />
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={showArrows}
+                  onChange={(e) => setShowArrows(e.target.checked)}
+                />
+                Arrows
+              </label>
+            </div>
+          </div>
+          <SunPanel
+            sunMode={sunMode}
+            onSunMode={setSunMode}
+            manualAzDeg={manualAzDeg}
+            manualStrength={manualStrength}
+            onManualAzDeg={setManualAzDeg}
+            onManualStrength={setManualStrength}
+            lightOn={lightOn}
+            onLightOn={setLightOn}
+            light={light}
+            onLight={setLight}
+          />
+          <div className="well">
+            <CompareView
+              originalUrl={originalUrl}
+              adjustedUrl={adjustedUrl}
+              viewMode={viewMode}
+              arrows={sunMode === 'fitted' ? arrows : []}
+              fitCoarsened={sunMode === 'fitted' && fitCoarsened}
+              box={box}
+              view={view}
+              onView={setView}
+              renderedBox={renderedBox}
+              pending={pending}
+            />
+          </div>
+          <p className="hint">{hintFor(viewMode)}</p>
+        </section>
+        <aside className="panel" aria-label="Adjustments">
+          <div className="body">
+            <RecipeSliders
+              recipe={recipe}
+              onRecipe={setRecipe}
+              onSave={() => void onSave()}
+              saveStatus={saveStatus}
+            />
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

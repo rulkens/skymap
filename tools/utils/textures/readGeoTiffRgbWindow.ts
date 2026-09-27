@@ -7,7 +7,9 @@ import sharp from 'sharp';
  * image's own bands — a GDAL internal mask sits in a separate IFD libvips's
  * tiff reader can't open via `page` ("samples_per_pixel not a whole number
  * of bytes", confirmed on the Gale ortho COG), so a masked COG's fringe
- * pixels currently come back opaque, not transparent.
+ * pixels currently come back opaque, not transparent. `page` selects an
+ * overview level (see `geoTiffOverviewLevels`); `left/top/width/height` are
+ * already in THAT level's own pixel space, never the native raster's.
  */
 export async function readGeoTiffRgbWindow(
   path: string,
@@ -15,8 +17,9 @@ export async function readGeoTiffRgbWindow(
   top: number,
   width: number,
   height: number,
+  page = 0,
 ): Promise<Uint8Array> {
-  const image = sharp(path, { limitInputPixels: false, unlimited: true });
+  const image = sharp(path, { limitInputPixels: false, unlimited: true, page });
   const depth = (await image.metadata()).depth;
   // An 8-bit depth is the one this reader is for; anything else is a file
   // this function was never meant to see (readGeoTiffWindow reads DEMs).

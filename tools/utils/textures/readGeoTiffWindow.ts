@@ -15,7 +15,9 @@ const DEPTHS = {
  * native numeric depth. `toColourspace('b-w')` is load-bearing: sharp's
  * default sRGB output silently triples a single-band DEM into three
  * interleaved copies. An 8-bit depth THROWS rather than rescaling — a
- * byte-depth DEM is a wrong/pre-stretched file, and rescaling would fabricate metres.
+ * byte-depth DEM is a wrong/pre-stretched file, and rescaling would fabricate
+ * metres. `page` selects an overview level (see `geoTiffOverviewLevels`);
+ * `left/top/width/height` are already in THAT level's own pixel space.
  */
 export async function readGeoTiffWindow(
   path: string,
@@ -23,8 +25,9 @@ export async function readGeoTiffWindow(
   top: number,
   width: number,
   height: number,
+  page = 0,
 ): Promise<Float32Array> {
-  const image = sharp(path, { limitInputPixels: false, unlimited: true });
+  const image = sharp(path, { limitInputPixels: false, unlimited: true, page });
   const depth = (await image.metadata()).depth;
   const spec = depth === undefined ? undefined : DEPTHS[depth as keyof typeof DEPTHS];
   if (spec === undefined) {
