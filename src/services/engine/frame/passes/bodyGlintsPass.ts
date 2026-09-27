@@ -44,7 +44,7 @@
  * Like `starPointsPass`, this projects through NEAR0 (COSMO's fixed near plane
  * would clip the AU-scale body anchors) while accumulating into the HDR target
  * so the glints ride the galaxies' tone-map. And like `starPointsPass` it hands
- * the renderer CAMERA-RELATIVE anchors (`pos - camPos`, in f64) paired with the
+ * the renderer CAMERA-RELATIVE anchors (`pos - camPos` in f64, then unit length) with the
  * REBASED view-projection (`rebaseViewProj(view.slab.vp, camPos)`), so the f32
  * upload carries no catastrophic cancellation as the camera closes on a body —
  * see that layer's f64-seam note.
@@ -213,10 +213,17 @@ export const bodyGlintsPass: ContentPass = {
       // Camera-relative anchor (pos - camPos), computed in f64 before the
       // renderer narrows to f32 — narrowing the raw AU-scale anchor would have
       // already lost the low bits.
+      // A depthless sprite needs only the direction. The raw offset is ~3e-16 Mpc
+      // for a moon 8000 km off, and a clip w that small broke the quad into a
+      // screen-sized black octagon (Phobos from Jezero).
+      const dx = positionMpc[0] - camPos[0];
+      const dy = positionMpc[1] - camPos[1];
+      const dz = positionMpc[2] - camPos[2];
+      const len = Math.hypot(dx, dy, dz);
       const base = count * INSTANCE_FLOATS;
-      staging[base + 0] = positionMpc[0] - camPos[0];
-      staging[base + 1] = positionMpc[1] - camPos[1];
-      staging[base + 2] = positionMpc[2] - camPos[2];
+      staging[base + 0] = dx / len;
+      staging[base + 1] = dy / len;
+      staging[base + 2] = dz / len;
       staging[base + 3] = body.albedo[0];
       staging[base + 4] = body.albedo[1];
       staging[base + 5] = body.albedo[2];

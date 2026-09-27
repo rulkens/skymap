@@ -342,7 +342,11 @@ describe('bodyGlintsPass.draw', () => {
     // (LIT sits farther from the Sun than the camera); the unlit body's would be
     // negative. Confirms which body survived the skip.
     expect(instances[0]!).toBeGreaterThan(0);
-    expect(instances[0]!).toBeCloseTo(LIT.positionMpc[0] - CAM_POS[0], 20);
+    // A UNIT direction, not the raw Mpc offset: a moon 8000 km off is ~3e-16 Mpc,
+    // and a clip w that small broke the sprite into a screen-sized black octagon.
+    const rel = [0, 1, 2].map((k) => LIT.positionMpc[k]! - CAM_POS[k]!);
+    const len = Math.hypot(...rel);
+    for (let k = 0; k < 3; k++) expect(instances[k]!).toBeCloseTo(rel[k]! / len, 6);
     // Anchors span exactly one INSTANCE_FLOATS-strided record.
     expect(instances.length).toBeGreaterThanOrEqual(INSTANCE_FLOATS);
 
