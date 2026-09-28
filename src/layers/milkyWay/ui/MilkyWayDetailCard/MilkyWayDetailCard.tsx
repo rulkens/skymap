@@ -1,14 +1,8 @@
 /**
- * MilkyWayDetailCard — rich panel for the Milky Way singleton.
- *
- * Mirrors the shared galaxy/structure layout (headline row, then image slot +
- * summary in a cardTopRow, then fact rows, then the description). The name,
- * morphological type (`typeString`), and world position are the only fields
- * MilkyWayInfo carries — every fact row below is derived from an engine
- * constant (diameter, Sun→centre, black-hole mass, orbital period) or looked
- * up from the literature record `MILKY_WAY_FACTS` (star count, the two mass
- * estimates, age, orbital speed), never retyped. The focus action lives in
- * the shared CardHeader (the "Focus" pill, shown when the card is pinned).
+ * MilkyWayDetailCard — rich panel for the Milky Way singleton. Facts the engine
+ * already draws (disc diameter, Sun→centre, Sgr A* mass, and the lap time from
+ * them) are derived from those constants so the card can't disagree with the
+ * scene; the rest are literature values in `MILKY_WAY_FACTS`.
  */
 
 import type { ReactNode } from 'react';
@@ -44,9 +38,8 @@ export type MilkyWayDetailCardProps = {
   onClose?: () => void;
 };
 
-// One singleton, so these are plain module constants rather than per-render
-// recomputation — each is a pure derivation of an engine constant.
 const DIAMETER_TEXT = formatDiameterKpc(2 * MILKY_WAY_DISC_RADIUS_KPC);
+// The world origin is the Sun, so the centre anchor's length is R₀.
 const SUN_TO_CENTRE_MPC = Math.hypot(...MILKY_WAY_CENTER_WORLD);
 const SUN_TO_CENTRE_TEXT = formatDistance(SUN_TO_CENTRE_MPC);
 const GALACTIC_YEAR_MYR = galacticYearMyr(SUN_TO_CENTRE_MPC, MILKY_WAY_FACTS.sunOrbitSpeedKmS);
@@ -89,10 +82,6 @@ function MilkyWayDetailCard({
 
       <div className={styles.cardSection}>
         <CardRow label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
-        <CardRow
-          label={<InfoTip {...TIPS.sunToCentre!}>Sun to centre</InfoTip>}
-          value={SUN_TO_CENTRE_TEXT}
-        />
         <CardRow
           label={<InfoTip {...TIPS.milkyWayStars!}>Stars</InfoTip>}
           value={MILKY_WAY_FACTS.starCountRange}
