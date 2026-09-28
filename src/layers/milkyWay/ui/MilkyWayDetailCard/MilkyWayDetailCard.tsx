@@ -2,11 +2,12 @@
  * MilkyWayDetailCard — rich panel for the Milky Way singleton.
  *
  * Mirrors the shared galaxy/structure layout (headline row, then image slot +
- * summary in a cardTopRow): the image slot shows the card-shot thumbnail
- * captured under the Milky Way's own focus id, same as a body's.  Shows the
- * name, morphological type (`typeString` — distinct from the union `type`
- * tag), a distance note (we're inside the galaxy, so the usual catalog
- * distance is undefined), and the description.  The focus action lives in
+ * summary in a cardTopRow, then fact rows, then the description). The name,
+ * morphological type (`typeString`), and world position are the only fields
+ * MilkyWayInfo carries — every fact row below is derived from an engine
+ * constant (diameter, Sun→centre, black-hole mass, orbital period) or looked
+ * up from the literature record `MILKY_WAY_FACTS` (star count, the two mass
+ * estimates, age, orbital speed), never retyped. The focus action lives in
  * the shared CardHeader (the "Focus" pill, shown when the card is pinned).
  */
 
@@ -15,6 +16,15 @@ import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
+import { MILKY_WAY_FACTS } from '../../../../data/milkyWay/milkyWayFacts';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_DISC_RADIUS_KPC,
+} from '../../../../data/milkyWay/galacticCenter';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar';
+import { formatDiameterKpc } from '../../../../utils/format/formatDiameterKpc';
+import { formatDistance } from '../../../../utils/format/formatDistance';
+import { galacticYearMyr } from '../../../../utils/astro/galacticYearMyr';
 import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import { MILKY_WAY_FOCUS_ID } from '../../../../services/url/milkyWayFocusId';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
@@ -33,6 +43,17 @@ export type MilkyWayDetailCardProps = {
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
+
+// One singleton, so these are plain module constants rather than per-render
+// recomputation — each is a pure derivation of an engine constant.
+const DIAMETER_TEXT = formatDiameterKpc(2 * MILKY_WAY_DISC_RADIUS_KPC);
+const SUN_TO_CENTRE_MPC = Math.hypot(...MILKY_WAY_CENTER_WORLD);
+const SUN_TO_CENTRE_TEXT = formatDistance(SUN_TO_CENTRE_MPC);
+const GALACTIC_YEAR_MYR = galacticYearMyr(SUN_TO_CENTRE_MPC, MILKY_WAY_FACTS.sunOrbitSpeedKmS);
+const GALACTIC_YEAR_TEXT = `${MILKY_WAY_FACTS.sunOrbitSpeedKmS} km/s · one lap ≈ ${Math.round(
+  GALACTIC_YEAR_MYR,
+)} million years`;
+const BLACK_HOLE_TEXT = `Sgr A* · ${(SGR_A_STAR_MASS_SOLAR / 1e6).toFixed(1)} million M☉`;
 
 function MilkyWayDetailCard({
   target,
@@ -60,8 +81,38 @@ function MilkyWayDetailCard({
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>
           </div>
-          <div className={styles.cardDistLine}>{target.distanceNote}</div>
+          <div className={styles.cardDistLine}>
+            <InfoTip {...TIPS.sunToCentre!}>{SUN_TO_CENTRE_TEXT}</InfoTip>
+          </div>
         </div>
+      </div>
+
+      <div className={styles.cardSection}>
+        <CardRow label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
+        <CardRow
+          label={<InfoTip {...TIPS.sunToCentre!}>Sun to centre</InfoTip>}
+          value={SUN_TO_CENTRE_TEXT}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayStars!}>Stars</InfoTip>}
+          value={MILKY_WAY_FACTS.starCountRange}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayMass!}>Mass</InfoTip>}
+          value={`${MILKY_WAY_FACTS.stellarMassText} · ${MILKY_WAY_FACTS.totalMassText}`}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.oldestStars!}>Oldest stars</InfoTip>}
+          value={MILKY_WAY_FACTS.oldestStarsAgeText}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.galacticYear!}>Galactic year</InfoTip>}
+          value={GALACTIC_YEAR_TEXT}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.centralBlackHole!}>Central black hole</InfoTip>}
+          value={BLACK_HOLE_TEXT}
+        />
       </div>
 
       <div className={styles.cardSection}>

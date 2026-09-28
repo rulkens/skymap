@@ -6,9 +6,9 @@
  *
  * Unlike the galaxy/structure arms, the Milky Way has exactly one instance, so
  * its info is a single static const (see `data/milkyWay/milkyWayInfo.ts`) rather
- * than a per-row derivation.  We're inside this galaxy, so the usual catalog
- * notion of "distance to it" is undefined — the card carries a `distanceNote`
- * instead, and the world coords are the galactic centre (Sgr A*).
+ * than a per-row derivation.  The card's fact rows (diameter, Sun→centre, mass,
+ * age…) are derived or looked up at render time, not stored here — this type
+ * stays identity-only, and the world coords are the galactic centre (Sgr A*).
  *
  * Note the morphology lives in `typeString`, NOT `type`: `type` is reserved for
  * the union discriminant, so the Hubble-class string can't share that name the
@@ -24,8 +24,6 @@ export type MilkyWayInfo = {
   readonly description: string;
   /** Morphological type for the card's type row. */
   readonly typeString: string;
-  /** Distance note for the card (we are inside it; ~8 kpc to the centre). */
-  readonly distanceNote: string;
   /** World-space position of the galactic centre (Sgr A*), from MILKY_WAY_CENTER_WORLD. */
   readonly x: number;
   readonly y: number;

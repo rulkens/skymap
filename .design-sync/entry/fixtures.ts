@@ -298,7 +298,6 @@ export const milkyWay: MilkyWayInfo = {
   description:
     'Our home galaxy, a barred spiral roughly 100,000 light-years across holding some 200 billion stars. The Sun orbits about 26,000 light-years from the galactic center.',
   typeString: 'Barred spiral (SBbc)',
-  distanceNote: 'We are inside it — about 8 kpc from the center.',
   x: 0,
   y: 0,
   z: 0,
