@@ -20,7 +20,9 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -139,6 +141,7 @@ function followPose(
       pitch: ang.pitch,
       distance: Math.hypot(rel[0], rel[1], rel[2]),
       roll: cur.roll,
+      lookOffset: cur.lookOffset,
     };
   }
 
@@ -179,9 +182,18 @@ function followPose(
       // lands per wheel notch, and dropping it pinned a followed approach
       // to scene-frame up until the engage edge.
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
+      lookOffset: easedLookOffset(from, committed, t),
     }),
     memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
   };
+}
+
+/** Absent on both ends stays absent, so a pose without an offset keeps its shape. */
+function easedLookOffset(from: CameraPose, to: CameraPose, t: number): Vec2 | undefined {
+  if (from.lookOffset === undefined && to.lookOffset === undefined) return undefined;
+  const [fy, fp] = from.lookOffset ?? [0, 0];
+  const [ty, tp] = to.lookOffset ?? [0, 0];
+  return [lerp(fy, ty, t), lerp(fp, tp, t)];
 }
 
 /**

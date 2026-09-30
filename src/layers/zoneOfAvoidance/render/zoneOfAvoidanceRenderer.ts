@@ -9,11 +9,11 @@
  * `shaders/zoneOfAvoidance/io.wesl` is authoritative.
  */
 
-import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import vsCode from '../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
 import fsPickCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
@@ -125,9 +125,8 @@ export function createZoneOfAvoidanceRenderer(
   // packedId (float-index 25, u32) is written ONCE below and never touched
   // by writeUniforms — the packed identity never changes across frames.
   new Uint32Array(uniforms)[25] = packedId;
-  // Plain Vec3 tuples (not vec3.create's Float32Array) so the per-component
-  // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
-  // writes into them in place via the `dst` arg just the same.
+  // Plain Vec3 tuples so the per-component reads below index cleanly under
+  // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
   // Frame-pole reference up, allocated once and rewritten in place each frame.
   const upRefScratch: Vec3 = [0, 0, 0];
@@ -151,8 +150,7 @@ export function createZoneOfAvoidanceRenderer(
     // Same derivation as horizonShellRenderer.draw — see that file's
     // header for the full rationale (rolled frame-pole basis so this
     // shell's rays agree with computeViewProj's).
-    vec3.subtract(cam.target, cam.position, fwd);
-    vec3.normalize(fwd, fwd);
+    orbitForwardOf(cam, fwd);
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;

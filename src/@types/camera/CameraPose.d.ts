@@ -5,6 +5,7 @@
  * All drivers (mouse input, tour storyboard, animated tweens) converge to this shape.
  */
 
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 
 export type CameraPose = {
@@ -19,4 +20,11 @@ export type CameraPose = {
    * before that fold lands.
    */
   roll?: number;
+  /**
+   * [yaw, pitch] radians turning the VIEW about the eye after the orbit terms
+   * place it; absent ⇒ [0, 0]. The eye never reads it, so the orbit terms stay
+   * centre-looking; it is view-local, so a frame re-encode carries it and a
+   * conversion into a body-fixed or site arm drops it.
+   */
+  lookOffset?: Vec2;
 };

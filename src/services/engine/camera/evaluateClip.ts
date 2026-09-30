@@ -596,13 +596,14 @@ function originOfLeg(
  * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
+ * Clips author no `lookOffset`, so one starting from an offset pose snaps it to 0.
  */
 function evaluateBaseAt(
   compiled: CompiledClip,
   t: number,
   origin: LegOrigin,
   beforeSec = Infinity,
-): Required<CameraPose> {
+): Required<Omit<CameraPose, 'lookOffset'>> {
   const { baseTracks } = compiled;
   const { atSec, pose: start } = origin;
   const window: LegWindow =

@@ -504,6 +504,24 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(result.roll).toBeCloseTo(0.6, 12);
   });
 
+  it('tween eases lookOffset to zero', () => {
+    // The committed base carries no offset, so the follow ease lands centre-looking.
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const s = store.getState() as unknown as RootState;
+    const produceFollow = makeFollowProduce({
+      state: s,
+      from: { ...BASE_POSE, lookOffset: [0.4, -0.2] },
+    });
+
+    // The elapsed at which easeOutCubic reaches 0.5.
+    const halfMs = FOCUS_TWEEN_MS * (1 - Math.cbrt(0.5));
+    const half = worldArmOf(produceFollow(halfMs).pose).lookOffset!;
+    expect(half[0]).toBeCloseTo(0.2, 12);
+    expect(half[1]).toBeCloseTo(-0.1, 12);
+    expect(worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).lookOffset).toEqual([0, 0]);
+  });
+
   it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
     // autoRotate off so the resting floor is the fallback winner.
     const store = makeStore();
