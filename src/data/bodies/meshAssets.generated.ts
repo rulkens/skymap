@@ -4,7 +4,6 @@
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
-import type { MeshHoleRect } from '../../@types/data/mesh/MeshHoleRect';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../@types/data/Tier';
 
@@ -28,9 +27,6 @@ export type MeshAssetRow = {
   /** The ground-contact box `contactShadow` projects into, body frame,
    *  metres; absent for a floating mesh. */
   readonly contactDecal?: ContactDecal;
-  /** The lat/lon rect `<key>_hole.webp` covers; absent for a mesh with no
-   *  terrain hole to cut. */
-  readonly hole?: MeshHoleRect;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
@@ -153,11 +149,5 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     licence: 'CC BY 4.0',
     attribution:
       'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
-    hole: {
-      lonMinDeg: 12.523172510948879,
-      latMinDeg: 55.6686959789349,
-      lonSpanDeg: 0.003524198067005102,
-      latSpanDeg: 0.0022617938388833636,
-    },
   },
 };

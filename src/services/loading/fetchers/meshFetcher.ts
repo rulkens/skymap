@@ -2,8 +2,7 @@
  * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
  * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>-<px>.*`
  * (`req.tier` already clamped to the body's ceiling by `meshBodyRow.req`); the
- * contact mask stays untiered at `<key>_contact.webp`, as does the terrain-hole
- * mask `<key>_hole.webp` of a row with a `hole`.
+ * contact mask stays untiered at `<key>_contact.webp`.
  *
  * A slot whose format is not sRGB carries numeric channels rather than a
  * picture, so it decodes with `colorSpaceConversion: 'none'` — the full writeup
@@ -42,10 +41,9 @@ async function fetchTexture(
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
   const prefix = meshTierPrefix(req.meshKey, req.tier);
   const contactUrl = dataUrl(`meshes/${req.meshKey}_contact.webp`);
-  const row = MESH_ASSETS[req.meshKey];
-  const hasContactDecal = row?.contactDecal !== undefined;
+  const hasContactDecal = MESH_ASSETS[req.meshKey]?.contactDecal !== undefined;
 
-  const [buf, textures, contactShadow, holeMask] = await Promise.all([
+  const [buf, textures, contactShadow] = await Promise.all([
     fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress),
     // `fromEntries` widens the key back to `string`; the slot table is what
     // makes the record exhaustive, so the assertion is restating it, not
@@ -70,18 +68,8 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
           return undefined;
         })
       : undefined,
-    // Unlike the shadow, the hole is load-bearing: without it terrain pokes
-    // through the scan, so a failed fetch fails the load.
-    row?.hole !== undefined
-      ? fetchTexture(dataUrl(`meshes/${req.meshKey}_hole.webp`), signal, true)
-      : undefined,
   ]);
   const geometry = await decodeMesh(buf);
 
-  return {
-    ...geometry,
-    ...textures,
-    ...(contactShadow ? { contactShadow } : {}),
-    ...(holeMask ? { holeMask } : {}),
-  };
+  return { ...geometry, ...textures, ...(contactShadow ? { contactShadow } : {}) };
 };

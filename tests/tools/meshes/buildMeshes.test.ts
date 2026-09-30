@@ -199,7 +199,6 @@ function runTiers(
   groundUp?: Vec3,
   tierTriangles?: Partial<Record<Tier, number>>,
   georeferencedOffsetM?: Vec2,
-  hole?: MeshBuildTarget['hole'],
 ) {
   const tiers = Object.fromEntries(
     Object.entries(glbPaths).map(([tier, path]) => [
@@ -218,7 +217,6 @@ function runTiers(
         bodyFromSource,
         groundUp,
         georeferencedOffsetM,
-        hole,
       },
     ],
     outDir: join(dir, 'out'),
@@ -927,56 +925,5 @@ describe('buildMeshes()', () => {
     // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
     expect(row.groundOffsetM).toBeCloseTo(0, 6);
-  });
-
-  it('bakes a terrain-hole mask and emits its lat/lon rect on the row', async () => {
-    const doc = new Document();
-    doc.createBuffer();
-    const material = await withBaseColour(doc, doc.createMaterial('one'));
-    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
-    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
-    const glbPath = await writeGlb(doc);
-
-    const R = 6_371_000;
-    const siteLatDeg = 55.67;
-    // A non-square ring (200 m east x 100 m north) at a non-zero latitude: a
-    // lon/lat axis swap, or a missing cos(lat) foreshortening on the east
-    // span, would both pass a square ring at the equator but not this one.
-    const row = (
-      await runTiers({ small: glbPath }, undefined, undefined, undefined, undefined, {
-        ringM: [
-          [0, 0],
-          [200, 0],
-          [200, 100],
-          [0, 100],
-        ],
-        siteLatDeg,
-        siteLonDeg: 12.53,
-        radiusM: R,
-      })
-    )[0]!;
-
-    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(true);
-    const metresPerDegLat = (Math.PI / 180) * R;
-    const metresPerDegLon = metresPerDegLat * Math.cos((siteLatDeg * Math.PI) / 180);
-    expect(row.hole).toBeDefined();
-    expect(row.hole!.lonMinDeg).toBeCloseTo(12.53, 6);
-    expect(row.hole!.latMinDeg).toBeCloseTo(siteLatDeg, 6);
-    expect(row.hole!.lonSpanDeg).toBeCloseTo(200 / metresPerDegLon, 6);
-    expect(row.hole!.latSpanDeg).toBeCloseTo(100 / metresPerDegLat, 6);
-  });
-
-  it('leaves hole undefined for a target with no crop outline', async () => {
-    const doc = new Document();
-    doc.createBuffer();
-    const material = await withBaseColour(doc, doc.createMaterial('one'));
-    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
-    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
-    const glbPath = await writeGlb(doc);
-
-    const row = (await runTiers({ small: glbPath }))[0]!;
-
-    expect(row.hole).toBeUndefined();
-    expect(existsSync(join(dir, 'out', 'testmesh_hole.webp'))).toBe(false);
   });
 });

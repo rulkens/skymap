@@ -97,3 +97,12 @@ Dropped by the height ruling: the per-host site-height generator prep (anchored 
 ## Adjacent (backlog)
 
 - The workbench feeds DVR90 heights in as ellipsoidal (~36 m shared bias). Not this PR: app terrain and scan are both DVR90.
+
+## 2026-09-30 update
+
+User smoke without the hole ruled: drop the terrain-hole path entirely (bake,
+fetch, surface-tile bind group and shaders) rather than fix it, and instead
+lift the scan 0.8 m above its source anchor's DVR90 height (the anchor's
+lawn sits slightly below the drawn terrain tiles, which the hole used to cut
+away — the lift clears them with no cut needed). See the matching note on
+the plan file for the task breakdown.

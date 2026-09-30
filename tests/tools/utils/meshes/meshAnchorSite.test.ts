@@ -14,7 +14,7 @@ vi.mock('../../../../src/data/bodies/surfaceFixedSites', () => ({
 vi.mock('../../../../tools/utils/io/meshSources', () => ({
   get MESH_SOURCES() {
     return Object.fromEntries(
-      georeferencedKeys.map((key) => [key, { georeferenced: { anchor: {}, holeOutline: '' } }]),
+      georeferencedKeys.map((key) => [key, { georeferenced: { anchor: {} } }]),
     );
   },
 }));

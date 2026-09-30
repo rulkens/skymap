@@ -1,5 +1,4 @@
 import type { ContactDecal } from '../../../src/@types/data/mesh/ContactDecal';
-import type { MeshHoleRect } from '../../../src/@types/data/mesh/MeshHoleRect';
 import type { MeshTextureField } from '../../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Geometry } from './Geometry';
@@ -11,5 +10,4 @@ export type BakeTierResult = {
   readonly substituted: readonly MeshTextureField[];
   readonly mean: Vec3;
   readonly contactDecal?: ContactDecal;
-  readonly hole?: MeshHoleRect;
 };

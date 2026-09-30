@@ -210,7 +210,6 @@ export function createMeshBodyRenderer(init: {
     res.uniformBuffer.destroy();
     res.contactShadow?.texture.destroy();
     res.contactShadow?.uniformBuffer.destroy();
-    res.holeMask?.destroy();
   }
 
   // The capture writes the cube's mip 0 face by face and `prefilterCubeGgx`
@@ -263,12 +262,12 @@ export function createMeshBodyRenderer(init: {
     return texture;
   }
 
-  // No mip chain: both masks are sampled at mip 0 only. RENDER_ATTACHMENT is
-  // still required — copyExternalImageToTexture rejects a destination without
-  // it, which silently leaves the mask all zeros.
-  function uploadMask(label: string, src: ImageBitmap): GPUTexture {
+  // No mip chain: the contact-shadows pass samples mip 0 only. RENDER_ATTACHMENT
+  // is still required — copyExternalImageToTexture rejects a destination
+  // without it, which silently leaves the mask all zeros.
+  function uploadContactShadow(id: string, src: ImageBitmap): ContactShadowResources {
     const texture = device.createTexture({
-      label,
+      label: `meshBody-contact-${id}`,
       size: [src.width, src.height, 1],
       format: 'r8unorm',
       usage:
@@ -281,11 +280,6 @@ export function createMeshBodyRenderer(init: {
       src.height,
       1,
     ]);
-    return texture;
-  }
-
-  function uploadContactShadow(id: string, src: ImageBitmap): ContactShadowResources {
-    const texture = uploadMask(`meshBody-contact-${id}`, src);
     const uniformBuffer = device.createBuffer({
       label: `meshBody-contact-uniform-${id}`,
       size: CONTACT_SHADOW_UNIFORM_BYTES,
@@ -327,7 +321,6 @@ export function createMeshBodyRenderer(init: {
 
     const probe = mintProbe(id);
     const contactShadow = asset.contactShadow && uploadContactShadow(id, asset.contactShadow);
-    const holeMask = asset.holeMask && uploadMask(`meshBody-hole-${id}`, asset.holeMask);
 
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
@@ -343,7 +336,6 @@ export function createMeshBodyRenderer(init: {
       probe,
       uniformBuffer,
       contactShadow,
-      holeMask,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
         layout: bodyBindGroupLayout,
@@ -378,10 +370,6 @@ export function createMeshBodyRenderer(init: {
 
   function hasMesh(id: string): boolean {
     return meshes.has(id);
-  }
-
-  function holeMaskOf(id: string): GPUTexture | null {
-    return meshes.get(id)?.holeMask ?? null;
   }
 
   function draw(pass: GPURenderPassEncoder, id: string, uniforms: Float32Array): void {
@@ -440,7 +428,6 @@ export function createMeshBodyRenderer(init: {
     setMesh,
     clearMesh,
     hasMesh,
-    holeMaskOf,
     probeOf,
     draw,
     drawContactShadow,

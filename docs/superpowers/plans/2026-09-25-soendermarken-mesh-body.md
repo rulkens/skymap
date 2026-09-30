@@ -181,3 +181,14 @@ Contract:
 - [ ] Rover generated rows unchanged.
 - [ ] Smoke (user): fly to Søndermarken via search → the scan draws, textured and lit, seated on terrain with no gap at the rim; no terrain poking through the lawn; the hole is invisible (no blue/black pit) from above and at a low angle; tier switch small↔medium changes texture sharpness; clicking the park does not select it; Mars rovers unchanged.
 - [ ] Deferred: R2 sync (after merge, from main, on the user's word); multi-hole hosts; de-lighting.
+
+## 2026-09-30 update
+
+The terrain-hole path (Tasks 6, 9, 10 and the hole half of Task 12) was
+deleted after user smoke: no hole mask bake, fetch, or surface-tile bind
+group. In its place, the anchored seat height is the source anchor's DVR90
+height plus a 0.8 m lift authored on `SURFACE_FIXED_SITES.soendermarken`
+(the scan's lawn sits slightly below the terrain tiles that used to be cut
+away around it). `MeshSeatKind`, `computeSmoothNormals`, `simplifyToTriangles`,
+`enuOffsetM`, `MeshTierSource` and `GeoreferencedMeshSource` (now without a
+`holeOutline` field) all stand as shipped.

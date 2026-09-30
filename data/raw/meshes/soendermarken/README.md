@@ -32,16 +32,6 @@ Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`. Re-baking the
 workbench group (a new flight, a wider crop) changes the triangle count and
 bounds below — update this file's line in `../meshes.sha256` afterwards.
 
-## The crop outline
-
-The hole `buildMeshes` cuts under this mesh comes from the SAME crop, not a
-re-derived footprint:
-[`data/geo3d/soendermarken-crop-2019/mesh.outline.json`](../../../geo3d/soendermarken-crop-2019/mesh.outline.json)
-— a closed ring (`ringM`, 45 points) in the source's own ENU metres, committed
-alongside the workbench group. `MESH_SOURCES.soendermarken.georeferenced.holeOutline`
-names this path; `buildMeshes` shifts it by the same anchor→site translation
-it applies to the mesh before rasterising it into the terrain mask.
-
 ## As inspected (2026-09-25)
 
 glTF 2.0, one primitive, one material, `POSITION` + `TEXCOORD_0` only (no

@@ -25,7 +25,7 @@ export type MeshSourceEntry = {
    */
   readonly bodyFromSource?: Mat3;
   /** Present iff an `anchored` `SurfaceFixedSite` uses this key: the source's
-   *  real-world anchor and its terrain-hole crop outline. */
+   *  real-world anchor. */
   readonly georeferenced?: GeoreferencedMeshSource;
 };
 
@@ -105,7 +105,6 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     // Already authored in the body frame (+X east, +Z up) — no remap.
     georeferenced: {
       anchor: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
-      holeOutline: 'data/geo3d/soendermarken-crop-2019/mesh.outline.json',
     },
   },
 };
