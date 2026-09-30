@@ -19,7 +19,8 @@
 
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { CameraDriver } from '../camera/CameraDriver';
+import type { ControlScheme } from '../camera/ControlScheme';
+import type { ControlSchemeId } from '../camera/ControlSchemeId';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
@@ -37,10 +38,10 @@ export type RunFrameDeps = {
    */
   timingService: GpuTimingService;
   /**
-   * Camera-control drivers (`CAMERA_DRIVERS`, overridable by a fixture).
-   * `pickWinner` picks the single highest-priority active winner each frame and
-   * is also the source of truth for "is the camera animating" (render-on-demand
-   * gate). Order in this array is not significant — `priority` decides.
+   * Control-scheme registry (`CONTROL_SCHEMES`, overridable by a fixture); each
+   * scheme's driver table feeds `pickWinner`, which picks the single
+   * highest-priority active winner each frame and is also the source of truth
+   * for "is the camera animating" (render-on-demand gate).
    */
-  readonly drivers: readonly CameraDriver[];
+  readonly controlSchemes: Readonly<Record<ControlSchemeId, ControlScheme>>;
 };

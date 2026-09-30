@@ -86,6 +86,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -274,7 +275,7 @@ function makeState(): EngineState {
 /**
  * Build a `RunFrameDeps` of no-op stubs.  Every dep is inert because the
  * renderer-null bail-out inside `runFrame` short-circuits before any of
- * them are touched; the camera-driver fixtures override `drivers` + `canvas`
+ * them are touched; the camera-driver fixtures override `controlSchemes` + `canvas`
  * + `cb.store` via `makeCamDeps`.
  */
 function makeDeps(store = makeStore()): RunFrameDeps {
@@ -290,7 +291,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     context: {} as unknown as GPUCanvasContext,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 }
 
@@ -327,7 +328,7 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
       clientWidth: 100,
       clientHeight: 100,
     } as unknown as HTMLCanvasElement,
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 }
 
@@ -804,7 +805,10 @@ describe('runFrame — sim clock (Task 8)', () => {
         };
       },
     };
-    const deps: RunFrameDeps = { ...makeCamDeps(state, store), drivers: [stub] };
+    const deps: RunFrameDeps = {
+      ...makeCamDeps(state, store),
+      controlSchemes: { skymap: { drivers: [stub] } },
+    };
 
     runFrame(state, deps, NOW);
 
@@ -1218,7 +1222,7 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, drivers: [probe, ...CAMERA_DRIVERS] };
+    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);
