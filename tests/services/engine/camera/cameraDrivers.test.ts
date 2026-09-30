@@ -358,6 +358,23 @@ describe("the winner's elapsed", () => {
     );
   });
 
+  it('tween eases lookOffset to zero', () => {
+    const store = makeStore();
+    store.dispatch(
+      startCameraTween({ ...TWEEN_DESC, from: { ...TWEEN_DESC.from, lookOffset: [0.4, -0.2] } }),
+    );
+    const s = store.getState() as unknown as RootState;
+    const epochs = epochsAt(s, 'tween', 0);
+
+    const mid = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 500).pose).lookOffset!;
+    const keep = 1 - easeOutCubic(0.5);
+    expect(mid[0]).toBeCloseTo(0.4 * keep, 12);
+    expect(mid[1]).toBeCloseTo(-0.2 * keep, 12);
+    const end = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 1000).pose).lookOffset!;
+    expect(end[0]).toBeCloseTo(0, 12);
+    expect(end[1]).toBeCloseTo(0, 12);
+  });
+
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {
     const store = makeStore();
     store.dispatch(beginDrag());
@@ -504,7 +521,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(result.roll).toBeCloseTo(0.6, 12);
   });
 
-  it('tween eases lookOffset to zero', () => {
+  it('followApproach eases lookOffset to zero', () => {
     // The committed base carries no offset, so the follow ease lands centre-looking.
     const store = makeStore();
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));

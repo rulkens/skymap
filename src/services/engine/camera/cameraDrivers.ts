@@ -324,8 +324,16 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         bodies: ctx.bodies,
         playback: tween,
       });
+      const framed = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
+      const offset = tween.from.lookOffset;
+      if (offset === undefined || !isWorldArm(framed))
+        return { pose: framed, memory: settledMemory(mem) };
+      // Clips author no offset channel, so the start pose's eases out here, on
+      // the same easeOutCubic `tweenToClip` gives every other term.
+      const keep = 1 - easeOutCubic(ctx.elapsedMs / tween.durationMs);
+      const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
+        pose: absoluteArm({ ...framed.pose, lookOffset }),
         memory: settledMemory(mem),
       };
     },
