@@ -4,13 +4,13 @@ import type { DraggedSurfacePose } from '../../@types/camera/DraggedSurfacePose'
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { TILT_GAIN } from '../../data/camera/tiltGain';
 import { anchoredDragRotation, MIN_INCIDENCE_COS } from './anchoredDragRotation';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
+import { lookedSurfacePose } from './lookedSurfacePose';
+import { orbitedSurfacePose } from './orbitedSurfacePose';
 import { pickOnBody } from './pickOnBody';
-import { rotateBasisByQuat } from './rotateBasisByQuat';
 import { rotatedAboutPoint } from './rotatedAboutPoint';
 import { tiltFloorBudgetRad } from './tiltFloorBudgetRad';
 import { dot3 } from '../math/dot3';
@@ -51,26 +51,8 @@ export function draggedSurfacePose(
   const b = arm.basisLocal;
   const right: Vec3 = [b[0], b[1], b[2]];
 
-  if (mode === 'orbit') {
-    // The pan continued past the limb on the frozen sphere: the pose orbits
-    // the centre AGAINST the drag, which is what carries the grabbed limb
-    // along with the cursor. The level settle in `apply` holds the entry
-    // heading, so this is the north-locked orbit, not a free trackball.
-    const up: Vec3 = [b[3], b[4], b[5]];
-    const q = multiplyQuat(quatFromAxisAngle(right, -pitchRad), quatFromAxisAngle(up, -yawRad));
-    return { pose: rotatedAboutPoint(arm, q, BODY_LOCAL_FRAME.centreM), mode };
-  }
-
-  if (mode === 'look') {
-    // Yaw about the LOCAL vertical rather than the camera's own up: that is
-    // what keeps the horizon level at every latitude and azimuth (probe
-    // defect 3). The eye is not touched — this is the only route to the sky.
-    const q = multiplyQuat(
-      quatFromAxisAngle(right, pitchRad),
-      quatFromAxisAngle(normalize3(bodyFixedEyeM(arm)), yawRad),
-    );
-    return { pose: { ...arm, basisLocal: rotateBasisByQuat(q, arm.basisLocal) }, mode };
-  }
+  if (mode === 'orbit') return { pose: orbitedSurfacePose(arm, yawRad, pitchRad), mode };
+  if (mode === 'look') return { pose: lookedSurfacePose(arm, yawRad, pitchRad), mode };
 
   const anchorM = gesture.anchorLocalM;
   // Both modes below latch an anchor, so this only keeps the arm total.
