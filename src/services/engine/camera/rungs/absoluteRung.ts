@@ -46,10 +46,22 @@ export const absoluteRung: RungRow<'absolute'> = {
     return { pose: { ...next, roll }, memory: null, tilt };
   },
   nudge(tilt, framed, delta, ctx) {
+    const { zoom, ...rest } = delta;
+    // Zoom IS the wheel step, roll ride included, so a nudge cannot pop at the engage flip.
+    const zoomed =
+      zoom === undefined
+        ? framed.pose
+        : absoluteRung.step(
+            null,
+            tilt,
+            framed,
+            { kind: 'zoom', factor: Math.exp(zoom), duringGesture: false, cursorPx: null },
+            ctx,
+          ).pose;
     return {
       pose: nudgedWorldPose(
-        framed.pose,
-        delta,
+        zoomed,
+        rest,
         ctx.viewportPx[1],
         ctx.pivot,
         ctx.fovYRad,

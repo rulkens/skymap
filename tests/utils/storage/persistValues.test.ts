@@ -69,9 +69,4 @@ describe('SPLASH_SEEN_VERSION row', () => {
 
     expect(window.localStorage.getItem(SPLASH_SEEN_VERSION.key)).toBeNull();
   });
-
-  it('skips null: null is not a dismissal', () => {
-    expect(SPLASH_SEEN_VERSION.skip?.(null)).toBe(true);
-    expect(SPLASH_SEEN_VERSION.skip?.(1)).toBe(false);
-  });
 });

@@ -15,7 +15,7 @@ export function persistValues(
     const state = store.getState();
     rows.forEach((row, i) => {
       const current = row.select(state);
-      if (current === last[i] || row.skip?.(current)) return;
+      if (current === last[i]) return;
       last[i] = current;
       try {
         window.localStorage.setItem(row.key, row.serialize(current));

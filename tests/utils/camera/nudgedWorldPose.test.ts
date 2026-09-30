@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import { nudgedWorldPose } from '../../../src/utils/camera/nudgedWorldPose';
 import { applyInputToCamera } from '../../../src/services/camera/applyInputToCamera';
-import { zoomedDistance } from '../../../src/utils/camera/zoomedDistance';
 import { PITCH_LIMIT } from '../../../src/data/camera/pitchLimit';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { PivotFraming } from '../../../src/@types/camera/PivotFraming';
@@ -35,10 +34,6 @@ describe('nudgedWorldPose', () => {
     expect(nudged.yaw).toBeCloseTo(dragged.yaw, 12);
     expect(nudged.pitch).toBeCloseTo(dragged.pitch, 12);
     expect(nudged.distance).toBe(dragged.distance);
-  });
-
-  it('world nudge zoom matches zoomedDistance', () => {
-    expect(nudge(POSE, { zoom: 0.3 }).distance).toBe(zoomedDistance(1.5, Math.exp(0.3), PIVOT));
   });
 
   it('world nudge look accumulates lookOffset and clamps pitch', () => {

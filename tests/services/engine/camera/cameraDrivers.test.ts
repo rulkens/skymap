@@ -366,10 +366,14 @@ describe("the winner's elapsed", () => {
     const s = store.getState() as unknown as RootState;
     const epochs = epochsAt(s, 'tween', 0);
 
-    const mid = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 500).pose).lookOffset!;
-    const keep = 1 - easeOutCubic(0.5);
-    expect(mid[0]).toBeCloseTo(0.4 * keep, 12);
-    expect(mid[1]).toBeCloseTo(-0.2 * keep, 12);
+    // The offset keeps the same fraction the tween's own yaw has left to travel.
+    const midPose = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 500).pose);
+    const { from, to } = TWEEN_DESC;
+    const keep = (to.yaw - midPose.yaw) / (to.yaw - from.yaw);
+    expect(keep).toBeGreaterThan(0);
+    expect(keep).toBeLessThan(0.5);
+    expect(midPose.lookOffset![0]).toBeCloseTo(0.4 * keep, 12);
+    expect(midPose.lookOffset![1]).toBeCloseTo(-0.2 * keep, 12);
     const end = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 1000).pose).lookOffset!;
     expect(end[0]).toBeCloseTo(0, 12);
     expect(end[1]).toBeCloseTo(0, 12);

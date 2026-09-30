@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { nudgedSurfacePose } from '../../../src/utils/camera/nudgedSurfacePose';
 import { surfaceStep } from '../../../src/services/camera/surfaceStep';
 import { canonicalBasisAt } from '../../../src/utils/camera/canonicalBasisAt';
+import { imagePlaneBasis } from '../../../src/utils/camera/imagePlaneBasis';
 import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../src/data/camera/cameraTuning';
@@ -75,10 +76,20 @@ describe('nudgedSurfacePose', () => {
         expect(Math.abs(dot(col(b, i), col(b, j)) - (i === j ? 1 : 0))).toBeLessThan(1e-12);
       }
     }
-    // The image roll, read off the new up in the pre-pose's right | up plane.
-    const up = col(b, 1);
-    const roll = Math.atan2(-dot(up, col(POSE.basisLocal, 0)), dot(up, col(POSE.basisLocal, 1)));
-    expect(Math.abs(roll - 0.2)).toBeLessThan(1e-9);
+    // The world arm's roll convention, so a cross-arm sign slip fails here.
+    const expected = imagePlaneBasis(col(POSE.basisLocal, 2), 0.2, col(POSE.basisLocal, 1)).up;
+    for (let i = 0; i < 3; i++) expect(Math.abs(col(b, 1)[i]! - expected[i]!)).toBeLessThan(1e-9);
+  });
+
+  it('body nudge look+roll still writes tilt memory', () => {
+    // Inside the tilt band (h/R 0.03 < tiltFullHR), where a look authors tilt.
+    const [x, y, z] = POSE.eyeRelAnchorM;
+    const k = 1.03 / Math.hypot(x, y, z);
+    const low: BodyFixedPose = { ...POSE, eyeRelAnchorM: [x * k, y * k, z * k] };
+    const looked = nudgedSurfacePose(low, EMPTY_TILT_MEMORY, { look: [0, 0.1] }, CTX);
+    const rolled = nudgedSurfacePose(low, EMPTY_TILT_MEMORY, { look: [0, 0.1], roll: 0.2 }, CTX);
+    expect(looked.tilt.rememberedTiltRad).not.toBe(EMPTY_TILT_MEMORY.rememberedTiltRad);
+    expect(rolled.tilt.rememberedTiltRad).toBe(looked.tilt.rememberedTiltRad);
   });
 
   it('an empty delta returns the pose by reference', () => {

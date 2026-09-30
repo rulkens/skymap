@@ -13,7 +13,6 @@ export const SPLASH_SEEN_VERSION: PersistedValue<number | null> = {
     return Number.isFinite(parsed) ? parsed : null;
   },
   serialize: (v) => String(v),
-  skip: (v) => v === null,
 };
 
 export const PERSISTED_VALUES = [SPLASH_SEEN_VERSION] as const;
