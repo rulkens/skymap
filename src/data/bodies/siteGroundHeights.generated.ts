@@ -14,7 +14,7 @@ export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {
   perseverance: 4259.82301156924,
   spirit: 4267.150660739002,
   opportunity: 4713.81073991086,
-  soendermarken: 18.53,
+  soendermarken: 19.330000000000002,
 };
 
 /** Site id -> the ground's up in the site's radial (east, north, up) frame,

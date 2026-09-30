@@ -27,4 +27,18 @@ describe('anchoredSeat', () => {
     expect(up[1]).toBeCloseTo(0, 6);
     expect(up[2]).toBeCloseTo(1, 6);
   });
+
+  it("adds the site's altitudeM lift on top of the source anchor's height", () => {
+    const anchor = { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 };
+    const site = {
+      id: 'soendermarken',
+      hostId: 'earth',
+      latDeg: anchor.latDeg,
+      lonDeg: anchor.lonDeg,
+      altitudeM: 0.8,
+      seat: 'anchored' as const,
+    };
+
+    expect(anchoredSeat(site, anchor, R).heightM).toBeCloseTo(19.33, 6);
+  });
 });

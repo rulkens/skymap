@@ -25,4 +25,17 @@ describe('sitePointBodyFixed', () => {
     expect(p[1]).toBeCloseTo(825, 9);
     expect(p[2]).toBeCloseTo(550, 9);
   });
+
+  it("ignores an anchored site's altitudeM — already folded into hostRadiusM's baked height", () => {
+    const site: SurfaceFixedSite = {
+      id: 'fixture-anchored',
+      hostId: 'fixture-host',
+      latDeg: 0,
+      lonDeg: 0,
+      altitudeM: 0.8,
+      seat: 'anchored',
+    };
+    const p = sitePointBodyFixed(site, 1000);
+    expect(p[0]).toBeCloseTo(1000, 9);
+  });
 });

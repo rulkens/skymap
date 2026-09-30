@@ -42,11 +42,13 @@ function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
 
 /**
  * anchoredSeat — an anchored site's height and up with NO terrain sample:
- * height is the source anchor's own DVR90 height; up is the anchor's own
- * straight-up as seen from the site, which tilts a hair off true vertical
- * because the site sits `enuOffsetM(anchor, site)` away from where that
- * "straight up" was measured. Exported standalone (no manifest argument) so
- * it is testable with no baked tiles on disk.
+ * height is the source anchor's own DVR90 height plus the site's own
+ * `altitudeM` (the same "lift above the seat" meaning it has for a rover,
+ * baked in here rather than re-applied at runtime — see `sitePointBodyFixed`);
+ * up is the anchor's own straight-up as seen from the site, which tilts a
+ * hair off true vertical because the site sits `enuOffsetM(anchor, site)`
+ * away from where that "straight up" was measured. Exported standalone (no
+ * manifest argument) so it is testable with no baked tiles on disk.
  */
 export function anchoredSeat(
   site: SurfaceFixedSite,
@@ -54,7 +56,10 @@ export function anchoredSeat(
   radiusM: number,
 ): { readonly heightM: number; readonly up: Vec3 } {
   const [e, n] = enuOffsetM(anchor, site, radiusM);
-  return { heightM: anchor.heightM, up: normalize3([-e / radiusM, -n / radiusM, 1]) };
+  return {
+    heightM: anchor.heightM + site.altitudeM,
+    up: normalize3([-e / radiusM, -n / radiusM, 1]),
+  };
 }
 
 const GENERATED_BANNER =
