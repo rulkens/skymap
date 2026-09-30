@@ -43,10 +43,8 @@ const DIAMETER_TEXT = formatDiameterKpc(2 * MILKY_WAY_DISC_RADIUS_KPC);
 const SUN_TO_CENTRE_MPC = Math.hypot(...MILKY_WAY_CENTER_WORLD);
 const SUN_TO_CENTRE_TEXT = formatDistance(SUN_TO_CENTRE_MPC);
 const GALACTIC_YEAR_MYR = galacticYearMyr(SUN_TO_CENTRE_MPC, MILKY_WAY_FACTS.sunOrbitSpeedKmS);
-const GALACTIC_YEAR_TEXT = `${MILKY_WAY_FACTS.sunOrbitSpeedKmS} km/s · one lap ≈ ${Math.round(
-  GALACTIC_YEAR_MYR,
-)} million years`;
-const BLACK_HOLE_TEXT = `Sgr A* · ${(SGR_A_STAR_MASS_SOLAR / 1e6).toFixed(1)} million M☉`;
+const GALACTIC_YEAR_TEXT = `${Math.round(GALACTIC_YEAR_MYR)} Myr · ${MILKY_WAY_FACTS.sunOrbitSpeedKmS} km/s`;
+const BLACK_HOLE_TEXT = `Sgr A* · ${(SGR_A_STAR_MASS_SOLAR / 1e6).toFixed(1)} × 10⁶ M☉`;
 
 function MilkyWayDetailCard({
   target,
@@ -87,8 +85,12 @@ function MilkyWayDetailCard({
           value={MILKY_WAY_FACTS.starCountRange}
         />
         <CardRow
-          label={<InfoTip {...TIPS.milkyWayMass!}>Mass</InfoTip>}
-          value={`${MILKY_WAY_FACTS.stellarMassText} · ${MILKY_WAY_FACTS.totalMassText}`}
+          label={<InfoTip {...TIPS.milkyWayMass!}>Stellar mass</InfoTip>}
+          value={MILKY_WAY_FACTS.stellarMassText}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayMass!}>Total mass</InfoTip>}
+          value={MILKY_WAY_FACTS.totalMassText}
         />
         <CardRow
           label={<InfoTip {...TIPS.oldestStars!}>Oldest stars</InfoTip>}
@@ -99,7 +101,7 @@ function MilkyWayDetailCard({
           value={GALACTIC_YEAR_TEXT}
         />
         <CardRow
-          label={<InfoTip {...TIPS.centralBlackHole!}>Central black hole</InfoTip>}
+          label={<InfoTip {...TIPS.centralBlackHole!}>Black hole</InfoTip>}
           value={BLACK_HOLE_TEXT}
         />
       </div>

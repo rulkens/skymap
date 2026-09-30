@@ -25,7 +25,7 @@ describe('InfoCard Milky Way', () => {
     // Fact rows: diameter derives from MILKY_WAY_DISC_RADIUS_KPC, black-hole
     // mass from SGR_A_STAR_MASS_SOLAR — both should show their derived value.
     expect(screen.getByText(/35\.0 kpc/)).toBeInTheDocument();
-    expect(screen.getByText(/Sgr A\* · 4\.3 million M☉/)).toBeInTheDocument();
+    expect(screen.getByText(/Sgr A\* · 4\.3 × 10⁶ M☉/)).toBeInTheDocument();
   });
 
   it("the Milky Way card's Focus button calls onFocus with MILKY_WAY_INFO", () => {
