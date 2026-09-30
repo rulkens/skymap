@@ -1,13 +1,8 @@
 /**
- * MilkyWayDetailCard — rich panel for the Milky Way singleton.
- *
- * Mirrors the shared galaxy/structure layout (headline row, then image slot +
- * summary in a cardTopRow): the image slot shows the card-shot thumbnail
- * captured under the Milky Way's own focus id, same as a body's.  Shows the
- * name, morphological type (`typeString` — distinct from the union `type`
- * tag), a distance note (we're inside the galaxy, so the usual catalog
- * distance is undefined), and the description.  The focus action lives in
- * the shared CardHeader (the "Focus" pill, shown when the card is pinned).
+ * MilkyWayDetailCard — rich panel for the Milky Way singleton. Facts the engine
+ * already draws (disc diameter, Sun→centre, Sgr A* mass, and the lap time from
+ * them) are derived from those constants so the card can't disagree with the
+ * scene; the rest are literature values in `MILKY_WAY_FACTS`.
  */
 
 import type { ReactNode } from 'react';
@@ -15,6 +10,15 @@ import cx from 'classnames';
 import type { MilkyWayInfo } from '../../../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../../../data/milkyWay/milkyWayInfo';
+import { MILKY_WAY_FACTS } from '../../../../data/milkyWay/milkyWayFacts';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_DISC_RADIUS_KPC,
+} from '../../../../data/milkyWay/galacticCenter';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../data/bodies/sgrAStarMassSolar';
+import { formatDiameterKpc } from '../../../../utils/format/formatDiameterKpc';
+import { formatDistance } from '../../../../utils/format/formatDistance';
+import { galacticYearMyr } from '../../../../utils/astro/galacticYearMyr';
 import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import { MILKY_WAY_FOCUS_ID } from '../../../../services/url/milkyWayFocusId';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
@@ -33,6 +37,14 @@ export type MilkyWayDetailCardProps = {
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
+
+const DIAMETER_TEXT = formatDiameterKpc(2 * MILKY_WAY_DISC_RADIUS_KPC);
+// The world origin is the Sun, so the centre anchor's length is R₀.
+const SUN_TO_CENTRE_MPC = Math.hypot(...MILKY_WAY_CENTER_WORLD);
+const SUN_TO_CENTRE_TEXT = formatDistance(SUN_TO_CENTRE_MPC);
+const GALACTIC_YEAR_MYR = galacticYearMyr(SUN_TO_CENTRE_MPC, MILKY_WAY_FACTS.sunOrbitSpeedKmS);
+const GALACTIC_YEAR_TEXT = `${Math.round(GALACTIC_YEAR_MYR)} Myr · ${MILKY_WAY_FACTS.sunOrbitSpeedKmS} km/s`;
+const BLACK_HOLE_TEXT = `Sgr A* · ${(SGR_A_STAR_MASS_SOLAR / 1e6).toFixed(1)} × 10⁶ M☉`;
 
 function MilkyWayDetailCard({
   target,
@@ -60,8 +72,38 @@ function MilkyWayDetailCard({
           <div className={styles.cardTypeLine}>
             <InfoTip {...TIPS.morphology!}>{target.typeString}</InfoTip>
           </div>
-          <div className={styles.cardDistLine}>{target.distanceNote}</div>
+          <div className={styles.cardDistLine}>
+            <InfoTip {...TIPS.sunToCentre!}>{SUN_TO_CENTRE_TEXT}</InfoTip>
+          </div>
         </div>
+      </div>
+
+      <div className={styles.cardSection}>
+        <CardRow label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>} value={DIAMETER_TEXT} />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayStars!}>Stars</InfoTip>}
+          value={MILKY_WAY_FACTS.starCountRange}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayMass!}>Stellar mass</InfoTip>}
+          value={MILKY_WAY_FACTS.stellarMassText}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.milkyWayMass!}>Total mass</InfoTip>}
+          value={MILKY_WAY_FACTS.totalMassText}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.oldestStars!}>Oldest stars</InfoTip>}
+          value={MILKY_WAY_FACTS.oldestStarsAgeText}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.galacticYear!}>Galactic year</InfoTip>}
+          value={GALACTIC_YEAR_TEXT}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.centralBlackHole!}>Black hole</InfoTip>}
+          value={BLACK_HOLE_TEXT}
+        />
       </div>
 
       <div className={styles.cardSection}>

@@ -15,9 +15,9 @@ import { MILKY_WAY_CENTER_WORLD } from './galacticCenter';
 export const MILKY_WAY_INFO: MilkyWayInfo = {
   type: 'milkyWay',
   displayName: 'Milky Way',
-  description: 'Our home galaxy — you are here',
+  description:
+    'Our home galaxy is a barred spiral: a flat disc of gas, dust and a few hundred billion stars, wound into spiral arms around a central bar. The Sun sits roughly halfway out, in a minor arm called the Orion Spur between two major ones, and circles the centre about once every 220 million years. From inside, we see the disc edge-on as the pale band across the night sky that gave the galaxy its name. At its very centre lies Sagittarius A*, a black hole of about four million solar masses.',
   typeString: 'Barred spiral (SBbc)',
-  distanceNote: '≈ 8 kpc to the galactic centre; we are inside it',
   x: MILKY_WAY_CENTER_WORLD[0],
   y: MILKY_WAY_CENTER_WORLD[1],
   z: MILKY_WAY_CENTER_WORLD[2],
