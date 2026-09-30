@@ -12,6 +12,7 @@
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
@@ -46,11 +47,11 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 export function pickWinner(
   drivers: readonly CameraDriver[],
   s: RootState,
-  approachDone = false,
+  activity: DriverActivity,
 ): CameraDriver {
   let winner: CameraDriver | null = null;
   for (const d of drivers) {
-    if (!d.isActive(s, approachDone)) continue;
+    if (!d.isActive(s, activity)) continue;
     if (winner === null || d.priority > winner.priority) winner = d;
   }
   // Only an empty table reaches the fallback; `resting` is always active.
@@ -272,7 +273,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // focus's framing pose — is stated in world terms and the fold refolds it
     // into whatever arm geometry picks, so an approach owed from inside an arm
     // the focus HOSTS (standing at a rover, focusing its planet) can fly.
-    isActive: (s, approachDone = false) => followsFocus(s) && !approachDone,
+    isActive: (s, activity) => followsFocus(s) && !activity.approachDone,
     pose: followPose,
   },
   {

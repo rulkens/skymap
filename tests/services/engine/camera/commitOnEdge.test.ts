@@ -406,7 +406,7 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     store.dispatch(beginDrag());
-    expect(pickWinner(drivers, store.getState()).id).toBe('orbitDrag');
+    expect(pickWinner(drivers, store.getState(), { approachDone: false }).id).toBe('orbitDrag');
 
     store.dispatch(
       clipStarted({
@@ -414,6 +414,6 @@ describe('commitOnEdge — clip deactivation', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    expect(pickWinner(drivers, store.getState()).id).toBe('clip');
+    expect(pickWinner(drivers, store.getState(), { approachDone: false }).id).toBe('clip');
   });
 });

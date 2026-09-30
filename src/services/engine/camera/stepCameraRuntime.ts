@@ -160,11 +160,13 @@ export function stepCameraRuntime(
   // old memory said, so the two are one fact and cannot disagree on phase. An
   // outside commit hands off too: the commit IS the framing, so no approach
   // is owed, whatever the epoch reads.
-  const approachDone =
-    external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false);
+  const activity = {
+    approachDone:
+      external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false),
+  };
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
-  const winner = pickWinner(drivers, rootState, approachDone);
+  const winner = pickWinner(drivers, rootState, activity);
   const winnerId = winner.id;
   const epochs = advanceEpochs(prev.epochs, {
     intent: rootState.camera,
