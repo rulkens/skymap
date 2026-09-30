@@ -1,6 +1,7 @@
 /** The world arm's row — the ladder's floor: nothing to climb to, and no host body its numbers hang off. */
 import type { RungRow } from '../../../../@types/camera/RungRow';
 import { absoluteArm } from '../../../../utils/camera/absoluteArm';
+import { nudgedWorldPose } from '../../../../utils/camera/nudgedWorldPose';
 import { applyInputToCamera } from '../../../camera/applyInputToCamera';
 import { frameAlignedRoll } from '../frameAlignedRoll';
 
@@ -43,5 +44,19 @@ export const absoluteRung: RungRow<'absolute'> = {
       ctx.tuning,
     );
     return { pose: { ...next, roll }, memory: null, tilt };
+  },
+  nudge(tilt, framed, delta, ctx) {
+    return {
+      pose: nudgedWorldPose(
+        framed.pose,
+        delta,
+        ctx.viewportPx[1],
+        ctx.pivot,
+        ctx.fovYRad,
+        ctx.poseBasis,
+        ctx.upBasis,
+      ),
+      tilt,
+    };
   },
 };
