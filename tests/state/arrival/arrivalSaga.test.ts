@@ -56,6 +56,7 @@ import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
+import { homePose } from '../../../src/services/engine/camera/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
@@ -79,7 +80,7 @@ const LIVE: LiveCameraRuntime = {
 const BOOT_BASE = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 });
 const J2000_MS = Date.UTC(2000, 0, 1, 12);
 
-function build({ milkyWayLanded = true } = {}) {
+function build({ milkyWayLanded = true, home = EARTH_HOME } = {}) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
@@ -102,7 +103,7 @@ function build({ milkyWayLanded = true } = {}) {
       () => ALL_KINDS_ENABLED,
     ),
     cameraRuntime: () => (booted ? LIVE : null),
-    home: EARTH_HOME,
+    home,
   });
   for (const saga of [
     watchSelectionRowsSaga,
@@ -262,5 +263,80 @@ describe('arrivalSaga', () => {
     expect(selectFocusRef(root)).toEqual(EARTH_REF);
     expect(selectSelectedRef(root)).toEqual(EARTH_REF);
     expect(h.status()).toEqual({ status: 'arrived' });
+    // Framed against the wall-clock sun: the store's seed anchor is J2000.
+    const now = unixMsToJulianDays(Date.now());
+    const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+    const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
+    const landed = worldArmOf(root.camera.base);
+    expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
+    expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
+  });
+
+  it('a home that does not seed the selection focuses but never selects', async () => {
+    const h = build({ home: { ...EARTH_HOME, seedSelection: false } });
+    h.arrive({ view: { kind: 'home' } });
+    h.boot();
+    await flush();
+
+    expect(selectFocusRef(h.store.getState())).toEqual(EARTH_REF);
+    expect(selectSelectedRef(h.store.getState())).toBeNull();
+    expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
+  it('a catalog that lands after the arrival timed out does not change focus', async () => {
+    vi.useFakeTimers();
+    const h = build({ milkyWayLanded: false });
+    h.arrive({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } });
+    h.boot();
+    await vi.advanceTimersByTimeAsync(ARRIVAL_TIMEOUT_MS);
+    expect(h.status()).toEqual({ status: 'failed', reason: 'timeout' });
+
+    h.layerRows.landed = true;
+    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(selectFocusRef(h.store.getState())).toEqual(EARTH_REF);
+    expect(selectSelectedRef(h.store.getState())).toEqual(EARTH_REF);
+  });
+
+  it('a load that starts right after an idle report keeps the arrival pending', async () => {
+    const h = build({ milkyWayLanded: false });
+    h.arrive({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } });
+    h.boot();
+    h.store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
+    h.store.dispatch(engineLoadProgressChanged(null));
+    h.store.dispatch(
+      engineLoadProgressChanged({ loadedBytes: 0, totalBytes: 10, inFlightCount: 1 }),
+    );
+    await flush();
+    expect(h.status().status).toBe('pending');
+
+    h.layerRows.landed = true;
+    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    await flush();
+
+    expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
+  it('the backstop waits for the camera to exist', async () => {
+    vi.useFakeTimers();
+    const h = build();
+    h.arrive({ view: { kind: 'focus', id: 'body-mars' } });
+    await vi.advanceTimersByTimeAsync(ARRIVAL_TIMEOUT_MS * 2);
+    expect(h.status().status).toBe('pending');
+
+    h.boot();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
+  it('an engine that errors before the camera exists fails the arrival', async () => {
+    const h = build();
+    h.arrive({ view: { kind: 'focus', id: 'body-mars' } });
+    h.store.dispatch(engineStatusChanged({ kind: 'error', message: 'no adapter' }));
+    await flush();
+
+    expect(h.status()).toEqual({ status: 'failed', reason: 'engine-error' });
   });
 });

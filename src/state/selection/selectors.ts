@@ -73,6 +73,9 @@ export const selectFocusRef = (state: RootState): SelectionRef | null =>
 export const selectPendingFocusId = (state: RootState): string | null =>
   selectSelection(state).pending.focus;
 
+export const selectPendingSelectId = (state: RootState): string | null =>
+  selectSelection(state).pending.select;
+
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
 const selectHoverRow = (state: RootState): SelectionRow | null => selectSelectionRows(state).hover;

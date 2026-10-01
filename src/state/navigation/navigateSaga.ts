@@ -3,19 +3,20 @@
  * arrival (`'cut'`) and every later hash change (`'fly'`). `t` and
  * `orientation` land first, so a subject framed below is framed at the linked
  * instant and in the linked frame. Every camera commit waits for the camera
- * runtime: a commit before `wireInput`'s boot base would be overwritten by it.
+ * runtime (`liveCameraRuntimeSaga`).
  */
 import { call, delay, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
+import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import { updateSelectionFocus, updateSelectionSelect } from '../selection/selectionSlice';
 import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
-import { selectEngineStatus } from '../engine/selectors';
+import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import { commitCameraPose } from '../camera/cameraSlice';
 import { selectCameraBase } from '../camera/selectors';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
@@ -39,18 +40,6 @@ import type { LiveCameraRuntime, SagaContext } from '../../store/types';
 const OK: NavigateOutcome = { ok: true };
 const UNKNOWN_ID: NavigateOutcome = { ok: false, reason: 'unknown-id' };
 
-function* liveCameraRuntimeSaga() {
-  const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
-  let runtime = cameraRuntime();
-  while (runtime === null) {
-    // Any action: `wireInput`'s boot commit is the first one after the
-    // runtime exists, and nothing else announces it.
-    yield* take('*');
-    runtime = cameraRuntime();
-  }
-  return runtime;
-}
-
 function* commitSaga(pose: FramedCameraPose) {
   yield* call(liveCameraRuntimeSaga);
   yield* put(commitCameraPose(pose));
@@ -71,10 +60,12 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
     const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
     if (idle === undefined) continue;
     // A catalog's count report, which resolves its ids, trails the idle
-    // report it lands with by an async hop.
+    // report it lands with by an async hop; a load that started in that hop
+    // may still bring the id.
     yield* delay(0);
     const ready = (yield* select(selectEngineStatus)).kind === 'ready';
-    if (ready && (yield* select(selectPendingFocusId)) !== null) return UNKNOWN_ID;
+    const stillIdle = (yield* select(selectLoadProgress)) === null;
+    if (ready && stillIdle && (yield* select(selectPendingFocusId)) !== null) return UNKNOWN_ID;
   }
   const row = (yield* select(selectFocusRow))!;
   if (!ROW_FOCUSABLE[row.type]) return OK;

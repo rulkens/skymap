@@ -9,15 +9,19 @@
  * deferral if a newer requestFocus arrives. Its sibling watchRequestSelectSaga
  * writes the select slot off the same shared loop; React never resolves ids.
  */
-import { takeLatest, put } from 'typed-redux-saga';
+import { takeLatest, put, select } from 'typed-redux-saga';
 
 import { requestFocus } from './requestFocus';
 import { updateSelectionFocus } from './selectionSlice';
+import { selectPendingFocusId } from './selectors';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 
 export function* watchRequestFocusSaga() {
   yield* takeLatest(requestFocus, function* (action) {
     const ref = yield* resolveFocusRefDeferringSaga(action.payload.id);
+    // A request retired while it deferred (a failed arrival, a cleared
+    // selection) must not land when its catalog finally does.
+    if ((yield* select(selectPendingFocusId)) !== action.payload.id) return;
     yield* put(updateSelectionFocus(ref, action.payload.transition));
   });
 }

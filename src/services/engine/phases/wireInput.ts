@@ -92,7 +92,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   });
 
   // The neutral base the runtime starts from: the composition's home pose at
-  // the live wall-clock instant `startLoop`'s `goLive` re-anchors to. The view
+  // the live wall-clock instant `arrivalSaga`'s `goLive` anchored to. The view
   // itself is `arrivalSaga`'s, which commits over this base in the same
   // dispatch, before any frame draws.
   const simDays = unixMsToJulianDays(Date.now());

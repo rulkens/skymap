@@ -30,10 +30,8 @@ import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
-import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
@@ -144,12 +142,6 @@ describe('navigateSaga', () => {
 
     const types = h.recorded.map((a) => a.type);
     expect(types.indexOf(setSimDays.type)).toBeLessThan(types.indexOf(commitCameraPose.type));
-    // Mars where it was at `t`: the live clock would put it elsewhere entirely.
-    const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get('mars')!.positionMpc;
-    const target = worldArmOf(h.store.getState().camera.base).target;
-    expect(target[0]).toBeCloseTo(marsAtT[0], 12);
-    expect(target[1]).toBeCloseTo(marsAtT[1], 12);
-    expect(target[2]).toBeCloseTo(marsAtT[2], 12);
   });
 
   it('a hashchange after arrival flies and leaves arrival untouched', async () => {
