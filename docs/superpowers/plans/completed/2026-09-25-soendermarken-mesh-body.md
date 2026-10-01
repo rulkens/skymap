@@ -176,11 +176,11 @@ Contract:
 
 ## Definition of Done
 
-- [ ] Deliverables: `MeshSeatKind`, `computeSmoothNormals`, `simplifyToTriangles`, `enuOffsetM`, `rasterizeHoleMask`, `MeshTierSource`, `GeoreferencedMeshSource`; `meshes/soendermarken-{small,medium}.*`, `meshes/soendermarken_hole.webp` in the worktree manifest.
-- [ ] Typecheck + suite green in CI.
-- [ ] Rover generated rows unchanged.
-- [ ] Smoke (user): fly to Søndermarken via search → the scan draws, textured and lit, seated on terrain with no gap at the rim; no terrain poking through the lawn; the hole is invisible (no blue/black pit) from above and at a low angle; tier switch small↔medium changes texture sharpness; clicking the park does not select it; Mars rovers unchanged.
-- [ ] Deferred: R2 sync (after merge, from main, on the user's word); multi-hole hosts; de-lighting.
+- [x] Deliverables: `MeshSeatKind`, `computeSmoothNormals`, `simplifyToTriangles`, `enuOffsetM`, `MeshTierSource`; `meshes/soendermarken-{small,medium}.*` in the worktree manifest (hole mask + `GeoreferencedMeshSource` dropped, see the 2026-09-30 update).
+- [x] Typecheck + suite green in CI.
+- [x] Rover generated rows unchanged.
+- [x] Smoke (user): fly to Søndermarken via search → the scan draws, textured and lit, seated on terrain with no gap at the rim; no terrain poking through the lawn; the hole is invisible (no blue/black pit) from above and at a low angle; tier switch small↔medium changes texture sharpness; clicking the park does not select it; Mars rovers unchanged.
+- [x] Deferred: R2 sync (after merge, from main, on the user's word); multi-hole hosts; de-lighting.
 
 ## 2026-09-30 update
 
