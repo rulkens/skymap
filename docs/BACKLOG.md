@@ -35,6 +35,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
+- [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **Derive `SettingsSnapshot` from the Layer registry** `needs-design` — the takeover's captured-cluster list is a hand-written `Pick<>` a new Layer must remember to join; two Layers didn't and were restored-over until #793 patched them by hand. → [details](backlog/2026-09-21-derive-settings-snapshot.md)
 - [ ] **`SCENE_ANCHORS`/`AnchorBody` is the place table, filed under a body name** `needs-design` — the black-hole prep's first non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`) exposed that this table was never body-only, just never used for anything else. → [details](backlog/2026-09-22-scene-anchors-are-places.md)
 - [ ] **The solar system hangs off the Sun; it could hang off a place** `deferred` — a `'solar-system'` `PlaceId` at the heliocentre would re-key the eleven `focusId: 'sun'` element rows and both Sun-anchored regions the way R15 did for the Galactic Centre; no reader needs it until a barycentric ephemeris, a moving render origin, or the seeded stars leaving the body tables. → [details](backlog/2026-09-23-solar-system-place.md)
