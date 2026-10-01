@@ -15,7 +15,7 @@
  * ### One publish per SETTLED state, not one per trigger
  *
  * `debounce(0, …)` rather than `takeEvery`, and the reason is the history stack.
- * Applying one URL is not one action: `watchHashReadSaga`'s `applyHash` walks the
+ * Applying one URL is not one action: `watchHashReadSaga`'s `applyNavigation` walks the
  * table and dispatches a row's worth of actions at a time, each of them a write
  * trigger in its own right, and the selection reconciler adds hops of its own on
  * top. Under `takeEvery` every one of those published, so applying
@@ -28,7 +28,7 @@
  * A per-row write can only ever be right by luck, because no row's write output
  * is a function of its own row alone: `write` composes the whole body, so it is
  * correct exactly when every row has landed. `delay(0)` is a MACROTASK, which is
- * strictly longer than the synchronous `applyHash` burst plus the microtask and
+ * strictly longer than the synchronous `applyNavigation` burst plus the microtask and
  * scheduler hops the reconciler takes, so the worker composes once, from a store
  * nothing is still in the middle of changing.
  *

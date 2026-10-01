@@ -17,7 +17,7 @@
  *
  * Two of those are load-bearing far out of proportion to their line count. The
  * boot suppression is what stops a bare page load dispatching `clearSelection`
- * over the engine's Earth seed; the empty-value routing is the single
+ * over the arrival's home seed; the empty-value routing is the single
  * expression that makes `HashParamSource.read`'s "never called with an empty
  * value" contract true for every row at once.
  *
@@ -46,7 +46,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { arrived } from '../../../src/state/arrival/arrivalSlice';
+import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
@@ -108,31 +108,25 @@ function buildHarness(arrivalBody: string) {
 }
 
 describe('watchHashReadSaga', () => {
-  it('turns an arrival deep link into a select plus a fly', () => {
-    const { recorded } = buildHarness('focus=m31');
+  it('hands the arrival link to arrivalSaga as one intent, applying nothing itself', () => {
+    const { recorded } = buildHarness('focus=m31&orientation=galactic');
 
-    // The select + fly, because arriving by URL is meant to look like a scene
-    // click (pins the InfoCard) plus a fly (moves the camera) — a `read` that
-    // lost one of them would still navigate, or still pin, and look almost
-    // right. `arrived` follows: the write half takes it to canonicalize the
-    // link in place instead of pushing over it (`hashHistoryIntegrity`).
+    // The first view is `arrivalSaga`'s: a select or focus put here would race
+    // the cut it makes once the camera exists.
     expect(recorded).toEqual([
-      requestSelect('m31'),
-      requestFocus({ id: 'm31', transition: 'fly' }),
-      arrived(),
+      arrivalPending({ view: { kind: 'focus', id: 'm31' }, orientation: 'galactic' }),
     ]);
   });
 
-  it('dispatches nothing but the arrival on a bare URL', () => {
+  it('consults no absent row on a bare arrival URL', () => {
     const { recorded } = buildHarness('');
 
-    // The most load-bearing case in this file. Every param is absent, and the
-    // boot read must consult NO row's `readAbsent` — `clearSelection()` here
-    // would race `wireInput`'s home seed on every ordinary page load, and the
-    // loser is whichever landed first. An exact list rather than a
+    // Every param is absent, and the boot read must consult NO row's
+    // `readAbsent` — `clearSelection()` here would race the arrival's home seed
+    // on every ordinary page load. An exact list rather than a
     // `not.toContainEqual(clearSelection())` so the same guarantee holds for a
     // row added later, which will have its own default to over-assert.
-    expect(recorded).toEqual([arrived()]);
+    expect(recorded).toEqual([arrivalPending({ view: { kind: 'home' } })]);
   });
 
   it('restores param defaults when a hashchange arrives bare', () => {
@@ -166,31 +160,19 @@ describe('watchHashReadSaga', () => {
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
   });
 
-  it('commits a pose the same way on arrival and on a later navigation', () => {
-    // The codec round-trips an explicit `roll`, which `absoluteArm` leaves off.
+  it('lands a focus link’s pose before it requests the focus, as a cut', () => {
+    // A linked pose IS the framing: the focus must not fly away from it. The
+    // link's own writes land before the absent rows' defaults fire.
     const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
-    const { recorded, emit } = buildHarness(`pose=${encodeFramedPose(pose)}`);
-
-    expect(recorded).toEqual([commitCameraPose(pose), arrived()]);
+    const { recorded, emit } = buildHarness('');
     recorded.length = 0;
 
-    emit(`pose=${encodeFramedPose(pose)}`);
+    emit(`focus=m31&pose=${encodeFramedPose(pose)}`);
 
-    // Same on a hashchange: the link's own writes land before the absent
-    // rows' defaults (focus, t, orientation) fire.
-    expect(recorded[0]).toEqual(commitCameraPose(pose));
-  });
-
-  it('lands a focus link’s pose before it requests the focus, as a cut', () => {
-    // A linked pose IS the framing: the focus must not fly away from it.
-    const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
-    const { recorded } = buildHarness(`focus=m31&pose=${encodeFramedPose(pose)}`);
-
-    expect(recorded).toEqual([
+    expect(recorded.slice(0, 3)).toEqual([
       commitCameraPose(pose),
       requestSelect('m31'),
       requestFocus({ id: 'm31', transition: 'cut' }),
-      arrived(),
     ]);
   });
 

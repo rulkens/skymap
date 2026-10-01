@@ -29,6 +29,7 @@ import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSa
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
 import { watchHashSaga } from '../state/url/watchHashSaga';
+import { arrivalSaga } from '../state/arrival/arrivalSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -51,5 +52,6 @@ export function* mainSaga() {
     watchReplayInspectedPathSaga(),
     watchGoHomeSaga(),
     watchHashSaga(),
+    arrivalSaga(),
   ]);
 }

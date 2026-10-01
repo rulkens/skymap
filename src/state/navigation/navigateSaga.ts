@@ -5,13 +5,17 @@
  * instant and in the linked frame. Every camera commit waits for the camera
  * runtime: a commit before `wireInput`'s boot base would be overwritten by it.
  */
-import { call, getContext, put, select, take } from 'typed-redux-saga';
+import { call, delay, getContext, put, race, select, take } from 'typed-redux-saga';
+import type { Action } from '@reduxjs/toolkit';
+import type { SagaGenerator } from 'typed-redux-saga';
 
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import { updateSelectionFocus, updateSelectionSelect } from '../selection/selectionSlice';
 import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
+import { engineLoadProgressChanged } from '../engine/engineSlice';
+import { selectEngineStatus } from '../engine/selectors';
 import { commitCameraPose } from '../camera/cameraSlice';
 import { selectCameraBase } from '../camera/selectors';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
@@ -33,6 +37,7 @@ import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { LiveCameraRuntime, SagaContext } from '../../store/types';
 
 const OK: NavigateOutcome = { ok: true };
+const UNKNOWN_ID: NavigateOutcome = { ok: false, reason: 'unknown-id' };
 
 function* liveCameraRuntimeSaga() {
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
@@ -51,22 +56,34 @@ function* commitSaga(pose: FramedCameraPose) {
   yield* put(commitCameraPose(pose));
 }
 
-// Lands in the same tick as the focus row, so the frame that first follows a
-// moving body already reads the commit as its framing and owes no approach.
-function* frameFocusSaga(runtime: LiveCameraRuntime) {
+const isLoadIdle = (action: Action): boolean =>
+  engineLoadProgressChanged.match(action) && action.payload === null;
+
+// Commits in the same tick the focus row lands, so the frame that first
+// follows a moving body already reads the commit as its framing and owes no
+// approach. An id still unresolved once every load has gone quiet names
+// nothing the loaded catalogs hold.
+function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutcome> {
   while (
     (yield* select(selectPendingFocusId)) !== null ||
     (yield* select(selectFocusRow)) === null
   ) {
-    yield* take(setSelectionRow);
+    const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
+    if (idle === undefined) continue;
+    // A catalog's count report, which resolves its ids, trails the idle
+    // report it lands with by an async hop.
+    yield* delay(0);
+    const ready = (yield* select(selectEngineStatus)).kind === 'ready';
+    if (ready && (yield* select(selectPendingFocusId)) !== null) return UNKNOWN_ID;
   }
   const row = (yield* select(selectFocusRow))!;
-  if (!ROW_FOCUSABLE[row.type]) return;
+  if (!ROW_FOCUSABLE[row.type]) return OK;
   // The committed base, not the runtime's `from`: at boot the runtime still
   // reports its pre-commit placeholder for one frame.
   const base = yield* select(selectCameraBase);
   const from = isWorldArm(base) ? base.pose : runtime.from;
   yield* put(commitCameraPose(absoluteArm(framingPose(row, runtime.fovYRad, from))));
+  return OK;
 }
 
 function* homeSaga() {
@@ -82,7 +99,10 @@ function* homeSaga() {
   yield* put(updateSelectionFocus(home.focus.ref, 'cut'));
 }
 
-export function* navigateSaga(intent: LinkIntent, transition: Transition) {
+export function* navigateSaga(
+  intent: LinkIntent,
+  transition: Transition,
+): SagaGenerator<NavigateOutcome> {
   if (intent.t !== undefined) {
     for (const action of manualPausedAtActions(new Date(intent.t))) yield* put(action);
   }
@@ -104,12 +124,10 @@ export function* navigateSaga(intent: LinkIntent, transition: Transition) {
       const focusTransition = view.pose === undefined ? transition : 'cut';
       yield* put(requestSelect(view.id));
       yield* put(requestFocus({ id: view.id, transition: focusTransition }));
-      if (view.pose === undefined && transition === 'cut') {
-        yield* call(frameFocusSaga, yield* call(liveCameraRuntimeSaga));
-      }
-      return OK;
+      if (view.pose !== undefined || transition === 'fly') return OK;
+      return yield* call(frameFocusSaga, yield* call(liveCameraRuntimeSaga));
     }
     default:
-      return { ok: false, reason: 'unknown-id' } satisfies NavigateOutcome;
+      return UNKNOWN_ID;
   }
 }

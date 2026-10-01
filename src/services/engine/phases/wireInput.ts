@@ -18,17 +18,15 @@ import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
-import { selectUrlPose } from '../../../state/camera/selectors';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
+import { selectSelectedRef } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { isCinemaMode } from '../../../utils/url/isCinemaMode';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -93,36 +91,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     resolvePick: deps.selection.resolvePick,
   });
 
-  // Boot straight into the composition's home pose. The live wall-clock instant
-  // `startLoop`'s `goLive` re-anchors the sim clock to, NOT
-  // `deriveSimDays(state.time, …)` — that would run against the still-placeholder
-  // J2000 anchor at this phase and frame the body where it isn't, giving a jump
-  // on the first follow frame.
+  // The neutral base the runtime starts from: the composition's home pose at
+  // the live wall-clock instant `startLoop`'s `goLive` re-anchors to. The view
+  // itself is `arrivalSaga`'s, which commits over this base in the same
+  // dispatch, before any frame draws.
   const simDays = unixMsToJulianDays(Date.now());
-  // The committed orientation basis the boot pose encodes through, so first-paint
-  // yaw/pitch round-trip under the same frame the render path decodes with.
+  // The URL's orientation is already in the store: `createEngine` dispatches
+  // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap this phase
+  // runs inside, and the arrival applies it on the boot read.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
 
   state.booted = true;
 
-  // Without this seed the first resting frame returns the placeholder `base`
-  // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
-  // camera jump on frame one.
-  //
-  // The URL orientation frame — and, the same gap, a `#pose=` link's
-  // `camera.urlPose` — are already in the store: `createEngine` dispatches
-  // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE this
-  // phase runs inside; moving that dispatch into a phase regresses both.
-  //
-  // A parked `urlPose` IS the boot pose — a `#pose=` deep link's exact camera
-  // — and wins outright over the computed home framing; the park itself stays
-  // put, spent by the arrival focus, not this seed.
-  //
   // Seeded BEFORE the commit below, off the still-placeholder store — the one
   // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
   // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
-  const urlPose = selectUrlPose(store.getState());
-  const committed = urlPose ?? homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis);
   state.cameraRuntime = seedCameraRuntime({
     state: store.getState(),
     projection: {
@@ -132,28 +115,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       far: FAR_CLIP_MPC,
     },
   });
-  store.dispatch(commitCameraPose(committed));
-
-  // Boot IS the home state: the sim clock boots live, so Earth moves from the
-  // first frame and a bare pose would let the globe slide out of frame.
-  //
-  // The guard is INTENT, not resolved refs: a galaxy/star id from `#focus=`
-  // defers until its catalog pulse lands, so the resolved ref slot reads null
-  // for the whole boot window this phase runs in. A ref-only guard would seed
-  // the home body over a deep link that is merely still resolving, and
-  // `resolveRef` would then clear the pending id along with it. Consequence
-  // accepted: a junk `#focus=zzz` parks forever and suppresses the seed for
-  // that session.
-  const rootState = store.getState();
-  if (home.focus !== null && !selectHasSelectionIntent(rootState)) {
-    // Cinema is an app mode gating what the composition asked for — the same
-    // class of override as the deep-link deference guard above — so it stays
-    // a phase-level gate rather than a composition knob.
-    if (home.seedSelection && !isCinemaMode()) {
-      store.dispatch(updateSelectionSelect(home.focus.ref));
-    }
-    store.dispatch(updateSelectionFocus(home.focus.ref));
-  }
+  store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
 
   // Callbacks are the semantic engine actions: `inputBindings` already converts
   // `e.clientX/Y` to CSS pixels and owns the requestRender wake for

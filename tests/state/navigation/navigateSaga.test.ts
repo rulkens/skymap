@@ -26,6 +26,7 @@ import { commitCameraPose, startCameraTween } from '../../../src/state/camera/ca
 import { setSimDays } from '../../../src/state/time/timeSlice';
 import { selectFocusRef } from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -162,8 +163,8 @@ describe('navigateSaga', () => {
     );
     const h = build();
     h.run(watchHashReadSaga);
+    h.store.dispatch(arrived());
     const arrival = selectArrival(h.store.getState());
-    expect(arrival.status).not.toBe('pending');
 
     emit(`focus=${MILKY_WAY_FOCUS_ID}`);
     await flush();

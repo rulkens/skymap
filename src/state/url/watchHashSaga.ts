@@ -52,12 +52,10 @@
  * its own fork needs it.
  *
  * `setSagaContext` is what ends the wait, and `createEngine` calls it
- * synchronously, before it kicks off the async bootstrap IIFE. So the arrival
- * read's `setOrientation` and focus request are committed by the time
- * `wireInput` reads `selectOrientation` for `computeInitialCamera` and checks
- * `selectHasSelectionIntent` for its Earth seed; see `wireInput`'s boot-ordering
- * note, which depends on that gap and would break if registration moved into the
- * bootstrap phases. A store nobody registers a context on never reads or writes
+ * synchronously, before it kicks off the async bootstrap IIFE. So the arrival's
+ * `setOrientation` is committed by the time `wireInput` reads
+ * `selectOrientation` for its boot base, which would break if registration
+ * moved into the bootstrap phases. A store nobody registers a context on never reads or writes
  * the hash at all — the honest answer for a store with nothing behind it.
  */
 

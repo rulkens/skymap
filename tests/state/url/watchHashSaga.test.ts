@@ -40,10 +40,8 @@ import { writeHashBody } from '../../../src/services/url/writeHashBody';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { sagaContextRegistered } from '../../../src/store/sagaContextRegistered';
 import { watchHashSaga } from '../../../src/state/url/watchHashSaga';
-import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { arrived } from '../../../src/state/arrival/arrivalSlice';
+import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 const write = vi.mocked(writeHashBody);
@@ -107,11 +105,7 @@ describe('watchHashSaga', () => {
     register();
     await settle();
 
-    expect(recorded).toEqual([
-      requestSelect('m31'),
-      requestFocus({ id: 'm31', transition: 'fly' }),
-      arrived(),
-    ]);
+    expect(recorded).toEqual([arrivalPending({ view: { kind: 'focus', id: 'm31' } })]);
   });
 
   it('holds the write half until the saga context is registered', async () => {
