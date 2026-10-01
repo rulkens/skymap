@@ -19,11 +19,10 @@ import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import type { RootState } from '../../../src/store/types';
 import { stateAfter } from '../../fixtures/stateAfter';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -68,10 +67,8 @@ afterEach(() => {
 });
 
 describe('focus row', () => {
-  it('reads a value as a pinned card plus a camera fly', () => {
-    // Arriving by URL must look the same as a scene click (requestSelect pins
-    // the InfoCard) plus a fly (requestFocus moves the camera).
-    expect(focusSource.read('m31')).toEqual([requestSelect('m31'), requestFocus('m31')]);
+  it('reads a value as a focus view on that id', () => {
+    expect(focusSource.read('m31')).toEqual({ view: { kind: 'focus', id: 'm31' } });
   });
 
   it('reads an absent value as a cleared selection', () => {
@@ -106,16 +103,14 @@ describe('focus row', () => {
 });
 
 describe('t row', () => {
-  it('reads an ISO instant as manual-and-paused at that moment', () => {
-    const actions = timeSource.read(J2000_ISO);
-    expect(actions.map((action) => action.type)).toEqual(['time/setSimDays', 'time/pause']);
-    expect(actions[0]).toMatchObject({ payload: { simDays: CONST_J2000 } });
+  it('reads an ISO instant as that Unix instant', () => {
+    expect(timeSource.read(J2000_ISO)).toEqual({ t: J2000_UNIX_MS });
   });
 
   it('reads an unparseable value as no change at all', () => {
     // The hash is external input; a hand-typed timestamp is not a reason to
     // move the clock somewhere arbitrary.
-    expect(timeSource.read('not-a-timestamp')).toEqual([]);
+    expect(timeSource.read('not-a-timestamp')).toEqual({});
   });
 
   it('reads an absent value as live-at-now', () => {
@@ -127,7 +122,7 @@ describe('t row', () => {
   });
 
   it('writes a manual anchor as an ISO instant', () => {
-    const actions = timeSource.read(J2000_ISO);
+    const actions = manualPausedAtActions(new Date(J2000_ISO));
     expect(timeSource.write(stateAfter(...actions))).toBe(J2000_ISO);
   });
 
@@ -138,12 +133,12 @@ describe('t row', () => {
 });
 
 describe('orientation row', () => {
-  it('reads a recognised frame as a snap', () => {
-    expect(orientationSource.read('galactic')).toEqual([setOrientation('galactic')]);
+  it('reads a recognised frame as that orientation', () => {
+    expect(orientationSource.read('galactic')).toEqual({ orientation: 'galactic' });
   });
 
   it('reads a junk frame as no change at all', () => {
-    expect(orientationSource.read('polaris')).toEqual([]);
+    expect(orientationSource.read('polaris')).toEqual({});
   });
 
   it('reads an absent value as the default frame', () => {
@@ -159,23 +154,14 @@ describe('pose row', () => {
     pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, roll: 0.42 },
   };
 
-  it('reads a valid value as a park AND a commit, park first', () => {
-    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual([
-      applyUrlPose(WORLD_ARM),
-      commitCameraPose(WORLD_ARM),
-    ]);
-  });
-
-  it('reads before focus — the fly-to tween must see a parked urlPose', () => {
-    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
-    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
-    const poseIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'pose');
-    const focusIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'focus');
-    expect(poseIndex).toBeLessThan(focusIndex);
+  it('reads a valid value as a pose view', () => {
+    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual({
+      view: { kind: 'pose', pose: WORLD_ARM },
+    });
   });
 
   it('reads a malformed value as no change at all', () => {
-    expect(poseSource.read('not,a,pose')).toEqual([]);
+    expect(poseSource.read('not,a,pose')).toEqual({});
   });
 
   it('reads an absent value as no change at all — the camera is left alone', () => {

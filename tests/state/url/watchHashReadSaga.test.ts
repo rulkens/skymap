@@ -167,10 +167,25 @@ describe('watchHashReadSaga', () => {
 
     emit(`pose=${encodeFramedPose(pose)}`);
 
-    // Same row order on a hashchange: pose is read first (table order), so it
-    // applies before the other rows' absent arms (focus, t, orientation) fire.
+    // Same on a hashchange: the link's own writes land before the absent
+    // rows' defaults (focus, t, orientation) fire.
     expect(recorded[0]).toEqual(applyUrlPose(pose));
     expect(recorded[1]).toEqual(commitCameraPose(pose));
+  });
+
+  it('parks a focus link’s pose before it requests the focus', () => {
+    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
+    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
+    const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
+    const { recorded } = buildHarness(`focus=m31&pose=${encodeFramedPose(pose)}`);
+
+    expect(recorded).toEqual([
+      applyUrlPose(pose),
+      commitCameraPose(pose),
+      requestSelect('m31'),
+      requestFocus('m31'),
+      hashArrivalApplied(),
+    ]);
   });
 
   it('detaches the channel subscriber when cancelled', () => {

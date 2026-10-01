@@ -10,8 +10,8 @@
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
  * read-only row (`write: () => null`, `pose` today) composes nothing into the
- * body, so this rule says nothing about its position — its place in the table
- * is fixed by READ order instead (below).
+ * body, so this rule says nothing about its position. Read order is not a
+ * table fact at all: `linkIntentFrom` merges the rows' contributions.
  *
  * ### The `writesOn` completeness contract
  *
@@ -77,16 +77,13 @@ import type { Action } from '@reduxjs/toolkit';
 import type { HashParamSource } from '../../@types/state/url/HashParamSource';
 import { URL_HASH_FOR } from '../../services/url/urlHashFor';
 import { requestFocus } from '../selection/requestFocus';
-import { requestSelect } from '../selection/requestSelect';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
-import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
-import { applyUrlPose, commitCameraPose } from '../camera/cameraSlice';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -106,9 +103,8 @@ const isFocusSlotRow = (action: Action): boolean =>
 
 /**
  * `focus` — the selected/framed target. The write reuses `URL_HASH_FOR` (the
- * FocusableTarget → id-segment codec); the read makes a URL arrival look like a
- * scene click plus a fly, which is why it returns TWO actions:
- * `requestSelect(id)` pins the InfoCard and `requestFocus(id)` flies the camera.
+ * FocusableTarget → id-segment codec); the read names the subject, which
+ * `applyLinkIntent` turns into a scene click plus a fly.
  *
  * Absence clears the selection — but only on a hashchange, which the reading
  * pass enforces by never calling `readAbsent` on the boot read. A plain load
@@ -163,7 +159,7 @@ const focusSource: HashParamSource = {
     // empty id (non-encodable row) contributes no param, same as null.
     return URL_HASH_FOR[focused.type](focused) || null;
   },
-  read: (value) => [requestSelect(value), requestFocus(value)],
+  read: (value) => ({ view: { kind: 'focus', id: value } }),
   readAbsent: () => [clearSelection()],
 };
 
@@ -182,12 +178,10 @@ const focusSource: HashParamSource = {
  * share" freezes exactly the moment on screen.
  *
  * ── read ──
- * A parseable ISO string restores manual + paused at that instant via
- * `manualPausedAtActions` — the same shared operation the date-entry popover
- * commits through, so the shared-`nowMs` invariant that holds the instant
- * exactly is stated once, where it is sampled. An unparseable value yields no
- * actions: the hash is external input and a hand-typed timestamp is not a reason
- * to move the clock somewhere arbitrary.
+ * A parseable ISO string contributes its Unix instant, which `applyLinkIntent`
+ * lands as manual + paused. An unparseable value contributes nothing: the hash
+ * is external input and a hand-typed timestamp is not a reason to move the
+ * clock somewhere arbitrary.
  *
  * ── readAbsent ──
  * No `t` on the URL means live-at-now, so a back/forward navigation away from a
@@ -205,8 +199,7 @@ const timeSource: HashParamSource = {
   },
   read: (value) => {
     const unixMs = Date.parse(value);
-    if (Number.isNaN(unixMs)) return [];
-    return manualPausedAtActions(new Date(unixMs));
+    return Number.isNaN(unixMs) ? {} : { t: unixMs };
   },
   readAbsent: () => [goLiveNowAction()],
 };
@@ -226,8 +219,8 @@ const timeSource: HashParamSource = {
  * ── read ──
  * The value is routed through `isOrientationFrameId` first — the hash is
  * external input and could carry a hand-typed junk frame. A recognised frame
- * SNAPS via `setOrientation`; it deliberately does NOT start a frame tween, so a
- * shared link reproduces the composition instantly with no slerp on arrival.
+ * SNAPS; it deliberately does NOT start a frame tween, so a shared link
+ * reproduces the composition instantly with no slerp on arrival.
  */
 const orientationSource: HashParamSource = {
   key: 'orientation',
@@ -248,7 +241,7 @@ const orientationSource: HashParamSource = {
     const orientation = selectOrientation(state);
     return orientation === DEFAULT_ORIENTATION ? null : orientation;
   },
-  read: (value) => (isOrientationFrameId(value) ? [setOrientation(value)] : []),
+  read: (value) => (isOrientationFrameId(value) ? { orientation: value } : {}),
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
@@ -259,13 +252,7 @@ const orientationSource: HashParamSource = {
  * would fight `watchHashWriteSaga`'s own coalescing for no reader anyone
  * shares. Absence means "leave the camera alone", boot and navigation alike.
  *
- * `read` both commits the pose (so it draws immediately) and parks it in
- * `camera.urlPose` — the link owns the camera until the arrival focus spends
- * the park (`spendUrlPose`, in `watchFocusTweenSaga`). Must run BEFORE
- * `focusSource` (table order below) so a `#focus=…&pose=…` link's fly-to
- * tween sees the park and stands down. The commit gets its OWN object: the
- * loop detects `wireInput`'s boot commit by `base` identity, and a commit
- * aliasing the park would make that boot commit invisible to frame one.
+ * A pose beside a `focus` is that focus's arrival pose (`combineLinkViews`).
  */
 const poseSource: HashParamSource = {
   key: 'pose',
@@ -276,9 +263,9 @@ const poseSource: HashParamSource = {
     const framed = decodeFramedPose(value);
     if (framed === null) {
       console.warn(`hashParamSources: malformed pose param, ignoring: ${value}`);
-      return [];
+      return {};
     }
-    return [applyUrlPose(framed), commitCameraPose({ ...framed })];
+    return { view: { kind: 'pose', pose: framed } };
   },
   readAbsent: () => [],
 };
