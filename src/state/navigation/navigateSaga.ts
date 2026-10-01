@@ -5,7 +5,7 @@
  * instant and in the linked frame. Every camera commit waits for the camera
  * runtime (`liveCameraRuntimeSaga`).
  */
-import { call, delay, getContext, put, race, select, take } from 'typed-redux-saga';
+import { all, call, delay, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
@@ -17,7 +17,10 @@ import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
-import { commitCameraPose } from '../camera/cameraSlice';
+import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
+import { startClip } from '../camera/clipActions';
+import { openExhibit } from '../exhibits/exhibitActions';
+import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { selectTimeState } from '../time/selectors';
@@ -28,6 +31,10 @@ import { homePose } from '../../services/engine/camera/homePose';
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
+import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { clipFactories } from '../../data/animation/clips/clipRegistry';
+import { isKeyOf } from '../../utils/object/isKeyOf';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
@@ -90,6 +97,19 @@ function* homeSaga() {
   yield* put(updateSelectionFocus(home.focus.ref, 'cut'));
 }
 
+// A tour or clip opens on its own first frame, so a cut arrival is done only
+// once the first clip has started: an opening snap or a fixed `start` lands
+// before the reveal. Its live start is the home framing, as from the splash.
+function* playFromHomeSaga(start: Action, transition: Transition): SagaGenerator<NavigateOutcome> {
+  if (transition === 'fly') {
+    yield* put(start);
+    return OK;
+  }
+  yield* call(homeSaga);
+  yield* all([take(clipStarted), put(start)]);
+  return OK;
+}
+
 export function* navigateSaga(
   intent: LinkIntent,
   transition: Transition,
@@ -118,7 +138,17 @@ export function* navigateSaga(
       if (view.pose !== undefined || transition === 'fly') return OK;
       return yield* call(frameFocusSaga, yield* call(liveCameraRuntimeSaga));
     }
-    default:
-      return UNKNOWN_ID;
+    case 'exhibit':
+      if (!isKeyOf(exhibitRegistry, view.id)) return UNKNOWN_ID;
+      // The fitted pose reads the live lens, so the cut waits for it.
+      yield* call(liveCameraRuntimeSaga);
+      yield* put(openExhibit({ id: view.id, entry: transition }));
+      return OK;
+    case 'tour':
+      if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
+      return yield* call(playFromHomeSaga, startTour(view.id), transition);
+    case 'clip':
+      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      return yield* call(playFromHomeSaga, startClip(view.id), transition);
   }
 }

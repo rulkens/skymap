@@ -46,9 +46,10 @@ export function* watchTakeoverSaga() {
       source = { kind: 'tour', id: tour.id };
       body = () => tourBodySaga(tour, action.payload.beats);
     } else if (openExhibit.match(action)) {
-      const exhibit = exhibitRegistry[action.payload];
-      source = { kind: 'exhibit', id: exhibit.id };
-      body = () => exhibitBodySaga(exhibit);
+      const { id, entry } = action.payload;
+      const exhibit = exhibitRegistry[id];
+      source = { kind: 'exhibit', id: exhibit.id, entry };
+      body = () => exhibitBodySaga(exhibit, entry);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is

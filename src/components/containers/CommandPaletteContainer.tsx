@@ -36,7 +36,7 @@ const RUN_ACTION: Record<
   },
   exhibit: (dispatch, action) => {
     if (action.kind !== 'exhibit') return;
-    dispatch(openExhibit(action.exhibitId));
+    dispatch(openExhibit({ id: action.exhibitId, entry: 'fly' }));
   },
   tour: (dispatch, action) => {
     if (action.kind !== 'tour') return;

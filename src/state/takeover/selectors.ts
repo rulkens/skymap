@@ -5,6 +5,8 @@
  */
 
 import { takeoverRoute } from '../../store/constants';
+import { FLY_TO_POSE_SEC } from '../../data/animation/clips/makers/flyToPoseClip';
+import { EXHIBIT_COPY_LEAD_SEC } from '../../data/exhibits/exhibitCopyLeadSec';
 import type { RootState } from '../../store/types';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
@@ -13,3 +15,11 @@ export const selectTakeoverSource = (state: RootState): TakeoverSource | null =>
 
 export const selectTakeoverActive = (state: RootState): boolean =>
   selectTakeoverSource(state) !== null;
+
+/** A cut entry has already landed, so its copy shows at once. */
+export const selectExhibitCopyDelaySec = (state: RootState): number => {
+  const source = selectTakeoverSource(state);
+  return source?.kind === 'exhibit' && source.entry === 'fly'
+    ? FLY_TO_POSE_SEC - EXHIBIT_COPY_LEAD_SEC
+    : 0;
+};

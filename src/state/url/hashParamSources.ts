@@ -9,7 +9,7 @@
  * so two identical states always produce byte-identical hashes. That binds
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
- * read-only row (`write: () => null`, `pose` today) composes nothing into the
+ * read-only row (`write: () => null`: `pose` and the takeovers) composes nothing into the
  * body, so this rule says nothing about its position. Read order is not a
  * table fact at all: `linkIntentFrom` merges the rows' contributions.
  *
@@ -270,9 +270,29 @@ const poseSource: HashParamSource = {
   readAbsent: () => [],
 };
 
+/**
+ * `exhibit` / `tour` / `clip` — a takeover link, read-only like `pose`. The
+ * read names the subject and `navigateSaga` validates the id against its
+ * registry. Nothing writes the key back, so the first write after arrival
+ * drops it from the address bar: the takeover never lingers into a later
+ * focus or time link. Absence restores nothing; a running takeover is the
+ * viewer's to exit.
+ */
+const takeoverSource = (kind: 'exhibit' | 'tour' | 'clip'): HashParamSource => ({
+  key: kind,
+  deepLink: true,
+  writesOn: [],
+  write: () => null,
+  read: (value) => ({ view: { kind, id: value } }),
+  readAbsent: () => [],
+});
+
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   poseSource,
   focusSource,
   timeSource,
   orientationSource,
+  takeoverSource('exhibit'),
+  takeoverSource('tour'),
+  takeoverSource('clip'),
 ];

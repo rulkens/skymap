@@ -68,7 +68,7 @@ describe('runTakeoverSaga', () => {
     store.dispatch(setCosmicWebDensityEnabled(true));
 
     sagaMiddleware.run(function* () {
-      yield* runTakeoverSaga({ kind: 'exhibit', id: 'solarSystem' }, function* () {
+      yield* runTakeoverSaga({ kind: 'exhibit', id: 'solarSystem', entry: 'fly' }, function* () {
         yield* put(setCosmicWebDensityEnabled(false));
         yield* take(exitTakeover);
       });

@@ -34,6 +34,6 @@ describe('CommandPaletteContainer', () => {
       wrapper: makeWrapper(store),
     });
     fireEvent.click(getByRole('button', { name: 'Solar System' }));
-    expect(spy).toHaveBeenCalledWith(openExhibit('solarSystem'));
+    expect(spy).toHaveBeenCalledWith(openExhibit({ id: 'solarSystem', entry: 'fly' }));
   });
 });

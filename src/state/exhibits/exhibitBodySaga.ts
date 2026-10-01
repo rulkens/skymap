@@ -1,6 +1,6 @@
 /**
- * exhibitBodySaga — an exhibit's takeover body: apply its settings, fly to its
- * pose, then hold, turning slowly, until the viewer exits. `runTakeoverSaga` owns
+ * exhibitBodySaga — an exhibit's takeover body: apply its settings, fly (or,
+ * on a `'cut'` entry, cut) to its pose, then hold, turning slowly, until the viewer exits. `runTakeoverSaga` owns
  * the snapshot/start/restore/end bracket; this only decides when the body
  * returns. `exitTakeover` is the only abort arm — an exhibit has no beat loop,
  * so orbiting mid-fly or mid-hold must not end it.
@@ -10,13 +10,15 @@ import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
-import { setAutoRotate } from '../camera/cameraSlice';
+import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
 import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
+import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { SagaContext } from '../../store/types';
+import type { Transition } from '../../@types/navigation/Transition';
 
 /**
  * The held exhibit's yaw drift, in radians per assumed-60-fps frame
@@ -29,7 +31,7 @@ import type { SagaContext } from '../../store/types';
  */
 const EXHIBIT_SPIN_RATE = -0.0003;
 
-export function* exhibitBodySaga(exhibit: Exhibit): Generator {
+export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
@@ -58,14 +60,18 @@ export function* exhibitBodySaga(exhibit: Exhibit): Generator {
         }
       : exhibit.pose;
 
-  const { exit } = yield* race({
-    landed: call(playClip, flyToPoseClip(pose), orientation),
-    exit: take(exitTakeover),
-  });
-  if (exit) return;
+  if (entry === 'cut') {
+    yield* put(commitCameraPose(absoluteArm(pose)));
+  } else {
+    const { exit } = yield* race({
+      landed: call(playClip, flyToPoseClip(pose), orientation),
+      exit: take(exitTakeover),
+    });
+    if (exit) return;
+  }
 
   // The drift is `camera.autoRotate`, not a looping clip: it spins from the
-  // frozen `base` the clip just committed, so it needs no duration guessed in
+  // frozen `base` the fly or the cut committed, so it needs no duration guessed in
   // advance and cannot drift out of step with a hold of unknown length.
   // `camera` is NOT in `runTakeoverSaga`'s scene snapshot (that covers settings,
   // orientation and focus), so the restore is this body's own — in a `finally`,

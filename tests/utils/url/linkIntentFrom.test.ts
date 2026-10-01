@@ -29,6 +29,16 @@ describe('linkIntentFrom', () => {
     });
   });
 
+  it('a takeover key beats focus and pose', () => {
+    expect(linkIntentFrom(`exhibit=cosmicWeb&focus=m31&pose=${encodeFramedPose(POSE)}`)).toEqual({
+      view: { kind: 'exhibit', id: 'cosmicWeb' },
+    });
+    expect(linkIntentFrom(`focus=m31&tour=grandTour&t=${J2000_ISO}`)).toEqual({
+      view: { kind: 'tour', id: 'grandTour' },
+      t: Date.UTC(2000, 0, 1, 12),
+    });
+  });
+
   it('no hash yields the home view', () => {
     expect(linkIntentFrom('')).toEqual({ view: { kind: 'home' } });
     // An empty value says nothing, so it never reaches a row's read.

@@ -5,5 +5,9 @@
 
 import type { TourId } from '../animation/tour/TourId';
 import type { ExhibitId } from '../exhibits/ExhibitId';
+import type { Transition } from '../navigation/Transition';
 
-export type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: ExhibitId };
+/** An exhibit's `entry` is how it arrived; its overlay times the copy from it. */
+export type TakeoverSource =
+  | { kind: 'tour'; id: TourId }
+  | { kind: 'exhibit'; id: ExhibitId; entry: Transition };

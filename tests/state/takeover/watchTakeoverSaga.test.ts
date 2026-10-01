@@ -244,12 +244,16 @@ describe('watchTakeoverSaga', () => {
     store.dispatch(setCosmicWebDensityEnabled(false));
     await flush();
 
-    store.dispatch(openExhibit('cosmicWeb'));
+    store.dispatch(openExhibit({ id: 'cosmicWeb', entry: 'fly' }));
     await flush();
     await flush();
 
     // (a) openExhibit reached the watcher and started the exhibit.
-    expect(selectTakeoverSource(store.getState())).toEqual({ kind: 'exhibit', id: 'cosmicWeb' });
+    expect(selectTakeoverSource(store.getState())).toEqual({
+      kind: 'exhibit',
+      id: 'cosmicWeb',
+      entry: 'fly',
+    });
 
     // (b) the outgoing tour's mid-run mutation was wound back before the exhibit
     // snapshotted: exiting the exhibit must restore volumes to the pre-takeover

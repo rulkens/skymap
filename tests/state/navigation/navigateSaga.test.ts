@@ -22,9 +22,22 @@ import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTwee
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
 import { watchRequestSelectSaga } from '../../../src/state/selection/watchRequestSelectSaga';
 import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
-import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
+import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
+import { startTour } from '../../../src/state/tour/tourActions';
+import { startClip } from '../../../src/state/camera/clipActions';
+import {
+  clipStarted,
+  commitCameraPose,
+  startCameraTween,
+} from '../../../src/state/camera/cameraSlice';
 import { setSimDays } from '../../../src/state/time/timeSlice';
-import { selectFocusRef } from '../../../src/state/selection/selectors';
+import {
+  selectFocusRef,
+  selectPendingFocusId,
+  selectSelectedRef,
+} from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
@@ -33,6 +46,9 @@ import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milky
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
+import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
+import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -52,6 +68,7 @@ function build() {
     recorded.push(action as Action);
     return next(action);
   };
+  const playClip = vi.fn(() => new Promise<void>(() => {}));
   const mw = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
@@ -70,12 +87,14 @@ function build() {
       upBasisQuat: [0, 0, 0, 1],
     }),
     home: { focus: null, seedSelection: false },
+    playClip,
   });
   for (const saga of [
     watchSelectionRowsSaga,
     watchRequestFocusSaga,
     watchRequestSelectSaga,
     watchFocusTweenSaga,
+    watchTakeoverSaga,
   ]) {
     mw.run(saga);
   }
@@ -87,6 +106,8 @@ function build() {
       mw.run(navigateSaga, intent, transition).toPromise(),
     commits: () => count(commitCameraPose.match),
     tweens: () => count(startCameraTween.match),
+    count,
+    playClip,
     run: mw.run,
   };
 }
@@ -142,6 +163,68 @@ describe('navigateSaga', () => {
 
     const types = h.recorded.map((a) => a.type);
     expect(types.indexOf(setSimDays.type)).toBeLessThan(types.indexOf(commitCameraPose.type));
+  });
+
+  it('navigate exhibit cut commits the fitted pose and plays no clip', async () => {
+    const h = build();
+    const outcome = await h.navigate(
+      { view: { kind: 'exhibit', id: 'observableUniverse' } },
+      'cut',
+    );
+    await flush();
+
+    expect(outcome).toEqual({ ok: true });
+    expect(h.playClip).not.toHaveBeenCalled();
+    expect(h.commits()).toBe(1);
+    const { fitRadiusMpc } = exhibitRegistry.observableUniverse;
+    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+      sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
+    );
+    expect(selectTakeoverSource(h.store.getState())).toEqual({
+      kind: 'exhibit',
+      id: 'observableUniverse',
+      entry: 'cut',
+    });
+  });
+
+  it('exhibit link selects nothing even with a focus key', async () => {
+    const h = build();
+    await h.navigate(linkIntentFrom(`exhibit=cosmicWeb&focus=${MILKY_WAY_FOCUS_ID}`), 'cut');
+    await flush();
+
+    const state = h.store.getState();
+    expect(selectFocusRef(state)).toBeNull();
+    expect(selectSelectedRef(state)).toBeNull();
+    expect(selectPendingFocusId(state)).toBeNull();
+    expect(h.tweens()).toBe(0);
+  });
+
+  it('an unknown exhibit id fails without dispatching openExhibit', async () => {
+    const h = build();
+    const outcome = await h.navigate({ view: { kind: 'exhibit', id: 'nope' } }, 'cut');
+
+    expect(outcome).toEqual({ ok: false, reason: 'unknown-id' });
+    expect(h.count(openExhibit.match)).toBe(0);
+    expect(selectTakeoverSource(h.store.getState())).toBeNull();
+  });
+
+  it.each([
+    ['tour', 'grandTour', startTour.match],
+    ['clip', 'cosmicFlows', startClip.match],
+  ] as const)('navigate %s reveals after the first clipStarted', async (kind, id, started) => {
+    const h = build();
+    let done = false;
+    const navigation = h.navigate({ view: { kind, id } }, 'cut').then((outcome) => {
+      done = true;
+      return outcome;
+    });
+    await flush();
+
+    expect(h.count(started)).toBe(1);
+    expect(done).toBe(false);
+
+    h.store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial' }));
+    expect(await navigation).toEqual({ ok: true });
   });
 
   it('a hashchange after arrival flies and leaves arrival untouched', async () => {
