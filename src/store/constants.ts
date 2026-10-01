@@ -42,3 +42,5 @@ export const engineRoute = 'engine' as const;
 // (simDays, realMs) anchor, rate-ladder index, direction, and pause. No
 // wall-clock tick lives here; the current instant is derived on demand.
 export const timeRoute = 'time' as const;
+// `arrivalRoute` is the boot link's arrival status — what the veil and `ready` wait on.
+export const arrivalRoute = 'arrival' as const;

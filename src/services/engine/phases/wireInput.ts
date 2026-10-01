@@ -12,13 +12,13 @@ import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
-import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
+import { DEFAULT_FOV_Y_RAD, NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../camera/cameraFraming';
+import { homePose } from '../camera/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import { selectUrlPose } from '../../../state/camera/selectors';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
@@ -102,13 +102,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // The committed orientation basis the boot pose encodes through, so first-paint
   // yaw/pitch round-trip under the same frame the render path decodes with.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
-  const bodyId = home.focus === null ? null : home.focus.ref.id;
-  const initialCam = computeInitialCamera({
-    bodyId,
-    fovYRad: DEFAULT_FOV_Y_RAD,
-    simDays,
-    frameBasis,
-  });
 
   state.booted = true;
 
@@ -122,29 +115,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // phase runs inside; moving that dispatch into a phase regresses both.
   //
   // A parked `urlPose` IS the boot pose — a `#pose=` deep link's exact camera
-  // — and wins outright over the computed home framing (`target` COPIED, as
-  // `initialCam.target` is mutable); the park itself stays put, spent by the
-  // arrival focus, not this seed.
+  // — and wins outright over the computed home framing; the park itself stays
+  // put, spent by the arrival focus, not this seed.
   //
   // Seeded BEFORE the commit below, off the still-placeholder store — the one
   // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
   // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
   const urlPose = selectUrlPose(store.getState());
-  const committed =
-    urlPose ??
-    absoluteArm({
-      target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-      yaw: initialCam.yaw,
-      pitch: initialCam.pitch,
-      distance: initialCam.distance,
-    });
+  const committed = urlPose ?? homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis);
   state.cameraRuntime = seedCameraRuntime({
     state: store.getState(),
     projection: {
-      fovYRad: initialCam.fovYRad,
+      fovYRad: DEFAULT_FOV_Y_RAD,
       aspect: canvas.width / canvas.height,
-      near: initialCam.near,
-      far: initialCam.far,
+      near: NEAR_CLIP_MPC,
+      far: FAR_CLIP_MPC,
     },
   });
   store.dispatch(commitCameraPose(committed));

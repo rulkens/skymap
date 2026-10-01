@@ -104,7 +104,7 @@ const isFocusSlotRow = (action: Action): boolean =>
 /**
  * `focus` — the selected/framed target. The write reuses `URL_HASH_FOR` (the
  * FocusableTarget → id-segment codec); the read names the subject, which
- * `applyLinkIntent` turns into a scene click plus a fly.
+ * `navigateSaga` turns into a scene click plus a focus.
  *
  * Absence clears the selection — but only on a hashchange, which the reading
  * pass enforces by never calling `readAbsent` on the boot read. A plain load
@@ -178,7 +178,7 @@ const focusSource: HashParamSource = {
  * share" freezes exactly the moment on screen.
  *
  * ── read ──
- * A parseable ISO string contributes its Unix instant, which `applyLinkIntent`
+ * A parseable ISO string contributes its Unix instant, which `navigateSaga`
  * lands as manual + paused. An unparseable value contributes nothing: the hash
  * is external input and a hand-typed timestamp is not a reason to move the
  * clock somewhere arbitrary.

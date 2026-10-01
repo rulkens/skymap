@@ -33,6 +33,8 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
   computeInitialCamera: (...args: unknown[]) =>
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
   DEFAULT_FOV_Y_RAD: (Math.PI / 180) * 60,
+  NEAR_CLIP_MPC: 0.01,
+  FAR_CLIP_MPC: 80000,
 }));
 
 vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({

@@ -82,21 +82,28 @@ import type { Action } from '@reduxjs/toolkit';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashBodyFor } from './hashBodyFor';
-import { hashArrivalApplied } from './hashArrivalApplied';
+import { arrived, arrivalFailed } from '../arrival/arrivalSlice';
+import { selectArrivalPending } from '../arrival/selectors';
 import { writeHashBody } from '../../services/url/writeHashBody';
 import type { RootState } from '../../store/types';
 
+const isArrivalSettled = (action: Action): boolean =>
+  arrived.match(action) || arrivalFailed.match(action);
+
+// The arrival settling is a trigger of its own: its publish is what strips
+// the keys the link carried but the store never writes back (`pose`).
 const isHashWrite = (action: Action): boolean =>
+  isArrivalSettled(action) ||
   HASH_PARAM_SOURCES.some((source) => source.writesOn.some((triggers) => triggers(action)));
 
 export function* watchHashWriteSaga() {
   // A plain closure variable, not store state: it is consumed by the very
   // next debounce firing regardless of which action's burst produced it, so a
-  // torn-read follow-up landing after `hashArrivalApplied` (seen in
+  // torn-read follow-up landing after the arrival (seen in
   // `hashHistoryIntegrity`) cannot un-arm it early or miss it late.
   let canonicalizeArrival = false;
   yield* fork(function* () {
-    yield* take(hashArrivalApplied.match);
+    yield* take(isArrivalSettled);
     canonicalizeArrival = true;
   });
 
@@ -106,7 +113,9 @@ export function* watchHashWriteSaga() {
     // reads. Read AFTER the debounce window, so this is the state the burst
     // settled on rather than the state the trigger that opened it produced.
     const state = yield* select((s: RootState) => s);
-    const mode = canonicalizeArrival ? 'replace' : 'push';
+    // Everything up to and including the arrival's own publish rewrites the
+    // link the visitor followed in place; nothing they navigated is lost.
+    const mode = canonicalizeArrival || selectArrivalPending(state) ? 'replace' : 'push';
     canonicalizeArrival = false;
     const body = hashBodyFor(state);
     // Wrapped: typed-redux-saga's `call` overload resolution still rejects the direct 3-arg form here.

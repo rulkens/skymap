@@ -73,16 +73,16 @@
 import { take, call, put } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
-import { hashArrivalApplied } from './hashArrivalApplied';
-import { applyLinkIntent } from './applyLinkIntent';
+import { arrived } from '../arrival/arrivalSlice';
+import { navigateSaga } from '../navigation/navigateSaga';
 import { linkIntentFrom } from '../../utils/url/linkIntentFrom';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
 import { parseHashParams } from '../../utils/url/parseHashParams';
 
 /**
- * Apply one hash body to the store: what the link says (`applyLinkIntent`),
- * then, on a navigation only, each ABSENT row's default.
+ * Apply one hash body to the store: what the link says (`navigateSaga`, which
+ * flies), then, on a navigation only, each ABSENT row's default.
  *
  * `isInitial` is consumed here and only here. Threading it into every row
  * instead hands each a flag they would all branch on identically, and turns
@@ -90,7 +90,7 @@ import { parseHashParams } from '../../utils/url/parseHashParams';
  * to drift in any one of them. Stated at the pass, a new row inherits it.
  */
 function* applyHash(body: string, isInitial: boolean) {
-  yield* call(applyLinkIntent, linkIntentFrom(body));
+  yield* call(navigateSaga, linkIntentFrom(body), 'fly' as const);
   if (isInitial) return;
 
   const params = parseHashParams(body);
@@ -118,11 +118,7 @@ export function* watchHashReadSaga() {
     // throw outside would leave the DOM listener attached with no owner.
     const arrivalBody = yield* call(readHashBody);
     yield* call(applyHash, arrivalBody, true);
-    // A non-empty arrival may compose a DIFFERENT settled body than the URL
-    // carried in (e.g. `pose`, which never writes) — this signal is what lets
-    // the write half canonicalize that one publish with `replaceState` rather
-    // than pushing over the link the visitor followed.
-    if (arrivalBody) yield* put(hashArrivalApplied());
+    yield* put(arrived());
     while (true) {
       yield* call(applyHash, yield* take(channel), false);
     }

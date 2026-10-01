@@ -46,8 +46,8 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
-import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
+import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -88,6 +88,15 @@ function buildHarness(arrivalBody: string) {
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(recorder, sagaMiddleware),
   });
+  // A live camera, so a pose commit lands at once rather than waiting on boot.
+  sagaMiddleware.setContext({
+    cameraRuntime: () => ({
+      from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+      fovYRad: 0.8,
+      aspect: 1,
+      upBasisQuat: [0, 0, 0, 1],
+    }),
+  });
   const task = sagaMiddleware.run(watchHashReadSaga);
 
   return {
@@ -105,26 +114,25 @@ describe('watchHashReadSaga', () => {
     // The select + fly, because arriving by URL is meant to look like a scene
     // click (pins the InfoCard) plus a fly (moves the camera) — a `read` that
     // lost one of them would still navigate, or still pin, and look almost
-    // right. `hashArrivalApplied` follows: the boot read's own signal that it
-    // applied a non-empty URL, which the write half takes to canonicalize its
-    // first settled publish instead of pushing (`hashHistoryIntegrity`).
+    // right. `arrived` follows: the write half takes it to canonicalize the
+    // link in place instead of pushing over it (`hashHistoryIntegrity`).
     expect(recorded).toEqual([
       requestSelect('m31'),
       requestFocus({ id: 'm31', transition: 'fly' }),
-      hashArrivalApplied(),
+      arrived(),
     ]);
   });
 
-  it('dispatches nothing at all on a bare arrival URL', () => {
+  it('dispatches nothing but the arrival on a bare URL', () => {
     const { recorded } = buildHarness('');
 
     // The most load-bearing case in this file. Every param is absent, and the
     // boot read must consult NO row's `readAbsent` — `clearSelection()` here
     // would race `wireInput`'s home seed on every ordinary page load, and the
-    // loser is whichever landed first. `toEqual([])` rather than a
+    // loser is whichever landed first. An exact list rather than a
     // `not.toContainEqual(clearSelection())` so the same guarantee holds for a
     // row added later, which will have its own default to over-assert.
-    expect(recorded).toEqual([]);
+    expect(recorded).toEqual([arrived()]);
   });
 
   it('restores param defaults when a hashchange arrives bare', () => {
@@ -158,37 +166,31 @@ describe('watchHashReadSaga', () => {
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
   });
 
-  it('applies AND parks a pose the same way on arrival and on a later navigation', () => {
+  it('commits a pose the same way on arrival and on a later navigation', () => {
     // The codec round-trips an explicit `roll`, which `absoluteArm` leaves off.
     const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
     const { recorded, emit } = buildHarness(`pose=${encodeFramedPose(pose)}`);
 
-    // Both actions fire at boot too — the camera doesn't exist yet, but a
-    // commit lands in the store regardless (the seed re-commits the same
-    // object) and the park is what the arrival focus later spends.
-    expect(recorded).toEqual([applyUrlPose(pose), commitCameraPose(pose), hashArrivalApplied()]);
+    expect(recorded).toEqual([commitCameraPose(pose), arrived()]);
     recorded.length = 0;
 
     emit(`pose=${encodeFramedPose(pose)}`);
 
     // Same on a hashchange: the link's own writes land before the absent
     // rows' defaults (focus, t, orientation) fire.
-    expect(recorded[0]).toEqual(applyUrlPose(pose));
-    expect(recorded[1]).toEqual(commitCameraPose(pose));
+    expect(recorded[0]).toEqual(commitCameraPose(pose));
   });
 
-  it('parks a focus link’s pose before it requests the focus', () => {
-    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
-    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
+  it('lands a focus link’s pose before it requests the focus, as a cut', () => {
+    // A linked pose IS the framing: the focus must not fly away from it.
     const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
     const { recorded } = buildHarness(`focus=m31&pose=${encodeFramedPose(pose)}`);
 
     expect(recorded).toEqual([
-      applyUrlPose(pose),
       commitCameraPose(pose),
       requestSelect('m31'),
-      requestFocus({ id: 'm31', transition: 'fly' }),
-      hashArrivalApplied(),
+      requestFocus({ id: 'm31', transition: 'cut' }),
+      arrived(),
     ]);
   });
 

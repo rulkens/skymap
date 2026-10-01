@@ -43,7 +43,7 @@ import { watchHashSaga } from '../../../src/state/url/watchHashSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 const write = vi.mocked(writeHashBody);
@@ -110,7 +110,7 @@ describe('watchHashSaga', () => {
     expect(recorded).toEqual([
       requestSelect('m31'),
       requestFocus({ id: 'm31', transition: 'fly' }),
-      hashArrivalApplied(),
+      arrived(),
     ]);
   });
 
