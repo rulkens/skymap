@@ -1,6 +1,6 @@
 /**
- * applyLinkIntent — a `LinkIntent` as the store writes a hash read has always
- * made. The pose parks BEFORE the focus requests: `watchFocusTweenSaga` reads
+ * applyLinkIntent — turns a `LinkIntent` into the same store writes a hash
+ * read has always made. The pose parks BEFORE the focus requests: `watchFocusTweenSaga` reads
  * the park to stand its fly-to tween down. The commit gets its OWN object: the
  * loop detects `wireInput`'s boot commit by `base` identity, and a commit
  * aliasing the park would make that boot commit invisible to frame one.

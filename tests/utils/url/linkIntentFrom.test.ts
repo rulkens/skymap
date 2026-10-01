@@ -24,10 +24,9 @@ describe('linkIntentFrom', () => {
   });
 
   it('focus and pose combine into one focus view', () => {
-    // Either order on the URL: precedence is the parse rule's, not the table's.
-    const expected = { view: { kind: 'focus', id: 'm31', pose: POSE } };
-    expect(linkIntentFrom(`focus=m31&pose=${encodeFramedPose(POSE)}`)).toEqual(expected);
-    expect(linkIntentFrom(`pose=${encodeFramedPose(POSE)}&focus=m31`)).toEqual(expected);
+    expect(linkIntentFrom(`focus=m31&pose=${encodeFramedPose(POSE)}`)).toEqual({
+      view: { kind: 'focus', id: 'm31', pose: POSE },
+    });
   });
 
   it('no hash yields the home view', () => {

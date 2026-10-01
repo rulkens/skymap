@@ -18,8 +18,7 @@ import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { centreLookingArm } from '../../utils/camera/centreLookingArm';
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
-import { bodyDriverGeometry } from '../../utils/scene/bodyDriverGeometry';
+import { bodyRowAt } from '../../utils/scene/bodyRowAt';
 import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
 import { toBodyArm, toWorldArm } from '../../services/engine/camera/poseFrameConversion';
 import { focusFraming } from '../../services/engine/camera/focusFraming';
@@ -27,7 +26,6 @@ import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -69,20 +67,10 @@ export function* watchFlyToLonLatSaga() {
     // to whatever it aims at, not the eye's height.
     const here = toBodyArm(runtime.from, basis, basis, body, host.state);
     // Off the focused body, the eye stands where a click-to-focus frames it.
-    const { label } = findByIdOrThrow(SCENE_BODIES, body, 'flyToLonLat');
-    const framing = focusFraming(
-      {
-        type: 'body',
-        id: body,
-        label,
-        positionMpc: host.state.positionMpc,
-        driver: bodyDriverGeometry(body),
-      },
-      runtime.fovYRad,
-    );
     const eyeRadiusM = sameBody
       ? Math.hypot(...bodyFixedEyeM(here))
-      : framing.distance / SCALE_UNITS.M_TO_MPC;
+      : focusFraming(bodyRowAt(body, host.state.positionMpc), runtime.fovYRad).distance /
+        SCALE_UNITS.M_TO_MPC;
     const rangeM = altKm !== undefined ? altKm * 1000 : eyeRadiusM - host.radiusM;
     const heading =
       headingRad ?? (sameBody ? (eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0) : 0);

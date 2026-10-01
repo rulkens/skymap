@@ -56,9 +56,7 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyDriverGeometry } from '../../../utils/scene/bodyDriverGeometry';
+import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusFraming } from './focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 
@@ -74,14 +72,10 @@ export function bodyHomePose(
   fovYRad: number,
   frameBasis?: Mat3,
 ): CameraPose {
-  const { label } = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyHomePose');
   const state = deriveBodyStates(simDays).get(bodyId);
   if (!state) throw new Error(`bodyHomePose: no derived state for id '${bodyId}'`);
   const bodyPos = state.positionMpc;
-  const { target, distance } = focusFraming(
-    { type: 'body', id: bodyId, label, positionMpc: bodyPos, driver: bodyDriverGeometry(bodyId) },
-    fovYRad,
-  );
+  const { target, distance } = focusFraming(bodyRowAt(bodyId, bodyPos), fovYRad);
 
   // `s` is the sun→body (pure-sunward) unit direction; `t` is perpendicular to
   // it and horizontal in the equatorial frame (never degenerate — the body never

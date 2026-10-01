@@ -2,8 +2,8 @@
  * HASH_PARAM_SOURCES — the ordered table of `window.location.hash` params. One
  * row per param, owning everything about it: its key, whether its presence
  * counts as a deep link, which dispatched actions can change its serialized
- * value, how to write that value out of the store, and how to read a present or
- * absent value back into actions.
+ * value, how to write that value out of the store, how to read a present value
+ * into its contribution to a `LinkIntent`, and what actions an absent one restores.
  *
  * Table order fixes the on-URL layout — the body is composed in this order —
  * so two identical states always produce byte-identical hashes. That binds
