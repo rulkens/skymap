@@ -7,9 +7,9 @@
  * `RAW_DATA[...].upstream`.
  */
 
+import type { GeodeticAnchor } from '../../../src/@types/geo/GeodeticAnchor';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Tier } from '../../../src/@types/data/Tier';
-import type { GeoreferencedMeshSource } from '../../meshes/@types/GeoreferencedMeshSource';
 import type { MeshTierSource } from '../../meshes/@types/MeshTierSource';
 
 export type MeshSourceEntry = {
@@ -26,7 +26,7 @@ export type MeshSourceEntry = {
   readonly bodyFromSource?: Mat3;
   /** Present iff an `anchored` `SurfaceFixedSite` uses this key: the source's
    *  real-world anchor. */
-  readonly georeferenced?: GeoreferencedMeshSource;
+  readonly georeferenced?: GeodeticAnchor;
 };
 
 /**
@@ -103,8 +103,6 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     attribution:
       'Contains skråfoto © Klimadatastyrelsen (CC BY 4.0); photogrammetry by Alexander Rulkens',
     // Already authored in the body frame (+X east, +Z up) — no remap.
-    georeferenced: {
-      anchor: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
-    },
+    georeferenced: { latDeg: 55.67, lonDeg: 12.53, heightM: 18.53 },
   },
 };

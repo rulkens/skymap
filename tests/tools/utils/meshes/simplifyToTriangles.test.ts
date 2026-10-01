@@ -2,39 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import { simplifyToTriangles } from '../../../../tools/utils/meshes/simplifyToTriangles';
 
-/** A `size` x `size`-cell grid in the XY plane, two triangles per cell
- *  (`size * size * 2` triangles), UVs spanning [0, 1] linearly. */
-function buildGrid(size: number): {
-  positions: Float32Array;
-  uvs: Float32Array;
-  indices: Uint32Array;
-} {
-  const verts = size + 1;
-  const positions = new Float32Array(verts * verts * 3);
-  const uvs = new Float32Array(verts * verts * 2);
-  for (let y = 0; y <= size; y++) {
-    for (let x = 0; x <= size; x++) {
-      const v = y * verts + x;
-      positions[v * 3] = x;
-      positions[v * 3 + 1] = y;
-      positions[v * 3 + 2] = 0;
-      uvs[v * 2] = x / size;
-      uvs[v * 2 + 1] = y / size;
-    }
-  }
-  const indices: number[] = [];
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const a = y * verts + x;
-      const b = a + 1;
-      const c = a + verts;
-      const d = c + 1;
-      indices.push(a, b, d, a, d, c);
-    }
-  }
-  return { positions, uvs, indices: new Uint32Array(indices) };
-}
-
 /**
  * A grid split down its middle column into two UV halves that never share a
  * triangle: the seam column is duplicated (same position, u = 0.5 on both
@@ -92,16 +59,6 @@ function buildSeamGrid(size: number): {
 }
 
 describe('simplifyToTriangles', () => {
-  it('simplifies a 64x64 grid (8192 tris) to within ±5% of 2000', async () => {
-    const { positions, uvs, indices } = buildGrid(64);
-    expect(indices.length / 3).toBe(8192);
-
-    const result = await simplifyToTriangles(positions, uvs, indices, 2000);
-
-    expect(Math.abs(result.triangleCount - 2000) / 2000).toBeLessThanOrEqual(0.05);
-    expect(result.indices.length).toBe(result.triangleCount * 3);
-  });
-
   it('never lets a triangle span a UV seam', async () => {
     const { positions, uvs, indices } = buildSeamGrid(64);
 

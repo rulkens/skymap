@@ -30,9 +30,7 @@ describe('meshGroundUpSource', () => {
   });
 
   it('a floating mesh bakes with no ground', () => {
-    for (const key of ['voyager']) {
-      expect(meshGroundUpSource(key)).toBeUndefined();
-    }
+    expect(meshGroundUpSource('voyager')).toBeUndefined();
   });
 
   it('an anchored site is not seated (no ground-fit, no prebake)', () => {

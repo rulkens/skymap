@@ -198,7 +198,7 @@ function runTiers(
   bodyFromSource?: Mat3,
   groundUp?: Vec3,
   tierTriangles?: Partial<Record<Tier, number>>,
-  georeferencedOffsetM?: Vec2,
+  georeferencedCentreM?: Vec2,
 ) {
   const tiers = Object.fromEntries(
     Object.entries(glbPaths).map(([tier, path]) => [
@@ -216,7 +216,7 @@ function runTiers(
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
         groundUp,
-        georeferencedOffsetM,
+        georeferencedCentreM,
       },
     ],
     outDir: join(dir, 'out'),
@@ -912,7 +912,7 @@ describe('buildMeshes()', () => {
       .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
 
     const row = (
-      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [5, -3])
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [-5, 3])
     )[0]!;
     const decoded = await decodeMesh(readMesh());
 

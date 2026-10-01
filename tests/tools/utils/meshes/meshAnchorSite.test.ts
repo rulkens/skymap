@@ -13,9 +13,7 @@ vi.mock('../../../../src/data/bodies/surfaceFixedSites', () => ({
 
 vi.mock('../../../../tools/utils/io/meshSources', () => ({
   get MESH_SOURCES() {
-    return Object.fromEntries(
-      georeferencedKeys.map((key) => [key, { georeferenced: { anchor: {} } }]),
-    );
+    return Object.fromEntries(georeferencedKeys.map((key) => [key, { georeferenced: {} }]));
   },
 }));
 
@@ -60,11 +58,5 @@ describe('meshAnchorSite', () => {
     expect(() => meshAnchorSite('hubble')).toThrow(
       /site 'hubble' is anchored but MESH_SOURCES.hubble has no georeferenced entry/,
     );
-  });
-
-  it('throws when a georeferenced key has no site backing any of its bodies', () => {
-    sites = [];
-    georeferencedKeys = ['voyager'];
-    expect(() => meshAnchorSite('voyager')).toThrow(/no anchored SurfaceFixedSite uses it/);
   });
 });

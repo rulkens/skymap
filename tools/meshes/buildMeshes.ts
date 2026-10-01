@@ -88,14 +88,9 @@ export type MeshBuildTarget = {
   readonly bodyFromSource?: Mat3;
   /** Undefined for a floating source; see `meshGroundUpSource`. */
   readonly groundUp?: Vec3;
-  /**
-   * Present for a georeferenced source: the XY vector to ADD to every merged
-   * vertex instead of the usual area-weighted centroid recentre, so the
-   * mesh's origin lands on its `SurfaceFixedSite` rather than its own source
-   * anchor. `[-e, -n]` where `[e, n] = enuOffsetM(anchor, site)` — already
-   * negated so `mergeGeometry` can add it with no sign to remember.
-   */
-  readonly georeferencedOffsetM?: Vec2;
+  /** Present for a georeferenced source: `enuOffsetM(anchor, site)`, used as
+   *  the recentre origin so the mesh's origin lands on its `SurfaceFixedSite`. */
+  readonly georeferencedCentreM?: Vec2;
 };
 
 /**
@@ -331,7 +326,7 @@ function localPositions(pos: Accessor): Float32Array {
 
 /** A primitive's own index run, indexed or flat — read from the accessor
  *  exactly once and reused below both for `computeSmoothNormals` and for the
- *  merged index buffer, rather than re-deriving it a second time per use. */
+ *  merged index buffer. */
 function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
   const idx = prim.getIndices();
   const count = idx ? idx.getCount() : vertexCount;
@@ -347,7 +342,7 @@ function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
  * long thin appendage (the whale's tail) drag the origin — and with it the
  * selection ring, pick sphere and caption anchor it all shares — off the
  * visible mass; weighting by triangle area keeps it on the surface instead.
- * A georeferenced source (`georeferencedOffsetM` set) skips this hunt for a
+ * A georeferenced source (`georeferencedCentreM` set) skips this hunt for a
  * mass centre entirely: its origin is already meaningful (the source's real
  * anchor), so the shift is the fixed, precomputed offset onto its site.
  *
@@ -362,7 +357,7 @@ function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
 function mergeGeometry(
   doc: Document,
   bodyFromSource?: Mat3,
-  georeferencedOffsetM?: Vec2,
+  georeferencedCentreM?: Vec2,
 ): Geometry {
   const prims = listPrimitives(doc);
   const positions: number[] = [];
@@ -422,13 +417,12 @@ function mergeGeometry(
   }
 
   // sum(triangleArea * triangleCentroid) / sum(triangleArea) — see the docblock
-  // above for why this beats a bbox centre. Skipped for a georeferenced
-  // source, which translates by its precomputed site offset instead.
+  // above for why this beats a bbox centre.
   let cx = 0;
   let cy = 0;
   let cz = 0;
-  if (georeferencedOffsetM) {
-    [cx, cy] = [-georeferencedOffsetM[0], -georeferencedOffsetM[1]];
+  if (georeferencedCentreM) {
+    [cx, cy] = georeferencedCentreM;
   } else {
     let totalArea = 0;
     for (let i = 0; i < indices.length; i += 3) {
@@ -521,9 +515,7 @@ async function writeTexture(
  * A per-tier record's present tiers, in ladder order — throws unless they form
  * a contiguous `TIER_LADDER` prefix starting at `small`: a gap (`small` +
  * `large`, no `medium`) would leave `clampTier` handing a `medium` request a
- * file that was never built, a silent 404. Generic over the record's value
- * (a built GLB path, or a `MeshSourceEntry`'s `MeshTierSource`) — only which
- * tier keys are present matters here.
+ * file that was never built, a silent 404.
  */
 function orderedTiers<T>(tiers: Readonly<Partial<Record<Tier, T>>>, key: string): readonly Tier[] {
   const present = TIER_LADDER.filter((tier) => tiers[tier] !== undefined);
@@ -660,7 +652,7 @@ async function bakeTier(
     );
   }
 
-  const merged = mergeGeometry(doc, target.bodyFromSource, target.georeferencedOffsetM);
+  const merged = mergeGeometry(doc, target.bodyFromSource, target.georeferencedCentreM);
   const geometry = await simplifyTier(target, key, tier, merged);
   const px = tierToTexturePx(tier);
   const stem = basename(meshTierPrefix(key, tier));
@@ -890,18 +882,15 @@ export async function buildMeshes(options: {
 
 /**
  * A georeferenced key's ENU offset from its source anchor to its
- * `SurfaceFixedSite` (negated: the translation `mergeGeometry` adds) —
- * undefined for every other key. `meshAnchorSite` is the single place the
- * anchored-site guards live; this just turns its answer into what `main`
- * wants.
+ * `SurfaceFixedSite` — undefined for every other key. `meshAnchorSite` is the
+ * single place the anchored-site guards live.
  */
-function georeferencedOffsetM(key: string): Vec2 | undefined {
+function georeferencedCentreM(key: string): Vec2 | undefined {
   const site = meshAnchorSite(key);
   if (site === undefined) return undefined;
-  const anchor = MESH_SOURCES[key]!.georeferenced!.anchor;
+  const anchor = MESH_SOURCES[key]!.georeferenced!;
   const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildMeshes');
-  const [e, n] = enuOffsetM(anchor, site, host.surface.datumRadiusM);
-  return [-e, -n];
+  return enuOffsetM(anchor, site, host.surface.datumRadiusM);
 }
 
 async function main(): Promise<void> {
@@ -922,7 +911,7 @@ async function main(): Promise<void> {
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
       groundUp: meshGroundUpSource(key),
-      georeferencedOffsetM: georeferencedOffsetM(key),
+      georeferencedCentreM: georeferencedCentreM(key),
     };
   });
   await buildMeshes({

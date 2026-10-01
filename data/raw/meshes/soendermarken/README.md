@@ -49,7 +49,7 @@ the mesh's origin from this anchor onto `SURFACE_FIXED_SITES.soendermarken`
 `GeoreferencedMeshSource` in `tools/meshes/@types/`.
 
 DVR90 is the app's own DHM terrain datum, so the scan's heights need no geoid
-shift to compare against or cut into the drawn terrain.
+shift to compare against the drawn terrain.
 
 ## Attribution
 

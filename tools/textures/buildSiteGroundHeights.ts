@@ -28,8 +28,7 @@ const RAD_TO_DEG = 180 / Math.PI;
 
 /** The `GeodeticAnchor` an `anchored` site's own mesh source carries, found by
  *  running `meshAnchorSite` (key -> site) over every key until one answers
- *  with this site — the site -> key direction, with no separate join or
- *  error message of its own to drift from that one's. */
+ *  with this site. */
 function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
   const meshKey = Object.keys(MESH_SOURCES).find((key) => meshAnchorSite(key)?.id === site.id);
   if (meshKey === undefined) {
@@ -37,7 +36,7 @@ function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
       `buildSiteGroundHeights: anchored site '${site.id}' has no georeferenced mesh source`,
     );
   }
-  return MESH_SOURCES[meshKey]!.georeferenced!.anchor;
+  return MESH_SOURCES[meshKey]!.georeferenced!;
 }
 
 /**
@@ -45,8 +44,7 @@ function anchorForSite(site: SurfaceFixedSite): GeodeticAnchor {
  * height is the source anchor's own DVR90 height; up is the anchor's own
  * straight-up as seen from the site, which tilts a hair off true vertical
  * because the site sits `enuOffsetM(anchor, site)` away from where that
- * "straight up" was measured. Exported standalone (no manifest argument) so
- * it is testable with no baked tiles on disk.
+ * "straight up" was measured.
  */
 export function anchoredSeat(
   site: SurfaceFixedSite,

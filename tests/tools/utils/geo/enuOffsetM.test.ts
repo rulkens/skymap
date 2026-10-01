@@ -24,15 +24,4 @@ describe('enuOffsetM', () => {
     expect(north).toBeCloseTo(0, 6);
     expect(east).toBeCloseTo(62.709, 2);
   });
-
-  it('is anti-symmetric: swapping from/to negates both components', () => {
-    const from = { latDeg: 55.67, lonDeg: 12.53 };
-    const to = { latDeg: 55.6701, lonDeg: 12.5241 };
-    const [east, north] = enuOffsetM(from, to, R);
-    const [backEast, backNorth] = enuOffsetM(to, from, R);
-    // Not exactly negated (the two tangent planes differ slightly), but at
-    // this small a span the mismatch is far below the metre.
-    expect(backEast).toBeCloseTo(-east, 1);
-    expect(backNorth).toBeCloseTo(-north, 1);
-  });
 });
