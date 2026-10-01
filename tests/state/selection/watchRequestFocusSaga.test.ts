@@ -62,7 +62,7 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('resolves a structure id immediately (prefix-only, no cloud needed)', async () => {
-    store.dispatch(requestFocus('cluster-virgo'));
+    store.dispatch(requestFocus({ id: 'cluster-virgo', transition: 'fly' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({
       type: 'structure',
@@ -75,14 +75,14 @@ describe('watchRequestFocusSaga', () => {
     // through the composed resolver's core rows — no `engineSourceCountReported`
     // pulse required, even with the cloud absent.
     cloudPresent = false;
-    store.dispatch(requestFocus('body-mars'));
+    store.dispatch(requestFocus({ id: 'body-mars', transition: 'fly' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({ type: 'body', id: 'mars' });
   });
 
   it('defers an unresolvable galaxy id, then resolves on the catalog-landed count pulse', async () => {
     cloudPresent = false;
-    store.dispatch(requestFocus('sdss-1237668393006604288'));
+    store.dispatch(requestFocus({ id: 'sdss-1237668393006604288', transition: 'fly' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toBeNull();
 

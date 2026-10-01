@@ -107,7 +107,11 @@ describe('watchHashSaga', () => {
     register();
     await settle();
 
-    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31'), hashArrivalApplied()]);
+    expect(recorded).toEqual([
+      requestSelect('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
+      hashArrivalApplied(),
+    ]);
   });
 
   it('holds the write half until the saga context is registered', async () => {

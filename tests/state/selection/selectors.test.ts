@@ -98,7 +98,7 @@ describe('selectHasSelectionIntent', () => {
 
   it('returns true when only pending.focus is set — the deferred deep-link case a ref-only guard misses', () => {
     const { store } = createAppStore();
-    store.dispatch(requestFocus('m31'));
+    store.dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
     // The request is still deferring: the resolved focus ref stays null while
     // it parks on a catalog pulse, exactly as `resolveFocusRefDeferringSaga` does
     // for a cold `#focus=m31` load. A guard reading only the ref slots would

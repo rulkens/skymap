@@ -79,7 +79,9 @@ describe('focus row', () => {
     // A galaxy/star request parks in `resolveFocusRefDeferringSaga` until its
     // catalog pulses, leaving the resolved slot null for the whole boot window.
     // Publishing the in-flight id is what keeps a cold deep link on the URL.
-    expect(focusSource.write(stateAfter(requestFocus('m31')))).toBe('m31');
+    expect(focusSource.write(stateAfter(requestFocus({ id: 'm31', transition: 'fly' })))).toBe(
+      'm31',
+    );
   });
 
   it('writes the encoded target once the request has resolved', () => {
@@ -92,7 +94,7 @@ describe('focus row', () => {
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
       setSelectionRow({ slot: 'focus', row: virgoRow }),
-      requestFocus('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');
   });

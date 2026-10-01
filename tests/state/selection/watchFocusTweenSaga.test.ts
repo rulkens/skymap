@@ -4,6 +4,9 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
+import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import {
   updateSelectionFocus,
   updateSelectionSelect,
@@ -17,7 +20,7 @@ import {
   engineStructureCountsChanged,
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { cameraRoute } from '../../../src/store/constants';
+import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -86,6 +89,7 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
+    mw.run(watchRequestFocusSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       resolveDeps,
@@ -131,6 +135,13 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus(SIRIUS_REF));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
+  });
+
+  it('a cut focus request sets focus without starting a tween', async () => {
+    store.dispatch(requestFocus({ id: MILKY_WAY_FOCUS_ID, transition: 'cut' }));
+    await flush();
+    expect(store.getState()[selectionRoute].focus).toEqual({ type: 'milkyWay' });
+    expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {

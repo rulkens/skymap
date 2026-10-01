@@ -108,7 +108,11 @@ describe('watchHashReadSaga', () => {
     // right. `hashArrivalApplied` follows: the boot read's own signal that it
     // applied a non-empty URL, which the write half takes to canonicalize its
     // first settled publish instead of pushing (`hashHistoryIntegrity`).
-    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31'), hashArrivalApplied()]);
+    expect(recorded).toEqual([
+      requestSelect('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
+      hashArrivalApplied(),
+    ]);
   });
 
   it('dispatches nothing at all on a bare arrival URL', () => {
@@ -183,7 +187,7 @@ describe('watchHashReadSaga', () => {
       applyUrlPose(pose),
       commitCameraPose(pose),
       requestSelect('m31'),
-      requestFocus('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
       hashArrivalApplied(),
     ]);
   });

@@ -55,6 +55,9 @@ export function* watchFocusTweenSaga() {
         return;
       }
 
+      // Below the park: a cut is still the arrival focus that spends it.
+      if (action.meta.transition === 'cut') return;
+
       // A structure deep link resolves its ref statically at bootstrap (a
       // durable id), before its backing store is fed, so the row comes back
       // null until that store's first commit. `NOT_YET_LOADED` states the one

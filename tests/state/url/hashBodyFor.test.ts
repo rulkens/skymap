@@ -23,7 +23,9 @@ describe('hashBodyFor', () => {
   });
 
   it('composes a single param when only focus is set', () => {
-    expect(hashBodyFor(stateAfter(requestFocus('m31')))).toBe('focus=m31');
+    expect(hashBodyFor(stateAfter(requestFocus({ id: 'm31', transition: 'fly' })))).toBe(
+      'focus=m31',
+    );
   });
 
   it('composes focus, t, and orientation in TABLE ORDER regardless of dispatch order', () => {
@@ -35,7 +37,7 @@ describe('hashBodyFor', () => {
     const state = stateAfter(
       setOrientation('galactic'),
       ...manualPausedAtActions(new Date('2000-01-01T12:00:00.000Z')),
-      requestFocus('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(hashBodyFor(state)).toBe('focus=m31&t=2000-01-01T12:00:00.000Z&orientation=galactic');
   });

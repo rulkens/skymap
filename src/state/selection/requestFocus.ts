@@ -3,8 +3,12 @@
  * resolve a durable focus id into a ref. Mirrors requestTier: dispatching it
  * changes no state; the watchRequestFocusSaga (Part 2) resolves the id,
  * deferring on the catalog-landed count pulse until the cloud is ready, then dispatches
- * updateSelectionFocus(ref). A palette pick or a hash deep-link dispatches it.
+ * updateSelectionFocus(ref, transition). A palette pick or a hash deep-link dispatches it.
  */
 import { createAction } from '@reduxjs/toolkit';
 
-export const requestFocus = createAction<string>('selection/requestFocus');
+import type { Transition } from '../../@types/navigation/Transition';
+
+export const requestFocus = createAction<{ id: string; transition: Transition }>(
+  'selection/requestFocus',
+);

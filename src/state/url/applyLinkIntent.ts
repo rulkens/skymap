@@ -23,7 +23,7 @@ export function* applyLinkIntent(intent: LinkIntent) {
   }
   if (view.kind === 'focus') {
     yield* put(requestSelect(view.id));
-    yield* put(requestFocus(view.id));
+    yield* put(requestFocus({ id: view.id, transition: 'fly' }));
   }
   if (intent.t !== undefined) {
     for (const action of manualPausedAtActions(new Date(intent.t))) yield* put(action);

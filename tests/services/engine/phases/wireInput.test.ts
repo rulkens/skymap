@@ -418,7 +418,7 @@ describe('wireInput', () => {
     // holds the id — the extraReducer sets `pending.focus` synchronously,
     // no saga needed to observe the guard here. A ref-only guard would read
     // this as "empty" and seed Earth over the still-resolving deep link.
-    deps.cb.store.dispatch(requestFocus('m31'));
+    deps.cb.store.dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
 
     await wireInput(state, deps);
 

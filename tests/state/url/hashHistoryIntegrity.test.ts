@@ -213,7 +213,7 @@ describe('hash history integrity', () => {
     await flush();
 
     pushState.mockClear();
-    store.dispatch(requestFocus('body-mars'));
+    store.dispatch(requestFocus({ id: 'body-mars', transition: 'fly' }));
     await flush();
 
     // The counterweight to every empty assertion above: focusing something IS a
