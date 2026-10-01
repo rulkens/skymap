@@ -5,7 +5,7 @@
  * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * SplashContainer, and `DebugPanel` (memo-boundary, its sections mount their
+ * SplashContainer, ArrivalVeilContainer, and `DebugPanel` (memo-boundary, its sections mount their
  * own containers).
  * Each container owns its own store reach; App just arranges them.
  *
@@ -44,6 +44,7 @@ import TopBarContainer from '../containers/TopBarContainer';
 import CommandPaletteContainer from '../containers/CommandPaletteContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import SplashContainer from '../containers/SplashContainer';
+import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
@@ -183,6 +184,7 @@ export function App(): React.ReactElement {
           just like TourNav and the beat counter. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
+      <ArrivalVeilContainer />
     </>
   );
 }
