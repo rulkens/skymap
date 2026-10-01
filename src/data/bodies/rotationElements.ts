@@ -184,4 +184,7 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   { kind: 'surfaceLocked', id: 'perseverance', headingDeg: 0 },
   { kind: 'surfaceLocked', id: 'spirit', headingDeg: 180 },
   { kind: 'surfaceLocked', id: 'opportunity', headingDeg: 270 },
+  // The scan is already authored with +X east (no bodyFromSource remap), so
+  // heading 90 puts body +X on east with no rotation left to apply.
+  { kind: 'surfaceLocked', id: 'soendermarken', headingDeg: 90 },
 ];

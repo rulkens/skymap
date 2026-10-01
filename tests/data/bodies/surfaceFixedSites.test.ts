@@ -66,11 +66,12 @@ describe('the Mars rover landing sites', () => {
     expect(distanceM).toBeCloseTo(siteGroundRadiusM(site, MARS_RADIUS_M) + site.altitudeM, 4);
   });
 
-  it('every surface-fixed site is lifted by its asset’s ground offset', () => {
+  it('every resting site is lifted by its asset’s ground offset', () => {
     // An invariant across two independently-edited files: the bake decides where
     // a mesh's origin sits, so a re-bake that moves it must move the site with
-    // it. Eyeballing the altitude back would bury a rover or float it.
-    for (const site of SURFACE_FIXED_SITES) {
+    // it. Eyeballing the altitude back would bury a rover or float it. An
+    // `anchored` site has no ground-fit, so its lift is hand-tuned instead.
+    for (const site of SURFACE_FIXED_SITES.filter((s) => s.seat === 'resting')) {
       const body = findByIdOrThrow(SCENE_MESH_BODIES, site.id, 'surfaceFixedSites.test');
       expect(site.altitudeM, site.id).toBe(MESH_ASSETS[body.meshKey]!.groundOffsetM);
     }

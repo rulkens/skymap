@@ -15,7 +15,14 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { basename, join, resolve } from 'node:path';
 
-import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-transform/core';
+import {
+  Document,
+  NodeIO,
+  Primitive,
+  type Accessor,
+  type Material,
+  type Texture,
+} from '@gltf-transform/core';
 import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
@@ -23,6 +30,7 @@ import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Tier } from '../../src/@types/data/Tier';
+import type { Vec2 } from '../../src/@types/math/Vec2';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { BakeTierResult } from './@types/BakeTierResult';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
@@ -33,9 +41,15 @@ import { TIER_LADDER } from '../../src/data/tierLadder';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { meshTierPrefix } from '../../src/utils/meshBodies/meshTierPrefix';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
+import { SCENE_CELESTIAL_BODIES } from '../../src/data/bodies/sceneCelestialBodies';
+import { findByIdOrThrow } from '../../src/utils/object/findByIdOrThrow';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { computeSmoothNormals } from '../utils/meshes/computeSmoothNormals';
+import { enuOffsetM } from '../utils/geo/enuOffsetM';
+import { meshAnchorSite } from '../utils/meshes/meshAnchorSite';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
+import { simplifyToTriangles } from '../utils/meshes/simplifyToTriangles';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
@@ -54,11 +68,19 @@ const LOSSLESS_WEBP = { lossless: true };
 /** Tangent-space "straight out", the substitute for a missing normal map. */
 const FLAT_NORMAL = { r: 128, g: 128, b: 255 };
 
+/** How far a tier's simplified triangle count may miss its target before
+ *  `bakeTier` refuses the build rather than ship a silently off-budget tier. */
+const SIMPLIFY_TOLERANCE = 0.05;
+
 export type MeshBuildTarget = {
   readonly key: string;
-  /** One source GLB per tier this body ships; must be a contiguous prefix of
-   *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). */
-  readonly glbPaths: Readonly<Partial<Record<Tier, string>>>;
+  /** One entry per tier this body ships; must be a contiguous prefix of
+   *  `TIER_LADDER` starting at `small` (`orderedTiers` enforces it). A tier's
+   *  `triangles`, if present, is the count `simplifyTier` meshopt-simplifies
+   *  it to after merge; absent bakes that tier at full density. */
+  readonly tiers: Readonly<
+    Partial<Record<Tier, { readonly path: string; readonly triangles?: number }>>
+  >;
   /** The CEILING tier's RAW_DATA upstream. */
   readonly source: string;
   readonly licence: string;
@@ -66,6 +88,9 @@ export type MeshBuildTarget = {
   readonly bodyFromSource?: Mat3;
   /** Undefined for a floating source; see `meshGroundUpSource`. */
   readonly groundUp?: Vec3;
+  /** Present for a georeferenced source: `enuOffsetM(anchor, site)`, used as
+   *  the recentre origin so the mesh's origin lands on its `SurfaceFixedSite`. */
+  readonly georeferencedCentreM?: Vec2;
 };
 
 /**
@@ -286,6 +311,30 @@ function windingFollowsNormal(
   return cx * nx + cy * ny + cz * nz >= 0;
 }
 
+/** A primitive's own POSITION buffer, in local (pre-node-transform) space —
+ *  what `computeSmoothNormals` needs when NORMAL is missing. */
+function localPositions(pos: Accessor): Float32Array {
+  const positions = new Float32Array(pos.getCount() * 3);
+  for (let v = 0; v < pos.getCount(); v++) {
+    const p = pos.getElement(v, [0, 0, 0]);
+    positions[v * 3] = p[0]!;
+    positions[v * 3 + 1] = p[1]!;
+    positions[v * 3 + 2] = p[2]!;
+  }
+  return positions;
+}
+
+/** A primitive's own index run, indexed or flat — read from the accessor
+ *  exactly once and reused below both for `computeSmoothNormals` and for the
+ *  merged index buffer. */
+function localIndices(prim: Primitive, vertexCount: number): Uint32Array {
+  const idx = prim.getIndices();
+  const count = idx ? idx.getCount() : vertexCount;
+  const indices = new Uint32Array(count);
+  for (let i = 0; i < count; i++) indices[i] = idx ? idx.getScalar(i) : i;
+  return indices;
+}
+
 /**
  * Merge every primitive into one vertex/index buffer with node transforms — and
  * the source's optional body-frame remap — baked in, then RECENTRE on the
@@ -293,6 +342,9 @@ function windingFollowsNormal(
  * long thin appendage (the whale's tail) drag the origin — and with it the
  * selection ring, pick sphere and caption anchor it all shares — off the
  * visible mass; weighting by triangle area keeps it on the surface instead.
+ * A georeferenced source (`georeferencedCentreM` set) skips this hunt for a
+ * mass centre entirely: its origin is already meaningful (the source's real
+ * anchor), so the shift is the fixed, precomputed offset onto its site.
  *
  * Recentring is also why `groundOffsetM` is measured HERE: after it the origin
  * sits inside the mesh, and this is the last place that knows how far the
@@ -302,7 +354,11 @@ function windingFollowsNormal(
  * source has none on EVERY primitive, since regenerating over a good frame
  * silently breaks normal-mapped shading.
  */
-function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
+function mergeGeometry(
+  doc: Document,
+  bodyFromSource?: Mat3,
+  georeferencedCentreM?: Vec2,
+): Geometry {
   const prims = listPrimitives(doc);
   const positions: number[] = [];
   const normals: number[] = [];
@@ -321,13 +377,17 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     const uv = prim.getAttribute('TEXCOORD_0');
     const tan = prim.getAttribute('TANGENT');
     if (!pos) throw new Error('buildMeshes: primitive without POSITION');
+    const indices3 = localIndices(prim, pos.getCount());
+    const computedNormals = nrm ? null : computeSmoothNormals(localPositions(pos), indices3);
 
     for (let v = 0; v < pos.getCount(); v++) {
       const p = pos.getElement(v, [0, 0, 0]);
       const world = transformPoint(matrix, p[0]!, p[1]!, p[2]!);
       positions.push(...world);
 
-      const n = nrm ? nrm.getElement(v, [0, 0, 0]) : [0, 0, 1];
+      const n = nrm
+        ? nrm.getElement(v, [0, 0, 0])
+        : [computedNormals![v * 3]!, computedNormals![v * 3 + 1]!, computedNormals![v * 3 + 2]!];
       const normal = transformNormal(matrix, mirrorSign, n[0]!, n[1]!, n[2]!);
       normals.push(...normal);
 
@@ -346,10 +406,8 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
 
     // A mirrored node also inverts triangle winding, so undo that first; the
     // per-face normalisation then judges the geometry as it will be drawn.
-    const idx = prim.getIndices();
-    const count = idx ? idx.getCount() : pos.getCount();
-    const at = (i: number) => base + (idx ? idx.getScalar(i) : i);
-    for (let i = 0; i < count; i += 3) {
+    const at = (i: number) => base + indices3[i]!;
+    for (let i = 0; i < indices3.length; i += 3) {
       const i0 = at(i);
       const i1 = at(mirrored ? i + 2 : i + 1);
       const i2 = at(mirrored ? i + 1 : i + 2);
@@ -363,26 +421,30 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
   let cx = 0;
   let cy = 0;
   let cz = 0;
-  let totalArea = 0;
-  for (let i = 0; i < indices.length; i += 3) {
-    const a = indices[i]! * 3;
-    const b = indices[i + 1]! * 3;
-    const c = indices[i + 2]! * 3;
-    const ux = positions[b]! - positions[a]!;
-    const uy = positions[b + 1]! - positions[a + 1]!;
-    const uz = positions[b + 2]! - positions[a + 2]!;
-    const vx = positions[c]! - positions[a]!;
-    const vy = positions[c + 1]! - positions[a + 1]!;
-    const vz = positions[c + 2]! - positions[a + 2]!;
-    const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
-    cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
-    cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
-    cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
-    totalArea += area;
+  if (georeferencedCentreM) {
+    [cx, cy] = georeferencedCentreM;
+  } else {
+    let totalArea = 0;
+    for (let i = 0; i < indices.length; i += 3) {
+      const a = indices[i]! * 3;
+      const b = indices[i + 1]! * 3;
+      const c = indices[i + 2]! * 3;
+      const ux = positions[b]! - positions[a]!;
+      const uy = positions[b + 1]! - positions[a + 1]!;
+      const uz = positions[b + 2]! - positions[a + 2]!;
+      const vx = positions[c]! - positions[a]!;
+      const vy = positions[c + 1]! - positions[a + 1]!;
+      const vz = positions[c + 2]! - positions[a + 2]!;
+      const area = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+      cx += (area * (positions[a]! + positions[b]! + positions[c]!)) / 3;
+      cy += (area * (positions[a + 1]! + positions[b + 1]! + positions[c + 1]!)) / 3;
+      cz += (area * (positions[a + 2]! + positions[b + 2]! + positions[c + 2]!)) / 3;
+      totalArea += area;
+    }
+    cx /= totalArea;
+    cy /= totalArea;
+    cz /= totalArea;
   }
-  cx /= totalArea;
-  cy /= totalArea;
-  cz /= totalArea;
 
   const centred = new Float32Array(positions.length);
   let radiusSq = 0;
@@ -450,13 +512,13 @@ async function writeTexture(
 }
 
 /**
- * `target.glbPaths`' present tiers, in ladder order — throws unless they form
+ * A per-tier record's present tiers, in ladder order — throws unless they form
  * a contiguous `TIER_LADDER` prefix starting at `small`: a gap (`small` +
  * `large`, no `medium`) would leave `clampTier` handing a `medium` request a
  * file that was never built, a silent 404.
  */
-function orderedTiers(glbPaths: MeshBuildTarget['glbPaths'], key: string): readonly Tier[] {
-  const present = TIER_LADDER.filter((tier) => glbPaths[tier] !== undefined);
+function orderedTiers<T>(tiers: Readonly<Partial<Record<Tier, T>>>, key: string): readonly Tier[] {
+  const present = TIER_LADDER.filter((tier) => tiers[tier] !== undefined);
   if (present.length !== TIER_LADDER.indexOf(present[present.length - 1] ?? 'small') + 1) {
     throw new Error(
       `buildMeshes: ${key} ships tiers [${present.join(', ')}] — tiers must run contiguously from small`,
@@ -515,6 +577,41 @@ function bakeContactDecal(
 }
 
 /**
+ * Decimate a merged tier to its `tiers[tier].triangles` budget, if the tier
+ * has one — geometry itself (positions/normals/uvs/tangents) is untouched,
+ * only `indices` shrinks; `writeMeshBinary`'s reorder pass drops whatever
+ * that leaves unreferenced. A miss past `SIMPLIFY_TOLERANCE` throws rather
+ * than ship a tier silently off its triangle budget.
+ */
+async function simplifyTier(
+  target: MeshBuildTarget,
+  key: string,
+  tier: Tier,
+  geometry: Geometry,
+): Promise<Geometry> {
+  const targetTriangles = target.tiers[tier]?.triangles;
+  if (targetTriangles === undefined) return geometry;
+  const sourceTriangles = geometry.indices.length / 3;
+  const { indices, triangleCount } = await simplifyToTriangles(
+    geometry.positions,
+    geometry.uvs,
+    geometry.indices,
+    targetTriangles,
+  );
+  process.stderr.write(
+    `  simplify ${key}-${tier}  ${sourceTriangles} -> ${triangleCount} tris (target ${targetTriangles})\n`,
+  );
+  const miss = Math.abs(triangleCount - targetTriangles) / targetTriangles;
+  if (miss > SIMPLIFY_TOLERANCE) {
+    throw new Error(
+      `buildMeshes: ${key}-${tier} simplified to ${triangleCount} tris, missing its ` +
+        `${targetTriangles}-tri target by ${(miss * 100).toFixed(1)}% (over ${(SIMPLIFY_TOLERANCE * 100).toFixed(0)}%)`,
+    );
+  }
+  return { ...geometry, indices };
+}
+
+/**
  * Bake one tier's GLB: geometry to `<key>-<tier>.mesh`, every texture slot to
  * `<key>-<tier><suffix>.webp` capped at that tier's `tierToTexturePx`. The
  * contact mask is UNTIERED and only ever written for the ceiling tier — the
@@ -555,7 +652,8 @@ async function bakeTier(
     );
   }
 
-  const geometry = mergeGeometry(doc, target.bodyFromSource);
+  const merged = mergeGeometry(doc, target.bodyFromSource, target.georeferencedCentreM);
+  const geometry = await simplifyTier(target, key, tier, merged);
   const px = tierToTexturePx(tier);
   const stem = basename(meshTierPrefix(key, tier));
   writeFileSync(join(outDir, `${stem}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
@@ -659,14 +757,14 @@ async function bakeTier(
  */
 async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
   const { key } = target;
-  const tiers = orderedTiers(target.glbPaths, key);
+  const tiers = orderedTiers(target.tiers, key);
   const ceiling = tiers[tiers.length - 1]!;
 
   // `tiers` is ladder-ordered (`orderedTiers`), so the last iteration is
   // always the ceiling — no need to track which pass that was separately.
   let result: BakeTierResult | undefined;
   for (const tier of tiers) {
-    result = await bakeTier(target, tier, target.glbPaths[tier]!, outDir, tier === ceiling);
+    result = await bakeTier(target, tier, target.tiers[tier]!.path, outDir, tier === ceiling);
   }
   const { geometry, substituted, mean, contactDecal } = result!;
 
@@ -782,21 +880,38 @@ export async function buildMeshes(options: {
   return rows;
 }
 
+/**
+ * A georeferenced key's ENU offset from its source anchor to its
+ * `SurfaceFixedSite` — undefined for every other key. `meshAnchorSite` is the
+ * single place the anchored-site guards live.
+ */
+function georeferencedCentreM(key: string): Vec2 | undefined {
+  const site = meshAnchorSite(key);
+  if (site === undefined) return undefined;
+  const anchor = MESH_SOURCES[key]!.georeferenced!;
+  const host = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'buildMeshes');
+  return enuOffsetM(anchor, site, host.surface.datumRadiusM);
+}
+
 async function main(): Promise<void> {
   const targets = Object.entries(MESH_SOURCES).map(([key, entry]) => {
     const present = orderedTiers(entry.tiers, key);
-    const glbPaths = Object.fromEntries(
-      present.map((tier) => [tier, rawDataPath(entry.tiers[tier]!)]),
-    ) as MeshBuildTarget['glbPaths'];
-    const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!];
+    const tiers = Object.fromEntries(
+      present.map((tier) => [
+        tier,
+        { path: rawDataPath(entry.tiers[tier]!.raw), triangles: entry.tiers[tier]!.triangles },
+      ]),
+    ) as MeshBuildTarget['tiers'];
+    const raw: RawDataEntry = RAW_DATA[entry.tiers[present[present.length - 1]!]!.raw];
     return {
       key,
-      glbPaths,
+      tiers,
       source: raw.upstream ?? raw.path,
       licence: entry.licence,
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
       groundUp: meshGroundUpSource(key),
+      georeferencedCentreM: georeferencedCentreM(key),
     };
   });
   await buildMeshes({

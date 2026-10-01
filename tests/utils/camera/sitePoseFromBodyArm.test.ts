@@ -31,7 +31,14 @@ const RANGE_FLOOR_M = ROVER.standoffRadii * ROVER.boundingRadiusM;
 const RELEASE_EDGE_M = 80 * ROVER.boundingRadiusM;
 
 function site(latDeg: number, lonDeg: number): SurfaceFixedSite {
-  return { id: 'fixture-rover', hostId: 'fixture-host', latDeg, lonDeg, altitudeM: 1.7 };
+  return {
+    id: 'fixture-rover',
+    hostId: 'fixture-host',
+    latDeg,
+    lonDeg,
+    altitudeM: 1.7,
+    seat: 'resting',
+  };
 }
 
 const SITES = [site(90, 0), site(0, 0), site(-4.59, 137.44)];
@@ -77,6 +84,7 @@ describe('sitePoseFromBodyArm', () => {
       latDeg: 61,
       lonDeg: -21,
       altitudeM: 0.5,
+      seat: 'resting',
     };
     for (const pose of POSES) expectRoundTrip(tiny, 1000, pose);
   });
