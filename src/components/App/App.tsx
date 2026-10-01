@@ -5,8 +5,8 @@
  * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * SplashContainer, ArrivalVeilContainer, and `DebugPanel` (memo-boundary, its sections mount their
- * own containers).
+ * SplashContainer, ArrivalVeilContainer, and `DebugPanel` (memo-boundary, its
+ * sections mount their own containers).
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and

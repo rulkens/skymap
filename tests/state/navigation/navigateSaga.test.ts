@@ -26,7 +26,8 @@ import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { startClip } from '../../../src/state/camera/clipActions';
+import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import {
   clipStarted,
   commitCameraPose,
@@ -62,17 +63,36 @@ const resolveDeps = (): ResolveDeps =>
     structures: { byId: () => null, byCategory: () => [], loaded: () => true },
   }) as unknown as ResolveDeps;
 
-function build() {
+const PLAYS = [
+  ['tour', 'grandTour', startTour.match],
+  ['clip', 'cosmicFlows', startClip.match],
+] as const;
+
+const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
+  data: { timeline: [] },
+  frame: 'equatorial',
+};
+
+// `playsAtOnce` stands in for a player whose first clip starts inside the
+// start request's own dispatch.
+function build({ playsAtOnce = false } = {}) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
     return next(action);
   };
+  const player: Middleware = (api) => (next) => (action) => {
+    const result = next(action);
+    if (playsAtOnce && (startTour.match(action) || startClip.match(action))) {
+      api.dispatch(clipStarted(CLIP_STARTED));
+    }
+    return result;
+  };
   const playClip = vi.fn(() => new Promise<void>(() => {}));
   const mw = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
-    middleware: (g) => g().concat(recorder, mw),
+    middleware: (g) => g().concat(recorder, player, mw),
   });
   mw.setContext({
     resolveDeps,
@@ -199,19 +219,20 @@ describe('navigateSaga', () => {
     expect(h.tweens()).toBe(0);
   });
 
-  it('an unknown exhibit id fails without dispatching openExhibit', async () => {
+  it.each([
+    ['exhibit', openExhibit.match],
+    ['tour', startTour.match],
+    ['clip', startClip.match],
+  ] as const)('an unknown %s id fails without dispatching its start', async (kind, started) => {
     const h = build();
-    const outcome = await h.navigate({ view: { kind: 'exhibit', id: 'nope' } }, 'cut');
+    const outcome = await h.navigate({ view: { kind, id: 'nope' } }, 'cut');
 
     expect(outcome).toEqual({ ok: false, reason: 'unknown-id' });
-    expect(h.count(openExhibit.match)).toBe(0);
+    expect(h.count(started)).toBe(0);
     expect(selectTakeoverSource(h.store.getState())).toBeNull();
   });
 
-  it.each([
-    ['tour', 'grandTour', startTour.match],
-    ['clip', 'cosmicFlows', startClip.match],
-  ] as const)('navigate %s reveals after the first clipStarted', async (kind, id, started) => {
+  it.each(PLAYS)('navigate %s reveals after the first clipStarted', async (kind, id, started) => {
     const h = build();
     let done = false;
     const navigation = h.navigate({ view: { kind, id } }, 'cut').then((outcome) => {
@@ -223,8 +244,33 @@ describe('navigateSaga', () => {
     expect(h.count(started)).toBe(1);
     expect(done).toBe(false);
 
-    h.store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial' }));
+    h.store.dispatch(clipStarted(CLIP_STARTED));
     expect(await navigation).toEqual({ ok: true });
+  });
+
+  it.each(PLAYS)('navigate %s catches a clipStarted inside its start', async (kind, id) => {
+    // A player whose first clip starts inside the start request's dispatch
+    // must still reveal, not leave the arrival waiting for the timeout.
+    const h = build({ playsAtOnce: true });
+    const outcome = await Promise.race([
+      h.navigate({ view: { kind, id } }, 'cut'),
+      flush().then(() => 'still waiting'),
+    ]);
+
+    expect(outcome).toEqual({ ok: true });
+  });
+
+  it.each([
+    ['tour', 'grandTour', exitTakeover.match],
+    ['clip', 'cosmicFlows', stopClip.match],
+  ] as const)('a cancelled %s arrival stops what it started', async (kind, id, stopped) => {
+    const h = build();
+    const task = h.run(navigateSaga, { view: { kind, id } }, 'cut' as const);
+    await flush();
+    task.cancel();
+    await flush();
+
+    expect(h.count(stopped)).toBe(1);
   });
 
   it('a hashchange after arrival flies and leaves arrival untouched', async () => {

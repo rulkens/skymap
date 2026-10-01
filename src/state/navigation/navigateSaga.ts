@@ -5,20 +5,25 @@
  * instant and in the linked frame. Every camera commit waits for the camera
  * runtime (`liveCameraRuntimeSaga`).
  */
-import { all, call, delay, getContext, put, race, select, take } from 'typed-redux-saga';
+import { all, call, cancelled, delay, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
 import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
-import { updateSelectionFocus, updateSelectionSelect } from '../selection/selectionSlice';
+import {
+  clearSelection,
+  updateSelectionFocus,
+  updateSelectionSelect,
+} from '../selection/selectionSlice';
 import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
-import { startClip } from '../camera/clipActions';
+import { startClip, stopClip } from '../camera/clipActions';
+import { exitTakeover } from '../takeover/takeoverActions';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
@@ -99,14 +104,22 @@ function* homeSaga() {
 
 // A tour or clip opens on its own first frame, so a cut arrival is done only
 // once the first clip has started: an opening snap or a fixed `start` lands
-// before the reveal. Its live start is the home framing, as from the splash.
-function* playFromHomeSaga(start: Action, transition: Transition): SagaGenerator<NavigateOutcome> {
+// before the reveal. An arrival that gives up first stops what it started,
+// or the play could still begin over home after the veil has lifted.
+function* firstClipSaga(
+  start: Action,
+  stop: Action,
+  transition: Transition,
+): SagaGenerator<NavigateOutcome> {
   if (transition === 'fly') {
     yield* put(start);
     return OK;
   }
-  yield* call(homeSaga);
-  yield* all([take(clipStarted), put(start)]);
+  try {
+    yield* all([take(clipStarted), put(start)]);
+  } finally {
+    if (yield* cancelled()) yield* put(stop);
+  }
   return OK;
 }
 
@@ -146,9 +159,17 @@ export function* navigateSaga(
       return OK;
     case 'tour':
       if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
-      return yield* call(playFromHomeSaga, startTour(view.id), transition);
+      // A live start begins on the home framing, as from the splash.
+      if (transition === 'cut') yield* call(homeSaga);
+      return yield* call(firstClipSaga, startTour(view.id), exitTakeover(), transition);
     case 'clip':
       if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
-      return yield* call(playFromHomeSaga, startClip(view.id), transition);
+      if (transition === 'cut') {
+        yield* call(homeSaga);
+        // A tour clears the seeded focus itself; a clip does not, so Earth's
+        // card would sit over it and follow would ease back when it ends.
+        yield* put(clearSelection());
+      }
+      return yield* call(firstClipSaga, startClip(view.id), stopClip(), transition);
   }
 }

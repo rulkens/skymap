@@ -1,8 +1,8 @@
 /**
  * exhibitBodySaga — an exhibit's takeover body: apply its settings, fly (or,
- * on a `'cut'` entry, cut) to its pose, then hold, turning slowly, until the viewer exits. `runTakeoverSaga` owns
- * the snapshot/start/restore/end bracket; this only decides when the body
- * returns. `exitTakeover` is the only abort arm — an exhibit has no beat loop,
+ * on a `'cut'` entry, cut) to its pose, then hold, turning slowly, until the
+ * viewer exits. `runTakeoverSaga` owns the snapshot/start/restore/end bracket;
+ * this only decides when the body returns. `exitTakeover` is the only abort arm — an exhibit has no beat loop,
  * so orbiting mid-fly or mid-hold must not end it.
  */
 import { call, getContext, put, race, select, take } from 'typed-redux-saga';
