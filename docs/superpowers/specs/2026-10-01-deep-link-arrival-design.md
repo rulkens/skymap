@@ -82,7 +82,7 @@ type ArrivalState = { status: 'pending' | 'arrived' | 'failed'; reason?: 'unknow
 2. **Boot.** `wireInput` no longer chooses the boot pose and no longer seeds the Earth focus; it commits a neutral home base only so the runtime has a pose. The veil covers that base. The `urlPose ?? homeFraming` choice moves out of `wireInput` (`wireInput.ts:132-150`).
 3. **Navigate.** Once `cameraRuntime()` exists, `arrivalSaga` calls `navigateSaga(intent, 'cut')`. `t` and `orientation` apply first, so framing uses the linked instant; this fixes `#t=` framing Earth at wall-clock time. The subject then resolves, using the existing deferring resolver (`resolveFocusRefDeferringSaga`) for late catalog ids. Finally one outside commit lands on the destination pose, which frame 1 adopts as settled (#788).
 4. **Moving bodies.** The commit uses `framingPose`, now the same distance the follow driver holds (prep 1), and the follow memory must read saturated, so `followApproach` (`cameraEpochs.ts:74`) has no debt to re-ease. The plan's first task verifies this against a real `#focus=body-mars` boot before relying on it.
-5. **Reveal.** After the engine renders one frame on the destination, `arrived` is dispatched and the veil fades. The plan picks the frame signal: an existing frame-end event if one exists, otherwise a new engine → store "frame presented" action.
+5. **Reveal.** After the engine renders one frame on the destination, `arrived` is dispatched and the veil fades. No frame-presented signal exists, so "rendered" means two `requestAnimationFrame`s after the commit (the render loop runs on rAF), the same wait the perf hook's `setPose` uses.
 6. **Deletions.** `CameraState.urlPose`, `applyUrlPose`, `spendUrlPose`, `selectUrlPose`, the parked-pose branch in `watchFocusTweenSaga` and `applyLinkIntent` (the prep-2 shim) all go. `#pose=` is now the `pose` subject.
 
 ### Subjects
@@ -91,7 +91,7 @@ type ArrivalState = { status: 'pending' | 'arrived' | 'failed'; reason?: 'unknow
 - **`pose`.** The pose is committed with no focus.
 - **`exhibit`.** `openExhibit({ id, entry })`. With `entry: 'cut'`, `exhibitBodySaga` commits the fitted pose in place of `playClip(flyToPoseClip)`. The settings merge, no-focus and auto-rotate steps run unchanged, and the overlay copy shows at once.
 - **`tour`.** `startTour(id)` runs unchanged.
-- **`clip`.** For a fixed `start`, commit `start` first, built at the frozen `nowMs` and orientation that `watchClipSaga` uses (`watchClipSaga.ts:95-96`), so frame 0 does not jump. Then `startClip(id)`.
+- **`clip`.** `startClip(id)`; the veil lifts only after the clip has started (`clipStarted`) and rendered its first frame. A fixed-`start` clip therefore reveals on `start`, with no pre-commit: the jump from the home base to `start` happens behind the veil. The same "reveal after the first `clipStarted`" rule covers `tour`, so `grandTour`'s 0 s opening snap lands behind the veil too.
 - **`home`.** Commit the home framing and seed the Earth focus. This is what `wireInput` does today, moved.
 - **Unknown registry ids and unresolvable focus ids** take the failure path (ruling 5).
 
