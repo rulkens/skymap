@@ -85,8 +85,10 @@ describe('textureSourcesFor', () => {
         'PIA18434.tif',
         'PIA18438.tif',
         'PIA18436.tif',
-        // Mimas's normal map is baked from the Gaskell shape model.
+        // Mimas, Tethys and Dione normal maps are baked from Gaskell shape models.
         'mimas_quad512q.tab',
+        'tethys_quad512q.tab',
+        'dione_quad512q.tab',
         // Pluto's second (chroma) input and the true-colour reference its
         // calibration is fitted against: neither is a `native`, so both ride the
         // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).

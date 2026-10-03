@@ -67,8 +67,15 @@ export const TEXTURE_SOURCES = {
     surface: { native: 'textures.nasaMimas' },
     normal: { native: 'textures.gaskellMimasShape', format: 'icq', lonOffsetDeg: 4 },
   },
-  tethys: { surface: { native: 'textures.nasaTethys' } },
-  dione: { surface: { native: 'textures.nasaDione' } },
+  // Tethys's offset is MEASURED (correlation vs PIA18439); the prime-meridian constants (shape W0 10.45 vs pck00011 8.95) would predict +1.5.
+  tethys: {
+    surface: { native: 'textures.nasaTethys' },
+    normal: { native: 'textures.gaskellTethysShape', format: 'icq', lonOffsetDeg: -0.5 },
+  },
+  dione: {
+    surface: { native: 'textures.nasaDione' },
+    normal: { native: 'textures.gaskellDioneShape', format: 'icq', lonOffsetDeg: -0.6 },
+  },
   rhea: { surface: { native: 'textures.nasaRhea' } },
   iapetus: { surface: { native: 'textures.nasaIapetus' } },
   'saturn-ring': {

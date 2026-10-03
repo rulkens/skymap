@@ -249,15 +249,20 @@ mirror); the build rolls them back (`antimeridianCentred`).
 | Rhea    | `PIA18438.tif` | 12015×6008  | RGB   | greyed, tinted + lifted                             |
 | Iapetus | `PIA18436.tif` | 11741×5871  | RGB   | greyed, tinted; two-terrain albedo fit, small lift  |
 
-### Gaskell Mimas shape model (public domain; credit "Robert Gaskell / NASA PDS Small Bodies Node")
+### Gaskell shape models: Mimas, Tethys, Dione (public domain; credit "Robert Gaskell / NASA PDS Small Bodies Node")
 
-`mimas_quad512q.tab` (~60 MB, `https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab`):
+`<body>_quad512q.tab` (~60 MB each, `https://sbnarchive.psi.edu/pds4/non_mission/gaskell.<body>.shape-model/data/<body>_quad512q.tab`):
 ASCII, line 1 = Q (512), then 6·(Q+1)² body-fixed `x y z` lines in km. Not a
-texture: the build rasterises its radius (187.6-210.8 km) to a 2048×1024
-heightfield and Sobel-bakes Mimas's `normal` map from it. The shape frame's
-prime-meridian constant is 337.46° vs the texture's 333.46°; cross-correlation
-against PIA18437 and a Herschel overlay give a 4° offset, encoded as
-`lonOffsetDeg` in `textureSources.ts`.
+texture: the build rasterises the radius to a 2048×1024 heightfield and
+Sobel-bakes the body's `normal` map from it. Each shape frame's prime meridian
+differs from its texture's, so `lonOffsetDeg` in `textureSources.ts` is
+measured by cross-correlating shape shading against the texture.
+
+| Body   | Radius (km)   | Spacing  | `lonOffsetDeg` | Note                                                                 |
+| ------ | ------------- | -------- | -------------- | -------------------------------------------------------------------- |
+| Mimas  | 187.6-210.8   | ~0.6 km  | +4             | constants 337.46 vs 333.46; Herschel overlay agrees                  |
+| Tethys | 519.2-541.6   | ~1.6 km  | -0.5           | measured; the constants (W0 10.45 vs pck 8.95) would predict +1.5    |
+| Dione  | 554.2-566.1   | ~1.7 km  | -0.6           | measured; agrees with the constants (W0 357.00 vs pck 357.6)         |
 
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or

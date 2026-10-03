@@ -820,6 +820,28 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.gaskellTethysShape': {
+    path: 'data/raw/textures/tethys_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.5 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.tethys.shape-model/data/tethys_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.gaskellDioneShape': {
+    path: 'data/raw/textures/dione_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Dione shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 554.2-566.1 km; build-only bake input for Dione's normal map. Texture lon L reads shape lon L - 0.6 (measured by cross-correlation; agrees with the prime-meridian constants). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.dione.shape-model/data/dione_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.earthClouds': {
     path: 'data/raw/textures/cloud_combined_8192.tif',
     kind: 'file',

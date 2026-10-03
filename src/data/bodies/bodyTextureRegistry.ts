@@ -171,13 +171,13 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   },
   tethys: {
     bodyId: 'tethys',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', normal: 'small' },
     provenance: 'nasa',
     treatment: { kind: 'monoTint', tint: [0.47, 0.47, 0.47], lift: 0.678, antimeridianCentred: true },
   },
   dione: {
     bodyId: 'dione',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', normal: 'small' },
     provenance: 'nasa',
     treatment: { kind: 'monoTint', tint: [0.58, 0.58, 0.58], lift: 0.584, antimeridianCentred: true },
   },

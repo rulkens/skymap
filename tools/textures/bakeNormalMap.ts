@@ -89,6 +89,8 @@ export const DEFAULT_EXAGGERATION = 4;
  */
 export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
   mimas: 64, // measured: p50 tilt 10°, p99 38° over the 2k grid, so Herschel's walls read without saturating
+  tethys: 38, // measured: p50 tilt 10°, p99 37° over the 2k grid; the bake maps each body's radius range to 0-255, so gain differs per body
+  dione: 18, // measured: p50 tilt 6°, p99 36°; its 12 km radius range is the narrowest, so the steepest per-texel slope
   moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4
 };
 
