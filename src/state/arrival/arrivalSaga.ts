@@ -9,6 +9,7 @@ import type { Action } from '@reduxjs/toolkit';
 
 import { arrivalPending, arrived, arrivalFailed } from './arrivalSlice';
 import { navigateSaga } from '../navigation/navigateSaga';
+import { applyLinkClockAndFrameSaga } from '../navigation/applyLinkClockAndFrameSaga';
 import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
 import { clearSelection } from '../selection/selectionSlice';
 import { engineStatusChanged } from '../engine/engineSlice';
@@ -26,8 +27,11 @@ const isEngineError = (action: Action): boolean =>
 export function* arrivalSaga() {
   const { payload: intent } = yield* take(arrivalPending);
   // The store boots on the J2000 seed anchor; anything framed against it
-  // faces the wrong sun.
+  // faces the wrong sun. Both land before the runtime: `wireInput` seeds it in
+  // the store's orientation, and one seeded in another frame re-encodes the
+  // arrival's commit on frame 1.
   if (intent.t === undefined) yield* put(goLiveNowAction());
+  yield* call(applyLinkClockAndFrameSaga, intent);
   // The backstop measures reaching the subject, not booting the engine.
   const { error } = yield* race({
     runtime: call(liveCameraRuntimeSaga),
@@ -38,7 +42,7 @@ export function* arrivalSaga() {
     return;
   }
   const { done } = yield* race({
-    done: call(navigateSaga, intent, 'cut' as const),
+    done: call(navigateSaga, { view: intent.view }, 'cut' as const),
     timeout: delay(ARRIVAL_TIMEOUT_MS),
   });
   const failure: ArrivalState['reason'] =

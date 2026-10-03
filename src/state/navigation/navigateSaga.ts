@@ -2,14 +2,16 @@
  * navigateSaga — the one path from a `LinkIntent` to the screen, for the boot
  * arrival (`'cut'`) and every later hash change (`'fly'`). `t` and
  * `orientation` land first, so a subject framed below is framed at the linked
- * instant and in the linked frame. Every camera commit waits for the camera
- * runtime (`liveCameraRuntimeSaga`).
+ * instant and in the linked frame; the arrival lands them itself, before the
+ * runtime is seeded, and passes only the view. Every camera commit waits for
+ * the camera runtime (`liveCameraRuntimeSaga`).
  */
 import { all, call, cancelled, delay, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
 import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
+import { applyLinkClockAndFrameSaga } from './applyLinkClockAndFrameSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
@@ -27,9 +29,7 @@ import { exitTakeover } from '../takeover/takeoverActions';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
-import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { selectTimeState } from '../time/selectors';
-import { setOrientation } from '../settings/core/orientationSlice';
 import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framingPose';
 import { homePose } from '../../services/engine/camera/homePose';
@@ -127,10 +127,7 @@ export function* navigateSaga(
   intent: LinkIntent,
   transition: Transition,
 ): SagaGenerator<NavigateOutcome> {
-  if (intent.t !== undefined) {
-    for (const action of manualPausedAtActions(new Date(intent.t))) yield* put(action);
-  }
-  if (intent.orientation !== undefined) yield* put(setOrientation(intent.orientation));
+  yield* call(applyLinkClockAndFrameSaga, intent);
 
   const { view } = intent;
   switch (view.kind) {

@@ -58,6 +58,9 @@ import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import { homePose } from '../../../src/services/engine/camera/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
+import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
+import { selectOrientation } from '../../../src/state/settings/selectors';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -79,6 +82,7 @@ const LIVE: LiveCameraRuntime = {
 };
 const BOOT_BASE = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 });
 const J2000_MS = Date.UTC(2000, 0, 1, 12);
+const PROJECTION = { fovYRad: LIVE.fovYRad, aspect: 1, near: 1e-20, far: 1e5 };
 
 function build({ milkyWayLanded = true, home = EARTH_HOME } = {}) {
   const recorded: Action[] = [];
@@ -267,6 +271,27 @@ describe('arrivalSaga', () => {
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
+    const landed = worldArmOf(root.camera.base);
+    expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
+    expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
+  });
+
+  it('a linked orientation is in the store before the camera runtime is seeded', async () => {
+    const h = build();
+    h.arrive({ view: { kind: 'home' }, orientation: 'galactic' });
+    await flush();
+    // What `wireInput` seeds the runtime off; a seed in another frame makes
+    // frame 1 re-encode the arrival's already-galactic base.
+    const seeded = seedCameraRuntime({ state: h.store.getState(), projection: PROJECTION });
+    h.boot();
+    await flush();
+
+    const root = h.store.getState();
+    expect(seeded.orientation).toBe(selectOrientation(root));
+    const simDays = deriveSimDays(root.time, performance.now());
+    const expected = worldArmOf(
+      homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
+    );
     const landed = worldArmOf(root.camera.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);

@@ -52,11 +52,12 @@
  * its own fork needs it.
  *
  * `setSagaContext` is what ends the wait, and `createEngine` calls it
- * synchronously, before it kicks off the async bootstrap IIFE. So the arrival's
- * `setOrientation` is committed by the time `wireInput` reads
- * `selectOrientation` for its boot base, which would break if registration
- * moved into the bootstrap phases. A store nobody registers a context on never reads or writes
- * the hash at all — the honest answer for a store with nothing behind it.
+ * synchronously, before it kicks off the async bootstrap IIFE. `arrivalSaga`
+ * lands the link's `setOrientation` on that boot read, before it waits for the
+ * camera runtime, so `wireInput` seeds the runtime and its boot base in the
+ * linked frame; that breaks if registration moves into the bootstrap phases.
+ * A store nobody registers a context on never reads or writes the hash at
+ * all — the honest answer for a store with nothing behind it.
  */
 
 import { all, take } from 'typed-redux-saga';

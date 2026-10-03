@@ -98,7 +98,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const simDays = unixMsToJulianDays(Date.now());
   // The URL's orientation is already in the store: `createEngine` dispatches
   // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap this phase
-  // runs inside, and the arrival applies it on the boot read.
+  // runs inside, and `arrivalSaga` lands it on that boot read, before it
+  // waits for this runtime. A seed in another frame re-encodes on frame 1.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
 
   state.booted = true;
