@@ -3,15 +3,17 @@
  * row per param, owning everything about it: its key, whether its presence
  * counts as a deep link, which dispatched actions can change its serialized
  * value, how to write that value out of the store, how to read a present value
- * into its contribution to a `LinkIntent`, and what actions an absent one restores.
+ * into its contribution to a `LinkIntent`, and what actions an absent one
+ * restores.
  *
  * Table order fixes the on-URL layout — the body is composed in this order —
  * so two identical states always produce byte-identical hashes. That binds
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
- * read-only row (`write: () => null`: `pose` and the takeovers) composes nothing into the
- * body, so this rule says nothing about its position. Read order is not a
- * table fact at all: `linkIntentFrom` merges the rows' contributions.
+ * read-only row (`write: () => null`: `pose` and the takeovers) composes
+ * nothing into the body, so this rule says nothing about its position. Read
+ * order is not a table fact at all: `linkIntentFrom` merges the rows'
+ * contributions.
  *
  * ### The `writesOn` completeness contract
  *

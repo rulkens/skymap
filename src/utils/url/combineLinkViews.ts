@@ -2,7 +2,8 @@ import type { LinkView } from '../../@types/url/LinkView';
 
 /**
  * Two rows' views as one: a takeover beats focus and pose, and a focus plus
- * a pose is a focus that arrives at that pose. Each key has one row, so two focuses or two poses never meet.
+ * a pose is a focus that arrives at that pose. Each key has one row, so two
+ * focuses or two poses never meet.
  */
 export function combineLinkViews(a: LinkView, b: LinkView): LinkView {
   for (const v of [a, b]) {
