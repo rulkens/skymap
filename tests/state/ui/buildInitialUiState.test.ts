@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { buildInitialUiState } from '../../../src/state/ui/buildInitialUiState';
-import { SPLASH_STORAGE_KEY, CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
+import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
+import { SPLASH_SEEN_VERSION } from '../../../src/state/persistedValues';
 
 describe('buildInitialUiState', () => {
   beforeEach(() => {
@@ -16,13 +17,13 @@ describe('buildInitialUiState', () => {
     });
 
     it('is false when seenVersion equals the current version', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION));
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(false);
     });
 
     it('is true when seenVersion is lower than the current version', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION - 1));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION - 1));
       const state = buildInitialUiState();
       expect(state.splash.visible).toBe(true);
     });
@@ -52,7 +53,7 @@ describe('buildInitialUiState', () => {
 
   describe('splash.dismissedVersion', () => {
     it('seeds to the stored seenVersion when present', () => {
-      window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION));
+      window.localStorage.setItem(SPLASH_SEEN_VERSION.key, String(CURRENT_SPLASH_VERSION));
       const state = buildInitialUiState();
       expect(state.splash.dismissedVersion).toBe(CURRENT_SPLASH_VERSION);
     });

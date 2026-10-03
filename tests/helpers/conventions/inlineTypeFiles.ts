@@ -39,7 +39,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/animation/fadeController.ts',
   'src/services/animation/scopedVisibilityActions.ts',
   'src/services/animation/visibilityActionRow.ts',
-  'src/services/camera/surfaceStep.ts',
   'src/services/engine/animation/applyPathTuning.ts',
   'src/services/engine/animation/buildDwellWarp.ts',
   'src/services/engine/animation/buildPathTrack.ts',

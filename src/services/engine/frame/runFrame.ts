@@ -130,7 +130,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodies: bodyStates,
     terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
     clipEpoch,
-    drivers: deps.drivers,
+    drivers: deps.controlSchemes.skymap.drivers,
   });
   // The runtime is installed BEFORE any action reaches the store (ruled): a
   // listener fired by a commit sees this frame's register, not last frame's.
