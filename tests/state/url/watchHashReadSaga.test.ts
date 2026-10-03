@@ -48,6 +48,7 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { hashNavigationStarted } from '../../../src/state/url/hashNavigationStarted';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -169,7 +170,8 @@ describe('watchHashReadSaga', () => {
 
     emit(`focus=m31&pose=${encodeFramedPose(pose)}`);
 
-    expect(recorded.slice(0, 3)).toEqual([
+    expect(recorded.slice(0, 4)).toEqual([
+      hashNavigationStarted(),
       commitCameraPose(pose),
       requestSelect('m31'),
       requestFocus({ id: 'm31', transition: 'cut' }),

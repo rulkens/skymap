@@ -15,10 +15,10 @@
  * ### One publish per SETTLED state, not one per trigger
  *
  * `debounce(0, …)` rather than `takeEvery`, and the reason is the history stack.
- * Applying one URL is not one action: `watchHashReadSaga`'s `applyNavigation` walks the
- * table and dispatches a row's worth of actions at a time, each of them a write
- * trigger in its own right, and the selection reconciler adds hops of its own on
- * top. Under `takeEvery` every one of those published, so applying
+ * Applying one URL is not one action: `watchHashReadSaga`'s `applyNavigation`
+ * runs `navigateSaga` and then each absent row's defaults, many of them write
+ * triggers in their own right, and the selection reconciler adds hops of its
+ * own on top. Under `takeEvery` every one of those published, so applying
  * `#focus=body-mars&orientation=galactic` composed `focus=body-mars` from a store
  * that had applied the focus row and not yet the orientation row, pushed it, and
  * only then pushed the real thing. Two history entries for one navigation — and
@@ -77,23 +77,25 @@
  * row mix named actions with a computed test, which `focus` now does.
  */
 
-import { debounce, call, select, fork, take } from 'typed-redux-saga';
+import { debounce, call, select, takeEvery } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashBodyFor } from './hashBodyFor';
+import { hashNavigationStarted } from './hashNavigationStarted';
 import { arrived, arrivalFailed } from '../arrival/arrivalSlice';
 import { selectArrivalPending } from '../arrival/selectors';
 import { writeHashBody } from '../../services/url/writeHashBody';
 import type { RootState } from '../../store/types';
 
-const isArrivalSettled = (action: Action): boolean =>
-  arrived.match(action) || arrivalFailed.match(action);
+// Applying a URL the visitor is already on: the arrival settling, or a hash
+// navigation. Each is a trigger of its own, so its publish is what strips the
+// keys the link carried but the store never writes back (`pose`, takeovers).
+const armsReplace = (action: Action): boolean =>
+  arrived.match(action) || arrivalFailed.match(action) || hashNavigationStarted.match(action);
 
-// The arrival settling is a trigger of its own: its publish is what strips
-// the keys the link carried but the store never writes back (`pose`).
 const isHashWrite = (action: Action): boolean =>
-  isArrivalSettled(action) ||
+  armsReplace(action) ||
   HASH_PARAM_SOURCES.some((source) => source.writesOn.some((triggers) => triggers(action)));
 
 export function* watchHashWriteSaga() {
@@ -101,10 +103,9 @@ export function* watchHashWriteSaga() {
   // next debounce firing regardless of which action's burst produced it, so a
   // torn-read follow-up landing after the arrival (seen in
   // `hashHistoryIntegrity`) cannot un-arm it early or miss it late.
-  let canonicalizeArrival = false;
-  yield* fork(function* () {
-    yield* take(isArrivalSettled);
-    canonicalizeArrival = true;
+  let replaceNext = false;
+  yield* takeEvery(armsReplace, function* () {
+    replaceNext = true;
   });
 
   yield* debounce(0, isHashWrite, function* () {
@@ -115,8 +116,8 @@ export function* watchHashWriteSaga() {
     const state = yield* select((s: RootState) => s);
     // Everything up to and including the arrival's own publish rewrites the
     // link the visitor followed in place; nothing they navigated is lost.
-    const mode = canonicalizeArrival || selectArrivalPending(state) ? 'replace' : 'push';
-    canonicalizeArrival = false;
+    const mode = replaceNext || selectArrivalPending(state) ? 'replace' : 'push';
+    replaceNext = false;
     const body = hashBodyFor(state);
     // Wrapped: typed-redux-saga's `call` overload resolution still rejects the direct 3-arg form here.
     yield* call(() => writeHashBody(body, mode));

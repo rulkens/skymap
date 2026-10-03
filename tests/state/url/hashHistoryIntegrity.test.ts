@@ -224,6 +224,21 @@ describe('hash history integrity', () => {
     expect(window.location.hash).not.toContain('pose=');
   });
 
+  it('canonicalizes a takeover navigation in place instead of pushing', async () => {
+    seedHash('');
+    await boot();
+    await flush();
+
+    pushState.mockClear();
+    navigate('exhibit=zoneOfAvoidance');
+    await flush();
+
+    // `exhibit` never writes, so the settled body drops it; a push would make
+    // Back land on this same URL, reopen the exhibit and push again.
+    expect(pushedHashes()).toEqual([]);
+    expect(window.location.hash).not.toContain('exhibit=');
+  });
+
   it('pushes exactly once for a selection the store makes on its own', async () => {
     seedHash('');
     const { store } = await boot();

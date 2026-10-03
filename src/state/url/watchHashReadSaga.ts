@@ -70,6 +70,7 @@
 import { take, call, put } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
+import { hashNavigationStarted } from './hashNavigationStarted';
 import { arrivalPending } from '../arrival/arrivalSlice';
 import { navigateSaga } from '../navigation/navigateSaga';
 import { linkIntentFrom } from '../../utils/url/linkIntentFrom';
@@ -82,6 +83,7 @@ import { parseHashParams } from '../../utils/url/parseHashParams';
  * flies), then each ABSENT row's default.
  */
 function* applyNavigation(body: string) {
+  yield* put(hashNavigationStarted());
   yield* call(navigateSaga, linkIntentFrom(body), 'fly' as const);
 
   const params = parseHashParams(body);
