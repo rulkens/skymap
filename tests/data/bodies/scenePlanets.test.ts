@@ -54,7 +54,7 @@ describe('SCENE_PLANETS', () => {
     // with no registry row (Phobos) carries the identity, the honest "no facing
     // modelled" value.
     const saturnRow = rotationRowById('saturn')!;
-    if (!('poleRaDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
+    if (!('primeMeridianDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
     expect(stateOf('saturn').orientation).toEqual(rotationFromIau(saturnRow));
     expect(stateOf('phobos').orientation).toEqual([...IDENTITY_MAT3]);
   });

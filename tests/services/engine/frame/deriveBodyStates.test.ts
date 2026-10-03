@@ -6,6 +6,7 @@ import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
@@ -134,4 +135,38 @@ describe('deriveBodyStates', () => {
     expect(states.get('titan')!.orientation).toEqual([...IDENTITY_MAT3]);
     expect(states.get('earth')!.orientation).not.toEqual([...IDENTITY_MAT3]);
   });
+
+  // The host direction leaves a moon's equator only by the gap between its IAU pole and its
+  // orbit normal (measured <= 1.6 deg for all ten, Iapetus's 15 deg pole tilt included); 5 deg
+  // keeps headroom without admitting the 14+ deg drifts this guards against.
+  const TIDAL_LOCK_MAX_DEG = 5;
+  const SYNCHRONOUS_MOONS = [
+    'io',
+    'europa',
+    'ganymede',
+    'callisto',
+    'mimas',
+    'enceladus',
+    'tethys',
+    'dione',
+    'rhea',
+    'iapetus',
+  ];
+
+  it.each(SYNCHRONOUS_MOONS)(
+    'synchronous moon %s keeps longitude 0 toward its host at J2000 and +10 yr',
+    (id) => {
+      for (const simDays of [CONST_J2000, CONST_J2000 + 3650]) {
+        const snap = deriveBodyStates(simDays);
+        const moon = snap.get(id)!;
+        const host = snap.get(bodyHostId(id)!)!;
+        const d = [0, 1, 2].map((k) => host.positionMpc[k]! - moon.positionMpc[k]!);
+        const len = Math.hypot(d[0]!, d[1]!, d[2]!);
+        const o = moon.orientation as number[];
+        const cos = (o[0]! * d[0]! + o[1]! * d[1]! + o[2]! * d[2]!) / len;
+        const angleDeg = (Math.acos(cos) * 180) / Math.PI;
+        expect(angleDeg, `${id} at day ${simDays - CONST_J2000}`).toBeLessThan(TIDAL_LOCK_MAX_DEG);
+      }
+    },
+  );
 });
