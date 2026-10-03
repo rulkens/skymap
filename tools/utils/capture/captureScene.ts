@@ -1,8 +1,7 @@
 /**
  * captureScene — one framed shot of the running scene, start to written file.
- * Boot commits once (no fly-in, no re-settle — `arrival` owns that wait), so a
- * `capture.pose` override lands on top and stays: the "fly-in overwrites an
- * early pose" landmine `#focus=`/`#exhibit=` booting used to carry is gone.
+ * Boot cuts once and `ready` waits for that arrival, so a `capture.pose`
+ * override lands on top and stays.
  */
 import type { Browser } from '@playwright/test';
 import { bootHookedPage } from '../browser/bootHookedPage';
@@ -15,6 +14,7 @@ import { shotPose } from './shotPose';
 import { writeThumbnail } from './writeThumbnail';
 import { VIEWPORT } from './shotDefaults';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
+import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import type { SceneShot } from '../../@types/capture/SceneShot';
 import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
 
@@ -49,6 +49,9 @@ export async function captureScene(
       ...(shot.focusId !== undefined ? sceneDeclutterActions(shot.hideGalaxyField === true) : []),
       ...(shot.settings !== undefined ? [mergeSnapshot(shot.settings)] : []),
       ...labelDeclutterActions(),
+      // An exhibit holds with a slow spin, which would drift from its pose
+      // for however long `ready` took.
+      ...(shot.exhibitId !== undefined ? [setAutoRotate({ active: false, rate: 0 })] : []),
     ]);
 
     if (pose !== undefined) {
@@ -58,6 +61,13 @@ export async function captureScene(
     if (shot.focusId !== undefined && shot.keepFocus !== true) {
       await page.keyboard.press('Escape');
     }
+    // The steps above only dispatch; the shot needs a frame that drew them.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
 
     const bytes = await writeThumbnail(await page.screenshot({ type: 'png' }), shot.outPath);
     return { status: 'captured', label: shot.label, bytes };

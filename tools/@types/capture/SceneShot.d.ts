@@ -9,7 +9,7 @@ import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAct
  * boots on `#focus=` or `#exhibit=`, never both.
  */
 export type SceneShot = {
-  /** `#focus=` id to fly to; omit to boot with no selection (a view's own frame). */
+  /** `#focus=` id to open on; omit to boot with no selection (a view's own frame). */
   focusId?: string;
   /** `#exhibit=` id to open on arrival — its registry settings and pose apply themselves. */
   exhibitId?: ExhibitId;
@@ -17,7 +17,7 @@ export type SceneShot = {
   settings?: Parameters<typeof mergeSnapshot>[0];
   /** ISO instant, pinned via `#t=` (the same string `#t=` takes). */
   t: string;
-  /** Applied once arrival settles — the boot commits once, so nothing overwrites it. Exclusive with `phaseDeg`. */
+  /** Applied once arrival settles, and stays. Exclusive with `phaseDeg`. */
   pose?: CameraPose;
   /** Frame a focused body at this phase instead; `bodyPhasePose` defines the turn. */
   phaseDeg?: number;
