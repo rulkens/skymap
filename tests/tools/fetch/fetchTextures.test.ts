@@ -89,6 +89,8 @@ describe('textureSourcesFor', () => {
         'mimas_quad512q.tab',
         'tethys_quad512q.tab',
         'dione_quad512q.tab',
+        // Enceladus's normal map is baked from the Schenk 2024 DEM.
+        'Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
         // Pluto's second (chroma) input and the true-colour reference its
         // calibration is fitted against: neither is a `native`, so both ride the
         // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).

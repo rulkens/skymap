@@ -466,6 +466,20 @@ All public domain; NASA asks that credit go to the named observatory / program.
 - **Licence:** Public domain. Credit: "Robert Gaskell / NASA PDS Small Bodies
   Node".
 
+#### NASA PDS / Paul Schenk (LPI) — Enceladus global DEM (Cassini)
+
+- **Use:** Enceladus's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Enceladus Cassini Global DEM 200m Schenk" (Lunar and Planetary
+  Institute/USRA; published by the Planetary Data System 2024-08-12,
+  distributed by USGS Astrogeology),
+  <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>.
+- **Licence:** No access constraints; use constraint "Please cite authors".
+  Citation: Schenk, P. M. & McKinnon, W. B. (2024), "New global topography of
+  Enceladus: Hypsometry, basins, spherical harmonics, shell thickness, and true
+  polar wander revisited", _Icarus_ 408,
+  <https://doi.org/10.1016/j.icarus.2023.115827>.
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

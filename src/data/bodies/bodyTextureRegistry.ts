@@ -152,7 +152,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // highlight clip).
   enceladus: {
     bodyId: 'enceladus',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', normal: 'medium' },
     provenance: 'usgs',
     treatment: { kind: 'monoTint', tint: [0.5, 0.5, 0.5], lift: 0.686 },
   },

@@ -261,8 +261,23 @@ measured by cross-correlating shape shading against the texture.
 | Body   | Radius (km)   | Spacing  | `lonOffsetDeg` | Note                                                                 |
 | ------ | ------------- | -------- | -------------- | -------------------------------------------------------------------- |
 | Mimas  | 187.6-210.8   | ~0.6 km  | +4             | constants 337.46 vs 333.46; Herschel overlay agrees                  |
-| Tethys | 519.2-541.6   | ~1.6 km  | -0.5           | measured; the constants (W0 10.45 vs pck 8.95) would predict +1.5    |
+| Tethys | 519.2-541.6   | ~1.6 km  | -0.1           | measured; the constants (W0 10.45 vs pck 8.95) would predict +1.5    |
 | Dione  | 554.2-566.1   | ~1.7 km  | -0.6           | measured; agrees with the constants (W0 357.00 vs pck 357.6)         |
+
+### Schenk 2024 Enceladus DEM (cite Schenk & McKinnon 2024, Icarus 408)
+
+Catalogue page (use constraint "Please cite authors"):
+`https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk`,
+doi:10.1016/j.icarus.2023.115827.
+
+`Enceladus_Cassini_DEM_global_200m_schenk2024.tif` (124 MB, 8049×4025 Float32,
+heights in km, nodata ≈ -3.4e38 on 0.04% of cells;
+`https://asc-astropedia.s3.us-west-2.amazonaws.com/Enceladus/Cassini/Enceladus_Cassini_DEM_global_200m_schenk2024.tif`).
+Not a texture: the build bins it to a 4096×2048 grid (longitude 0 is at the
+LEFT edge, so it is rolled to the centre column), fills the nodata cells from
+their neighbours and Sobel-bakes Enceladus's `normal` map. Its content sits
+0.35° east of the 110 m mosaic texture (cross-correlation), encoded as
+`lonOffsetDeg: 0.35` in `textureSources.ts`.
 
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or

@@ -23,10 +23,11 @@ export type TextureSourceEntry = {
   readonly devFilename?: string;
   readonly chroma?: RawDataKey;
   /** `'icq'`: `native` is a Gaskell shape-model point cloud, rasterised to a
-   *  radius heightfield instead of read as an image. */
-  readonly format?: 'icq';
-  /** Shape east longitude minus texture east longitude at the same spot (the two
-   *  frames use different prime-meridian constants). */
+   *  radius heightfield instead of read as an image. `'floatDem'`: a Float32
+   *  height GeoTIFF with longitude 0 at its left edge. */
+  readonly format?: 'icq' | 'floatDem';
+  /** Source east longitude minus texture east longitude at the same spot (the
+   *  frames differ: prime-meridian constants, or a DEM's own registration). */
   readonly lonOffsetDeg?: number;
 };
 
@@ -62,7 +63,10 @@ export const TEXTURE_SOURCES = {
   // `RAW_DATA` row); the `panSharpen` calibration undoes that stretch.
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
-  enceladus: { surface: { native: 'textures.usgsEnceladus' } },
+  enceladus: {
+    surface: { native: 'textures.usgsEnceladus' },
+    normal: { native: 'textures.schenkEnceladusDem', format: 'floatDem', lonOffsetDeg: 0.35 },
+  },
   mimas: {
     surface: { native: 'textures.nasaMimas' },
     normal: { native: 'textures.gaskellMimasShape', format: 'icq', lonOffsetDeg: 4 },
@@ -70,7 +74,7 @@ export const TEXTURE_SOURCES = {
   // Tethys's offset is MEASURED (correlation vs PIA18439); the prime-meridian constants (shape W0 10.45 vs pck00011 8.95) would predict +1.5.
   tethys: {
     surface: { native: 'textures.nasaTethys' },
-    normal: { native: 'textures.gaskellTethysShape', format: 'icq', lonOffsetDeg: -0.5 },
+    normal: { native: 'textures.gaskellTethysShape', format: 'icq', lonOffsetDeg: -0.1 },
   },
   dione: {
     surface: { native: 'textures.nasaDione' },

@@ -919,6 +919,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.schenkEnceladusDem': {
+    path: 'data/raw/textures/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Schenk & McKinnon 2024 Enceladus Cassini global DEM, 200 m/px, 8049x4025 single-band Float32 GeoTIFF, heights in km, nodata ~ -3.4e38 (0.04% of cells), equirect with longitude 0 at the LEFT edge (PDS release 2024-08-12, use constraint: cite authors, doi:10.1016/j.icarus.2023.115827); build-only bake input for Enceladus's normal map. Its content sits 0.35 deg east of the mosaic texture, so texture lon L reads DEM lon L + 0.35 (measured by cross-correlation); ~124 MB.",
+    upstream:
+      'https://asc-astropedia.s3.us-west-2.amazonaws.com/Enceladus/Cassini/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsEnceladus': {
     path: 'data/raw/textures/Enceladus_Cassini_mosaic_global_110m.tif',
     kind: 'file',

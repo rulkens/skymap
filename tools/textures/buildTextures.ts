@@ -23,6 +23,8 @@ import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
+import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
+import { fillEquirectNodata } from '../utils/image/fillEquirectNodata';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
@@ -104,14 +106,14 @@ function firstExisting(paths: readonly string[]): string | null {
   return null;
 }
 
-/** Grid width a shape-model source is rasterised at; its ~0.6 km point spacing
- *  (~0.17 deg) supports 2k, not 4k. */
-const ICQ_GRID_WIDTH = 2048;
+/** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
+ *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
+const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
 const BYTE_MAX = 255;
 
-/** Full-scale-mapped radius: min -> 0, max -> 255, unquantised, so 23 km of
- *  Mimas radius is not terraced into 90 m steps before the Sobel pass. */
-function radiusToHeightScale(radius: Float32Array): Float32Array {
+/** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
+ *  of Mimas radius is not terraced into 90 m steps before the Sobel pass. */
+function toByteScale(radius: Float32Array): Float32Array {
   let lo = Infinity;
   let hi = -Infinity;
   for (const r of radius) {
@@ -320,18 +322,27 @@ function bakeNormalOnce(
     const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
       if ('format' in entry) {
-        const width = ICQ_GRID_WIDTH;
+        const width = GRID_WIDTH[entry.format];
         const height = width / 2;
-        const radius = icqPointsToEquirectRadius(
-          readIcqPoints(srcPath),
-          width,
-          height,
-          entry.lonOffsetDeg,
-        );
-        return bakeNormalMap(
-          { data: radiusToHeightScale(radius), width, height },
-          exaggerationFor(bodyId),
-        );
+        let grid: Float32Array;
+        if (entry.format === 'icq') {
+          grid = icqPointsToEquirectRadius(
+            readIcqPoints(srcPath),
+            width,
+            height,
+            entry.lonOffsetDeg,
+          );
+        } else {
+          const raw = await sharp(srcPath, { limitInputPixels: false })
+            .toColourspace('b-w')
+            .raw({ depth: 'float' })
+            .toBuffer({ resolveWithObject: true });
+          const { width: sw, height: sh, channels } = raw.info;
+          const src = new Float32Array(raw.data.buffer, raw.data.byteOffset, sw * sh * channels);
+          grid = binFloatDemToEquirect(src, channels, sw, sh, width, height, entry.lonOffsetDeg);
+          fillEquirectNodata(grid, width, height);
+        }
+        return bakeNormalMap({ data: toByteScale(grid), width, height }, exaggerationFor(bodyId));
       }
       // `.greyscale()` collapses the 16-bit elevation `.tif` to the 8-bit
       // heightfield `bakeNormalMap` expects; the quantization is accepted for v1.
@@ -472,7 +483,7 @@ export async function buildTextures(outDir: string): Promise<void> {
       continue;
     }
     const entry = SOURCE_TABLE[bodyId][kind]!;
-    const width = 'format' in entry ? ICQ_GRID_WIDTH : await sourceWidth(srcPath);
+    const width = 'format' in entry ? GRID_WIDTH[entry.format] : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
     const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
     if (tiers.length === 0) {
