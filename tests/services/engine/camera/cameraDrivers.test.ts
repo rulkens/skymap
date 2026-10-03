@@ -33,6 +33,7 @@ import {
   advanceEpochs,
 } from '../../../../src/services/engine/camera/cameraEpochs';
 import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
+import { framingPose } from '../../../../src/services/engine/camera/framingPose';
 import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -575,6 +576,27 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
       expect(samples[i]!).toBeLessThan(samples[i - 1]!);
     }
     expect(samples[0]!).toBeGreaterThan(framingDistance);
+  });
+
+  it('a followed body holds the distance framingPose gives it', () => {
+    // A radius-multiple override must reach the follow seed too, or a followed
+    // body glides away from the pose its arrival framed it to.
+    const marsRow = {
+      type: 'body' as const,
+      id: 'mars',
+      label: 'Mars',
+      positionMpc: [0, 0, 0] as [number, number, number],
+      driver: { ...bodyDriverGeometry('mars'), focusDistanceRadii: 7 },
+    };
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: marsRow }));
+    const s = store.getState() as unknown as RootState;
+
+    const produceFollow = makeFollowProduce({ state: s, from: BASE_POSE });
+
+    // A ratio: at ~1e-15 Mpc an absolute tolerance cannot tell the two distances apart.
+    const held = worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).distance;
+    expect(held / framingPose(marsRow, FOLLOW_FOV, BASE_POSE).distance).toBeCloseTo(1, 9);
   });
 
   it('a drag-committed zoom sticks: follow re-eases to base.distance, not framing', () => {

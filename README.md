@@ -31,7 +31,7 @@ The framing owes everything to [Powers of Ten](https://www.youtube.com/watch?v=0
 - **Solar system**: runs on a live clock. All the planets plus Pluto and Charon, Saturn's rings, orbit trails, the Sun with bloom.
 - **Earth**: PBR shading, night lights, relief, clouds, an atmosphere, and streamed surface tiles down to city scale.
 - **Time**: jump the simulation to any date, change its rate, and share the moment with a `#t=` link.
-- **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets.
+- **Search**: Cmd+K reaches the famous atlas, 48,000 PGC name aliases, and named structures. `#focus=` links share camera targets; `#exhibit=`, `#tour=`, and `#clip=` links open a curated view or set it playing.
 - **Opt-in**: DESI DR1 cones, the CF4++ flow field, constellations, and the CF-4 dark-matter volume are off by default in the Settings panel.
 - **Debug**: press `d` for per-pass GPU timings and render-pass toggles.
 - **Reproduce a view**: press `l` (the link prints to the console) or click `copy URL` in the debug panel's Camera section for a `#pose=` link that reopens the exact camera at the exact moment. Paste it into a bug report and the reader sees what you saw.

@@ -12,7 +12,7 @@
  *
  * The home-scene strip lives IN this clip (not a tour-level setup list):
  * one authoring surface, and stepping back to beat 1 re-establishes its
- * scene. Everything hidden here is a later beat's reveal; `runTakeoverSaga`'s
+ * scene. Everything hidden here is a later beat's reveal; `withSceneSnapshotSaga`'s
  * snapshot/restore winds it all back on exit.
  */
 

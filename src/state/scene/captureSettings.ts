@@ -31,7 +31,7 @@
  * engine dependency, so it lives beside `captureScene` in `state/scene/`
  * rather than in the engine wiring layer. `tourBodySaga` is a second caller —
  * it re-reads the same baseline for its beat-boundary fold, since
- * `runTakeoverSaga`'s own snapshot isn't threaded into the body closure.
+ * `withSceneSnapshotSaga`'s own snapshot isn't threaded into the body closure.
  */
 
 import type { RootState } from '../../store/types';

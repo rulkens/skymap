@@ -5,7 +5,7 @@
  * facts `tourBodySaga` itself never touches — stay observable from this suite.
  *
  * `runTour` below is the test-local composition `watchTakeoverSaga` performs
- * in production: `runTakeoverSaga({kind:'tour', id}, () => tourBodySaga(tour, range))`.
+ * in production: `runTakeoverSaga(source, () => withSceneSnapshotSaga(() => tourBodySaga(…)))`.
  *
  * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
  * `waitUntilSaga(clipFociReady)` exits synchronously on the first predicate check.
@@ -28,6 +28,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { runTakeoverSaga } from '../../../src/state/takeover/runTakeoverSaga';
+import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnapshotSaga';
 import { tourBodySaga } from '../../../src/state/tour/tourBodySaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
@@ -115,7 +116,9 @@ function makeTour(beats: readonly BeatData[]): Tour {
 // around the beat loop under test, even though `tourBodySaga` no longer owns it.
 function runTour(sagaMiddleware: SagaMiddleware, tour: Tour, range?: BeatRange): Task {
   return sagaMiddleware.run(function* () {
-    yield* runTakeoverSaga({ kind: 'tour', id: tour.id }, () => tourBodySaga(tour, range));
+    yield* runTakeoverSaga({ kind: 'tour', id: tour.id }, () =>
+      withSceneSnapshotSaga(() => tourBodySaga(tour, range)),
+    );
   });
 }
 

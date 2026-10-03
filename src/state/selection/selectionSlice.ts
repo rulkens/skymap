@@ -71,6 +71,7 @@ import { requestSelect } from './requestSelect';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import type { Transition } from '../../@types/navigation/Transition';
 
 const setIfChanged =
   (slot: 'hover' | 'select' | 'focus') =>
@@ -89,7 +90,15 @@ const selectionSlice = createSlice({
   reducers: {
     updateSelectionHover: setIfChanged('hover'),
     updateSelectionSelect: setIfChanged('select'),
-    updateSelectionFocus: setIfChanged('focus'),
+    // The transition rides as `meta`: the reducer never reads it, only the
+    // tween saga's decision does, and every direct dispatcher is a fly.
+    updateSelectionFocus: {
+      reducer: setIfChanged('focus'),
+      prepare: (ref: SelectionRef | null, transition: Transition = 'fly') => ({
+        payload: ref,
+        meta: { transition },
+      }),
+    },
     clearSelection: (selection) => {
       selection.select = null;
       selection.focus = null;
@@ -100,7 +109,7 @@ const selectionSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(requestFocus, (selection, action) => {
-        selection.pending.focus = action.payload;
+        selection.pending.focus = action.payload.id;
       })
       .addCase(requestSelect, (selection, action) => {
         selection.pending.select = action.payload;

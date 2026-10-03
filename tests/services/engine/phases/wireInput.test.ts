@@ -33,6 +33,8 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
   computeInitialCamera: (...args: unknown[]) =>
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
   DEFAULT_FOV_Y_RAD: (Math.PI / 180) * 60,
+  NEAR_CLIP_MPC: 0.01,
+  FAR_CLIP_MPC: 80000,
 }));
 
 vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
@@ -78,20 +80,10 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // phase-split assertion below, rather than a hand-written key list that
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
-import {
-  selectSelectedRef,
-  selectFocusRef,
-  selectPendingFocusId,
-} from '../../../../src/state/selection/selectors';
-import {
-  updateSelectionSelect,
-  updateSelectionFocus,
-} from '../../../../src/state/selection/selectionSlice';
-import { requestFocus } from '../../../../src/state/selection/requestFocus';
-import { EARTH_REF } from '../../../../src/data/selection/earthRef';
+import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { applyUrlPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { selectCameraBase, selectUrlPose } from '../../../../src/state/camera/selectors';
+import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { selectCameraBase } from '../../../../src/state/camera/selectors';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -238,21 +230,6 @@ describe('wireInput', () => {
     expect(state.booted).toBe(true);
   });
 
-  it('seeds a parked #pose= link as the boot pose, without spending the park', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-    const urlPose = absoluteArm({ target: [7, 8, 9], yaw: 1.1, pitch: -0.4, distance: 12 });
-    deps.cb.store.dispatch(applyUrlPose(urlPose));
-
-    await wireInput(state, deps);
-
-    const root = deps.cb.store.getState();
-    // The link wins outright over the computed home framing, but the park
-    // stands — the arrival focus spends it, not the seed.
-    expect(selectCameraBase(root)).toEqual(urlPose);
-    expect(selectUrlPose(root)).toEqual(urlPose);
-  });
-
   it('commits a COPY of the framing target to the store, not the live array', async () => {
     const state = makeState();
     const deps = makeDeps();
@@ -281,36 +258,18 @@ describe('wireInput', () => {
     expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.base);
   });
 
-  it('seeds the home selection: select + focus pinned to Earth at boot', async () => {
+  it('seeds no selection: the first view is the arrival’s', async () => {
     const state = makeState();
     const deps = makeDeps();
 
     await wireInput(state, deps);
 
-    // Boot IS the home state — both slots must point at Earth so the follow
-    // driver tracks the live globe and the InfoCard pins on first paint.
-    const root = deps.cb.store.getState();
-    expect(selectSelectedRef(root)).toEqual(EARTH_REF);
-    expect(selectFocusRef(root)).toEqual(EARTH_REF);
-  });
-
-  it('seeds focus but not select when the home config withholds the selection', async () => {
-    const state = makeState();
-    const deps = {
-      ...makeDeps(),
-      composition: { layers: [], home: { ...EARTH_HOME, seedSelection: false } },
-    };
-
-    await wireInput(state, deps);
-
-    // Cinema behaviour: focus still tracks Earth so the camera has a home
-    // target, but no selection ring/InfoCard is seeded.
     const root = deps.cb.store.getState();
     expect(selectSelectedRef(root)).toBeNull();
-    expect(selectFocusRef(root)).toEqual(EARTH_REF);
+    expect(selectFocusRef(root)).toBeNull();
   });
 
-  it('dispatches no selection at all for a composition with no home target', async () => {
+  it('frames the neutral pose for a composition with no home target', async () => {
     const state = makeState();
     const deps = {
       ...makeDeps(),
@@ -319,28 +278,7 @@ describe('wireInput', () => {
 
     await wireInput(state, deps);
 
-    const root = deps.cb.store.getState();
-    expect(selectSelectedRef(root)).toBeNull();
-    expect(selectFocusRef(root)).toBeNull();
     expect(computeInitialCameraSpy).toHaveBeenCalledWith(expect.objectContaining({ bodyId: null }));
-  });
-
-  it('leaves an existing selection alone — a URL-hash focus restored before bootstrap wins', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-
-    // A `#focus=body-jupiter` deep link resolves at React mount (bodies are a
-    // static registry — no catalog wait), which is BEFORE this async bootstrap
-    // phase runs. The Earth seed must not clobber it.
-    const jupiter = { type: 'body', id: 'jupiter' } as const;
-    deps.cb.store.dispatch(updateSelectionSelect(jupiter));
-    deps.cb.store.dispatch(updateSelectionFocus(jupiter));
-
-    await wireInput(state, deps);
-
-    const root = deps.cb.store.getState();
-    expect(selectSelectedRef(root)).toEqual(jupiter);
-    expect(selectFocusRef(root)).toEqual(jupiter);
   });
 
   it('wires the camera and the input bindings when the pick renderers are absent', async () => {
@@ -406,26 +344,6 @@ describe('wireInput', () => {
     const root = deps.cb.store.getState();
     expect(root.camera.tween).toBeNull();
     expect(root.camera.dragging).toBe(true);
-  });
-
-  it('defers the seed to a galaxy/star id still parked in a deferred resolve', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-
-    // A galaxy/star focus id defers until its catalog pulse lands
-    // (`resolveFocusRefDeferringSaga` parks it), so the resolved `focus` ref
-    // stays null for the whole boot window while `pending.focus` already
-    // holds the id — the extraReducer sets `pending.focus` synchronously,
-    // no saga needed to observe the guard here. A ref-only guard would read
-    // this as "empty" and seed Earth over the still-resolving deep link.
-    deps.cb.store.dispatch(requestFocus('m31'));
-
-    await wireInput(state, deps);
-
-    const root = deps.cb.store.getState();
-    expect(selectSelectedRef(root)).toBeNull();
-    expect(selectFocusRef(root)).toBeNull();
-    expect(selectPendingFocusId(root)).toBe('m31');
   });
 
   it('constructs the wireInput-phase GPU_HANDLE_ROWS rows', async () => {
