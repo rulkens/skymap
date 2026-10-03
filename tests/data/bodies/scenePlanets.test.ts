@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { rotationFromIau } from '../../../src/utils/orbit/rotationFromIau';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
-import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
@@ -50,12 +49,9 @@ describe('SCENE_PLANETS', () => {
     // the expectation is built from the authored ROTATION_ELEMENTS table through
     // the same util the derive calls, so this exercises the WIRING (does Saturn's
     // orientation come from its rotation elements?) rather than restating a
-    // matrix. A textured body carries its baked IAU rotation; an irregular moon
-    // with no registry row (Phobos) carries the identity, the honest "no facing
-    // modelled" value.
+    // matrix.
     const saturnRow = rotationRowById('saturn')!;
     if (!('primeMeridianDeg' in saturnRow)) throw new Error('saturn must be an IAU-pole row');
     expect(stateOf('saturn').orientation).toEqual(rotationFromIau(saturnRow));
-    expect(stateOf('phobos').orientation).toEqual([...IDENTITY_MAT3]);
   });
 });

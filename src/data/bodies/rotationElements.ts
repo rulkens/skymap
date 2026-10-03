@@ -88,6 +88,20 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   },
   // Synchronous moons face their host by construction: the lock is derived from the orbit
   // because IAU W rows and JPL orbit rows disagree in phase and rate. Optical libration is dropped.
+  // Phobos, Deimos and Titan are untextured, but a surface camera rides their frames:
+  // row-less, the Sun would stand still in their skies.
+  {
+    kind: 'tidallyLocked',
+    id: 'phobos',
+    poleRaDeg: 317.68,
+    poleDecDeg: 52.9,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'deimos',
+    poleRaDeg: 316.65,
+    poleDecDeg: 53.52,
+  },
   {
     kind: 'tidallyLocked',
     id: 'io',
@@ -142,8 +156,6 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     poleRaDeg: 40.38,
     poleDecDeg: 83.55,
   },
-  // Untextured, but a surface camera rides this frame: without a row the Sun never moves in
-  // Titan's sky.
   {
     kind: 'tidallyLocked',
     id: 'titan',
