@@ -444,6 +444,18 @@ All public domain; NASA asks that credit go to the named observatory / program.
 - **Licence:** Public domain. Credit: "NASA/JPL/Space Science Institute",
   publisher USGS Astrogeology.
 
+#### NASA Photojournal — Saturn moon colour maps (Cassini, 2014)
+
+- **Use:** Global surface maps for Mimas, Tethys, Dione, Rhea and Iapetus
+  (PIA18437, PIA18439, PIA18434, PIA18438, PIA18436). Their colour is enhanced
+  into the UV and IR, so the build keeps luminance only and applies a
+  `monoTint` hue and `lift`; each map is re-centred from 180° to the prime
+  meridian.
+- **Source:** NASA Photojournal, <https://photojournal.jpl.nasa.gov/>; mosaics
+  assembled by Paul Schenk (Lunar and Planetary Institute).
+- **Licence:** Public domain. Credit: "NASA/JPL-Caltech/Space Science
+  Institute/Lunar and Planetary Institute".
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

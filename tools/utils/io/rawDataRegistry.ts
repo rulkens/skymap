@@ -896,6 +896,70 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  // ─── Saturn mid-sized moons — CICLOPS 2014 global colour maps ─────────
+  //
+  // Paul Schenk's (LPI) photometrically corrected Cassini ISS mosaics, chosen
+  // over the USGS Cassini mosaics because those are brightness-normalised relief
+  // shading: Iapetus loses its dark leading hemisphere entirely. Colour is
+  // enhanced into the UV/IR, so the build keeps luminance only (`monoTint`). The
+  // CENTRE column is longitude 180°: each cross-correlates against its USGS
+  // counterpart at exactly a half-turn shift, unmirrored (Mimas, whose USGS
+  // map is too smooth to correlate, by Herschel's position instead).
+  'textures.nasaMimas': {
+    path: 'data/raw/textures/PIA18437.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Mimas - 2014" (PIA18437), 6356x3178, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~61 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18437/PIA18437.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaTethys': {
+    path: 'data/raw/textures/PIA18439.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Tethys - 2014" (PIA18439), 13467x6734, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~272 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18439/PIA18439.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaDione': {
+    path: 'data/raw/textures/PIA18434.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Dione - 2014" (PIA18434), 14134x7067, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~300 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18434/PIA18434.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaRhea': {
+    path: 'data/raw/textures/PIA18438.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Rhea - 2014" (PIA18438), 12015x6008, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~217 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18438/PIA18438.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaIapetus': {
+    path: 'data/raw/textures/PIA18436.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Iapetus - 2014" (PIA18436), 11741x5871, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~207 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18436/PIA18436.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   // ─── Pluto derived colour — chroma source + calibration reference ─────
   //
   // PIA11707 carries NO colour-type label of its own. That it is enhanced

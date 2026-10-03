@@ -18,7 +18,6 @@ import sharp from 'sharp';
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
-import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
@@ -26,6 +25,7 @@ import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
+import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
@@ -109,34 +109,39 @@ async function sourceWidth(srcPath: string): Promise<number> {
 }
 
 /**
- * Multiply a tint into a mono source, add an optional lift, and write the
- * JPEG — the path for a body whose only map is panchromatic AND has no
- * colour source to recover hue from (Europa, Callisto, Charon, Enceladus).
- * The tint is a stand-in, not a measurement; `lift` (default 0) restores
- * brightness a relief-shading mosaic has none of to scale (Enceladus). A mono
- * body that DOES have a colour source takes `panSharpen` (Pluto) and never
- * reaches here.
+ * Multiply a tint into a source's luminance, add an optional lift, and write
+ * the JPEG — the path for a body with no colour source to recover hue from
+ * (Europa, Callisto, Charon, the Saturn moons). The tint is a stand-in, not a
+ * measurement; `lift` (default 0) restores brightness a stretched mosaic cannot
+ * reach by multiplying alone. A mono body that DOES have a colour source takes
+ * `panSharpen` (Pluto) and never reaches here. `greyscale` is a no-op on the
+ * 1-band USGS mosaics and drops the enhanced IR/UV hue of the CICLOPS maps.
  *
- * TWO sharp passes, not one, because libvips fixes its operation order: within a
- * single pipeline `linear` runs BEFORE the band expansion that
- * `toColourspace('srgb')` implies for a 1-band image, so three coefficients on a
- * still-mono pipeline throw 'Band expansion using linear is unsupported'. Pass 1
- * resizes to tier first: the full Europa source is 19631×9816, ~578 MB raw.
+ * TWO sharp passes, not one: the roll needs the resized pixels in hand, and
+ * resizing first keeps the buffer small (the full Europa source is 19631×9816,
+ * ~578 MB raw). Pass 2 widens the luminance band to three with `joinChannel`, NOT
+ * `toColourspace('srgb')`: libvips runs `linear` before a colourspace band
+ * expansion, so three coefficients on that route throw 'Band expansion using
+ * linear is unsupported'.
  */
 export async function writeTintedMonoTier(
   srcPath: string,
-  tint: Vec3,
+  treatment: Extract<ColourTreatment, { kind: 'monoTint' }>,
   widthPx: number,
   outPath: string,
-  lift = 0,
 ): Promise<void> {
-  const rgb = await sharp(srcPath, { limitInputPixels: false })
+  const { data, info } = await sharp(srcPath, { limitInputPixels: false })
     .resize({ width: widthPx })
-    .toColourspace('srgb')
+    .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
+  const luminance = treatment.antimeridianCentred
+    ? rollEquirectHalfTurn(data, info.width, info.height, info.channels)
+    : data;
+  const { tint, lift = 0 } = treatment;
   const liftedChannel = lift * EIGHT_BIT_FULL_SCALE;
-  await sharp(rgb.data, { raw: rgb.info })
+  await sharp(luminance, { raw: info })
+    .joinChannel([luminance, luminance], { raw: info })
     .linear([tint[0], tint[1], tint[2]], [liftedChannel, liftedChannel, liftedChannel])
     .jpeg({ quality: JPEG_QUALITY })
     .toFile(outPath);
@@ -201,7 +206,7 @@ async function writeBodyTier(
       return;
     }
     case 'monoTint': {
-      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath, treatment.lift);
+      await writeTintedMonoTier(srcPath, treatment, widthPx, outPath);
       return;
     }
     case 'panSharpen': {

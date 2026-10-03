@@ -230,6 +230,25 @@ directly). Full pull only — no dev variant. Base:
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
 | Enceladus | `Enceladus_Cassini_mosaic_global_110m.tif`              | 14401×7201 | gray  | tinted + lifted in build (relief-shading mosaic, no albedo; blurred wedge NW and smeared N pole acceptable) |
 
+## NASA Photojournal — Saturn mid-sized moons (public domain; credit "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute")
+
+Paul Schenk's 2014 Cassini ISS colour maps. Base:
+`https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia<n>/PIA<n>.tif`
+(the old `photojournal.jpl.nasa.gov/tiff/` path now serves HTML). Chosen over
+the USGS Cassini mosaics (`<Body>_Cassini[_Voyager]_mosaic_global_*.tif`), which
+are brightness-normalised relief shading: Iapetus's dark leading hemisphere
+vanishes from them entirely. All five are centred on longitude 180°, verified
+by cross-correlating each against its USGS counterpart (a clean half-turn, no
+mirror); the build rolls them back (`antimeridianCentred`).
+
+| Body    | File           | Native      | Bands | Build note                                          |
+| ------- | -------------- | ----------- | ----- | --------------------------------------------------- |
+| Mimas   | `PIA18437.tif` | 6356×3178   | RGB   | greyed, tinted + lifted; `medium` is the ceiling    |
+| Tethys  | `PIA18439.tif` | 13467×6734  | RGB   | greyed, tinted + lifted                             |
+| Dione   | `PIA18434.tif` | 14134×7067  | RGB   | greyed, tinted + lifted                             |
+| Rhea    | `PIA18438.tif` | 12015×6008  | RGB   | greyed, tinted + lifted                             |
+| Iapetus | `PIA18436.tif` | 11741×5871  | RGB   | greyed, tinted; two-terrain albedo fit, small lift  |
+
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or
 radar), the NASA Photojournal (every true-colour Titan is a small

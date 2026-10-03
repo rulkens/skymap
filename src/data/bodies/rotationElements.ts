@@ -121,6 +121,45 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 6.32,
     spinRateDegPerDay: 262.7318996,
   },
+  // Mimas drops two LARGE periodic W terms, unlike the sub-arcminute ones above: the
+  // ±44.85° ~71-yr Tethys-resonance libration (absent from its Keplerian orbit row too, so
+  // facing and orbit stay consistent) and a ±13.48° ~1-yr term tracking the nodal
+  // precession its orbit row DOES model, so its map can swing ~13° off sub-Saturn.
+  {
+    id: 'mimas',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+    primeMeridianDeg: 333.46,
+    spinRateDegPerDay: 381.994555,
+  },
+  {
+    id: 'tethys',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+    primeMeridianDeg: 8.95,
+    spinRateDegPerDay: 190.6979085,
+  },
+  {
+    id: 'dione',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+    primeMeridianDeg: 357.6,
+    spinRateDegPerDay: 131.5349316,
+  },
+  {
+    id: 'rhea',
+    poleRaDeg: 40.38,
+    poleDecDeg: 83.55,
+    primeMeridianDeg: 235.16,
+    spinRateDegPerDay: 79.6900478,
+  },
+  {
+    id: 'iapetus',
+    poleRaDeg: 318.16,
+    poleDecDeg: 75.03,
+    primeMeridianDeg: 355.2,
+    spinRateDegPerDay: 4.5379572,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.

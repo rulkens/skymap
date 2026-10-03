@@ -14,7 +14,7 @@ import type { RawDataKey } from './rawDataRegistry';
 
 /**
  * `--dev` variant: its own registry row (`devKey`) or a loose file in
- * `textures.dir` (`devFilename`); the USGS moons have neither. `chroma` is a
+ * `textures.dir` (`devFilename`); the USGS and CICLOPS moons have neither. `chroma` is a
  * `panSharpen` body's SECOND input — `native` is luminance, `chroma` is hue.
  */
 export type TextureSourceEntry = {
@@ -57,6 +57,11 @@ export const TEXTURE_SOURCES = {
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
   enceladus: { surface: { native: 'textures.usgsEnceladus' } },
+  mimas: { surface: { native: 'textures.nasaMimas' } },
+  tethys: { surface: { native: 'textures.nasaTethys' } },
+  dione: { surface: { native: 'textures.nasaDione' } },
+  rhea: { surface: { native: 'textures.nasaRhea' } },
+  iapetus: { surface: { native: 'textures.nasaIapetus' } },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },
