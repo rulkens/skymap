@@ -1,7 +1,7 @@
 /**
- * Takeover selectors — the read seam for the `takeover` slice: which source,
- * if any, currently owns the scene. `selectTourActive` (tour/selectors.ts)
- * derives from `selectTakeoverSource` rather than duplicating this read.
+ * Takeover selectors — the read seam for the `takeover` slice: what runs, if
+ * anything. The tour selectors derive from `selectTakeoverSource` rather than
+ * duplicating this read.
  */
 
 import { takeoverRoute } from '../../store/constants';
@@ -12,9 +12,6 @@ import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
 export const selectTakeoverSource = (state: RootState): TakeoverSource | null =>
   state[takeoverRoute].active;
-
-export const selectTakeoverActive = (state: RootState): boolean =>
-  selectTakeoverSource(state) !== null;
 
 /** A cut entry has already landed, so its copy shows at once. */
 export const selectExhibitCopyDelaySec = (state: RootState): number => {

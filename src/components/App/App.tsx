@@ -54,7 +54,7 @@ import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectTakeoverActive, selectTakeoverSource } from '../../state/takeover/selectors';
+import { selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
   selectUiHidden,
@@ -84,12 +84,11 @@ export function App(): React.ReactElement {
 
   // A running guided tour hides the whole HUD stack and mounts its own overlay
   // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
-  // HUD-hidden is DERIVED from `takeoverActive` (any takeover, tour or
-  // exhibit), not a separate `setUiHidden` write — see runTakeoverSaga's module
-  // header. The overlay and beat rail below stay gated on `tourActive`
-  // specifically: they are tour chrome, not generic takeover chrome.
+  // HUD-hidden is DERIVED from a running tour or exhibit, not a separate
+  // `setUiHidden` write. A registry clip is a takeover too but keeps the HUD:
+  // it leaves the scene alone, and the debug panel's Stop must stay in reach.
+  // The overlay and beat rail below stay gated on `tourActive` specifically.
   const tourActive = useAppSelector(selectTourActive);
-  const takeoverActive = useAppSelector(selectTakeoverActive);
 
   // Exhibit takeover mirrors the tour branch above: App resolves which
   // exhibit (if any) owns the scene and hands the id down, so
@@ -146,7 +145,8 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splashVisible || takeoverActive) && appStyles.uiStackHidden,
+          (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
+            appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >

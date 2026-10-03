@@ -24,7 +24,7 @@ import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
 import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
-import { startClip, stopClip } from '../camera/clipActions';
+import { startClip } from '../camera/clipActions';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
@@ -106,11 +106,7 @@ function* homeSaga() {
 // once the first clip has started: an opening snap or a fixed `start` lands
 // before the reveal. An arrival that gives up first stops what it started,
 // or the play could still begin over home after the veil has lifted.
-function* firstClipSaga(
-  start: Action,
-  stop: Action,
-  transition: Transition,
-): SagaGenerator<NavigateOutcome> {
+function* firstClipSaga(start: Action, transition: Transition): SagaGenerator<NavigateOutcome> {
   if (transition === 'fly') {
     yield* put(start);
     return OK;
@@ -118,7 +114,7 @@ function* firstClipSaga(
   try {
     yield* all([take(clipStarted), put(start)]);
   } finally {
-    if (yield* cancelled()) yield* put(stop);
+    if (yield* cancelled()) yield* put(exitTakeover());
   }
   return OK;
 }
@@ -158,7 +154,7 @@ export function* navigateSaga(
       if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
       // A live start begins on the home framing, as from the splash.
       if (transition === 'cut') yield* call(homeSaga);
-      return yield* call(firstClipSaga, startTour(view.id), exitTakeover(), transition);
+      return yield* call(firstClipSaga, startTour(view.id), transition);
     case 'clip':
       if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
       if (transition === 'cut') {
@@ -167,6 +163,6 @@ export function* navigateSaga(
         // card would sit over it and follow would ease back when it ends.
         yield* put(clearSelection());
       }
-      return yield* call(firstClipSaga, startClip(view.id), stopClip(), transition);
+      return yield* call(firstClipSaga, startClip(view.id), transition);
   }
 }

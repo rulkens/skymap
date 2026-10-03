@@ -1,6 +1,6 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (`startTour`, `openExhibit`). A superseding request cancels the running
+ * source (`startTour`, `openExhibit`, `startClip`). A superseding request cancels the running
  * takeover and waits for the whole cancelled bracket to settle before the
  * successor starts, so the successor snapshots the user's pre-takeover scene
  * and not a mid-takeover one.
@@ -10,15 +10,18 @@ import { call, cancel, fork, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
 import { runTakeoverSaga } from './runTakeoverSaga';
+import { withSceneSnapshotSaga } from './withSceneSnapshotSaga';
 import { tourBodySaga } from '../tour/tourBodySaga';
 import { startTour } from '../tour/tourActions';
 import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
+import { clipBodySaga } from '../camera/clipBodySaga';
+import { startClip } from '../camera/clipActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour, openExhibit];
+const startRequests = [startTour, openExhibit, startClip];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -38,18 +41,22 @@ export function* watchTakeoverSaga() {
     }
 
     // Branch on the incoming action to build this run's `TakeoverSource` and
-    // body — `runTakeoverSaga` itself stays generic over both (see its header).
+    // body — `runTakeoverSaga` itself stays generic over every kind (see its header).
     let source: TakeoverSource;
     let body: () => Generator;
     if (startTour.match(action)) {
       const tour = tourRegistry[action.payload.id];
       source = { kind: 'tour', id: tour.id };
-      body = () => tourBodySaga(tour, action.payload.beats);
+      body = () => withSceneSnapshotSaga(() => tourBodySaga(tour, action.payload.beats));
     } else if (openExhibit.match(action)) {
       const { id, entry } = action.payload;
       const exhibit = exhibitRegistry[id];
       source = { kind: 'exhibit', id: exhibit.id, entry };
-      body = () => exhibitBodySaga(exhibit, entry);
+      body = () => withSceneSnapshotSaga(() => exhibitBodySaga(exhibit, entry));
+    } else if (startClip.match(action)) {
+      const id = action.payload;
+      source = { kind: 'clip', id };
+      body = () => clipBodySaga(id);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is

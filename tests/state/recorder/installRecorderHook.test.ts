@@ -171,7 +171,7 @@ describe('installRecorderHook', () => {
     if (!hook) throw new Error('hook not installed');
 
     // Tour A is running (the bracket's activation write, driven directly). A
-    // takeLatest supersede never emits takeoverEnded for the cancelled run, so
+    // supersede never emits takeoverEnded for the cancelled run, so
     // an overlapping call could not attribute the eventual end — the hook is
     // single-flight and must refuse loudly instead of resolving on tour B.
     store.dispatch(takeoverStarted({ kind: 'tour', id: 'demo' }));

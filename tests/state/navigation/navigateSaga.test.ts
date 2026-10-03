@@ -26,7 +26,7 @@ import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { startClip } from '../../../src/state/camera/clipActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import {
   clipStarted,
@@ -240,16 +240,16 @@ describe('navigateSaga', () => {
   });
 
   it.each([
-    ['tour', 'grandTour', exitTakeover.match],
-    ['clip', 'cosmicFlows', stopClip.match],
-  ] as const)('a cancelled %s arrival stops what it started', async (kind, id, stopped) => {
+    ['tour', 'grandTour'],
+    ['clip', 'cosmicFlows'],
+  ] as const)('a cancelled %s arrival stops what it started', async (kind, id) => {
     const h = build();
     const task = h.run(navigateSaga, { view: { kind, id } }, 'cut' as const);
     await flush();
     task.cancel();
     await flush();
 
-    expect(h.count(stopped)).toBe(1);
+    expect(h.count(exitTakeover.match)).toBe(1);
   });
 
   it('a hashchange after arrival flies and leaves arrival untouched', async () => {

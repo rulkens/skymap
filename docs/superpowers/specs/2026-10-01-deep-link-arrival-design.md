@@ -48,7 +48,7 @@ type ArrivalState = { status: 'pending' | 'arrived' | 'failed'; reason?: 'unknow
 - **`requestFocus(id, { transition })`**: the focus tween runs only on `'fly'`.
 - **`openExhibit({ id, entry: Transition })`**: `TakeoverSource` records `entry`, and the overlay delay derives from it.
 - **New hash rows** `exhibit`, `tour`, `clip` get `deepLink: true`; `hasDeepLink` derives them with no edit.
-- **A clip stays outside the takeover system.** It is one case of the subject switch and dispatches `startClip`; promoting clips to a third takeover arm was rejected.
+- **A registry clip is a third takeover kind** (amended 2026-10-03, reversing the brainstorm ruling). `takeover.active` is the one record of what runs: `{ kind: 'tour' | 'exhibit' | 'clip', id, entry? }`. One watcher gives mutual exclusion across all three, `exitTakeover` is the one exit verb, and every takeover hash row writes from it. Each kind brings its own bracket: tours and exhibits snapshot and restore the scene and pin the FOV, while a clip freezes and restores the clock and leaves the scene alone. `camera.clip` stays on the camera slice, because it is the motion being played and not the identity of the run.
 
 ### Joints and verdicts
 

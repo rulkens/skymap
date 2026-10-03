@@ -47,8 +47,7 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
-import { clipIdChanged, commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { stopClip } from '../../../src/state/camera/clipActions';
+import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { hashNavigationStarted } from '../../../src/state/url/hashNavigationStarted';
@@ -203,16 +202,6 @@ describe('watchHashReadSaga', () => {
     const types = recorded.map((action) => action.type);
     expect(types).not.toContain(exitTakeover.type);
     expect(types).not.toContain(startTour.type);
-  });
-
-  it("back to a URL without the running clip's key stops the clip", () => {
-    const { store, recorded, emit } = buildHarness('');
-    store.dispatch(clipIdChanged('flyout'));
-    recorded.length = 0;
-
-    emit('');
-
-    expect(recorded).toContainEqual(stopClip());
   });
 
   it('detaches the channel subscriber when cancelled', () => {

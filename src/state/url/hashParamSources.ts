@@ -89,8 +89,7 @@ import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { takeoverEnded, takeoverStarted } from '../takeover/takeoverActions';
-import { clipIdChanged } from '../camera/cameraSlice';
-import { selectPlayingClipId } from '../camera/selectors';
+import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -284,35 +283,27 @@ const poseSource: HashParamSource = {
  * Absence restores nothing here: leaving the running takeover is
  * `applyNavigation`'s, which knows what runs and what the entry names.
  */
-const takeoverSource = (
-  key: 'exhibit' | 'tour' | 'clip',
-  writesOn: HashParamSource['writesOn'],
-  write: HashParamSource['write'],
-): HashParamSource => ({
+const isTakeoverChange = (action: Action): boolean =>
+  takeoverStarted.match(action) || takeoverEnded.match(action);
+
+const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
   key,
   deepLink: true,
-  writesOn,
-  write,
+  writesOn: [isTakeoverChange],
+  write: (state) => {
+    const source = selectTakeoverSource(state);
+    return source?.kind === key ? source.id : null;
+  },
   read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],
 });
-
-const takeoverIdOf =
-  (kind: 'exhibit' | 'tour'): HashParamSource['write'] =>
-  (state) => {
-    const source = selectTakeoverSource(state);
-    return source?.kind === kind ? source.id : null;
-  };
-
-const isTakeoverChange = (action: Action): boolean =>
-  takeoverStarted.match(action) || takeoverEnded.match(action);
 
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   poseSource,
   focusSource,
   timeSource,
   orientationSource,
-  takeoverSource('exhibit', [isTakeoverChange], takeoverIdOf('exhibit')),
-  takeoverSource('tour', [isTakeoverChange], takeoverIdOf('tour')),
-  takeoverSource('clip', [clipIdChanged.match], selectPlayingClipId),
+  takeoverSource('exhibit'),
+  takeoverSource('tour'),
+  takeoverSource('clip'),
 ];

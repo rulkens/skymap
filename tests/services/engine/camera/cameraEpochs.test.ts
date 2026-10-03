@@ -67,7 +67,6 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     autoRotate: { active: false, rate: 0 },
     dragging: false,
     clip: null,
-    clipId: null,
     frameTween: null,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,

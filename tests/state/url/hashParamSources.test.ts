@@ -180,6 +180,7 @@ describe('takeover rows', () => {
   it.each([
     ['tour', { kind: 'tour', id: 'grandTour' }],
     ['exhibit', { kind: 'exhibit', id: 'zoneOfAvoidance', entry: 'cut' }],
+    ['clip', { kind: 'clip', id: 'flyout' }],
   ] as const)('a running %s keeps its key in the hash and drops it when it ends', (key, source) => {
     const row = HASH_PARAM_SOURCES.find((candidate) => candidate.key === key)!;
     const started = takeoverStarted(source);

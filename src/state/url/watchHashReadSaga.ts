@@ -75,8 +75,6 @@ import { arrivalPending } from '../arrival/arrivalSlice';
 import { navigateSaga } from '../navigation/navigateSaga';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { exitTakeover } from '../takeover/takeoverActions';
-import { selectPlayingClipId } from '../camera/selectors';
-import { stopClip } from '../camera/clipActions';
 import { linkIntentFrom } from '../../utils/url/linkIntentFrom';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
@@ -93,18 +91,15 @@ function* applyNavigation(body: string) {
   const { view } = intent;
   const names = (kind: string, id: string) => view.kind === kind && 'id' in view && view.id === id;
   const takeover = yield* select(selectTakeoverSource);
-  const clipId = yield* select(selectPlayingClipId);
   const keepsTakeover = takeover !== null && names(takeover.kind, takeover.id);
-  const keepsClip = clipId !== null && names('clip', clipId);
 
   // An entry that leaves out the running play's key is one from before it,
   // such as Back to the pre-tour URL.
   if (takeover !== null && !keepsTakeover) yield* put(exitTakeover());
-  if (clipId !== null && !keepsClip) yield* put(stopClip());
   // The app's own writes push silently, so an entry naming what runs is
   // Back/Forward across that play's own history (a tour pushes one per
   // focus); navigating would restart it.
-  if (!keepsTakeover && !keepsClip) yield* call(navigateSaga, intent, 'fly' as const);
+  if (!keepsTakeover) yield* call(navigateSaga, intent, 'fly' as const);
 
   const params = parseHashParams(body);
   for (const source of HASH_PARAM_SOURCES) {
