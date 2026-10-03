@@ -179,7 +179,6 @@ describe('clipBodySaga', () => {
     await flush();
     store.dispatch(startClip('flowOrbit'));
     await flush();
-    // The superseded run's teardown lands before its successor's start.
     expect(hashBodyFor(store.getState())).toContain('clip=flowOrbit');
 
     store.dispatch(exitTakeover());
