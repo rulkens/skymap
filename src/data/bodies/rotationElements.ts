@@ -142,6 +142,14 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     poleRaDeg: 40.38,
     poleDecDeg: 83.55,
   },
+  // Untextured, but a surface camera rides this frame: without a row the Sun never moves in
+  // Titan's sky.
+  {
+    kind: 'tidallyLocked',
+    id: 'titan',
+    poleRaDeg: 39.4827,
+    poleDecDeg: 83.4279,
+  },
   {
     kind: 'tidallyLocked',
     id: 'iapetus',

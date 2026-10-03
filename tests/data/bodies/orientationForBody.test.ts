@@ -61,12 +61,12 @@ describe('orientationForBody', () => {
     expect(meridianAfter[2]).toBeCloseTo(meridianBefore[2], 4);
   });
 
-  it('leaves a non-textured body orientation-invariant across simDays', () => {
-    // Titan carries no rotation row, so it has no meridian to spin — its
+  it('leaves a row-less body orientation-invariant across simDays', () => {
+    // Phobos carries no rotation row, so it has no meridian to spin — its
     // orientation is the identity at every instant, never a fabricated pole
     // that would drift as the clock advances.
-    expect(orientationForBody('titan', CONST_J2000, NO_POSITIONS)).toEqual([...IDENTITY_MAT3]);
-    expect(orientationForBody('titan', CONST_J2000 + 5000, NO_POSITIONS)).toEqual([
+    expect(orientationForBody('phobos', CONST_J2000, NO_POSITIONS)).toEqual([...IDENTITY_MAT3]);
+    expect(orientationForBody('phobos', CONST_J2000 + 5000, NO_POSITIONS)).toEqual([
       ...IDENTITY_MAT3,
     ]);
   });

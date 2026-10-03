@@ -129,15 +129,15 @@ describe('deriveBodyStates', () => {
     expect(io.positionMpc[2] - jupiter.positionMpc[2]).toBeCloseTo(ioRelative[2], 18);
   });
 
-  it('orientation is identity iff the body is untextured', () => {
-    // Matches orientationForBody's texture-gate contract: a textured body (Earth)
-    // carries a baked IAU rotation; an untextured one (Titan) carries identity.
-    expect(states.get('titan')!.orientation).toEqual([...IDENTITY_MAT3]);
+  it('orientation is identity iff the body has no rotation row', () => {
+    // Matches orientationForBody's row-gate contract: a body with a row (Earth)
+    // carries a baked IAU rotation; a row-less one (Phobos) carries identity.
+    expect(states.get('phobos')!.orientation).toEqual([...IDENTITY_MAT3]);
     expect(states.get('earth')!.orientation).not.toEqual([...IDENTITY_MAT3]);
   });
 
   // The host direction leaves a moon's equator only by the gap between its IAU pole and its
-  // orbit normal (measured <= 1.6 deg for all ten, Iapetus's 15 deg pole tilt included); 5 deg
+  // orbit normal (measured <= 1.6 deg for all eleven, Iapetus's 15 deg pole tilt included); 5 deg
   // keeps headroom without admitting the 14+ deg drifts this guards against.
   const TIDAL_LOCK_MAX_DEG = 5;
   const SYNCHRONOUS_MOONS = [
@@ -150,6 +150,7 @@ describe('deriveBodyStates', () => {
     'tethys',
     'dione',
     'rhea',
+    'titan',
     'iapetus',
   ];
 
