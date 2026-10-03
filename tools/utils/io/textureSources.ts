@@ -14,7 +14,7 @@ import type { RawDataKey } from './rawDataRegistry';
 
 /**
  * `--dev` variant: its own registry row (`devKey`) or a loose file in
- * `textures.dir` (`devFilename`); the USGS moons have neither. `chroma` is a
+ * `textures.dir` (`devFilename`); the USGS and CICLOPS moons have neither. `chroma` is a
  * `panSharpen` body's SECOND input — `native` is luminance, `chroma` is hue.
  */
 export type TextureSourceEntry = {
@@ -22,6 +22,13 @@ export type TextureSourceEntry = {
   readonly devKey?: RawDataKey;
   readonly devFilename?: string;
   readonly chroma?: RawDataKey;
+  /** `'icq'`: `native` is a Gaskell shape-model point cloud, rasterised to a
+   *  radius heightfield instead of read as an image. `'floatDem'`: a Float32
+   *  height GeoTIFF with longitude 0 at its left edge. */
+  readonly format?: 'icq' | 'floatDem';
+  /** Source east longitude minus texture east longitude at the same spot (the
+   *  frames differ: prime-meridian constants, or a DEM's own registration). */
+  readonly lonOffsetDeg?: number;
 };
 
 // Uranus/Neptune keep a `devFilename` though their native IS the 2k file: fetch
@@ -56,7 +63,25 @@ export const TEXTURE_SOURCES = {
   // `RAW_DATA` row); the `panSharpen` calibration undoes that stretch.
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
-  enceladus: { surface: { native: 'textures.usgsEnceladus' } },
+  enceladus: {
+    surface: { native: 'textures.usgsEnceladus' },
+    normal: { native: 'textures.schenkEnceladusDem', format: 'floatDem', lonOffsetDeg: 0.35 },
+  },
+  mimas: {
+    surface: { native: 'textures.nasaMimas' },
+    normal: { native: 'textures.gaskellMimasShape', format: 'icq', lonOffsetDeg: 4 },
+  },
+  // Tethys's offset is MEASURED (correlation vs PIA18439); the prime-meridian constants (shape W0 10.45 vs pck00011 8.95) would predict +1.5.
+  tethys: {
+    surface: { native: 'textures.nasaTethys' },
+    normal: { native: 'textures.gaskellTethysShape', format: 'icq', lonOffsetDeg: -0.1 },
+  },
+  dione: {
+    surface: { native: 'textures.nasaDione' },
+    normal: { native: 'textures.gaskellDioneShape', format: 'icq', lonOffsetDeg: -0.6 },
+  },
+  rhea: { surface: { native: 'textures.nasaRhea' } },
+  iapetus: { surface: { native: 'textures.nasaIapetus' } },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },

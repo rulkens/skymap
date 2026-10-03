@@ -16,6 +16,6 @@ import type { ColourTreatment } from './ColourTreatment';
 export type BodyTextureSpec = {
   readonly bodyId: BodyTextureId;
   readonly kinds: Readonly<Partial<Record<TextureKind, Tier>>>; // present key = body ships that kind; value = its highest tier, `small` 2k | `medium` 4k | `large` 8k
-  readonly provenance: 'sss' | 'usgs' | 'nasa'; // Solar System Scope | USGS | NASA Blue Marble
+  readonly provenance: 'sss' | 'usgs' | 'nasa'; // Solar System Scope | USGS | NASA (Blue Marble, Photojournal)
   readonly treatment: ColourTreatment; // per body, not per kind
 };

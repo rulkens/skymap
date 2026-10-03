@@ -3,8 +3,8 @@
  * pole (α₀, δ₀), prime meridian W₀ and spin rate Ẇ, all degrees. `orbitalElements`
  * places a body; this aims it. A body with no row is rotation-invariant and
  * falls back to `IDENTITY_MAT3`. Only Ẇ is live: the published pole rates
- * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`,
- * the Galileans' `Jn`) are dropped — they move the pole under an arcminute over 250
+ * α̇/δ̇ and the periodic nutation/libration terms (Neptune's `N`, the Moon's `E1…`)
+ * are dropped — they move the pole under an arcminute over 250
  * years, below a textured sphere's resolution. Source: the constant terms of
  * Archinal et al. (2018), Cel. Mech. Dyn. Astron. 130:22, Tables 1 and 2/3.
  */
@@ -86,40 +86,87 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 38.3213,
     spinRateDegPerDay: 13.17635815,
   },
+  // Synchronous moons face their host by construction: the lock is derived from the orbit
+  // because IAU W rows and JPL orbit rows disagree in phase and rate. Optical libration is dropped.
+  // Phobos, Deimos and Titan are untextured, but a surface camera rides their frames:
+  // row-less, the Sun would stand still in their skies.
   {
+    kind: 'tidallyLocked',
+    id: 'phobos',
+    poleRaDeg: 317.68,
+    poleDecDeg: 52.9,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'deimos',
+    poleRaDeg: 316.65,
+    poleDecDeg: 53.52,
+  },
+  {
+    kind: 'tidallyLocked',
     id: 'io',
     poleRaDeg: 268.05,
     poleDecDeg: 64.5,
-    primeMeridianDeg: 200.39,
-    spinRateDegPerDay: 203.4889538,
   },
   {
+    kind: 'tidallyLocked',
     id: 'europa',
     poleRaDeg: 268.08,
     poleDecDeg: 64.51,
-    primeMeridianDeg: 36.022,
-    spinRateDegPerDay: 101.3747235,
   },
   {
+    kind: 'tidallyLocked',
     id: 'ganymede',
     poleRaDeg: 268.2,
     poleDecDeg: 64.57,
-    primeMeridianDeg: 44.064,
-    spinRateDegPerDay: 50.3176081,
   },
   {
+    kind: 'tidallyLocked',
     id: 'callisto',
     poleRaDeg: 268.72,
     poleDecDeg: 64.83,
-    primeMeridianDeg: 259.51,
-    spinRateDegPerDay: 21.5710715,
   },
   {
+    kind: 'tidallyLocked',
     id: 'enceladus',
     poleRaDeg: 40.66,
     poleDecDeg: 83.52,
-    primeMeridianDeg: 6.32,
-    spinRateDegPerDay: 262.7318996,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'mimas',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'tethys',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'dione',
+    poleRaDeg: 40.66,
+    poleDecDeg: 83.52,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'rhea',
+    poleRaDeg: 40.38,
+    poleDecDeg: 83.55,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'titan',
+    poleRaDeg: 39.4827,
+    poleDecDeg: 83.4279,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'iapetus',
+    poleRaDeg: 318.16,
+    poleDecDeg: 75.03,
   },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde

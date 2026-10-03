@@ -47,7 +47,7 @@ describe('textureSourcesFor', () => {
     );
   });
 
-  it('the full pull selects the native tiers + both BMNG publications + the seven USGS mosaics', () => {
+  it('the full pull selects the native tiers + both BMNG publications + the moon mosaics', () => {
     const full = textureSourcesFor(false);
     expect(filenames(full).sort()).toEqual(
       [
@@ -79,6 +79,18 @@ describe('textureSourcesFor', () => {
         'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
         'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
         'Enceladus_Cassini_mosaic_global_110m.tif',
+        // The CICLOPS Saturn-moon maps (Mimas, Tethys, Dione, Rhea, Iapetus).
+        'PIA18437.tif',
+        'PIA18439.tif',
+        'PIA18434.tif',
+        'PIA18438.tif',
+        'PIA18436.tif',
+        // Mimas, Tethys and Dione normal maps are baked from Gaskell shape models.
+        'mimas_quad512q.tab',
+        'tethys_quad512q.tab',
+        'dione_quad512q.tab',
+        // Enceladus's normal map is baked from the Schenk 2024 DEM.
+        'Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
         // Pluto's second (chroma) input and the true-colour reference its
         // calibration is fitted against: neither is a `native`, so both ride the
         // full pull the way the BMNG quadrants do (see CHROMA_SOURCES).
