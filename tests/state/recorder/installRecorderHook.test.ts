@@ -28,6 +28,7 @@ import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/to
 import { rootReducer } from '../../../src/store/rootReducer';
 import { installRecorderHook } from '../../../src/state/recorder/installRecorderHook';
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { takeoverStarted, takeoverEnded } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
@@ -36,7 +37,6 @@ import {
   engineStatusChanged,
   engineLoadProgressChanged,
 } from '../../../src/state/engine/engineSlice';
-import { Source } from '../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { SkymapRecorderHook } from '../../../src/@types/recorder/SkymapRecorderHook';
@@ -117,9 +117,11 @@ describe('installRecorderHook', () => {
     await vi.advanceTimersByTimeAsync(READY_STABLE_MS * 2);
     expect(settled).toBe(false);
 
-    // The last in-flight slot settles: the aggregator reports null and the
-    // predicate holds. Just short of the window it is still pending...
+    // The last in-flight slot settles: the aggregator reports null, arrival
+    // lands, and the predicate holds. Just short of the window it is still
+    // pending...
     store.dispatch(engineLoadProgressChanged(null));
+    store.dispatch(arrived());
     await vi.advanceTimersByTimeAsync(READY_STABLE_MS - 1);
     expect(settled).toBe(false);
 

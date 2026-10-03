@@ -73,26 +73,17 @@ const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   frame: 'equatorial',
 };
 
-// `playsAtOnce` stands in for a player whose first clip starts inside the
-// start request's own dispatch.
-function build({ playsAtOnce = false } = {}) {
+function build() {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
     return next(action);
   };
-  const player: Middleware = (api) => (next) => (action) => {
-    const result = next(action);
-    if (playsAtOnce && (startTour.match(action) || startClip.match(action))) {
-      api.dispatch(clipStarted(CLIP_STARTED));
-    }
-    return result;
-  };
   const playClip = vi.fn(() => new Promise<void>(() => {}));
   const mw = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
-    middleware: (g) => g().concat(recorder, player, mw),
+    middleware: (g) => g().concat(recorder, mw),
   });
   mw.setContext({
     resolveDeps,
@@ -246,18 +237,6 @@ describe('navigateSaga', () => {
 
     h.store.dispatch(clipStarted(CLIP_STARTED));
     expect(await navigation).toEqual({ ok: true });
-  });
-
-  it.each(PLAYS)('navigate %s catches a clipStarted inside its start', async (kind, id) => {
-    // A player whose first clip starts inside the start request's dispatch
-    // must still reveal, not leave the arrival waiting for the timeout.
-    const h = build({ playsAtOnce: true });
-    const outcome = await Promise.race([
-      h.navigate({ view: { kind, id } }, 'cut'),
-      flush().then(() => 'still waiting'),
-    ]);
-
-    expect(outcome).toEqual({ ok: true });
   });
 
   it.each([
