@@ -24,6 +24,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
+import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
@@ -172,5 +173,22 @@ describe('pose row', () => {
 
   it('writes nothing: the rendered pose changes every frame of a drag, so this row never publishes', () => {
     expect(poseSource.write(stateAfter())).toBeNull();
+  });
+});
+
+describe('takeover rows', () => {
+  it.each([
+    ['tour', { kind: 'tour', id: 'grandTour' }],
+    ['exhibit', { kind: 'exhibit', id: 'zoneOfAvoidance', entry: 'cut' }],
+  ] as const)('a running %s keeps its key in the hash and drops it when it ends', (key, source) => {
+    const row = HASH_PARAM_SOURCES.find((candidate) => candidate.key === key)!;
+    const started = takeoverStarted(source);
+    const ended = takeoverEnded();
+
+    expect(row.write(stateAfter(started))).toBe(source.id);
+    expect(row.write(stateAfter(started, ended))).toBeNull();
+    // A miss here leaves the key stale until some other row's trigger fires.
+    expect(row.writesOn.some((matches) => matches(started))).toBe(true);
+    expect(row.writesOn.some((matches) => matches(ended))).toBe(true);
   });
 });

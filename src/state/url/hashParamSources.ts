@@ -10,10 +10,11 @@
  * so two identical states always produce byte-identical hashes. That binds
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
- * read-only row (`write: () => null`: `pose` and the takeovers) composes
- * nothing into the body, so this rule says nothing about its position. Read
- * order is not a table fact at all: `linkIntentFrom` merges the rows'
- * contributions.
+ * read-only row (`write: () => null`: `pose`) composes nothing into the body,
+ * so this rule says nothing about its position. The takeover rows began
+ * read-only and already sat last, so their becoming writers appended them: no
+ * link in the wild carries a written takeover key. Read order is not a table
+ * fact at all: `linkIntentFrom` merges the rows' contributions.
  *
  * ### The `writesOn` completeness contract
  *
@@ -86,6 +87,10 @@ import { selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
+import { selectTakeoverSource } from '../takeover/selectors';
+import { takeoverEnded, takeoverStarted } from '../takeover/takeoverActions';
+import { clipIdChanged } from '../camera/cameraSlice';
+import { selectPlayingClipId } from '../camera/selectors';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -273,28 +278,41 @@ const poseSource: HashParamSource = {
 };
 
 /**
- * `exhibit` / `tour` / `clip` — a takeover link, read-only like `pose`. The
- * read names the subject and `navigateSaga` validates the id against its
- * registry. Nothing writes the key back, so the first write after arrival
- * drops it from the address bar: the takeover never lingers into a later
- * focus or time link. Absence restores nothing; a running takeover is the
- * viewer's to exit.
+ * `exhibit` / `tour` / `clip` — a takeover link. The read names the subject and
+ * `navigateSaga` validates the id against its registry. The write mirrors what
+ * is running, however it started, so a reload or a shared copy reopens it.
+ * Absence restores nothing here: leaving the running takeover is
+ * `applyNavigation`'s, which knows what runs and what the entry names.
  */
-const takeoverSource = (kind: 'exhibit' | 'tour' | 'clip'): HashParamSource => ({
-  key: kind,
+const takeoverSource = (
+  key: 'exhibit' | 'tour' | 'clip',
+  writesOn: HashParamSource['writesOn'],
+  write: HashParamSource['write'],
+): HashParamSource => ({
+  key,
   deepLink: true,
-  writesOn: [],
-  write: () => null,
-  read: (value) => ({ view: { kind, id: value } }),
+  writesOn,
+  write,
+  read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],
 });
+
+const takeoverIdOf =
+  (kind: 'exhibit' | 'tour'): HashParamSource['write'] =>
+  (state) => {
+    const source = selectTakeoverSource(state);
+    return source?.kind === kind ? source.id : null;
+  };
+
+const isTakeoverChange = (action: Action): boolean =>
+  takeoverStarted.match(action) || takeoverEnded.match(action);
 
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   poseSource,
   focusSource,
   timeSource,
   orientationSource,
-  takeoverSource('exhibit'),
-  takeoverSource('tour'),
-  takeoverSource('clip'),
+  takeoverSource('exhibit', [isTakeoverChange], takeoverIdOf('exhibit')),
+  takeoverSource('tour', [isTakeoverChange], takeoverIdOf('tour')),
+  takeoverSource('clip', [clipIdChanged.match], selectPlayingClipId),
 ];

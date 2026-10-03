@@ -20,6 +20,7 @@ import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
+import type { ClipId } from '../../@types/animation/ClipId';
 import type { FrameTween } from '../../@types/camera/FrameTween';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
 
@@ -37,6 +38,7 @@ const initialState: CameraState = {
   },
   dragging: false,
   clip: null,
+  clipId: null,
   frameTween: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
@@ -88,6 +90,11 @@ const cameraSlice = createSlice({
       camera.clip = null;
       camera.tween = null;
     },
+    // Apart from `clip` because a tour's or an exhibit's clips play through the
+    // seam with no registry id; only `watchClipSaga` writes this.
+    clipIdChanged: (camera, action: PayloadAction<ClipId | null>) => {
+      camera.clipId = action.payload;
+    },
 
     // Orthogonal to `setOrientation`: that snaps the committed target frame, this
     // starts the up-basis slerp toward it — so a URL boot or a tour cue can set the
@@ -121,6 +128,7 @@ export const {
   setCameraTuning,
   clipStarted,
   clipEnded,
+  clipIdChanged,
   startFrameTween,
   clearFrameTween,
 } = cameraSlice.actions;

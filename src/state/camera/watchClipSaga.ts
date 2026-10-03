@@ -66,6 +66,7 @@
 import { call, race, take, takeLatest, getContext, put, select } from 'typed-redux-saga';
 
 import { startClip, stopClip } from './clipActions';
+import { clipIdChanged } from './cameraSlice';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -99,6 +100,7 @@ export function* watchClipSaga() {
     const frozenSimDays = deriveSimDays(priorTime, nowMs);
     const clip = clipFactories[action.payload](frozenSimDays);
     yield* put(pause({ nowMs }));
+    yield* put(clipIdChanged(action.payload));
     try {
       yield* race({
         run: call(function* () {
@@ -131,6 +133,7 @@ export function* watchClipSaga() {
         stop: take(stopClip),
       });
     } finally {
+      yield* put(clipIdChanged(null));
       // Runs on natural end, `stopClip`, AND `takeLatest` cancellation. Restore
       // exactly what the clip interrupted:
       //   live            → re-snap to the wall-clock JD now (so "live" is still

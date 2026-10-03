@@ -20,6 +20,7 @@ import { CANCEL } from '@redux-saga/core';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
 import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { hashBodyFor } from '../../../src/state/url/hashBodyFor';
 import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
@@ -171,6 +172,21 @@ describe('watchClipSaga', () => {
     for (const w of fp.waypoints) {
       expect('at' in w).toBe(true);
     }
+  });
+
+  it('a running clip keeps clip= in the hash and drops it when the clip ends', async () => {
+    const { store } = buildHarness(blockingSeam(() => {}));
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    store.dispatch(startClip('flowOrbit'));
+    await flush();
+    // The superseded run's teardown lands before its successor's start.
+    expect(hashBodyFor(store.getState())).toContain('clip=flowOrbit');
+
+    store.dispatch(stopClip());
+    await flush();
+    expect(hashBodyFor(store.getState())).not.toContain('clip=');
   });
 
   it('cancels the prior run when a second startClip arrives (takeLatest)', async () => {

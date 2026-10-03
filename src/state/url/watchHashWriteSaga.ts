@@ -90,7 +90,7 @@ import type { RootState } from '../../store/types';
 
 // Applying a URL the visitor is already on: the arrival settling, or a hash
 // navigation. Each is a trigger of its own, so its publish is what strips the
-// keys the link carried but the store never writes back (`pose`, takeovers).
+// keys the link carried but the store never writes back (`pose`).
 const armsReplace = (action: Action): boolean =>
   arrived.match(action) || arrivalFailed.match(action) || hashNavigationStarted.match(action);
 

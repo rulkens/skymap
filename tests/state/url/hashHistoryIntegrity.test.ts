@@ -82,6 +82,7 @@ import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { selectArrivalPending } from '../../../src/state/arrival/selectors';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
@@ -224,7 +225,7 @@ describe('hash history integrity', () => {
     expect(window.location.hash).not.toContain('pose=');
   });
 
-  it('canonicalizes a takeover navigation in place instead of pushing', async () => {
+  it("keeps a takeover navigation's key without pushing", async () => {
     seedHash('');
     await boot();
     await flush();
@@ -233,10 +234,23 @@ describe('hash history integrity', () => {
     navigate('exhibit=zoneOfAvoidance');
     await flush();
 
-    // `exhibit` never writes, so the settled body drops it; a push would make
-    // Back land on this same URL, reopen the exhibit and push again.
+    // The running exhibit writes its own key back, so the settled body is the
+    // URL the browser already moved to; a push would truncate Forward.
     expect(pushedHashes()).toEqual([]);
-    expect(window.location.hash).not.toContain('exhibit=');
+    expect(window.location.hash).toContain('exhibit=zoneOfAvoidance');
+  });
+
+  it('a palette-opened exhibit writes exhibit=', async () => {
+    seedHash('');
+    const { store } = await boot();
+    await flush();
+
+    pushState.mockClear();
+    store.dispatch(openExhibit({ id: 'zoneOfAvoidance', entry: 'fly' }));
+    await flush();
+
+    // Opening one is the viewer's own act, so it leaves an entry Back undoes.
+    expect(pushedHashes().at(-1)).toContain('exhibit=zoneOfAvoidance');
   });
 
   it('pushes exactly once for a selection the store makes on its own', async () => {

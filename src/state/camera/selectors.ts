@@ -8,6 +8,7 @@ import { cameraRoute } from '../../store/constants';
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { ClipId } from '../../@types/animation/ClipId';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
@@ -45,3 +46,6 @@ export const selectCameraActive = (state: RootState): boolean => {
 
 export const selectClipActive = (state: RootState): boolean =>
   selectCameraIntent(state).clip !== null;
+
+export const selectPlayingClipId = (state: RootState): ClipId | null =>
+  selectCameraIntent(state).clipId;

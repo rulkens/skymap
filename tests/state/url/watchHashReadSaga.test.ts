@@ -47,7 +47,10 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { clipIdChanged, commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { stopClip } from '../../../src/state/camera/clipActions';
+import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { startTour } from '../../../src/state/tour/tourActions';
 import { hashNavigationStarted } from '../../../src/state/url/hashNavigationStarted';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
@@ -83,9 +86,9 @@ function buildHarness(arrivalBody: string) {
   };
 
   const sagaMiddleware = createSagaMiddleware();
-  // The store is here for the real reducers the saga's `put`s land in and for
-  // the middleware chain; no case reads its state back, so it needs no binding.
-  configureStore({
+  // The real reducers the saga's `put`s land in; a case seeds a running play
+  // through it.
+  const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(recorder, sagaMiddleware),
   });
@@ -101,6 +104,7 @@ function buildHarness(arrivalBody: string) {
   const task = sagaMiddleware.run(watchHashReadSaga);
 
   return {
+    store,
     recorded,
     emit: (body: string) => emit(body),
     task,
@@ -176,6 +180,39 @@ describe('watchHashReadSaga', () => {
       requestSelect('m31'),
       requestFocus({ id: 'm31', transition: 'cut' }),
     ]);
+  });
+
+  it("back to a URL without the running tour's key exits the tour", () => {
+    const { store, recorded, emit } = buildHarness('');
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
+    recorded.length = 0;
+
+    emit('focus=body-mars');
+
+    expect(recorded).toContainEqual(exitTakeover());
+  });
+
+  it('an entry naming the running tour neither exits nor restarts it', () => {
+    // Back across the tour's own pushes (one per beat focus) lands here.
+    const { store, recorded, emit } = buildHarness('');
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
+    recorded.length = 0;
+
+    emit('focus=body-mars&tour=grandTour');
+
+    const types = recorded.map((action) => action.type);
+    expect(types).not.toContain(exitTakeover.type);
+    expect(types).not.toContain(startTour.type);
+  });
+
+  it("back to a URL without the running clip's key stops the clip", () => {
+    const { store, recorded, emit } = buildHarness('');
+    store.dispatch(clipIdChanged('flyout'));
+    recorded.length = 0;
+
+    emit('');
+
+    expect(recorded).toContainEqual(stopClip());
   });
 
   it('detaches the channel subscriber when cancelled', () => {

@@ -13,6 +13,8 @@ import { stateAfter } from '../../fixtures/stateAfter';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
+import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 
 describe('hashBodyFor', () => {
   it('composes the empty body from the boot state (bare URL)', () => {
@@ -40,5 +42,16 @@ describe('hashBodyFor', () => {
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(hashBodyFor(state)).toBe('focus=m31&t=2000-01-01T12:00:00.000Z&orientation=galactic');
+  });
+
+  it('reloading a tour=… URL that also carries focus/t opens the tour', () => {
+    // The body a running tour publishes beside its beat's focus and clock must
+    // parse back to the tour, or a reload lands on the beat instead.
+    const state = stateAfter(
+      ...manualPausedAtActions(new Date('2000-01-01T12:00:00.000Z')),
+      requestFocus({ id: 'm31', transition: 'fly' }),
+      takeoverStarted({ kind: 'tour', id: 'grandTour' }),
+    );
+    expect(linkIntentFrom(hashBodyFor(state)).view).toEqual({ kind: 'tour', id: 'grandTour' });
   });
 });

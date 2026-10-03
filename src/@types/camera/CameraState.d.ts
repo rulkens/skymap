@@ -13,6 +13,7 @@ import type { FramedCameraPose } from './FramedCameraPose';
 import type { CameraTuning } from './CameraTuning';
 import type { CameraTweenDescriptor } from './CameraTweenDescriptor';
 import type { ClipData } from '../animation/ClipData';
+import type { ClipId } from '../animation/ClipId';
 import type { FrameTween } from './FrameTween';
 import type { OrientationFrameId } from './OrientationFrameId';
 
@@ -23,6 +24,8 @@ export type CameraState = {
   autoRotate: { active: boolean; rate: number };
   dragging: boolean;
   clip: { data: ClipData; frame: OrientationFrameId } | null;
+  /** The registry clip `startClip` is running, from request to teardown; the `clip` hash key mirrors it. */
+  clipId: ClipId | null;
   frameTween: FrameTween | null;
   /** The band edges the camera math is threaded with; session-only, never serialized. `readonly`: always replaced whole. */
   readonly tuning: CameraTuning;
