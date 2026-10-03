@@ -28,6 +28,8 @@ import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
+import { icqPointsToEquirectRadius } from '../utils/shape/icqPointsToEquirectRadius';
+import { readIcqPoints } from '../utils/shape/readIcqPoints';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
@@ -100,6 +102,23 @@ function firstExisting(paths: readonly string[]): string | null {
     if (existsSync(p)) return p;
   }
   return null;
+}
+
+/** Grid width a shape-model source is rasterised at; its ~0.6 km point spacing
+ *  (~0.17 deg) supports 2k, not 4k. */
+const ICQ_GRID_WIDTH = 2048;
+const BYTE_MAX = 255;
+
+/** Full-scale-mapped radius: min -> 0, max -> 255, unquantised, so 23 km of
+ *  Mimas radius is not terraced into 90 m steps before the Sobel pass. */
+function radiusToHeightScale(radius: Float32Array): Float32Array {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of radius) {
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+  }
+  return radius.map((r) => ((r - lo) / (hi - lo)) * BYTE_MAX);
 }
 
 /** Source width in pixels; 0 if sharp can't report it. */
@@ -298,7 +317,22 @@ function bakeNormalOnce(
   let baked = bakedNormalCache.get(srcPath);
   if (baked === undefined) {
     const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
+      if ('format' in entry) {
+        const width = ICQ_GRID_WIDTH;
+        const height = width / 2;
+        const radius = icqPointsToEquirectRadius(
+          readIcqPoints(srcPath),
+          width,
+          height,
+          entry.lonOffsetDeg,
+        );
+        return bakeNormalMap(
+          { data: radiusToHeightScale(radius), width, height },
+          exaggerationFor(bodyId),
+        );
+      }
       // `.greyscale()` collapses the 16-bit elevation `.tif` to the 8-bit
       // heightfield `bakeNormalMap` expects; the quantization is accepted for v1.
       const grey = await sharp(srcPath, { limitInputPixels: false })
@@ -437,7 +471,8 @@ export async function buildTextures(outDir: string): Promise<void> {
       process.stderr.write(`  skip ${bodyId}:${kind}: no source on disk\n`);
       continue;
     }
-    const width = await sourceWidth(srcPath);
+    const entry = SOURCE_TABLE[bodyId][kind]!;
+    const width = 'format' in entry ? ICQ_GRID_WIDTH : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
     const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
     if (tiers.length === 0) {

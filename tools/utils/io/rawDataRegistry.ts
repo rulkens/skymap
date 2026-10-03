@@ -809,6 +809,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.gaskellMimasShape': {
+    path: 'data/raw/textures/mimas_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Mimas shape model (PDS SBN, CO-SA-ISSNA-5-MIMASSHAPE-V2.0, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 187.6-210.8 km; build-only bake input for Mimas's normal map. Its frame uses prime-meridian W0 = 337.46 deg vs the texture's 333.46, so texture lon L reads shape lon L + 4 (measured by cross-correlation); ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.earthClouds': {
     path: 'data/raw/textures/cloud_combined_8192.tif',
     kind: 'file',

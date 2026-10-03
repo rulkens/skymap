@@ -249,6 +249,16 @@ mirror); the build rolls them back (`antimeridianCentred`).
 | Rhea    | `PIA18438.tif` | 12015×6008  | RGB   | greyed, tinted + lifted                             |
 | Iapetus | `PIA18436.tif` | 11741×5871  | RGB   | greyed, tinted; two-terrain albedo fit, small lift  |
 
+### Gaskell Mimas shape model (public domain; credit "Robert Gaskell / NASA PDS Small Bodies Node")
+
+`mimas_quad512q.tab` (~60 MB, `https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab`):
+ASCII, line 1 = Q (512), then 6·(Q+1)² body-fixed `x y z` lines in km. Not a
+texture: the build rasterises its radius (187.6-210.8 km) to a 2048×1024
+heightfield and Sobel-bakes Mimas's `normal` map from it. The shape frame's
+prime-meridian constant is 337.46° vs the texture's 333.46°; cross-correlation
+against PIA18437 and a Herschel overlay give a 4° offset, encoded as
+`lonOffsetDeg` in `textureSources.ts`.
+
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or
 radar), the NASA Photojournal (every true-colour Titan is a small

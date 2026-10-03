@@ -22,6 +22,12 @@ export type TextureSourceEntry = {
   readonly devKey?: RawDataKey;
   readonly devFilename?: string;
   readonly chroma?: RawDataKey;
+  /** `'icq'`: `native` is a Gaskell shape-model point cloud, rasterised to a
+   *  radius heightfield instead of read as an image. */
+  readonly format?: 'icq';
+  /** Shape east longitude minus texture east longitude at the same spot (the two
+   *  frames use different prime-meridian constants). */
+  readonly lonOffsetDeg?: number;
 };
 
 // Uranus/Neptune keep a `devFilename` though their native IS the 2k file: fetch
@@ -57,7 +63,10 @@ export const TEXTURE_SOURCES = {
   pluto: { surface: { native: 'textures.usgsPluto', chroma: 'textures.nasaPlutoColor' } },
   charon: { surface: { native: 'textures.usgsCharon' } },
   enceladus: { surface: { native: 'textures.usgsEnceladus' } },
-  mimas: { surface: { native: 'textures.nasaMimas' } },
+  mimas: {
+    surface: { native: 'textures.nasaMimas' },
+    normal: { native: 'textures.gaskellMimasShape', format: 'icq', lonOffsetDeg: 4 },
+  },
   tethys: { surface: { native: 'textures.nasaTethys' } },
   dione: { surface: { native: 'textures.nasaDione' } },
   rhea: { surface: { native: 'textures.nasaRhea' } },

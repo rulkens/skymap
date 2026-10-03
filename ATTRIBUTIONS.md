@@ -456,6 +456,15 @@ All public domain; NASA asks that credit go to the named observatory / program.
 - **Licence:** Public domain. Credit: "NASA/JPL-Caltech/Space Science
   Institute/Lunar and Planetary Institute".
 
+#### NASA PDS Small Bodies Node — Gaskell Mimas shape model
+
+- **Use:** Mimas's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Gaskell Mimas Shape Model" (CO-SA-ISSNA-5-MIMASSHAPE-V2.0),
+  <https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/>.
+- **Licence:** Public domain. Credit: "Robert Gaskell / NASA PDS Small Bodies
+  Node".
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

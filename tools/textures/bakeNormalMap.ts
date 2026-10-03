@@ -21,7 +21,8 @@
  *       -2  0  +2                   0  0  0
  *       -1  0  +1                  +1 +2 +1
  *
- * Height is normalized to [0,1] (byte / 255) so `exaggeration` means the same
+ * Height is normalized to [0,1] (value / 255; a float grid on the same 0-255 scale
+ * avoids terracing where 8 bits are too coarse) so `exaggeration` means the same
  * thing regardless of the source's bit depth, and each weighted sum is divided
  * by 8 (the kernel's one-sided weight total, 1+2+1 = 4, times the ±1 central
  * span) to read as a per-texel derivative.
@@ -87,6 +88,7 @@ export const DEFAULT_EXAGGERATION = 4;
  * `tools/` test drift-catches every key against the real body registry.
  */
 export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
+  mimas: 64, // measured: p50 tilt 10°, p99 38° over the 2k grid, so Herschel's walls read without saturating
   moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4
 };
 
@@ -104,7 +106,7 @@ export function exaggerationFor(bodyId: string): number {
  * seam) and clamp the row (poles). Returns the byte value at the resolved texel.
  */
 function sampleWrapClamp(
-  data: Uint8Array,
+  data: ArrayLike<number>,
   width: number,
   height: number,
   col: number,
@@ -117,7 +119,7 @@ function sampleWrapClamp(
 }
 
 export function bakeNormalMap(
-  height: { readonly data: Uint8Array; readonly width: number; readonly height: number },
+  height: { readonly data: ArrayLike<number>; readonly width: number; readonly height: number },
   exaggeration: number,
 ): { data: Buffer; info: { width: number; height: number; channels: 4 } } {
   const { data, width, height: h } = height;

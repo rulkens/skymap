@@ -164,7 +164,8 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // 6356 px wide, so `medium` is its ceiling.
   mimas: {
     bodyId: 'mimas',
-    kinds: { surface: 'medium' },
+    // `small` normal: the shape model's ~0.6 km spacing resolves 2k, not 4k.
+    kinds: { surface: 'medium', normal: 'small' },
     provenance: 'nasa',
     treatment: { kind: 'monoTint', tint: [0.49, 0.49, 0.49], lift: 0.635, antimeridianCentred: true },
   },
