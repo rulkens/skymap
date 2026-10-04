@@ -152,9 +152,46 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   // highlight clip).
   enceladus: {
     bodyId: 'enceladus',
-    kinds: { surface: 'large' },
+    kinds: { surface: 'large', normal: 'medium' },
     provenance: 'usgs',
     treatment: { kind: 'monoTint', tint: [0.5, 0.5, 0.5], lift: 0.686 },
+  },
+  // Saturn's mid-sized moons: CICLOPS albedo maps, greyed (their colour is
+  // enhanced UV/IR) and stretched for display. The four bright moons are fitted so
+  // the texture's mean lands on the body's flat albedo with ~3% highlight clip;
+  // Iapetus is anchored on its two terrains instead (dark-hemisphere median ->
+  // albedo 0.04, bright -> 0.6) with a mild warm cast, by eye. Mimas's source is
+  // 6356 px wide, so `medium` is its ceiling.
+  mimas: {
+    bodyId: 'mimas',
+    // `small` normal: the shape model's ~0.6 km spacing resolves 2k, not 4k.
+    kinds: { surface: 'medium', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.49, 0.49, 0.49], lift: 0.635, antimeridianCentred: true },
+  },
+  tethys: {
+    bodyId: 'tethys',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.47, 0.47, 0.47], lift: 0.678, antimeridianCentred: true },
+  },
+  dione: {
+    bodyId: 'dione',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.58, 0.58, 0.58], lift: 0.584, antimeridianCentred: true },
+  },
+  rhea: {
+    bodyId: 'rhea',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.57, 0.57, 0.57], lift: 0.602, antimeridianCentred: true },
+  },
+  iapetus: {
+    bodyId: 'iapetus',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [1.2, 1.16, 1.08], lift: 0.107, antimeridianCentred: true },
   },
 };
 

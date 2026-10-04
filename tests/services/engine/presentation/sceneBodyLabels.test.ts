@@ -3,6 +3,7 @@ import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sc
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
@@ -15,11 +16,19 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per core scene body (Earth + planets + mesh bodies)', () => {
+  it('emits one label per core scene body (Earth + planets + non-anchored mesh bodies)', () => {
     // The seeded stars and the Sun caption from the star Layer's own producer
     // (`produceStarCaptions`) now, not here — core keeps only the bodies whose
     // identity core owns.
-    expect(labels).toHaveLength(1 + SCENE_PLANETS.length + SCENE_MESH_BODIES.length);
+    const captioned = SCENE_MESH_BODIES.filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id));
+    expect(labels).toHaveLength(1 + SCENE_PLANETS.length + captioned.length);
+  });
+
+  it('leaves anchored scans uncaptioned', () => {
+    expect(ANCHORED_MESH_BODY_IDS.size).toBeGreaterThan(0);
+    for (const id of ANCHORED_MESH_BODY_IDS) {
+      expect(labels.some((label) => label.id === `sceneBody-${id}`)).toBe(false);
+    }
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {

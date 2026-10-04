@@ -16,6 +16,7 @@ import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDr
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
+import type { DriverActivity } from '../../../../src/@types/engine/camera/DriverActivity';
 import type { EpochRow } from '../../../../src/@types/engine/camera/EpochRow';
 import type { RootState } from '../../../../src/store/types';
 import {
@@ -64,6 +65,8 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
+const APPROACHING: DriverActivity = { approachDone: false };
+const APPROACH_DONE: DriverActivity = { approachDone: true };
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distance: 100 };
 
 const TWEEN_DESC: CameraTweenDescriptor = {
@@ -109,7 +112,7 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
-  const winner = pickWinner(drivers, s, approachDone);
+  const winner = pickWinner(drivers, s, { approachDone });
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -296,20 +299,20 @@ describe('pickWinner', () => {
     const low = makeDriver('autoRotate', 20, true);
     const high = makeDriver('tween', 60, true);
 
-    expect(pickWinner([low, high], fakeState).id).toBe('tween');
-    expect(pickWinner([high, low], fakeState).id).toBe('tween');
+    expect(pickWinner([low, high], fakeState, APPROACHING).id).toBe('tween');
+    expect(pickWinner([high, low], fakeState, APPROACHING).id).toBe('tween');
   });
 
   it('skips inactive drivers', () => {
     const inactive = makeDriver('orbitDrag', 80, false);
     const active = makeDriver('autoRotate', 20, true);
-    expect(pickWinner([inactive, active], fakeState).id).toBe('autoRotate');
+    expect(pickWinner([inactive, active], fakeState, APPROACHING).id).toBe('autoRotate');
   });
 
   it('defensive: returns drivers[0] for an empty-ish all-inactive list', () => {
     const only = makeDriver('resting', 0, false);
     // All inactive → defensive fallback → drivers[0]
-    expect(pickWinner([only], fakeState)).toBe(only);
+    expect(pickWinner([only], fakeState, APPROACHING)).toBe(only);
   });
 
   it('clip (95) beats orbitDrag (80) when both are active', () => {
@@ -320,7 +323,7 @@ describe('pickWinner', () => {
     store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
-    expect(pickWinner(drivers, s).id).toBe('clip');
+    expect(pickWinner(drivers, s, APPROACHING).id).toBe('clip');
   });
 });
 
@@ -330,7 +333,7 @@ describe('pickWinner — precedence', () => {
     store.dispatch(startCameraTween(TWEEN_DESC));
     store.dispatch(beginDrag());
     const s = store.getState() as unknown as RootState;
-    expect(pickWinner(CAMERA_DRIVERS, s).id).toBe('orbitDrag');
+    expect(pickWinner(CAMERA_DRIVERS, s, APPROACHING).id).toBe('orbitDrag');
   });
 });
 
@@ -354,6 +357,27 @@ describe("the winner's elapsed", () => {
     expect(pose200).toEqual(
       absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
     );
+  });
+
+  it('tween eases lookOffset to zero', () => {
+    const store = makeStore();
+    store.dispatch(
+      startCameraTween({ ...TWEEN_DESC, from: { ...TWEEN_DESC.from, lookOffset: [0.4, -0.2] } }),
+    );
+    const s = store.getState() as unknown as RootState;
+    const epochs = epochsAt(s, 'tween', 0);
+
+    // The offset keeps the same fraction the tween's own yaw has left to travel.
+    const midPose = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 500).pose);
+    const { from, to } = TWEEN_DESC;
+    const keep = (to.yaw - midPose.yaw) / (to.yaw - from.yaw);
+    expect(keep).toBeGreaterThan(0);
+    expect(keep).toBeLessThan(0.5);
+    expect(midPose.lookOffset![0]).toBeCloseTo(0.4 * keep, 12);
+    expect(midPose.lookOffset![1]).toBeCloseTo(-0.2 * keep, 12);
+    const end = worldArmOf(runAtWinner(CAMERA_DRIVERS, s, epochs, 1000).pose).lookOffset!;
+    expect(end[0]).toBeCloseTo(0, 12);
+    expect(end[1]).toBeCloseTo(0, 12);
   });
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {
@@ -502,6 +526,24 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(result.roll).toBeCloseTo(0.6, 12);
   });
 
+  it('followApproach eases lookOffset to zero', () => {
+    // The committed base carries no offset, so the follow ease lands centre-looking.
+    const store = makeStore();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
+    const s = store.getState() as unknown as RootState;
+    const produceFollow = makeFollowProduce({
+      state: s,
+      from: { ...BASE_POSE, lookOffset: [0.4, -0.2] },
+    });
+
+    // The elapsed at which easeOutCubic reaches 0.5.
+    const halfMs = FOCUS_TWEEN_MS * (1 - Math.cbrt(0.5));
+    const half = worldArmOf(produceFollow(halfMs).pose).lookOffset!;
+    expect(half[0]).toBeCloseTo(0.2, 12);
+    expect(half[1]).toBeCloseTo(-0.1, 12);
+    expect(worldArmOf(produceFollow(FOCUS_TWEEN_MS).pose).lookOffset).toEqual([0, 0]);
+  });
+
   it('deactivates when focus leaves the body; pickWinner hands off to the next driver', () => {
     // autoRotate off so the resting floor is the fallback winner.
     const store = makeStore();
@@ -513,29 +555,41 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
 
     // No focus → both inactive → resting wins.
     let s = store.getState() as unknown as RootState;
-    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
-    expect(pickWinner(drivers, s).id).toBe('resting');
+    expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
+      false,
+      false,
+    ]);
+    expect(pickWinner(drivers, s, APPROACHING).id).toBe('resting');
 
     // A non-body focus (Milky Way) → still inactive.
     store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
     s = store.getState() as unknown as RootState;
-    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
+    expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
+      false,
+      false,
+    ]);
 
     // A body focus present in the snapshot → active, and follow wins over
     // resting. A saturated approach is the ONLY thing that separates the two
     // rows: before it the approach authors, after it the hold does.
     store.dispatch(setSelectionRow({ slot: 'focus', row: EARTH_ROW }));
     s = store.getState() as unknown as RootState;
-    expect([approach.isActive(s, false), hold.isActive(s, false)]).toEqual([true, true]);
-    expect(pickWinner(drivers, s, false).id).toBe('followApproach');
-    expect(approach.isActive(s, true)).toBe(false);
-    expect(pickWinner(drivers, s, true).id).toBe('followHold');
+    expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
+      true,
+      true,
+    ]);
+    expect(pickWinner(drivers, s, APPROACHING).id).toBe('followApproach');
+    expect(approach.isActive(s, APPROACH_DONE)).toBe(false);
+    expect(pickWinner(drivers, s, APPROACH_DONE).id).toBe('followHold');
 
     // Focus leaves the body again → deactivates → hands back to resting.
     store.dispatch(setSelectionRow({ slot: 'focus', row: null }));
     s = store.getState() as unknown as RootState;
-    expect([approach.isActive(s), hold.isActive(s)]).toEqual([false, false]);
-    expect(pickWinner(drivers, s).id).toBe('resting');
+    expect([approach.isActive(s, APPROACHING), hold.isActive(s, APPROACHING)]).toEqual([
+      false,
+      false,
+    ]);
+    expect(pickWinner(drivers, s, APPROACHING).id).toBe('resting');
   });
 
   it('the follow approach ease converges from the captured pose to the framing offset', () => {
@@ -698,9 +752,9 @@ describe('CAMERA_DRIVERS — follow priority under body focus', () => {
 
     // All three are active; once the approach has saturated the winner is
     // autoRotate (20) over followHold (10), before that the approach (55).
-    expect(drivers.find((d) => d.id === 'followHold')!.isActive(s)).toBe(true);
-    expect(pickWinner(drivers, s, true).id).toBe('autoRotate');
-    expect(pickWinner(drivers, s, false).id).toBe('followApproach');
+    expect(drivers.find((d) => d.id === 'followHold')!.isActive(s, APPROACHING)).toBe(true);
+    expect(pickWinner(drivers, s, APPROACH_DONE).id).toBe('autoRotate');
+    expect(pickWinner(drivers, s, APPROACHING).id).toBe('followApproach');
   });
 
   it('yaw advances over frames while auto-rotating a focused body', () => {

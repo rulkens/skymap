@@ -12,6 +12,7 @@
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
@@ -19,7 +20,9 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -45,11 +48,11 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 export function pickWinner(
   drivers: readonly CameraDriver[],
   s: RootState,
-  approachDone = false,
+  activity: DriverActivity,
 ): CameraDriver {
   let winner: CameraDriver | null = null;
   for (const d of drivers) {
-    if (!d.isActive(s, approachDone)) continue;
+    if (!d.isActive(s, activity)) continue;
     if (winner === null || d.priority > winner.priority) winner = d;
   }
   // Only an empty table reaches the fallback; `resting` is always active.
@@ -137,6 +140,7 @@ function followPose(
       pitch: ang.pitch,
       distance: Math.hypot(rel[0], rel[1], rel[2]),
       roll: cur.roll,
+      lookOffset: cur.lookOffset,
     };
   }
 
@@ -177,9 +181,18 @@ function followPose(
       // lands per wheel notch, and dropping it pinned a followed approach
       // to scene-frame up until the engage edge.
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
+      lookOffset: easedLookOffset(from, committed, t),
     }),
     memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
   };
+}
+
+/** Absent on both ends stays absent, so a pose without an offset keeps its shape. */
+function easedLookOffset(from: CameraPose, to: CameraPose, t: number): Vec2 | undefined {
+  if (from.lookOffset === undefined && to.lookOffset === undefined) return undefined;
+  const [fy, fp] = from.lookOffset ?? [0, 0];
+  const [ty, tp] = to.lookOffset ?? [0, 0];
+  return [lerp(fy, ty, t), lerp(fp, tp, t)];
 }
 
 /**
@@ -271,7 +284,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // focus's framing pose — is stated in world terms and the fold refolds it
     // into whatever arm geometry picks, so an approach owed from inside an arm
     // the focus HOSTS (standing at a rover, focusing its planet) can fly.
-    isActive: (s, approachDone = false) => followsFocus(s) && !approachDone,
+    isActive: (s, activity) => followsFocus(s) && !activity.approachDone,
     pose: followPose,
   },
   {
@@ -310,8 +323,16 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         bodies: ctx.bodies,
         playback: tween,
       });
+      const framed = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
+      const offset = tween.from.lookOffset;
+      if (offset === undefined || !isWorldArm(framed))
+        return { pose: framed, memory: settledMemory(mem) };
+      // Clips author no offset channel, so the start pose's eases out here, on
+      // the same easeOutCubic `tweenToClip` gives every other term.
+      const keep = 1 - easeOutCubic(ctx.elapsedMs / tween.durationMs);
+      const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
+        pose: absoluteArm({ ...framed.pose, lookOffset }),
         memory: settledMemory(mem),
       };
     },

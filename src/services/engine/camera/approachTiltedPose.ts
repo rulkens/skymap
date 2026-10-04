@@ -95,5 +95,6 @@ export function approachTiltedPose(
     pitch,
     distance: pose.distance,
     roll: pose.roll,
+    lookOffset: pose.lookOffset,
   });
 }

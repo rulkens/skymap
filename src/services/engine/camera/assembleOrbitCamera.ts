@@ -47,6 +47,7 @@ export function assembleOrbitCamera(
     pitch: pose.pitch,
     distance: pose.distance,
     roll: pose.roll,
+    lookOffset: pose.lookOffset,
     fovYRad: projection.fovYRad,
     aspect: projection.aspect,
     near: projection.near,

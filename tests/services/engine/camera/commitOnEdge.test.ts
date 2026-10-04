@@ -391,7 +391,7 @@ describe('commitOnEdge — clip deactivation', () => {
     // at pointerup. The gesture row serves both arms at 80; the clip's 95
     // outranks it either way: a clip is not drag-interruptible.
     const { store, deps } = makeHarness();
-    const drivers = deps.drivers;
+    const drivers = deps.controlSchemes.skymap.drivers;
 
     // The rows read `base.frame` only, so the pose value is irrelevant here.
     store.dispatch(
@@ -406,7 +406,7 @@ describe('commitOnEdge — clip deactivation', () => {
       }),
     );
     store.dispatch(beginDrag());
-    expect(pickWinner(drivers, store.getState()).id).toBe('orbitDrag');
+    expect(pickWinner(drivers, store.getState(), { approachDone: false }).id).toBe('orbitDrag');
 
     store.dispatch(
       clipStarted({
@@ -414,6 +414,6 @@ describe('commitOnEdge — clip deactivation', () => {
         frame: DEFAULT_ORIENTATION,
       }),
     );
-    expect(pickWinner(drivers, store.getState()).id).toBe('clip');
+    expect(pickWinner(drivers, store.getState(), { approachDone: false }).id).toBe('clip');
   });
 });

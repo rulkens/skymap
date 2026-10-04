@@ -1,6 +1,7 @@
 /** The world arm's row — the ladder's floor: nothing to climb to, and no host body its numbers hang off. */
 import type { RungRow } from '../../../../@types/camera/RungRow';
 import { absoluteArm } from '../../../../utils/camera/absoluteArm';
+import { nudgedWorldPose } from '../../../../utils/camera/nudgedWorldPose';
 import { applyInputToCamera } from '../../../camera/applyInputToCamera';
 import { frameAlignedRoll } from '../frameAlignedRoll';
 
@@ -43,5 +44,31 @@ export const absoluteRung: RungRow<'absolute'> = {
       ctx.tuning,
     );
     return { pose: { ...next, roll }, memory: null, tilt };
+  },
+  nudge(tilt, framed, delta, ctx) {
+    const { zoom, ...rest } = delta;
+    // Zoom IS the wheel step, roll ride included, so a nudge cannot pop at the engage flip.
+    const zoomed =
+      zoom === undefined
+        ? framed.pose
+        : absoluteRung.step(
+            null,
+            tilt,
+            framed,
+            { kind: 'zoom', factor: Math.exp(zoom), duringGesture: false, cursorPx: null },
+            ctx,
+          ).pose;
+    return {
+      pose: nudgedWorldPose(
+        zoomed,
+        rest,
+        ctx.viewportPx[1],
+        ctx.pivot,
+        ctx.fovYRad,
+        ctx.poseBasis,
+        ctx.upBasis,
+      ),
+      tilt,
+    };
   },
 };
