@@ -79,7 +79,6 @@ import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuH
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
