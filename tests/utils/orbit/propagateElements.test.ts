@@ -90,9 +90,9 @@ describe('propagateElements', () => {
     // The scene frame is equatorial J2000 (keplerianEllipse rotates the ecliptic
     // elements through ECLIPTIC_FRAME), matching Horizons' ICRF frame to sub-
     // arcsecond bias. Tolerance is arcminute-class: the mean-element model differs
-    // from the true DE ephemeris by ~1 arcmin (~2e-4 au at 1 au), and the scene's
-    // scene's J2000 obliquity is exact, so it adds none. A frame swap, unit slip, or sign
-    // error in a rate would miss by ≥0.05 au and fail loudly.
+    // from the true DE ephemeris by ~1 arcmin (~2e-4 au at 1 au); the scene's J2000
+    // obliquity is exact, so it adds none. A frame swap, unit slip, or sign error in a
+    // rate would miss by ≥0.05 au and fail loudly.
     const simDays = 2_460_676.5;
     const horizonsAu: Vec3 = [-1.786710910310161e-1, 8.871846912692936e-1, 3.845832338744293e-1];
     const expectedMpc = horizonsAu.map((au) => au * SCALE_UNITS.AU_TO_MPC) as Vec3;
