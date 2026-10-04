@@ -98,6 +98,7 @@
     "fetch-famous-images": "tsx tools/famous/fetchFamousImages.ts",
     "fetch-gaia": "tsx tools/fetch/fetchGaia.ts",
     "fetch-height": "tsx tools/fetch/fetchHeightSources.ts",
+    "fetch-horizons-planets": "tsx tools/fetch/fetchHorizonsPlanets.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
     "fetch-skraafoto": "tsx tools/fetch/fetchSkraafoto.ts",
