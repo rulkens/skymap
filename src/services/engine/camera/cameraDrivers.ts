@@ -279,6 +279,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Bakes the last follow pose into `base` on focus loss, so lower drivers
     // resume from where the camera is.
     commitsOnEdge: true,
+    family: 'follow',
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
     // NOT arm-gated: the approach's job — ease from where the eye is to the
@@ -296,6 +297,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     priority: 10,
     epoch: 'follow',
     commitsOnEdge: true,
+    family: 'follow',
     pivotsOnFocusedBody: true,
     // Arm-gated where the approach is not (spec §7): the ARM is the hold — a
     // state that co-rotates with the body keeps it centred structurally, and a

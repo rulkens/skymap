@@ -2,6 +2,7 @@
 
 import type { DriverActivity } from './DriverActivity';
 import type { DriverCtx } from './DriverCtx';
+import type { DriverFamily } from './DriverFamily';
 import type { DriverId } from './DriverId';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
@@ -18,6 +19,8 @@ export type CameraDriver = {
   // Bake this row's final register into `camera.base` as it DEACTIVATES, so the
   // loop freezes the saturated pose instead of snapping back to the old base.
   readonly commitsOnEdge?: boolean;
+  // Rows sharing a family hand off without that commit: they are one author.
+  readonly family?: DriverFamily;
   // This row authors ORBIT terms, so `applyFocusedBodyPivot` re-centres its `target`
   // on the focused body; clip / tween keyframe a target of their own and leave it unset.
   readonly pivotsOnFocusedBody?: boolean;
