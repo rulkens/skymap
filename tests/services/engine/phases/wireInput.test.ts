@@ -2,9 +2,9 @@
  * wireInput — focused test for the highest-leverage invariant of the
  * third bootstrap phase: the initial camera framing call.
  *
- * `computeInitialCamera` is called with a 60° FOV and the result drives the
- * boot pose seed. No bbox input — framing uses pure constants so the phase
- * can run before any galaxy catalog arrives.
+ * `homePose` is called with a 60° FOV and the result drives the boot pose
+ * seed. No bbox input — framing uses pure constants so the phase can run
+ * before any galaxy catalog arrives.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -20,21 +20,17 @@ import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 
-const computeInitialCameraSpy = vi.fn(() => ({
-  target: [0, 0, 0] as [number, number, number],
-  distance: 0.43,
-  yaw: 3.0045,
-  pitch: 0.0609,
-  fovYRad: Math.PI / 3,
-  near: 0.01,
-  far: 6000,
+const homePoseSpy = vi.fn(() => ({
+  frame: 'absolute' as const,
+  pose: {
+    target: [0, 0, 0] as [number, number, number],
+    distance: 0.43,
+    yaw: 3.0045,
+    pitch: 0.0609,
+  },
 }));
-vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
-  computeInitialCamera: (...args: unknown[]) =>
-    computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
-  DEFAULT_FOV_Y_RAD: (Math.PI / 180) * 60,
-  NEAR_CLIP_MPC: 0.01,
-  FAR_CLIP_MPC: 80000,
+vi.mock('../../../../src/services/engine/camera/homePose', () => ({
+  homePose: (...args: unknown[]) => homePoseSpy(...(args as Parameters<typeof homePoseSpy>)),
 }));
 
 vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
@@ -83,11 +79,9 @@ import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuH
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
-import { selectCameraBase } from '../../../../src/state/camera/selectors';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { worldArmOf } from '../../../fixtures/worldArmOf';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -217,32 +211,17 @@ describe('wireInput', () => {
 
     await wireInput(state, deps);
 
-    expect(computeInitialCameraSpy).toHaveBeenCalledTimes(1);
+    expect(homePoseSpy).toHaveBeenCalledTimes(1);
     // The boot store defaults to the ecliptic orientation, so the phase threads
     // that committed basis into the framing call (first-paint encodes through the
     // frame the render path decodes with).
-    expect(computeInitialCameraSpy).toHaveBeenCalledWith({
-      bodyId: 'earth',
-      fovYRad: (Math.PI / 180) * 60,
-      simDays: expect.any(Number),
-      frameBasis: ORIENTATION_FRAMES.ecliptic,
-    });
+    expect(homePoseSpy).toHaveBeenCalledWith(
+      deps.composition.home,
+      (Math.PI / 180) * 60,
+      expect.any(Number),
+      ORIENTATION_FRAMES.ecliptic,
+    );
     expect(state.booted).toBe(true);
-  });
-
-  it('commits a COPY of the framing target to the store, not the live array', async () => {
-    const state = makeState();
-    const deps = makeDeps();
-
-    await wireInput(state, deps);
-
-    // The committed pose outlives the framing result that made it, so a
-    // shared array would drag the boot commit along with whoever mutates it
-    // next.
-    computeInitialCameraSpy.mock.results[0]!.value.target[0] = 99;
-
-    const root = deps.cb.store.getState();
-    expect(worldArmOf(selectCameraBase(root)).target[0]).toBe(0);
   });
 
   it('seeds the runtime off the PRE-commit store, so frame one reads the boot commit as outside', async () => {
@@ -278,7 +257,12 @@ describe('wireInput', () => {
 
     await wireInput(state, deps);
 
-    expect(computeInitialCameraSpy).toHaveBeenCalledWith(expect.objectContaining({ bodyId: null }));
+    expect(homePoseSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ focus: null }),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('wires the camera and the input bindings when the pick renderers are absent', async () => {
