@@ -36,6 +36,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
+- [ ] **`afterTwoFrames` guesses a drawn frame** `ready` — the double rAF in `arrivalSaga`, `installPerfHook` and `tools/utils/capture/captureScene.ts` assumes the on-demand loop woke; a `renderScheduler.nextFrame()` that requests a render and resolves after `onFrame` replaces all three.
+- [ ] **`npm run shot` link screenshot** `ready` — open a deep-link URL in its own vite, await `ready` (arrival), save a PNG; deferred out of the deep-link arrival PR (#831).
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **Derive `SettingsSnapshot` from the Layer registry** `needs-design` — the takeover's captured-cluster list is a hand-written `Pick<>` a new Layer must remember to join; two Layers didn't and were restored-over until #793 patched them by hand. → [details](backlog/2026-09-21-derive-settings-snapshot.md)
 - [ ] **`SCENE_ANCHORS`/`AnchorBody` is the place table, filed under a body name** `needs-design` — the black-hole prep's first non-body row (`GALACTIC_CENTRE_ANCHOR`, a `PlaceId`) exposed that this table was never body-only, just never used for anything else. → [details](backlog/2026-09-22-scene-anchors-are-places.md)

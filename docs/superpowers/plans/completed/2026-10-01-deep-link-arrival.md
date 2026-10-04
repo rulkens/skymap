@@ -52,10 +52,10 @@ export function framingPose(row: SelectionRow, fovYRad: number, from: CameraPose
 
 Built on `focusFraming(row, fovYRad)` (`focusFraming.ts:71-127`). Every body-distance site above derives its distance from `focusFraming`; `bodyFocusDistance` goes if nothing else reads it.
 
-- [ ] Write the failing test `a followed body holds the distance framingPose gives it`. Use Mars, with `focusDistanceRadii` set; today `cameraDrivers.ts:160` ignores it. Run it and confirm it fails.
-- [ ] Write the test `framingPose keeps yaw and pitch of from and takes target and distance from focusFraming`.
-- [ ] Implement, then route the four sites through it.
-- [ ] Run `npm test -- camera selection`, then commit.
+- [x] Write the failing test `a followed body holds the distance framingPose gives it`. Use Mars, with `focusDistanceRadii` set; today `cameraDrivers.ts:160` ignores it. Run it and confirm it fails.
+- [x] Write the test `framingPose keeps yaw and pitch of from and takes target and distance from focusFraming`.
+- [x] Implement, then route the four sites through it.
+- [x] Run `npm test -- camera selection`, then commit.
 
 ### Task 2: Hash rows contribute to a `LinkIntent`
 
@@ -87,12 +87,12 @@ export function* applyLinkIntent(intent: LinkIntent): SagaGenerator<void>;    //
 
 Precedence lives in `linkIntentFrom`. A row's contribution to `view` merges as follows: a takeover beats focus and pose, and focus plus pose combine into `{ kind: 'focus', id, pose }`. After this task, table order fixes the write layout only.
 
-- [ ] Write tests:
+- [x] Write tests:
   - `linkIntentFrom parses each key`: focus, pose, t, orientation.
   - `focus and pose combine into one focus view`.
   - `no hash yields the home view`.
-- [ ] Reshape the rows, add `linkIntentFrom` and the `applyLinkIntent` shim, and switch both passes of `watchHashReadSaga` to `applyLinkIntent(linkIntentFrom(…))`.
-- [ ] Run `npm test -- url`: all existing url tests pass. Commit.
+- [x] Reshape the rows, add `linkIntentFrom` and the `applyLinkIntent` shim, and switch both passes of `watchHashReadSaga` to `applyLinkIntent(linkIntentFrom(…))`.
+- [x] Run `npm test -- url`: all existing url tests pass. Commit.
 
 ### Task 3: Focus requests carry a `Transition`
 
@@ -105,9 +105,9 @@ Precedence lives in `linkIntentFrom`. A row's contribution to `view` merges as f
 
 **Contract:** `requestFocus({ id: string; transition: Transition })`, with `transition` required. A `'cut'` focus must never start a tween. Choose the narrowest route that carries the transition from the request to the tween decision; `selection.pending` and `updateSelectionFocus` are the candidates. Name the route you chose in your reply. Every existing caller passes `'fly'`.
 
-- [ ] Write the test `a cut focus request sets focus without starting a tween` and confirm it fails.
-- [ ] Implement it and update the callers.
-- [ ] Run `npm test -- selection url`, then commit.
+- [x] Write the test `a cut focus request sets focus without starting a tween` and confirm it fails.
+- [x] Implement it and update the callers.
+- [x] Run `npm test -- selection url`, then commit.
 
 ## Feature
 
@@ -147,8 +147,8 @@ Order inside `navigateSaga`: apply `t`, then `orientation`, then resolve the sub
 - `navigate applies t before framing`
 - `a hashchange after arrival flies and leaves arrival untouched` (Review focus 1)
 
-- [ ] Write the tests, implement, and route the hashchange loop through `navigateSaga`. The write half's canonicalization (`watchHashWriteSaga.ts:99`) keys on `arrival.status !== 'pending'` instead of `hashArrivalApplied`; delete `hashArrivalApplied` if nothing else reads it.
-- [ ] Run `npm test -- url navigation selection`, then commit.
+- [x] Write the tests, implement, and route the hashchange loop through `navigateSaga`. The write half's canonicalization (`watchHashWriteSaga.ts:99`) keys on `arrival.status !== 'pending'` instead of `hashArrivalApplied`; delete `hashArrivalApplied` if nothing else reads it.
+- [x] Run `npm test -- url navigation selection`, then commit.
 
 ### Task 5: Boot arrival — `arrivalSaga` owns the first view
 
@@ -163,16 +163,16 @@ Order inside `navigateSaga`: apply `t`, then `orientation`, then resolve the sub
 
 **Contract:** `arrivalSaga` waits for `cameraRuntime()`. It then races `navigateSaga(bootIntent, 'cut')` (plus, for a focus, the deferred resolve) against `ARRIVAL_TIMEOUT_MS`, waits two rAFs, and puts `arrived()`. On a timeout or `ok: false`, it navigates `home` with `'cut'` and puts `arrivalFailed(reason)`.
 
-- [ ] **First, verify the moving-body premise.** Boot `#focus=body-mars` headlessly on this branch: Playwright via `tools/utils/browser/launchChromium`, a `.mts` script in the scratchpad, screenshot at 1 s and at 4 s. With prep in place, a commit of `framingPose` for a followed body must produce identical frames. If follow re-eases (`cameraEpochs.ts:74`), stop and report before writing more code; don't work around it.
-- [ ] Write tests:
+- [x] **First, verify the moving-body premise.** Boot `#focus=body-mars` headlessly on this branch: Playwright via `tools/utils/browser/launchChromium`, a `.mts` script in the scratchpad, screenshot at 1 s and at 4 s. With prep in place, a commit of `framingPose` for a followed body must produce identical frames. If follow re-eases (`cameraEpochs.ts:74`), stop and report before writing more code; don't work around it.
+- [x] Write tests:
   - `boot arrival on a body commits once, never tweens, then arrives`.
   - `boot arrival on a late catalog id waits for the catalog, then arrives`.
   - `an id the loaded catalogs lack fails to home`.
   - `the backstop times out to failed` (Review focus 4).
   - `a body framed at the linked instant, not wall-clock` (Review focus 5).
   - `a plain boot arrives at home with the Earth focus`.
-- [ ] Implement it, then delete the `urlPose` machinery.
-- [ ] Run `npm test -- arrival camera url selection wireInput`, then commit.
+- [x] Implement it, then delete the `urlPose` machinery.
+- [x] Run `npm test -- arrival camera url selection wireInput`, then commit.
 
 ### Task 6: Takeover links — `#exhibit=`, `#tour=`, `#clip=`
 
@@ -205,8 +205,8 @@ type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: Exhi
 - `navigate clip reveals after clipStarted`
 - `an unknown exhibit id fails without dispatching openExhibit` (Review focus 3)
 
-- [ ] Write the tests, implement, and update the palette dispatch to `openExhibit({ id, entry: 'fly' })`.
-- [ ] Run `npm test -- navigation url exhibits takeover`, then commit.
+- [x] Write the tests, implement, and update the palette dispatch to `openExhibit({ id, entry: 'fly' })`.
+- [x] Run `npm test -- navigation url exhibits takeover`, then commit.
 
 ### Task 7: `ArrivalVeil`
 
@@ -217,7 +217,7 @@ type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: Exhi
 
 **Contract:** load the `create-component` skill before you start. The veil is opaque, shows `SplashProgress` with the engine's `loadProgress`, and fades out when it hides. It is visible while `arrival.status === 'pending'` AND the boot had a deep link (`hasDeepLink`); a plain boot shows the splash, never the veil. It has `role="status"` and `aria-busy`. No new test: it's a visibility gate over two existing selectors, and a manual check covers it.
 
-- [ ] Implement, `npm run typecheck:fast`, commit.
+- [x] Implement, `npm run typecheck:fast`, commit.
 
 ### Task 8: `ready` means arrived; tools drop their workarounds
 
@@ -230,14 +230,14 @@ type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: Exhi
 
 **Test:** `tests/state/lifecycle/whenStablyReady.test.ts` gets `ready waits for arrival` and `ready rejects when arrival failed`. The tools get none: they are covered by the manual capture run in the DoD.
 
-- [ ] Write the tests, implement, and make the tool deletions. Run `npm run capture-featured` for one exhibit card and one focus card against this branch's dev server (`--url` with this server's port).
-- [ ] Commit.
+- [x] Write the tests, implement, and make the tool deletions. Run `npm run capture-featured` for one exhibit card and one focus card against this branch's dev server (`--url` with this server's port).
+- [x] Commit.
 
 ### Task 9: Docs
 
 **Files:** `README.md` ("Reproduce a view": add the exhibit, tour and clip link forms), `docs/RENDERER.md` or `docs/` wherever `#pose=` boot behaviour is described (grep `urlPose`, `#pose=`).
 
-- [ ] Grep for stale mentions of `urlPose`, `applyUrlPose` and `POST_ESC_WAIT_MS` across `docs/`, `tools/` and `.claude/skills/`, fix them, and commit.
+- [x] Grep for stale mentions of `urlPose`, `applyUrlPose` and `POST_ESC_WAIT_MS` across `docs/`, `tools/` and `.claude/skills/`, fix them, and commit.
 
 ## Suggested dispatch grouping
 
@@ -268,4 +268,4 @@ type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: Exhi
 - `#exhibit=nope`: the veil lifts on home.
 - Browser back after a palette focus: it flies.
 
-**Out of scope:** the `npm run shot` tool; seeking a tour or clip to an offset; writing takeover keys back to the URL; Earth lon/lat in the hash; the twin request sagas; the palette routing through `navigate` (backlogged).
+**Out of scope:** the `npm run shot` tool; seeking a tour or clip to an offset; Earth lon/lat in the hash; the twin request sagas; the palette routing through `navigate` (backlogged).

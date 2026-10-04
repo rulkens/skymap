@@ -123,6 +123,5 @@ The veil is a new `ArrivalVeil` component (via `create-component`): opaque, show
 
 - The `npm run shot` tool.
 - Seeking a tour or clip to a time offset.
-- Writing takeover keys back into the URL.
 - Earth lon/lat in the hash (`docs/backlog/2026-09-15-earth-point-url-hash.md`).
 - The twin request sagas (`docs/backlog/2026-07-29-twin-request-selection-sagas.md`).
