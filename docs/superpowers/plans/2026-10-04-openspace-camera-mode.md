@@ -144,10 +144,11 @@ stepNavigator(
 - Modify: `src/utils/camera/nudgedWorldPose.ts`
 - Test: `tests/utils/camera/nudgedWorldPose.test.ts`
 
-**Contract:** after any world nudge, `|pose.pitch + (pose.lookOffset?.[1] ?? 0)| ≤ PITCH_LIMIT`, enforced by clamping the offset's pitch (never the orbit pitch, which the drag's own law owns). The clamp runs after orbit too, because an orbit can push a look-offset pose past zenith. An absent `lookOffset` stays absent when the clamp has nothing to do.
+**Contract:** after any world nudge, the RENDERED view's elevation stays within ±`PITCH_LIMIT`, enforced by clamping the offset's pitch (never the orbit pitch, which the drag's own law owns). The rendered view is `orbitForwardOf(pose, poseBasis, upBasis)`, and its elevation is measured against `frameUp(upBasis)`. Take the un-offset forward's elevation `e` (orbit pitch lives in `poseBasis` and points target → eye, so `e` is NOT `pose.pitch`; it differs in sign and, when the bases differ, by up to ~23°), then clamp the offset pitch to `[−PITCH_LIMIT − e, PITCH_LIMIT − e]`. The clamp runs after orbit too, because an orbit can push a look-offset pose past the pole. An absent `lookOffset` stays absent when the clamp has nothing to do. (Corrected after the D1 review: the first draft summed `pose.pitch + offset`, which has the wrong sign.)
 
-- [ ] Test `look offset cannot carry the view past zenith`: at orbit pitch 1.4 rad, a look of +0.5 rad leaves `pitch + offset = PITCH_LIMIT`.
-- [ ] Test `an orbit under a held offset re-clamps it`: offset pitch 0.3, an orbit that raises pitch to 1.4, and the sum is clamped.
+- [ ] Test `look offset cannot carry the view past the pole`, for BOTH look signs at orbit pitch ±1.4: assert on `orbitForwardOf` of the result that `asin(forward·up) ∈ ±PITCH_LIMIT` and the horizontal direction does not flip.
+- [ ] Test `an orbit under a held offset re-clamps it`, with a case that really reaches the pole, asserted on the rendered view as above.
+- [ ] Test `the clamp reads the rendered elevation when poseBasis ≠ upBasis` (ecliptic pose basis, equatorial up).
 - [ ] Test `an absent offset stays absent under orbit`.
 - [ ] Commit: `fix(camera): clamp orbit + look-offset pitch at the zenith`.
 
