@@ -1,7 +1,7 @@
 # Accurate planet positions — implementation plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: use superpowers:subagent-driven-development under the
-> lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax.
+> lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax.
 
 **Goal:** The eight planets match JPL DE (Horizons) to ≤ 1,000 km over 1900–2100, Earth wobbles about
 the Earth–Moon barycentre, and every orbit trail stays through its body.
@@ -14,7 +14,9 @@ about either.
 
 **Tech stack:** TypeScript, Vitest, tsx tools, the JPL Horizons API.
 
-**Spec:** `docs/superpowers/specs/2026-10-04-accurate-planet-positions-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-04-accurate-planet-positions-design.md`
+
+**Completed 2026-10-05** (#834 prep, #835 feature). Deviations and rulings: see the archived ledger `2026-10-04-accurate-planet-positions.ledger.md`. The real-data on-trail test (Task 6) was dropped by the deletion audit (user ruling): the snapshot-offset test covers the mechanism.
 
 ## Global constraints
 
@@ -70,19 +72,19 @@ about either.
 The body is now on its trail by construction: any later change to the snapshot position moves the
 trail with it. Keep `meanAnomalyRad` as the fade anchor, unchanged.
 
-- [ ] Add the test `trail follows a snapshot position that differs from raw Kepler`. Stub the states
+- [x] Add the test `trail follows a snapshot position that differs from raw Kepler`. Stub the states
       map so one row's `positionMpc` is the Kepler position plus a 1e6 km vector (converted with
       `SCALE_UNITS.KM_TO_MPC`). Read the packed eye-relative km basis (floats 34..45, written by
       `eyeRelativeOrbitBasisKm`): the body point `C + A·cosE + B·sinE` at the row's propagated E must
       equal the stubbed position, eye-relative in km, to ≤ 1 m. Use km tolerances throughout:
       1e-15 Mpc is 30,000 km.
-- [ ] Run that test and confirm it fails against the current code.
-- [ ] Implement the after-line. Rewrite the `orbitalElements.ts` header sentence about "a body sitting
+- [x] Run that test and confirm it fails against the current code.
+- [x] Implement the after-line. Rewrite the `orbitalElements.ts` header sentence about "a body sitting
       on its own trail is structural" so it names the snapshot anchoring.
-- [ ] The comparisons against `keplerianEllipse` (`orbitTrailsPass.test.ts:345-378`, `:511-573`) were
+- [x] The comparisons against `keplerianEllipse` (`orbitTrailsPass.test.ts:345-378`, `:511-573`) were
       exact to 18–20 digits. Loosen them to `toBeCloseTo(…, 15)`, or the relative tolerance f64 can
       hold for `(a + b) − b`, and give the reason in one line.
-- [ ] `npm test -- orbitTrailsPass`, then commit "Orbit trails anchor on the snapshot body position".
+- [x] `npm test -- orbitTrailsPass`, then commit "Orbit trails anchor on the snapshot body position".
 
 ### Task 2: Exact obliquity (P2)
 
@@ -103,17 +105,17 @@ Set `OBLIQUITY_DEG = 23.4392911` and say "IAU J2000 mean obliquity" in its comme
 say `23.44°` become `23.439°`. Test literals use the exact value; in `orientationFrames.test.ts:54`,
 66.56° becomes `90 − 23.4392911`. No new test: this is a constant, and the existing frame tests pin it.
 
-- [ ] Change the constant, comments and test literals.
-- [ ] Regenerate `bodyStatesJ2000.json` with a one-off tsx snippet that is not committed. It
+- [x] Change the constant, comments and test literals.
+- [x] Regenerate `bodyStatesJ2000.json` with a one-off tsx snippet that is not committed. It
       serialises `deriveBodyStates(2451545.0)` for every `ORBITAL_ELEMENTS` id in the fixture's
       existing shape (`positionMpc`, `orientation`, `meanAnomalyRad`), leaves anchors out, and keeps
       the key order. Diff it: only rotated values may change.
-- [ ] Re-record the camera traces with `SETTLE_GOLDEN_RECORD=1` and `DRIVER_GOLDEN_RECORD=1`
+- [x] Re-record the camera traces with `SETTLE_GOLDEN_RECORD=1` and `DRIVER_GOLDEN_RECORD=1`
       (`npm test -- settleGoldenTrace driverGoldenTrace`). The spec rules this. Then run once more
       without the flags.
-- [ ] Update `EARTH_TARGET` in `perfScenarios.ts:52` to the new J2000 Earth position, taken from the
+- [x] Update `EARTH_TARGET` in `perfScenarios.ts:52` to the new J2000 Earth position, taken from the
       regenerated fixture.
-- [ ] `npm run typecheck:fast`, then `npm test -- orbitPlaneFrames orientationFrames propagateElements earthTerminator deriveBodyStates`.
+- [x] `npm run typecheck:fast`, then `npm test -- orbitPlaneFrames orientationFrames propagateElements earthTerminator deriveBodyStates`.
       Commit "Exact J2000 obliquity".
 
 ---
@@ -141,12 +143,12 @@ export function ephemerisCorrectionMpc(c: EphemerisCorrection, simDays: number):
 
 Sum in f64 km, then multiply by `SCALE_UNITS.KM_TO_MPC`.
 
-- [ ] Test `evaluates polynomial and terms at a known instant`: a hand-built two-term correction,
+- [x] Test `evaluates polynomial and terms at a known instant`: a hand-built two-term correction,
       checked against values worked out by hand.
-- [ ] Test `holds the edge value outside the span`: `simDays` 100 years before `startJd` returns
+- [x] Test `holds the edge value outside the span`: `simDays` 100 years before `startJd` returns
       exactly (`toEqual`) the value at `startJd`, and likewise at `endJd`.
-- [ ] Test `is continuous across both span edges`: evaluations at edge ± 1e-6 day differ by < 1 m.
-- [ ] Implement, `npm test -- ephemerisCorrectionMpc`, then commit "Ephemeris correction evaluator".
+- [x] Test `is continuous across both span edges`: evaluations at edge ± 1e-6 day differ by < 1 m.
+- [x] Implement, `npm test -- ephemerisCorrectionMpc`, then commit "Ephemeris correction evaluator".
 
 ### Task 4: Horizons planet fetcher
 
@@ -172,14 +174,14 @@ The output goes to `data/raw/horizons/planets/<naif>.csv` with the columns `jd,x
 written through `rawDataPath('horizons.planets')`. Chunks are concatenated and a row whose `jd` is ≤
 the previous row's is dropped (Review focus 5).
 
-- [ ] Test `parses the SOE/EOE block of a Horizons vectors result`: use a trimmed real response
+- [x] Test `parses the SOE/EOE block of a Horizons vectors result`: use a trimmed real response
       pasted as a string literal, three rows.
-- [ ] Test `concatenating two chunks drops the shared boundary row once`, through a small exported
+- [x] Test `concatenating two chunks drops the shared boundary row once`, through a small exported
       merge step, or by asserting the fetcher's `mergeChunks` if you extract it. Keep it
       one-symbol-per-file if extracted.
-- [ ] Implement the parser and the fetcher, which writes all eight CSVs. Announce the download size
+- [x] Implement the parser and the fetcher, which writes all eight CSVs. Announce the download size
       before running it: 8 × ~3 MB.
-- [ ] Run `npm run fetch-horizons-planets`. Commit "Horizons planet fetcher", without the gitignored
+- [x] Run `npm run fetch-horizons-planets`. Commit "Horizons planet fetcher", without the gitignored
       CSVs.
 
 ### Task 5: Fit tool and generated corrections · `review: yes`
@@ -222,13 +224,13 @@ export const PLANET_EPHEMERIS_CORRECTIONS: Readonly<Record<string, EphemerisCorr
 The tool then **verifies on every 1-day row** with `ephemerisCorrectionMpc` (from Task 3) and throws
 if any planet exceeds 1,000 km. That way the shipped evaluator is exactly what gets verified.
 
-- [ ] Test `fft finds a pure sinusoid's bin`: N = 64, a sinusoid in bin 5, and the power peaks at k = 5.
-- [ ] Test `fitSinusoidSeries recovers a synthetic two-term signal`: a cubic plus two sinusoids at
+- [x] Test `fft finds a pure sinusoid's bin`: N = 64, a sinusoid in bin 5, and the power peaks at k = 5.
+- [x] Test `fitSinusoidSeries recovers a synthetic two-term signal`: a cubic plus two sinusoids at
       non-bin frequencies. With `stopKm` 1, it should use ≤ 4 terms, and evaluating the result through
       `ephemerisCorrectionMpc` reproduces the signal to ≤ 1 km.
-- [ ] Implement, then run `npm run build-planet-ephemeris`. Report each planet's term count and
+- [x] Implement, then run `npm run build-planet-ephemeris`. Report each planet's term count and
       verified max error; expect ~35–180 terms and a total of ~17 kB of numbers.
-- [ ] Commit "Planet ephemeris fit tool + generated corrections".
+- [x] Commit "Planet ephemeris fit tool + generated corrections".
 
 ### Task 6: Wire corrections and the Earth–Moon pair into `deriveBodyStates` · `review: yes`
 
@@ -270,25 +272,25 @@ target `399` (Earth centre) for Earth.
 - Shape: `{ [id]: { [jd]: [xKm, yKm, zKm] } }`.
 - The test header records the query URL.
 
-- [ ] Test `every planet is within 1,000 km of Horizons at the fixture dates`, from `deriveBodyStates`
+- [x] Test `every planet is within 1,000 km of Horizons at the fixture dates`, from `deriveBodyStates`
       positions. Earth is compared with Horizons `399` and gets its own tolerance: measure the max,
       round up to the next 500 km, and write the measured number in a one-line comment, since it
       includes the app Moon's error. This test is Review focus 4.
-- [ ] Test `Earth–Moon reflex keeps the barycentre and the separation`. At three dates, with
+- [x] Test `Earth–Moon reflex keeps the barycentre and the separation`. At three dates, with
       k = 1/82.30057, (1−k)·Earth + k·Moon equals the corrected EMB (Earth-row Kepler plus the
       correction) to ≤ 1 m. Moon − Earth equals the Moon's raw Kepler offset to ≤ 1 m.
-- [ ] Test `an Earth surface site keeps its offset from the wobbling Earth` (Review focus 2): a site
+- [x] Test `an Earth surface site keeps its offset from the wobbling Earth` (Review focus 2): a site
       hosted on `earth` minus Earth's position is independent of the reflex. Compare with the site
       offset computed from `sitePointBodyFixed` and Earth's orientation.
-- [ ] Test `Moon, Hubble and Saturn sit on their trails at a non-J2000 date` (Review focus 3): drive
+- [x] Test `Moon, Hubble and Saturn sit on their trails at a non-J2000 date` (Review focus 3): drive
       `orbitTrailsPass` packing at a 1989 date. Each body's position lies on its packed conic at its
       propagated E, to ≤ 1 m, reading the eye-relative km basis as Task 1's test does.
-- [ ] Implement the pair table and the 1b term. Fix the `scenePlanets.ts:3` header.
-- [ ] Regenerate `bodyStatesJ2000.json` with Task 2's one-off snippet. Re-record the golden traces
+- [x] Implement the pair table and the 1b term. Fix the `scenePlanets.ts:3` header.
+- [x] Regenerate `bodyStatesJ2000.json` with Task 2's one-off snippet. Re-record the golden traces
       with the record flags, then rerun without them. Update `EARTH_TARGET`.
-- [ ] Backlog: in the detail file, add that `BARYCENTRIC_PAIRS` exists, so Pluto's wobble is one row,
+- [x] Backlog: in the detail file, add that `BARYCENTRIC_PAIRS` exists, so Pluto's wobble is one row,
       while the minor moons still need the invisible node. Update the BACKLOG line's clause to match.
-- [ ] `npm run typecheck:fast`, then `npm test -- planetEphemeris deriveBodyStates orbitTrailsPass`.
+- [x] `npm run typecheck:fast`, then `npm test -- planetEphemeris deriveBodyStates orbitTrailsPass`.
       Commit "Accurate planet positions: corrections + Earth–Moon pair".
 
 ---
