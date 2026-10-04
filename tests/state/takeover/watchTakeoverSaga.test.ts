@@ -1,8 +1,8 @@
 /**
  * watchTakeoverSaga tests — integration tests over a real store + saga
- * middleware, exercising both start-request kinds the watcher handles.
+ * middleware, exercising the start-request kinds the watcher handles.
  *
- * `watchTakeoverSaga` is the `startTour`/`openExhibit` watcher: for a tour it
+ * `watchTakeoverSaga` is the `startTour`/`openExhibit`/`startClip` watcher: for a tour it
  * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBodySaga`
  * under `runTakeoverSaga`. The registry is MOCKED here with two controlled tours —
  * a `demo` tour whose single narration beat auto-advances, and a `webShowcase`
@@ -30,6 +30,8 @@
  *    start lands on the window's first beat, not beat 0.
  * 4. `openExhibit` reaches the watcher and an exhibit supersedes a running tour with
  *    the same restore-before-snapshot ordering as 2b.
+ * 5. `startClip` reaches the watcher too: a registry clip supersedes a running
+ *    tour, whose scene is restored.
  *
  * ### Timing
  *
@@ -88,6 +90,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
+import { startClip } from '../../../src/state/camera/clipActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
@@ -170,7 +173,7 @@ describe('watchTakeoverSaga', () => {
     expect(selectTourActive(store.getState())).toBe(true);
   });
 
-  // ── (2) second startTour supersedes first (takeLatest) ───────────────────
+  // ── (2) second startTour supersedes first ────────────────────────────────
 
   it('a second startTour supersedes the first run, staying active under the new run', async () => {
     const playClip = makeAutoFlyStub();
@@ -183,7 +186,7 @@ describe('watchTakeoverSaga', () => {
     await flush();
     const fliesAfterFirst = playClip.mock.calls.length;
 
-    // Dispatch a second startTour — takeLatest cancels the first worker (its
+    // Dispatch a second startTour — the watcher cancels the first run (its
     // finally restores), then launches a fresh run with its own snapshot.
     store.dispatch(startTour('webShowcase'));
     await flush();
@@ -244,12 +247,16 @@ describe('watchTakeoverSaga', () => {
     store.dispatch(setCosmicWebDensityEnabled(false));
     await flush();
 
-    store.dispatch(openExhibit('cosmicWeb'));
+    store.dispatch(openExhibit({ id: 'cosmicWeb', entry: 'fly' }));
     await flush();
     await flush();
 
     // (a) openExhibit reached the watcher and started the exhibit.
-    expect(selectTakeoverSource(store.getState())).toEqual({ kind: 'exhibit', id: 'cosmicWeb' });
+    expect(selectTakeoverSource(store.getState())).toEqual({
+      kind: 'exhibit',
+      id: 'cosmicWeb',
+      entry: 'fly',
+    });
 
     // (b) the outgoing tour's mid-run mutation was wound back before the exhibit
     // snapshotted: exiting the exhibit must restore volumes to the pre-takeover
@@ -257,6 +264,32 @@ describe('watchTakeoverSaga', () => {
     // would have captured as "the" baseline to return to.
     store.dispatch(exitTakeover());
     await flush();
+    expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
+  });
+
+  // ── (5) startClip supersedes a running tour ─────────────────────────────────
+
+  it('startClip supersedes a running tour, restoring its scene', async () => {
+    // Only the tour's opening fly lands; its drift and the clip both block.
+    const playClip = vi
+      .fn<(clip: ClipData) => Promise<void>>()
+      .mockResolvedValueOnce(undefined)
+      .mockImplementation(() => new Promise<void>(() => {}));
+    const { store } = buildHarness({ playClip });
+    store.dispatch(setCosmicWebDensityEnabled(true));
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+    store.dispatch(setCosmicWebDensityEnabled(false));
+    await flush();
+
+    store.dispatch(startClip('flyout'));
+    await flush();
+    await flush();
+
+    expect(selectTakeoverSource(store.getState())).toEqual({ kind: 'clip', id: 'flyout' });
+    // A clip leaves the scene alone, so the tour's restore is what put this back.
     expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
   });
 

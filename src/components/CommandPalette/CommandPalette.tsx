@@ -28,7 +28,7 @@
  * Selection: every row maps to a `PaletteAction` via `utils/actionForRow`; a
  * featured-grid card already carries its own.  Either way it reaches the
  * single `onSelect(action)` callback, and the container dispatches on
- * `action.kind` — for `focus`, `requestFocus(focusId)`, the one command→ref
+ * `action.kind` — for `focus`, `requestFocus({ id, transition })`, the one command→ref
  * bridge — so the palette never resolves a ref itself.
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient

@@ -38,5 +38,6 @@ export function reencodePose(
     pitch,
     distance: pose.distance,
     roll: pose.roll,
+    lookOffset: pose.lookOffset,
   };
 }

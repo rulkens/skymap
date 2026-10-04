@@ -96,6 +96,8 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
     pinnedClip: () => null,
     pinnedFrame: () => null,
   },
+  // A home-less composition: a bare arrival frames the neutral pose and seeds nothing.
+  home: { focus: null, seedSelection: false },
 };
 
 export function createTestStore(preloadedState?: PreloadedState) {

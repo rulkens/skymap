@@ -41,4 +41,12 @@ describe('encodeFramedPose', () => {
     };
     expect(encodeFramedPose(world)).toBe('a,0,0,0,0,0,1,0.42');
   });
+
+  it('encodeFramedPose omits a zero lookOffset', () => {
+    const zero: FramedCameraPose = {
+      frame: 'absolute',
+      pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, lookOffset: [0, 0] },
+    };
+    expect(encodeFramedPose(zero)).toBe('a,1,2,3,0.7,-0.2,5.5,0');
+  });
 });

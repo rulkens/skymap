@@ -18,6 +18,7 @@ import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
+import { afterTwoFrames } from '../../services/animation/afterTwoFrames';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SkymapPerfHook } from './@types/SkymapPerfHook';
@@ -58,7 +59,7 @@ function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   store.dispatch(cancelCameraTween());
   store.dispatch(commitCameraPose(pose.framed));
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  return afterTwoFrames();
 }
 
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {

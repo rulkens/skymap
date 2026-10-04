@@ -29,7 +29,6 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 const initialState: CameraState = {
   base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
-  urlPose: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
     // Per-frame yaw advance in radians at an assumed 60 fps (~0.05°/frame), the
@@ -53,7 +52,8 @@ const cameraSlice = createSlice({
       camera.dragging = false;
     },
 
-    // INVARIANT (R12b-3): every committed ABSOLUTE pose is centre-looking. The
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are
+    // centre-looking; `lookOffset` turns only the view. The
     // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
     // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
     // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
@@ -65,19 +65,6 @@ const cameraSlice = createSlice({
     // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
-    },
-
-    // A `#pose=` deep link, parked until the arrival focus (or the home focus)
-    // spends it via `spendUrlPose` — see `watchFocusTweenSaga`.
-    applyUrlPose: (camera, action: PayloadAction<FramedCameraPose>) => {
-      camera.urlPose = action.payload;
-    },
-
-    // The one spender: `watchFocusTweenSaga` calls this for the first
-    // `updateSelectionFocus` after a parked link, whether or not that focus
-    // itself tweens.
-    spendUrlPose: (camera) => {
-      camera.urlPose = null;
     },
 
     startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
@@ -129,8 +116,6 @@ export const {
   beginDrag,
   endDrag,
   commitCameraPose,
-  applyUrlPose,
-  spendUrlPose,
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,

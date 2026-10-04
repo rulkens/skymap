@@ -17,6 +17,7 @@ import { siteGroundRadiusM } from '../../../../utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
+import { nudgedSitePose } from '../../../../utils/camera/nudgedSitePose';
 import { steppedSitePose } from '../../../../utils/camera/steppedSitePose';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
@@ -89,6 +90,19 @@ export const siteRung: ClimbRow<'site'> = {
       ),
       memory,
       // Keyed by HOST, and this rung authors no tilt: the slot rides through.
+      tilt,
+    };
+  },
+
+  nudge(tilt, framed, delta, ctx) {
+    return {
+      pose: nudgedSitePose(
+        framed.pose,
+        delta,
+        meshBodyOf(framed.frame.site),
+        ctx.viewportPx,
+        ctx.fovYRad,
+      ),
       tilt,
     };
   },

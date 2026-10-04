@@ -1,6 +1,6 @@
 /**
- * takeoverSlice — which source (a tour or an exhibit), if any, currently owns
- * the scene. `runTakeoverSaga` is the sole writer, via `takeoverStarted`/`takeoverEnded`
+ * takeoverSlice — what runs (a tour, an exhibit or a registry clip), if
+ * anything. `runTakeoverSaga` is the sole writer, via `takeoverStarted`/`takeoverEnded`
  * (`takeoverActions.ts`) — the same external-action-plus-`extraReducers` split
  * `selectionSlice` uses for `requestFocus`/`requestSelect`.
  */

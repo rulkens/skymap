@@ -7,7 +7,7 @@
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as volumesInitialState } from '../../layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
-import { GALAXIES_OFF } from './utils/galaxiesOff';
+import { SURVEYS_OFF } from './utils/surveysOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
@@ -30,7 +30,7 @@ const INFERNO_RAMP = ['#000004', '#3b0f70', '#8c2981', '#de4968', '#fe9f6d', '#f
 export const cosmicWeb: Exhibit = {
   id: 'cosmicWeb',
   label: 'Cosmic Web',
-  settings: { galaxyCatalogs: GALAXIES_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
+  settings: { galaxyCatalogs: SURVEYS_OFF, cosmicWebDensity: VOLUMES_WITH_2MRS },
   // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
   // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
   pose: {
@@ -63,7 +63,7 @@ export const cosmicWeb: Exhibit = {
         onWord: 'shown',
         offWord: 'hidden in this view',
         on: [mergeSnapshot({ galaxyCatalogs: galaxyCatalogsInitialState })],
-        off: [mergeSnapshot({ galaxyCatalogs: GALAXIES_OFF })],
+        off: [mergeSnapshot({ galaxyCatalogs: SURVEYS_OFF })],
       },
     },
     {

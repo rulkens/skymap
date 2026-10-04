@@ -38,7 +38,7 @@ describe('selectionSlice', () => {
 
 describe('selectionSlice pending', () => {
   it('holds the pending focus id across the ref write and retires it on the row', () => {
-    const requested = reducer(undefined, requestFocus('NGC 224'));
+    const requested = reducer(undefined, requestFocus({ id: 'NGC 224', transition: 'fly' }));
 
     // The ref write is NOT the end of the request. `selectPendingFocusId` is the
     // top rung of the URL's precedence ladder and `selectionRows.focus` is the
@@ -56,13 +56,13 @@ describe('selectionSlice pending', () => {
   it('a newer requestFocus replaces the pending id', () => {
     // What makes takeLatest's cancelled deferral need no unwinding: the newer
     // request has already overwritten the slot the aborted one wrote.
-    const first = reducer(undefined, requestFocus('NGC 224'));
-    const second = reducer(first, requestFocus('NGC 5128'));
+    const first = reducer(undefined, requestFocus({ id: 'NGC 224', transition: 'fly' }));
+    const second = reducer(first, requestFocus({ id: 'NGC 5128', transition: 'fly' }));
     expect(second.pending.focus).toBe('NGC 5128');
   });
 
   it('clearSelection nulls both pending slots', () => {
-    let state = reducer(undefined, requestFocus('NGC 224'));
+    let state = reducer(undefined, requestFocus({ id: 'NGC 224', transition: 'fly' }));
     state = reducer(state, requestSelect('NGC 5128'));
     const cleared = reducer(state, clearSelection());
     expect(cleared.pending).toEqual({ select: null, focus: null });
@@ -75,7 +75,7 @@ describe('selectionSlice pending', () => {
     // …and retiring the select request leaves a live focus request alone. The
     // row write carries a slot, so it must retire only that slot's twin — a
     // deep link's `focus` request outlives the `select` half of the same arrival.
-    const bothPending = reducer(selectOnly, requestFocus('NGC 224'));
+    const bothPending = reducer(selectOnly, requestFocus({ id: 'NGC 224', transition: 'fly' }));
     const selectResolved = reducer(bothPending, setSelectionRow({ slot: 'select', row: null }));
     expect(selectResolved.pending).toEqual({ select: null, focus: 'NGC 224' });
   });

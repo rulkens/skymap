@@ -4,20 +4,21 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
+import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { applyUrlPose, clipStarted } from '../../../src/state/camera/cameraSlice';
-import { selectUrlPose } from '../../../src/state/camera/selectors';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
   engineStructureCountsChanged,
 } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { cameraRoute } from '../../../src/store/constants';
+import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
@@ -86,6 +87,7 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
+    mw.run(watchRequestFocusSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       resolveDeps,
@@ -119,18 +121,11 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 
-  it('stands down when a #pose= link is pending, and spends the park — the link IS the destination', async () => {
-    store.dispatch(applyUrlPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 })));
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+  it('a cut focus request sets focus without starting a tween', async () => {
+    store.dispatch(requestFocus({ id: MILKY_WAY_FOCUS_ID, transition: 'cut' }));
     await flush();
+    expect(store.getState()[selectionRoute].focus).toEqual({ type: 'milkyWay' });
     expect(store.getState()[cameraRoute].tween).toBeNull();
-    expect(selectUrlPose(store.getState())).toBeNull();
-
-    // The park is spent, so a SECOND focus tweens normally rather than
-    // standing down forever.
-    store.dispatch(updateSelectionFocus(SIRIUS_REF));
-    await flush();
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {
