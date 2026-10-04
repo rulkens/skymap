@@ -29,9 +29,11 @@ export function stepNavigator(
   settings: NavSettings,
   radPerPx: number,
 ): { readonly state: NavigatorState; readonly delta: ArmDelta; readonly moving: boolean } {
-  const dtMs =
-    prev.lastNowMs === null ? 0 : Math.min(Math.max(nowMs - prev.lastNowMs, 0), NAV_DT_CAP_MS);
-  const dtS = dtMs / 1000;
+  const rawDtMs = prev.lastNowMs === null ? 0 : Math.max(nowMs - prev.lastNowMs, 0);
+  const dtS = Math.min(rawDtMs, NAV_DT_CAP_MS) / 1000;
+  // The hold target divides by the REAL gap: a stall's pixels were gathered over
+  // all of it, and the capped dt would turn them into a fling.
+  const rawDtS = rawDtMs / 1000;
   const k = Math.min(dtS / (settings.friction + NAV_FRICTION_EPS), 1);
 
   const v = {
@@ -45,11 +47,11 @@ export function stepNavigator(
     updated.add(axis);
     if (dtS === 0) return;
     if (axis === 'zoom') {
-      v.zoom += ((px[1] * NAV_ZOOM_LN_PER_PX) / dtS - v.zoom) * k;
+      v.zoom += ((px[1] * NAV_ZOOM_LN_PER_PX) / rawDtS - v.zoom) * k;
     } else if (axis === 'roll') {
-      v.roll += ((px[0] * NAV_ROTATION_GAIN.roll * radPerPx) / dtS - v.roll) * k;
+      v.roll += ((px[0] * NAV_ROTATION_GAIN.roll * radPerPx) / rawDtS - v.roll) * k;
     } else {
-      const rate = (NAV_ROTATION_GAIN[axis] * radPerPx) / dtS;
+      const rate = (NAV_ROTATION_GAIN[axis] * radPerPx) / rawDtS;
       const w = v[axis];
       w[0] += (px[0] * rate - w[0]) * k;
       w[1] += (px[1] * rate - w[1]) * k;

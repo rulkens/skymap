@@ -76,6 +76,14 @@ describe('stepNavigator', () => {
     expect(gap.delta).toEqual(capped.delta);
   });
 
+  it('a stalled frame holds at the pixels over the real gap, not the capped dt', () => {
+    // Friction small enough that k = 1 at the capped dt, so velocity IS the target.
+    const snappy: NavSettings = { ...ALL_ON, friction: 0.01 };
+    const start: NavigatorState = { ...NAV_AT_REST, held: 'orbit', lastNowMs: 0 };
+    const { state } = stepNavigator(start, [drag('orbit', 200, 0)], 2000, snappy, RAD_PER_PX);
+    expect(state.velocity.orbit[0]).toBeCloseTo((200 * RAD_PER_PX) / 2);
+  });
+
   it('the first frame moves nothing', () => {
     const first = { ...coasting(), lastNowMs: null };
     const { delta } = stepNavigator(first, [drag('orbit', 10, 0)], 5000, ALL_ON, RAD_PER_PX);
