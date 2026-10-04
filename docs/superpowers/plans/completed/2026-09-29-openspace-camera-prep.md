@@ -1,6 +1,6 @@
 # OpenSpace camera mode — PR 1 ground preparation
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Create the five joints the OpenSpace control scheme needs (P1–P5), all behaviour-neutral: the skymap scheme renders, drives and commits exactly as before.
 
@@ -53,9 +53,9 @@ pickWinner(drivers, s: RootState, activity: DriverActivity): CameraDriver;
 ```
 `stepCameraRuntime` builds `{ approachDone }` once, where today it computes `approachDone`, and passes it to `pickWinner`. The activity is required; no row defaults it.
 
-- [ ] Change the type and every call site; `followApproach` reads `activity.approachDone`.
-- [ ] No new test: this is a signature change the compiler checks. The existing driver tests are the gate.
-- [ ] `npm run typecheck:fast && npm test -- camera` is green. Commit: `refactor(camera): driver activity bag replaces approachDone arg`.
+- [x] Change the type and every call site; `followApproach` reads `activity.approachDone`.
+- [x] No new test: this is a signature change the compiler checks. The existing driver tests are the gate.
+- [x] `npm run typecheck:fast && npm test -- camera` is green. Commit: `refactor(camera): driver activity bag replaces approachDone arg`.
 
 ### Task 2 (P3): Control-scheme registry
 
@@ -77,9 +77,9 @@ export const CONTROL_SCHEMES: Readonly<Record<ControlSchemeId, ControlScheme>> =
 - `runFrame` resolves `deps.controlSchemes.skymap.drivers` into `StepInputs.drivers`, which is unchanged. PR 2 swaps the literal key for the settings read.
 - A fixture overrides the table as `{ skymap: { drivers: [...] } }`.
 
-- [ ] Implement. `runFrame.ts` still exports only `runFrame` (frame purity ratchet: `tests/services/engine/frame/frameFilePurity.test.ts`).
-- [ ] No new test: plumbing only.
-- [ ] Green. Commit: `refactor(camera): driver table behind a control-scheme registry`.
+- [x] Implement. `runFrame.ts` still exports only `runFrame` (frame purity ratchet: `tests/services/engine/frame/frameFilePurity.test.ts`).
+- [x] No new test: plumbing only.
+- [x] Green. Commit: `refactor(camera): driver table behind a control-scheme registry`.
 
 ### Task 3 (P5): `CameraPose.lookOffset` — `review: yes`
 
@@ -110,13 +110,13 @@ export type CameraPose = { target: Vec3; yaw: number; pitch: number; distance: n
 - **R12b-3 comment** at `src/state/camera/cameraSlice.ts:56`: reword to "every committed ABSOLUTE pose's orbit terms are centre-looking; `lookOffset` turns only the view."
 - **URL.** Encode the two extra numbers only when the offset is non-zero, as trailing fields after `roll`. Decode accepts both lengths.
 
-- [ ] Test `orbitForwardOf keeps the eye and turns forward by lookOffset`: with a non-zero offset, `position` is unchanged, and the angle between the new and old forward equals `hypot` of the offset (small-angle case) or the exact composed angle (test at [0.3, 0] and [0, 0.2]).
-- [ ] Test `orbitForwardOf with lookOffset [0,0] is bitwise identical to absent`: `Float64Array` equality of the forward and of the `computeViewProj` matrix.
-- [ ] Test `encodeFramedPose omits a zero lookOffset`: a pose with `[0, 0]` encodes to the same string as without the field.
-- [ ] Test `framed pose round-trips a non-zero lookOffset through the hash`: encode then decode returns the offset within 1e-12.
-- [ ] Test `tween eases lookOffset to zero`, in the existing tween-row test file: at t=0.5 it is half the start offset, and at t=1 it is 0.
-- [ ] Implement and run the audit. Every existing test and golden stays green, unchanged.
-- [ ] Commit: `feat(camera): CameraPose.lookOffset — view turn about the eye, neutral at zero`.
+- [x] Test `orbitForwardOf keeps the eye and turns forward by lookOffset`: with a non-zero offset, `position` is unchanged, and the angle between the new and old forward equals `hypot` of the offset (small-angle case) or the exact composed angle (test at [0.3, 0] and [0, 0.2]).
+- [x] Test `orbitForwardOf with lookOffset [0,0] is bitwise identical to absent`: `Float64Array` equality of the forward and of the `computeViewProj` matrix.
+- [x] Test `encodeFramedPose omits a zero lookOffset`: a pose with `[0, 0]` encodes to the same string as without the field.
+- [x] Test `framed pose round-trips a non-zero lookOffset through the hash`: encode then decode returns the offset within 1e-12.
+- [x] Test `tween eases lookOffset to zero`, in the existing tween-row test file: at t=0.5 it is half the start offset, and at t=1 it is 0.
+- [x] Implement and run the audit. Every existing test and golden stays green, unchanged.
+- [x] Commit: `feat(camera): CameraPose.lookOffset — view turn about the eye, neutral at zero`.
 
 ### Task 4 (P1a): Extract the body arm's orbit, look and settle — `review: yes`
 
@@ -140,8 +140,8 @@ settledDragPose(
 ```
 `draggedSurfacePose` and `surfaceStep` call these helpers, with no logic change. This is extraction only.
 
-- [ ] No new test. `tests/services/camera/surfaceStep.test.ts`, `rememberedTilt.test.ts` and `singularLocusRecession.test.ts` are the parity gate and must stay green unchanged.
-- [ ] Commit: `refactor(camera): extract body-arm orbit/look solves and the drag settle`.
+- [x] No new test. `tests/services/camera/surfaceStep.test.ts`, `rememberedTilt.test.ts` and `singularLocusRecession.test.ts` are the parity gate and must stay green unchanged.
+- [x] Commit: `refactor(camera): extract body-arm orbit/look solves and the drag settle`.
 
 ### Task 5 (P1b): `ArmDelta` + `RungRow.nudge` — `review: yes`
 
@@ -178,13 +178,13 @@ nudge(tilt: TiltMemory, framed: FramedPose<K>, delta: ArmDelta, ctx: RungCtx):
   Then run **one** `settledDragPose`. The mode is `'orbit'` when orbit alone moved, `'look'` when look moved (it writes the tilt memory), and the floor-only branch when roll moved. Roll must skip the level step, because the level settle would undo it: the body arm rules that no *drag* may roll, and `nudge` is not a drag.
 - **site (`nudgedSitePose`):** orbit uses `steppedSitePose`'s gain law (`steppedSitePose.ts:25-37`) with pixels = `rad · cssHeight / fovY`. Zoom multiplies range by `spentZoomFactor(exp(zoom))`, with the declined-notch identity. Look and roll are ignored.
 
-- [ ] Test `world nudge orbit equals the equivalent pixel drag`: for a pose over Earth with a pivot radius, `nudgedWorldPose({orbit:[a,b]})` equals `applyInputToCamera` with a drag of `(a,b)·cssHeight/fovY` px, within 1e-12.
-- [ ] Test `world nudge zoom matches zoomedDistance` and `world nudge look accumulates lookOffset and clamps pitch`.
-- [ ] Test `body nudge orbit equals the equivalent orbit-mode drag`: the same pose as the drag path with the gesture latched to `'orbit'`, within 1e-9 m. Build the drag through `surfaceStep` with a pre-latched orbit gesture.
-- [ ] Test `body nudge roll keeps basisLocal orthonormal and survives the settle`: after `roll: 0.2`, the basis is orthonormal to 1e-12 and the image roll relative to the pre-pose is 0.2 ± 1e-9 (i.e. the level step didn't eat it).
-- [ ] Test `site nudge ignores look and roll by reference` and `site nudge orbit equals the equivalent drag`.
-- [ ] Implement. `step` is untouched.
-- [ ] Commit: `feat(camera): RungRow.nudge — pixel-free per-arm motion column`.
+- [x] Test `world nudge orbit equals the equivalent pixel drag`: for a pose over Earth with a pivot radius, `nudgedWorldPose({orbit:[a,b]})` equals `applyInputToCamera` with a drag of `(a,b)·cssHeight/fovY` px, within 1e-12.
+- [x] Test `world nudge zoom matches zoomedDistance` and `world nudge look accumulates lookOffset and clamps pitch`.
+- [x] Test `body nudge orbit equals the equivalent orbit-mode drag`: the same pose as the drag path with the gesture latched to `'orbit'`, within 1e-9 m. Build the drag through `surfaceStep` with a pre-latched orbit gesture.
+- [x] Test `body nudge roll keeps basisLocal orthonormal and survives the settle`: after `roll: 0.2`, the basis is orthonormal to 1e-12 and the image roll relative to the pre-pose is 0.2 ± 1e-9 (i.e. the level step didn't eat it).
+- [x] Test `site nudge ignores look and roll by reference` and `site nudge orbit equals the equivalent drag`.
+- [x] Implement. `step` is untouched.
+- [x] Commit: `feat(camera): RungRow.nudge — pixel-free per-arm motion column`.
 
 ### Task 6 (P4): Persisted-value table — `review: yes`
 
@@ -211,11 +211,11 @@ export const PERSISTED_VALUES = [SPLASH_SEEN_VERSION] as const;   // src/state/p
 ```
 The splash row keeps key `'skymap.splash.seenVersion'` verbatim.
 
-- [ ] Test `readPersisted returns null when storage throws` (stub `localStorage.getItem` to throw) and `readPersisted returns null for an unparsable value`.
-- [ ] Test `persistValues writes only on change and not at install`: seed a non-null value, install, and dispatch an unrelated action, so there is no write; change the value, so there is exactly one write.
-- [ ] Test `persistValues swallows a throwing setItem`.
-- [ ] Port the surviving assertions of `persistSplashVersion.test.ts` (no write on `reopenSplash`, no write for null) onto the splash row, then delete that file.
-- [ ] Commit: `refactor(state): generic persisted-value table; splash version moves onto it`.
+- [x] Test `readPersisted returns null when storage throws` (stub `localStorage.getItem` to throw) and `readPersisted returns null for an unparsable value`.
+- [x] Test `persistValues writes only on change and not at install`: seed a non-null value, install, and dispatch an unrelated action, so there is no write; change the value, so there is exactly one write.
+- [x] Test `persistValues swallows a throwing setItem`.
+- [x] Port the surviving assertions of `persistSplashVersion.test.ts` (no write on `reopenSplash`, no write for null) onto the splash row, then delete that file.
+- [x] Commit: `refactor(state): generic persisted-value table; splash version moves onto it`.
 
 ---
 
