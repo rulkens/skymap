@@ -149,7 +149,7 @@ export function stepCameraRuntime(
   );
   const controls = stored.settings.cameraControls;
   const drivers = schemes[controls.scheme].drivers;
-  // A table without navigator rows never steps it, so a stray `navDrag` cannot
+  // A table without navigator rows drops navigator input, so a stray `navDrag` cannot
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => d.family === 'openSpace');
   const nav = stepNavigator(

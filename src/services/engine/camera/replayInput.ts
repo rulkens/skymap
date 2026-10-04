@@ -86,6 +86,8 @@ export function replayInput(
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
   const navSteps: NavStep[] = [];
+  // Folded as `stepNavigator` folds `held`, so a press, move and release in one drain counts.
+  let navHeld = args.navHeld;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
     camera = cameraReducer(camera, action);
@@ -192,9 +194,10 @@ export function replayInput(
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped under a held navigator too: the release starts its coast, and
         // the navigator rows' own edge commit bakes where the coast stops.
-        if (camera.clip === null && !args.navHeld && sameFrame(register.frame, camera.base.frame)) {
+        if (camera.clip === null && !navHeld && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
+        navHeld = false;
         navSteps.push(step);
         stepRegister(step);
         emit(endDrag());
@@ -206,6 +209,7 @@ export function replayInput(
         break;
 
       case 'navDrag':
+        navHeld = true;
         navSteps.push(step);
         break;
 

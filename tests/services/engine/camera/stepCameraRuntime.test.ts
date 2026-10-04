@@ -74,6 +74,8 @@ const EARTH_ROW: SelectionRow = {
   driver: bodyDriverGeometry('earth'),
 };
 
+const CANVAS_PX = 100;
+
 /** The frame's inputs as `runFrame` would build them, off the harness's live store and aggregator. */
 function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs> = {}): StepInputs {
   const rootState = h.store.getState();
@@ -82,7 +84,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     nowMs,
     simDays,
     rootState,
-    canvasPx: [100, 100],
+    canvasPx: [CANVAS_PX, CANVAS_PX],
     aspect: 1,
     steps: h.state.subsystems.inputAggregator.drain(),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
@@ -452,6 +454,24 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     expect(commitsIn(stepWith(h, []))).toBe(0);
   });
 
+  it('a press, move and release in one frame commits once over the whole motion', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    h.store.dispatch(beginDrag());
+    let out = stepWith(h, [...press, ...release]);
+    let commits = commitsIn(out);
+    expect(out.next.register.winner).toBe('openSpaceCoast');
+    let i = 0;
+    while (h.state.cameraRuntime.register.winner === 'openSpaceCoast' && i < GUARD) {
+      out = stepWith(h, []);
+      commits += commitsIn(out);
+      i += 1;
+    }
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
+    expect(commits).toBe(1);
+  });
+
   it('a tween preempting a coast commits once and zeroes the navigator', () => {
     const { h } = coasting();
     stepWith(h, []);
@@ -505,7 +525,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         [],
         nextNow(h),
         h.store.getState().settings.cameraControls,
-        prev.outputs.projection.fovYRad / 100,
+        prev.outputs.projection.fovYRad / CANVAS_PX,
       ).state.velocity;
       const out = stepWith(h, []);
       expect(out.next.register.winner).toBe('openSpaceCoast');
