@@ -802,9 +802,15 @@ describe('the control-scheme tables', () => {
   });
 
   it("the openspace table is skymap's with orbitDrag swapped", () => {
-    const expected = CAMERA_DRIVERS.flatMap((d) =>
-      d.id === 'orbitDrag' ? ['openSpaceHeld', 'openSpaceCoast'] : [d.id],
-    );
-    expect(CONTROL_SCHEMES.openspace.drivers.map((d) => d.id)).toEqual(expected);
+    expect(CONTROL_SCHEMES.openspace.drivers.map((d) => d.id)).toEqual([
+      'clip',
+      'openSpaceHeld',
+      'openSpaceCoast',
+      'followApproach',
+      'followHold',
+      'tween',
+      'autoRotate',
+      'resting',
+    ]);
   });
 });
