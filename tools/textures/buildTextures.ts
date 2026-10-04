@@ -109,7 +109,6 @@ function firstExisting(paths: readonly string[]): string | null {
 /** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
  *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
 const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
-const BYTE_MAX = 255;
 
 /** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
  *  of Mimas radius is not terraced into 90 m steps before the Sobel pass. */
@@ -120,7 +119,7 @@ function toByteScale(radius: Float32Array): Float32Array {
     if (r < lo) lo = r;
     if (r > hi) hi = r;
   }
-  return radius.map((r) => ((r - lo) / (hi - lo)) * BYTE_MAX);
+  return radius.map((r) => ((r - lo) / (hi - lo)) * EIGHT_BIT_FULL_SCALE);
 }
 
 /** Source width in pixels; 0 if sharp can't report it. */
@@ -334,12 +333,12 @@ function bakeNormalOnce(
           );
         } else {
           const raw = await sharp(srcPath, { limitInputPixels: false })
-            .toColourspace('b-w')
+            .toColourspace('b-w') // single-channel raster; without it sharp returns 3 float channels
             .raw({ depth: 'float' })
             .toBuffer({ resolveWithObject: true });
-          const { width: sw, height: sh, channels } = raw.info;
-          const src = new Float32Array(raw.data.buffer, raw.data.byteOffset, sw * sh * channels);
-          grid = binFloatDemToEquirect(src, channels, sw, sh, width, height, entry.lonOffsetDeg);
+          const { width: sw, height: sh } = raw.info;
+          const src = new Float32Array(raw.data.buffer, raw.data.byteOffset, sw * sh);
+          grid = binFloatDemToEquirect(src, sw, sh, width, height, entry.lonOffsetDeg);
           fillEquirectNodata(grid, width, height);
         }
         return bakeNormalMap({ data: toByteScale(grid), width, height }, exaggerationFor(bodyId));

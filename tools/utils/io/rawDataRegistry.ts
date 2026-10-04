@@ -825,7 +825,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.5 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
+      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.1 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
     upstream:
       'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.tethys.shape-model/data/tethys_quad512q.tab',
     fetcher: 'tools/fetch/fetchTextures.ts',

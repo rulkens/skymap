@@ -86,8 +86,7 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 38.3213,
     spinRateDegPerDay: 13.17635815,
   },
-  // Synchronous moons face their host by construction: the lock is derived from the orbit
-  // because IAU W rows and JPL orbit rows disagree in phase and rate. Optical libration is dropped.
+  // Synchronous moons face their host by construction; see rotationTidallyLocked.
   // Phobos, Deimos and Titan are untextured, but a surface camera rides their frames:
   // row-less, the Sun would stand still in their skies.
   {

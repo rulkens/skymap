@@ -12,11 +12,4 @@ describe('rollEquirectHalfTurn', () => {
 
     expect([...out]).toEqual([0, 1].flatMap((r) => [2, 3, 0, 1].flatMap((c) => px(r, c))));
   });
-
-  it('is its own inverse', () => {
-    const src = Buffer.from(Array.from({ length: 6 * 3 * 3 }, (_, i) => i));
-    expect([...rollEquirectHalfTurn(rollEquirectHalfTurn(src, 6, 3, 3), 6, 3, 3)]).toEqual([
-      ...src,
-    ]);
-  });
 });

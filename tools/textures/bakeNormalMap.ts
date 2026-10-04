@@ -76,8 +76,9 @@
 export const DEFAULT_EXAGGERATION = 4;
 
 /**
- * Per-body gradient-gain override for the normal bake. A body ABSENT from this
- * table bakes at DEFAULT_EXAGGERATION — the data-gate shape of LIMB_DARKENING_PARAMS
+ * Per-body gradient-gain override for the normal bake.
+ * The bake maps each body's radius range to 0-255, so gain differs per body.
+ * A body ABSENT from this table bakes at DEFAULT_EXAGGERATION — the data-gate shape of LIMB_DARKENING_PARAMS
  * (absent row ⇒ default behaviour, no branch). The Moon's low-contrast LOLA relief
  * wants a stronger gain than Earth's coastlines; the seed here is eye-tuned in the
  * F4 shader visual pass, not a fixed contract.
@@ -89,7 +90,7 @@ export const DEFAULT_EXAGGERATION = 4;
  */
 export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
   mimas: 64, // measured: p50 tilt 10°, p99 38° over the 2k grid, so Herschel's walls read without saturating
-  tethys: 15, // measured: p50 tilt 4°, p99 17° over the 2k grid, tuned by eye; the bake maps each body's radius range to 0-255, so gain differs per body
+  tethys: 15, // measured: p50 tilt 4°, p99 17° over the 2k grid, tuned by eye
   dione: 7, // measured: p50 tilt 2°, p99 16°, tuned by eye; its 12 km radius range is the narrowest, so the steepest per-texel slope
   enceladus: 8, // measured: p50 tilt 4°, p99 17° over the 4k grid, tuned by eye (5 km of relief across the 0-255 range)
   moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4

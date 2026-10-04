@@ -14,7 +14,6 @@ const NODATA_BELOW = -1e30;
 
 export function binFloatDemToEquirect(
   src: Float32Array,
-  srcChannels: number,
   srcWidth: number,
   srcHeight: number,
   width: number,
@@ -27,7 +26,7 @@ export function binFloatDemToEquirect(
   for (let y = 0; y < srcHeight; y++) {
     const row = Math.min(height - 1, Math.floor((y / srcHeight) * height));
     for (let x = 0; x < srcWidth; x++) {
-      const v = src[(y * srcWidth + x) * srcChannels]!;
+      const v = src[y * srcWidth + x]!;
       if (!(v > NODATA_BELOW)) continue; // also rejects NaN
       const bin = Math.floor((x / srcWidth) * width);
       const col = (((bin + width / 2 - shiftCols) % width) + width) % width;

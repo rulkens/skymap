@@ -5,10 +5,9 @@
  * so the fill does not smear directionally with scan order.
  */
 export function fillEquirectNodata(grid: Float32Array, width: number, height: number): void {
-  let remaining = 1;
-  while (remaining > 0) {
-    remaining = 0;
-    let progressed = false;
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
     const next = grid.slice();
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -33,10 +32,9 @@ export function fillEquirectNodata(grid: Float32Array, width: number, height: nu
         if (n > 0) {
           next[i] = acc / n;
           progressed = true;
-        } else remaining++;
+        }
       }
     }
     grid.set(next);
-    if (!progressed) break; // an all-NaN grid has nothing to grow from
   }
 }
