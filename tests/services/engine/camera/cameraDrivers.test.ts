@@ -24,6 +24,7 @@ import {
   elapsedForWinner,
   pickWinner,
 } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
@@ -64,8 +65,8 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const APPROACHING: DriverActivity = { approachDone: false };
-const APPROACH_DONE: DriverActivity = { approachDone: true };
+const APPROACHING: DriverActivity = { approachDone: false, navHeld: false, navMoving: false };
+const APPROACH_DONE: DriverActivity = { ...APPROACHING, approachDone: true };
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distance: 100 };
 
 const TWEEN_DESC: CameraTweenDescriptor = {
@@ -111,7 +112,7 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
-  const winner = pickWinner(drivers, s, { approachDone });
+  const winner = pickWinner(drivers, s, { ...APPROACHING, approachDone });
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -791,5 +792,19 @@ describe('orbitDrag — the register comes from the ctx', () => {
     });
     const drag = CAMERA_DRIVERS.find((d) => d.id === 'orbitDrag')!;
     expect(drag.pose(ctx, null).pose).toBe(REGISTER_POSE);
+  });
+});
+
+describe('the control-scheme tables', () => {
+  it('the skymap table is unchanged', () => {
+    expect(CONTROL_SCHEMES.skymap.drivers).toBe(CAMERA_DRIVERS);
+    expect(CAMERA_DRIVERS.some((d) => d.family === 'openSpace')).toBe(false);
+  });
+
+  it("the openspace table is skymap's with orbitDrag swapped", () => {
+    const expected = CAMERA_DRIVERS.flatMap((d) =>
+      d.id === 'orbitDrag' ? ['openSpaceHeld', 'openSpaceCoast'] : [d.id],
+    );
+    expect(CONTROL_SCHEMES.openspace.drivers.map((d) => d.id)).toEqual(expected);
   });
 });

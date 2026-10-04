@@ -6,6 +6,8 @@
  */
 
 import type { CameraEpochs } from '../camera/CameraEpochs';
+import type { ControlSchemeId } from '../camera/ControlSchemeId';
+import type { NavigatorState } from '../../camera/NavigatorState';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
@@ -31,5 +33,10 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
   readonly gesture: RungMemory;
   readonly tilt: TiltMemory;
+  /** At rest on every frame an openSpace-family row did not win. */
+  readonly navigator: NavigatorState;
+  /** The scheme last frame's winner was picked from: a toggled-away row exists
+   * only in its own table, which is where its edge commit must look it up. */
+  readonly scheme: ControlSchemeId;
   readonly outputs: FrameOutputs;
 };

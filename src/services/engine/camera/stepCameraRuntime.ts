@@ -27,6 +27,9 @@ import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
+import { nudgeRung } from './rungs/nudgeRung';
+import { stepNavigator } from '../../../utils/camera/stepNavigator';
+import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { rowFor } from './rungs/rowFor';
 import { isWorldArm } from './rungs/isWorldArm';
 import { resolveFrameBasis } from './resolveFrameBasis';
@@ -67,7 +70,7 @@ export function stepCameraRuntime(
     bodies,
     terrainHeightAt,
     clipEpoch,
-    drivers,
+    schemes,
   } = inputs;
   // A `base` the loop did not write is a commit from outside: `resting`
   // authored it verbatim, so last frame's author reads as `resting` — the
@@ -141,8 +144,27 @@ export function stepCameraRuntime(
       nowMs,
       winnerLastFrame,
       autoRotateEpoch: prev.epochs.autoRotate,
+      navHeld: prev.navigator.held !== null,
     },
   );
+  const controls = stored.settings.cameraControls;
+  const drivers = schemes[controls.scheme].drivers;
+  // A table without navigator rows never steps it, so a stray `navDrag` cannot
+  // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
+  const navigates = drivers.some((d) => d.family === 'openSpace');
+  const nav = stepNavigator(
+    prev.navigator,
+    navigates ? drained.navSteps : [],
+    nowMs,
+    controls,
+    projection.fovYRad / canvasPx[1],
+  );
+  // Everything below — the edge commit, the produce, the next runtime — reads
+  // the nudged register, so a held or coasting frame moves exactly once.
+  const { pose: register, tilt } =
+    Object.keys(nav.delta).length === 0
+      ? { pose: drained.register, tilt: drained.tilt }
+      : nudgeRung(drained.register, drained.tilt, nav.delta, replayCtx);
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
@@ -163,6 +185,8 @@ export function stepCameraRuntime(
   const activity = {
     approachDone:
       external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false),
+    navHeld: nav.state.held !== null,
+    navMoving: nav.moving,
   };
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
@@ -181,24 +205,24 @@ export function stepCameraRuntime(
   // target on its next produce.
   const followIn = epochs.follow.ref !== prev.epochs.follow.ref ? null : drained.follow;
   const edge = commitOnEdge({
-    register: drained.register,
+    register,
     displayed: prev.outputs.displayed,
     prevWinner: winnerLastFrame,
     winner,
-    drivers,
+    drivers: schemes[prev.scheme].drivers,
   });
 
   const { pose, memory } = winner.pose(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
-      register: drained.register,
+      register,
       // Both by reference in the world arm, so the follow rows' world numbers
       // — and the goldens — are untouched. Below it they are the world arm a
       // hand-back would land on: an arm's roll is its local horizon, and an
       // approach that carried it out would leave the image tilted for good
       // (the band test `releasedWorldRoll` makes is the same one).
-      authoredWorld: releasedWorldArm(drained.register, replayCtx, tuning),
+      authoredWorld: releasedWorldArm(register, replayCtx, tuning),
       // Post-edge: a follow row taking over from a tween adopts where the tween
       // LANDED, not the pose the tween departed from (still `base` this frame).
       committedWorld: releasedWorldArm(edge.committed ?? rootState.camera.base, replayCtx, tuning),
@@ -251,7 +275,7 @@ export function stepCameraRuntime(
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
-    tilt: drained.tilt,
+    tilt,
     intent: rootState.camera,
     ctx: foldCtx,
   });
@@ -285,6 +309,10 @@ export function stepCameraRuntime(
       follow: memory,
       gesture,
       tilt: projected.tilt,
+      // One reset rule (handoff, scheme toggle, a clip or tween preempting):
+      // velocity survives only while its own family authors the camera.
+      navigator: winner.family === 'openSpace' ? nav.state : { ...NAV_AT_REST, lastNowMs: nowMs },
+      scheme: controls.scheme,
       outputs: {
         displayed: projected.displayed,
         simDays,
@@ -293,7 +321,7 @@ export function stepCameraRuntime(
       },
     },
     actions,
-    requestRender: projected.requestRender,
+    requestRender: projected.requestRender || nav.state.held !== null || nav.moving,
     world: projected.world,
     rootState,
   };

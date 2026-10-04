@@ -20,7 +20,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 
 import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCameraRuntime';
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
@@ -51,6 +51,17 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
+import type { InputStep } from '../../../../src/@types/camera/InputStep';
+import type { NavVelocity } from '../../../../src/@types/camera/NavVelocity';
+import type { UnknownAction } from '@reduxjs/toolkit';
+import { beginDrag, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import {
+  setControlScheme,
+  setFrictionOn,
+  toggleControlScheme,
+} from '../../../../src/state/settings/core/cameraControlsSlice';
+import { stepNavigator } from '../../../../src/utils/camera/stepNavigator';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
@@ -79,7 +90,7 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     // production's own `?? 0` miss (F3a, spec §8.3).
     terrainHeightAt: () => 0,
     clipEpoch: h.state.cameraRuntime.epochs.clip,
-    drivers: CAMERA_DRIVERS,
+    schemes: CONTROL_SCHEMES,
     ...over,
   };
 }
@@ -382,5 +393,151 @@ describe('a commit mid-approach', () => {
     expect(h.store.getState().camera.base).toBe(bodyArm);
     expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
     expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
+  });
+});
+
+describe('stepCameraRuntime — the openspace scheme', () => {
+  const GUARD = 2000;
+  const press: readonly InputStep[] = [
+    { kind: 'gestureStart' },
+    { kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] },
+  ];
+  const hold: readonly InputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
+  const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
+
+  // The hand-fed frames' wall clock, picking up where the harness's own frames stopped.
+  const clocks = new WeakMap<CameraSimHarness, number>();
+  const nextNow = (h: CameraSimHarness): number => (clocks.get(h) ?? h.nowMs()) + 16;
+
+  /** One frame with hand-fed steps, installed and dispatched as `runFrame` does. */
+  function stepWith(h: CameraSimHarness, steps: readonly InputStep[]) {
+    const nowMs = nextNow(h);
+    clocks.set(h, nowMs);
+    const out = stepCameraRuntime(h.state.cameraRuntime, inputsFor(h, nowMs, { steps }));
+    h.state.cameraRuntime = out.next;
+    for (const action of out.actions) h.store.dispatch(action);
+    return out;
+  }
+  const commitsIn = (out: { readonly actions: readonly UnknownAction[] }): number =>
+    out.actions.filter((a) => a.type === commitCameraPose.type).length;
+  const atRest = (v: NavVelocity): boolean =>
+    v.orbit[0] === 0 && v.orbit[1] === 0 && v.look[0] === 0 && v.zoom === 0 && v.roll === 0;
+
+  /** An openspace harness with no focus (no follow row competes), mid-coast after a 5-frame orbit hold. */
+  function coasting(): { h: CameraSimHarness; commits: number } {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.store.dispatch(setControlScheme('openspace'));
+    h.frame(2);
+    // `wireInput` dispatches it at the press, outside the loop.
+    h.store.dispatch(beginDrag());
+    let commits = commitsIn(stepWith(h, press));
+    for (let i = 0; i < 4; i += 1) commits += commitsIn(stepWith(h, hold));
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceHeld');
+    commits += commitsIn(stepWith(h, release));
+    expect(h.state.cameraRuntime.register.winner).toBe('openSpaceCoast');
+    return { h, commits };
+  }
+
+  it('held → coast → rest commits base once, on the at-rest frame', () => {
+    const { h, commits } = coasting();
+    expect(commits).toBe(0);
+    let i = 0;
+    while (h.state.cameraRuntime.register.winner === 'openSpaceCoast' && i < GUARD) {
+      const out = stepWith(h, []);
+      const coasts = out.next.register.winner === 'openSpaceCoast';
+      expect(commitsIn(out)).toBe(coasts ? 0 : 1);
+      i += 1;
+    }
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
+    expect(commitsIn(stepWith(h, []))).toBe(0);
+  });
+
+  it('a tween preempting a coast commits once and zeroes the navigator', () => {
+    const { h } = coasting();
+    stepWith(h, []);
+    h.store.dispatch(
+      startCameraTween({
+        from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 50 },
+        to: { target: [1, 2, 3], yaw: 2, pitch: 0.2, distance: 10 },
+        durationMs: 1000,
+        easing: 'easeOutCubic',
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+
+    const edge = stepWith(h, []);
+
+    expect(edge.next.register.winner).toBe('tween');
+    expect(commitsIn(edge)).toBe(1);
+    expect(atRest(edge.next.navigator.velocity)).toBe(true);
+  });
+
+  it('a scheme toggle mid-coast commits once and zeroes the navigator', () => {
+    const { h } = coasting();
+    stepWith(h, []);
+    h.store.dispatch(toggleControlScheme());
+
+    const edge = stepWith(h, []);
+
+    expect(edge.next.scheme).toBe('skymap');
+    expect(edge.next.register.winner).toBe('resting');
+    expect(commitsIn(edge)).toBe(1);
+    expect(atRest(edge.next.navigator.velocity)).toBe(true);
+  });
+
+  it('a coast crossing an arm boundary keeps its velocity', () => {
+    // Zoom friction off, so the coast flies in at a constant rate until the
+    // fold engages Earth's arm mid-coast; the approach is saturated first.
+    const h = makeCameraSimHarness();
+    h.store.dispatch(setControlScheme('openspace'));
+    h.store.dispatch(setFrictionOn({ group: 'zoom', on: false }));
+    h.frame(60);
+    h.state.cameraRuntime = {
+      ...h.state.cameraRuntime,
+      navigator: { ...NAV_AT_REST, velocity: { ...NAV_AT_REST.velocity, zoom: -3 } },
+    };
+    stepWith(h, []);
+    let i = 0;
+    while (h.state.cameraRuntime.register.pose.frame === 'absolute' && i < GUARD) {
+      const prev = h.state.cameraRuntime;
+      const expected = stepNavigator(
+        prev.navigator,
+        [],
+        nextNow(h),
+        h.store.getState().settings.cameraControls,
+        prev.outputs.projection.fovYRad / 100,
+      ).state.velocity;
+      const out = stepWith(h, []);
+      expect(out.next.register.winner).toBe('openSpaceCoast');
+      expect(out.next.navigator.velocity).toEqual(expected);
+      i += 1;
+    }
+    expect(h.state.cameraRuntime.register.pose.frame).toEqual({ body: 'earth' });
+    expect(h.state.cameraRuntime.navigator.velocity.zoom).toBe(-3);
+  });
+
+  it('a coasting navigator requests a render, an at-rest one does not', () => {
+    const { h } = coasting();
+    expect(stepWith(h, []).requestRender).toBe(true);
+    let i = 0;
+    while (h.state.cameraRuntime.register.winner === 'openSpaceCoast' && i < GUARD) {
+      stepWith(h, []);
+      i += 1;
+    }
+    expect(stepWith(h, []).requestRender).toBe(false);
+  });
+
+  it('skymap scheme: a navDrag step is inert', () => {
+    const h = makeCameraSimHarness({ focusBody: null });
+    h.frame(2);
+    h.store.dispatch(beginDrag());
+    const before = h.state.cameraRuntime.register.pose;
+    stepWith(h, press);
+    for (let i = 0; i < 4; i += 1) {
+      const out = stepWith(h, hold);
+      expect(out.next.register.winner).toBe('orbitDrag');
+      expect(atRest(out.next.navigator.velocity)).toBe(true);
+    }
+    expect(h.state.cameraRuntime.register.pose).toEqual(before);
   });
 });

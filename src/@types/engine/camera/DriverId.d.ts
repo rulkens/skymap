@@ -8,6 +8,8 @@
 export type DriverId =
   | 'clip'
   | 'orbitDrag'
+  | 'openSpaceHeld'
+  | 'openSpaceCoast'
   | 'followApproach'
   | 'followHold'
   | 'tween'

@@ -81,6 +81,7 @@ function ctxOf(
     nowMs: overrides.nowMs ?? 0,
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     autoRotateEpoch: { ref: null, startMs: null },
+    navHeld: false,
   };
 }
 

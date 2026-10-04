@@ -17,6 +17,7 @@ import { UNSTARTED_EPOCHS } from './cameraEpochs';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';
 import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
+import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 
@@ -39,6 +40,8 @@ export function seedCameraRuntime(args: {
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },
     tilt: EMPTY_TILT_MEMORY,
+    navigator: NAV_AT_REST,
+    scheme: settings.cameraControls.scheme,
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,

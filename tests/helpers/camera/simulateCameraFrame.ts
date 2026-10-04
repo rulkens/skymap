@@ -39,7 +39,7 @@ export function simulateCameraFrame(
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
     terrainHeightAt: () => 0,
     clipEpoch,
-    drivers: deps.controlSchemes.skymap.drivers,
+    schemes: deps.controlSchemes,
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);

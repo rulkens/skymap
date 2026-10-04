@@ -372,3 +372,38 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pose: (ctx, mem) => ({ pose: ctx.state.camera.base, memory: mem }),
   },
 ];
+
+// One family, so held → coast hands off without a commit and only the coast's
+// end (or a preempting row) bakes `base`. Both echo the authored register, as
+// `orbitDrag` does: the navigator's nudge already moved it this frame.
+const OPENSPACE_ROW = {
+  family: 'openSpace',
+  pivotsOnFocusedBody: true,
+  commitsOnEdge: true,
+  pose: (ctx: DriverCtx, mem: FollowMemory | null) => ({ pose: ctx.register, memory: mem }),
+} as const;
+
+/**
+ * The openspace table: `CAMERA_DRIVERS` with `orbitDrag` swapped for the
+ * navigator's rows. The coast sits at 50, under tween (60) and the follow
+ * approach (55), so a focus change preempts it; the held row keeps the drag's 80.
+ */
+export const OPENSPACE_DRIVERS: readonly CameraDriver[] = CAMERA_DRIVERS.flatMap((d) =>
+  d.id !== 'orbitDrag'
+    ? [d]
+    : [
+        {
+          ...OPENSPACE_ROW,
+          id: 'openSpaceHeld',
+          priority: 80,
+          isActive: (_s: RootState, activity: DriverActivity) => activity.navHeld,
+        },
+        {
+          ...OPENSPACE_ROW,
+          id: 'openSpaceCoast',
+          priority: 50,
+          isActive: (_s: RootState, activity: DriverActivity) =>
+            !activity.navHeld && activity.navMoving,
+        },
+      ],
+);
