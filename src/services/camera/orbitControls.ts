@@ -104,14 +104,19 @@ export function attachOrbitControls(
 
     if (activePointers.size === 0) {
       const endedMode = dragMode;
-      const endedLatched = navAxis !== null;
+      const endedAxis = navAxis;
       dragMode = null;
       dragPointerId = null;
       navAxis = null;
 
       // Click only on an ORBIT release: a pan release (right/middle mouse) must
-      // not pick a galaxy, and the second finger of a pinch is not a tap.
-      if (options?.onClick && endedMode === 'orbit' && !endedLatched) {
+      // not pick a galaxy, and the second finger of a pinch is not a tap. A
+      // latched axis checks the axis too: alt+left zoom still has mode 'orbit'.
+      if (
+        options?.onClick &&
+        endedMode === 'orbit' &&
+        (endedAxis === null || endedAxis === 'orbit')
+      ) {
         const dx = e.clientX - downX;
         const dy = e.clientY - downY;
         if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {

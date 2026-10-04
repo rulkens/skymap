@@ -132,7 +132,7 @@ It placed velocity in module state; this spec keeps it in `CameraRuntime`, becau
 - `ControlScheme` gains `bindAxis: (press: AxisPress) => NavAxis | null` (PR 1 shipped it without), and `OrbitControlsOptions` gains the same field, which `wireInput.ts:241` reads from `CONTROL_SCHEMES[scheme]` at press. In the `openspace` scheme a touch or pen press binds `orbit`, so every pointer gesture goes through the navigator; a second finger still pinches through the rung's zoom step.
 - At pointer-down, a non-null axis latches for the gesture. The recognizer emits a zero-delta `navMove` on the press itself (so the axis is held before any motion), then one `navMove` per move with its pixel delta, and never re-reads the modifiers mid-drag.
 - A null axis (the `skymap` scheme) takes today's path untouched.
-- A `navDrag` release never click-picks. The click test stays tied to the skymap `orbit` mode.
+- An `orbit`-axis release under the click threshold click-picks, as skymap's orbit does; a zoom, look or roll release never does (alt+left zoom shares the `orbit` drag mode, so the axis is what excludes it).
 - `beginDrag`/`endDrag` and `cancelCameraTween` fire as for any gesture, so `camera.dragging` still means "a button is held".
 - The aggregator turns `navMove` events into `navDrag` steps, folding consecutive moves of the same axis by summing `deltaPx`.
 - `replayInput` hands a `navDrag` step to the navigator, not the rung. While the navigator holds an axis it skips the `gestureEnd` base commit: the motion is one running fold, so a single-frame flick commits once, through the rows below.

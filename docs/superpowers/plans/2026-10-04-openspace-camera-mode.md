@@ -242,13 +242,13 @@ bindAxis?: (press: AxisPress) => NavAxis | null;
 - At the first contact's pointer-down, `bindAxis` is called once (absent ⇒ null). A non-null axis latches for the gesture. The recognizer emits `gestureStart`, then a `navMove` with `dxPx = dyPx = 0`, so the axis reaches the navigator on the press frame, before any motion. Each later move of the driving pointer emits a `navMove` with the delta since the last one. Modifiers are never re-read mid-gesture.
 - A null axis takes today's path, byte for byte.
 - A second finger promotes to pinch exactly as today (`orbitControls.ts:69-73`); `navMove` stops while pinching.
-- A latched-axis release never calls `onClick` (the click test stays tied to the skymap `orbit` mode, `orbitControls.ts:86`).
+- An `orbit`-axis release under the click threshold calls `onClick`, as skymap's orbit does; a zoom, look or roll release never does (ruled at the final review).
 - The aggregator turns `navMove` into `navDrag`, extending a trailing `navDrag` of the same axis by summing `deltaPx`. A zero-delta move still opens a step.
 - `wireInput` passes `bindAxis: (press) => CONTROL_SCHEMES[store.getState().settings.cameraControls.scheme].bindAxis(press)`. `beginDrag`/`cancelCameraTween` keep firing on `gestureStart` (`wireInput.ts:243-250`), so `camera.dragging` still means "a button is held".
 
 - [x] Test `the axis latched at press survives a modifier release`: press with ctrl+left (look), release ctrl, move, and every `navMove` says `look`.
 - [x] Test `a press emits a zero navMove before any motion`.
-- [x] Test `a latched release does not click-pick`.
+- [x] Test `a latched orbit release under the threshold click-picks`; look, zoom and roll releases do not.
 - [x] Test `without bindAxis the event stream is unchanged`: the existing recognizer tests pass untouched (no new test; they are the gate).
 - [x] Test `the aggregator sums same-axis navMoves and splits on an axis change`.
 - [x] `npm test -- orbitControls inputAggregator` is green. Commit: `feat(camera): latch an OpenSpace axis at press and emit navDrag deltas`.

@@ -284,7 +284,10 @@ describe('attachOrbitControls — gesture boundaries', () => {
 });
 
 describe('attachOrbitControls — a latched navigator axis', () => {
-  const mouseDown = (button: number, mods: { ctrlKey?: boolean } = {}) => ({
+  const mouseDown = (
+    button: number,
+    mods: { ctrlKey?: boolean; altKey?: boolean; shiftKey?: boolean } = {},
+  ) => ({
     pointerId: 1,
     pointerType: 'mouse',
     button,
@@ -330,15 +333,42 @@ describe('attachOrbitControls — a latched navigator axis', () => {
     expect(sink.kinds()).not.toContain('dragMove');
   });
 
-  it('does not click-pick on a latched release', () => {
+  const attachWithClick = () => {
     const { canvas, rec } = makeCanvas();
     const onClick = vi.fn();
     attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeSink().emit, {
       bindAxis: openSpaceAxisFor,
       onClick,
     });
+    return { rec, onClick };
+  };
+
+  it('a latched orbit release under the threshold click-picks', () => {
+    const { rec, onClick } = attachWithClick();
 
     rec.fire('pointerdown', mouseDown(0));
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onClick).toHaveBeenCalledWith(100, 100);
+  });
+
+  it('a latched touch tap click-picks', () => {
+    const { rec, onClick } = attachWithClick();
+
+    rec.fire('pointerdown', touchDown(1, 100, 100));
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onClick).toHaveBeenCalledWith(100, 100);
+  });
+
+  it.each([
+    ['look', { ctrlKey: true }],
+    ['zoom', { altKey: true }],
+    ['roll', { shiftKey: true }],
+  ] as const)('a latched %s release never click-picks', (_axis, mods) => {
+    const { rec, onClick } = attachWithClick();
+
+    rec.fire('pointerdown', mouseDown(0, mods));
     win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
 
     expect(onClick).not.toHaveBeenCalled();
