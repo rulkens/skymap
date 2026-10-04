@@ -6,6 +6,9 @@
  * concerns that need no aggregation, so they stay direct callbacks.
  */
 
+import type { AxisPress } from './AxisPress';
+import type { NavAxis } from './NavAxis';
+
 export type OrbitControlsOptions = {
   /**
    * Fires on a pointerup within 4 CSS pixels of its pointerdown — the
@@ -22,4 +25,10 @@ export type OrbitControlsOptions = {
    * that selection to focus, and neither step is missed.
    */
   onDoubleClick?: (xCss: number, yCss: number) => void;
+  /**
+   * Called once at the first contact's press. A non-null axis latches for the
+   * whole gesture and its motion leaves as `navMove`; null (or absent) keeps the
+   * skymap drag path.
+   */
+  bindAxis?: (press: AxisPress) => NavAxis | null;
 };

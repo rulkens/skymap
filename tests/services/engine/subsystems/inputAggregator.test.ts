@@ -104,4 +104,17 @@ describe('inputAggregator', () => {
 
     expect(agg.drain()).toHaveLength(2);
   });
+
+  it('sums same-axis navMoves into one navDrag and splits on an axis change', () => {
+    const agg = createInputAggregator();
+    agg.push({ kind: 'navMove', axis: 'orbit', dxPx: 0, dyPx: 0 });
+    agg.push({ kind: 'navMove', axis: 'orbit', dxPx: 3, dyPx: -1 });
+    agg.push({ kind: 'navMove', axis: 'orbit', dxPx: 4, dyPx: 2 });
+    agg.push({ kind: 'navMove', axis: 'zoom', dxPx: 0, dyPx: 5 });
+
+    expect(agg.drain()).toEqual([
+      { kind: 'navDrag', axis: 'orbit', deltaPx: [7, 1] },
+      { kind: 'navDrag', axis: 'zoom', deltaPx: [0, 5] },
+    ]);
+  });
 });

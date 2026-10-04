@@ -7,6 +7,7 @@
  */
 
 import { attachOrbitControls } from '../../camera/orbitControls';
+import { CONTROL_SCHEMES } from '../camera/controlSchemes';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
@@ -261,6 +262,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
             // dropped and the prior selection stands.
           });
       },
+      // Read per press, so a scheme toggle applies from the next gesture on.
+      bindAxis: (press) =>
+        CONTROL_SCHEMES[store.getState().settings.cameraControls.scheme].bindAxis(press),
       onDoubleClick: () => {
         // Read the select ref the preceding single-click wrote rather than
         // running a second pick — racing readbacks resolve out of order.

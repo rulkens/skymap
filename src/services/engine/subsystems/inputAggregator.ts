@@ -87,6 +87,18 @@ export function createInputAggregator(): InputAggregator {
           lastPinchDist = event.distPx;
           return;
 
+        case 'navMove': {
+          // A zero-delta press still opens a step: it is what tells the
+          // navigator an axis is held.
+          const tail = steps[steps.length - 1];
+          if (tail !== undefined && tail.kind === 'navDrag' && tail.axis === event.axis) {
+            tail.deltaPx = [tail.deltaPx[0] + event.dxPx, tail.deltaPx[1] + event.dyPx];
+          } else {
+            steps.push({ kind: 'navDrag', axis: event.axis, deltaPx: [event.dxPx, event.dyPx] });
+          }
+          return;
+        }
+
         case 'wheel':
           foldZoom(Math.exp(event.deltaY * WHEEL_ZOOM_K), event.duringGesture, [
             event.xPx,

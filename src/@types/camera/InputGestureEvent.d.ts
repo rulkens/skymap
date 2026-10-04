@@ -6,9 +6,11 @@
  * measures from the press point, not the previous gesture's last position. The
  * wheel carries its own cursor pixel because the body arm zooms toward what the
  * cursor is over with no pointer down (spec §6b), where no drag baseline exists.
+ * `navMove` is a pixel delta on the axis a control scheme latched at press.
  */
 
 import type { DragMode } from './DragMode';
+import type { NavAxis } from './NavAxis';
 
 export type InputGestureEvent =
   | { kind: 'gestureStart' }
@@ -17,4 +19,5 @@ export type InputGestureEvent =
   | { kind: 'dragMove'; mode: DragMode; xPx: number; yPx: number }
   | { kind: 'pinchAnchor'; distPx: number }
   | { kind: 'pinchMove'; distPx: number }
+  | { kind: 'navMove'; axis: NavAxis; dxPx: number; dyPx: number }
   | { kind: 'wheel'; deltaY: number; duringGesture: boolean; xPx: number; yPx: number };
