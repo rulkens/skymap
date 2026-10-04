@@ -206,6 +206,8 @@ acceptable shape is Cesium's flick-only synthetic-replay form with cross-cancel
 and no persistent velocity. Written now, zero LOC: a coast, if ever added,
 replays in the **body-fixed frame** (ground-fixed, not inertial).
 
+**Revised for the `openspace` scheme:** it drives a velocity model with true friction, as OpenSpace does ([spec](../superpowers/specs/2026-09-29-openspace-camera-mode-design.md)). The ruling above still stands for the `skymap` scheme.
+
 ## Q9: MapLibre's pole "dial" band
 
 **The question:** MapLibre special-cases drags within ~12° of a pole to preserve
