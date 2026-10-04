@@ -35,10 +35,10 @@
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
  * `camera.clip` is only written by `clipStarted`, which `playClip` dispatches
- * AFTER `watchClipSaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
+ * AFTER `clipBodySaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
  * `selectClipActive` reads false. A second `startClip` in that window would
- * be accepted, `takeLatest` would cancel worker A while it's still inside
+ * be accepted, `watchTakeoverSaga` would cancel run A while it's still inside
  * `waitUntilSaga` (before `playClip` ever ran, so no `[CANCEL]` hook fires and A
  * gets no `clipEnded`), and B's normal activate/end cycle would resolve BOTH
  * latches — caller A reports success for a clip it never filmed. So `startClip`
@@ -104,7 +104,7 @@ export function installRecorderHook(store: AppStore): void {
   // `selectClipActive` the way `runTour` uses `selectTourActive`.
   let clipInFlight = false;
 
-  // Same seen-active latch `runTour` uses, guarding against `watchClipSaga`'s
+  // Same seen-active latch `runTour` uses, guarding against `clipBodySaga`'s
   // foci/runtime `waitUntilSaga` gate: `camera.clip` stays null across however
   // many store updates land before the clip activates, so a latch that
   // resolved on any inactive reading would resolve instantly and film zero

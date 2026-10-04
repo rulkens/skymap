@@ -56,7 +56,7 @@ const REFRAME_JOIN = 0.85;
 
 /**
  * The whole fly, in seconds. Leg 2 outlasts leg 1, so it sets the end — the
- * exhibit's copy waits on this (`ExhibitOverlayContainer`).
+ * exhibit's copy waits on this (`selectExhibitCopyDelaySec`).
  */
 export const FLY_TO_POSE_SEC = PULL_BACK_SEC * REFRAME_JOIN + REFRAME_SEC;
 

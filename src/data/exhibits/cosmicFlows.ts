@@ -8,7 +8,7 @@ import { initialState as flowInitialState } from '../../layers/flow/state/flow/i
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
-import { GALAXIES_OFF } from './utils/galaxiesOff';
+import { SURVEYS_OFF } from './utils/surveysOff';
 import { COSMIC_WEB_DENSITY_OFF } from './utils/cosmicWebDensityOff';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 
@@ -33,7 +33,7 @@ export const cosmicFlows: Exhibit = {
   label: 'Cosmic Flows',
   settings: {
     flow: { ...flowInitialState, enabled: true },
-    galaxyCatalogs: GALAXIES_OFF,
+    galaxyCatalogs: SURVEYS_OFF,
     milkyWay: MILKY_WAY_WITH_MARKER,
     cosmicWebDensity: COSMIC_WEB_DENSITY_OFF,
   },
@@ -68,7 +68,7 @@ export const cosmicFlows: Exhibit = {
         onWord: 'shown',
         offWord: 'hidden in this view',
         on: [mergeSnapshot({ galaxyCatalogs: galaxyCatalogsInitialState })],
-        off: [mergeSnapshot({ galaxyCatalogs: GALAXIES_OFF })],
+        off: [mergeSnapshot({ galaxyCatalogs: SURVEYS_OFF })],
       },
     },
     {

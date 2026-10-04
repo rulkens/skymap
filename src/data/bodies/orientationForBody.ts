@@ -12,6 +12,7 @@ import { SITE_GROUND_UPS_ENU } from './siteGroundHeights.generated';
 import { CONST_J2000 } from '../time/constJ2000';
 import { rotationFromIau } from '../../utils/orbit/rotationFromIau';
 import { rotationLookAt } from '../../utils/orbit/rotationLookAt';
+import { rotationTidallyLocked } from '../../utils/orbit/rotationTidallyLocked';
 import { rotationSurfaceLocked } from '../../utils/orbit/rotationSurfaceLocked';
 import { IDENTITY_MAT3 } from '../../utils/math/identityMat3';
 import type { Mat3 } from '../../@types/math/Mat3';
@@ -77,6 +78,18 @@ export function orientationForBody(
         hostPoleWorld,
         row.headingDeg,
         groundUpEnu,
+      );
+    }
+    case 'tidallyLocked': {
+      const hostId = bodyHostId(id);
+      if (hostId === null) {
+        throw new Error(`orientationForBody: tidally-locked '${id}' hangs off no host`);
+      }
+      return rotationTidallyLocked(
+        positionOrThrow(positions, id, id),
+        positionOrThrow(positions, hostId, id),
+        row.poleRaDeg,
+        row.poleDecDeg,
       );
     }
     default: {

@@ -444,6 +444,42 @@ All public domain; NASA asks that credit go to the named observatory / program.
 - **Licence:** Public domain. Credit: "NASA/JPL/Space Science Institute",
   publisher USGS Astrogeology.
 
+#### NASA Photojournal — Saturn moon colour maps (Cassini, 2014)
+
+- **Use:** Global surface maps for Mimas, Tethys, Dione, Rhea and Iapetus
+  (PIA18437, PIA18439, PIA18434, PIA18438, PIA18436). Their colour is enhanced
+  into the UV and IR, so the build keeps luminance only and applies a
+  `monoTint` hue and `lift`; each map is re-centred from 180° to the prime
+  meridian.
+- **Source:** NASA Photojournal, <https://photojournal.jpl.nasa.gov/>; mosaics
+  assembled by Paul Schenk (Lunar and Planetary Institute).
+- **Licence:** Public domain. Credit: "NASA/JPL-Caltech/Space Science
+  Institute/Lunar and Planetary Institute".
+
+#### NASA PDS Small Bodies Node — Gaskell shape models (Mimas, Tethys, Dione)
+
+- **Use:** Each moon's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Gaskell Mimas / Tethys / Dione Shape Model",
+  <https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/>
+  (and `gaskell.tethys.shape-model`, `gaskell.dione.shape-model`).
+- **Licence:** Public domain. Credit: "Robert Gaskell / NASA PDS Small Bodies
+  Node".
+
+#### NASA PDS / Paul Schenk (LPI) — Enceladus global DEM (Cassini)
+
+- **Use:** Enceladus's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Enceladus Cassini Global DEM 200m Schenk" (Lunar and Planetary
+  Institute/USRA; published by the Planetary Data System 2024-08-12,
+  distributed by USGS Astrogeology),
+  <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>.
+- **Licence:** No access constraints; use constraint "Please cite authors".
+  Citation: Schenk, P. M. & McKinnon, W. B. (2024), "New global topography of
+  Enceladus: Hypsometry, basins, spherical harmonics, shell thickness, and true
+  polar wander revisited", _Icarus_ 408,
+  <https://doi.org/10.1016/j.icarus.2023.115827>.
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

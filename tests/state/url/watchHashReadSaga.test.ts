@@ -17,7 +17,7 @@
  *
  * Two of those are load-bearing far out of proportion to their line count. The
  * boot suppression is what stops a bare page load dispatching `clearSelection`
- * over the engine's Earth seed; the empty-value routing is the single
+ * over the arrival's home seed; the empty-value routing is the single
  * expression that makes `HashParamSource.read`'s "never called with an empty
  * value" contract true for every row at once.
  *
@@ -43,13 +43,11 @@ import { createHashChangeChannel } from '../../../src/services/url/createHashCha
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchHashReadSaga } from '../../../src/state/url/watchHashReadSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
-import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
+import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { startTour } from '../../../src/state/tour/tourActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 /**
@@ -82,15 +80,25 @@ function buildHarness(arrivalBody: string) {
   };
 
   const sagaMiddleware = createSagaMiddleware();
-  // The store is here for the real reducers the saga's `put`s land in and for
-  // the middleware chain; no case reads its state back, so it needs no binding.
-  configureStore({
+  // The real reducers the saga's `put`s land in; a case seeds a running play
+  // through it.
+  const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(recorder, sagaMiddleware),
+  });
+  // A live camera, so a pose commit lands at once rather than waiting on boot.
+  sagaMiddleware.setContext({
+    cameraRuntime: () => ({
+      from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+      fovYRad: 0.8,
+      aspect: 1,
+      upBasisQuat: [0, 0, 0, 1],
+    }),
   });
   const task = sagaMiddleware.run(watchHashReadSaga);
 
   return {
+    store,
     recorded,
     emit: (body: string) => emit(body),
     task,
@@ -99,28 +107,25 @@ function buildHarness(arrivalBody: string) {
 }
 
 describe('watchHashReadSaga', () => {
-  it('turns an arrival deep link into a select plus a fly', () => {
-    const { recorded } = buildHarness('focus=m31');
+  it('hands the arrival link to arrivalSaga as one intent, applying nothing itself', () => {
+    const { recorded } = buildHarness('focus=m31&orientation=galactic');
 
-    // The select + fly, because arriving by URL is meant to look like a scene
-    // click (pins the InfoCard) plus a fly (moves the camera) — a `read` that
-    // lost one of them would still navigate, or still pin, and look almost
-    // right. `hashArrivalApplied` follows: the boot read's own signal that it
-    // applied a non-empty URL, which the write half takes to canonicalize its
-    // first settled publish instead of pushing (`hashHistoryIntegrity`).
-    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31'), hashArrivalApplied()]);
+    // The first view is `arrivalSaga`'s: a select or focus put here would race
+    // the cut it makes once the camera exists.
+    expect(recorded).toEqual([
+      arrivalPending({ view: { kind: 'focus', id: 'm31' }, orientation: 'galactic' }),
+    ]);
   });
 
-  it('dispatches nothing at all on a bare arrival URL', () => {
+  it('consults no absent row on a bare arrival URL', () => {
     const { recorded } = buildHarness('');
 
-    // The most load-bearing case in this file. Every param is absent, and the
-    // boot read must consult NO row's `readAbsent` — `clearSelection()` here
-    // would race `wireInput`'s home seed on every ordinary page load, and the
-    // loser is whichever landed first. `toEqual([])` rather than a
+    // Every param is absent, and the boot read must consult NO row's
+    // `readAbsent` — `clearSelection()` here would race the arrival's home seed
+    // on every ordinary page load. An exact list rather than a
     // `not.toContainEqual(clearSelection())` so the same guarantee holds for a
     // row added later, which will have its own default to over-assert.
-    expect(recorded).toEqual([]);
+    expect(recorded).toEqual([arrivalPending({ view: { kind: 'home' } })]);
   });
 
   it('restores param defaults when a hashchange arrives bare', () => {
@@ -154,23 +159,27 @@ describe('watchHashReadSaga', () => {
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
   });
 
-  it('applies AND parks a pose the same way on arrival and on a later navigation', () => {
-    // The codec round-trips an explicit `roll`, which `absoluteArm` leaves off.
-    const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
-    const { recorded, emit } = buildHarness(`pose=${encodeFramedPose(pose)}`);
-
-    // Both actions fire at boot too — the camera doesn't exist yet, but a
-    // commit lands in the store regardless (the seed re-commits the same
-    // object) and the park is what the arrival focus later spends.
-    expect(recorded).toEqual([applyUrlPose(pose), commitCameraPose(pose), hashArrivalApplied()]);
+  it("back to a URL without the running tour's key exits the tour", () => {
+    const { store, recorded, emit } = buildHarness('');
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
     recorded.length = 0;
 
-    emit(`pose=${encodeFramedPose(pose)}`);
+    emit('focus=body-mars');
 
-    // Same row order on a hashchange: pose is read first (table order), so it
-    // applies before the other rows' absent arms (focus, t, orientation) fire.
-    expect(recorded[0]).toEqual(applyUrlPose(pose));
-    expect(recorded[1]).toEqual(commitCameraPose(pose));
+    expect(recorded).toContainEqual(exitTakeover());
+  });
+
+  it('an entry naming the running tour neither exits nor restarts it', () => {
+    // Back across the tour's own pushes (one per beat focus) lands here.
+    const { store, recorded, emit } = buildHarness('');
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
+    recorded.length = 0;
+
+    emit('focus=body-mars&tour=grandTour');
+
+    const types = recorded.map((action) => action.type);
+    expect(types).not.toContain(exitTakeover.type);
+    expect(types).not.toContain(startTour.type);
   });
 
   it('detaches the channel subscriber when cancelled', () => {

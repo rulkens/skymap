@@ -32,7 +32,6 @@ import { clearSelection, updateSelectionFocus } from '../selection/selectionSlic
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
-import { stopClip } from '../camera/clipActions';
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
 import { selectTimeState } from '../time/selectors';
@@ -47,12 +46,9 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
     preventDefault: true,
   },
-  // `stopClip` alongside `exitTakeover`: a tour beat's clip plays via a direct
-  // `playClip` call (see `visitBeatSaga`), never through `startClip`, so the
-  // two stops target disjoint playback paths and can't fight over the same
-  // clip. Both are no-ops when their respective thing isn't running (same as
-  // `exitTakeover` already was), so no precedence check is needed here.
-  { keys: 'escape', run: () => [clearSelection(), exitTakeover(), stopClip()] },
+  // `exitTakeover` ends whatever runs — a tour, an exhibit, a registry clip, or
+  // the debug path replay — and is a no-op when nothing does.
+  { keys: 'escape', run: () => [clearSelection(), exitTakeover()] },
   {
     keys: 'f',
     run: (s) => {

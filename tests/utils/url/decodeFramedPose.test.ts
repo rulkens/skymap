@@ -4,6 +4,7 @@ import { decodeFramedPose } from '../../../src/utils/url/decodeFramedPose';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
+import { worldArmOf } from '../../fixtures/worldArmOf';
 
 // The Everest body arm from a real `l`-key dump (earth-everest.json).
 const EVEREST_ARM: FramedCameraPose = {
@@ -41,6 +42,16 @@ describe('decodeFramedPose', () => {
 
   it('round-trips a world arm bit-exact', () => {
     expect(decodeFramedPose(encodeFramedPose(WORLD_ARM))).toEqual(WORLD_ARM);
+  });
+
+  it('framed pose round-trips a non-zero lookOffset through the hash', () => {
+    const offset: FramedCameraPose = {
+      frame: 'absolute',
+      pose: { ...worldArmOf(WORLD_ARM), lookOffset: [0.3, -0.125] },
+    };
+    const got = worldArmOf(decodeFramedPose(encodeFramedPose(offset))!).lookOffset!;
+    expect(got[0]).toBeCloseTo(0.3, 12);
+    expect(got[1]).toBeCloseTo(-0.125, 12);
   });
 
   it('rejects an unrecognised tag', () => {

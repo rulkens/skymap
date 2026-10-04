@@ -49,7 +49,8 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
   }
 
   if (tag === 'a') {
-    if (fields.length !== 8) return null;
+    // 8 fields, or 10 with a trailing `lookOffset` pair.
+    if (fields.length !== 8 && fields.length !== 10) return null;
     const n = parseFiniteNumbers(fields.slice(1));
     if (n === null) return null;
     // `distance` is `CameraPose`'s Mpc field, so the same degeneracy floor
@@ -63,6 +64,7 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
         pitch: n[4]!,
         distance: n[5]!,
         roll: n[6]!,
+        ...(n.length === 9 && { lookOffset: [n[7]!, n[8]!] }),
       },
     };
   }

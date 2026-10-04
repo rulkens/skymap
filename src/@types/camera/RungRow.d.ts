@@ -1,3 +1,4 @@
+import type { ArmDelta } from './ArmDelta';
 import type { RungKind } from './RungKind';
 import type { FrameOf } from './FrameOf';
 import type { FramedPose } from './FramedPose';
@@ -10,7 +11,7 @@ import type { RungCtx } from './RungCtx';
 import type { HostBody } from './HostBody';
 import type { TiltMemory } from './TiltMemory';
 
-/** One rung's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step. */
+/** One rung's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step and its nudge. */
 export type RungRow<K extends RungKind> = {
   readonly kind: K;
   host(frame: FrameOf[K], ctx: RungBasisCtx): HostBody | null;
@@ -33,4 +34,15 @@ export type RungRow<K extends RungKind> = {
     input: InputStep,
     ctx: RungCtx,
   ): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory };
+  /**
+   * One frame's pixel-free motion in this rung's own frame, at the equivalent
+   * drag's rate. A delta the rung ignores entirely returns `framed.pose` BY
+   * REFERENCE, the same identity rule as `step`.
+   */
+  nudge(
+    tilt: TiltMemory,
+    framed: FramedPose<K>,
+    delta: ArmDelta,
+    ctx: RungCtx,
+  ): { readonly pose: PoseOf[K]; readonly tilt: TiltMemory };
 };

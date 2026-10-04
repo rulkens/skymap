@@ -55,7 +55,6 @@ import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
-import { goLive } from '../../../../src/state/time/timeSlice';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
@@ -113,19 +112,11 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
  * Minimal `BootstrapDeps` shaped for startLoop's body.  Populates only
  * the fields the phase reads.  `frameRef.current` starts as a no-op
  * stub so we can assert it gets replaced.
- *
- * `timeMode` is what the phase's clock-snap guard reads: 'live' is the
- * untouched boot default; 'manual' is where a `#t=` deep link's arrival
- * read lands the clock before this phase runs.
  */
-function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}): BootstrapDeps {
+function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
-    // `startLoop` dispatches the bootstrap `goLive` through this store — a
-    // spy so the clock-snap can be asserted without a real reducer.
-    cb: {
-      store: { dispatch: vi.fn(), getState: () => ({ time: { mode: timeMode } }) },
-    } as never,
+    cb: { store: { dispatch: vi.fn(), getState: () => ({}) } } as never,
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },
@@ -203,48 +194,6 @@ describe('startLoop', () => {
 
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
     expect(deps.frameRef.current).not.toBe(originalFrameBody);
-  });
-
-  it('dispatches goLive exactly once to snap the sim clock to the real instant on load', async () => {
-    // A bare load must show the sky as it is right now. The time slice seeds at
-    // J2000 as a deterministic static anchor; this single bootstrap dispatch is
-    // what overwrites it with the wall-clock JD. It runs once (startLoop is the
-    // terminal boot phase), so no re-fire guard is needed.
-    const state = makeState({ cloudCount: 1 });
-    const deps = makeDeps();
-
-    await startLoop(state, deps);
-
-    const dispatch = deps.cb.store.dispatch as unknown as ReturnType<typeof vi.fn>;
-    const goLiveCalls = dispatch.mock.calls.filter(
-      (call) => (call[0] as { type?: string }).type === goLive.type,
-    );
-    expect(goLiveCalls).toHaveLength(1);
-    const payload = (goLiveCalls[0]![0] as ReturnType<typeof goLive>).payload;
-    // A plausible present-day Julian day (well past J2000's 2451545) and a
-    // finite performance.now() anchor.
-    expect(payload.simDays).toBeGreaterThan(2451545);
-    expect(Number.isFinite(payload.nowMs)).toBe(true);
-  });
-
-  it('skips the boot goLive when the clock is already in manual mode (a #t= deep link)', async () => {
-    // The arrival read (`watchHashReadSaga`) applies `#t=<instant>` as
-    // manual+paused BEFORE this async phase runs — same boot ordering
-    // `wireInput` relies on for its Earth seed. An unconditional goLive here
-    // would clobber that deep link back to the wall clock, and the write half
-    // would then strip `t` off the address bar.
-    const state = makeState({ cloudCount: 1 });
-    const deps = makeDeps({ timeMode: 'manual' });
-
-    await startLoop(state, deps);
-
-    const dispatch = deps.cb.store.dispatch as unknown as ReturnType<typeof vi.fn>;
-    const goLiveCalls = dispatch.mock.calls.filter(
-      (call) => (call[0] as { type?: string }).type === goLive.type,
-    );
-    expect(goLiveCalls).toHaveLength(0);
-    // The rest of the phase is unaffected — the loop still starts.
-    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('throws a clear error when initGpu never ran', async () => {

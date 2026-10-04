@@ -19,8 +19,7 @@
 import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
-import { startCameraTween, spendUrlPose } from '../camera/cameraSlice';
-import { selectUrlPose } from '../camera/selectors';
+import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
@@ -39,20 +38,12 @@ export function* watchFocusTweenSaga() {
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      // A body/milkyWay id resolves synchronously off the hash read, before
-      // `wireInput` runs — waiting for the camera first keeps the urlPose
-      // check below from reading a park the boot commit hasn't landed yet.
+      // A cut lands with no move; `navigateSaga` commits its framing.
+      if (action.meta.transition === 'cut') return;
+
+      // A focus that resolves before `wireInput` runs has no camera to fly yet.
       while (cameraRuntime() === null) {
         yield* take(engineStatusChanged);
-      }
-
-      // A parked `#pose=` link IS the destination — flying there would land the
-      // tween on top of it. This, the arrival focus, is what spends the park.
-      // Accepted edge: a home-less boot or a junk id that never resolves still
-      // spends here, so the user's first focus after it does not fly, once.
-      if ((yield* select(selectUrlPose)) !== null) {
-        yield* put(spendUrlPose());
-        return;
       }
 
       // A structure deep link resolves its ref statically at bootstrap (a

@@ -27,7 +27,7 @@ describe('SCENE_EARTH', () => {
     // Earth's facing is baked from its IAU rotation elements through the same
     // util the derive calls — this pins the wiring, not a matrix restatement.
     const earthRow = rotationRowById('earth')!;
-    if (!('poleRaDeg' in earthRow)) throw new Error('earth must be an IAU-pole row');
+    if (!('primeMeridianDeg' in earthRow)) throw new Error('earth must be an IAU-pole row');
     expect(earthState.orientation).toEqual(rotationFromIau(earthRow));
   });
 });
