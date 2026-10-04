@@ -66,7 +66,7 @@ describe('textures.* rows', () => {
       (key) =>
         RAW_DATA[key].source === 'gitignored' &&
         RAW_DATA[key].kind === 'file' &&
-        !RAW_DATA[key].manualDownload,
+        !('manualDownload' in RAW_DATA[key]),
     );
     expect(rawSources.length).toBeGreaterThan(0);
     for (const key of rawSources) {
