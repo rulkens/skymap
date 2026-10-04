@@ -34,6 +34,7 @@ import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedPose } from '../../../@types/camera/FramedPose';
 import type { InputStep } from '../../../@types/camera/InputStep';
 import type { MemOf } from '../../../@types/camera/MemOf';
+import type { NavStep } from '../../../@types/camera/NavStep';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { RungKind } from '../../../@types/camera/RungKind';
 import type { TiltMemory } from '../../../@types/camera/TiltMemory';
@@ -53,6 +54,9 @@ export function replayInput(
     readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
+    readonly navHeld: boolean;
+    /** Last frame's winner was a navigator row: its register, not `base`, is the live pose. */
+    readonly navOwns: boolean;
   },
 ): {
   readonly register: FramedCameraPose;
@@ -61,6 +65,8 @@ export function replayInput(
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
+  /** The navigator's input, in order; a `gestureEnd` is also handled here. */
+  readonly navSteps: readonly NavStep[];
 } {
   const { ctx, rootState, nowMs, winnerLastFrame } = args;
   const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
@@ -81,6 +87,9 @@ export function replayInput(
   let autoRotateEpoch = args.autoRotateEpoch;
   let camera = rootState.camera;
   const actions: UnknownAction[] = [];
+  const navSteps: NavStep[] = [];
+  // Folded as `stepNavigator` folds `held`, so a press, move and release in one drain counts.
+  let navHeld = args.navHeld;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
     camera = cameraReducer(camera, action);
@@ -185,9 +194,13 @@ export function replayInput(
         // ONE commit site for both arms: bake the register into `base` before
         // `endDrag`. Skipped while a clip owns the camera and across an arm
         // mismatch — the fold owns regime edges; a commit here must never flip one.
-        if (camera.clip === null && sameFrame(register.frame, camera.base.frame)) {
+        // Skipped under a held navigator too: the release starts its coast, and
+        // the navigator rows' own edge commit bakes where the coast stops.
+        if (camera.clip === null && !navHeld && sameFrame(register.frame, camera.base.frame)) {
           emit(commitCameraPose(register));
         }
+        navHeld = false;
+        navSteps.push(step);
         stepRegister(step);
         emit(endDrag());
         break;
@@ -195,6 +208,11 @@ export function replayInput(
 
       case 'drag':
         stepRegister(step);
+        break;
+
+      case 'navDrag':
+        navHeld = true;
+        navSteps.push(step);
         break;
 
       case 'zoom': {
@@ -210,7 +228,12 @@ export function replayInput(
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
           !step.duringGesture && isFollowDriverId(winnerLastFrame) && followTargetBefore !== null;
-        if (!ridesTheFollow && stepRegister(step)) break;
+        // While the navigator owns the camera, `base` is the last commit, not the
+        // view (R11): an at-rest notch would zoom that stale pose and snap back to
+        // it. It rides the live register instead, as a held gesture's does, and
+        // the navigator rows' at-rest commit bakes it.
+        const notch = args.navOwns && !step.duringGesture ? { ...step, duringGesture: true } : step;
+        if (!ridesTheFollow && stepRegister(notch)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
           // Ruling 8: the ride's authored altitude move IS that target change —
@@ -273,5 +296,6 @@ export function replayInput(
     follow,
     followDistanceTarget,
     actions,
+    navSteps,
   };
 }

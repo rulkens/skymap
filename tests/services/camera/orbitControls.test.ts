@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
 import { PINCH_WHEEL_GAIN } from '../../../src/data/camera/pinchWheelGain';
+import { openSpaceAxisFor } from '../../../src/utils/camera/openSpaceAxisFor';
 import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
 
 type Listener = (e: unknown) => void;
@@ -279,5 +280,97 @@ describe('attachOrbitControls — gesture boundaries', () => {
     const before = sink.events.length;
     win.fire('pointermove', { pointerId: 2, clientX: 90, clientY: 0 });
     expect(sink.events).toHaveLength(before);
+  });
+});
+
+describe('attachOrbitControls — a latched navigator axis', () => {
+  const mouseDown = (
+    button: number,
+    mods: { ctrlKey?: boolean; altKey?: boolean; shiftKey?: boolean } = {},
+  ) => ({
+    pointerId: 1,
+    pointerType: 'mouse',
+    button,
+    clientX: 100,
+    clientY: 100,
+    ctrlKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...mods,
+  });
+
+  it('emits a zero navMove on press, before any motion', () => {
+    const { canvas, rec } = makeCanvas();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit, {
+      bindAxis: openSpaceAxisFor,
+    });
+
+    rec.fire('pointerdown', mouseDown(0));
+
+    expect(sink.events).toEqual([
+      { kind: 'gestureStart' },
+      { kind: 'navMove', axis: 'orbit', dxPx: 0, dyPx: 0 },
+    ]);
+  });
+
+  it('keeps the axis latched at press after the modifier is released', () => {
+    const { canvas, rec } = makeCanvas();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit, {
+      bindAxis: openSpaceAxisFor,
+    });
+
+    rec.fire('pointerdown', mouseDown(0, { ctrlKey: true }));
+    win.fire('pointermove', { pointerId: 1, clientX: 110, clientY: 95, ctrlKey: false });
+    win.fire('pointermove', { pointerId: 1, clientX: 130, clientY: 95, ctrlKey: false });
+
+    expect(sink.events.filter((e) => e.kind === 'navMove')).toEqual([
+      { kind: 'navMove', axis: 'look', dxPx: 0, dyPx: 0 },
+      { kind: 'navMove', axis: 'look', dxPx: 10, dyPx: -5 },
+      { kind: 'navMove', axis: 'look', dxPx: 20, dyPx: 0 },
+    ]);
+    expect(sink.kinds()).not.toContain('dragMove');
+  });
+
+  const attachWithClick = () => {
+    const { canvas, rec } = makeCanvas();
+    const onClick = vi.fn();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeSink().emit, {
+      bindAxis: openSpaceAxisFor,
+      onClick,
+    });
+    return { rec, onClick };
+  };
+
+  it('a latched orbit release under the threshold click-picks', () => {
+    const { rec, onClick } = attachWithClick();
+
+    rec.fire('pointerdown', mouseDown(0));
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onClick).toHaveBeenCalledWith(100, 100);
+  });
+
+  it('a latched touch tap click-picks', () => {
+    const { rec, onClick } = attachWithClick();
+
+    rec.fire('pointerdown', touchDown(1, 100, 100));
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onClick).toHaveBeenCalledWith(100, 100);
+  });
+
+  it.each([
+    ['look', { ctrlKey: true }],
+    ['zoom', { altKey: true }],
+    ['roll', { shiftKey: true }],
+  ] as const)('a latched %s release never click-picks', (_axis, mods) => {
+    const { rec, onClick } = attachWithClick();
+
+    rec.fire('pointerdown', mouseDown(0, mods));
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

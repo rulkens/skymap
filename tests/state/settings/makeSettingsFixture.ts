@@ -68,6 +68,7 @@ import { initialState as localBubbleInitialState } from '../../../src/layers/loc
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
+import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
@@ -85,6 +86,7 @@ export function makeSettingsFixture(
 ): EngineSettingsState {
   return {
     orientation: DEFAULT_ORIENTATION,
+    cameraControls: DEFAULT_CAMERA_CONTROLS,
     camera: {
       fovDeg: DEFAULT_FOV_DEG,
     },

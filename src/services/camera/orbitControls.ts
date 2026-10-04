@@ -10,6 +10,7 @@
  */
 
 import type { InputGestureEvent } from '../../@types/camera/InputGestureEvent';
+import type { NavAxis } from '../../@types/camera/NavAxis';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
 import { PINCH_WHEEL_GAIN } from '../../data/camera/pinchWheelGain';
 
@@ -20,6 +21,11 @@ export function attachOrbitControls(
 ): () => void {
   type DragMode = 'orbit' | 'pan' | 'pinch';
   let dragMode: DragMode | null = null;
+  // Latched once at press: OpenSpace binds the axis from the press's buttons and
+  // modifiers, so releasing ctrl mid-drag must not turn a look into an orbit.
+  let navAxis: NavAxis | null = null;
+  let navLastX = 0;
+  let navLastY = 0;
 
   // Contacts other than `dragPointerId` are tracked only so they tear down
   // cleanly; they never drive a single-pointer gesture.
@@ -50,6 +56,7 @@ export function attachOrbitControls(
       activePointers.clear();
       dragMode = null;
       dragPointerId = null;
+      navAxis = null;
     }
 
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -64,8 +71,25 @@ export function attachOrbitControls(
 
       // First contact only — a second finger promoting to pinch does NOT start
       // a new gesture. And no `setPointerCapture` (see the listeners below).
+      navAxis =
+        options?.bindAxis?.({
+          button: e.button,
+          ctrl: e.ctrlKey,
+          alt: e.altKey,
+          shift: e.shiftKey,
+          pointerType: e.pointerType,
+        }) ?? null;
+
       emit({ kind: 'gestureStart' });
-      emit({ kind: 'dragAnchor', xPx: e.clientX, yPx: e.clientY });
+      if (navAxis === null) {
+        emit({ kind: 'dragAnchor', xPx: e.clientX, yPx: e.clientY });
+      } else {
+        // A zero move puts the axis in the navigator on the press frame, so a
+        // held-still press already holds (and stops a coast) before any motion.
+        navLastX = e.clientX;
+        navLastY = e.clientY;
+        emit({ kind: 'navMove', axis: navAxis, dxPx: 0, dyPx: 0 });
+      }
     } else if (activePointers.size === 2) {
       // `dragPointerId` stays intact; `dragMode` is what gates `onMove`.
       dragMode = 'pinch';
@@ -80,12 +104,19 @@ export function attachOrbitControls(
 
     if (activePointers.size === 0) {
       const endedMode = dragMode;
+      const endedAxis = navAxis;
       dragMode = null;
       dragPointerId = null;
+      navAxis = null;
 
       // Click only on an ORBIT release: a pan release (right/middle mouse) must
-      // not pick a galaxy, and the second finger of a pinch is not a tap.
-      if (options?.onClick && endedMode === 'orbit') {
+      // not pick a galaxy, and the second finger of a pinch is not a tap. A
+      // latched axis checks the axis too: alt+left zoom still has mode 'orbit'.
+      if (
+        options?.onClick &&
+        endedMode === 'orbit' &&
+        (endedAxis === null || endedAxis === 'orbit')
+      ) {
         const dx = e.clientX - downX;
         const dy = e.clientY - downY;
         if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {
@@ -120,6 +151,18 @@ export function attachOrbitControls(
     // Only the driving pointer drives: otherwise a second contact yanks the
     // baseline back and forth and the orbit jitters.
     if (e.pointerId !== dragPointerId) return;
+
+    if (navAxis !== null) {
+      emit({
+        kind: 'navMove',
+        axis: navAxis,
+        dxPx: e.clientX - navLastX,
+        dyPx: e.clientY - navLastY,
+      });
+      navLastX = e.clientX;
+      navLastY = e.clientY;
+      return;
+    }
 
     // Client (viewport-relative) coords survive a scrolled/transformed canvas.
     emit({ kind: 'dragMove', mode: dragMode, xPx: e.clientX, yPx: e.clientY });

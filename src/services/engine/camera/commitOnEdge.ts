@@ -13,7 +13,6 @@ import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
 const NO_ACTIONS: readonly UnknownAction[] = [];
 
@@ -35,10 +34,11 @@ export function commitOnEdge(args: {
 } {
   const { register, displayed, prevWinner, winner, drivers } = args;
   const departing = drivers.find((d) => d.id === prevWinner);
-  // The follow pair is ONE author: committing between them baked the OLD body's
-  // distance into `base`, which the pin then read around the NEW body.
+  // A family is ONE author: committing between the follow pair baked the OLD
+  // body's distance into `base`, which the pin then read around the NEW body.
   const sameAuthor =
-    prevWinner === winner.id || (isFollowDriverId(prevWinner) && isFollowDriverId(winner.id));
+    prevWinner === winner.id ||
+    (departing?.family !== undefined && departing.family === winner.family);
   if (sameAuthor || !departing?.commitsOnEdge) {
     return { render: null, committed: null, authoredOverride: null, actions: NO_ACTIONS };
   }

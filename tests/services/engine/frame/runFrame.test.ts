@@ -87,6 +87,7 @@ import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
+import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -253,6 +254,8 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      navigator: NAV_AT_REST,
+      scheme: 'skymap',
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,
@@ -805,7 +808,10 @@ describe('runFrame — sim clock (Task 8)', () => {
     };
     const deps: RunFrameDeps = {
       ...makeCamDeps(state, store),
-      controlSchemes: { skymap: { drivers: [stub] } },
+      controlSchemes: {
+        ...CONTROL_SCHEMES,
+        skymap: { ...CONTROL_SCHEMES.skymap, drivers: [stub] },
+      },
     };
 
     runFrame(state, deps, NOW);
@@ -1176,7 +1182,13 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
+    const deps = {
+      ...h.deps,
+      controlSchemes: {
+        ...CONTROL_SCHEMES,
+        skymap: { ...CONTROL_SCHEMES.skymap, drivers: [probe, ...CAMERA_DRIVERS] },
+      },
+    };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);

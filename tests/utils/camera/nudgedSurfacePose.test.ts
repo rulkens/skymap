@@ -92,6 +92,30 @@ describe('nudgedSurfacePose', () => {
     expect(rolled.tilt.rememberedTiltRad).toBe(looked.tilt.rememberedTiltRad);
   });
 
+  it('a body orbit nudge slows with altitude, so the ground tracks the drag', () => {
+    const angleBetween = (a: Vec3, b: Vec3) =>
+      Math.acos(Math.min(1, dot(a, b) / Math.hypot(...a) / Math.hypot(...b)));
+    const eyeOf = (p: BodyFixedPose): Vec3 => [
+      p.anchorLocalM[0] + p.eyeRelAnchorM[0],
+      p.anchorLocalM[1] + p.eyeRelAnchorM[1],
+      p.anchorLocalM[2] + p.eyeRelAnchorM[2],
+    ];
+    const swept = (h: number) => {
+      const low: BodyFixedPose = { ...seed, eyeRelAnchorM: [R + h, 0, 0] };
+      const pose: BodyFixedPose = {
+        ...low,
+        basisLocal: canonicalBasisAt(eyeFrameOf(low, 1, POLE)!, 0.3, 0.2),
+      };
+      const nudged = nudgedSurfacePose(pose, EMPTY_TILT_MEMORY, { orbit: [0.1, 0] }, CTX);
+      return angleBetween(eyeOf(pose), eyeOf(nudged.pose));
+    };
+    // Ground under the eye moves ~θ·h for a screen angle θ (2·tan(fov/2)/fov = 4/π here),
+    // so the sweep about the centre is ~θ·h/R — not θ, which would cross the planet.
+    expect(swept(0.001)).toBeLessThan(0.1 * 0.001 * 2);
+    expect(swept(0.001)).toBeGreaterThan(0);
+    expect(swept(0.01) / swept(0.001)).toBeCloseTo(10, 0);
+  });
+
   it('an empty delta returns the pose by reference', () => {
     expect(nudgedSurfacePose(POSE, EMPTY_TILT_MEMORY, {}, CTX).pose).toBe(POSE);
   });
