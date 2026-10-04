@@ -809,6 +809,39 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.gaskellMimasShape': {
+    path: 'data/raw/textures/mimas_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Mimas shape model (PDS SBN, CO-SA-ISSNA-5-MIMASSHAPE-V2.0, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 187.6-210.8 km; build-only bake input for Mimas's normal map. Its frame uses prime-meridian W0 = 337.46 deg vs the texture's 333.46, so texture lon L reads shape lon L + 4 (measured by cross-correlation); ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.gaskellTethysShape': {
+    path: 'data/raw/textures/tethys_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.1 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.tethys.shape-model/data/tethys_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.gaskellDioneShape': {
+    path: 'data/raw/textures/dione_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Dione shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 554.2-566.1 km; build-only bake input for Dione's normal map. Texture lon L reads shape lon L - 0.6 (measured by cross-correlation; agrees with the prime-meridian constants). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.dione.shape-model/data/dione_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.earthClouds': {
     path: 'data/raw/textures/cloud_combined_8192.tif',
     kind: 'file',
@@ -886,6 +919,17 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.schenkEnceladusDem': {
+    path: 'data/raw/textures/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Schenk & McKinnon 2024 Enceladus Cassini global DEM, 200 m/px, 8049x4025 single-band Float32 GeoTIFF, heights in km, nodata ~ -3.4e38 (0.04% of cells), equirect with longitude 0 at the LEFT edge (PDS release 2024-08-12, use constraint: cite authors, doi:10.1016/j.icarus.2023.115827); build-only bake input for Enceladus's normal map. Its content sits 0.35 deg east of the mosaic texture, so texture lon L reads DEM lon L + 0.35 (measured by cross-correlation); ~124 MB.",
+    upstream:
+      'https://asc-astropedia.s3.us-west-2.amazonaws.com/Enceladus/Cassini/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.usgsEnceladus': {
     path: 'data/raw/textures/Enceladus_Cassini_mosaic_global_110m.tif',
     kind: 'file',
@@ -893,6 +937,70 @@ export const RAW_DATA = {
     description:
       'USGS Astrogeology Enceladus Cassini global mosaic, 110 m/px, 14401x7201, single-band 8-bit GeoTIFF (public domain, credit NASA/JPL/Space Science Institute, publisher USGS Astrogeology). Grayscale relief mosaic — build-tinted and lifted; ~104 MB.',
     upstream: 'https://planetarymaps.usgs.gov/mosaic/Enceladus_Cassini_mosaic_global_110m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  // ─── Saturn mid-sized moons — CICLOPS 2014 global colour maps ─────────
+  //
+  // Paul Schenk's (LPI) photometrically corrected Cassini ISS mosaics, chosen
+  // over the USGS Cassini mosaics because those are brightness-normalised relief
+  // shading: Iapetus loses its dark leading hemisphere entirely. Colour is
+  // enhanced into the UV/IR, so the build keeps luminance only (`monoTint`). The
+  // CENTRE column is longitude 180°: each cross-correlates against its USGS
+  // counterpart at exactly a half-turn shift, unmirrored (Mimas, whose USGS
+  // map is too smooth to correlate, by Herschel's position instead).
+  'textures.nasaMimas': {
+    path: 'data/raw/textures/PIA18437.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Mimas - 2014" (PIA18437), 6356x3178, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~61 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18437/PIA18437.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaTethys': {
+    path: 'data/raw/textures/PIA18439.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Tethys - 2014" (PIA18439), 13467x6734, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~272 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18439/PIA18439.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaDione': {
+    path: 'data/raw/textures/PIA18434.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Dione - 2014" (PIA18434), 14134x7067, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~300 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18434/PIA18434.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaRhea': {
+    path: 'data/raw/textures/PIA18438.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Rhea - 2014" (PIA18438), 12015x6008, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~217 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18438/PIA18438.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaIapetus': {
+    path: 'data/raw/textures/PIA18436.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Iapetus - 2014" (PIA18436), 11741x5871, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~207 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18436/PIA18436.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },

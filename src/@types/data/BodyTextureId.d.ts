@@ -22,4 +22,9 @@ export type BodyTextureId =
   | 'callisto'
   | 'pluto'
   | 'charon'
-  | 'enceladus';
+  | 'enceladus'
+  | 'mimas'
+  | 'tethys'
+  | 'dione'
+  | 'rhea'
+  | 'iapetus';

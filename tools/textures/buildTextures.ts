@@ -18,16 +18,20 @@ import sharp from 'sharp';
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
-import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
+import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
+import { fillEquirectNodata } from '../utils/image/fillEquirectNodata';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
+import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
+import { icqPointsToEquirectRadius } from '../utils/shape/icqPointsToEquirectRadius';
+import { readIcqPoints } from '../utils/shape/readIcqPoints';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
@@ -102,6 +106,22 @@ function firstExisting(paths: readonly string[]): string | null {
   return null;
 }
 
+/** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
+ *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
+const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
+
+/** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
+ *  of Mimas radius is not terraced into 90 m steps before the Sobel pass. */
+function toByteScale(radius: Float32Array): Float32Array {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of radius) {
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+  }
+  return radius.map((r) => ((r - lo) / (hi - lo)) * EIGHT_BIT_FULL_SCALE);
+}
+
 /** Source width in pixels; 0 if sharp can't report it. */
 async function sourceWidth(srcPath: string): Promise<number> {
   const meta = await sharp(srcPath, { limitInputPixels: false }).metadata();
@@ -109,34 +129,39 @@ async function sourceWidth(srcPath: string): Promise<number> {
 }
 
 /**
- * Multiply a tint into a mono source, add an optional lift, and write the
- * JPEG — the path for a body whose only map is panchromatic AND has no
- * colour source to recover hue from (Europa, Callisto, Charon, Enceladus).
- * The tint is a stand-in, not a measurement; `lift` (default 0) restores
- * brightness a relief-shading mosaic has none of to scale (Enceladus). A mono
- * body that DOES have a colour source takes `panSharpen` (Pluto) and never
- * reaches here.
+ * Multiply a tint into a source's luminance, add an optional lift, and write
+ * the JPEG — the path for a body with no colour source to recover hue from
+ * (Europa, Callisto, Charon, the Saturn moons). The tint is a stand-in, not a
+ * measurement; `lift` (default 0) restores brightness a stretched mosaic cannot
+ * reach by multiplying alone. A mono body that DOES have a colour source takes
+ * `panSharpen` (Pluto) and never reaches here. `greyscale` is a no-op on the
+ * 1-band USGS mosaics and drops the enhanced IR/UV hue of the CICLOPS maps.
  *
- * TWO sharp passes, not one, because libvips fixes its operation order: within a
- * single pipeline `linear` runs BEFORE the band expansion that
- * `toColourspace('srgb')` implies for a 1-band image, so three coefficients on a
- * still-mono pipeline throw 'Band expansion using linear is unsupported'. Pass 1
- * resizes to tier first: the full Europa source is 19631×9816, ~578 MB raw.
+ * TWO sharp passes, not one: the roll needs the resized pixels in hand, and
+ * resizing first keeps the buffer small (the full Europa source is 19631×9816,
+ * ~578 MB raw). Pass 2 widens the luminance band to three with `joinChannel`, NOT
+ * `toColourspace('srgb')`: libvips runs `linear` before a colourspace band
+ * expansion, so three coefficients on that route throw 'Band expansion using
+ * linear is unsupported'.
  */
 export async function writeTintedMonoTier(
   srcPath: string,
-  tint: Vec3,
+  treatment: Extract<ColourTreatment, { kind: 'monoTint' }>,
   widthPx: number,
   outPath: string,
-  lift = 0,
 ): Promise<void> {
-  const rgb = await sharp(srcPath, { limitInputPixels: false })
+  const { data, info } = await sharp(srcPath, { limitInputPixels: false })
     .resize({ width: widthPx })
-    .toColourspace('srgb')
+    .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
+  const luminance = treatment.antimeridianCentred
+    ? rollEquirectHalfTurn(data, info.width, info.height, info.channels)
+    : data;
+  const { tint, lift = 0 } = treatment;
   const liftedChannel = lift * EIGHT_BIT_FULL_SCALE;
-  await sharp(rgb.data, { raw: rgb.info })
+  await sharp(luminance, { raw: info })
+    .joinChannel([luminance, luminance], { raw: info })
     .linear([tint[0], tint[1], tint[2]], [liftedChannel, liftedChannel, liftedChannel])
     .jpeg({ quality: JPEG_QUALITY })
     .toFile(outPath);
@@ -201,7 +226,7 @@ async function writeBodyTier(
       return;
     }
     case 'monoTint': {
-      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath, treatment.lift);
+      await writeTintedMonoTier(srcPath, treatment, widthPx, outPath);
       return;
     }
     case 'panSharpen': {
@@ -293,7 +318,31 @@ function bakeNormalOnce(
   let baked = bakedNormalCache.get(srcPath);
   if (baked === undefined) {
     const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
+      if ('format' in entry) {
+        const width = GRID_WIDTH[entry.format];
+        const height = width / 2;
+        let grid: Float32Array;
+        if (entry.format === 'icq') {
+          grid = icqPointsToEquirectRadius(
+            readIcqPoints(srcPath),
+            width,
+            height,
+            entry.lonOffsetDeg,
+          );
+        } else {
+          const raw = await sharp(srcPath, { limitInputPixels: false })
+            .toColourspace('b-w') // single-channel raster; without it sharp returns 3 float channels
+            .raw({ depth: 'float' })
+            .toBuffer({ resolveWithObject: true });
+          const { width: sw, height: sh } = raw.info;
+          const src = new Float32Array(raw.data.buffer, raw.data.byteOffset, sw * sh);
+          grid = binFloatDemToEquirect(src, sw, sh, width, height, entry.lonOffsetDeg);
+          fillEquirectNodata(grid, width, height);
+        }
+        return bakeNormalMap({ data: toByteScale(grid), width, height }, exaggerationFor(bodyId));
+      }
       // `.greyscale()` collapses the 16-bit elevation `.tif` to the 8-bit
       // heightfield `bakeNormalMap` expects; the quantization is accepted for v1.
       const grey = await sharp(srcPath, { limitInputPixels: false })
@@ -432,7 +481,8 @@ export async function buildTextures(outDir: string): Promise<void> {
       process.stderr.write(`  skip ${bodyId}:${kind}: no source on disk\n`);
       continue;
     }
-    const width = await sourceWidth(srcPath);
+    const entry = SOURCE_TABLE[bodyId][kind]!;
+    const width = 'format' in entry ? GRID_WIDTH[entry.format] : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
     const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
     if (tiers.length === 0) {
