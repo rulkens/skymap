@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
+import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../../src/data/bodies/barycentricPairs';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
@@ -9,10 +10,25 @@ import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
+import { PLANET_EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/planetEphemerisCorrections.generated';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { ephemerisCorrectionMpc } from '../../../../src/utils/orbit/ephemerisCorrectionMpc';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
+import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 
 const states = deriveBodyStates(CONST_J2000);
 const ANCHOR_IDS = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
+const MPC_TO_KM = 1 / SCALE_UNITS.KM_TO_MPC;
+// 1900, a Voyager flyby, 2099: the reflex and correction are checked across the span.
+const SPAN_DATES = [2415171.5, 2447763.5, 2487855.5];
+
+function distanceKm(a: readonly number[], b: readonly number[]): number {
+  return Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!) * MPC_TO_KM;
+}
 
 describe('deriveBodyStates', () => {
   it('returns a state for every driver id, and nothing else', () => {
@@ -127,6 +143,44 @@ describe('deriveBodyStates', () => {
     expect(io.positionMpc[0] - jupiter.positionMpc[0]).toBeCloseTo(ioRelative[0], 18);
     expect(io.positionMpc[1] - jupiter.positionMpc[1]).toBeCloseTo(ioRelative[1], 18);
     expect(io.positionMpc[2] - jupiter.positionMpc[2]).toBeCloseTo(ioRelative[2], 18);
+  });
+
+  it('Earth–Moon reflex keeps the barycentre and the separation', () => {
+    // Earth's row is the barycentre: weighting Earth and Moon by mass must land back
+    // on the corrected row position, and the Moon's offset from Earth stays raw Kepler.
+    const k = BARYCENTRIC_REFLEX_BY_PRIMARY.get('earth')!.k;
+    for (const t of SPAN_DATES) {
+      const snap = deriveBodyStates(t);
+      const earth = snap.get('earth')!.positionMpc;
+      const moon = snap.get('moon')!.positionMpc;
+      const sun = snap.get('sun')!.positionMpc;
+      const rowKepler = keplerianPositionMpc(propagateElements(elementsById('earth'), t));
+      const correction = ephemerisCorrectionMpc(PLANET_EPHEMERIS_CORRECTIONS['earth']!, t);
+      const emb = [0, 1, 2].map((i) => sun[i]! + rowKepler[i]! + correction[i]!);
+      const weighted = [0, 1, 2].map((i) => (1 - k) * earth[i]! + k * moon[i]!);
+      expect(distanceKm(weighted, emb)).toBeLessThan(1e-3);
+
+      const moonKepler = keplerianPositionMpc(propagateElements(elementsById('moon'), t));
+      const separation = [0, 1, 2].map((i) => moon[i]! - earth[i]!);
+      expect(distanceKm(separation, moonKepler)).toBeLessThan(1e-3);
+    }
+  });
+
+  it('an Earth surface site keeps its offset from the wobbling Earth', () => {
+    // The site rides the reflexed Earth, so its offset is the body-fixed point under
+    // Earth's spin alone — the ~4,700 km wobble must not leak into it.
+    const site = findByIdOrThrow(SURFACE_FIXED_SITES, 'soendermarken', 'test');
+    for (const t of SPAN_DATES) {
+      const snap = deriveBodyStates(t);
+      const earth = snap.get('earth')!;
+      const offsetM = rotateVec3ByTightMat3(
+        sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
+        earth.orientation,
+      );
+      const offsetMpc = offsetM.map((m) => m * SCALE_UNITS.M_TO_MPC);
+      const actual = snap.get(site.id)!.positionMpc.map((v, i) => v - earth.positionMpc[i]!);
+      expect(distanceKm(actual, offsetMpc)).toBeLessThan(1e-3);
+    }
   });
 
   it('orientation is identity iff the body has no rotation row', () => {

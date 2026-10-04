@@ -192,6 +192,10 @@ Planet/moon/ring textures and Earth's imagery are gitignored raw pulls with comm
 
 Earth's whole-globe base texture and its surface tile pyramid are two publications of one Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants, ~421 MB). The month is chosen once in [`bmngVintage.ts`](../tools/utils/io/bmngVintage.ts) and every registry path, upstream URL, and attribution string reads it from there. The tile layer falls back to the base outside its baked window, so a vintage split between the two would draw a visible seasonal seam along the tile frontier.
 
+### Planet positions (JPL Horizons)
+
+Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100. `npm run fetch-horizons-planets` pulls 1-day heliocentric ICRF vectors (8 × ~3 MB, gitignored) into `data/raw/horizons/planets/`, and `npm run build-planet-ephemeris` fits them into the committed `src/data/bodies/planetEphemerisCorrections.generated.ts`. Regenerate after any planet element-row or frame change. The exact query is in [`data/raw/horizons/planets/README.md`](../data/raw/horizons/planets/README.md).
+
 ### Earth surface tile pyramid
 
 The bake emits `public/data/images/earth-tiles/v10/albedo/<z>/<x>/<y>.webp`: 512 px lossy WebP tiles whose alpha channel doubles as the land mask, plus two sidecars, `index.txt` (one path per line) and `manifest.json` (the flat band list every product's planner filters by `builtFrom`). `npm run build-surface-tiles` is idempotent per tile (a tile whose output already exists is skipped, byte-identical, on a re-run) and refuses to write `index.txt`/`manifest.json` at all if any tile the prior index promised is missing on disk, leaving both untouched — an interrupted or partially-deleted bake never advances the pointer to half-baked data ([`buildSurfaceTiles.ts`](../tools/textures/buildSurfaceTiles.ts)).
@@ -216,6 +220,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Clusters/superclusters | `fetch-structures`                              | `build-structures` (after `build-tiers`)                         |
 | DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
+| Planet positions       | `fetch-horizons-planets`                        | `build-planet-ephemeris` (commits a generated `.ts`, no R2 sync) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.

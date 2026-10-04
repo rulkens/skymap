@@ -2,6 +2,7 @@
  * deriveBodyStates — derives every scene body's time-varying `BodyState` from
  * the three authored position tables — anchors, Keplerian elements, surface
  * sites (`positionDrivers.ts` reads the same three as a union) — keyed by id.
+ * A planet is Kepler plus its fitted Horizons correction, less any pair reflex.
  * `meanAnomalyRad` is the PROPAGATED `M` at `t` (not epoch) — the
  * orbit-trail falloff anchor, so a trail fading behind the body must
  * track where it actually is. Memoized on `simDays`: every pass (draw,
@@ -25,6 +26,9 @@ import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { PLANET_EPHEMERIS_CORRECTIONS } from '../../../data/bodies/planetEphemerisCorrections.generated';
+import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../data/bodies/barycentricPairs';
+import { ephemerisCorrectionMpc } from '../../../utils/orbit/ephemerisCorrectionMpc';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -63,7 +67,23 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   for (const el of FOCUS_ORDER) {
     const focus = positions.get(el.focusId)!;
     const propagated = propagateElements(el, simDays);
-    positions.set(el.id, addVec3(focus, keplerianPositionMpc(propagated)));
+    const position = addVec3(focus, keplerianPositionMpc(propagated));
+    const correction = PLANET_EPHEMERIS_CORRECTIONS[el.id];
+    if (correction !== undefined) {
+      const c = ephemerisCorrectionMpc(correction, simDays);
+      position[0] += c[0];
+      position[1] += c[1];
+      position[2] += c[2];
+    }
+    // The secondary is propagated inline: `FOCUS_ORDER` places it after its primary.
+    const reflex = BARYCENTRIC_REFLEX_BY_PRIMARY.get(el.id);
+    if (reflex !== undefined) {
+      const s = keplerianPositionMpc(propagateElements(reflex.secondary, simDays));
+      position[0] -= reflex.k * s[0];
+      position[1] -= reflex.k * s[1];
+      position[2] -= reflex.k * s[2];
+    }
+    positions.set(el.id, position);
     meanAnomalies.set(el.id, propagated.meanAnomalyRad);
   }
 

@@ -231,7 +231,7 @@ describe('settle golden trace (byte bar for the orientation settles)', () => {
       const trace = thin(runScript(northUp));
       if (process.env['SETTLE_GOLDEN_RECORD']) {
         recorded[key] = trace;
-        writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded)}\n`);
+        writeFileSync(FIXTURE_PATH, `${JSON.stringify(recorded, null, 2)}\n`);
         return;
       }
       expectTraceMatches(trace, (GOLDEN as Record<string, Trace>)[key]!);

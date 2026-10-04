@@ -16,7 +16,7 @@ import { mat3FromColumns } from '../math/mat3FromColumns';
 import { normalize3 } from '../math/normalize3';
 
 // Positions are equatorial-world, so the ecliptic pole is the obliquity-tilted
-// frame normal rather than +z; `ECLIPTIC_FRAME` owns the 23.44°.
+// frame normal rather than +z; `ECLIPTIC_FRAME` owns the 23.439°.
 // Below this residual length (≈ the boresight-to-pole angle in radians) the
 // projection has no direction left to carry the roll, so a second, always
 // non-parallel reference takes over — the equinox, the frame's own +X.
