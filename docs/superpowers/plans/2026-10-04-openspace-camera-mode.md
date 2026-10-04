@@ -74,9 +74,9 @@ readonly family?: DriverFamily;   // rows sharing a family are one author: no ed
 ```
 In `commitOnEdge`, `sameAuthor` becomes "same id, or both rows carry the same defined `family`". The departing row is looked up from `drivers`, as today. `isFollowDriverId` keeps its other three readers (`cameraDrivers.ts:165`, `replayInput.ts:212`, `shouldKeepTicking.ts:26`): they ask "is this the follow row", not "same author".
 
-- [ ] Tag both follow rows `family: 'follow'` and switch `sameAuthor` to read the field.
-- [ ] No new test: the existing follow-pair edge test in `tests/services/engine/camera/commitOnEdge.test.ts` is the gate and must pass untouched.
-- [ ] `npm run typecheck:fast && npm test -- camera` is green. Commit: `refactor(camera): driver families replace the follow hand list in commitOnEdge`.
+- [x] Tag both follow rows `family: 'follow'` and switch `sameAuthor` to read the field.
+- [x] No new test: the existing follow-pair edge test in `tests/services/engine/camera/commitOnEdge.test.ts` is the gate and must pass untouched.
+- [x] `npm run typecheck:fast && npm test -- camera` is green. Commit: `refactor(camera): driver families replace the follow hand list in commitOnEdge`.
 
 ### Task 2: The navigator (pure) — `review: yes`
 
@@ -125,18 +125,18 @@ stepNavigator(
 5. Any axis whose magnitude is below `NAV_REST_EPS` snaps to exactly 0.
 6. `delta = v · dtS` per axis. **Zero axes are omitted** from `delta` (an `orbit: [0, 0]` is not identity on the world arm). `moving` = any velocity axis is non-zero.
 
-- [ ] Test `release decays by 1 − min(dt/friction, 1)` at dt = 8, 16 and 50 ms, friction 0.5: the velocity after one step equals the law to 1e-12.
-- [ ] Test `friction 0 stops a released axis in one frame`.
-- [ ] Test `an axis with friction off holds its velocity`: `frictionOn.zoom = false` keeps the zoom velocity bit-identical over 100 frames while the rotational axes decay.
-- [ ] Test `look decays under the roll toggle, not the rotational one` (ruling 3).
-- [ ] Test `dt is capped at 100 ms`: a 2 s gap decays exactly as one 100 ms step.
-- [ ] Test `the first frame moves nothing`: `lastNowMs === null` gives an empty `delta`.
-- [ ] Test `a held motionless mouse comes to rest even with friction off`: hold `orbit`, feed one moving frame then zero-delta frames with all friction off, and the velocity converges below ε and snaps to 0.
-- [ ] Test `steady hold moves at the drag rate`: hold `orbit` at a constant 10 px per frame for 60 frames, and the per-frame `delta.orbit` converges to `[10 · radPerPx, …]`.
-- [ ] Test `moving falls exactly once`: during a release, `moving` is true then false, and never flips back without input.
-- [ ] Test `zero axes are omitted`: a pure orbit hold yields a `delta` with no `look`, `zoom` or `roll` keys.
-- [ ] Test `a gestureEnd in the same frame applies the final delta before releasing`.
-- [ ] `npm test -- stepNavigator` is green. Commit: `feat(camera): OpenSpace navigator — velocity state with the DampenedVelocity law`.
+- [x] Test `release decays by 1 − min(dt/friction, 1)` at dt = 8, 16 and 50 ms, friction 0.5: the velocity after one step equals the law to 1e-12.
+- [x] Test `friction 0 stops a released axis in one frame`.
+- [x] Test `an axis with friction off holds its velocity`: `frictionOn.zoom = false` keeps the zoom velocity bit-identical over 100 frames while the rotational axes decay.
+- [x] Test `look decays under the roll toggle, not the rotational one` (ruling 3).
+- [x] Test `dt is capped at 100 ms`: a 2 s gap decays exactly as one 100 ms step.
+- [x] Test `the first frame moves nothing`: `lastNowMs === null` gives an empty `delta`.
+- [x] Test `a held motionless mouse comes to rest even with friction off`: hold `orbit`, feed one moving frame then zero-delta frames with all friction off, and the velocity converges below ε and snaps to 0.
+- [x] Test `steady hold moves at the drag rate`: hold `orbit` at a constant 10 px per frame for 60 frames, and the per-frame `delta.orbit` converges to `[10 · radPerPx, …]`.
+- [x] Test `moving falls exactly once`: during a release, `moving` is true then false, and never flips back without input.
+- [x] Test `zero axes are omitted`: a pure orbit hold yields a `delta` with no `look`, `zoom` or `roll` keys.
+- [x] Test `a gestureEnd in the same frame applies the final delta before releasing`.
+- [x] `npm test -- stepNavigator` is green. Commit: `feat(camera): OpenSpace navigator — velocity state with the DampenedVelocity law`.
 
 ### Task 3: World-arm combined pitch clamp — `review: yes`
 
@@ -146,11 +146,11 @@ stepNavigator(
 
 **Contract:** after any world nudge, the RENDERED view's elevation stays within ±`PITCH_LIMIT`, enforced by clamping the offset's pitch (never the orbit pitch, which the drag's own law owns). The rendered view is `orbitForwardOf(pose, poseBasis, upBasis)`, and its elevation is measured against `frameUp(upBasis)`. Take the un-offset forward's elevation `e` (orbit pitch lives in `poseBasis` and points target → eye, so `e` is NOT `pose.pitch`; it differs in sign and, when the bases differ, by up to ~23°), then clamp the offset pitch to `[−PITCH_LIMIT − e, PITCH_LIMIT − e]`. The clamp runs after orbit too, because an orbit can push a look-offset pose past the pole. An absent `lookOffset` stays absent when the clamp has nothing to do. (Corrected after the D1 review: the first draft summed `pose.pitch + offset`, which has the wrong sign.)
 
-- [ ] Test `look offset cannot carry the view past the pole`, for BOTH look signs at orbit pitch ±1.4: assert on `orbitForwardOf` of the result that `asin(forward·up) ∈ ±PITCH_LIMIT` and the horizontal direction does not flip.
-- [ ] Test `an orbit under a held offset re-clamps it`, with a case that really reaches the pole, asserted on the rendered view as above.
-- [ ] Test `the clamp reads the rendered elevation when poseBasis ≠ upBasis` (ecliptic pose basis, equatorial up).
-- [ ] Test `an absent offset stays absent under orbit`.
-- [ ] Commit: `fix(camera): clamp orbit + look-offset pitch at the zenith`.
+- [x] Test `look offset cannot carry the view past the pole`, for BOTH look signs at orbit pitch ±1.4: assert on `orbitForwardOf` of the result that `asin(forward·up) ∈ ±PITCH_LIMIT` and the horizontal direction does not flip.
+- [x] Test `an orbit under a held offset re-clamps it`, with a case that really reaches the pole, asserted on the rendered view as above.
+- [x] Test `the clamp reads the rendered elevation when poseBasis ≠ upBasis` (ecliptic pose basis, equatorial up).
+- [x] Test `an absent offset stays absent under orbit`.
+- [x] Commit: `fix(camera): clamp orbit + look-offset pitch at the zenith`.
 
 ### Task 4: The openspace scheme in the engine — `review: yes`
 
@@ -213,16 +213,16 @@ nudgeRung(framed: FramedCameraPose, tilt: TiltMemory, delta: ArmDelta, ctx: Rung
 - `CameraRuntime` gains `readonly scheme: ControlSchemeId`, seeded from `settings.cameraControls.scheme` and written each frame.
 - `pickWinner` reads `schemes[rootState.settings.cameraControls.scheme].drivers`. `commitOnEdge`'s `drivers` argument becomes `schemes[prev.scheme].drivers`, the table the departing winner was picked from.
 
-- [ ] Test `the skymap table is unchanged`: `CONTROL_SCHEMES.skymap.drivers === CAMERA_DRIVERS`, and no row of it carries an openSpace family.
-- [ ] Test `the openspace table is skymap's with orbitDrag swapped`: same ids in the same order, except `orbitDrag` is replaced by the two rows.
-- [ ] Test `openSpaceAxisFor` table: every row of the binding list above, plus alt+shift+left → `zoom` (alt wins) and ctrl+shift+left → `roll`.
-- [ ] Test `held → coast → rest commits base once`: openspace scheme, friction on. Hold orbit for 5 frames, release, and step until `navMoving` falls. Exactly one `commitCameraPose` appears, on the at-rest frame.
-- [ ] Test `a tween preempting a coast commits once and zeroes the navigator`: start a focus tween mid-coast. One commit lands on the edge frame, and the next runtime's velocities are all 0.
-- [ ] Test `a scheme toggle mid-coast commits once and zeroes the navigator`.
-- [ ] Test `a coast crossing an arm boundary keeps its velocity`: a frame whose fold changes the register's frame leaves `navigator.velocity` identical to `stepNavigator`'s output.
-- [ ] Test `a coasting navigator requests a render, an at-rest one does not`.
-- [ ] Test `skymap scheme: a navDrag step is inert` (no rung, no velocity, since the reset rule applies every frame).
-- [ ] `npm run typecheck:fast && npm test -- camera` is green, with the goldens untouched. Commit: `feat(camera): openspace control scheme — navigator, held/coast rows, scheme-selected table`.
+- [x] Test `the skymap table is unchanged`: `CONTROL_SCHEMES.skymap.drivers === CAMERA_DRIVERS`, and no row of it carries an openSpace family.
+- [x] Test `the openspace table is skymap's with orbitDrag swapped`: same ids in the same order, except `orbitDrag` is replaced by the two rows.
+- [x] Test `openSpaceAxisFor` table: every row of the binding list above, plus alt+shift+left → `zoom` (alt wins) and ctrl+shift+left → `roll`.
+- [x] Test `held → coast → rest commits base once`: openspace scheme, friction on. Hold orbit for 5 frames, release, and step until `navMoving` falls. Exactly one `commitCameraPose` appears, on the at-rest frame.
+- [x] Test `a tween preempting a coast commits once and zeroes the navigator`: start a focus tween mid-coast. One commit lands on the edge frame, and the next runtime's velocities are all 0.
+- [x] Test `a scheme toggle mid-coast commits once and zeroes the navigator`.
+- [x] Test `a coast crossing an arm boundary keeps its velocity`: a frame whose fold changes the register's frame leaves `navigator.velocity` identical to `stepNavigator`'s output.
+- [x] Test `a coasting navigator requests a render, an at-rest one does not`.
+- [x] Test `skymap scheme: a navDrag step is inert` (no rung, no velocity, since the reset rule applies every frame).
+- [x] `npm run typecheck:fast && npm test -- camera` is green, with the goldens untouched. Commit: `feat(camera): openspace control scheme — navigator, held/coast rows, scheme-selected table`.
 
 ### Task 5: Input capture — `review: yes`
 
@@ -246,12 +246,12 @@ bindAxis?: (press: AxisPress) => NavAxis | null;
 - The aggregator turns `navMove` into `navDrag`, extending a trailing `navDrag` of the same axis by summing `deltaPx`. A zero-delta move still opens a step.
 - `wireInput` passes `bindAxis: (press) => CONTROL_SCHEMES[store.getState().settings.cameraControls.scheme].bindAxis(press)`. `beginDrag`/`cancelCameraTween` keep firing on `gestureStart` (`wireInput.ts:243-250`), so `camera.dragging` still means "a button is held".
 
-- [ ] Test `the axis latched at press survives a modifier release`: press with ctrl+left (look), release ctrl, move, and every `navMove` says `look`.
-- [ ] Test `a press emits a zero navMove before any motion`.
-- [ ] Test `a latched release does not click-pick`.
-- [ ] Test `without bindAxis the event stream is unchanged`: the existing recognizer tests pass untouched (no new test; they are the gate).
-- [ ] Test `the aggregator sums same-axis navMoves and splits on an axis change`.
-- [ ] `npm test -- orbitControls inputAggregator` is green. Commit: `feat(camera): latch an OpenSpace axis at press and emit navDrag deltas`.
+- [x] Test `the axis latched at press survives a modifier release`: press with ctrl+left (look), release ctrl, move, and every `navMove` says `look`.
+- [x] Test `a press emits a zero navMove before any motion`.
+- [x] Test `a latched release does not click-pick`.
+- [x] Test `without bindAxis the event stream is unchanged`: the existing recognizer tests pass untouched (no new test; they are the gate).
+- [x] Test `the aggregator sums same-axis navMoves and splits on an axis change`.
+- [x] `npm test -- orbitControls inputAggregator` is green. Commit: `feat(camera): latch an OpenSpace axis at press and emit navDrag deltas`.
 
 ### Task 6: Persistence, shortcut, settings section
 
@@ -278,11 +278,11 @@ parseCameraControls(raw: string): CameraControlsSettings | null;       // null o
   - only when OpenSpace is selected: three friction checkboxes (Orbit, Zoom, Look & roll — the last label names what the source's `roll` toggle really gates) and a 0–1 friction slider using the shared `Slider` component.
   - No toast.
 
-- [ ] Test `parseCameraControls round-trips the default`.
-- [ ] Test `a malformed field falls back alone`: `{ scheme: 'nope', friction: 0.2, frictionOn: { rotational: false, zoom: 'x', roll: true } }` → scheme `skymap`, friction 0.2, rotational false, zoom true (default), roll true.
-- [ ] Test `non-object JSON parses to null` (`'42'`, `'null'`, `'[]'`).
-- [ ] No component test: the section is a pure-props select plus a conditional block, and the visual check covers it.
-- [ ] Commit: `feat(settings): persisted camera-controls cluster, shift+c, settings section`.
+- [x] Test `parseCameraControls round-trips the default`.
+- [x] Test `a malformed field falls back alone`: `{ scheme: 'nope', friction: 0.2, frictionOn: { rotational: false, zoom: 'x', roll: true } }` → scheme `skymap`, friction 0.2, rotational false, zoom true (default), roll true.
+- [x] Test `non-object JSON parses to null` (`'42'`, `'null'`, `'[]'`).
+- [x] No component test: the section is a pure-props select plus a conditional block, and the visual check covers it.
+- [x] Commit: `feat(settings): persisted camera-controls cluster, shift+c, settings section`.
 
 ### Task 7: Docs
 
@@ -291,10 +291,10 @@ parseCameraControls(raw: string): CameraControlsSettings | null;       // null o
 - Modify: `docs/grill-sessions/globe-camera-pivot-2026-08-24.md:199` (Q8)
 - Modify: `docs/superpowers/specs/2026-09-29-openspace-camera-mode-design.md` (sync with the plan rulings above)
 
-- [ ] RENDERER.md: name `CONTROL_SCHEMES` (scheme → driver table + `bindAxis`), the `RungRow.nudge` column, and `CameraRuntime.navigator`, in ≤ 4 lines.
-- [ ] Q8: one line saying the openspace scheme revises it (velocity + true friction), pointing at the spec. Q8's ruling still stands for the skymap scheme.
-- [ ] Spec: reflect rulings 1–6 in §3.1, §6 and §7 (family field, single reset rule, friction groups, gain seed, touch binds orbit, scheme lookup in the step).
-- [ ] No test. Commit: `docs: OpenSpace scheme in RENDERER.md, Q8 revision note, spec sync`.
+- [x] RENDERER.md: name `CONTROL_SCHEMES` (scheme → driver table + `bindAxis`), the `RungRow.nudge` column, and `CameraRuntime.navigator`, in ≤ 4 lines.
+- [x] Q8: one line saying the openspace scheme revises it (velocity + true friction), pointing at the spec. Q8's ruling still stands for the skymap scheme.
+- [x] Spec: reflect rulings 1–6 in §3.1, §6 and §7 (family field, single reset rule, friction groups, gain seed, touch binds orbit, scheme lookup in the step).
+- [x] No test. Commit: `docs: OpenSpace scheme in RENDERER.md, Q8 revision note, spec sync`.
 
 ---
 
