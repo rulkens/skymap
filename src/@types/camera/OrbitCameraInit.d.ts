@@ -3,6 +3,7 @@
  * live state lets `createOrbitCamera` take a plain object literal and derive
  * the rest (e.g. `position`) from it.
  */
+import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { Mat3 } from '../math/Mat3';
 
@@ -31,6 +32,12 @@ export type OrbitCameraInit = {
    * screen; positive rotates the image counter-clockwise. Optional, default 0.
    */
   roll?: number;
+
+  /**
+   * [yaw, pitch] radians turning the view about the eye (`CameraPose.lookOffset`).
+   * Only `orbitForwardOf` reads it; `updatePosition` never does. Absent ⇒ [0, 0].
+   */
+  lookOffset?: Vec2;
 
   /**
    * Frame-local → world basis the (yaw, pitch) DECODE runs through:

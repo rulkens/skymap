@@ -35,11 +35,11 @@
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
 
-import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import vsCode from '../../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -118,9 +118,8 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(HORIZON_SHELL_UNIFORM_BUFFER_SIZE);
   const f32 = new Float32Array(uniforms);
-  // Plain Vec3 tuples (not vec3.create's Float32Array) so the per-component
-  // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
-  // writes into them in place via the `dst` arg just the same.
+  // Plain Vec3 tuples so the per-component reads below index cleanly under
+  // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
   // Frame-pole reference up, allocated once and rewritten in place each frame.
   const upRefScratch: Vec3 = [0, 0, 0];
@@ -136,7 +135,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
     //
-    //   forward = normalize(target - position)
+    //   forward = orbitForwardOf(cam)   (decoded, so a lookOffset turns it)
     //   right   = normalize(forward × rolledUp)
     //   up      = normalize(right × forward)
     //
@@ -146,8 +145,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     // `imagePlaneBasis`, which rolls the frame pole (`frameUp(cam.upBasis)`;
     // world +Y absent a basis) about the view direction — so the shell rolls in
     // lockstep with `computeViewProj` (both read the same draw-time `upBasis`).
-    vec3.subtract(cam.target, cam.position, fwd);
-    vec3.normalize(fwd, fwd);
+    orbitForwardOf(cam, fwd);
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;
