@@ -31,13 +31,11 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
-import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../../../../src/utils/orbit/keplerianPositionMpc';
-import { addVec3 } from '../../../../../src/utils/math/addVec3';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -95,13 +93,17 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', async (impor
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
 // The J2000 oracle `SCENE_ORBIT_CONICS` used to provide, hand-derived here with
-// its own two helpers (`keplerianEllipse` for the ellipse, `keplerianPositionMpc`
-// to place a focus that is itself an orbiting body) so the expected values never
-// come from the layer under test.
-function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
+// its own helpers (`keplerianEllipse` for the ellipse, the snapshot body less its
+// raw Kepler offset for the focus the trail anchors on) so the expected values
+// never come from the layer under test.
+function conicAtJ2000(el: OrbitalElements) {
   const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
+  const bodyMpc = deriveBodyStates(CONST_J2000).get(el.id)!.positionMpc;
+  const keplerMpc = keplerianPositionMpc(el);
   return {
-    centerMpc: addVec3(focusPositionMpc, centerOffsetMpc),
+    centerMpc: [0, 1, 2].map(
+      (i) => bodyMpc[i]! - keplerMpc[i]! + centerOffsetMpc[i]!,
+    ) as unknown as Vec3,
     semiMajorMpc,
     semiMinorMpc,
     eccentricity: el.eccentricity,
@@ -110,14 +112,9 @@ function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
   };
 }
 
-const SUN_POS_MPC = SCENE_ANCHORS.find((a) => a.id === 'sun')!.positionMpc;
-const EARTH_POS_MPC = addVec3(
-  SUN_POS_MPC,
-  keplerianPositionMpc(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'earth')!),
-);
 // Mercury is CORE_TRAIL_ELEMENTS[0] — the first ORBITAL_ELEMENTS row, unfiltered.
-const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!, SUN_POS_MPC);
-const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!, EARTH_POS_MPC);
+const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!);
+const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!);
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -650,6 +647,57 @@ describe('orbitTrailsPass.draw', () => {
       }
     } finally {
       snapshotOverride.states = undefined;
+    }
+  });
+
+  it('Moon, Hubble and Saturn sit on their trails at a non-J2000 date', () => {
+    // 1989: Earth carries its correction and the Moon's reflex, Saturn its own
+    // correction; each body must still lie on its conic at its propagated E.
+    const simDays = 2447763.5;
+    const states = deriveBodyStates(simDays);
+    const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+    for (const id of ['moon', 'hubble', 'saturn']) {
+      const el = ORBITAL_ELEMENTS.find((e) => e.id === id)!;
+      const bodyMpc = states.get(id)!.positionMpc;
+      const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
+      const ctx = {
+        snapshot: {
+          simDays,
+          focusBlend: 0,
+          nowMs: 0,
+          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+        },
+        bodyPose: () => null,
+        drawCamPos: eye,
+        drawPxPerRad: FIXTURE_PX_PER_RAD,
+        cam: { distance: 1e-13 },
+      } as unknown as FrameView;
+      composeMock.mockClear();
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [el],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count, id).toBe(1);
+      const { eccentricity, meanAnomalyRad } = propagateElements(el, simDays);
+      const eAnom = eccentricAnomalyFromMean(meanAnomalyRad, eccentricity);
+      const [cosE, sinE] = [Math.cos(eAnom), Math.sin(eAnom)];
+      // f32's ulp at Saturn's 1.4e9 km semi-major axis is 128 km, so Saturn reads the
+      // f64 conic handed to composeOrbitConic; the small orbits read the packed basis.
+      const [, centre, major, minor] = composeMock.mock.calls[0]! as Vec3[];
+      for (let axis = 0; axis < 3; axis++) {
+        const rel = (bodyMpc[axis]! - eye[axis]!) * kmPerMpc;
+        if (id === 'saturn') {
+          const onConic = centre![axis]! + major![axis]! * cosE + minor![axis]! * sinE;
+          expect(Math.abs((onConic - bodyMpc[axis]!) * kmPerMpc), id).toBeLessThan(1e-3);
+        } else {
+          const packed =
+            staging[34 + axis]! + staging[38 + axis]! * cosE + staging[42 + axis]! * sinE;
+          expect(Math.abs(packed - rel), id).toBeLessThan(0.1);
+        }
+      }
     }
   });
 

@@ -1,7 +1,7 @@
 /**
- * scenePlanets — planet + moon seeds at their real J2000 mean positions, DERIVED
- * from `ORBITAL_ELEMENTS` via `keplerianPositionMpc`, so a body sits exactly on the
- * ellipse its trail draws. `datumRadiusM` is authored in SI metres and resolved
+ * scenePlanets — planet + moon identity rows; positions are not baked here but
+ * derived per instant by `deriveBodyStates`, and each trail anchors on that snapshot
+ * position. `datumRadiusM` is authored in SI metres and resolved
  * into a draw-space sphere at render time. Albedos are plausible
  * flat linear-RGB colours, inline rather than in `palette.ts` because each is
  * per-body data read once at its seed site.

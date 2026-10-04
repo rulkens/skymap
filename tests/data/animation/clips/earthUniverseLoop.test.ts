@@ -47,8 +47,11 @@ describe('earthUniverseLoop', () => {
     // sin(30°) up the ecliptic pole — the basis's second column, since a
     // column-major Mat3 stores column c at basis[c*3 + r].
     const pole: Vec3 = [basis[3], basis[4], basis[5]];
+    // The lift is from the sun line, and the Moon's reflex puts Earth ~1″ off the
+    // ecliptic, so the sun line's own latitude β is folded in.
     const eyeAlongPole = dirWorld[0] * pole[0] + dirWorld[1] * pole[1] + dirWorld[2] * pole[2];
-    expect(eyeAlongPole).toBeCloseTo(Math.sin((30 * Math.PI) / 180), 6);
+    const beta = Math.asin(sunward[0] * pole[0] + sunward[1] * pole[1] + sunward[2] * pole[2]);
+    expect(eyeAlongPole).toBeCloseTo(Math.sin((30 * Math.PI) / 180 - beta), 6);
   });
 
   it('loops seamlessly: pose(durationSec) equals pose(0) with yaw offset by exactly 2π', () => {

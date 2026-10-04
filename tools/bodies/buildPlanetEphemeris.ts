@@ -20,6 +20,7 @@ import { keplerianPositionMpc } from '../../src/utils/orbit/keplerianPositionMpc
 import { propagateElements } from '../../src/utils/orbit/propagateElements';
 import type { EphemerisCorrection } from '../../src/@types/scene/EphemerisCorrection';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { HorizonsSeries } from './@types/HorizonsSeries';
 import { fitSinusoidSeries } from '../utils/math/fitSinusoidSeries';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -51,8 +52,6 @@ const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 // Amplitudes to 0.1 km: hundreds of 0.05 km roundings sum to well under a kilometre.
 const fmtOmega = (x: number): string => String(Number(x.toPrecision(12)));
 const fmtKm = (x: number): string => String(Math.round(x * 10) / 10);
-
-type HorizonsSeries = { jd: Float64Array; km: [Float64Array, Float64Array, Float64Array] };
 
 function readSeries(naif: string): HorizonsSeries {
   const lines = readFileSync(join(rawDataPath('horizons.planets'), `${naif}.csv`), 'utf8')

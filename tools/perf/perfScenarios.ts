@@ -49,7 +49,7 @@ export type PerfScenario = { readonly name: string; readonly pose: PerfPose };
 // time).
 // Factored out so those poses differ only in the axes that actually vary
 // (distance/yaw/pitch) and the target can never drift between them.
-const EARTH_TARGET: Vec3 = [-8.5895045e-13, 4.3022465e-12, 1.8652508e-12];
+const EARTH_TARGET: Vec3 = [-8.5882588e-13, 4.3023659e-12, 1.8652815e-12];
 
 // The shared look-at point for `milky-way-outside` and `milky-way-close`: the
 // galactic centre (~8 kpc off the origin — contrast `EARTH_TARGET`'s ~1 AU).
