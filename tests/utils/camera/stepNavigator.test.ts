@@ -101,6 +101,25 @@ describe('stepNavigator', () => {
     expect(state.held).toBe('orbit');
   });
 
+  const steadyHold = (axis: 'zoom' | 'roll', x: number, y: number) => {
+    let state = stepNavigator(NAV_AT_REST, [], 0, ALL_ON, RAD_PER_PX).state;
+    let delta = {};
+    for (let i = 1; i <= 600; i++) {
+      ({ state, delta } = stepNavigator(state, [drag(axis, x, y)], i * 16, ALL_ON, RAD_PER_PX));
+    }
+    return delta;
+  };
+
+  it('zoom reads the vertical drag: drag down is farther', () => {
+    expect(steadyHold('zoom', 50, 10)).toEqual({ zoom: expect.closeTo(10 * 0.005, 9) });
+    expect(steadyHold('zoom', 50, -10)).toEqual({ zoom: expect.closeTo(-10 * 0.005, 9) });
+  });
+
+  it('roll reads the horizontal drag only', () => {
+    expect(steadyHold('roll', 10, 40)).toEqual({ roll: expect.closeTo(10 * RAD_PER_PX, 9) });
+    expect(steadyHold('roll', -10, 40)).toEqual({ roll: expect.closeTo(-10 * RAD_PER_PX, 9) });
+  });
+
   it('steady hold moves at the drag rate', () => {
     let state = stepNavigator(NAV_AT_REST, [], 0, ALL_ON, RAD_PER_PX).state;
     let delta = {};
