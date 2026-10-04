@@ -10,7 +10,7 @@
  *
  * Sourced from the seed set (`SCENE_EARTH` + `SCENE_PLANETS` +
  * `SCENE_MESH_BODIES`), each tinted by its own authored colour: a planet's or
- * mesh body's `albedo`, and a fixed tint for Earth, which carries a texture
+ * mesh body's brightened `albedo`, and a fixed tint for Earth, which carries a texture
  * instead of a colour. Deriving the tints from the body records keeps this
  * file free of a parallel colour table that would drift from the seeds.
  *
@@ -41,6 +41,7 @@ import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../data/bodies/anchoredMeshBodyIds';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
+import { compressBrightness } from '../../../utils/color/compressBrightness';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
@@ -52,6 +53,13 @@ import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM'
  * the captions have always used.
  */
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
+
+/**
+ * A raw albedo makes a dark body's caption dark text on a black sky (Mercury
+ * and the Moon peak near 0.3). This exponent lifts them to ~0.7 while keeping
+ * them dimmer than Venus or Enceladus, so the captions still rank by albedo.
+ */
+const PLANET_TINT_GAMMA = 0.3;
 
 /**
  * Turn a seed's authored reveal distance into the caption's band: alpha 0 at
@@ -89,7 +97,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
         planet,
         bodyFootprintRadiusM(planet),
         bodyStates.get(planet.id)!.positionMpc,
-        planet.albedo,
+        compressBrightness(planet.albedo, PLANET_TINT_GAMMA),
         'planet',
       ),
     ),
