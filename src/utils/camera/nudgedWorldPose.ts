@@ -44,11 +44,17 @@ export function nudgedWorldPose(
   }
   if (look !== undefined) {
     const [yaw, pitch] = next.lookOffset ?? [0, 0];
-    next = {
-      ...next,
-      lookOffset: [yaw + look[0], Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch + look[1]))],
-    };
+    next = { ...next, lookOffset: [yaw + look[0], pitch + look[1]] };
   }
   if (roll !== undefined) next = { ...next, roll: (next.roll ?? 0) + roll };
-  return next;
+  // The VIEW pitch is orbit + offset; past ±π/2 its basis flips. Only the offset
+  // gives way (the orbit pitch is the drag law's), and the clamp runs after an
+  // orbit too, which can raise the pitch under a held offset.
+  if (next.lookOffset === undefined) return next;
+  const [offsetYaw, offsetPitch] = next.lookOffset;
+  const clamped = Math.max(
+    -PITCH_LIMIT - next.pitch,
+    Math.min(PITCH_LIMIT - next.pitch, offsetPitch),
+  );
+  return clamped === offsetPitch ? next : { ...next, lookOffset: [offsetYaw, clamped] };
 }

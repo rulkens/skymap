@@ -36,13 +36,32 @@ describe('nudgedWorldPose', () => {
     expect(nudged.distance).toBe(dragged.distance);
   });
 
-  it('world nudge look accumulates lookOffset and clamps pitch', () => {
+  it('world nudge look accumulates lookOffset', () => {
     const once = nudge(POSE, { look: [0.1, 0.2] });
     expect(once.lookOffset).toEqual([0.1, 0.2]);
-    const twice = nudge(once, { look: [0.2, 3] });
+    const twice = nudge(once, { look: [0.2, 0.1] });
     expect(twice.lookOffset![0]).toBeCloseTo(0.3, 15);
-    expect(twice.lookOffset![1]).toBe(PITCH_LIMIT);
+    expect(twice.lookOffset![1]).toBeCloseTo(0.3, 15);
     expect(twice.yaw).toBe(POSE.yaw);
+  });
+
+  it('look offset cannot carry the view past zenith', () => {
+    const high = { ...POSE, pitch: 1.4 };
+    const looked = nudge(high, { look: [0, 0.5] });
+    expect(looked.pitch).toBe(1.4);
+    expect(looked.pitch + looked.lookOffset![1]).toBeCloseTo(PITCH_LIMIT, 12);
+  });
+
+  it('an orbit under a held offset re-clamps it', () => {
+    const held: CameraPose = { ...POSE, pitch: 1.2, lookOffset: [0, 0.3] };
+    const orbited = nudge(held, { orbit: [0, 0.3] });
+    expect(orbited.pitch).toBeGreaterThan(1.3);
+    expect(orbited.pitch + orbited.lookOffset![1]).toBeCloseTo(PITCH_LIMIT, 12);
+  });
+
+  it('an absent offset stays absent under orbit', () => {
+    const orbited = nudge({ ...POSE, pitch: 1.2 }, { orbit: [0.1, 0.3] });
+    expect(orbited).not.toHaveProperty('lookOffset');
   });
 
   it('an empty delta returns the pose by reference', () => {
