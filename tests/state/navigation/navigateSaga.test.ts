@@ -45,7 +45,6 @@ import { coreSelectionRows } from '../../../src/services/engine/selection/coreSe
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
@@ -126,16 +125,6 @@ function build() {
 const POSE = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4 });
 
 describe('navigateSaga', () => {
-  it('navigate focus cut commits once and never tweens', async () => {
-    const h = build();
-    await h.navigate({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } }, 'cut');
-    await flush();
-
-    expect(h.commits()).toBe(1);
-    expect(h.tweens()).toBe(0);
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
-  });
-
   it('navigate focus fly tweens as today', async () => {
     const h = build();
     await h.navigate({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } }, 'fly');

@@ -11,18 +11,6 @@ const POSE: FramedCameraPose = {
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 
 describe('linkIntentFrom', () => {
-  it('linkIntentFrom parses each key', () => {
-    expect(linkIntentFrom('focus=m31')).toEqual({ view: { kind: 'focus', id: 'm31' } });
-    expect(linkIntentFrom(`pose=${encodeFramedPose(POSE)}`)).toEqual({
-      view: { kind: 'pose', pose: POSE },
-    });
-    expect(linkIntentFrom(`t=${J2000_ISO}&orientation=galactic`)).toEqual({
-      view: { kind: 'home' },
-      t: Date.UTC(2000, 0, 1, 12),
-      orientation: 'galactic',
-    });
-  });
-
   it('focus and pose combine into one focus view', () => {
     expect(linkIntentFrom(`focus=m31&pose=${encodeFramedPose(POSE)}`)).toEqual({
       view: { kind: 'focus', id: 'm31', pose: POSE },

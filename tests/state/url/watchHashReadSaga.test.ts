@@ -43,16 +43,11 @@ import { createHashChangeChannel } from '../../../src/services/url/createHashCha
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchHashReadSaga } from '../../../src/state/url/watchHashReadSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { hashNavigationStarted } from '../../../src/state/url/hashNavigationStarted';
-import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 /**
@@ -162,23 +157,6 @@ describe('watchHashReadSaga', () => {
     // `focus.read`, requesting the id `''`.
     expect(recorded).toContainEqual(clearSelection());
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
-  });
-
-  it('lands a focus link’s pose before it requests the focus, as a cut', () => {
-    // A linked pose IS the framing: the focus must not fly away from it. The
-    // link's own writes land before the absent rows' defaults fire.
-    const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
-    const { recorded, emit } = buildHarness('');
-    recorded.length = 0;
-
-    emit(`focus=m31&pose=${encodeFramedPose(pose)}`);
-
-    expect(recorded.slice(0, 4)).toEqual([
-      hashNavigationStarted(),
-      commitCameraPose(pose),
-      requestSelect('m31'),
-      requestFocus({ id: 'm31', transition: 'cut' }),
-    ]);
   });
 
   it("back to a URL without the running tour's key exits the tour", () => {

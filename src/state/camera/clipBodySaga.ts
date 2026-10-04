@@ -5,8 +5,6 @@
  * the seam's `[CANCEL]` hook, which stops the player.
  * A clip leaves the scene alone; what it holds is the sim clock, frozen so
  * nothing drifts under a scripted move and restored in its own `finally`.
- * Saga context is read here, not at fork time: the engine registers it after
- * the root saga forks.
  */
 import { call, race, take, getContext, put, select } from 'typed-redux-saga';
 

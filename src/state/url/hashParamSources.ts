@@ -11,9 +11,7 @@
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
  * read-only row (`write: () => null`: `pose`) composes nothing into the body,
- * so this rule says nothing about its position. The takeover rows began
- * read-only and already sat last, so their becoming writers appended them: no
- * link in the wild carries a written takeover key. Read order is not a table
+ * so this rule says nothing about its position. Read order is not a table
  * fact at all: `linkIntentFrom` merges the rows' contributions.
  *
  * ### The `writesOn` completeness contract

@@ -27,9 +27,6 @@ export async function captureScene(
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
   try {
-    if (shot.exhibitId !== undefined && shot.focusId !== undefined) {
-      throw new Error(`'${shot.label}' sets both 'exhibitId' and 'focusId' — boot takes one`);
-    }
     const pose = shotPose(shot);
     const hash =
       shot.exhibitId !== undefined

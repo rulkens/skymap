@@ -2,7 +2,9 @@
  * ArrivalVeilContainer — store boundary for the arrival veil. Only a boot
  * that carried a deep link gets one: a plain boot shows the splash, and its
  * arrival home still runs, unveiled, for `ready`. The URL is read once at
- * mount because the hash drops a takeover key as soon as the link arrives.
+ * mount because a running takeover's key stays in the hash for as long as it
+ * runs — only canonicalization (`pose` never writes back), a failed play, or
+ * one that already ended drops it.
  */
 
 import { memo, useState } from 'react';

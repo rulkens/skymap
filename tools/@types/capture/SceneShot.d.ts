@@ -5,8 +5,7 @@ import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAct
 /**
  * One framed shot of the scene: where to look, when, and where the file lands.
  * Deliberately knows nothing about palette cards — whoever wants a shot maps
- * their own data onto this. `focusId` and `exhibitId` are exclusive — the shot
- * boots on `#focus=` or `#exhibit=`, never both.
+ * their own data onto this.
  */
 export type SceneShot = {
   /** `#focus=` id to open on; omit to boot with no selection (a view's own frame). */
