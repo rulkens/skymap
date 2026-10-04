@@ -74,7 +74,7 @@ describe('watchHashWriteSaga', () => {
   it('writes the pending id on requestFocus', async () => {
     // The cold deep-link case: the id is still resolving, no ref slot holds
     // anything, and the URL must carry the intent anyway.
-    buildHarness().dispatch(requestFocus('m31'));
+    buildHarness().dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
     await settle();
 
     expect(lastBody()).toBe('focus=m31');
@@ -105,7 +105,7 @@ describe('watchHashWriteSaga', () => {
 
   it('writes an empty body on clearSelection', async () => {
     const store = buildHarness();
-    store.dispatch(requestFocus('m31'));
+    store.dispatch(requestFocus({ id: 'm31', transition: 'fly' }));
 
     // Settled BETWEEN the two dispatches on purpose. Without it they share one
     // debounce window and the only publish is the clear's — which would pass

@@ -23,10 +23,9 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { installPerfHook, PERF_WARMUP_FRAMES } from '../../../src/state/perf/installPerfHook';
 import { isPerfMode } from '../../../src/utils/url/isPerfMode';
 import { requestTier } from '../../../src/state/tier/requestTier';
-import { setTier } from '../../../src/state/tier/tierSlice';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
-import { Source } from '../../../src/data/sources';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
@@ -121,8 +120,9 @@ describe('installPerfHook', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(requestTier('large'));
 
     // Drive the store to the "settled" reading (engine ready + no load in
-    // flight) so the fresh whenStablyReady arms its stability timer.
+    // flight + arrived) so the fresh whenStablyReady arms its stability timer.
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
+    store.dispatch(arrived());
     // Not yet: the predicate must HOLD for the full stability window first.
     await Promise.resolve();
     expect(resolved).toBe(false);

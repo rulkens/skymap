@@ -419,6 +419,7 @@ export function createEngine(
         : null,
     playClip,
     clipPathInspect,
+    home: composition.home,
   });
 
   // `void`: nothing awaits engine construction, and the catch routes failures to

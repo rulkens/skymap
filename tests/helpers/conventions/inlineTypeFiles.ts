@@ -341,7 +341,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'tools/textures/geodanmarkTileSource.ts',
   'tools/textures/surfaceBodies/marsSurfaceBake.ts',
   'tools/utils/camera/orbitDragDelta.ts',
-  'tools/utils/capture/poseMismatch.ts',
   'tools/utils/cli/ansiPalette.ts',
   'tools/utils/geo/icosphere.ts',
   'tools/utils/geo/refineMeshByEdgeLength.ts',

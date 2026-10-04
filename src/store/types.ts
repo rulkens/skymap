@@ -61,6 +61,7 @@ import type { Mat3 } from '../@types/math/Mat3';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
+import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -180,5 +181,7 @@ export type SagaContext = {
    * rather than omitting it.
    */
   clipPathInspect: ClipPathInspectSeam;
+  /** The composition's home — what a bare link arrives on (`navigateSaga`). */
+  home: EngineHomeConfig;
 };
 export type SetSagaContext = (ctx: SagaContext) => void;

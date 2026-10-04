@@ -126,7 +126,7 @@ describe('App cinema mode', () => {
     // gate) actually reads now — both are `runTakeoverSaga`/`tourBodySaga` writes,
     // driven directly here rather than through the saga. The dwell landing
     // (nonce bump) is what reveals the caption; mid-fly it is hidden by design.
-    store.dispatch(tourStarted({ tourId: 'webShowcase' }));
+    store.dispatch(tourStarted());
     store.dispatch(takeoverStarted({ kind: 'tour', id: 'webShowcase' }));
     store.dispatch(dwellStarted({ dwellSec: 8 }));
     const { container, getByText, queryByText } = renderApp(store);

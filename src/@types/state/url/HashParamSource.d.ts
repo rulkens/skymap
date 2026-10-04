@@ -25,11 +25,11 @@
  * own seed) — so that distinction is stated once, at the pass, instead of being
  * re-derived inside every row.
  *
- * Both arms RETURN actions instead of taking a `dispatch`. Returned actions
- * compose: a saga `put`s them, a test reads their payloads with no store at
- * all, and a row that needs two dispatches (`focus` pins the card AND flies the
- * camera) says so by returning two elements rather than by holding an
- * imperative handle.
+ * `read` returns the row's CONTRIBUTION to a `LinkIntent`, not actions:
+ * `linkIntentFrom` merges every row's share and owns the precedence between
+ * them, so no row's meaning depends on where it sits in the table. A value the
+ * row cannot parse contributes nothing. `readAbsent` still returns actions —
+ * restoring a default is a store write, not part of what a link says.
  *
  * ── writesOn ──
  * The set of dispatched actions that can change this row's `write` output,
@@ -49,6 +49,7 @@
 import type { Action } from '@reduxjs/toolkit';
 
 import type { RootState } from '../../../store/types';
+import type { LinkIntent } from '../../url/LinkIntent';
 
 export type HashParamSource = {
   readonly key: string;
@@ -67,8 +68,8 @@ export type HashParamSource = {
   /** Serialize from the store. `null` omits the param entirely. */
   readonly write: (state: RootState) => string | null;
 
-  /** Deserialize a PRESENT value into actions. Never called with an empty value. */
-  readonly read: (value: string) => readonly Action[];
+  /** Deserialize a PRESENT value. Never called with an empty value. */
+  readonly read: (value: string) => Partial<LinkIntent>;
 
   /**
    * Restore this param's default when it is ABSENT from a hashchange. Never

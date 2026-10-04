@@ -1,15 +1,12 @@
 /**
- * watchClipSaga tests — integration over a real store + saga middleware.
+ * clipBodySaga tests — integration over a real store, driven through
+ * `watchTakeoverSaga` the way the app starts a registry clip.
  *
- * `watchClipSaga` resolves the dispatched `ClipId` against `clipRegistry` and
- * runs the injected `playClip` seam (read from saga context) with the resolved
- * `ClipData` for each `startClip` action, cancelling it on `stopClip` or a
- * re-play (takeLatest). Cancellation is observed via the seam Promise's
- * `[CANCEL]` hook — the same mechanism the production `playClip` seam attaches to
- * route cancellation into `clipPlayer.stop()`.
- *
- * The seam itself is stubbed, so these tests assert the saga's routing
- * contract (resolve + run on play, cancel on stop / re-play), not the clip player.
+ * The `playClip` seam is stubbed, so these assert the body's routing contract
+ * (resolve + run on start, cancel on `exitTakeover` or a superseding start,
+ * clock freeze and restore), not the clip player. Cancellation is observed via
+ * the seam Promise's `[CANCEL]` hook, the one the production seam routes into
+ * `clipPlayer.stop()`.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -18,8 +15,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { CANCEL } from '@redux-saga/core';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchClipSaga } from '../../../src/state/camera/watchClipSaga';
-import { startClip, stopClip } from '../../../src/state/camera/clipActions';
+import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
+import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
+import { startClip } from '../../../src/state/camera/clipActions';
+import { hashBodyFor } from '../../../src/state/url/hashBodyFor';
 import { setRate, setSimDays, goLive, pause, resume } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
@@ -77,11 +76,11 @@ function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS)
     selection: selectionResolverOver(resolveDeps),
     cameraRuntime: () => RUNTIME,
   });
-  sagaMiddleware.run(watchClipSaga);
+  sagaMiddleware.run(watchTakeoverSaga);
   return { store };
 }
 
-describe('watchClipSaga', () => {
+describe('clipBodySaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -102,7 +101,7 @@ describe('watchClipSaga', () => {
     expect(seam).toHaveBeenCalledWith(EXPECTED);
   });
 
-  it('cancels the in-flight seam when stopClip is dispatched', async () => {
+  it('cancels the in-flight seam on exitTakeover', async () => {
     let cancelled = false;
     const seam = blockingSeam(() => {
       cancelled = true;
@@ -113,10 +112,10 @@ describe('watchClipSaga', () => {
     await flush();
     expect(cancelled).toBe(false);
 
-    store.dispatch(stopClip());
+    store.dispatch(exitTakeover());
     await flush();
 
-    // The race's stop arm wins → the run call is cancelled → [CANCEL] fires.
+    // The race's exit arm wins → the run call is cancelled → [CANCEL] fires.
     expect(cancelled).toBe(true);
   });
 
@@ -173,7 +172,21 @@ describe('watchClipSaga', () => {
     }
   });
 
-  it('cancels the prior run when a second startClip arrives (takeLatest)', async () => {
+  it('a running clip keeps clip= in the hash and drops it when the clip ends', async () => {
+    const { store } = buildHarness(blockingSeam(() => {}));
+
+    store.dispatch(startClip(CLIP_ID));
+    await flush();
+    store.dispatch(startClip('flowOrbit'));
+    await flush();
+    expect(hashBodyFor(store.getState())).toContain('clip=flowOrbit');
+
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(hashBodyFor(store.getState())).not.toContain('clip=');
+  });
+
+  it('cancels the prior run when a second startClip arrives', async () => {
     let cancelCount = 0;
     const seam = blockingSeam(() => {
       cancelCount++;
@@ -185,7 +198,7 @@ describe('watchClipSaga', () => {
     store.dispatch(startClip(CLIP_ID));
     await flush();
 
-    // takeLatest cancelled the first run (one [CANCEL]); both runs called the seam.
+    // The watcher cancelled the first run (one [CANCEL]); both runs called the seam.
     expect(cancelCount).toBe(1);
     expect(seam).toHaveBeenCalledTimes(2);
   });
@@ -270,7 +283,7 @@ describe('watchClipSaga', () => {
   });
 
   it('restores manual playback after a clip, including the cancel path', async () => {
-    // Blocking seam so the clip only ends via the explicit stopClip below.
+    // Blocking seam so the clip only ends via the explicit exitTakeover below.
     const seam = blockingSeam(() => {});
     const { store } = buildHarness(seam);
 
@@ -282,8 +295,8 @@ describe('watchClipSaga', () => {
     await flush();
     expect(store.getState().time.paused).toBe(true); // frozen for the clip
 
-    // Cancel via stopClip — the finally restore must still run on this path.
-    store.dispatch(stopClip());
+    // Exit the takeover — the finally restore must still run on this path.
+    store.dispatch(exitTakeover());
     await flush();
 
     const after = store.getState().time;
@@ -309,8 +322,8 @@ describe('watchClipSaga', () => {
     await flush();
     expect(store.getState().time.paused).toBe(true); // still paused during the clip
 
-    // Cancel via stopClip so the finally-restore runs on the clip's exit.
-    store.dispatch(stopClip());
+    // Exit the takeover so the finally-restore runs on the clip's exit.
+    store.dispatch(exitTakeover());
     await flush();
 
     const after = store.getState().time;
