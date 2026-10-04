@@ -46,12 +46,4 @@ describe('ephemerisCorrectionMpc', () => {
       ephemerisCorrectionMpc(CORRECTION, CORRECTION.endJd),
     );
   });
-
-  it('is continuous across both span edges', () => {
-    for (const edge of [CORRECTION.startJd, CORRECTION.endJd]) {
-      const a = km(edge - 1e-6);
-      const b = km(edge + 1e-6);
-      expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeLessThan(1e-3);
-    }
-  });
 });

@@ -7,7 +7,7 @@
  * (ω, cos, sin) amplitudes. τ and phase conventions match `ephemerisCorrectionMpc`.
  */
 
-import type { FitResult } from '../../@types/math/FitResult';
+import type { EphemerisCorrection } from '../../../src/@types/scene/EphemerisCorrection';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { dot } from './dot';
 import { fft } from './fft';
@@ -24,7 +24,7 @@ export function fitSinusoidSeries(
   endJd: number,
   stopKm: number,
   maxTerms: number,
-): FitResult {
+): Pick<EphemerisCorrection, 'polyKm' | 'terms'> {
   const n = tJd.length;
   // Uniform, except the last gap may be short so the grid can end exactly on `endJd`: an
   // unsampled tail is extrapolated, and drifts past the stop. The FFT only brackets ω, so

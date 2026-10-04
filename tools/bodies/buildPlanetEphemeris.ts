@@ -9,7 +9,6 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { format, resolveConfig } from 'prettier';
 
@@ -20,7 +19,6 @@ import { keplerianPositionMpc } from '../../src/utils/orbit/keplerianPositionMpc
 import { propagateElements } from '../../src/utils/orbit/propagateElements';
 import type { EphemerisCorrection } from '../../src/@types/scene/EphemerisCorrection';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import type { HorizonsSeries } from './@types/HorizonsSeries';
 import { fitSinusoidSeries } from '../utils/math/fitSinusoidSeries';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
@@ -53,14 +51,14 @@ const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 const fmtOmega = (x: number): string => String(Number(x.toPrecision(12)));
 const fmtKm = (x: number): string => String(Math.round(x * 10) / 10);
 
-function readSeries(naif: string): HorizonsSeries {
+function readSeries(naif: string) {
   const lines = readFileSync(join(rawDataPath('horizons.planets'), `${naif}.csv`), 'utf8')
     .trim()
     .split('\n')
     .slice(1);
   const cols = [0, 1, 2, 3].map(() => new Float64Array(lines.length));
   lines.forEach((line, i) => line.split(',').forEach((v, c) => (cols[c]![i] = Number(v))));
-  return { jd: cols[0]!, km: [cols[1]!, cols[2]!, cols[3]!] };
+  return { jd: cols[0]!, km: [cols[1]!, cols[2]!, cols[3]!] as const };
 }
 
 function keplerKm(id: string, jd: number): Vec3 {
@@ -118,9 +116,9 @@ function buildPlanet(id: string, naif: string, step: number): { text: string; su
 
   let maxKm = 0;
   for (let i = 0; i < jd.length; i++) {
-    const kepler = keplerianPositionMpc(propagateElements(elementsById(id), jd[i]!));
+    const kepler = keplerKm(id, jd[i]!);
     const corr = ephemerisCorrectionMpc(shipped, jd[i]!);
-    const err = [0, 1, 2].map((a) => km[a]![i]! - (kepler[a]! + corr[a]!) / KM_TO_MPC);
+    const err = [0, 1, 2].map((a) => km[a]![i]! - (kepler[a]! + corr[a]! / KM_TO_MPC));
     maxKm = Math.max(maxKm, Math.hypot(err[0]!, err[1]!, err[2]!));
   }
   const nTerms = fit.terms.length / 7;
@@ -151,10 +149,4 @@ async function main(): Promise<void> {
   process.stderr.write(`wrote ${GENERATED_PATH} (${(formatted.length / 1024).toFixed(1)} kB)\n`);
 }
 
-// Allow the script to be both executed (CLI) and imported (tests).
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((err: unknown) => {
-    process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
-    process.exit(1);
-  });
-}
+await main();
