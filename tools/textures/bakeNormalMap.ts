@@ -93,6 +93,9 @@ export const NORMAL_EXAGGERATION: Readonly<Record<string, number>> = {
   tethys: 15, // measured: p50 tilt 4°, p99 17° over the 2k grid, tuned by eye
   dione: 7, // measured: p50 tilt 2°, p99 16°, tuned by eye; its 12 km radius range is the narrowest, so the steepest per-texel slope
   enceladus: 8, // measured: p50 tilt 4°, p99 17° over the 4k grid, tuned by eye (5 km of relief across the 0-255 range)
+  miranda: 12, // measured: p50 tilt 1°, p99 16° over the 4k grid (11 km of relief across the 0-255 range)
+  ariel: 5, // measured: p50 tilt 1°, p99 17° over the 2k grid
+  titania: 6, // measured: p50 tilt 2°, p99 17° over the 1722 grid
   moon: 8, // seed — stronger than DEFAULT_EXAGGERATION (4); tuned by eye at the terminator in F4
 };
 

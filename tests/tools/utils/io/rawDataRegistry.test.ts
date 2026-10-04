@@ -63,7 +63,10 @@ describe('textures.* rows', () => {
     // the quadrants' state until they joined the pull. That `fetch-textures`
     // really does download each one is checked in fetchTextures.test.ts.
     const rawSources = textureKeys.filter(
-      (key) => RAW_DATA[key].source === 'gitignored' && RAW_DATA[key].kind === 'file',
+      (key) =>
+        RAW_DATA[key].source === 'gitignored' &&
+        RAW_DATA[key].kind === 'file' &&
+        !RAW_DATA[key].manualDownload,
     );
     expect(rawSources.length).toBeGreaterThan(0);
     for (const key of rawSources) {

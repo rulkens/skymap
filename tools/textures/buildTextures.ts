@@ -20,13 +20,18 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
+import type { IsisCubeRaster } from '../@types/image/IsisCubeRaster';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
 import { fillEquirectNodata } from '../utils/image/fillEquirectNodata';
+import { flattenUncoveredNormals } from '../utils/image/flattenUncoveredNormals';
+import { dropSmallRegions } from '../utils/image/dropSmallRegions';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
+import { isisMosaicToGrey } from '../utils/image/isisMosaicToGrey';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
+import { readIsisCube } from '../utils/image/readIsisCube';
 import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
@@ -106,9 +111,36 @@ function firstExisting(paths: readonly string[]): string | null {
   return null;
 }
 
+/** Region-size floor for `isisDem`: a limb-profile arc is a sliver beside the stereo coverage. */
+const MIN_REGION_FRACTION = 0.05;
+
+const cubeCache = new Map<string, IsisCubeRaster>();
+function loadCube(path: string): IsisCubeRaster {
+  let cube = cubeCache.get(path);
+  if (cube === undefined) {
+    cube = readIsisCube(path);
+    cubeCache.set(path, cube);
+  }
+  return cube;
+}
+
 /** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
  *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
 const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
+
+/** An `isisDem` grid is the tier ceiling, or the cube's own (even) width when that is
+ *  narrower, so a small DEM is never binned onto a grid wider than its pixels. */
+function isisDemGridWidth(bodyId: BodyTextureId, srcPath: string): number {
+  const ceilingPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+  return Math.min(ceilingPx, loadCube(srcPath).width & ~1);
+}
+
+/** sharp over a source file; an ISIS mosaic is decoded and stretched to 8-bit grey first. */
+function openGreySource(srcPath: string): ReturnType<typeof sharp> {
+  if (!srcPath.endsWith('.cub')) return sharp(srcPath, { limitInputPixels: false });
+  const { data, width, height } = isisMosaicToGrey(loadCube(srcPath));
+  return sharp(Buffer.from(data.buffer), { raw: { width, height, channels: 1 } });
+}
 
 /** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
  *  of Mimas radius is not terraced into 90 m steps before the Sobel pass. */
@@ -124,6 +156,7 @@ function toByteScale(radius: Float32Array): Float32Array {
 
 /** Source width in pixels; 0 if sharp can't report it. */
 async function sourceWidth(srcPath: string): Promise<number> {
+  if (srcPath.endsWith('.cub')) return loadCube(srcPath).width;
   const meta = await sharp(srcPath, { limitInputPixels: false }).metadata();
   return meta.width ?? 0;
 }
@@ -150,7 +183,7 @@ export async function writeTintedMonoTier(
   widthPx: number,
   outPath: string,
 ): Promise<void> {
-  const { data, info } = await sharp(srcPath, { limitInputPixels: false })
+  const { data, info } = await openGreySource(srcPath)
     .resize({ width: widthPx })
     .greyscale()
     .raw()
@@ -321,7 +354,8 @@ function bakeNormalOnce(
     const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
       if ('format' in entry) {
-        const width = GRID_WIDTH[entry.format];
+        const width =
+          entry.format === 'isisDem' ? isisDemGridWidth(bodyId, srcPath) : GRID_WIDTH[entry.format];
         const height = width / 2;
         let grid: Float32Array;
         if (entry.format === 'icq') {
@@ -331,6 +365,27 @@ function bakeNormalOnce(
             height,
             entry.lonOffsetDeg,
           );
+        } else if (entry.format === 'isisDem') {
+          const cube = loadCube(srcPath);
+          const src = cube.data.slice();
+          dropSmallRegions(src, cube.width, cube.height, MIN_REGION_FRACTION);
+          // Column 0 is lon `leftLonDeg`, not 0, so the registration shift absorbs it.
+          grid = binFloatDemToEquirect(
+            src,
+            cube.width,
+            cube.height,
+            width,
+            height,
+            entry.lonOffsetDeg - cube.leftLonDeg,
+          );
+          const covered = Uint8Array.from(grid, (v) => (Number.isNaN(v) ? 0 : 1));
+          fillEquirectNodata(grid, width, height);
+          const normals = bakeNormalMap(
+            { data: toByteScale(grid), width, height },
+            exaggerationFor(bodyId),
+          );
+          flattenUncoveredNormals(normals.data, covered);
+          return normals;
         } else {
           const raw = await sharp(srcPath, { limitInputPixels: false })
             .toColourspace('b-w') // single-channel raster; without it sharp returns 3 float channels
@@ -482,17 +537,19 @@ export async function buildTextures(outDir: string): Promise<void> {
       continue;
     }
     const entry = SOURCE_TABLE[bodyId][kind]!;
-    const width = 'format' in entry ? GRID_WIDTH[entry.format] : await sourceWidth(srcPath);
+    const width =
+      'format' in entry
+        ? entry.format === 'isisDem'
+          ? isisDemGridWidth(bodyId, srcPath)
+          : GRID_WIDTH[entry.format]
+        : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
-    if (tiers.length === 0) {
-      process.stderr.write(
-        `  warn ${bodyId}:${kind}: source ${width}px too small for any tier — skipping\n`,
-      );
-      continue;
-    }
+    const emitted = emittedTiersForBody(bodyId, kind);
+    // A source narrower than `small` still ships that one tier, at its own width: no upscale.
+    const fitted = emitted.filter((tier) => fitting.includes(tier));
+    const tiers = fitted.length > 0 ? fitted : emitted.slice(0, 1);
     for (const tier of tiers) {
-      const px = tierToTexturePx(tier);
+      const px = Math.min(tierToTexturePx(tier), width);
       const filename = bodyTextureFilename(bodyId, kind, tier);
       const note = await writeBodyKindTier(bodyId, kind, srcPath, px, join(outDir, filename));
       process.stderr.write(`  ok   ${filename}${note}\n`);

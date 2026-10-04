@@ -193,6 +193,39 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'nasa',
     treatment: { kind: 'monoTint', tint: [1.2, 1.16, 1.08], lift: 0.107, antimeridianCentred: true },
   },
+  // Uranus's five big moons: Schenk's Voyager 2 mosaics, stretched to 8-bit and neutral grey; the
+  // unseen hemisphere is flat mean grey. Tiers follow source width (Miranda 6294, Ariel 3652, the
+  // rest under 2048: their `small` tier is written at the source's own width, never upscaled).
+  miranda: {
+    bodyId: 'miranda',
+    kinds: { surface: 'medium', normal: 'medium' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  ariel: {
+    bodyId: 'ariel',
+    kinds: { surface: 'small', normal: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  umbriel: {
+    bodyId: 'umbriel',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  titania: {
+    bodyId: 'titania',
+    kinds: { surface: 'small', normal: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  oberon: {
+    bodyId: 'oberon',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
 };
 
 // Takes `string`, not `BodyTextureId`, so a caller holding an arbitrary body id can

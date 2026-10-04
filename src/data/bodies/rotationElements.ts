@@ -167,6 +167,42 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     poleRaDeg: 318.16,
     poleDecDeg: 75.03,
   },
+  {
+    kind: 'tidallyLocked',
+    id: 'miranda',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.08,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'ariel',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.1,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'umbriel',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.1,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'titania',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.1,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'oberon',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.1,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'puck',
+    poleRaDeg: 257.43,
+    poleDecDeg: -15.1,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.

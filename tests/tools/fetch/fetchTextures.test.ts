@@ -12,7 +12,7 @@ import {
 } from '../../../tools/fetch/fetchTextures';
 import { BMNG_QUADRANT_KEYS } from '../../../tools/utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../../tools/utils/io/bmngVintage';
-import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
+import { RAW_DATA, rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES } from '../../../tools/utils/io/textureSources';
 
 /** Destination basenames of a source list — the identity we assert on
@@ -131,6 +131,7 @@ describe('textureSourcesFor', () => {
     const destPaths = new Set(textureSourcesFor(false).map((s) => s.destPath));
     for (const [bodyId, kinds] of Object.entries(TEXTURE_SOURCES)) {
       for (const [kind, entry] of Object.entries(kinds)) {
+        if (RAW_DATA[entry.native].manualDownload) continue; // browser-only: the pull skips it
         expect(destPaths.has(rawDataPath(entry.native)), `${bodyId}:${kind}`).toBe(true);
       }
     }

@@ -122,4 +122,40 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     datumRadiusM: 606000, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
     albedo: [0.4, 0.39, 0.38],
   }),
+  satelliteBody({
+    id: 'miranda',
+    label: 'Miranda',
+    datumRadiusM: 235800,
+    albedo: [0.52, 0.52, 0.52],
+  }),
+  satelliteBody({
+    id: 'ariel',
+    label: 'Ariel',
+    datumRadiusM: 578900,
+    albedo: [0.58, 0.58, 0.58],
+  }),
+  satelliteBody({
+    id: 'umbriel',
+    label: 'Umbriel',
+    datumRadiusM: 584700,
+    albedo: [0.38, 0.38, 0.38],
+  }),
+  satelliteBody({
+    id: 'titania',
+    label: 'Titania',
+    datumRadiusM: 788900,
+    albedo: [0.48, 0.48, 0.48],
+  }),
+  satelliteBody({
+    id: 'oberon',
+    label: 'Oberon',
+    datumRadiusM: 761400,
+    albedo: [0.42, 0.42, 0.42],
+  }),
+  satelliteBody({
+    id: 'puck',
+    label: 'Puck',
+    datumRadiusM: 81000,
+    albedo: [0.3, 0.3, 0.3],
+  }),
 ];
