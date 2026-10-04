@@ -51,8 +51,8 @@ describe('ORIENTATION_FRAMES', () => {
   });
 
   it('ecliptic pole matches the obliquity pole from planeFrameFromPole', () => {
-    // 66.56° = 90° − 23.44°: the ecliptic north pole in equatorial RA/Dec.
-    const pole = planeFrameFromPole(270, 66.56).normal;
+    // 66.5607089° = 90° − 23.4392911°: the ecliptic north pole in equatorial RA/Dec.
+    const pole = planeFrameFromPole(270, 90 - 23.4392911).normal;
     const mid = col(ORIENTATION_FRAMES.ecliptic, 1);
     expect(mid[0]).toBeCloseTo(pole[0], 4);
     expect(mid[1]).toBeCloseTo(pole[1], 4);
