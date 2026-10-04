@@ -1653,6 +1653,25 @@ export const RAW_DATA = {
     description: 'What `meshes.sha256` pins, the R2 backup, and the restore command.',
   },
 
+  // ─── JPL Horizons planet vectors (ephemeris-correction fit input) ─────
+
+  'horizons.planets': {
+    path: 'data/raw/horizons/planets',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Holds `<naif>.csv` (`jd,x_km,y_km,z_km`): 1-day heliocentric ICRF positions of the eight planets, 1900–2100, UT time tags. Input to `build-planet-ephemeris`.',
+    upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
+    fetcher: 'tools/fetch/fetchHorizonsPlanets.ts',
+    readme: 'horizons.planets.readme',
+  },
+  'horizons.planets.readme': {
+    path: 'data/raw/horizons/planets/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Horizons planet vectors — the exact query, targets and span.',
+  },
+
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 
   'starnet.weights': {

@@ -31,13 +31,11 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
 import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
-import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../../../../src/utils/orbit/keplerianPositionMpc';
-import { addVec3 } from '../../../../../src/utils/math/addVec3';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -95,13 +93,17 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', async (impor
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
 // The J2000 oracle `SCENE_ORBIT_CONICS` used to provide, hand-derived here with
-// its own two helpers (`keplerianEllipse` for the ellipse, `keplerianPositionMpc`
-// to place a focus that is itself an orbiting body) so the expected values never
-// come from the layer under test.
-function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
+// its own helpers (`keplerianEllipse` for the ellipse, the snapshot body less its
+// raw Kepler offset for the focus the trail anchors on) so the expected values
+// never come from the layer under test.
+function conicAtJ2000(el: OrbitalElements) {
   const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(el);
+  const bodyMpc = deriveBodyStates(CONST_J2000).get(el.id)!.positionMpc;
+  const keplerMpc = keplerianPositionMpc(el);
   return {
-    centerMpc: addVec3(focusPositionMpc, centerOffsetMpc),
+    centerMpc: [0, 1, 2].map(
+      (i) => bodyMpc[i]! - keplerMpc[i]! + centerOffsetMpc[i]!,
+    ) as unknown as Vec3,
     semiMajorMpc,
     semiMinorMpc,
     eccentricity: el.eccentricity,
@@ -110,14 +112,9 @@ function conicAtJ2000(el: OrbitalElements, focusPositionMpc: Readonly<Vec3>) {
   };
 }
 
-const SUN_POS_MPC = SCENE_ANCHORS.find((a) => a.id === 'sun')!.positionMpc;
-const EARTH_POS_MPC = addVec3(
-  SUN_POS_MPC,
-  keplerianPositionMpc(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'earth')!),
-);
 // Mercury is CORE_TRAIL_ELEMENTS[0] — the first ORBITAL_ELEMENTS row, unfiltered.
-const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!, SUN_POS_MPC);
-const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!, EARTH_POS_MPC);
+const MERCURY_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS[0]!);
+const MOON_CONIC = conicAtJ2000(CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!);
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
