@@ -7,6 +7,7 @@
 
 import { vec3 } from 'wgpu-matrix';
 
+import { PITCH_LIMIT } from '../../data/camera/pitchLimit';
 import { zoomedDistance } from '../../utils/camera/zoomedDistance';
 import { orbitRadPerPixel } from '../../utils/camera/orbitRadPerPixel';
 import { imagePlaneBasis } from '../../utils/camera/imagePlaneBasis';
@@ -18,11 +19,6 @@ import type { InputStep } from '../../@types/camera/InputStep';
 import type { PivotFraming } from '../../@types/camera/PivotFraming';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
-
-// Pitch ceiling: at exactly ±π/2 forward is collinear with the reference up and
-// `lookAt` degenerates to an all-NaN view matrix (gimbal lock). The 0.01 rad
-// (≈0.57°) gap is invisible.
-const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 /**
  * `cssHeight` is the CSS height, NOT the backing store — gesture feel must not

@@ -20,7 +20,11 @@ export function encodeFramedPose(framed: FramedCameraPose): string {
     // s,<siteId>,<headingRad>,<elevationRad>,<rangeM>
     return ['s', siteId, headingRad, elevationRad, rangeM].map(String).join(',');
   }
-  const { target, yaw, pitch, distance, roll } = framed.pose;
-  // a,<target×3>,<yaw>,<pitch>,<distance>,<roll>
-  return ['a', ...target, yaw, pitch, distance, roll ?? 0].map(String).join(',');
+  const { target, yaw, pitch, distance, roll, lookOffset } = framed.pose;
+  // a,<target×3>,<yaw>,<pitch>,<distance>,<roll>[,<lookYaw>,<lookPitch>]
+  const fields = ['a', ...target, yaw, pitch, distance, roll ?? 0];
+  // Only a non-zero offset lengthens the link, so every existing link stays byte-identical.
+  if (lookOffset !== undefined && (lookOffset[0] !== 0 || lookOffset[1] !== 0))
+    fields.push(...lookOffset);
+  return fields.map(String).join(',');
 }

@@ -9,7 +9,7 @@
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
-import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../camera/controlSchemes';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
@@ -44,7 +44,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     device: phaseLocals.device,
     context: phaseLocals.context,
     timingService: state.gpu.timingService,
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 
   // The scheduler was wired with `onFrame: () => frameRef.current()`, reading the
