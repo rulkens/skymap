@@ -1,12 +1,13 @@
 /**
  * orbitalElements — the J2000 Keplerian table, single source of truth for BOTH body
  * positions (`keplerianPositionMpc`) and their trails (`keplerianEllipse`); the trail pass
- * anchors each trail on the snapshot body position, so a body sits on its own trail by construction. Per row: `focusId` (the
- * Sun for planets, the parent planet for a moon) and `plane` (omitted = ecliptic, which is how
- * JPL publishes the planets and the Moon; a planet's own moons ride their OWN Laplace pole —
- * see `orbitPlaneFrames.ts`). No buried Mpc/radian literals, and JPL's `L`/`ϖ` columns are
- * converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription stays
- * checkable against the source: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons).
+ * anchors each trail on the snapshot body position, so a body sits on its own trail by
+ * construction. Per row: `focusId` (the Sun for planets, the parent planet for a moon) and
+ * `plane` (omitted = ecliptic, which is how JPL publishes the planets and the Moon; a planet's
+ * own moons ride their OWN Laplace pole — see `orbitPlaneFrames.ts`). No buried Mpc/radian
+ * literals, and JPL's `L`/`ϖ` columns are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`,
+ * likewise the rates) so every transcription stays checkable against the source: JPL SSD
+ * approx_pos.html Table 1 (planets), sats/elem (moons).
  */
 
 import { SCALE_UNITS } from '../scaleUnits';

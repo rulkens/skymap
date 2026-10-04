@@ -73,7 +73,9 @@ describe('GALACTIC_DISC_FORWARD', () => {
       GALACTIC_DISC_FORWARD,
       ORIENTATION_FRAMES.ecliptic,
     );
-    expect(yaw).toBeCloseTo(-1.4208, 6);
-    expect(pitch).toBeCloseTo(-0.1783, 6);
+    // 4 places, not 6: the exact J2000 obliquity re-tilts the ecliptic frame by
+    // ~2e-6 rad, still well inside a mistyped fourth decimal.
+    expect(yaw).toBeCloseTo(-1.4208, 4);
+    expect(pitch).toBeCloseTo(-0.1783, 4);
   });
 });
