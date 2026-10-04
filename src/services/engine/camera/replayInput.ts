@@ -55,6 +55,8 @@ export function replayInput(
     readonly winnerLastFrame: DriverId;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
     readonly navHeld: boolean;
+    /** Last frame's winner was a navigator row: its register, not `base`, is the live pose. */
+    readonly navOwns: boolean;
   },
 ): {
   readonly register: FramedCameraPose;
@@ -226,7 +228,12 @@ export function replayInput(
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
           !step.duringGesture && isFollowDriverId(winnerLastFrame) && followTargetBefore !== null;
-        if (!ridesTheFollow && stepRegister(step)) break;
+        // While the navigator owns the camera, `base` is the last commit, not the
+        // view (R11): an at-rest notch would zoom that stale pose and snap back to
+        // it. It rides the live register instead, as a held gesture's does, and
+        // the navigator rows' at-rest commit bakes it.
+        const notch = args.navOwns && !step.duringGesture ? { ...step, duringGesture: true } : step;
+        if (!ridesTheFollow && stepRegister(notch)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
           // Ruling 8: the ride's authored altitude move IS that target change —

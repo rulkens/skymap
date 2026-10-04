@@ -82,6 +82,7 @@ function ctxOf(
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     autoRotateEpoch: { ref: null, startMs: null },
     navHeld: false,
+    navOwns: false,
   };
 }
 

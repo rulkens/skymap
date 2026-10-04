@@ -145,6 +145,8 @@ export function stepCameraRuntime(
       winnerLastFrame,
       autoRotateEpoch: prev.epochs.autoRotate,
       navHeld: prev.navigator.held !== null,
+      navOwns:
+        schemes[prev.scheme].drivers.find((d) => d.id === winnerLastFrame)?.family === 'openSpace',
     },
   );
   const controls = stored.settings.cameraControls;

@@ -454,6 +454,22 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     expect(commitsIn(stepWith(h, []))).toBe(0);
   });
 
+  it('a wheel notch mid-coast zooms the live pose, not the stale base', () => {
+    const { h } = coasting();
+    const live = h.state.cameraRuntime.register.pose;
+    const stale = h.store.getState().camera.base;
+    if (!isWorldArm(live) || !isWorldArm(stale)) throw new Error('expected the world arm');
+    expect(live.pose.yaw).not.toBeCloseTo(stale.pose.yaw, 3);
+    stepWith(h, [{ kind: 'zoom', factor: 1.2, duringGesture: false, cursorPx: null }]);
+    const after = h.state.cameraRuntime.register.pose;
+    if (!isWorldArm(after)) throw new Error('expected the world arm');
+    // The coast keeps turning by at most a frame's worth; a snap back lands on the base's yaw.
+    expect(Math.abs(after.pose.yaw - live.pose.yaw)).toBeLessThan(
+      Math.abs(stale.pose.yaw - live.pose.yaw) / 2,
+    );
+    expect(after.pose.distance).toBeGreaterThan(live.pose.distance);
+  });
+
   it('a press, move and release in one frame commits once over the whole motion', () => {
     const h = makeCameraSimHarness({ focusBody: null });
     h.store.dispatch(setControlScheme('openspace'));
