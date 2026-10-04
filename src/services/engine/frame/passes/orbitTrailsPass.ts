@@ -15,6 +15,7 @@ import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegio
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
+import { keplerianPositionMpc } from '../../../../utils/orbit/keplerianPositionMpc';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
 import { sampledDepthBinding } from '../sampledDepthBinding';
@@ -96,17 +97,19 @@ export const orbitTrailsPass: ContentPass = {
     for (let i = 0; i < limit; i++) {
       const elements = rows[i]!;
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
-      // FRESH vectors per call, so the in-place focus fold below cannot alias a
+      // FRESH vectors per call, so the in-place anchoring below cannot alias a
       // shared scratch across orbits.
       const propagated = propagateElements(elements, ctx.snapshot.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
-      // The snapshot seeds anchors (the Sun) alongside every element row, so a
-      // heliocentric focus and a moving parent are the same lookup.
-      const focus = states.get(elements.focusId)!.positionMpc;
+      // Centre = the snapshot body position, less its raw Kepler offset, plus the
+      // ellipse centre offset: the body sits on its trail by construction, so any
+      // later correction to the snapshot position moves the trail with it.
+      const bodyMpc = states.get(elements.id)!.positionMpc;
+      const keplerMpc = keplerianPositionMpc(propagated);
       const centerMpc = centerOffsetMpc;
-      centerMpc[0] += focus[0];
-      centerMpc[1] += focus[1];
-      centerMpc[2] += focus[2];
+      centerMpc[0] += bodyMpc[0] - keplerMpc[0];
+      centerMpc[1] += bodyMpc[1] - keplerMpc[1];
+      centerMpc[2] += bodyMpc[2] - keplerMpc[2];
 
       const dx = centerMpc[0] - camPos[0];
       const dy = centerMpc[1] - camPos[1];
