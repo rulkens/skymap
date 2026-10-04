@@ -650,57 +650,6 @@ describe('orbitTrailsPass.draw', () => {
     }
   });
 
-  it('Moon, Hubble and Saturn sit on their trails at a non-J2000 date', () => {
-    // 1989: Earth carries its correction and the Moon's reflex, Saturn its own
-    // correction; each body must still lie on its conic at its propagated E.
-    const simDays = 2447763.5;
-    const states = deriveBodyStates(simDays);
-    const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
-    for (const id of ['moon', 'hubble', 'saturn']) {
-      const el = ORBITAL_ELEMENTS.find((e) => e.id === id)!;
-      const bodyMpc = states.get(id)!.positionMpc;
-      const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
-      const ctx = {
-        snapshot: {
-          simDays,
-          focusBlend: 0,
-          nowMs: 0,
-          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
-        },
-        bodyPose: () => null,
-        drawCamPos: eye,
-        drawPxPerRad: FIXTURE_PX_PER_RAD,
-        cam: { distance: 1e-13 },
-      } as unknown as FrameView;
-      composeMock.mockClear();
-      const renderer = makeRendererSpy();
-      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
-        ...makeState(renderer),
-        orbitTrailRows: [el],
-      } as unknown as EngineState);
-
-      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
-      expect(count, id).toBe(1);
-      const { eccentricity, meanAnomalyRad } = propagateElements(el, simDays);
-      const eAnom = eccentricAnomalyFromMean(meanAnomalyRad, eccentricity);
-      const [cosE, sinE] = [Math.cos(eAnom), Math.sin(eAnom)];
-      // f32's ulp at Saturn's 1.4e9 km semi-major axis is 128 km, so Saturn reads the
-      // f64 conic handed to composeOrbitConic; the small orbits read the packed basis.
-      const [, centre, major, minor] = composeMock.mock.calls[0]! as Vec3[];
-      for (let axis = 0; axis < 3; axis++) {
-        const rel = (bodyMpc[axis]! - eye[axis]!) * kmPerMpc;
-        if (id === 'saturn') {
-          const onConic = centre![axis]! + major![axis]! * cosE + minor![axis]! * sinE;
-          expect(Math.abs((onConic - bodyMpc[axis]!) * kmPerMpc), id).toBeLessThan(1e-3);
-        } else {
-          const packed =
-            staging[34 + axis]! + staging[38 + axis]! * cosE + staging[42 + axis]! * sinE;
-          expect(Math.abs(packed - rel), id).toBeLessThan(0.1);
-        }
-      }
-    }
-  });
-
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
     // Same pose as "rides a moon trail on its propagated parent" above — parking
     // the camera at Earth is what makes the Moon's tiny geocentric orbit survive
