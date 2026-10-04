@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ephemerisCorrectionMpc } from '../../../src/utils/orbit/ephemerisCorrectionMpc';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { EphemerisCorrection } from '../../../src/@types/scene/EphemerisCorrection';
 
 // A 400-day span, so dt = 100 sits at τ = −0.5 with round phases.
@@ -20,8 +21,10 @@ const CORRECTION: EphemerisCorrection = {
   ],
 };
 
-function km(simDays: number): number[] {
-  return ephemerisCorrectionMpc(CORRECTION, simDays).map((v) => v / SCALE_UNITS.KM_TO_MPC);
+function km(simDays: number): Vec3 {
+  const [x, y, z] = ephemerisCorrectionMpc(CORRECTION, simDays);
+  const k = SCALE_UNITS.KM_TO_MPC;
+  return [x / k, y / k, z / k];
 }
 
 describe('ephemerisCorrectionMpc', () => {

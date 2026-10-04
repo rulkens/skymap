@@ -19,12 +19,12 @@ export function ephemerisCorrectionMpc(c: EphemerisCorrection, simDays: number):
   let z = p0[2] + tau * (p1[2] + tau * (p2[2] + tau * p3[2]));
   const terms = c.terms;
   for (let i = 0; i < terms.length; i += FLOATS_PER_TERM) {
-    const phase = terms[i] * dt;
+    const phase = terms[i]! * dt;
     const cos = Math.cos(phase);
     const sin = Math.sin(phase);
-    x += terms[i + 1] * cos + terms[i + 4] * sin;
-    y += terms[i + 2] * cos + terms[i + 5] * sin;
-    z += terms[i + 3] * cos + terms[i + 6] * sin;
+    x += terms[i + 1]! * cos + terms[i + 4]! * sin;
+    y += terms[i + 2]! * cos + terms[i + 5]! * sin;
+    z += terms[i + 3]! * cos + terms[i + 6]! * sin;
   }
   const k = SCALE_UNITS.KM_TO_MPC;
   return [x * k, y * k, z * k];
