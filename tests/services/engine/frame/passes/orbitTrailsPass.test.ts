@@ -33,6 +33,7 @@ import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements
 import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
+import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import { keplerianPositionMpc } from '../../../../../src/utils/orbit/keplerianPositionMpc';
@@ -75,6 +76,21 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
   })),
 }));
 import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
+
+// Lets one test hand the pass a snapshot that differs from raw Kepler; unset, the
+// real map passes through untouched.
+const snapshotOverride = vi.hoisted(() => ({ states: undefined as unknown }));
+vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../../../../src/services/engine/frame/sceneBodyStates')
+    >();
+  return {
+    sceneBodyStates: ((...args: Parameters<typeof actual.sceneBodyStates>) =>
+      (snapshotOverride.states as ReturnType<typeof actual.sceneBodyStates> | undefined) ??
+      actual.sceneBodyStates(...args)) as typeof actual.sceneBodyStates,
+  };
+});
 
 const composeMock = composeOrbitConic as unknown as ReturnType<typeof vi.fn>;
 
@@ -583,6 +599,58 @@ describe('orbitTrailsPass.draw', () => {
       moon[2] - j2000Moon.centerMpc[2],
     );
     expect(drift).toBeGreaterThan(1e-13);
+  });
+
+  it('trail follows a snapshot position that differs from raw Kepler', () => {
+    const simDays = CONST_J2000 + 100;
+    const real = deriveBodyStates(simDays);
+    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const moonState = real.get('moon')!;
+    // 1e6 km off raw Kepler, asymmetric so a dropped axis shows.
+    const shiftMpc = [1e6, -4e5, 2.5e5].map((km) => km * SCALE_UNITS.KM_TO_MPC);
+    const stubbed: Vec3 = [
+      moonState.positionMpc[0] + shiftMpc[0]!,
+      moonState.positionMpc[1] + shiftMpc[1]!,
+      moonState.positionMpc[2] + shiftMpc[2]!,
+    ];
+    snapshotOverride.states = new Map(real).set('moon', { ...moonState, positionMpc: stubbed });
+    try {
+      // Eye 100 km off the body. The basis is packed in f32, whose ulp at the Moon's
+      // ~4e5 km semi-major axis is 30 m, so 0.1 km is the tightest honest bound; the
+      // injected 1e6 km offset is four orders above it.
+      const eye: Vec3 = [stubbed[0] + 100 * SCALE_UNITS.KM_TO_MPC, stubbed[1], stubbed[2]];
+      const ctx = {
+        snapshot: {
+          simDays,
+          focusBlend: 0,
+          nowMs: 0,
+          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+        },
+        bodyPose: () => null,
+        drawCamPos: eye,
+        drawPxPerRad: FIXTURE_PX_PER_RAD,
+        cam: { distance: 1e-13 },
+      } as unknown as FrameView;
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [moonEl],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const { eccentricity, meanAnomalyRad } = propagateElements(moonEl, simDays);
+      const eAnom = eccentricAnomalyFromMean(meanAnomalyRad, eccentricity);
+      const [cosE, sinE] = [Math.cos(eAnom), Math.sin(eAnom)];
+      const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+      for (let axis = 0; axis < 3; axis++) {
+        const bodyKm =
+          staging[34 + axis]! + staging[38 + axis]! * cosE + staging[42 + axis]! * sinE;
+        expect(Math.abs(bodyKm - (stubbed[axis]! - eye[axis]!) * kmPerMpc)).toBeLessThan(0.1);
+      }
+    } finally {
+      snapshotOverride.states = undefined;
+    }
   });
 
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
