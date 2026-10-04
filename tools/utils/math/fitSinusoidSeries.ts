@@ -9,18 +9,13 @@
 
 import type { FitResult } from '../../@types/math/FitResult';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { dot } from './dot';
 import { fft } from './fft';
 
 const ZERO_PAD = 8;
 const GOLDEN = (Math.sqrt(5) - 1) / 2;
 // Shrinks the two-bin bracket by 0.618^40 ≈ 4e-9: far below any phase error that matters.
 const GOLDEN_ITERATIONS = 40;
-
-const dot = (a: Float64Array, b: Float64Array): number => {
-  let s = 0;
-  for (let i = 0; i < a.length; i++) s += a[i]! * b[i]!;
-  return s;
-};
 
 export function fitSinusoidSeries(
   tJd: Float64Array,
@@ -124,13 +119,27 @@ export function fitSinusoidSeries(
     for (let k = 2; k < m / 2 - 1; k++) if (power[k]! > power[kb]!) kb = k;
     // The padded FFT only brackets the peak; a golden-section search inside the bracket
     // lands on it, so one term absorbs a tone instead of a cluster of neighbours.
-    let lo = (2 * Math.PI * (kb - 1)) / (m * stepDays);
+    // Bin 0 is DC, where the sin column vanishes: keep the bracket at one padded bin or above.
+    let lo = (2 * Math.PI * Math.max(kb - 1, 1)) / (m * stepDays);
     let hi = (2 * Math.PI * (kb + 1)) / (m * stepDays);
+    let w1 = hi - GOLDEN * (hi - lo);
+    let w2 = lo + GOLDEN * (hi - lo);
+    let e1 = capturedEnergy(w1);
+    let e2 = capturedEnergy(w2);
     for (let it = 0; it < GOLDEN_ITERATIONS; it++) {
-      const w1 = hi - GOLDEN * (hi - lo);
-      const w2 = lo + GOLDEN * (hi - lo);
-      if (capturedEnergy(w1) < capturedEnergy(w2)) lo = w1;
-      else hi = w2;
+      if (e1 < e2) {
+        lo = w1;
+        w1 = w2;
+        e1 = e2;
+        w2 = lo + GOLDEN * (hi - lo);
+        e2 = capturedEnergy(w2);
+      } else {
+        hi = w2;
+        w2 = w1;
+        e2 = e1;
+        w1 = hi - GOLDEN * (hi - lo);
+        e1 = capturedEnergy(w1);
+      }
     }
     const omega = (lo + hi) / 2;
     addColumn(Float64Array.from(dt, (d) => Math.cos(omega * d)));
@@ -151,5 +160,5 @@ export function fitSinusoidSeries(
   });
   const at = (j: number): Vec3 => [coef[0]![j]!, coef[1]![j]!, coef[2]![j]!];
   const terms = omegas.flatMap((omega, t) => [omega, ...at(4 + 2 * t), ...at(5 + 2 * t)]);
-  return { polyKm: [at(0), at(1), at(2), at(3)], terms, maxErrKm: maxErr() };
+  return { polyKm: [at(0), at(1), at(2), at(3)], terms };
 }

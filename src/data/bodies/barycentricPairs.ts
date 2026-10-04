@@ -8,7 +8,7 @@ import type { BarycentricPair } from '../../@types/scene/BarycentricPair';
 import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 
-export const BARYCENTRIC_PAIRS: readonly BarycentricPair[] = [
+const BARYCENTRIC_PAIRS: readonly BarycentricPair[] = [
   { primaryId: 'earth', secondaryId: 'moon', secondaryMassFraction: 1 / 82.30057 },
 ];
 

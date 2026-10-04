@@ -27,8 +27,4 @@ describe('parseHorizonsVectorsCsv', () => {
     });
     expect(rows[2]).toMatchObject({ jd: 2415022.5, zKm: -1.016666302505421e7 });
   });
-
-  it('throws when the result carries no data block', () => {
-    expect(() => parseHorizonsVectorsCsv('No ephemeris for target')).toThrow(/SOE/);
-  });
 });

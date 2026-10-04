@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
+import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../../src/data/bodies/barycentricPairs';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
@@ -146,7 +147,7 @@ describe('deriveBodyStates', () => {
   it('Earth–Moon reflex keeps the barycentre and the separation', () => {
     // Earth's row is the barycentre: weighting Earth and Moon by mass must land back
     // on the corrected row position, and the Moon's offset from Earth stays raw Kepler.
-    const k = 1 / 82.30057;
+    const k = BARYCENTRIC_REFLEX_BY_PRIMARY.get('earth')!.k;
     for (const t of SPAN_DATES) {
       const snap = deriveBodyStates(t);
       const earth = snap.get('earth')!.positionMpc;
