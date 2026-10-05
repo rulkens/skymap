@@ -106,7 +106,7 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 
 type SeededBody = (EarthBody | PlanetBody) & Pick<BodyState, 'positionMpc' | 'orientation'>;
 function toBodyState(b: SeededBody): BodyState {
-  return { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 };
+  return { positionMpc: b.positionMpc, orientation: b.orientation };
 }
 
 // Fixtures pairing each body's identity record with its real J2000 state —

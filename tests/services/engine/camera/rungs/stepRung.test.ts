@@ -41,7 +41,7 @@ const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const bodyId = (id: string): BodyId => id as BodyId;
 
 function bodyState(positionMpc: Vec3): BodyState {
-  return { positionMpc, orientation: IDENTITY, meanAnomalyRad: 0 };
+  return { positionMpc, orientation: IDENTITY };
 }
 
 // Body-at-origin: the eye's Mpc magnitude alone sets the altitude, so

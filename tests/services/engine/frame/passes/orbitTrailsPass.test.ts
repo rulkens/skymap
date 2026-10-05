@@ -650,6 +650,72 @@ describe('orbitTrailsPass.draw', () => {
     }
   });
 
+  it('orbitTrailsPass reads the snapshot orbit, not its own propagation', () => {
+    // A snapshot whose orbit is 1 rad ahead of the row's own propagation, body on
+    // that orbit. Re-propagating would translate the centre by the 1 rad chord
+    // (~3.7e5 km); reading the snapshot keeps it at focus + the ellipse offset.
+    const simDays = CONST_J2000 + 100;
+    const real = deriveBodyStates(simDays);
+    const moonEl = CORE_TRAIL_ELEMENTS.find((e) => e.id === 'moon')!;
+    const propagated = propagateElements(moonEl, simDays);
+    const stubbedOrbit = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + 1 };
+    const focusMpc = real.get(moonEl.focusId)!.positionMpc;
+    const kepler = keplerianPositionMpc(stubbedOrbit);
+    const bodyMpc: Vec3 = [
+      focusMpc[0] + kepler[0],
+      focusMpc[1] + kepler[1],
+      focusMpc[2] + kepler[2],
+    ];
+    snapshotOverride.states = new Map(real).set('moon', {
+      ...real.get('moon')!,
+      positionMpc: bodyMpc,
+      orbit: stubbedOrbit,
+    });
+    try {
+      const offset = keplerianEllipse(stubbedOrbit).centerOffsetMpc;
+      const expectedCentre: Vec3 = [
+        focusMpc[0] + offset[0],
+        focusMpc[1] + offset[1],
+        focusMpc[2] + offset[2],
+      ];
+      // Eye 100 km off the expected centre: the packed f32 centre is then ~100 km,
+      // whose ulp sits far under the 1 m bound.
+      const eye: Vec3 = [
+        expectedCentre[0] + 100 * SCALE_UNITS.KM_TO_MPC,
+        expectedCentre[1],
+        expectedCentre[2],
+      ];
+      const ctx = {
+        snapshot: {
+          simDays,
+          focusBlend: 0,
+          nowMs: 0,
+          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+        },
+        bodyPose: () => null,
+        drawCamPos: eye,
+        drawPxPerRad: FIXTURE_PX_PER_RAD,
+        cam: { distance: 1e-13 },
+      } as unknown as FrameView;
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [moonEl],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+      for (let axis = 0; axis < 3; axis++) {
+        const expectedKm = (expectedCentre[axis]! - eye[axis]!) * kmPerMpc;
+        expect(Math.abs(staging[34 + axis]! - expectedKm)).toBeLessThan(1e-3);
+      }
+      expect(staging[16]).toBe(Math.fround(stubbedOrbit.meanAnomalyRad));
+    } finally {
+      snapshotOverride.states = undefined;
+    }
+  });
+
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
     // Same pose as "rides a moon trail on its propagated parent" above — parking
     // the camera at Earth is what makes the Moon's tiny geocentric orbit survive

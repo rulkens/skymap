@@ -10,10 +10,10 @@ import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { bodyHostId } from '../../../../src/data/bodies/positionDrivers';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
-import { PLANET_EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/planetEphemerisCorrections.generated';
+import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorrections.generated';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { ephemerisCorrectionMpc } from '../../../../src/utils/orbit/ephemerisCorrectionMpc';
+import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
 import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
@@ -88,7 +88,7 @@ describe('deriveBodyStates', () => {
       expect(actual, `state for '${id}'`).toBeDefined();
       expect(actual!.positionMpc, id).toEqual(expected.positionMpc);
       expect(actual!.orientation, id).toEqual(expected.orientation);
-      expect(actual!.meanAnomalyRad, id).toBe(expected.meanAnomalyRad);
+      expect(actual!.orbit?.meanAnomalyRad, id).toBe(expected.orbit.meanAnomalyRad);
     }
     for (const el of ORBITAL_ELEMENTS) {
       expect(Object.hasOwn(BODY_STATES_J2000, el.id), `'${el.id}' is in the fixture`).toBe(true);
@@ -155,8 +155,11 @@ describe('deriveBodyStates', () => {
       const moon = snap.get('moon')!.positionMpc;
       const sun = snap.get('sun')!.positionMpc;
       const rowKepler = keplerianPositionMpc(propagateElements(elementsById('earth'), t));
-      const correction = ephemerisCorrectionMpc(PLANET_EPHEMERIS_CORRECTIONS['earth']!, t);
-      const emb = [0, 1, 2].map((i) => sun[i]! + rowKepler[i]! + correction[i]!);
+      const { positionKm, outside } = EPHEMERIS_CORRECTIONS['earth']!;
+      const correctionKm = correctionSeriesAt(positionKm!, t, outside)!;
+      const emb = [0, 1, 2].map(
+        (i) => sun[i]! + rowKepler[i]! + correctionKm[i]! * SCALE_UNITS.KM_TO_MPC,
+      );
       const weighted = [0, 1, 2].map((i) => (1 - k) * earth[i]! + k * moon[i]!);
       expect(distanceKm(weighted, emb)).toBeLessThan(1e-3);
 

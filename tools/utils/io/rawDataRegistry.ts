@@ -1749,21 +1749,21 @@ export const RAW_DATA = {
 
   // ─── JPL Horizons planet vectors (ephemeris-correction fit input) ─────
 
-  'horizons.planets': {
-    path: 'data/raw/horizons/planets',
+  horizons: {
+    path: 'data/raw/horizons',
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<naif>.csv` (`jd,x_km,y_km,z_km`): 1-day heliocentric ICRF positions of the eight planets, 1900–2100, UT time tags. Input to `build-planet-ephemeris`.',
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
-    fetcher: 'tools/fetch/fetchHorizonsPlanets.ts',
-    readme: 'horizons.planets.readme',
+    fetcher: 'tools/fetch/fetchHorizons.ts',
+    readme: 'horizons.readme',
   },
-  'horizons.planets.readme': {
-    path: 'data/raw/horizons/planets/README.md',
+  'horizons.readme': {
+    path: 'data/raw/horizons/README.md',
     kind: 'file',
     source: 'committed',
-    description: 'Provenance for the Horizons planet vectors — the exact query, targets and span.',
+    description: 'Provenance for the Horizons vectors — the exact query, body table and span.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

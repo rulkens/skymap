@@ -78,7 +78,7 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   }),
 }));
 function toBodyState(b: SeededBody): BodyState {
-  return { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 };
+  return { positionMpc: b.positionMpc, orientation: b.orientation };
 }
 
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];

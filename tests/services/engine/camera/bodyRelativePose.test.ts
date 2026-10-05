@@ -38,7 +38,7 @@ const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const CAM_BASIS: Mat3 = IDENTITY;
 
 function makeBodyState(positionMpc: Vec3, orientation: Mat3): BodyState {
-  return { positionMpc, orientation, meanAnomalyRad: 0 };
+  return { positionMpc, orientation };
 }
 
 // One f64 ULP above x (x > 0) via raw bit-pattern increment.
