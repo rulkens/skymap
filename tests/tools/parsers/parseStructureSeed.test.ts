@@ -14,9 +14,9 @@ function baseEntry(overrides: Partial<StructureSeedEntry> = {}): StructureSeedEn
     category: 'cluster',
     raHours: 12.997,
     decDeg: 27.98,
-    distMpc: 100,
-    physicalRadiusMpc: 3.0,
-    apparentRadiusMpc: 6.0,
+    distance: { value: 100, unit: 'Mpc' },
+    physicalRadius: { value: 3.0, unit: 'Mpc' },
+    apparentRadius: { value: 6.0, unit: 'Mpc' },
     description: 'Test cluster fixture.',
     ...overrides,
   };
@@ -31,6 +31,16 @@ describe('parseStructureSeed', () => {
     for (const e of entries) {
       expect(validCategories.has(e.category)).toBe(true);
     }
+  });
+
+  it('rejects an unknown length unit', () => {
+    const bad = [
+      baseEntry({
+        id: 'bad',
+        distance: { value: 1, unit: 'ly' as unknown as 'Mpc' },
+      }),
+    ];
+    expect(() => parseStructureSeed(JSON.stringify(bad))).toThrow(/bad.*unit|unit.*bad/i);
   });
 
   it('rejects out-of-range raHours', () => {

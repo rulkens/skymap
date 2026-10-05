@@ -69,15 +69,15 @@ Seed rows change three fields; nothing else:
 "apparentRadius": { "value": 6, "unit": "Mpc" }
 ```
 
-- [ ] Before editing, capture a snapshot for the value-exact check: run `buildStaticAnchorStructures()` and save each record's `id`, `worldPos`, `physicalRadiusMpc`, `apparentRadiusMpc` to a scratch file.
-- [ ] Add tests `lengthToMpc converts pc, kpc and Mpc to the same value for the same physical length` (1e6 pc, 1e3 kpc, 1 Mpc → 1) and `lengthToMpc returns Mpc values unchanged` (16.5 Mpc → exactly 16.5, no arithmetic).
-- [ ] Migrate all 42 rows with a script, all to unit `"Mpc"` with their existing numbers. Do not hand-edit.
-- [ ] Parser: `StructureSeedEntry` carries `distance`, `physicalRadius`, `apparentRadius` as `Length`; validation requires `value > 0` and a known unit. Add the test `parseStructureSeed rejects an unknown length unit`.
-- [ ] `buildStaticAnchorStructures` and `buildStructures` convert with `lengthToMpc` at the point they read the seed. Runtime records, `SkyCoord`, shaders and uniforms keep their Mpc fields.
-- [ ] Update `demoTour.ts` and any other reader found by searching for `distMpc`, `physicalRadiusMpc` and `apparentRadiusMpc` on a seed row. Readers of the runtime `StructureInfo` fields are not touched.
-- [ ] Re-run the snapshot and diff it against the scratch file: every number identical. Report the diff result.
-- [ ] `docs/DATA.md`: describe the unit-tagged fields where the seed schema is documented.
-- [ ] Commit.
+- [x] Before editing, capture a snapshot for the value-exact check: run `buildStaticAnchorStructures()` and save each record's `id`, `worldPos`, `physicalRadiusMpc`, `apparentRadiusMpc` to a scratch file.
+- [x] Add tests `lengthToMpc converts pc, kpc and Mpc to the same value for the same physical length` (1e6 pc, 1e3 kpc, 1 Mpc → 1) and `lengthToMpc returns Mpc values unchanged` (16.5 Mpc → exactly 16.5, no arithmetic).
+- [x] Migrate all 42 rows with a script, all to unit `"Mpc"` with their existing numbers. Do not hand-edit.
+- [x] Parser: `StructureSeedEntry` carries `distance`, `physicalRadius`, `apparentRadius` as `Length`; validation requires `value > 0` and a known unit. Add the test `parseStructureSeed rejects an unknown length unit`.
+- [x] `buildStaticAnchorStructures` and `buildStructures` convert with `lengthToMpc` at the point they read the seed. Runtime records, `SkyCoord`, shaders and uniforms keep their Mpc fields.
+- [x] Update `demoTour.ts` and any other reader found by searching for `distMpc`, `physicalRadiusMpc` and `apparentRadiusMpc` on a seed row. Readers of the runtime `StructureInfo` fields are not touched.
+- [x] Re-run the snapshot and diff it against the scratch file: every number identical. Report the diff result.
+- [x] `docs/DATA.md`: describe the unit-tagged fields where the seed schema is documented.
+- [x] Commit.
 
 ### Task 3 (P6): `galaxyMembers` on the structure registry row
 
