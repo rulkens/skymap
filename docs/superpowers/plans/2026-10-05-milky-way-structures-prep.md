@@ -162,11 +162,11 @@ createStructureMarkerRenderer(…, categories: readonly StructureId[])
 
 **Files:** `src/services/engine/presentation/produceStructureLabels.ts`, `src/services/engine/engine.ts`, tests under `tests/services/engine/presentation/`
 
-- [ ] `produceStructureLabels` takes the slab it produces for and emits only that slab's categories. The cosmo registration (`engine.ts:326-329`) passes `'cosmo'`.
-- [ ] A second registration on `foregroundLabelDirector` passes `'near0'`. For that slab the anchors are camera-relative, as in `src/layers/constellations/present/produceConstellationCaptions.ts:63-74`. With no near0 category it returns `[]`.
-- [ ] Pick ids are unchanged: `packSelection(STRUCTURE_ID_CODES[cat], categoryIndex + 1)`.
-- [ ] Add the test `structure labels for a slab contain only that slab's categories`, and `the near0 producer returns nothing when no category is near0`.
-- [ ] Commit.
+- [x] `produceStructureLabels` takes the slab it produces for and emits only that slab's categories. The cosmo registration (`engine.ts:326-329`) passes `'cosmo'`.
+- [x] A second registration on `foregroundLabelDirector` passes `'near0'`. For that slab the anchors are camera-relative, as in `src/layers/constellations/present/produceConstellationCaptions.ts:63-74`. With no near0 category it returns `[]`.
+- [x] Pick ids are unchanged: `packSelection(STRUCTURE_ID_CODES[cat], categoryIndex + 1)`.
+- [x] Add the test `structure labels for a slab contain only that slab's categories`, and `the near0 producer returns nothing when no category is near0`.
+- [x] Commit.
 
 ### Task 10: Perf gate and smoke
 

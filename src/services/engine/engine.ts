@@ -326,7 +326,7 @@ export function createEngine(
   // boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
-    produceLabels: produceStructureLabels,
+    produceLabels: (s, c) => produceStructureLabels(s, c, 'cosmo'),
   });
 
   // Scene-body captions first so an equal-prominence tiebreak favours the
@@ -335,6 +335,12 @@ export function createEngine(
   state.subsystems.foregroundLabelDirector.registerProducer({
     id: 'sceneBodyCaptions',
     produceLabels: produceSceneBodyCaptions,
+  });
+  // Structure categories on the near0 slab (none yet) label here: NEAR0 is the
+  // projection their parsec-scale anchors survive.
+  state.subsystems.foregroundLabelDirector.registerProducer({
+    id: 'structureLabelsNear',
+    produceLabels: (s, c) => produceStructureLabels(s, c, 'near0'),
   });
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a

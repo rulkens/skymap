@@ -58,9 +58,14 @@ import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
+import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
 import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from './structureVisibleBands';
 
-export function produceStructureLabels(state: EngineState, ctx: FrameView): Label2DProducerOutput {
+export function produceStructureLabels(
+  state: EngineState,
+  ctx: FrameView,
+  slab: 'cosmo' | 'near0',
+): Label2DProducerOutput {
   const labels: Label2D[] = [];
 
   const pxPerRad = ctx.drawPxPerRad;
@@ -71,7 +76,8 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
   // descent into the solar system. When every band is at 0 the producer emits
   // nothing — the fade reaches 0 continuously before this skip, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
-  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB.cosmo, camDistMpc)) return { labels: [], awake: false };
+  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB[slab], camDistMpc))
+    return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
@@ -92,7 +98,12 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
   const focusedOnly = state.settings.labels.focusedOnly;
 
   const structures = state.data.structures;
+  const slabIds = STRUCTURE_IDS_BY_SLAB[slab];
+  // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
+  // room for absolute Mpc positions); the COSMO one takes them absolute.
+  const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
   for (const p of structures.all()) {
+    if (!slabIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
@@ -200,7 +211,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
       ),
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
-      worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
+      worldPos: [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
       // Long names ("Perseus-Pisces Supercluster") break onto two balanced
       // lines here, at the presentation seam — the store keeps the unwrapped
       // name for the palette / InfoCard, and the layout just honours the '\n'.
