@@ -9,6 +9,8 @@ export const CLUSTER_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  slab: 'cosmo',
+  galaxyMembers: true,
   labelLayer: 'structure',
   detailLabel: 'Galaxy Cluster',
   shortLabel: 'Cluster',

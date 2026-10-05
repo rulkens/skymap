@@ -50,31 +50,35 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
+import type { StructureSlab } from '../../../@types/data/structure/StructureSlab';
+import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
+import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from './structureVisibleBands';
 
-export function produceStructureLabels(state: EngineState, ctx: FrameView): Label2DProducerOutput {
+export function produceStructureLabels(
+  state: EngineState,
+  ctx: FrameView,
+  slab: StructureSlab,
+): Label2DProducerOutput {
   const labels: Label2D[] = [];
 
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
 
-  // Deep-zoom survey fade — keyed on the camera's distance from the
-  // heliocentric render origin, the same quantity every other band consumer
-  // uses. Structure labels dissolve with their rings (structureMarkersPass
-  // rides the same band) so a cosmic-scale annotation can't linger over the
-  // solar-system view. Hoisted once: the factor is spatial, identical for
-  // every label this frame. At exactly 0 the producer emits nothing — the
-  // fade reaches 0 continuously before this skip engages, so no pop.
+  // Each category's visibility band is keyed on the camera's distance from
+  // the heliocentric render origin; labels dissolve with their rings on the
+  // descent into the solar system. When every band is at 0 the producer emits
+  // nothing — the fade reaches 0 continuously before this skip, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
-  const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
-  if (surveyFade === 0) return { labels: [], awake: false };
+  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB[slab], camDistMpc))
+    return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
@@ -95,7 +99,12 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
   const focusedOnly = state.settings.labels.focusedOnly;
 
   const structures = state.data.structures;
+  const slabIds = STRUCTURE_IDS_BY_SLAB[slab];
+  // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
+  // room for absolute Mpc positions); the COSMO one takes them absolute.
+  const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
   for (const p of structures.all()) {
+    if (!slabIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
@@ -121,6 +130,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
       continue;
 
     const style = STRUCTURE_MARKER_STYLES[p.category];
+    const bandFade = fadeBand(style.visibleBand, camDistMpc);
 
     // Camera distance — for the marker close-approach / far-distance fades.
     const dx = p.worldPos[0] - cx;
@@ -142,7 +152,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
     // extent, falling back to the core for structures that set only
     // physicalRadiusMpc.
     const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-    if (distanceMpc > 0.001) {
+    if (distanceMpc > 0) {
       const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
       prominencePx = apRadPx;
       if (apRadPx > style.markerMaxApparentRadiusPx) {
@@ -174,13 +184,13 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
 
     // Bake the resolved layer opacity into fadeAlpha on top of the distance
     // fade: catOpacity (toggle fade) × recession (focus fade) × clipFactor
-    // (clip-owned transient dimming) × surveyFade (the deep-zoom band, hoisted
-    // above — labels dissolve with their rings on descent). The focused
+    // (clip-owned transient dimming) × bandFade (the category's visibility band —
+    // labels dissolve with their rings on descent). The focused
     // structure's own label is exempt from recession — a faded ring never
     // carries a bright label, but the thing under inspection keeps its label.
     // clipFactor is NOT exempted for the focused structure: a tour cue that
     // dims all structure labels is expected to dim even the focused one (the
-    // tour controls the whole scene). Nothing is exempt from surveyFade —
+    // tour controls the whole scene). Nothing is exempt from the band —
     // at solar-system zoom even the focused structure's label is chrome.
     const recession =
       p.id === focusedStructureId
@@ -189,7 +199,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
             { kind: 'labelLayer', layer: 'structure', item: p.category },
             ctx.snapshot.focusBlend,
           );
-    fadeAlpha *= catOpacity * recession * clipFactor * surveyFade;
+    fadeAlpha *= catOpacity * recession * clipFactor * bandFade;
 
     labels.push({
       id: p.id,
@@ -202,7 +212,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
       ),
       // Structures anchor at the ring centre, centred on both axes (only
       // famous galaxies lift their label off the dot).
-      worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
+      worldPos: [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
       // Long names ("Perseus-Pisces Supercluster") break onto two balanced
       // lines here, at the presentation seam — the store keeps the unwrapped
       // name for the palette / InfoCard, and the layout just honours the '\n'.

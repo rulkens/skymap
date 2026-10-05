@@ -11,7 +11,7 @@
 // The fragment stage emits an additive radial gradient: centre alpha
 // full, edge alpha zero, smoothstep falloff across the quad.
 
-import package::structureMarker::io::Uniforms;
+import package::lib::camera::CameraUniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
@@ -21,7 +21,7 @@ import package::lib::billboard::expandBillboardWorld;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> u: CameraUniforms;
 // @group(1) FadeUniforms — the shared per-renderer opacity uniform
 // every HDR pass uses.  See lib/fadeUniforms.wesl for the contract
 // and filaments/fragment.wesl for the canonical consumer pattern.
@@ -38,10 +38,10 @@ fn vs(
   // Eye-facing world disc — see lib/billboard.wesl's expandBillboardWorld.
   let half = radiusMpc * MARKER_RADIUS_RETUNE;
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.camPosMpc.xyz, worldPos, corner, half);
+  let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u.cam, worldPos + offset);
+  out.pos = worldToClip(u, worldPos + offset);
   out.uv = corner;
   out.color = input.haloColorAndAlpha.xyz;
   out.alpha = input.haloColorAndAlpha.w;

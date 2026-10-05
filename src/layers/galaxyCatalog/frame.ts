@@ -21,6 +21,7 @@ import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
+import { structureHasGalaxyMembers } from '../../data/structure/structureHasGalaxyMembers';
 import { structureMemberCount } from '../../utils/structure/structureMemberCount';
 
 export function galaxyCatalogPlanner(
@@ -63,10 +64,12 @@ export function galaxyCatalogPlanner(
         memberCountMask = snapshot.visibleSourceMask;
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
-          // Narrowed on the row's own tag, never a structural sniff — only the
-          // `structure` arm is countable.
+          // Narrowed on the row's own tag, never a structural sniff — only a
+          // `structure` arm whose category has galaxy members is countable.
           structureMemberCount:
-            selectRow !== null && selectRow.type === 'structure'
+            selectRow !== null &&
+            selectRow.type === 'structure' &&
+            structureHasGalaxyMembers(selectRow.category)
               ? structureMemberCount(
                   selectRow,
                   (source) => runtime.catalogs.get(source),

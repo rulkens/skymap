@@ -29,6 +29,7 @@
  * left `group` countless until it was added).
  */
 
+import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
 import {
@@ -56,12 +57,11 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
    */
   function emitCounts(): void {
     cb.store.dispatch(
-      engineStructureCountsChanged({
-        cluster: state.data.structures.byCategory('cluster').length,
-        supercluster: state.data.structures.byCategory('supercluster').length,
-        void: state.data.structures.byCategory('void').length,
-        group: state.data.structures.byCategory('group').length,
-      }),
+      engineStructureCountsChanged(
+        Object.fromEntries(
+          STRUCTURE_IDS.map((id) => [id, state.data.structures.byCategory(id).length]),
+        ),
+      ),
     );
     cb.store.dispatch(
       engineStructureSearchListChanged(state.data.structures.all().map(toStructureSearchEntry)),

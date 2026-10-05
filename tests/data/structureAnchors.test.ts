@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
 
 const SEED_PATH = resolve(__dirname, '../../data/seeds/structure_anchors.seed.json');
@@ -50,14 +51,14 @@ describe('raDecDistToEqCart', () => {
 describe('cluster seed — cluster entries', () => {
   it('every entry has a positive distance', () => {
     for (const a of CLUSTER_ENTRIES) {
-      expect(a.distMpc).toBeGreaterThan(0);
+      expect(a.distance.value).toBeGreaterThan(0);
     }
   });
 
-  it('every entry has a finite, positive physicalRadiusMpc', () => {
+  it('every entry has a finite, positive physicalRadius', () => {
     for (const a of CLUSTER_ENTRIES) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+      expect(a.physicalRadius.value).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadius.value)).toBe(true);
     }
   });
 });
@@ -70,6 +71,6 @@ describe('cluster seed — void entries', () => {
     // it outside the box.
     const bootes = VOID_ENTRIES.find((a) => a.names[0] === 'Boötes Void');
     expect(bootes).toBeDefined();
-    expect(bootes!.distMpc).toBeLessThan(500);
+    expect(lengthToMpc(bootes!.distance)).toBeLessThan(500);
   });
 });

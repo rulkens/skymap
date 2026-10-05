@@ -314,7 +314,7 @@ function makeState(): EngineState {
       foregroundMarkerLineRenderer: null,
       markerLineRenderer: null,
       selectionRingRenderer: null,
-      structureMarkerRenderer: null,
+      structureMarkerCosmoRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       horizonShellRenderer: null,

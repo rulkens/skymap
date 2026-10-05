@@ -36,6 +36,7 @@ import type { StructureMarkerDescriptor } from '../../../@types/rendering/Struct
 import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
+import { fadeBand } from '../../../utils/math/fadeBand';
 
 export function produceStructureMarkers(
   state: PassState,
@@ -44,6 +45,8 @@ export function produceStructureMarkers(
   const out: StructureMarkerDescriptor[] = [];
   const pxPerRad = ctx.drawPxPerRad;
   const [cx, cy, cz] = ctx.drawCamPos;
+  // Distance from the render origin, which keys each category's visibility band.
+  const camDistMpc = Math.hypot(cx, cy, cz);
 
   // selected → 1.5× ring bump (highlight what you clicked); focused → the
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
@@ -79,17 +82,18 @@ export function produceStructureMarkers(
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
     const style = STRUCTURE_MARKER_STYLES[p.category];
+    const bandFade = fadeBand(style.visibleBand, camDistMpc);
 
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
     const dz = p.worldPos[2] - cz;
     const distanceMpc = Math.hypot(dx, dy, dz);
 
-    // Camera on top of the structure: projection divides by distance, so treat
-    // as fully faded. Still emit a descriptor (alpha 0) to keep the index
+    // The apparent-size projection divides by distance, so an eye exactly on
+    // the anchor gets alpha 0. Still emit a descriptor to keep the index
     // alignment — discarded in-fragment.
     let fadeAlpha: number;
-    if (distanceMpc < 0.001) {
+    if (distanceMpc <= 0) {
       fadeAlpha = 0;
     } else {
       const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
@@ -147,14 +151,19 @@ export function produceStructureMarkers(
       style.haloColor[0],
       style.haloColor[1],
       style.haloColor[2],
-      style.haloColor[3] * weightedFade * recession,
+      style.haloColor[3] * weightedFade * recession * bandFade,
     ];
 
     // Ring: same fade bake plus selection. Selected ring ×1.5 (capped at 1),
     // recession-free; every other ring scaled by the focus recession.
     const ringAlphaBase = style.ringColor[3] * weightedFade;
     const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase * recession;
-    const ringColor: Vec4 = [style.ringColor[0], style.ringColor[1], style.ringColor[2], ringAlpha];
+    const ringColor: Vec4 = [
+      style.ringColor[0],
+      style.ringColor[1],
+      style.ringColor[2],
+      ringAlpha * bandFade,
+    ];
 
     out.push({
       id: p.id,

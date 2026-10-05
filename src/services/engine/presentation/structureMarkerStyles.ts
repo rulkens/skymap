@@ -17,6 +17,7 @@
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import { hexToGl } from '../../../utils/color/hexToGl';
+import { SCALE_FADE_BANDS } from './scaleFadeBands';
 
 /**
  * Marker + label style fields for one structure category. Structures always
@@ -49,6 +50,11 @@ type StructureMarkerStyle = {
   readonly markerMinApparentRadiusPx: number;
   /** Smoothstep band width for the far-distance fade-out. */
   readonly markerMinApparentFadeBandPx: number;
+  /**
+   * Camera-distance band (from the render origin) over which this category's
+   * rings, halos and labels are visible; multiplies every alpha they carry.
+   */
+  readonly visibleBand: (typeof SCALE_FADE_BANDS)[keyof typeof SCALE_FADE_BANDS];
   /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
@@ -75,6 +81,7 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 5,
     markerMinApparentFadeBandPx: 4,
+    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -92,6 +99,7 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
+    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -107,6 +115,7 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
+    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -140,6 +149,7 @@ export const STRUCTURE_MARKER_STYLES = {
     // than lingering as a faint speck while you explore larger scales.
     markerMinApparentRadiusPx: 44,
     markerMinApparentFadeBandPx: 24,
+    visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },

@@ -16,7 +16,7 @@
 // AA band centred on |uv| == 1, alpha = ringAlpha inside the band,
 // smoothstep AA on each edge — see "Computing the band width" below.
 
-import package::structureMarker::io::Uniforms;
+import package::lib::camera::CameraUniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
@@ -26,7 +26,7 @@ import package::lib::billboard::expandBillboardWorld;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> u: CameraUniforms;
 // @group(1) FadeUniforms — see halo.wesl for the contract.
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
@@ -68,10 +68,10 @@ fn vs(
   // dome faces rasterise the same world curve at their shared seam.
   let half = radiusMpc * MARKER_RADIUS_RETUNE * RING_QUAD_MARGIN;
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.camPosMpc.xyz, worldPos, corner, half);
+  let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u.cam, worldPos + offset);
+  out.pos = worldToClip(u, worldPos + offset);
   // d == 1 is still the marker radius: RING_QUAD_MARGIN scales the
   // geometry (above) and the uv (here) together, so they cancel.
   out.uv = corner * RING_QUAD_MARGIN;
