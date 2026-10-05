@@ -65,5 +65,5 @@ export function readIsisCube(path: string): IsisCubeRaster {
   const radius = Number(text('EquatorialRadius'));
   const leftLonDeg =
     Number(text('CenterLongitude')) + ((Number(text('UpperLeftCornerX')) / radius) * 180) / Math.PI;
-  return { data, width, height, leftLonDeg };
+  return { data, width, height, leftLonDeg, equatorialRadiusM: radius };
 }

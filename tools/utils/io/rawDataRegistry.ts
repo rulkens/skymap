@@ -948,7 +948,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Schenk 2020 Miranda mosaic, 6294x3147, 240 m/px (Voyager 2): ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); stretched to 8-bit, nodata filled with the mean; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+      'Schenk 2020 Miranda mosaic, 6294x3147, 240 m/px (Voyager 2): ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',
@@ -958,7 +958,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Schenk 2020 Ariel mosaic, 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); stretched to 8-bit, nodata filled with the mean; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+      'Schenk 2020 Ariel mosaic, 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',
@@ -968,7 +968,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Schenk 2020 Umbriel mosaic, 919x460: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); stretched to 8-bit, nodata filled with the mean; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+      'Schenk 2020 Umbriel mosaic, 919x460: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',
@@ -978,7 +978,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Schenk 2020 Titania mosaic, 1722x861: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); stretched to 8-bit, nodata filled with the mean; ~6 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+      'Schenk 2020 Titania mosaic, 1722x861: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~6 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',
@@ -988,7 +988,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'Schenk 2020 Oberon mosaic, 957x479: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); stretched to 8-bit, nodata filled with the mean; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+      'Schenk 2020 Oberon mosaic, 957x479: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',
@@ -1009,16 +1009,6 @@ export const RAW_DATA = {
     source: 'gitignored',
     description:
       'Schenk 2020 Ariel DEM (stereo+photoclinometry+digitised limb arcs), 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
-    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
-    manualDownload: true,
-    readme: 'textures.readme',
-  },
-  'textures.schenkTitaniaDem': {
-    path: 'data/raw/textures/schenk-uranian-satellites/tudem-ZL-180180.cub',
-    kind: 'file',
-    source: 'gitignored',
-    description:
-      'Schenk 2020 Titania DEM (stereo + digitised limb arcs), 1722x861: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~6 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
     manualDownload: true,
     readme: 'textures.readme',

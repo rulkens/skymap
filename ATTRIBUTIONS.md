@@ -484,7 +484,7 @@ All public domain; NASA asks that credit go to the named observatory / program.
 
 - **Use:** Global surface mosaics for Miranda, Ariel, Umbriel, Titania and
   Oberon (shipped as greyscale body textures, unseen areas filled flat grey),
-  and the Miranda, Ariel and Titania DEMs, baked into their normal maps (the
+  and the Miranda and Ariel DEMs, baked into their normal maps (the
   DEMs are a build input, never shipped as runtime pixels). Based on Voyager 2
   images (NASA/JPL).
 - **Source:** "Uranian Satellite Global Mosaics and Digital Elevation Models",

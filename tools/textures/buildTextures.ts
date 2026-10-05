@@ -22,6 +22,7 @@ import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import type { IsisCubeRaster } from '../@types/image/IsisCubeRaster';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
+import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
@@ -33,6 +34,7 @@ import { isisMosaicToGrey } from '../utils/image/isisMosaicToGrey';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { readIsisCube } from '../utils/image/readIsisCube';
 import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
+import { trueReliefNormalGain } from '../utils/image/trueReliefNormalGain';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
 import { icqPointsToEquirectRadius } from '../utils/shape/icqPointsToEquirectRadius';
@@ -135,11 +137,32 @@ function isisDemGridWidth(bodyId: BodyTextureId, srcPath: string): number {
   return Math.min(ceilingPx, loadCube(srcPath).width & ~1);
 }
 
-/** sharp over a source file; an ISIS mosaic is decoded and stretched to 8-bit grey first. */
-function openGreySource(srcPath: string): ReturnType<typeof sharp> {
+/** The one home of a scene body's grey albedo, which the ISIS mosaic scale is pinned to. */
+function sceneAlbedoOf(bodyId: string): number {
+  const body = SCENE_PLANETS.find((p) => p.id === bodyId);
+  if (body === undefined)
+    throw new Error(`buildTextures: no scene body '${bodyId}' for its albedo`);
+  return body.albedo[0];
+}
+
+/** sharp over a source file; an ISIS mosaic is decoded to 8-bit sRGB grey at `albedo` first. */
+function openGreySource(srcPath: string, albedo: number | undefined): ReturnType<typeof sharp> {
   if (!srcPath.endsWith('.cub')) return sharp(srcPath, { limitInputPixels: false });
-  const { data, width, height } = isisMosaicToGrey(loadCube(srcPath));
+  if (albedo === undefined)
+    throw new Error(`buildTextures: ISIS mosaic ${srcPath} needs an albedo`);
+  const { data, width, height } = isisMosaicToGrey(loadCube(srcPath), albedo);
   return sharp(Buffer.from(data.buffer), { raw: { width, height, channels: 1 } });
+}
+
+/** Max minus min of a filled height grid, in the grid's own unit (km for an ISIS DEM). */
+function heightRangeOf(grid: Float32Array): number {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of grid) {
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+  }
+  return hi - lo;
 }
 
 /** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
@@ -182,8 +205,9 @@ export async function writeTintedMonoTier(
   treatment: Extract<ColourTreatment, { kind: 'monoTint' }>,
   widthPx: number,
   outPath: string,
+  mosaicAlbedo?: number,
 ): Promise<void> {
-  const { data, info } = await openGreySource(srcPath)
+  const { data, info } = await openGreySource(srcPath, mosaicAlbedo)
     .resize({ width: widthPx })
     .greyscale()
     .raw()
@@ -244,6 +268,7 @@ export async function writePanSharpenedTier(
  * 2:1, so height follows.
  */
 async function writeBodyTier(
+  bodyId: BodyTextureId,
   srcPath: string,
   treatment: ColourTreatment,
   chromaPath: string | null,
@@ -259,7 +284,8 @@ async function writeBodyTier(
       return;
     }
     case 'monoTint': {
-      await writeTintedMonoTier(srcPath, treatment, widthPx, outPath);
+      const mosaicAlbedo = srcPath.endsWith('.cub') ? sceneAlbedoOf(bodyId) : undefined;
+      await writeTintedMonoTier(srcPath, treatment, widthPx, outPath, mosaicAlbedo);
       return;
     }
     case 'panSharpen': {
@@ -380,11 +406,10 @@ function bakeNormalOnce(
           );
           const covered = Uint8Array.from(grid, (v) => (Number.isNaN(v) ? 0 : 1));
           fillEquirectNodata(grid, width, height);
-          const normals = bakeNormalMap(
-            { data: toByteScale(grid), width, height },
-            exaggerationFor(bodyId),
-          );
+          const gain = trueReliefNormalGain(heightRangeOf(grid), cube.equatorialRadiusM, width);
+          const normals = bakeNormalMap({ data: toByteScale(grid), width, height }, gain);
           flattenUncoveredNormals(normals.data, covered);
+          process.stderr.write(`  relief ${bodyId}: true-relief normal gain ${gain.toFixed(2)}\n`);
           return normals;
         } else {
           const raw = await sharp(srcPath, { limitInputPixels: false })
@@ -451,6 +476,7 @@ const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
 const SRGB_WRITER: KindWriter = {
   write: (bodyId, kind, srcPath, widthPx, outPath) =>
     writeBodyTier(
+      bodyId,
       srcPath,
       BODY_TEXTURE_REGISTRY[bodyId].treatment,
       chromaPathFor(bodyId, kind),

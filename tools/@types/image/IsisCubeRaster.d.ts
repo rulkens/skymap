@@ -6,4 +6,5 @@ export type IsisCubeRaster = {
   readonly width: number;
   readonly height: number;
   readonly leftLonDeg: number;
+  readonly equatorialRadiusM: number; // label EquatorialRadius, metres
 };

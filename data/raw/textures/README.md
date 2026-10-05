@@ -294,7 +294,7 @@ sit beside them for reference.
 | Miranda | `mumap-cyl-180180.cub`       | 82.0      | `mudem-ZT-cyl.cub`           | 82.0      |
 | Ariel   | `aumap-cyl-180180.cub`       | 26.8      | `audem-ZTL-cyl-180180.cub`   | 26.7      |
 | Umbriel | `uumap-cyl-180180.cub`       | 2.0       | none                         |           |
-| Titania | `tumap-cyl-180180.cub`       | 6.0       | `tudem-ZL-180180.cub`        | 6.0       |
+| Titania | `tumap-cyl-180180.cub`       | 6.0       | none                         |           |
 | Oberon  | `oumap-cyl-180180.cub`       | 1.9       | none                         |           |
 
 ISIS cubes: tiled, 32-bit Real, little-endian, one band, simple cylindrical.
@@ -303,16 +303,17 @@ longitude from the label (`CenterLongitude + UpperLeftCornerX / EquatorialRadius
 All mosaics start at -180 (to within 0.22° of pixel rounding), so the centre
 column is longitude 0 like the other body textures: no roll, `lonOffsetDeg: 0`.
 The Miranda DEM starts at 0° instead, which the DEM binning's built-in half-turn
-roll absorbs. The mosaics are I/F scaled values; the build stretches the 0.5 to
-99.5 percentile to 8 bit (the maximum is four times the 99.5th percentile) and
-fills the unseen half with the mean of the valid pixels, so it renders as flat
-grey. The mosaics are narrower than the usual tier ladder (Titania 1722 px,
+roll absorbs. The mosaics are values proportional to reflectance (0 = black); the build
+scales them so the mean of the valid pixels equals the moon's geometric albedo
+(`scenePlanets.ts`), sRGB-encodes, clamps hot pixels (the maximum is four times
+the 99.5th percentile) and fills the unseen half with the albedo, so it renders
+as flat grey. The mosaics are narrower than the usual tier ladder (Titania 1722 px,
 Oberon 957, Umbriel 919), so they are written at native width under the `small`
 filename and never upscaled.
 
 The DEMs hold the same Voyager 2 coverage as the mosaics (about a third of the
-globe each; Ariel and Titania only in the south). Ariel's and Titania's cubes
-also carry limb-profile arcs, thin slivers beside the stereo coverage; the build
+globe each; Ariel only in the south). Ariel's cube
+also carries limb-profile arcs, thin slivers beside the stereo coverage; the build
 drops valid regions smaller than 5% of the largest before binning. Texels
 without DEM coverage get a flat normal, so relief stops at the coverage edge.
 

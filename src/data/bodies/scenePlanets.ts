@@ -122,40 +122,42 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     datumRadiusM: 606000, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
     albedo: [0.4, 0.39, 0.38],
   }),
+  // Uranian moon albedos are geometric albedos (NSSDC Uranian Satellite Fact Sheet); the
+  // texture build reads them back as the mean of each Schenk mosaic's brightness.
   satelliteBody({
     id: 'miranda',
     label: 'Miranda',
     datumRadiusM: 235800,
-    albedo: [0.52, 0.52, 0.52],
+    albedo: [0.32, 0.32, 0.32],
   }),
   satelliteBody({
     id: 'ariel',
     label: 'Ariel',
     datumRadiusM: 578900,
-    albedo: [0.58, 0.58, 0.58],
+    albedo: [0.39, 0.39, 0.39],
   }),
   satelliteBody({
     id: 'umbriel',
     label: 'Umbriel',
     datumRadiusM: 584700,
-    albedo: [0.38, 0.38, 0.38],
+    albedo: [0.21, 0.21, 0.21],
   }),
   satelliteBody({
     id: 'titania',
     label: 'Titania',
     datumRadiusM: 788900,
-    albedo: [0.48, 0.48, 0.48],
+    albedo: [0.27, 0.27, 0.27],
   }),
   satelliteBody({
     id: 'oberon',
     label: 'Oberon',
     datumRadiusM: 761400,
-    albedo: [0.42, 0.42, 0.42],
+    albedo: [0.23, 0.23, 0.23],
   }),
   satelliteBody({
     id: 'puck',
     label: 'Puck',
     datumRadiusM: 81000,
-    albedo: [0.3, 0.3, 0.3],
+    albedo: [0.11, 0.11, 0.11],
   }),
 ];

@@ -193,8 +193,8 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'nasa',
     treatment: { kind: 'monoTint', tint: [1.2, 1.16, 1.08], lift: 0.107, antimeridianCentred: true },
   },
-  // Uranus's five big moons: Schenk's Voyager 2 mosaics, stretched to 8-bit and neutral grey; the
-  // unseen hemisphere is flat mean grey. Tiers follow source width (Miranda 6294, Ariel 3652, the
+  // Uranus's five big moons: Schenk's Voyager 2 mosaics, scaled to each moon's geometric albedo and neutral grey; the
+  // unseen hemisphere is flat albedo grey. Tiers follow source width (Miranda 6294, Ariel 3652, the
   // rest under 2048: their `small` tier is written at the source's own width, never upscaled).
   miranda: {
     bodyId: 'miranda',
@@ -216,7 +216,7 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
   },
   titania: {
     bodyId: 'titania',
-    kinds: { surface: 'small', normal: 'small' },
+    kinds: { surface: 'small' },
     provenance: 'schenk',
     treatment: { kind: 'monoTint', tint: [1, 1, 1] },
   },

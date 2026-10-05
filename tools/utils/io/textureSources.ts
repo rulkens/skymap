@@ -95,7 +95,6 @@ export const TEXTURE_SOURCES = {
   umbriel: { surface: { native: 'textures.schenkUmbrielMosaic' } },
   titania: {
     surface: { native: 'textures.schenkTitaniaMosaic' },
-    normal: { native: 'textures.schenkTitaniaDem', format: 'isisDem', lonOffsetDeg: 0 },
   },
   oberon: { surface: { native: 'textures.schenkOberonMosaic' } },
   'saturn-ring': {
