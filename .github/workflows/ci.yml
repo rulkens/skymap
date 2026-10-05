@@ -45,6 +45,11 @@ jobs:
       - name: Build website
         run: npm run site:build
 
+      # Every internal href/src in the built site resolves; planned-but-unbuilt
+      # pages are an explicit allow-list that can only shrink.
+      - name: Check website links
+        run: npm run site:links
+
       # `npm run format:check` is intentionally not run in CI yet — there
       # are pre-existing files in the repo that don't match Prettier's
       # current ruleset, so wiring it up here would fail on every PR.

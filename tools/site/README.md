@@ -17,3 +17,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - **Versioning**: the production copy is served `immutable`. New bytes need a new `videoFile` name (bump `v1`); the site reads the name from the plan.
 - **Upload** is the owner's step: see "Site media" in `docs/DEPLOY.md`.
 - After changing a cut point, re-check the stop timings in `packages/website/src/data/flightStops.ts` by looking at frames.
+
+## Link check
+
+`npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. Links to planned pages that do not exist yet are listed in `notYetBuilt.ts` and reported as pending; the check fails if a listed page now exists, so the PR that builds a page deletes its row.
