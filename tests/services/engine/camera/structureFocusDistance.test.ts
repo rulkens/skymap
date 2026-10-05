@@ -18,7 +18,11 @@ describe('structureFocusDistance', () => {
     expect(big).toBeCloseTo(small * 4, 5);
   });
 
-  it('treats non-finite radius as zero (then clamps to the 0.1 Mpc minimum)', () => {
+  it('a 4 pc radius frames within tens of parsecs', () => {
+    expect(structureFocusDistance(4e-6, FOV60)).toBeLessThan(1e-4);
+  });
+
+  it('treats non-finite radius as zero (falling back to 0.1 Mpc)', () => {
     // Defensive: a structure with NaN / Infinity radius must not produce a NaN
     // framing distance.
     expect(structureFocusDistance(Number.NaN, FOV60)).toBe(0.1);

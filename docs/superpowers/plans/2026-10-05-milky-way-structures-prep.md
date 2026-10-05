@@ -94,10 +94,10 @@ Seed rows change three fields; nothing else:
 
 **Files:** `src/services/engine/camera/structureFocusDistance.ts`, its test under `tests/services/engine/camera/`
 
-- [ ] Before editing, list every structure whose `FOCUS_FILL × apparentRadiusMpc` is under 0.1 Mpc, across the seed and the bulk `.ccat` catalogs loaded from `public/data/`. The seed's smallest apparent radius is 0.2 Mpc, so none are expected there. If any bulk row is under, stop and report the count and ids: removing the minimum would change its framing.
-- [ ] Remove `MIN_FRAMING_DISTANCE_MPC` (`structureFocusDistance.ts:59`) and its docblock paragraph (`:44-47`). Keep the maximum.
-- [ ] Add the test `a 4 pc radius frames within tens of parsecs` (radius 4e-6 Mpc → distance below 1e-4 Mpc), and keep the existing tests' expected values unchanged.
-- [ ] Commit.
+- [x] Before editing, list every structure whose `FOCUS_FILL × apparentRadiusMpc` is under 0.1 Mpc, across the seed and the bulk `.ccat` catalogs loaded from `public/data/`. The seed's smallest apparent radius is 0.2 Mpc, so none are expected there. If any bulk row is under, stop and report the count and ids: removing the minimum would change its framing.
+- [x] Remove `MIN_FRAMING_DISTANCE_MPC` (`structureFocusDistance.ts:59`) and its docblock paragraph (`:44-47`). Keep the maximum.
+- [x] Add the test `a 4 pc radius frames within tens of parsecs` (radius 4e-6 Mpc → distance below 1e-4 Mpc), and keep the existing tests' expected values unchanged.
+- [x] Commit.
 
 ### Task 5 (P3): Visibility band on the style row — `review: yes`
 
