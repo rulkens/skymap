@@ -27,7 +27,7 @@ Owner's: dark theme only · Astro in `packages/website/` as an npm workspace · 
 
 ## Ground preparation
 
-Ideal diff, data first: `workspaces: ["packages/*"]` · `toolPages.website = 'home'` · `DEV_PORTS.website = 5700` · the build chain gains `npm run site:build` · `packages/website/`.
+Ideal diff, data first: `workspaces: ["packages/*"]` · `toolPages.website = 'home'` · `DEV_PORTS.website = 5800` · the build chain gains `npm run site:build` · `packages/website/`.
 
 One missing joint: `src/styles/global.css` holds the font faces and `:root` tokens (lines 55–362) together with the app's page rules (`html`, `body`, `#c`). The site needs the first without the second. **Prep:** move the font faces and tokens to `src/styles/tokens.css`, imported by `global.css`. No behaviour change; its own commit, first.
 

@@ -10,5 +10,5 @@ export const DEV_PORTS = {
   galaxyRenderer: 5400,
   mcpmWorkbench: 5500,
   sceneWorkbench: 5600,
-  website: 5700,
+  website: 5800,
 } as const;
