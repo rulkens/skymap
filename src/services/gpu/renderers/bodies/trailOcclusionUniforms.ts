@@ -9,7 +9,7 @@
  * @module
  */
 
-import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
+import type { TrailOcclusionUniforms } from '../../../../@types/rendering/TrailOcclusionUniforms';
 import { MAX_ORBIT_OCCLUDERS } from '../../../../data/bodies/orbitTrailConstants';
 
 export const OCCLUDER_COUNT_OFFSET = 0;
@@ -18,16 +18,6 @@ export const OCCLUDER_INV_MVP_OFFSET = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLU
 export const OCCLUDER_CAM_POS_OFFSET = OCCLUDER_INV_MVP_OFFSET + 64; // mat4x4<f32>
 export const OCCLUDER_VIEWPORT_OFFSET = OCCLUDER_CAM_POS_OFFSET + 16; // camPosKm (vec3) ends at 348; vec2 aligns to 8 → 352
 export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_VIEWPORT_OFFSET + 16; // vec2<f32> + pad
-
-export type TrailOcclusionUniforms = {
-  /** The bytes to `writeBuffer` after `write`. */
-  readonly scratch: ArrayBuffer;
-  write(
-    occluders: { readonly count: number; readonly spheresKm: Float32Array },
-    depthFrame: SampledDepthBinding['frame'],
-    viewportPx: ArrayLike<number>,
-  ): void;
-};
 
 export function createTrailOcclusionUniforms(): TrailOcclusionUniforms {
   const scratch = new ArrayBuffer(OCCLUDER_UNIFORM_BYTES);

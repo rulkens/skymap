@@ -7,7 +7,8 @@
  * fallback pipeline for the behind-camera case. Same profile as
  * `planetRenderer` otherwise — additive, depthless, cull-none. Every per-orbit
  * quantity rides the instance record; the one bind group is the frame's
- * occluder spheres plus the sampled scene depth (lib/trailOcclusion.wesl), written once per draw.
+ * occluder spheres plus the sampled scene depth (lib/trailOcclusion.wesl),
+ * written once per draw.
  * @module
  */
 

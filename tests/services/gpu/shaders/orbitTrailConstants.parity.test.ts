@@ -38,8 +38,8 @@ import {
 const TRAIL_OCCLUSION_WESL = 'src/services/gpu/shaders/lib/trailOcclusion.wesl';
 
 /**
- * Extract every `const NAME: (u32|f32) = <number>;` from
- * orbitTrail/constants.wesl. Handles the `u`/`f` literal suffixes and float
+ * Extract every `const NAME: (u32|f32) = <number>;` from a .wesl file
+ * (default orbitTrail/constants.wesl). Handles the `u`/`f` literal suffixes and float
  * syntax, parsing with `parseFloat` so `96u` -> 96 and `2.5` -> 2.5 alike.
  */
 function parseWeslConstants(

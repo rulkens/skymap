@@ -1,7 +1,7 @@
 // lib/trailOcclusion.wesl — how much of a trail point survives the frame's
 // opaque bodies: analytic eye-relative spheres plus ONE sampled depth row.
-// Declares its own '@group(0)' bindings (as lib/sceneDepth.wesl does), so every
-// trail shader shares one layout; trailOcclusionUniforms.ts mirrors the block
+// Declares its own '@group(0)' bindings 0-1 (as lib/sceneDepth.wesl does), so
+// every importer reserves them and puts its own resources elsewhere; trailOcclusionUniforms.ts mirrors the block
 // byte-for-byte, pinned by orbitTrailConstants.parity.test.ts.
 
 import package::lib::sceneDepthRay::FAR_DEPTH;
