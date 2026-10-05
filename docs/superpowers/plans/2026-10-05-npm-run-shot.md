@@ -82,15 +82,15 @@ starting with `?` or `#`, and a bare hash body. `parseShotArgs` reads positional
 no links; `--out` with more than one link; `--build` together with `--url`; a `--url` carrying a query
 or hash; an unknown flag; a non-positive `--dpr` or `--timeout`.
 
-- [ ] `parseShotLink` tests, one per form: `full URL keeps query and hash, drops origin and path`
+- [x] `parseShotLink` tests, one per form: `full URL keeps query and hash, drops origin and path`
       (`https://skymap.example/app/?dome#focus=body-saturn&t=1` → `{ search: 'dome', hash:
 'focus=body-saturn&t=1' }`), `bare hash body`, `leading #`, `leading ? with a hash`, `URL with no
 hash` (→ `hash: ''`).
-- [ ] `parseShotArgs` tests: `defaults` (one link → 1600, 900, dpr 2, timeoutMs 30000, both hide flags
+- [x] `parseShotArgs` tests: `defaults` (one link → 1600, 900, dpr 2, timeoutMs 30000, both hide flags
       false, `url`/`out` undefined, `build` false); `--size 1280x720 --dpr 1 --timeout 5` → 1280, 720, 1,
       5000; `strips trailing slash from --url`; and one test per throwing case listed above, asserting
       the message names the offending flag.
-- [ ] Implement. `npm test -- parseShotLink parseShotArgs` passes. Commit.
+- [x] Implement. `npm test -- parseShotLink parseShotArgs` passes. Commit.
 
 ### Task 2: Output naming
 
