@@ -37,6 +37,7 @@ import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
+import type { MissionTrailRenderer } from '../../rendering/missionTrailRenderer/MissionTrailRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
@@ -452,6 +453,13 @@ export type EngineGpuHandles = {
    * (releases the instance buffer).
    */
   orbitTrailRenderer: OrbitTrailRenderer | null;
+  /**
+   * Sampled-craft (Voyager) trails into the same depthless `(hdr, NEAR0)` step as
+   * `orbitTrailRenderer`; `missionTrailsPass` uploads the tessellated tracks once
+   * per ephemeris load. Excluded from `isEngineReady`, null-checked at use,
+   * released and re-nulled by `destroy()`.
+   */
+  missionTrailRenderer: MissionTrailRenderer | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

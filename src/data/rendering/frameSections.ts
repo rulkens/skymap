@@ -289,7 +289,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails'],
+      passes: ['orbit-trails', 'mission-trails'],
       slot: 'POST_FOREGROUND',
     },
   ],
