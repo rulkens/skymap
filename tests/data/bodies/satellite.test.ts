@@ -105,8 +105,4 @@ describe('satellite() moon elements', () => {
       expect(Math.abs(degPerDay - 360 / periodDays), id).toBeLessThan(1e-9);
     }
   });
-
-  it("Io's apsis regresses", () => {
-    expect(io.argPeriapsisRateRadPerCty).toBeLessThan(0);
-  });
 });

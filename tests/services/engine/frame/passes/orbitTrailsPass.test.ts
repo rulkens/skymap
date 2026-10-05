@@ -220,6 +220,22 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
   };
 }
 
+/** Camera-at-`eye` frame at `simDays`, no body pose, deep-zoom distance. */
+function makeEyeCtx(simDays: number, eye: Vec3): FrameView {
+  return {
+    snapshot: {
+      simDays,
+      focusBlend: 0,
+      nowMs: 0,
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+    },
+    bodyPose: () => null,
+    drawCamPos: eye,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    cam: { distance: 1e-13 },
+  } as unknown as FrameView;
+}
+
 function makeRendererSpy() {
   return {
     draw: vi.fn<(pass: GPURenderPassEncoder, args: OrbitTrailDrawArgs) => void>(),
@@ -616,18 +632,7 @@ describe('orbitTrailsPass.draw', () => {
       // ~4e5 km semi-major axis is 30 m, so 0.1 km is the tightest honest bound; the
       // injected 1e6 km offset is four orders above it.
       const eye: Vec3 = [stubbed[0] + 100 * SCALE_UNITS.KM_TO_MPC, stubbed[1], stubbed[2]];
-      const ctx = {
-        snapshot: {
-          simDays,
-          focusBlend: 0,
-          nowMs: 0,
-          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
-        },
-        bodyPose: () => null,
-        drawCamPos: eye,
-        drawPxPerRad: FIXTURE_PX_PER_RAD,
-        cam: { distance: 1e-13 },
-      } as unknown as FrameView;
+      const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
       orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
         ...makeState(renderer),
@@ -685,18 +690,7 @@ describe('orbitTrailsPass.draw', () => {
         expectedCentre[1],
         expectedCentre[2],
       ];
-      const ctx = {
-        snapshot: {
-          simDays,
-          focusBlend: 0,
-          nowMs: 0,
-          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
-        },
-        bodyPose: () => null,
-        drawCamPos: eye,
-        drawPxPerRad: FIXTURE_PX_PER_RAD,
-        cam: { distance: 1e-13 },
-      } as unknown as FrameView;
+      const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
       orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
         ...makeState(renderer),
@@ -731,18 +725,7 @@ describe('orbitTrailsPass.draw', () => {
       const semiMajorKm = orbit!.semiMajorMpc * kmPerMpc;
       const offset = keplerianEllipse(orbit!).centerOffsetMpc;
       const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
-      const ctx = {
-        snapshot: {
-          simDays,
-          focusBlend: 0,
-          nowMs: 0,
-          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
-        },
-        bodyPose: () => null,
-        drawCamPos: eye,
-        drawPxPerRad: FIXTURE_PX_PER_RAD,
-        cam: { distance: 1e-13 },
-      } as unknown as FrameView;
+      const ctx = makeEyeCtx(simDays, eye);
       const renderer = makeRendererSpy();
       orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
         ...makeState(renderer),
