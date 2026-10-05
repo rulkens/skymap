@@ -204,20 +204,20 @@ export function fitSinusoidSeries(
   steps.
 
 **Steps:**
-- [ ] Do the moves above, then the type and evaluator rewrite. The `'hold'` tests carry over
+- [x] Do the moves above, then the type and evaluator rewrite. The `'hold'` tests carry over
       unchanged in meaning.
-- [ ] Add the test `correctionSeriesAt 'off' returns undefined outside the span and the full value
+- [x] Add the test `correctionSeriesAt 'off' returns undefined outside the span and the full value
       on its edges`. Check `startJd − 1e-6` and `endJd + 1e-6` → `undefined`, and `startJd` and
       `endJd` → equal to the `'hold'` value.
-- [ ] Extend the fit helper to N channels. The existing 3-channel test keeps passing. Add a
+- [x] Extend the fit helper to N channels. The existing 3-channel test keeps passing. Add a
       1-channel case, `fitSinusoidSeries fits a scalar channel`: a synthetic cubic plus 2
       sinusoids recovered to < 1e-6 of amplitude.
-- [ ] Re-run `npm run build-ephemeris-corrections`. The planet blocks in the generated file must
+- [x] Re-run `npm run build-ephemeris-corrections`. The planet blocks in the generated file must
       be value-identical to the old file: same ω, poly and amplitude literals, now in
       `{ outside: 'hold', positionKm: {...} }` shape. Check by diffing the numbers.
-- [ ] `npm test`, especially `ephemerisCorrections.test.ts` (today's planet Horizons check), then
+- [x] `npm test`, especially `ephemerisCorrections.test.ts` (today's planet Horizons check), then
       `npm run typecheck`.
-- [ ] Commit `refactor(bodies): body-agnostic ephemeris corrections (N-channel series, explicit
+- [x] Commit `refactor(bodies): body-agnostic ephemeris corrections (N-channel series, explicit
       out-of-span policy)`.
 
 ---
