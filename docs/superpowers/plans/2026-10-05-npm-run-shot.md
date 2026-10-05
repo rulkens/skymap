@@ -111,10 +111,10 @@ the link's hash, with every character outside `[A-Za-z0-9._-]` replaced by `-`; 
 present. Local time, as `tools/utils/record/defaultOutName.ts` stamps it. If the name is in `taken`,
 append `-2`, `-3`, … before `.png` until it is free.
 
-- [ ] Tests: `names the shot after its focus id`; `falls back to exhibit, tour, clip in that order`;
+- [x] Tests: `names the shot after its focus id`; `falls back to exhibit, tour, clip in that order`;
       `uses "shot" when the hash names no subject`; `sanitises a subject with path characters`
       (`focus=a/b` → `a-b`); `suffixes a second shot of the same subject in one run`.
-- [ ] Implement. `npm test -- shotOutName` passes. Commit.
+- [x] Implement. `npm test -- shotOutName` passes. Commit.
 
 ### Task 3: Wrong-checkout warning, shared with `perf`
 
