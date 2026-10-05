@@ -105,4 +105,9 @@ describe('satellite() moon elements', () => {
       expect(Math.abs(degPerDay - 360 / periodDays), id).toBeLessThan(1e-9);
     }
   });
+
+  it("Triton's node advances: it is retrograde, so Pnode = 340.379 yr enters the row negative", () => {
+    const rate = elementsById('triton').ascendingNodeRateRadPerCty!;
+    expect(rate).toBeCloseTo((2 * Math.PI * 100) / 340.379, 12);
+  });
 });

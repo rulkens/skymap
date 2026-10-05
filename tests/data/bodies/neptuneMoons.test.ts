@@ -6,29 +6,19 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 // JPL Horizons, position relative to Neptune centre (500@899), ICRF equatorial axes (the scene's
-// world frame), km. External contract: Triton orbits backwards (i = 157 deg) and Nereid is given
-// on the ecliptic, so a wrong plane, node sign or epoch shows up as tens of degrees. Mean
-// elements are not osculating, hence the bounds; Nereid's are loose because the Sun perturbs it.
+// world frame), km. External contract: Nereid is given on the ecliptic at 2020, so a wrong plane
+// or epoch shows up as tens of degrees. Mean elements are not osculating, hence the loose bounds:
+// the Sun perturbs it. Triton and Proteus are pinned in `ephemerisCorrections.test.ts`.
 const JD = { j2000: 2451545.0, voyager: 2447763.5, now: 2461318.5 };
 const HORIZONS_KM: Record<string, Record<keyof typeof JD, Vec3>> = {
-  triton: {
-    j2000: [-205696.4744679369, 10004.0771266601, 288812.3684286066],
-    voyager: [136841.4844034221, -65894.58087560126, -320652.4684100639],
-    now: [-114291.9439820195, 71723.74302498791, 328048.3335109302],
-  },
-  proteus: {
-    j2000: [46051.79358221572, -64887.07589296275, -86677.76874255059],
-    voyager: [-102896.5101776261, 2123.633261613296, 56925.31434581504],
-    now: [58284.12942941982, 87874.54166287351, 52044.20895731328],
-  },
   nereid: {
     j2000: [893764.5622070211, 8278569.61123076, 4329907.699022511],
     voyager: [4149828.930011556, 1780865.269851427, 1185080.230387541],
     now: [-1066087.5536643, 7069677.499115557, 3575544.128237794],
   },
 };
-const MAX_ANGLE_DEG: Record<string, number> = { triton: 0.7, proteus: 1, nereid: 0.5 };
-const MAX_RANGE_ERR: Record<string, number> = { triton: 0.002, proteus: 0.002, nereid: 0.015 };
+const MAX_ANGLE_DEG: Record<string, number> = { nereid: 0.5 };
+const MAX_RANGE_ERR: Record<string, number> = { nereid: 0.015 };
 
 describe('Neptune moons against Horizons', () => {
   const cases = Object.keys(HORIZONS_KM).flatMap((id) =>

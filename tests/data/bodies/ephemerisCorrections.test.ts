@@ -5,6 +5,9 @@
  * Moons (`horizonsMoons.json`, fetched 2026-10-05): the same query with each moon's target and
  * centre ('500@599' / '500@699'), TLIST = the Voyager Jupiter and Saturn flybys and both span ends
  * '2443938.003472222' '2444064.436805556' '2444556.490277778' '2444842.641666667' '2415171.5' '2487855.5'.
+ * Triton and Proteus (centre '500@899', targets '801' and '808'): the same query with
+ * TLIST = both span ends, Voyager 2 at Neptune, J2000, 2026-10-05 and 2050-01-01
+ * '2415020.5' '2447763.5' '2451545.0' '2461318.5' '2469807.5' '2488069.5'.
  * Fails when an element row or the frame changes without `npm run build-ephemeris-corrections`.
  */
 

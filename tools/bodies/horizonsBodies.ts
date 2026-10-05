@@ -36,4 +36,6 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
   { id: 'rhea', target: '605', centre: '500@699', stepDays: 1 / 4, fitStep: 2, outside: 'off' },
   { id: 'titan', target: '606', centre: '500@699', stepDays: 1 / 2, fitStep: 4, outside: 'off' },
   { id: 'iapetus', target: '608', centre: '500@699', stepDays: 1, fitStep: 2, outside: 'off' },
+  { id: 'triton', target: '801', centre: '500@899', stepDays: 1 / 3, fitStep: 2, outside: 'off' },
+  { id: 'proteus', target: '808', centre: '500@899', stepDays: 1 / 15, fitStep: 2, outside: 'off' },
 ];
