@@ -885,4 +885,324 @@
   "description": "A very massive young star cluster in Ara, heavily obscured by interstellar dust, about 4.05 kpc away. It contains many evolved massive stars such as red supergiants.",
   "source": "Navarete et al. 2022 (MNRAS 516, 1289; arXiv:2204.09414): distance 4.05 +/- 0.20 kpc, effective radius R50 = 2.0 arcmin = 2.33 pc, 3 x R50 = 7.0 pc as the outer extent; centre from Clark et al. 2005 as used there. Not in Hunt & Reffert 2024"
 }
+,
+{
+  "id": "omega-centauri",
+  "names": [
+    "Omega Centauri",
+    "NGC 5139"
+  ],
+  "category": "globular-cluster",
+  "raHours": 13.44647,
+  "decDeg": -47.47947,
+  "distance": { "value": 5.43, "unit": "kpc" },
+  "physicalRadius": { "value": 7.56, "unit": "pc" },
+  "apparentRadius": { "value": 208.6, "unit": "pc" },
+  "description": "The most massive globular cluster in the Milky Way, about 5.43 kpc away in Centaurus. It is thought to be the stripped core of a former dwarf galaxy.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 5139: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "47-tucanae",
+  "names": [
+    "47 Tucanae",
+    "NGC 104",
+    "47 Tuc"
+  ],
+  "category": "globular-cluster",
+  "raHours": 0.40159,
+  "decDeg": -72.08131,
+  "distance": { "value": 4.52, "unit": "kpc" },
+  "physicalRadius": { "value": 4.03, "unit": "pc" },
+  "apparentRadius": { "value": 124.63, "unit": "pc" },
+  "description": "A bright globular cluster in Tucana about 4.52 kpc away. It lies near the Small Magellanic Cloud on the sky but is much nearer.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 104: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m2",
+  "names": [
+    "M2",
+    "NGC 7089"
+  ],
+  "category": "globular-cluster",
+  "raHours": 21.55751,
+  "decDeg": -0.82325,
+  "distance": { "value": 11.69, "unit": "kpc" },
+  "physicalRadius": { "value": 3.05, "unit": "pc" },
+  "apparentRadius": { "value": 110.77, "unit": "pc" },
+  "description": "A rich globular cluster in Aquarius about 11.69 kpc away.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 7089: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m3",
+  "names": [
+    "M3",
+    "NGC 5272"
+  ],
+  "category": "globular-cluster",
+  "raHours": 13.70323,
+  "decDeg": 28.37728,
+  "distance": { "value": 10.18, "unit": "kpc" },
+  "physicalRadius": { "value": 3.4, "unit": "pc" },
+  "apparentRadius": { "value": 129.25, "unit": "pc" },
+  "description": "A globular cluster in Canes Venatici about 10.18 kpc away, well studied for its many variable stars.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 5272: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m4",
+  "names": [
+    "M4",
+    "NGC 6121"
+  ],
+  "category": "globular-cluster",
+  "raHours": 16.39312,
+  "decDeg": -26.52575,
+  "distance": { "value": 1.85, "unit": "kpc" },
+  "physicalRadius": { "value": 2.5, "unit": "pc" },
+  "apparentRadius": { "value": 53.94, "unit": "pc" },
+  "description": "The closest globular cluster to the Sun, about 1.85 kpc away in Scorpius. It lies near the bright star Antares.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6121: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m5",
+  "names": [
+    "M5",
+    "NGC 5904"
+  ],
+  "category": "globular-cluster",
+  "raHours": 15.30923,
+  "decDeg": 2.08103,
+  "distance": { "value": 7.48, "unit": "kpc" },
+  "physicalRadius": { "value": 3.52, "unit": "pc" },
+  "apparentRadius": { "value": 81.29, "unit": "pc" },
+  "description": "A bright globular cluster in Serpens about 7.48 kpc away.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 5904: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m10",
+  "names": [
+    "M10",
+    "NGC 6254"
+  ],
+  "category": "globular-cluster",
+  "raHours": 16.95251,
+  "decDeg": -4.10031,
+  "distance": { "value": 5.07, "unit": "kpc" },
+  "physicalRadius": { "value": 2.99, "unit": "pc" },
+  "apparentRadius": { "value": 53.76, "unit": "pc" },
+  "description": "A globular cluster in Ophiuchus about 5.07 kpc away, near the neighbouring cluster M12.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6254: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m12",
+  "names": [
+    "M12",
+    "NGC 6218"
+  ],
+  "category": "globular-cluster",
+  "raHours": 16.78727,
+  "decDeg": -1.94853,
+  "distance": { "value": 5.11, "unit": "kpc" },
+  "physicalRadius": { "value": 2.72, "unit": "pc" },
+  "apparentRadius": { "value": 45.62, "unit": "pc" },
+  "description": "A loosely concentrated globular cluster in Ophiuchus about 5.11 kpc away, near M10.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6218: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m13",
+  "names": [
+    "M13",
+    "NGC 6205",
+    "Hercules Globular Cluster"
+  ],
+  "category": "globular-cluster",
+  "raHours": 16.69479,
+  "decDeg": 36.45986,
+  "distance": { "value": 7.42, "unit": "kpc" },
+  "physicalRadius": { "value": 3.47, "unit": "pc" },
+  "apparentRadius": { "value": 130.27, "unit": "pc" },
+  "description": "The best-known globular cluster of the northern sky, about 7.42 kpc away in Hercules.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6205: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m15",
+  "names": [
+    "M15",
+    "NGC 7078"
+  ],
+  "category": "globular-cluster",
+  "raHours": 21.49954,
+  "decDeg": 12.167,
+  "distance": { "value": 10.71, "unit": "kpc" },
+  "physicalRadius": { "value": 2.03, "unit": "pc" },
+  "apparentRadius": { "value": 132.13, "unit": "pc" },
+  "description": "A globular cluster in Pegasus about 10.71 kpc away with a very dense, collapsed core. It also contains a planetary nebula.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 7078: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m22",
+  "names": [
+    "M22",
+    "NGC 6656",
+    "Sagittarius Cluster"
+  ],
+  "category": "globular-cluster",
+  "raHours": 18.60665,
+  "decDeg": -23.90475,
+  "distance": { "value": 3.3, "unit": "kpc" },
+  "physicalRadius": { "value": 3.18, "unit": "pc" },
+  "apparentRadius": { "value": 76.82, "unit": "pc" },
+  "description": "A bright globular cluster in Sagittarius about 3.3 kpc away, one of the nearest to the Sun.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6656: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m30",
+  "names": [
+    "M30",
+    "NGC 7099"
+  ],
+  "category": "globular-cluster",
+  "raHours": 21.67281,
+  "decDeg": -23.17986,
+  "distance": { "value": 8.46, "unit": "kpc" },
+  "physicalRadius": { "value": 2.54, "unit": "pc" },
+  "apparentRadius": { "value": 71.2, "unit": "pc" },
+  "description": "A globular cluster in Capricornus about 8.46 kpc away with a dense, collapsed core.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 7099: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m53",
+  "names": [
+    "M53",
+    "NGC 5024"
+  ],
+  "category": "globular-cluster",
+  "raHours": 13.21535,
+  "decDeg": 18.16817,
+  "distance": { "value": 18.5, "unit": "kpc" },
+  "physicalRadius": { "value": 6.46, "unit": "pc" },
+  "apparentRadius": { "value": 183.04, "unit": "pc" },
+  "description": "A distant globular cluster in Coma Berenices about 18.5 kpc from the Sun, in the outer halo of the Milky Way.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 5024: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m54",
+  "names": [
+    "M54",
+    "NGC 6715"
+  ],
+  "category": "globular-cluster",
+  "raHours": 18.91759,
+  "decDeg": -30.47986,
+  "distance": { "value": 26.28, "unit": "kpc" },
+  "physicalRadius": { "value": 3.58, "unit": "pc" },
+  "apparentRadius": { "value": 279.15, "unit": "pc" },
+  "description": "A globular cluster in Sagittarius about 26.28 kpc away. It sits at the centre of the Sagittarius dwarf galaxy rather than in the Milky Way's own halo.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6715: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m55",
+  "names": [
+    "M55",
+    "NGC 6809"
+  ],
+  "category": "globular-cluster",
+  "raHours": 19.66659,
+  "decDeg": -30.96475,
+  "distance": { "value": 5.35, "unit": "kpc" },
+  "physicalRadius": { "value": 4.6, "unit": "pc" },
+  "apparentRadius": { "value": 52.03, "unit": "pc" },
+  "description": "A loosely concentrated globular cluster in Sagittarius about 5.35 kpc away.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6809: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m71",
+  "names": [
+    "M71",
+    "NGC 6838"
+  ],
+  "category": "globular-cluster",
+  "raHours": 19.89625,
+  "decDeg": 18.77919,
+  "distance": { "value": 4, "unit": "kpc" },
+  "physicalRadius": { "value": 3.32, "unit": "pc" },
+  "apparentRadius": { "value": 40.95, "unit": "pc" },
+  "description": "A small, loosely packed globular cluster in Sagitta about 4.0 kpc away. It has lower mass than most globular clusters.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6838: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m79",
+  "names": [
+    "M79",
+    "NGC 1904"
+  ],
+  "category": "globular-cluster",
+  "raHours": 5.40306,
+  "decDeg": -24.52442,
+  "distance": { "value": 13.08, "unit": "kpc" },
+  "physicalRadius": { "value": 2.58, "unit": "pc" },
+  "apparentRadius": { "value": 66.21, "unit": "pc" },
+  "description": "A globular cluster in Lepus about 13.08 kpc away, on the far side of the Galaxy from the Galactic centre direction.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 1904: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m80",
+  "names": [
+    "M80",
+    "NGC 6093"
+  ],
+  "category": "globular-cluster",
+  "raHours": 16.284,
+  "decDeg": -22.97608,
+  "distance": { "value": 10.34, "unit": "kpc" },
+  "physicalRadius": { "value": 1.93, "unit": "pc" },
+  "apparentRadius": { "value": 62.86, "unit": "pc" },
+  "description": "A dense globular cluster in Scorpius about 10.34 kpc away, with a compact core.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6093: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "m92",
+  "names": [
+    "M92",
+    "NGC 6341"
+  ],
+  "category": "globular-cluster",
+  "raHours": 17.28538,
+  "decDeg": 43.13594,
+  "distance": { "value": 8.5, "unit": "kpc" },
+  "physicalRadius": { "value": 2.03, "unit": "pc" },
+  "apparentRadius": { "value": 113, "unit": "pc" },
+  "description": "A globular cluster in Hercules about 8.5 kpc away, among the oldest and most metal-poor in the Galaxy.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6341: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "ngc-6397",
+  "names": [
+    "NGC 6397",
+    "Caldwell 86"
+  ],
+  "category": "globular-cluster",
+  "raHours": 17.67836,
+  "decDeg": -53.67434,
+  "distance": { "value": 2.48, "unit": "kpc" },
+  "physicalRadius": { "value": 2.17, "unit": "pc" },
+  "apparentRadius": { "value": 49.64, "unit": "pc" },
+  "description": "The second-nearest globular cluster to the Sun after M4, about 2.48 kpc away in Ara. It has a collapsed core.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 6397: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+},
+{
+  "id": "ngc-2419",
+  "names": [
+    "NGC 2419",
+    "Caldwell 25",
+    "Intergalactic Wanderer"
+  ],
+  "category": "globular-cluster",
+  "raHours": 7.63569,
+  "decDeg": 38.88194,
+  "distance": { "value": 88.47, "unit": "kpc" },
+  "physicalRadius": { "value": 19.76, "unit": "pc" },
+  "apparentRadius": { "value": 734.97, "unit": "pc" },
+  "description": "One of the most distant globular clusters of the Milky Way halo, about 88.47 kpc from the Sun in Lynx.",
+  "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 2419: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
+}
 ]
