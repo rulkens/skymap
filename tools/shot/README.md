@@ -66,4 +66,4 @@ not change it.
 ## Wrong-checkout warning
 
 If the server reports a different checkout than the one the tool runs from, a warning naming both
-paths goes to stderr. A production build reports none. `npm run perf` prints the same warning.
+paths goes to stderr, once per run. A production build reports none. `npm run perf` prints the same warning.

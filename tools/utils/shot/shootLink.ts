@@ -31,6 +31,8 @@ export async function shootLink(
     'width' | 'height' | 'dpr' | 'hideUi' | 'hideLabels' | 'timeoutMs' | 'format'
   > & {
     outPath: string;
+    // The mismatch is a property of the server, so the caller asks for it once.
+    warnCheckout: boolean;
   },
 ): Promise<ShotOutcome> {
   const context = await browser.newContext({
@@ -45,10 +47,12 @@ export async function shootLink(
     const search = params.toString().replace(/=(&|$)/g, '$1');
     const url = `${base}/${search === '' ? '' : `?${search}`}#${link.hash}`;
 
+    let booted = false;
     const boot = (async (): Promise<string | null> => {
       try {
         await bootHookedPage(page, url);
-        await warnIfWrongCheckout(page);
+        booted = true;
+        if (opts.warnCheckout) await warnIfWrongCheckout(page);
         if (opts.hideLabels) {
           await dispatchActions(page, labelDeclutterActions());
         }
@@ -87,7 +91,7 @@ export async function shootLink(
     } catch (err) {
       error ??= err instanceof Error ? err.message : String(err);
     }
-    return { path, timedOut, error, pageErrors };
+    return { path, booted, timedOut, error, pageErrors };
   } finally {
     await context.close();
   }

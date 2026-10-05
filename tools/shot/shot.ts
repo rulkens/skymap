@@ -53,6 +53,7 @@ async function main(): Promise<number> {
     }
     browser = await launchChromium();
     const taken = new Set<string>();
+    let warnCheckout = true;
     for (const link of options.links) {
       const outPath =
         options.out ?? shotOutName({ link, format: options.format, now: new Date(), taken });
@@ -60,7 +61,9 @@ async function main(): Promise<number> {
       const outcome = await shootLink(browser, base, link, {
         ...options,
         outPath,
+        warnCheckout,
       });
+      if (outcome.booted) warnCheckout = false;
       const label = `#${link.hash}`;
       if (outcome.path !== null) process.stdout.write(`${outcome.path}\n`);
       if (outcome.timedOut) {
