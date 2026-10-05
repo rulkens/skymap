@@ -14,6 +14,8 @@ regenerate with `npm run fetch-horizons`.
 - **`500@799/`** (Uranus body centre): Miranda `705` (120 min), Ariel `701` (180 min), Umbriel `702` (360 min), Titania `703` and Oberon `704` (720 min). Puck `715` is not fetched: Horizons has no ephemeris for it before 1900-01-02.
 - A moon's step is ≤ P/16 and divides a day, so every piece below starts on the row's grid. The moons total ~8.5M rows, ~550 MB.
 
+- **Voyagers** (`500@10/`): `-31.csv` and `-32.csv`, daily state vectors from the first Horizons sample (1977-09-06 / 1977-08-21) to 2099-12-31; `<target>.dense.csv` adds 1 h (±60 d) and 1 min (±2 d) rows around each encounter; `<body>.<date>.csv` is the flown-by body centre (599, 699, 606, 799, 899), position only, 1 min over ±2 d. `npm run fetch-voyager-windows` writes the last two; the fit does not read any of them. Horizons has no data for these craft before those instants or after 2099-12-31, so the spans are clipped there.
+
 ## Query
 
 Every row's span is cut at 50-year boundaries (the 1900–2100 rows give 1900–1950, 1950–2000,

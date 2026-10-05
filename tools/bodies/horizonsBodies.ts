@@ -218,4 +218,22 @@ export const HORIZONS_BODIES: readonly HorizonsBody[] = [
     stepMinutes: 720,
     vectors: 'position',
   },
+  // Voyagers: daily Sun-centred state vectors from the first Horizons sample. Their dense
+  // encounter windows come from `fetchVoyagerWindows`; the fit never sees them.
+  {
+    id: 'voyager1',
+    target: '-31',
+    centre: '500@10',
+    span: ['1977-09-06', '2099-12-31'],
+    stepMinutes: 1440,
+    vectors: 'state',
+  },
+  {
+    id: 'voyager2',
+    target: '-32',
+    centre: '500@10',
+    span: ['1977-08-21', '2099-12-31'],
+    stepMinutes: 1440,
+    vectors: 'state',
+  },
 ];
