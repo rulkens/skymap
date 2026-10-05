@@ -23,6 +23,11 @@ describe('parseShotArgs', () => {
   it('--png switches to png', () => {
     expect(parseShotArgs([LINK, '--png']).format).toBe('png');
   });
+  it('--out decides the format by its extension and rejects a conflicting --png', () => {
+    expect(parseShotArgs([LINK, '--out', 'x.png']).format).toBe('png');
+    expect(parseShotArgs([LINK, '--out', 'x.jpg']).format).toBe('jpeg');
+    expect(() => parseShotArgs([LINK, '--out', 'x.jpg', '--png'])).toThrow(/--png conflicts/);
+  });
   it('reads --size, --dpr and --timeout (seconds to ms)', () => {
     const o = parseShotArgs([LINK, '--size', '1280x720', '--dpr', '1', '--timeout', '5']);
     expect([o.width, o.height, o.dpr, o.timeoutMs]).toEqual([1280, 720, 1, 5000]);

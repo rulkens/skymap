@@ -42,6 +42,11 @@ export function parseShotArgs(argv: readonly string[]): ShotOptions {
   if (out !== undefined && links.length > 1) {
     throw new Error(`--out names one file but ${links.length} links were given\n${USAGE}`);
   }
+  // An explicit file name states its own format: bytes must match the extension.
+  const outIsPng = out?.toLowerCase().endsWith('.png') ?? false;
+  if (png && out !== undefined && !outIsPng) {
+    throw new Error(`--png conflicts with --out '${out}': name the file .png\n${USAGE}`);
+  }
   const rawUrl = values.get('--url');
   if (rawUrl !== undefined && build) {
     throw new Error(
@@ -65,6 +70,6 @@ export function parseShotArgs(argv: readonly string[]): ShotOptions {
     hideUi,
     hideLabels,
     timeoutMs: (rawTimeout === undefined ? 30 : positiveNumber('--timeout', rawTimeout)) * 1000,
-    format: png ? 'png' : 'jpeg',
+    format: png || outIsPng ? 'png' : 'jpeg',
   };
 }

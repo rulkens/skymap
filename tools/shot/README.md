@@ -44,7 +44,8 @@ Shots land in `data/shots/<subject>-<YYYYMMDD-HHMMSS>.jpg` (`.png` under `--png`
 the first of `focus`, `exhibit`, `tour`, `clip` in the hash, else `shot`; a second shot of the same
 subject in one run gets `-2`, `-3`, ….
 
-The format flag decides the bytes, whatever extension `--out` carries.
+An `--out` file ending in `.png` is written as PNG without `--png`; any other name is JPEG, and
+`--png` with such a name is an error.
 
 ## Capture path
 

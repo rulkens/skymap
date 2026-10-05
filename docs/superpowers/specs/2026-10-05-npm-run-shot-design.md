@@ -115,7 +115,8 @@ npm run shot -- <link>... [--url <server>] [--build] [--out <file>] [--size WxH]
 
 - A link is a full share URL or a bare hash (`focus=body-saturn`, with or without `#`). The origin and
   path of a full URL are discarded; its query flags and hash are kept.
-- `--out` names the file and is valid with exactly one link.
+- `--out` names the file and is valid with exactly one link. A `.png` name is written as PNG; any
+  other name is JPEG, and `--png` with such a name is an error.
 - `--build` is valid only without `--url`.
 
 ### Server
