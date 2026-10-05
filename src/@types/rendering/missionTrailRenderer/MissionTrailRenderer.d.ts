@@ -27,7 +27,6 @@ export type MissionTrailRenderer = Renderer & {
     id: string,
     color: Readonly<Vec3>,
     opacity: number,
-    widthPx: number,
     segmentCount: number,
     headMpc: Readonly<Vec3> | null,
   ): void;

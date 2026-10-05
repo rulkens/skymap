@@ -10,7 +10,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { SAMPLED_BODIES } from '../../../../data/missions/spacecraftBodies';
-import { MISSION_TRAIL_WIDTH_PX } from '../../../../data/missions/missionTrailStyle';
 import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
 import { buildMissionTrails } from '../../../bodies/buildMissionTrails';
 import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
@@ -59,12 +58,12 @@ export const missionTrailsPass: ContentPass = {
     const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
     for (const { id, trailColor } of SAMPLED_BODIES) {
       const track = tracks.get(id);
-      if (track === undefined || !spacecraftPresent(id, ctx.snapshot.simDays)) continue;
+      if (track === undefined) continue;
       const k = trailVertexCount(track.tDays, ctx.snapshot.simDays);
       if (k === 0) continue;
       // Past the last vertex the craft is held on it: no head segment to draw.
       const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
-      renderer.drawTrail(pass, id, trailColor, layerOpacity, MISSION_TRAIL_WIDTH_PX, k - 1, head);
+      renderer.drawTrail(pass, id, trailColor, layerOpacity, k - 1, head);
     }
   },
 };

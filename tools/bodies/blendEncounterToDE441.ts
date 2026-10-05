@@ -9,13 +9,13 @@
  */
 import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import type { HorizonsVectorRow } from '../parsers/@types/HorizonsVectorRow';
+import { julianDaysToUnixMs } from '../../src/utils/time/julianDaysToUnixMs';
+import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
 import { encounterBlendWeight } from '../utils/math/encounterBlendWeight';
 import { encounterBlendWeightRate } from '../utils/math/encounterBlendWeightRate';
 
-const UNIX_EPOCH_JD = 2440587.5;
-const MS_PER_DAY = 86_400_000;
 const SECONDS_PER_DAY = 86_400;
-const key = (jd: number): number => Math.round(jd * MS_PER_DAY);
+const key = (jd: number): number => Math.round(julianDaysToUnixMs(jd));
 
 export function blendEncounterToDE441(
   track: SampledTrack,
@@ -23,7 +23,7 @@ export function blendEncounterToDE441(
   craftVsBary: readonly HorizonsVectorRow[],
   baryVsSun: readonly HorizonsVectorRow[],
 ): number {
-  const centreJd = Date.parse(`${date}T00:00Z`) / MS_PER_DAY + UNIX_EPOCH_JD;
+  const centreJd = unixMsToJulianDays(Date.parse(`${date}T00:00Z`));
   const bary = new Map(baryVsSun.map((r) => [key(r.jd), r]));
   const rel = new Map(craftVsBary.map((r) => [key(r.jd), r]));
   const pos = track.posKm as Float64Array;

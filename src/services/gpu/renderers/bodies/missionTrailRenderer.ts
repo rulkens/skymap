@@ -17,7 +17,7 @@ import vsCode from '../../shaders/bodies/missionTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/missionTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { splitF64HiLo } from '../../../../utils/math/splitF64HiLo';
+import { MISSION_TRAIL_WIDTH_PX } from '../../../../data/missions/missionTrailStyle';
 import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
 import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';
 
@@ -50,18 +50,6 @@ export const TRAIL_UNIFORM_BYTES = 128;
 const SLOT_STRIDE = 256;
 const MAX_TRAILS = 8;
 const HEAD_BYTES = 2 * TRAIL_VERTEX_STRIDE;
-
-/** Interleave split position pairs as [hi3, lo3] per vertex. */
-function interleaveHiLo(posMpc: Float64Array): Float32Array {
-  const { hi, lo } = splitF64HiLo(posMpc);
-  const n = posMpc.length / 3;
-  const out = new Float32Array(n * 6);
-  for (let i = 0; i < n; i++) {
-    out.set(hi.subarray(3 * i, 3 * i + 3), 6 * i);
-    out.set(lo.subarray(3 * i, 3 * i + 3), 6 * i + 3);
-  }
-  return out;
-}
 
 export function createMissionTrailRenderer(
   device: GPUDevice,
@@ -158,7 +146,9 @@ export function createMissionTrailRenderer(
     let at = 0;
     for (const t of built) {
       firstVertex.set(t.id, at);
-      data.set(interleaveHiLo(t.posMpc), at * 6);
+      for (let i = 0; i < t.posMpc.length / 3; i++) {
+        writeHiLoVertex(t.posMpc, 3 * i, data, 6 * (at + i));
+      }
       at += t.posMpc.length / 3;
     }
     vertexBuffer = device.createBuffer({
@@ -190,13 +180,14 @@ export function createMissionTrailRenderer(
       };
     }
     // The per-view uniform fields are filled once here; drawTrail overwrites
-    // only opacity / width / colour.
+    // only opacity / colour.
     const o = TRAIL_UNIFORM_OFFSETS;
     writeHiLoVertex(camPosMpc, 0, eyeScratch, 0);
     uniformScratch.set(vp, o.viewProj / 4);
     uniformScratch[o.viewportPx / 4] = viewportPx[0];
     uniformScratch[o.viewportPx / 4 + 1] = viewportPx[1];
     uniformScratch[o.pxPerRad / 4] = pxPerRad;
+    uniformScratch[o.widthPx / 4] = MISSION_TRAIL_WIDTH_PX;
     for (let k = 0; k < 3; k++) {
       uniformScratch[o.camHi / 4 + k] = eyeScratch[k]!;
       uniformScratch[o.camLo / 4 + k] = eyeScratch[3 + k]!;
@@ -209,7 +200,6 @@ export function createMissionTrailRenderer(
     id: string,
     color: Readonly<Vec3>,
     opacity: number,
-    widthPx: number,
     segmentCount: number,
     headMpc: Readonly<Vec3> | null,
   ): void {
@@ -219,7 +209,6 @@ export function createMissionTrailRenderer(
     }
     const o = TRAIL_UNIFORM_OFFSETS;
     uniformScratch[o.opacity / 4] = opacity;
-    uniformScratch[o.widthPx / 4] = widthPx;
     uniformScratch[o.color / 4] = color[0];
     uniformScratch[o.color / 4 + 1] = color[1];
     uniformScratch[o.color / 4 + 2] = color[2];

@@ -28,11 +28,8 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
   let wa = worldToClip(u.cam, a).w;
   let wb = worldToClip(u.cam, b).w;
 
-  var out: VSOut;
+  var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
   if (wa < W_EPS && wb < W_EPS) {
-    out.clip = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    out.relKm = vec3<f32>(0.0);
-    out.side = 0.0;
     return out;
   }
   if (wa < W_EPS) {
@@ -46,9 +43,6 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
   let bClip = worldToClip(u.cam, b);
   let dPx = (bClip.xy / bClip.w - aClip.xy / aClip.w) * 0.5 * u.cam.viewportPx;
   if (dot(dPx, dPx) < 1e-10) {
-    out.clip = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    out.relKm = vec3<f32>(0.0);
-    out.side = 0.0;
     return out;
   }
 

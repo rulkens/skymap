@@ -4,7 +4,6 @@
  */
 import { readFileSync } from 'node:fs';
 
-import type { HorizonsCsvColumns } from '../../@types/data/HorizonsCsvColumns';
 import type { HorizonsVectorRow } from '../../parsers/@types/HorizonsVectorRow';
 
 export function readHorizonsCsv(path: string): HorizonsVectorRow[] {
@@ -13,10 +12,8 @@ export function readHorizonsCsv(path: string): HorizonsVectorRow[] {
     .slice(1)
     .filter((line) => line.length > 0)
     .map((line) => {
-      const c = line.split(',').map(Number) as HorizonsCsvColumns;
-      const position = { jd: c[0], xKm: c[1], yKm: c[2], zKm: c[3] };
-      return Number.isNaN(c[4]) || c[4] === undefined
-        ? position
-        : { ...position, vxKmS: c[4], vyKmS: c[5], vzKmS: c[6] };
+      const c = line.split(',').map(Number);
+      const position = { jd: c[0]!, xKm: c[1]!, yKm: c[2]!, zKm: c[3]! };
+      return c[4] === undefined ? position : { ...position, vxKmS: c[4], vyKmS: c[5], vzKmS: c[6] };
     });
 }

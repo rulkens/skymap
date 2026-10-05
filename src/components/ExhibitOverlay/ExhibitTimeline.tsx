@@ -18,6 +18,7 @@ import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
+import { DAY_MS } from '../../data/time/dayMs';
 import styles from './ExhibitTimeline.module.css';
 
 export type ExhibitTimelineProps = {
@@ -30,8 +31,6 @@ export type ExhibitTimelineProps = {
   readonly onSeek: (simDays: number) => void;
 };
 
-const DAY_MS = 86_400_000;
-
 function ExhibitTimeline({
   section,
   lanes,
@@ -39,11 +38,8 @@ function ExhibitTimeline({
   endMs,
   onSeek,
 }: ExhibitTimelineProps): ReactNode {
-  const { events, captions } = section;
-  const axis = useMemo(
-    () => timelineAxis(section.fromIso, section.eras, endMs),
-    [section.fromIso, section.eras, endMs],
-  );
+  const { events, eras, captions } = section;
+  const axis = useMemo(() => timelineAxis(eras, endMs), [eras, endMs]);
   const [hotId, setHotId] = useState<string | null>(null);
   const headingId = useId();
 
@@ -72,7 +68,7 @@ function ExhibitTimeline({
 
       <TimelineTrack
         events={events}
-        eras={section.eras ?? []}
+        eras={eras}
         lanes={lanes}
         axis={axis}
         simMs={simMs}

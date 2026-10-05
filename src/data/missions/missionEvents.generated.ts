@@ -25,7 +25,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1979-03-05T12:04:35.394Z',
     label: 'Jupiter',
-    targetId: 'jupiter',
     closestKm: 348435,
   },
   {
@@ -34,7 +33,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1979-07-09T22:29:01.306Z',
     label: 'Jupiter',
-    targetId: 'jupiter',
     closestKm: 721375,
   },
   {
@@ -43,7 +41,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1980-11-12T05:40:22.393Z',
     label: 'Titan',
-    targetId: 'titan',
     closestKm: 6587,
   },
   {
@@ -52,7 +49,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1980-11-12T23:45:37.581Z',
     label: 'Saturn',
-    targetId: 'saturn',
     closestKm: 184030,
   },
   {
@@ -61,7 +57,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1981-08-26T03:24:04.587Z',
     label: 'Saturn',
-    targetId: 'saturn',
     closestKm: 160691,
   },
   {
@@ -70,7 +65,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1986-01-24T17:58:51.349Z',
     label: 'Uranus',
-    targetId: 'uranus',
     closestKm: 107154,
   },
   {
@@ -79,7 +73,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1989-08-25T03:55:40.084Z',
     label: 'Neptune',
-    targetId: 'neptune',
     closestKm: 29236,
   },
   {

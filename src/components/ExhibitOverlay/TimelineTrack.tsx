@@ -18,6 +18,8 @@ import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import type { TimelineAxis } from '../../@types/exhibits/TimelineAxis';
 import type { TimelineEra } from '../../@types/exhibits/TimelineEra';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
+import { DAY_MS } from '../../data/time/dayMs';
+import { YEAR_MS } from '../../data/time/yearMs';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineTrackProps = {
@@ -32,9 +34,7 @@ export type TimelineTrackProps = {
   readonly onSeekMs: (ms: number) => void;
 };
 
-const DAY_MS = 86_400_000;
 const MONTH_MS = 30.4375 * DAY_MS;
-const YEAR_MS = 365.25 * DAY_MS;
 
 const pct = (fraction: number) => `${fraction * 100}%`;
 

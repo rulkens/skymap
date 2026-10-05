@@ -1,8 +1,8 @@
 import type { TimelineAxis } from '../../../@types/exhibits/TimelineAxis';
 
 import type { TimelineAxisLabel } from '../../../@types/exhibits/TimelineAxisLabel';
+import { YEAR_MS } from '../../../data/time/yearMs';
 
-const YEAR_MS = 365.25 * 86_400_000;
 const MIN_GAP = 0.13;
 
 /**

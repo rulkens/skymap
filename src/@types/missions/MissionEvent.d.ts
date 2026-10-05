@@ -1,7 +1,7 @@
 /**
  * MissionEvent — one dated event of a sampled-track craft. `iso` is UTC and ends in
  * `T00:00:00.000Z` when the source gives only a day; `label` is the short plain copy.
- * Flybys carry the target body and the measured centre distance; `id` keys the caption.
+ * Flybys carry the measured centre distance; `id` keys the caption.
  */
 export type MissionEvent = {
   readonly id: string;
@@ -9,6 +9,5 @@ export type MissionEvent = {
   readonly kind: 'launch' | 'flyby' | 'boundary' | 'milestone';
   readonly iso: string;
   readonly label: string;
-  readonly targetId?: string;
   readonly closestKm?: number;
 };

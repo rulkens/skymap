@@ -18,6 +18,7 @@ import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { julianDaysToUnixMs } from '../../src/utils/time/julianDaysToUnixMs';
 import { hermiteTrackAt } from '../../src/utils/orbit/hermiteTrackAt';
 import { writeSpacecraftTracks } from '../utils/io/writeSpacecraftTracks';
 import { closestApproach } from '../utils/math/closestApproach';
@@ -33,11 +34,9 @@ const RAW_ROOT = rawDataPath('horizons');
 const RAW_DIR = join(RAW_ROOT, '500@10');
 const TRACKS_PATH = 'public/data/spacecraftTracks.bin';
 const EVENTS_PATH = 'src/data/missions/missionEvents.generated.ts';
-const UNIX_EPOCH_JD = 2440587.5;
-const MS_PER_DAY = 86_400_000;
 const TITAN_RADIUS_KM = 2574.73;
 
-const jdToIso = (jd: number): string => new Date((jd - UNIX_EPOCH_JD) * MS_PER_DAY).toISOString();
+const jdToIso = (jd: number): string => new Date(julianDaysToUnixMs(jd)).toISOString();
 
 function loadDense(id: string, target: string): SampledTrack {
   const rows = mergeHorizonsChunks([
@@ -93,15 +92,7 @@ function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
 function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
   return VOYAGER_ENCOUNTERS.filter((e) => e.craftId === craft.id).map((e) => {
     const rows = readHorizonsCsv(join(RAW_ROOT, `500@${e.bodyTarget}`, `${target}.csv`));
-    const craftRel = {
-      t: Float64Array.from(rows, (r) => r.jd),
-      pos: Float64Array.from(rows.flatMap((r) => [r.xKm, r.yKm, r.zKm])),
-    };
-    const centre = {
-      t: Float64Array.of(craftRel.t[0]!, craftRel.t.at(-1)!),
-      pos: new Float64Array(6),
-    };
-    const { jd, distanceKm } = closestApproach(craftRel, centre);
+    const { jd, distanceKm } = closestApproach(rows);
     const note =
       e.bodyName === 'Titan' ? `  (surface ${(distanceKm - TITAN_RADIUS_KM).toFixed(0)} km)` : '';
     console.log(`  ${e.bodyName}: ${jdToIso(jd)}  ${distanceKm.toFixed(0)} km from centre${note}`);
@@ -111,7 +102,6 @@ function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
       kind: 'flyby',
       iso: jdToIso(jd),
       label: e.bodyName,
-      targetId: e.bodyName.toLowerCase(),
       closestKm: Math.round(distanceKm),
     };
   });

@@ -35,12 +35,12 @@ describe('ExhibitTimelineContainer', () => {
   it('lists every event, and expands the current one with its caption and measured distance', () => {
     mount('1989-08-26');
     expect(screen.getAllByRole('button')).toHaveLength(section.events.length);
-    expect(screen.getByText(section.captions!['voyager2-neptune']!)).toBeInTheDocument();
+    expect(screen.getByText(section.captions['voyager2-neptune']!)).toBeInTheDocument();
     const neptune = section.events.find((e) => e.id === 'voyager2-neptune')!;
     expect(
       screen.getByText(`${neptune.closestKm!.toLocaleString('en-US')} km from Neptune’s centre`),
     ).toBeInTheDocument();
-    expect(screen.queryByText(section.captions!['voyager1-saturn']!)).toBeNull();
+    expect(screen.queryByText(section.captions['voyager1-saturn']!)).toBeNull();
   });
 
   it('a row click sets the clock to the event instant and leaves it running', () => {

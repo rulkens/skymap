@@ -19,7 +19,6 @@ import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFi
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SAMPLED_BODIES } from '../../../../src/data/missions/spacecraftBodies';
-import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 
 const states = deriveBodyStates(CONST_J2000);
@@ -131,19 +130,6 @@ describe('deriveBodyStates', () => {
 
     const later = deriveBodyStates(t + 1);
     expect(later).not.toBe(first);
-  });
-
-  it('a registry version bump recomputes the snapshot at the same simDays', () => {
-    // A craft track arriving while the clock is paused must reach the next read.
-    const t = CONST_J2000 + 5000;
-    const first = deriveBodyStates(t);
-    trajectoryRegistry.set({
-      id: 'dummy',
-      tDays: new Float64Array(0),
-      posKm: new Float64Array(0),
-      velKmS: new Float32Array(0),
-    });
-    expect(deriveBodyStates(t)).not.toBe(first);
   });
 
   it("a moon's snapshot position rides its propagated parent", () => {

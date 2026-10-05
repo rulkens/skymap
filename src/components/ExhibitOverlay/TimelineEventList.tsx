@@ -16,7 +16,7 @@ import styles from './ExhibitTimeline.module.css';
 export type TimelineEventListProps = {
   readonly events: readonly MissionEvent[];
   readonly lanes: readonly TimelineLane[];
-  readonly captions: Readonly<Record<string, string>> | undefined;
+  readonly captions: Readonly<Record<string, string>>;
   readonly currentId: string | null;
   readonly onSeekMs: (ms: number) => void;
   readonly onHot: (id: string | null) => void;
@@ -35,7 +35,7 @@ function TimelineEventList({
       {events.map((e) => {
         const isCurrent = currentId === e.id;
         const lane = lanes.find((l) => l.bodyId === e.bodyId);
-        const caption = captions?.[e.id];
+        const caption = captions[e.id];
         return (
           <li key={e.id} className={cx(styles.item, isCurrent && styles.itemCurrent)}>
             <button
@@ -51,7 +51,7 @@ function TimelineEventList({
             >
               <span className={cx(styles.glyph, styles[e.kind])} />
               <span className={styles.date}>{formatEventDate(e.iso)}</span>
-              <span className={styles.label}>{e.label}</span>
+              <span>{e.label}</span>
               <span className={styles.tag}>{lane?.tag}</span>
             </button>
             {isCurrent && (caption || e.closestKm !== undefined) ? (

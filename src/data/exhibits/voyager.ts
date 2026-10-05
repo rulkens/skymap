@@ -96,7 +96,6 @@ export const voyager: Exhibit = {
     {
       kind: 'timeline',
       heading: 'Timeline',
-      fromIso: '1977-08-20',
       events: MISSION_EVENTS,
       eras: [
         { label: 'Planetary · 1977–1989', fromIso: '1977-08-20' },

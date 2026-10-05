@@ -9,7 +9,7 @@ const ERAS = [
   { label: 'Planetary', fromIso: '1977-08-20' },
   { label: 'Interstellar', fromIso: '1990-01-01' },
 ];
-const axis = timelineAxis('1977-08-20', ERAS, END);
+const axis = timelineAxis(ERAS, END);
 
 describe('era-split timeline axis', () => {
   it('puts the era boundary at the middle of the track and the ends at 0 and 1', () => {
@@ -43,10 +43,5 @@ describe('era-split timeline axis', () => {
       const ms = Date.parse(iso);
       expect(timelineInstant(timelineFraction(ms, axis), axis)).toBeCloseTo(ms, -1);
     }
-  });
-
-  it('without eras is one linear span', () => {
-    const linear = timelineAxis('2000-01-01', undefined, Date.parse('2010-01-01'));
-    expect(timelineFraction(Date.parse('2005-01-01'), linear)).toBeCloseTo(0.5, 2);
   });
 });
