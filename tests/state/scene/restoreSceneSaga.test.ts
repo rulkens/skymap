@@ -51,7 +51,6 @@ const MANUAL_PAUSED: TimeState = {
 function makeSnapshot(
   focus: SelectionRef | null = FOCUS_REF,
   time: TimeState = MANUAL_PAUSED,
-  capturedAtMs = 100,
 ): SceneSnapshot {
   const f = makeSettingsFixture();
   return {
@@ -76,7 +75,6 @@ function makeSnapshot(
     orientation: f.orientation,
     focus,
     time,
-    capturedAtMs,
   };
 }
 
@@ -227,7 +225,7 @@ describe('restoreSceneSaga', () => {
       const wallMs = Date.UTC(2031, 5, 1);
       vi.spyOn(Date, 'now').mockReturnValue(wallMs);
 
-      sagaMiddleware.run(restoreSceneSaga, makeSnapshot(FOCUS_REF, live, 1));
+      sagaMiddleware.run(restoreSceneSaga, makeSnapshot(FOCUS_REF, live));
       await flush();
 
       const { time } = store.getState();
@@ -235,9 +233,33 @@ describe('restoreSceneSaga', () => {
       expect(time.anchor.simDays).toBe(unixMsToJulianDays(wallMs));
     });
 
+    it('exit restores a live paused clock to its captured instant', async () => {
+      const { store, sagaMiddleware } = buildHarness();
+      const livePaused: TimeState = {
+        mode: 'live',
+        anchor: { simDays: 2460000.5, realMs: 100 },
+        rateIndex: 0,
+        direction: 1,
+        paused: true,
+      };
+      store.dispatch(setSimDays({ simDays: 2470000, nowMs: 5 }));
+
+      sagaMiddleware.run(restoreSceneSaga, makeSnapshot(FOCUS_REF, livePaused));
+      await flush();
+
+      const { time } = store.getState();
+      expect([time.mode, time.paused, time.anchor.simDays]).toEqual(['live', true, 2460000.5]);
+    });
+
     it('exit restores rate and direction changed inside the takeover', async () => {
       const { store, sagaMiddleware } = buildHarness();
-      const captured: TimeState = { ...MANUAL_PAUSED, rateIndex: 2, direction: -1, paused: false };
+      const captured: TimeState = {
+        ...MANUAL_PAUSED,
+        anchor: { simDays: 2461000.25, realMs: 100 },
+        rateIndex: 2,
+        direction: -1,
+        paused: false,
+      };
       store.dispatch(setRate({ rateIndex: 5, nowMs: 5 }));
       store.dispatch(setDirection({ direction: 1, nowMs: 5 }));
       store.dispatch(pause({ nowMs: 5 }));
@@ -252,6 +274,7 @@ describe('restoreSceneSaga', () => {
         -1,
         false,
       ]);
+      expect(time.anchor.simDays).toBe(2461000.25);
     });
   });
 });

@@ -41,9 +41,9 @@
  * ### Why `time` rides along
  *
  * Takeovers move the clock (an exhibit pins an instant, a tour may scrub), and
- * exit must hand it back: live returns to the real now, manual returns to the
- * instant it showed at `capturedAtMs`. `TimeState` is held verbatim; the
- * derivation needs the capture instant, hence `capturedAtMs`.
+ * exit must hand it back: a playing live clock returns to the real now, any
+ * other returns to the instant it showed. The anchor is re-anchored at capture
+ * so `anchor.simDays` IS that instant.
  *
  * ### Why Readonly
  *
@@ -62,6 +62,4 @@ export type SceneSnapshot = Readonly<{
   orientation: OrientationFrameId;
   focus: SelectionRef | null;
   time: TimeState;
-  /** `performance.now()` at capture: the `nowMs` that resolves a manual clock's anchor. */
-  capturedAtMs: number;
 }>;

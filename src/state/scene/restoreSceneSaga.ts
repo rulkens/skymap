@@ -57,7 +57,6 @@ import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
 import { restoreTime } from '../time/timeSlice';
-import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 
@@ -68,12 +67,12 @@ export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }
 
-// Live returns to the wall clock's now (never the frozen capture instant);
-// manual returns to the instant it showed at capture. `Date.now()` and
-// `performance.now()` are read together for the same reason as `goLiveNowAction`.
-function resolveRestoredTime({ time, capturedAtMs }: SceneSnapshot) {
+// A playing live clock returns to the wall clock's now; a paused one (pause keeps
+// `mode: 'live'`) and every manual one return to the instant captured in the
+// anchor. `Date.now()` and `performance.now()` are read together, as `goLiveNowAction` does.
+function resolveRestoredTime({ time }: SceneSnapshot) {
   const nowMs = performance.now();
   const simDays =
-    time.mode === 'live' ? unixMsToJulianDays(Date.now()) : deriveSimDays(time, capturedAtMs);
+    time.mode === 'live' && !time.paused ? unixMsToJulianDays(Date.now()) : time.anchor.simDays;
   return { captured: time, simDays, nowMs };
 }

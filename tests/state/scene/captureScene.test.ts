@@ -64,6 +64,13 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       tonemap: { exposure: 1.2 },
     },
     selection: { hover: null, select: null, focus },
+    time: {
+      mode: 'manual',
+      anchor: { simDays: 2460000, realMs: 1000 },
+      rateIndex: 0,
+      direction: 1,
+      paused: false,
+    },
   } as unknown as RootState;
 }
 
@@ -87,6 +94,12 @@ describe('captureScene', () => {
 
     // Focus half carries the captured ref.
     expect(snap.focus).toEqual(FOCUS_REF);
+  });
+
+  it('re-anchors the clock at capture so anchor.simDays is the instant it showed', () => {
+    const snap = captureScene(makeState(null), 1000 + 86_400_000);
+    // Rate index 0 is 1 s/s: one real day later is one sim day later.
+    expect(snap.time.anchor).toEqual({ simDays: 2460001, realMs: 1000 + 86_400_000 });
   });
 
   it('captureScene is detached', () => {

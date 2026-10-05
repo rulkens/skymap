@@ -23,8 +23,8 @@
  * write, never mutates in place — so holding the reference is sufficient to
  * restore back to the captured identity.
  *
- * `time` is held by reference like `focus`: the slice replaces it on write.
- * `capturedAtMs` is a parameter, not a read, so the selector stays pure.
+ * `time` is re-anchored at `nowMs` (a parameter, so the selector stays pure):
+ * `anchor.simDays` is then the instant the clock showed at capture.
  *
  * Selection fields beyond `focus` (`hover`, `select`) are ephemeral UI
  * responses, not tour-owned intent — the tour does not drive them and must not
@@ -33,14 +33,14 @@
 
 import type { RootState } from '../../store/types';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { captureSettings } from './captureSettings';
 
-export function captureScene(state: RootState, capturedAtMs: number): SceneSnapshot {
+export function captureScene(state: RootState, nowMs: number): SceneSnapshot {
   return {
     settings: captureSettings(state),
     orientation: state.settings.orientation,
     focus: state.selection.focus,
-    time: state.time,
-    capturedAtMs,
+    time: { ...state.time, anchor: { simDays: deriveSimDays(state.time, nowMs), realMs: nowMs } },
   };
 }
