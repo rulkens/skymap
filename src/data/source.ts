@@ -237,8 +237,17 @@ export const Source = {
    * Mesh-drawn scene bodies (the whale and the basket of petunias) — one code
    * for the pair, since one registry row governs both. Pickable: the mesh pass
    * stamps this code into the pick texture itself rather than borrowing a star
-   * layer's, so it spends a pick code. Appended at 32 — after this row, codes
-   * 33..62 remain before the 6-bit pick-source field needs a wider layout.
+   * layer's, so it spends a pick code. Appended at 32.
    */
   MeshBody: 32,
+  /**
+   * Milky Way structure markers — parsec-scale places inside our own galaxy,
+   * drawn by the NEAR0 marker pass. Same encoding as Cluster; seed-only. Appended
+   * at 33..36 — after these rows, codes 37..62 remain before the 6-bit
+   * pick-source field needs a wider layout.
+   */
+  OpenCluster: 33,
+  GlobularCluster: 34,
+  Nebula: 35,
+  GalacticCentrePlace: 36,
 } as const;

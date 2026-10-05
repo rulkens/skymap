@@ -1,6 +1,6 @@
 /**
- * StructureInfo — one extended structure (cluster / supercluster / void /
- * group) as a resolved focusable target, parallel to `GalaxyInfo` (and the
+ * StructureInfo — one extended structure (a galaxy cluster, a void, an open
+ * cluster, a nebula, ...) as a resolved focusable target, parallel to `GalaxyInfo` (and the
  * Milky Way's `MilkyWayInfo`).  That the structure info is the stored record
  * while galaxy info is derived on-demand is a provenance detail — as targets
  * they are peers, and both flow through the same hover / select / focus slots.
@@ -20,6 +20,7 @@
  */
 
 import type { Vec3 } from '../../math/Vec3';
+import type { NebulaKind } from './NebulaKind';
 
 /**
  * Fields every structure record carries regardless of category.  Two distinct
@@ -103,9 +104,37 @@ type GroupRecord = StructureBase & {
   readonly category: 'group';
 };
 
+/** An open star cluster inside the Milky Way. */
+type OpenClusterRecord = StructureBase & { readonly category: 'open-cluster' };
+
+/** A globular star cluster inside the Milky Way. */
+type GlobularClusterRecord = StructureBase & { readonly category: 'globular-cluster' };
+
+/** A nebula; `nebulaKind` says which physical sort. */
+type NebulaRecord = StructureBase & {
+  readonly category: 'nebula';
+  readonly nebulaKind: NebulaKind;
+};
+
 /**
- * An extended structure record.  `category` is a `StructureId`
- * (cluster / supercluster / void / group); famous galaxies are not
- * structures and are absent from this union.
+ * A place around the Galactic Centre. `lineOfSightAssumed` marks a row whose
+ * distance is assumed to be the Centre's rather than measured.
  */
-export type StructureInfo = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;
+type GalacticCentrePlaceRecord = StructureBase & {
+  readonly category: 'galactic-centre';
+  readonly lineOfSightAssumed: boolean;
+};
+
+/**
+ * An extended structure record.  `category` is a `StructureId`; famous
+ * galaxies are not structures and are absent from this union.
+ */
+export type StructureInfo =
+  | ClusterRecord
+  | SuperclusterRecord
+  | VoidRecord
+  | GroupRecord
+  | OpenClusterRecord
+  | GlobularClusterRecord
+  | NebulaRecord
+  | GalacticCentrePlaceRecord;

@@ -21,6 +21,7 @@ import { Source } from '../../../../src/data/sources';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
+import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
@@ -294,7 +295,7 @@ function makeState(
   const markerVis = overrides.markerCategoryVisibility ?? allVisible;
   const labelVis = overrides.labelCategoryVisibility ?? allVisible;
   const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const cat of ['cluster', 'supercluster', 'void', 'group']) {
+  for (const cat of STRUCTURE_IDS) {
     structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
   }
   const data = createEngineData();

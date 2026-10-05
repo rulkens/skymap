@@ -123,6 +123,12 @@ export const SCALE_FADE_BANDS = {
     goneAt: CONSTELLATIONS_GONE_AT_KPC * SCALE_UNITS.KPC_TO_MPC,
   },
 
+  // Keyed on: CAMERA distance from the render origin, Mpc. A RECEDE fade — the
+  // Milky Way's own marked places (clusters, nebulae, Centre sites) are full
+  // from inside the galaxy out to two radii, and gone at the foreground gate,
+  // so the marker passes' inputs vanish as the survey markers take over. Eye-tuned.
+  galacticStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC },
+
   // Keyed on: CAMERA distance from the render origin, Mpc. An APPROACH fade —
   // full at the far edge — the veil explains a COSMIC-scale catalog gap.
   // Derived off MILKY_WAY_RADIUS_MPC (2/10 radii, chosen for feel), the same

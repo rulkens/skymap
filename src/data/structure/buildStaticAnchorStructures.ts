@@ -1,7 +1,6 @@
 /**
  * buildStaticAnchorStructures — assemble the static `StructureInfo[]` list
- * from the curated cluster/supercluster/void/group seed in
- * `data/seeds/structure_anchors.seed.json`.
+ * from the curated seed in `data/seeds/structure_anchors.seed.json`.
  *
  * ### Why a separate module?
  *
@@ -46,6 +45,7 @@ import { raDecDistToEqCart } from '../../utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../utils/math/lengthToMpc';
 import type { Length } from '../../@types/data/Length';
 import type { StructureId } from '../../@types/data/structure/StructureId';
+import type { NebulaKind } from '../../@types/data/structure/NebulaKind';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
@@ -71,17 +71,18 @@ type SeedEntry = {
   readonly physicalRadius: Length;
   readonly apparentRadius: Length;
   readonly abell?: string;
+  readonly nebulaKind?: NebulaKind;
+  readonly lineOfSightAssumed?: boolean;
   readonly description?: string;
 };
 
 /**
- * Build one record from a seed entry.  The seed's `category` is the union
- * `'cluster' | 'supercluster' | 'void' | 'group'`; a single object
- * literal whose `category` is that union does NOT narrow to one arm of
- * the discriminated `StructureInfo`, so we switch on it and let each
- * branch produce a literal whose `category` is a single string — which
- * the arm types accept.  The four structure arms share `StructureBase`'s
- * body, so the only difference between branches is the discriminant.
+ * Build one record from a seed entry.  A single object literal whose
+ * `category` is the whole `StructureId` union does NOT narrow to one arm of
+ * the discriminated `StructureInfo`, so we switch on it and let each branch
+ * produce a literal whose `category` is a single string — which the arm types
+ * accept.  The arms share `StructureBase`'s body, so branches differ by the
+ * discriminant and the fields only their arm carries.
  */
 function buildAnchorStructure(a: SeedEntry): StructureInfo {
   const common = {
@@ -122,11 +123,24 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
       return { ...common, category: 'void' };
     case 'group':
       return { ...common, category: 'group' };
+    case 'open-cluster':
+      return { ...common, category: 'open-cluster' };
+    case 'globular-cluster':
+      return { ...common, category: 'globular-cluster' };
+    case 'nebula':
+      // The parser requires `nebulaKind` on every nebula row.
+      return { ...common, category: 'nebula', nebulaKind: a.nebulaKind! };
+    case 'galactic-centre':
+      return {
+        ...common,
+        category: 'galactic-centre',
+        lineOfSightAssumed: a.lineOfSightAssumed ?? false,
+      };
   }
 }
 
 /**
- * Build the static cluster + supercluster + void + group structure list.
+ * Build the static structure list from the seed.
  * Synchronous, deterministic, and reference-stable per call (returns a
  * fresh array each call — callers should memoize at the React boundary so
  * reference identity is preserved across renders).

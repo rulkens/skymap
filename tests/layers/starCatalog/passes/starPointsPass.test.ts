@@ -272,6 +272,9 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
         // `=== null` handle check rather than reading state.data.bodies.planets,
         // which this star-focused fixture does not carry.
         bodyGlintRenderer: null,
+        // The near marker pass rides this group too and is visible below the
+        // gate; no renderer keeps it out so the roster stays the star rows.
+        structureMarkerNearRenderer: null,
       },
       // The milky-way impostor also rides this group now (its slab moved to
       // NEAR0), but its visibility window is far WIDER than the foreground

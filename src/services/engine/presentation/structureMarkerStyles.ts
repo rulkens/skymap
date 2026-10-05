@@ -1,7 +1,6 @@
 /**
  * structureMarkerStyles — per-category visual style table for the extended
- * structures (cluster / supercluster / void / group) rendered as ring/halo
- * markers and text labels.
+ * structures rendered as ring/halo markers and text labels.
  *
  * The per-`StructureId` marker styles travel with the structure
  * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
@@ -9,9 +8,8 @@
  * styles here lets the producers' per-category math read a single local table
  * rather than a wider union that includes a kind they never emit.
  *
- * `StructureId` (cluster | supercluster | void | group) is the
- * discriminant; every row is keyed by it so the table and the type can't
- * drift.
+ * `StructureId` is the discriminant; every row is keyed by it so the table
+ * and the type can't drift.
  */
 
 import type { StructureId } from '../../../@types/data/structure/StructureId';
@@ -62,11 +60,9 @@ type StructureMarkerStyle = {
 };
 
 /**
- * Per-category visual style table: cluster / supercluster / void / group
- * (the Local Volume galaxy groups, 0–13 Mpc). See the field docs above for
- * semantics and the tuning rationale (e.g. the per-category min-apparent
- * floors that keep the bulk catalog from papering the sky with sub-readable
- * specks).
+ * Per-category visual style table. See the field docs above for semantics and
+ * the tuning rationale (e.g. the per-category min-apparent floors that keep the
+ * bulk catalog from papering the sky with sub-readable specks).
  */
 export const STRUCTURE_MARKER_STYLES = {
   cluster: {
@@ -150,6 +146,70 @@ export const STRUCTURE_MARKER_STYLES = {
     markerMinApparentRadiusPx: 44,
     markerMinApparentFadeBandPx: 24,
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
+  'open-cluster': {
+    labelColor: hexToGl('#A9C4FF'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    worldEmMpc: 2e-6,
+    pixelWidth: 2,
+    haloColor: hexToGl('#7F9BD942'),
+    ringColor: hexToGl('#7F9BD9'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
+    visibleBand: SCALE_FADE_BANDS.galacticStructures,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
+  'globular-cluster': {
+    labelColor: hexToGl('#C9A8FF'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    worldEmMpc: 8e-6,
+    pixelWidth: 2,
+    haloColor: hexToGl('#9A7FD942'),
+    ringColor: hexToGl('#9A7FD9'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
+    visibleBand: SCALE_FADE_BANDS.galacticStructures,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
+  nebula: {
+    labelColor: hexToGl('#FF8FA3'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    worldEmMpc: 2e-6,
+    pixelWidth: 2,
+    haloColor: hexToGl('#D96F8442'),
+    ringColor: hexToGl('#D96F84'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
+    visibleBand: SCALE_FADE_BANDS.galacticStructures,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
+  'galactic-centre': {
+    labelColor: hexToGl('#E8E8F0'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    worldEmMpc: 2e-6,
+    pixelWidth: 2,
+    haloColor: hexToGl('#B8B8C842'),
+    ringColor: hexToGl('#B8B8C8'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
+    visibleBand: SCALE_FADE_BANDS.galacticStructures,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
