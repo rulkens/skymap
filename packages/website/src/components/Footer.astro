@@ -1,20 +1,14 @@
 ---
 import ObjLink from './ObjLink.astro';
 import pkg from '../../../../package.json';
+import { FOOTER_ITEMS } from '../data/nav';
+import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
 import { sitePath } from '../utils/sitePath';
-
-// Public repository named in the root package.json; no personal address is published.
-const REPO_URL = 'https://github.com/rulkens/skymap';
 ---
 
 <footer class="wrap footer">
-  <p>
-    skymap is made by Alexander Rulkens. We build it in the open and the code is open source.
-    Version {pkg.version}.
-  </p>
-  <ObjLink size="small" href={sitePath('/docs/')}>Docs</ObjLink>
-  <ObjLink size="small" href={sitePath('/docs/credits/')}>Credits</ObjLink>
-  <ObjLink size="small" href={sitePath('/docs/cite/')}>Cite</ObjLink>
+  <p>skymap is made by {MAKER_NAME}. The code is open source. Version {pkg.version}.</p>
+  {FOOTER_ITEMS.map((item) => <ObjLink size="small" href={sitePath(item.path)}>{item.label}</ObjLink>)}
   <ObjLink size="small" href={REPO_URL}>GitHub</ObjLink>
 </footer>
 

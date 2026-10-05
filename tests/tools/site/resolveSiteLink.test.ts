@@ -14,7 +14,7 @@ const ctx: SiteLinkContext = {
   hasBuilt: (rel) => built.has(rel),
   hasPublic: (rel) => rel === 'favicon.svg' || rel === 'images/featured/m31.webp',
   idsOf: (rel) => new Set(rel === 'index.html' ? ['main', 'places'] : []),
-  notYetBuilt: ['/educators/', '/docs/credits/'],
+  notYetBuilt: ['/classroom/', '/docs/credits/'],
 };
 const check = (href: string, page = '/home/') => resolveSiteLink(page, href, ctx).kind;
 
@@ -54,7 +54,7 @@ describe('resolveSiteLink', () => {
   });
 
   it('reports planned pages, and fails once one exists', () => {
-    expect(check('/home/educators/')).toBe('pending');
+    expect(check('/home/classroom/')).toBe('pending');
     expect(check('/home/docs/credits/')).toBe('stale-pending');
   });
 });
