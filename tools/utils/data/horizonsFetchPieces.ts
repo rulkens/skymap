@@ -9,14 +9,17 @@ const CHUNK_YEARS = 50;
 const MAX_ROWS = 89_000;
 const MS_PER_MINUTE = 60_000;
 
+// A span end is a date (`YYYY-MM-DD`, midnight UT) or a minute-precision `YYYY-MM-DDTHH:MM`.
+const parseSpanEnd = (s: string): number => Date.parse(s.length === 10 ? `${s}T00:00Z` : `${s}Z`);
+
 const calendar = (ms: number): string => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
 
 export function horizonsFetchPieces(
   span: readonly [string, string],
   stepMinutes: number,
 ): [string, string][] {
-  const spanStart = Date.parse(`${span[0]}T00:00Z`);
-  const spanStop = Date.parse(`${span[1]}T00:00Z`);
+  const spanStart = parseSpanEnd(span[0]);
+  const spanStop = parseSpanEnd(span[1]);
   const out: [string, string][] = [];
   const firstYear = Math.floor(new Date(spanStart).getUTCFullYear() / CHUNK_YEARS) * CHUNK_YEARS;
   for (let year = firstYear; Date.UTC(year, 0, 1) < spanStop; year += CHUNK_YEARS) {

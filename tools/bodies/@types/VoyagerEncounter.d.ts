@@ -11,4 +11,6 @@ export type VoyagerEncounter = {
   bodyName: string;
   /** Horizons COMMAND of the body centre (never the system barycentre). */
   bodyTarget: string;
+  /** Horizons COMMAND of the flown-by body's system barycentre (5 to 8). */
+  baryTarget: string;
 };

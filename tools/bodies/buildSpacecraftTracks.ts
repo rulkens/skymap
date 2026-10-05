@@ -4,8 +4,9 @@
  * from `fetchHorizons` / `fetchVoyagerWindows`) → `public/data/spacecraftTracks.bin` plus
  * `src/data/missions/missionEvents.generated.ts`. Samples are merged, decimated so the Hermite
  * the app evaluates stays within 1 km of every raw sample, and every raw sample is re-checked
- * against the kept ones. Closest approaches are measured against the body-centre vectors.
- * Heliopause dates are cited literals (NASA/JPL announcements), not derived.
+ * against the kept ones. Each encounter is first blended onto DE441 (`blendEncounterToDE441`);
+ * closest approaches come straight from the craft-against-body-centre fetch. Launch and
+ * heliopause instants are cited literals (NASA/JPL), not derived.
  */
 import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -22,10 +23,13 @@ import { closestApproach } from '../utils/math/closestApproach';
 import { decimateHermiteSamples } from '../utils/math/decimateHermiteSamples';
 import { hermitePositionKm } from '../utils/math/hermitePositionKm';
 import { HORIZONS_BODIES } from './horizonsBodies';
+import { blendEncounterToDE441 } from './blendEncounterToDE441';
 import { VOYAGER_ENCOUNTERS } from './voyagerEncounters';
+import { VOYAGER_LAUNCHES } from './voyagerLaunches';
 
 const TOLERANCE_KM = 1;
-const RAW_DIR = join(rawDataPath('horizons'), '500@10');
+const RAW_ROOT = rawDataPath('horizons');
+const RAW_DIR = join(RAW_ROOT, '500@10');
 const TRACKS_PATH = 'public/data/spacecraftTracks.bin';
 const EVENTS_PATH = 'src/data/missions/missionEvents.generated.ts';
 const UNIX_EPOCH_JD = 2440587.5;
@@ -102,14 +106,19 @@ function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
   return worst;
 }
 
-function flybyEvents(craft: SampledTrack): MissionEvent[] {
+/** Closest approach straight from Horizons: the craft against the body centre, 1 min. */
+function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
   return VOYAGER_ENCOUNTERS.filter((e) => e.craftId === craft.id).map((e) => {
-    const rows = readHorizonsCsv(join(RAW_DIR, `${e.bodyTarget}.${e.date}.csv`));
-    const target = {
+    const rows = readHorizonsCsv(join(RAW_ROOT, `500@${e.bodyTarget}`, `${target}.csv`));
+    const craftRel = {
       t: Float64Array.from(rows, (r) => r.jd),
       pos: Float64Array.from(rows.flatMap((r) => [r.xKm, r.yKm, r.zKm])),
     };
-    const { jd, distanceKm } = closestApproach({ t: craft.tDays, pos: craft.posKm }, target);
+    const centre = {
+      t: Float64Array.of(craftRel.t[0]!, craftRel.t.at(-1)!),
+      pos: new Float64Array(6),
+    };
+    const { jd, distanceKm } = closestApproach(craftRel, centre);
     const note =
       e.bodyName === 'Titan' ? `  (surface ${(distanceKm - TITAN_RADIUS_KM).toFixed(0)} km)` : '';
     console.log(`  ${e.bodyName}: ${jdToIso(jd)}  ${distanceKm.toFixed(0)} km from centre${note}`);
@@ -122,11 +131,37 @@ function flybyEvents(craft: SampledTrack): MissionEvent[] {
   });
 }
 
+/** Steps where consecutive samples disagree with trapezoid velocity integration by > 1,000 km. */
+function reportJumps(track: SampledTrack): void {
+  for (let i = 1; i < track.tDays.length; i++) {
+    const dtS = (track.tDays[i]! - track.tDays[i - 1]!) * 86_400;
+    let sum = 0;
+    for (let a = 0; a < 3; a++) {
+      const step = track.posKm[3 * i + a]! - track.posKm[3 * (i - 1) + a]!;
+      const integrated = 0.5 * (track.velKmS[3 * i + a]! + track.velKmS[3 * (i - 1) + a]!) * dtS;
+      sum += (step - integrated) ** 2;
+    }
+    if (Math.sqrt(sum) > 1000)
+      console.log(`  jump ${jdToIso(track.tDays[i]!)}: ${Math.sqrt(sum).toFixed(0)} km`);
+  }
+}
+
 async function main(): Promise<void> {
   const tracks: SampledTrack[] = [];
   const events: MissionEvent[] = [];
   for (const row of HORIZONS_BODIES.filter((b) => b.id.startsWith('voyager'))) {
     const dense = loadDense(row.id, row.target);
+    const mine = VOYAGER_ENCOUNTERS.filter((e) => e.craftId === row.id);
+    for (const e of mine.filter((e, i) => mine.findIndex((o) => o.date === e.date) === i)) {
+      const maxKm = blendEncounterToDE441(
+        dense,
+        e.date,
+        readHorizonsCsv(join(RAW_ROOT, `500@${e.baryTarget}`, `${row.target}.csv`)),
+        readHorizonsCsv(join(RAW_DIR, `${e.baryTarget}.${e.date}.csv`)),
+      );
+      console.log(`${row.id} ${e.date}: blend moved the track by up to ${maxKm.toFixed(0)} km`);
+    }
+    reportJumps(dense);
     const kept = decimateHermiteSamples(dense.tDays, dense.posKm, dense.velKmS, TOLERANCE_KM);
     const worst = worstErrorKm(dense, kept);
     console.log(
@@ -135,8 +170,8 @@ async function main(): Promise<void> {
     if (worst > TOLERANCE_KM) throw new Error(`${row.id}: reconstruction error ${worst} km`);
     tracks.push(gather(dense, kept));
     events.push(
-      { bodyId: row.id, kind: 'launch', iso: jdToIso(dense.tDays[0]!), label: 'Launch' },
-      ...flybyEvents(dense),
+      { bodyId: row.id, kind: 'launch', iso: VOYAGER_LAUNCHES[row.id]!.launchIso, label: 'Launch' },
+      ...flybyEvents(dense, row.target),
       {
         bodyId: row.id,
         kind: 'heliopause',
