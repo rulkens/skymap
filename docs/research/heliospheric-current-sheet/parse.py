@@ -8,7 +8,7 @@ def parse(path):
     return cols
 starts={}
 for m in re.finditer(r'CR (\d+)\s+(\d{4}):(\d\d):(\d\d) (\d\d)h', open('tilts.html').read()):
-    starts[int(m.group(1))]=datetime.datetime(int(m.group(2)),int(m.group(3)),int(m.group(4)),int(m.group(5))).timestamp()/86400
+    starts[int(m.group(1))]=datetime.datetime(int(m.group(2)),int(m.group(3)),int(m.group(4)),int(m.group(5)),tzinfo=datetime.timezone.utc).timestamp()/86400
 maps=[];prev=None;src={}
 for cr in range(1642,2303):
     cols=parse(f'wso/WSO-R250.{cr}.txt')

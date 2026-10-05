@@ -2,8 +2,10 @@ import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 const [,,html,dir,from,to,port='9334']=process.argv;
 mkdirSync(dir,{recursive:true});
-const HS='/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';
-const br=spawn(HS,['--no-sandbox','--allow-file-access-from-files','--use-angle=swiftshader','--enable-unsafe-swiftshader','--remote-debugging-port='+port,'--window-size=1920,1080','file://'+process.cwd()+'/'+html],{stdio:'ignore'});
+// CHROME = a chrome-headless-shell binary; CHROME_GL_FLAGS overrides the software-GL default.
+const HS=process.env.CHROME??'/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';
+const GL=(process.env.CHROME_GL_FLAGS??'--use-angle=swiftshader --enable-unsafe-swiftshader').split(' ').filter(Boolean);
+const br=spawn(HS,['--no-sandbox','--allow-file-access-from-files',...GL,'--remote-debugging-port='+port,'--window-size=1920,1080','file://'+process.cwd()+'/'+html],{stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let ws;for(let i=0;i<100;i++){try{const l=await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();const p=l.find(x=>x.type==='page');if(p){ws=p.webSocketDebuggerUrl;break;}}catch{}await sleep(200);}
 const sock=new WebSocket(ws);await new Promise(r=>sock.onopen=r);

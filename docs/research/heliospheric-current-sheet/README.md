@@ -18,6 +18,14 @@ ffmpeg -framerate 24 -i frames/f%04d.png -vf "tpad=stop_mode=clone:stop_duration
   -c:v libx264 -crf 21 -preset slow ballerina-skirt.mp4
 ```
 
+`capture.mjs` defaults to the Linux cloud-container browser with software GL. On macOS point
+it at Playwright's headless shell and Metal (~0.5 s/frame):
+
+```bash
+CHROME=~/Library/Caches/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-mac-arm64/chrome-headless-shell \
+  CHROME_GL_FLAGS=--use-angle=metal node capture.mjs render.html frames 0 708
+```
+
 `capture.mjs` takes `<html> <outDir> <from> <to> [devtoolsPort]`, so the 708 frames can be
 split across parallel runs on separate ports. `diagram.py` writes the static SVG of the
 ideal Parker spiral and skirt.
@@ -28,8 +36,7 @@ ideal Parker spiral and skirt.
   (radial model R250, one per Carrington rotation). Gaps are filled from the classic model
   (CR 2215–2217, 2302); CR 2258 is partly filled from the previous rotation.
 - **Measured:** the polar polarity and the flips. North-pole sign is the mean of the top 3
-  latitude rows, smoothed over ±6 rotations. Flips land around 1980, 1990, 2000, 2013 and
-  2023.
+  latitude rows, smoothed over ±6 rotations. Flips land around 1980, 1990, 2000, 2013 and 2023.
 - **Modelled:** everything beyond the Sun. The sheet is carried outward radially by a
   constant 400 km/s wind (an ideal Parker spiral, 1.07 rad/AU of winding) and is drawn out
   to 10 AU.
