@@ -20,6 +20,7 @@ import type { HorizonsBody } from '../bodies/@types/HorizonsBody';
 
 const API = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 const MAX_ATTEMPTS = 5;
+
 function queryUrl(body: HorizonsBody, start: string, stop: string): string {
   const params: Record<string, string> = {
     format: 'json',
