@@ -139,10 +139,10 @@ export async function warnIfWrongCheckout(page: Page): Promise<void>;
 `ownRoot` ignoring a trailing slash; otherwise one line naming both paths. `measurePerf` calls
 `warnIfWrongCheckout(page)` right after `bootHookedPage`; it must not write to stdout (`--json` mode).
 
-- [ ] Tests: `no warning for the same checkout`; `no warning when only a trailing slash differs`;
+- [x] Tests: `no warning for the same checkout`; `no warning when only a trailing slash differs`;
       `no warning for a built bundle's empty root`; `names both paths when they differ`.
-- [ ] No test for `warnIfWrongCheckout` or `PROJECT_ROOT` (a page read and a constant).
-- [ ] Implement; wire into `measurePerf`. `npm run typecheck`, `npm test -- checkoutMismatch` pass. Commit.
+- [x] No test for `warnIfWrongCheckout` or `PROJECT_ROOT` (a page read and a constant).
+- [x] Implement; wire into `measurePerf`. `npm run typecheck`, `npm test -- checkoutMismatch` pass. Commit.
 
 ### Task 4: Start a dev server
 

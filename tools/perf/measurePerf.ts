@@ -51,6 +51,7 @@
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { bootHookedPage } from '../utils/browser/bootHookedPage';
+import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { collectPageErrors } from '../utils/browser/collectPageErrors';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
@@ -201,6 +202,7 @@ async function bootPerfPage(
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
   await bootHookedPage(page, `${url}/?perf`);
+  await warnIfWrongCheckout(page);
   const slotGroups = (await page.evaluate(
     () =>
       (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf
