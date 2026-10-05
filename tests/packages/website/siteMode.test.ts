@@ -11,6 +11,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { DISPLAY_FONT_UNICODES } from '../../../packages/website/src/data/displayFontUnicodes';
+
 const siteDir = resolve(import.meta.dirname, '../../../packages/website');
 const ORIGIN = 'https://skymap.rulkens.com';
 
@@ -100,5 +102,23 @@ describe.each([
     ])
       expect(html, key).toContain(`name="${key}"`);
     expect(jsonLd.map((n) => n['@type']).sort()).toEqual(['Person', 'WebApplication', 'WebSite']);
+  });
+
+  // The display face is a subset: a character outside it would render in a fallback serif mid-word.
+  it('prints no character the display font subset lacks', () => {
+    const ranges = DISPLAY_FONT_UNICODES.split(',').map((range) =>
+      range
+        .slice(2)
+        .split('-')
+        .map((hex) => parseInt(hex, 16)),
+    );
+    const text = built()
+      .html.replace(/<(script|style)[\s\S]*?<\/\1>/g, '')
+      .replace(/<[^>]+>/g, '');
+    const missing = [...new Set(text)].filter((char) => {
+      const code = char.codePointAt(0)!;
+      return code > 0x7e && !ranges.some(([from, to = from]) => code >= from! && code <= to!);
+    });
+    expect(missing).toEqual([]);
   });
 });

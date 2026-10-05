@@ -1,6 +1,9 @@
 ---
 import '@fontsource-variable/jost/wght.css';
 import '../styles/site.css';
+// The two faces every page paints with at once; preloaded so the first paint is the last swap.
+import jostUrl from '@fontsource-variable/jost/files/jost-latin-wght-normal.woff2?url';
+import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import JsonLd from '../components/JsonLd.astro';
@@ -36,6 +39,8 @@ const imageUrl = new URL(image, Astro.site).href;
     <meta name="theme-color" content="#000000" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="preload" as="font" type="font/woff2" href={displayUrl} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={jostUrl} crossorigin />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

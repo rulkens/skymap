@@ -92,7 +92,8 @@ export default defineConfig({
   base: BASE,
   outDir: INDEXABLE ? distDir : resolve(distDir, toolPages.website),
   trailingSlash: 'always',
-  build: { format: 'directory' },
+  // The whole stylesheet is under 6 KB compressed: inlined, it saves the one render-blocking round trip.
+  build: { format: 'directory', inlineStylesheets: 'always' },
   server: { port: DEV_PORTS.website },
   integrations: [devRootStatics, crawlFiles],
   vite: { envDir: resolve(import.meta.dirname, '../..') },

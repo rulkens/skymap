@@ -46,6 +46,7 @@ export function initFlight(root: HTMLElement): void {
   let eased = -1;
   let last = 0;
   let current = -1;
+  let fetched = -1;
 
   function attach(): void {
     if (video.src || !root.hasAttribute('data-film')) return;
@@ -106,9 +107,14 @@ export function initFlight(root: HTMLElement): void {
     if (shown !== current) {
       current = shown;
       rings.forEach((ring, k) => ring.setAttribute('aria-current', String(k === shown)));
-      // Fetch the stills just ahead, and the one behind for a visitor scrolling back up.
+    }
+    // Fetch the stills just ahead (and behind, for a visitor scrolling back up): none until
+    // the page has loaded, so only the first competes for the first paint, then one, then two.
+    const ahead = document.readyState !== 'complete' ? 0 : p > 0 ? 2 : 1;
+    if (shown * 3 + ahead !== fetched) {
+      fetched = shown * 3 + ahead;
       stops.forEach((stop, k) => {
-        if (Math.abs(k - shown) <= 2) stop.classList.add('near');
+        if (Math.abs(k - shown) <= ahead) stop.classList.add('near');
       });
     }
   }
