@@ -1,7 +1,7 @@
 /**
- * StructureDetailCard — rich panel for a focused cluster / supercluster / void.
- * Shows name, category, distance from observer, physical radius, and — for
- * clusters carrying one — the Abell/ACO designation.
+ * StructureDetailCard — rich panel for a focused structure. Shows name,
+ * category, distance from observer, physical radius, and the rows only some
+ * categories carry (Abell designation, nebula type, assumed line of sight).
  */
 
 import type { ReactNode } from 'react';
@@ -10,6 +10,7 @@ import type { StructureInfo } from '../../../@types/data/structure/StructureInfo
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../../utils/format/formatAbellDesignation';
 import { CATEGORY_DISPLAY_INFO } from '../../../data/structure/categoryDisplayInfo';
+import { NEBULA_KIND_LABELS } from '../../../data/structure/nebulaKindLabels';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
@@ -66,6 +67,12 @@ function StructureDetailCard({
           label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
           value={formatDistance(target.physicalRadiusMpc)}
         />
+        {target.category === 'nebula' && (
+          <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
+        )}
+        {target.category === 'galactic-centre' && target.lineOfSightAssumed && (
+          <CardRow label="Line of sight" value="assumed at the Galactic Centre's distance" />
+        )}
         {memberCount != null && (
           <CardRow
             label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}

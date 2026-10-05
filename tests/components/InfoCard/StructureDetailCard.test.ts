@@ -7,7 +7,7 @@
 // picked up by Vitest's `include: ['tests/**/*.test.ts']` glob.
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import StructureDetailCard from '../../../src/components/InfoCard/StructureDetailCard/StructureDetailCard';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -64,5 +64,46 @@ describe('StructureDetailCard', () => {
     render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 0 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('a nebula card shows its kind; a cluster card has no Type row', () => {
+    const orion: StructureInfo = {
+      type: 'structure',
+      id: 'nebula-orion',
+      name: 'Orion Nebula',
+      category: 'nebula',
+      nebulaKind: 'emission',
+      worldPos: [0, 0.0004, 0],
+      featured: true,
+      physicalRadiusMpc: 4e-6,
+    };
+    render(createElement(StructureDetailCard, { target: orion }));
+    expect(screen.getByText('Type')).toBeInTheDocument();
+    expect(screen.getByText('Emission nebula')).toBeInTheDocument();
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Type/);
+  });
+
+  it('the Line of sight row appears only when lineOfSightAssumed', () => {
+    const arches: StructureInfo = {
+      type: 'structure',
+      id: 'galactic-centre-arches',
+      name: 'Arches Cluster',
+      category: 'galactic-centre',
+      lineOfSightAssumed: true,
+      worldPos: [0, 0.008, 0],
+      featured: true,
+      physicalRadiusMpc: 1e-6,
+    };
+    render(createElement(StructureDetailCard, { target: arches }));
+    expect(screen.getByText('Line of sight')).toBeInTheDocument();
+    cleanup();
+    const { container } = render(
+      createElement(StructureDetailCard, {
+        target: { ...arches, lineOfSightAssumed: false },
+      }),
+    );
+    expect(container.textContent).not.toMatch(/Line of sight/);
   });
 });
