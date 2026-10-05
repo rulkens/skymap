@@ -10,10 +10,14 @@ import Honesty from '../components/Honesty.astro';
 import Sources from '../components/Sources.astro';
 import Credits from '../components/Credits.astro';
 import { FLIGHT_STOPS } from '../data/flightStops';
+import { homeJsonLd } from '../data/homeJsonLd';
 import { PLACES } from '../data/places';
 import { heroPoster } from '../utils/heroPoster';
 import { heroVideoUrl } from '../utils/heroVideoUrl';
 
+const title = 'skymap: the mapped universe at true scale, in your browser';
+const description =
+  'Fly through the mapped universe, from a Copenhagen park to the cosmic web, in real star and galaxy catalogues. Free, no account, in a current browser.';
 const poster = await heroPoster();
 
 // Every fact the page prints, so the Sources list can never drift from the copy.
@@ -29,11 +33,7 @@ const factIds = [
 ];
 ---
 
-<Base
-  title="skymap: the mapped universe at true scale, in your browser"
-  description="Fly through the mapped universe, from a Copenhagen park to the cosmic web, in real star and galaxy catalogues. Free, no account, in a current browser."
-  heroNav
->
+<Base title={title} description={description} jsonLd={homeJsonLd(Astro.site!, description)} heroNav>
   <link slot="head" rel="preload" as="image" imagesrcset={poster.srcset} imagesizes={poster.sizes} fetchpriority="high" />
   <Flight poster={poster} videoUrl={heroVideoUrl()} />
   <Lead />

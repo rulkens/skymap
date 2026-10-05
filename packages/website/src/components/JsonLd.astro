@@ -1,0 +1,8 @@
+---
+/* JsonLd — one structured-data block. `<` is escaped so a string containing `</script>` cannot close it. */
+type Props = { data: Record<string, unknown> };
+
+const json = JSON.stringify(Astro.props.data).replace(/</g, '\\u003c');
+---
+
+<script type="application/ld+json" set:html={json} />
