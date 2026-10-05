@@ -217,13 +217,13 @@ outcome timed out, errored, or has no path; page errors alone do not change it.
 and the Commands block); `tools/perf/README.md` (modify: mention the wrong-checkout warning where it
 tells worktree users to pass `--url`)
 
-- [ ] `tools/shot/README.md`: usage, the flag table, where shots land, the timeout and exit-code
+- [x] `tools/shot/README.md`: usage, the flag table, where shots land, the timeout and exit-code
       rules, and the wrong-checkout warning. No more than the tool does.
-- [ ] `CLAUDE.md`, "Dev server stays running" bullet — replace its last sentence with: for a visual
+- [x] `CLAUDE.md`, "Dev server stays running" bullet — replace its last sentence with: for a visual
       check, shoot the link with `npm run shot -- '<link>' --url <your server>`, look at the result,
       then send the shot and its deep link to the user as a dash check; the user keeps the verdict.
-- [ ] `CLAUDE.md` Commands block: `npm run shot        # PNG of any deep link → tools/shot/README.md`.
-- [ ] Commit.
+- [x] `CLAUDE.md` Commands block: `npm run shot        # PNG of any deep link → tools/shot/README.md`.
+- [x] Commit.
 
 ---
 

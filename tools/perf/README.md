@@ -16,7 +16,9 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
    ```
 
    Without `--url` the harness assumes 5173 — which in a worktree may be a _different branch's_
-   server. If your numbers make no sense, check which server you actually measured.
+   server. If your numbers make no sense, check which server you actually measured. The harness
+   also prints a warning on stderr when the server reports a different checkout than the one the
+   tool runs from.
 
 2. **WebGPU `timestamp-query`** — present on Chrome/Metal (macOS dev machines). If the adapter
    lacks it the hook rejects loudly rather than returning zeros.
