@@ -156,8 +156,8 @@ one), resolves once the `Local:` banner line appears with its URL read by
 `tools/utils/record/parsePreviewUrl.ts`, and rejects with the tail of the output if the process exits
 or 30 s pass first. Follow `spawnPreviewServer.ts` for process handling and teardown.
 
-- [ ] No unit test: it only spawns a process; Task 5's smoke run exercises it.
-- [ ] Implement. `npm run typecheck` passes. Commit.
+- [x] No unit test: it only spawns a process; Task 5's smoke run exercises it.
+- [x] Implement. `npm run typecheck` passes. Commit.
 
 ### Task 5: The tool
 
