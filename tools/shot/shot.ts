@@ -10,8 +10,7 @@ import type { Browser } from '@playwright/test';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
 import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
-import { spawnDevServer } from '../utils/serve/spawnDevServer';
-import { spawnPreviewServer } from '../utils/serve/spawnPreviewServer';
+import { spawnViteServer } from '../utils/serve/spawnViteServer';
 import { shootLink } from '../utils/shot/shootLink';
 import { shotOutName } from '../utils/shot/shotOutName';
 import type { PreviewHandle } from '../@types/serve/PreviewHandle';
@@ -34,9 +33,12 @@ async function main(): Promise<number> {
       if (options.build) {
         await ensureServeBuild(SHOT_BUILD_DIR, true);
         ensureDataSymlink(SHOT_BUILD_DIR);
-        server = await spawnPreviewServer(SHOT_BUILD_DIR, SHOT_PORT);
+        server = await spawnViteServer(
+          ['preview', '--outDir', SHOT_BUILD_DIR, '--port', String(SHOT_PORT)],
+          'vite preview',
+        );
       } else {
-        server = await spawnDevServer();
+        server = await spawnViteServer([], 'vite dev server');
       }
       // A killed run skips `finally`, which would orphan the server.
       const spawned = server;

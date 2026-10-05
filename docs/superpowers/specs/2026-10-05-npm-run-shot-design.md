@@ -68,7 +68,7 @@ Files:
 - `tools/utils/browser/bootHookedPage.ts` — waits on `__skymap` only; the `hook` parameter goes.
   `applyPose.ts` and `dispatchActions.ts` go through `__skymap.dispatch`; `applyPose` commits the pose
   with the camera slice's own actions and awaits `nextFrame`.
-- `tools/utils/serve/ensureServeBuild.ts`, `ensureDataSymlink.ts`, `spawnPreviewServer.ts` — moved out
+- `tools/utils/serve/ensureServeBuild.ts`, `ensureDataSymlink.ts`, `spawnViteServer.ts` — moved out
   of `tools/record/record.ts` unchanged, one function per file, their types under `tools/@types/serve/`.
 
 ### Joints and verdicts
@@ -77,7 +77,7 @@ Files:
 | --- | --- | --- |
 | "A frame was drawn" signal | Bolt-on: a fourth double-rAF guess | `renderScheduler.ts` has no completion signal |
 | Generic page hook | Bolt-on: the tool would borrow `?perf` and its GPU timing | `installPerfHook.ts`, `bootHookedPage.ts` hook union |
-| Shared build/preview server | Bolt-on: `--build` would copy ~140 lines | `record.ts` `ensureServeBuild`…`spawnPreviewServer` |
+| Shared build/preview server | Bolt-on: `--build` would copy ~140 lines | `record.ts` `ensureServeBuild`…`spawnViteServer` |
 | Sagas reaching the scheduler | Growth: one more `SagaContext` entry | — |
 
 ### Shape options under compatibility tension
