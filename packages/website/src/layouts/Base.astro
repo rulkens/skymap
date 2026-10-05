@@ -5,9 +5,9 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import { PREVIEW } from '../data/preview';
 
-type Props = { title: string; description: string; image?: string };
+type Props = { title: string; description: string; image?: string; heroNav?: boolean };
 
-const { title, description, image = '/og-image.jpg' } = Astro.props;
+const { title, description, image = "/og-image.jpg", heroNav = false } = Astro.props;
 // Shared root files stay root-absolute (the main shell serves them); only the canonical needs the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const imageUrl = new URL(image, Astro.site).href;
@@ -30,8 +30,9 @@ const imageUrl = new URL(image, Astro.site).href;
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={imageUrl} />
     <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
   </head>
-  <body>
+  <body class={heroNav ? "hero-nav" : undefined}>
     <a class="skip-link" href="#main">Skip to content</a>
     <Nav />
     <main id="main">

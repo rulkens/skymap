@@ -1,0 +1,29 @@
+---
+import ObjLink from './ObjLink.astro';
+import { appLink } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+---
+
+<section class="wrap lead">
+  <h2>A Copenhagen park and the cosmic web, in the same scene</h2>
+  <p>
+    Start 46 metres up over a park in Copenhagen and pull back. The park shrinks into the Earth, the Earth into a
+    dot beside the Sun, and the scene never cuts on the way out to the cosmic web.
+  </p>
+  <ObjLink href={appLink(HOME_LINKS.parkFlight)}>Fly out from the park</ObjLink>
+</section>
+
+<style>
+  .lead {
+    padding-block: calc(var(--section-space) * 1.1) 1.5rem;
+  }
+
+  h2 {
+    max-width: 17ch;
+  }
+
+  p {
+    max-width: var(--measure-lead);
+    font-size: var(--text-lead);
+  }
+</style>

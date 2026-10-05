@@ -8,7 +8,10 @@
  * the main shell and pages reference them root-absolute. Production: the
  * shell ships them, so the build has no publicDir. Dev: Vite serves publicDir
  * under `base` only, so `rootStatics` rewrites root requests for files in the
- * repo's `public/` into that mount.
+ * repo's `public/` into that mount (Astro 7 still has no supported way to do this).
+ *
+ * `envDir` is the repo root so `VITE_DATA_BASE_URL` (committed in `.env.production`)
+ * reaches the pages the same way it reaches the app.
  */
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
@@ -60,5 +63,5 @@ export default defineConfig({
   build: { format: 'directory' },
   server: { port: DEV_PORTS.website },
   integrations: [mdx()],
-  vite: { plugins: [rootStatics] },
+  vite: { plugins: [rootStatics], envDir: resolve(import.meta.dirname, '../..') },
 });

@@ -1,0 +1,73 @@
+---
+import { Picture } from 'astro:assets';
+
+import ObjLink from './ObjLink.astro';
+import tourStill from '../assets/still-local-group.webp';
+import { appLink } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+---
+
+<section class="tour">
+  <Picture
+    src={tourStill}
+    alt="The Local Group and nearby galaxy groups in skymap: translucent spheres mark the groups among catalogued galaxies."
+    formats={["avif", "webp"]}
+    fallbackFormat="webp"
+    widths={[800, 1200, 1600]}
+    sizes="100vw"
+    loading="lazy"
+  />
+  <div class="over">
+    <h2>Take the tour</h2>
+    <p>The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe and back.</p>
+    <ObjLink href={appLink(HOME_LINKS.tour)}>Start the tour</ObjLink>
+  </div>
+</section>
+
+<style>
+  .tour {
+    position: relative;
+    margin-top: 2rem;
+    background: #000;
+  }
+
+  .tour :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 80svh;
+    object-fit: cover;
+  }
+
+  .tour::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.5) 38%, rgb(0 0 0 / 0) 62%);
+  }
+
+  .over {
+    position: absolute;
+    z-index: 2;
+    left: var(--gutter);
+    bottom: 12%;
+    max-width: 26rem;
+  }
+
+  @media (max-width: 900px) {
+    .tour::after {
+      display: none;
+    }
+
+    .tour :global(img) {
+      aspect-ratio: 4 / 3;
+    }
+
+    .over {
+      position: static;
+      padding: 1.5rem var(--gutter) 0;
+    }
+  }
+</style>

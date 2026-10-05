@@ -1,0 +1,70 @@
+---
+import ObjLink from './ObjLink.astro';
+import { HONESTY } from '../data/honesty';
+import { sitePath } from '../utils/sitePath';
+---
+
+<section class="wrap honest" id="honest">
+  <div class="intro">
+    <h2>What is measured, what is drawn</h2>
+    <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
+  </div>
+  <div>
+    <h3>Measured</h3>
+    <ul>
+      {HONESTY.measured.map((item) => <li><a href={item.href} rel="noopener">{item.text}</a></li>)}
+    </ul>
+  </div>
+  <div>
+    <h3>Drawn</h3>
+    <ul>
+      {HONESTY.drawn.map((item) => <li><a href={item.href} rel="noopener">{item.text}</a></li>)}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .honest {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 3.75rem;
+    padding-block: 6.5rem;
+  }
+
+  .honest::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--gutter);
+    right: var(--gutter);
+    border-top: 1px solid var(--border-divider);
+  }
+
+  h2 {
+    font-size: clamp(2.125rem, 3.6vw, 3.375rem);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 1.0625rem;
+  }
+
+  li {
+    padding-block: 0.5rem;
+  }
+
+  li a {
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .honest {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+      padding-block: 4rem;
+    }
+  }
+</style>

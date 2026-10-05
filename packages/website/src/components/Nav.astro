@@ -48,6 +48,14 @@ const home = sitePath('/');
     padding: 1.375rem var(--gutter);
   }
 
+  /* Home: the nav floats over the flight's first frame instead of pushing it down. */
+  :global(.hero-nav) .nav {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    z-index: 6;
+  }
+
   .mark {
     margin-right: auto;
     font: var(--weight-display) 1.75rem / 1 var(--font-family-display);

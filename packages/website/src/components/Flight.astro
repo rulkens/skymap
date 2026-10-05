@@ -1,0 +1,482 @@
+---
+/*
+ * Flight — the hero. A pinned 100vh stage inside a tall track; scroll scrubs
+ * the recording (scripts/initFlight.ts) and never changes scroll speed or
+ * direction. The poster is the first paint; the film attaches after it.
+ *
+ * Layout is chosen in CSS so nothing shifts when scripts arrive: pinned needs
+ * a wide screen, no reduced-motion preference and `data-live`, which the
+ * inline script sets before paint and the film's error handler removes. Any
+ * other case is the poster at ordinary height with the stops as a list.
+ */
+import ObjLink from './ObjLink.astro';
+import { appLink } from '../data/appLink';
+import { fact } from '../data/fact';
+import { FLIGHT_STOPS } from '../data/flightStops';
+import { HERO_MEDIA } from '../../../../tools/site/heroMediaPlan';
+import type { HeroPoster } from '../@types/HeroPoster';
+
+type Props = { poster: HeroPoster; videoUrl: string };
+
+const { poster, videoUrl } = Astro.props;
+const duration = HERO_MEDIA.outSec - HERO_MEDIA.inSec;
+const stops = FLIGHT_STOPS.map((stop) => ({
+  ...stop,
+  line: stop.factId ? (fact(stop.factId).short ?? '') : '',
+}));
+const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, line: s.line })));
+---
+
+<section class="flight" data-flight data-duration={duration} data-stops={stopData} data-video={videoUrl}>
+  <script is:inline>
+    // Runs before first paint, so nothing shifts: no script or data saver means the static layout.
+    if (!(navigator.connection && navigator.connection.saveData)) {
+      document.currentScript.parentElement.setAttribute("data-live", "");
+    }
+  </script>
+
+  <div class="track">
+    <div class="stage">
+      <div class="media">
+      <img
+        class="poster"
+        src={poster.src}
+        srcset={poster.srcset}
+        sizes={poster.sizes}
+        width={poster.width}
+        height={poster.height}
+        alt="Earth against a field of labelled stars and galaxies, from the opening of the flight."
+        fetchpriority="high"
+        decoding="async"
+      />
+      <video class="film" muted playsinline preload="none" tabindex="-1" aria-hidden="true"></video>
+      <div class="scrim" aria-hidden="true"></div>
+      </div>
+
+      <div class="intro" data-intro>
+        <div class="titles">
+          <h1 class="word">skymap</h1>
+          <p class="tag">The measured universe at true scale. You hold the camera.</p>
+        </div>
+        <div class="start">
+          <ObjLink class="launch" size="big" href={appLink()}>Fly it yourself</ObjLink>
+          <small>Free. No account, nothing to install.</small>
+        </div>
+        <p class="hint" aria-hidden="true">Scroll to pull back</p>
+      </div>
+
+      <div class="caption" data-caption aria-hidden="true"><b></b><span></span></div>
+      <div class="arrive" data-arrive>
+        <p>In skymap, each of those points is a catalogued star or galaxy at its measured position.</p>
+        <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+      </div>
+
+      <div class="spine" data-spine role="group" aria-label="Stops on the flight">
+        <i data-fill></i>
+        {
+          stops.map((stop) => (
+            <button type="button" style={`top:${((stop.atSec / duration) * 100).toFixed(2)}%`} data-stop={stop.atSec} aria-label={`Go to ${stop.name}`}>
+              <span>{stop.name}</span>
+            </button>
+          ))
+        }
+      </div>
+      <button class="pause" type="button" data-pause>Pause film</button>
+    </div>
+  </div>
+
+  <ol class="stops">
+    {
+      stops.slice(1).map((stop) => (
+        <li>
+          <p class="name">{stop.name}</p>
+          {stop.line && <p class="line">{stop.line}</p>}
+        </li>
+      ))
+    }
+  </ol>
+  <div class="end wrap">
+    <p>In skymap, each of those points is a catalogued star or galaxy at its measured position.</p>
+    <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+  </div>
+</section>
+
+<script>
+  import { initFlight } from '../scripts/initFlight';
+
+  const root = document.querySelector<HTMLElement>('[data-flight]');
+  if (root) initFlight(root);
+</script>
+
+<style>
+  .flight {
+    position: relative;
+    background: #000;
+  }
+
+  /* ── Static layout: the poster at ordinary height, stops as a list ─────── */
+  .stage {
+    position: relative;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* Phone: the poster is a 4:3 picture and the words sit below it on black. */
+  .media {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    max-height: 62svh;
+    overflow: hidden;
+  }
+
+  .poster,
+  .film {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 38%;
+  }
+
+  .film {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(0deg, #000 0%, rgb(0 0 0 / 0) 28%),
+      linear-gradient(180deg, rgb(0 0 0 / 0.6) 0%, rgb(0 0 0 / 0) 22%);
+  }
+
+  .intro {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 0.5rem var(--gutter) 2rem;
+  }
+
+  .word {
+    margin: 0 0 0.12em -0.04em;
+    font-size: clamp(4.5rem, 22vw, 8rem);
+    line-height: 1.1;
+  }
+
+  .tag {
+    max-width: 24ch;
+    margin: 0;
+    font-size: clamp(1.125rem, 4.4vw, 1.375rem);
+    line-height: 1.45;
+    color: var(--site-text);
+  }
+
+  .start small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: var(--text-small);
+    color: var(--site-text-muted);
+  }
+
+  /* Wide but static (reduced motion, data saver, no video): the pinned stage's first screen, unpinned. */
+  @media (min-width: 760px) {
+    .stage {
+      display: flex;
+      min-height: min(86svh, 44rem);
+    }
+
+    .media {
+      position: absolute;
+      inset: 0;
+      aspect-ratio: auto;
+      max-height: none;
+    }
+
+    .scrim {
+      background:
+        linear-gradient(0deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.55) 30%, rgb(0 0 0 / 0) 58%),
+        linear-gradient(180deg, rgb(0 0 0 / 0.6) 0%, rgb(0 0 0 / 0) 18%);
+    }
+
+    .intro {
+      margin-top: auto;
+      padding: 6rem var(--gutter) 2.5rem;
+    }
+
+    .word {
+      font-size: clamp(5.5rem, 9vw, 10rem);
+    }
+  }
+
+  .hint,
+  .caption,
+  .arrive,
+  .spine,
+  .pause {
+    display: none;
+  }
+
+  .stops {
+    margin: 0;
+    padding: 3rem var(--gutter) 1rem;
+    max-width: var(--wrap-max);
+    margin-inline: auto;
+    list-style: none;
+  }
+
+  .stops li {
+    padding-block: 1.25rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .stops .name {
+    margin: 0 0 0.3rem;
+    font: var(--weight-display) 1.625rem / 1.1 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  .stops .line {
+    margin: 0;
+  }
+
+  .end {
+    padding-block: 2rem 1rem;
+  }
+
+  .end p {
+    margin-bottom: 1rem;
+  }
+
+  /* ── Pinned layout ────────────────────────────────────────────────────── */
+  /* Keep this query identical to PINNED_QUERY in scripts/initFlight.ts. */
+  @media (min-width: 760px) and (prefers-reduced-motion: no-preference) {
+    .flight[data-live] .track {
+      height: 900vh;
+    }
+
+    .flight[data-live] .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      min-height: 0;
+    }
+
+    .flight[data-live] .film {
+      display: block;
+    }
+
+    .flight[data-live].has-video .film {
+      opacity: 1;
+    }
+
+    .flight[data-live] .intro {
+      position: absolute;
+      inset: 0;
+      display: block;
+      padding: 0;
+      margin: 0;
+    }
+
+    .flight[data-live] .titles {
+      position: absolute;
+      left: var(--gutter);
+      bottom: 3.5rem;
+      pointer-events: none;
+    }
+
+    .flight[data-live] .word {
+      font-size: clamp(5.5rem, 10vw, 10rem);
+    }
+
+    .flight[data-live] .tag {
+      font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+      text-shadow: 0 0 1.25rem #000;
+    }
+
+    .flight[data-live] .start {
+      position: absolute;
+      right: 5.5rem;
+      bottom: 3.5rem;
+      text-align: right;
+    }
+
+    .flight[data-live] .hint {
+      display: block;
+      position: absolute;
+      left: 50%;
+      bottom: 1.25rem;
+      transform: translateX(-50%);
+      margin: 0;
+      font-size: var(--text-small);
+      color: var(--site-text-muted);
+    }
+
+    .flight[data-live] .caption {
+      display: block;
+      position: absolute;
+      z-index: 3;
+      left: var(--gutter);
+      bottom: 3.5rem;
+      max-width: 46rem;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow:
+        0 0 1.875rem #000,
+        0 0 0.5rem #000;
+    }
+
+    .flight[data-live] .caption b {
+      display: block;
+      margin-bottom: 0.9rem;
+      font: var(--weight-display) clamp(2.75rem, 5vw, 5rem) / 1.05 var(--font-family-display);
+      color: var(--color-fg);
+    }
+
+    .flight[data-live] .caption span {
+      display: block;
+      max-width: 34rem;
+      font-size: 1.3125rem;
+      line-height: 1.45;
+      color: var(--site-text);
+    }
+
+    .flight[data-live] .arrive {
+      position: absolute;
+      z-index: 3;
+      left: 0;
+      right: 0;
+      bottom: 3.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.1rem;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .flight[data-live] .arrive p {
+      margin: 0;
+      max-width: 36ch;
+      font-size: 1.25rem;
+      color: var(--site-text);
+      text-shadow: 0 0 1.25rem #000;
+    }
+
+    .flight[data-live] .spine {
+      display: block;
+      position: absolute;
+      z-index: 4;
+      right: 1.875rem;
+      top: 9.5rem;
+      bottom: 6.5rem;
+      width: 0.9375rem;
+    }
+
+    .flight[data-live] .spine::before {
+      content: '';
+      position: absolute;
+      left: 0.4375rem;
+      top: 0;
+      bottom: 0;
+      border-left: 1px solid rgb(232 238 255 / 0.3);
+    }
+
+    .flight[data-live] .spine i {
+      position: absolute;
+      left: 0.4375rem;
+      top: 0;
+      width: 1px;
+      background: var(--color-accent);
+    }
+
+    .flight[data-live] .spine button {
+      position: absolute;
+      left: 0;
+      width: 0.9375rem;
+      height: 0.9375rem;
+      margin-top: -0.4375rem;
+      padding: 0;
+      border: 1px solid rgb(168 208 255 / 0.8);
+      border-radius: 50%;
+      background: #000;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .flight[data-live] .spine button:hover,
+    .flight[data-live] .spine button:focus-visible {
+      transform: scale(1.5);
+    }
+
+    .flight[data-live] .spine button[aria-current='true'] {
+      background: var(--color-accent);
+    }
+
+    .flight[data-live] .spine button span {
+      position: absolute;
+      right: 1.625rem;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font: var(--weight-display) 1.0625rem / 1 var(--font-family-display);
+      color: var(--color-fg);
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 0 0 0.75rem #000;
+      transition: opacity 0.2s ease;
+    }
+
+    .flight[data-live] .spine button:hover span,
+    .flight[data-live] .spine button:focus-visible span {
+      opacity: 1;
+    }
+
+    .flight[data-live] .pause {
+      display: block;
+      position: absolute;
+      z-index: 4;
+      right: 1.5rem;
+      top: 5.75rem;
+      padding: 0.35rem 0.8rem;
+      border: 1px solid rgb(168 208 255 / 0.6);
+      border-radius: 999px;
+      background: rgb(0 0 0 / 0.55);
+      color: var(--color-fg);
+      font: 400 var(--text-small) / 1.2 var(--font-body);
+      cursor: pointer;
+    }
+
+    .flight[data-live] .pause:focus-visible {
+      outline: 1px solid var(--color-accent);
+      outline-offset: 4px;
+    }
+
+    /* Screen readers still get the whole list; sighted visitors get the captions. */
+    .flight[data-live] .stops {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .flight[data-live] .end {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .film {
+      transition: none;
+    }
+  }
+</style>

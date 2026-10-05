@@ -13,7 +13,7 @@ export const PLACES: readonly Place[] = [
   { id: 'voyager1', name: 'Voyager 1', factId: 'voyager1-light-day', image: `${FEATURED}/body-voyager1.webp`, hash: 'focus=body-voyager1' },
   { id: 'betelgeuse', name: 'Betelgeuse', factId: 'betelgeuse-distance', image: `${FEATURED}/star-betelgeuse.webp`, hash: 'focus=star-betelgeuse' },
   { id: 'sgr-a', name: 'Sagittarius A*', factId: 'sgr-a-distance', image: `${FEATURED}/blackhole-sgr-a-star.webp`, hash: 'focus=blackhole-sgr-a-star' },
-  { id: 'andromeda', name: 'Andromeda', image: `${FEATURED}/m31.webp`, hash: 'focus=m31' },
+  { id: 'andromeda', name: 'Andromeda', factId: 'andromeda-distance', image: `${FEATURED}/m31.webp`, hash: 'focus=m31' },
   { id: 'virgo', name: 'The Virgo cluster', factId: 'virgo-distance', image: `${FEATURED}/cluster-virgo-m87.webp`, hash: 'focus=cluster-virgo-m87' },
   { id: 'laniakea', name: 'Laniakea', image: `${FEATURED}/supercluster-laniakea-sc.webp`, hash: 'focus=supercluster-laniakea-sc' },
 ];

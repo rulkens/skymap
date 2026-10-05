@@ -1,10 +1,44 @@
 ---
 import Base from '../layouts/Base.astro';
+import Flight from '../components/Flight.astro';
+import Lead from '../components/Lead.astro';
+import Places from '../components/Places.astro';
+import Tour from '../components/Tour.astro';
+import Classroom from '../components/Classroom.astro';
+import Dome from '../components/Dome.astro';
+import Honesty from '../components/Honesty.astro';
+import Sources from '../components/Sources.astro';
+import { FLIGHT_STOPS } from '../data/flightStops';
+import { PLACES } from '../data/places';
+import { heroPoster } from '../utils/heroPoster';
+import { heroVideoUrl } from '../utils/heroVideoUrl';
+
+const poster = await heroPoster();
+
+// Every fact the page prints, so the Sources list can never drift from the copy.
+const factIds = [
+  ...FLIGHT_STOPS.flatMap((s) => (s.factId ? [s.factId] : [])),
+  ...PLACES.flatMap((p) => (p.factId ? [p.factId] : [])),
+  'proxima-distance',
+  'sondermarken-flyout',
+  'grand-tour-steps',
+];
 ---
 
-<Base title="skymap" description="Placeholder until the Home page lands.">
-  <div class="wrap section">
-    <h1>skymap</h1>
-    <p>Placeholder.</p>
+<Base
+  title="skymap"
+  description="Fly from Earth to the edge of the observable universe at true scale, through the galaxies and stars the surveys have measured. Free, in the browser."
+  heroNav
+>
+  <link slot="head" rel="preload" as="image" imagesrcset={poster.srcset} imagesizes={poster.sizes} fetchpriority="high" />
+  <Flight poster={poster} videoUrl={heroVideoUrl()} />
+  <Lead />
+  <Places />
+  <Tour />
+  <Classroom />
+  <Dome />
+  <Honesty />
+  <div class="wrap">
+    <Sources ids={factIds} />
   </div>
 </Base>

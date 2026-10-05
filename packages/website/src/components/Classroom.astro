@@ -1,0 +1,96 @@
+---
+import { Picture } from 'astro:assets';
+
+import ObjLink from './ObjLink.astro';
+import still from '../assets/still-solar-system.webp';
+import { APP_BASE } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+import { sitePath } from '../utils/sitePath';
+
+// The example address is built from the same hash the deep-link test parses.
+const params = new URLSearchParams(HOME_LINKS.classroom);
+const host = new URL(Astro.site!).host;
+---
+
+<section class="wrap row" id="classroom">
+  <div class="frame">
+    <Picture
+      src={still}
+      alt="The solar system as skymap draws it: the Sun with the planets' orbits, labelled, among catalogued stars."
+      formats={["avif", "webp"]}
+    fallbackFormat="webp"
+      widths={[640, 960, 1280]}
+      sizes="(max-width: 900px) 100vw, 55vw"
+      loading="lazy"
+    />
+    <div class="address">
+      {host}{APP_BASE}#focus=<b>{params.get('focus')}</b>&amp;t=<i>{params.get('t')}</i>
+    </div>
+  </div>
+  <div class="copy">
+    <h2>Use it in a classroom</h2>
+    <p>
+      Point the camera at Jupiter, set the date, and copy the address. The whole class opens the link and sees what
+      you see. No accounts, nothing to install.
+    </p>
+    <ObjLink href={sitePath('/educators/')}>Skymap for educators</ObjLink>
+  </div>
+</section>
+
+<style>
+  .row {
+    display: grid;
+    grid-template-columns: 6fr 5fr;
+    gap: 5rem;
+    align-items: center;
+    padding-block: var(--section-space);
+  }
+
+  .frame {
+    position: relative;
+  }
+
+  .frame :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .address {
+    position: absolute;
+    left: -1.375rem;
+    right: 2.5rem;
+    bottom: -1.625rem;
+    padding: 1rem 1.25rem;
+    background: #05070f;
+    border: 1px solid rgb(232 238 255 / 0.28);
+    border-radius: 0.25rem;
+    font: 0.8125rem / 1.6 ui-monospace, 'SF Mono', Menlo, monospace;
+    color: var(--site-text-dim);
+    overflow-wrap: anywhere;
+  }
+
+  .address b {
+    font-weight: 400;
+    color: #ffd97a;
+  }
+
+  .address i {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: 3.5rem;
+    }
+
+    .address {
+      left: 0;
+      right: 0;
+    }
+  }
+</style>
