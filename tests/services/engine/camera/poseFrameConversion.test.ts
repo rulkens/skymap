@@ -51,7 +51,7 @@ const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const AU = SCALE_UNITS.AU_TO_MPC;
 
 function bodyState(positionMpc: Vec3, orientation: Mat3): BodyState {
-  return { positionMpc, orientation, meanAnomalyRad: 0 };
+  return { positionMpc, orientation };
 }
 
 /**

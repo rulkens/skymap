@@ -1,19 +1,15 @@
 /**
- * EphemerisCorrection — one planet's fitted `Horizons − Kepler` residual over a span,
- * in km: a cubic in normalised time plus a sum of sinusoids. `ephemerisCorrectionMpc`
- * evaluates it; `tools/bodies/buildPlanetEphemeris.ts` generates it. Outside the span
- * the edge value is held (simDays is clamped), so dates past either end stay finite.
+ * EphemerisCorrection — one body's fitted `Horizons − model` correction, per space it corrects.
+ * `outside` is the row's own out-of-span policy: `'hold'` clamps to the edge value (planets),
+ * `'off'` applies nothing outside the fitted span.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { CorrectionSeries } from './CorrectionSeries';
 
 export type EphemerisCorrection = {
-  /** Fitted span start, UTC Julian date. */
-  readonly startJd: number;
-  /** Fitted span end, UTC Julian date. */
-  readonly endJd: number;
-  /** Coefficients of τ⁰..τ³ in km, τ = 2(t − startJd)/(endJd − startJd) − 1. */
-  readonly polyKm: readonly [Vec3, Vec3, Vec3, Vec3];
-  /** Flat, 7 per term: ω (rad/day), cos x,y,z (km), sin x,y,z (km); phase ω·(t − startJd). */
-  readonly terms: readonly number[];
+  readonly outside: 'hold' | 'off';
+  /** 1 channel, rad: added to the propagated mean anomaly before Kepler is solved. */
+  readonly meanAnomalyRad?: CorrectionSeries;
+  /** 3 channels, equatorial km: added to the position after Kepler. */
+  readonly positionKm?: CorrectionSeries;
 };

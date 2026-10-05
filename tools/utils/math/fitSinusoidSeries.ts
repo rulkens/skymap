@@ -1,14 +1,14 @@
 /**
- * fitSinusoidSeries — fit a 3-axis residual (km, near-uniform time grid) as a cubic in τ plus
- * sinusoids, greedily: FFT the remaining residual (×8 zero-pad, power summed over xyz) to
- * bracket the strongest tone, refine its ω, add its cos and sin columns, stop at `stopKm`.
+ * fitSinusoidSeries — fit an N-channel residual (near-uniform time grid) as a cubic in τ plus
+ * sinusoids, greedily: FFT the remaining residual (×8 zero-pad, power summed over channels) to
+ * bracket the strongest tone, refine its ω, add its cos and sin columns, and stop once the
+ * channel-vector norm is within `stop` (in the channels' unit) everywhere.
  * Columns are orthonormalised incrementally (Gram–Schmidt, two passes), so every step is an
  * exact least-squares refit; the kept R turns the orthogonal coefficients back into plain
- * (ω, cos, sin) amplitudes. τ and phase conventions match `ephemerisCorrectionMpc`.
+ * (ω, cos, sin) amplitudes. τ and phase conventions match `correctionSeriesAt`.
  */
 
-import type { EphemerisCorrection } from '../../../src/@types/scene/EphemerisCorrection';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { CorrectionSeries } from '../../../src/@types/scene/CorrectionSeries';
 import { dot } from './dot';
 import { fft } from './fft';
 
@@ -19,12 +19,12 @@ const GOLDEN_ITERATIONS = 40;
 
 export function fitSinusoidSeries(
   tJd: Float64Array,
-  residualKm: [Float64Array, Float64Array, Float64Array],
+  residualIn: readonly Float64Array[],
   startJd: number,
   endJd: number,
-  stopKm: number,
+  stop: number,
   maxTerms: number,
-): Pick<EphemerisCorrection, 'polyKm' | 'terms'> {
+): Pick<CorrectionSeries, 'poly' | 'terms'> {
   const n = tJd.length;
   // Uniform, except the last gap may be short so the grid can end exactly on `endJd`: an
   // unsampled tail is extrapolated, and drifts past the stop. The FFT only brackets ω, so
@@ -38,10 +38,10 @@ export function fitSinusoidSeries(
   const dt = Float64Array.from(tJd, (t) => t - startJd);
   const tau = Float64Array.from(dt, (d) => (2 * d) / (endJd - startJd) - 1);
 
-  const residual = residualKm.map((a) => Float64Array.from(a));
+  const residual = residualIn.map((a) => Float64Array.from(a));
   const q: Float64Array[] = [];
   const rCols: Float64Array[] = []; // column j of the upper-triangular R
-  const proj: number[][] = [[], [], []]; // q_j · y, per axis
+  const proj: number[][] = residual.map(() => []); // q_j · y, per channel
 
   const addColumn = (a: Float64Array): void => {
     const c = Float64Array.from(a);
@@ -59,20 +59,23 @@ export function fitSinusoidSeries(
     rc[q.length] = norm;
     q.push(c);
     rCols.push(rc);
-    residual.forEach((r, axis) => {
+    residual.forEach((r, ch) => {
       const d = dot(c, r);
       for (let i = 0; i < n; i++) r[i]! -= d * c[i]!;
-      proj[axis]!.push(d);
+      proj[ch]!.push(d);
     });
   };
+  const sample = new Array<number>(residual.length);
   const maxErr = (): number => {
     let m = 0;
-    for (let i = 0; i < n; i++)
-      m = Math.max(m, Math.hypot(residual[0]![i]!, residual[1]![i]!, residual[2]![i]!));
+    for (let i = 0; i < n; i++) {
+      residual.forEach((r, c) => (sample[c] = r[i]!));
+      m = Math.max(m, Math.hypot(...sample));
+    }
     return m;
   };
 
-  // Residual energy (xyz) a cos/sin pair at ω would remove, net of what the kept columns
+  // Residual energy (all channels) a cos/sin pair at ω would remove, net of what the kept columns
   // already span. The bare periodogram ignores that overlap and is biased wherever a tone
   // correlates with the cubic or a neighbour, which costs extra terms to mop up.
   const capturedEnergy = (omega: number): number => {
@@ -106,7 +109,7 @@ export function fitSinusoidSeries(
   const im = new Float64Array(m);
   const power = new Float64Array(m / 2);
   const omegas: number[] = [];
-  while (omegas.length < maxTerms && maxErr() > stopKm) {
+  while (omegas.length < maxTerms && maxErr() > stop) {
     power.fill(0);
     for (const r of residual) {
       re.fill(0);
@@ -147,7 +150,7 @@ export function fitSinusoidSeries(
     omegas.push(omega);
   }
 
-  // Back-substitute R·x = qᵀy per axis: x are the plain-basis coefficients.
+  // Back-substitute R·x = qᵀy per channel: x are the plain-basis coefficients.
   const k = q.length;
   const coef = proj.map((d) => {
     const x = new Float64Array(k);
@@ -158,7 +161,7 @@ export function fitSinusoidSeries(
     }
     return x;
   });
-  const at = (j: number): Vec3 => [coef[0]![j]!, coef[1]![j]!, coef[2]![j]!];
+  const at = (j: number): number[] => coef.map((x) => x[j]!);
   const terms = omegas.flatMap((omega, t) => [omega, ...at(4 + 2 * t), ...at(5 + 2 * t)]);
-  return { polyKm: [at(0), at(1), at(2), at(3)], terms };
+  return { poly: [at(0), at(1), at(2), at(3)], terms };
 }
