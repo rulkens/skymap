@@ -38,17 +38,15 @@
   --gutter: 2.75rem;
   --wrap-max: 77.5rem;
   --section-space: 9.375rem;
-  --section-gap: 5rem;
   --stack: 1.625rem;
-  --nav-height: 4.5rem;
 }
 
+/* The 900px breakpoint is also in components/Nav.astro (CSS variables cannot be used in media queries). */
 @media (max-width: 900px) {
   :root {
     --text-body: 1.125rem;
     --gutter: 1.25rem;
     --section-space: 5rem;
-    --section-gap: 3rem;
   }
 }
 
@@ -60,7 +58,6 @@
 
 html {
   background: var(--color-bg);
-  scroll-padding-top: var(--nav-height);
 }
 
 body {
@@ -123,10 +120,6 @@ img {
   max-width: var(--wrap-max);
   margin-inline: auto;
   padding-inline: var(--gutter);
-}
-
-.section {
-  padding-block: var(--section-space);
 }
 
 .skip-link {

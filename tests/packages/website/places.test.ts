@@ -24,12 +24,23 @@ const paletteFocusIds = new Set(
 );
 const starIds = new Set(FAMOUS_STARS_GENERATED.map((s) => `star-${s.id}`));
 
+describe('place ids and links', () => {
+  it('ids are unique', () => {
+    const ids = PLACES.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('appLink returns the app base alone, or with the hash after a #', () => {
+    expect(appLink()).toBe(APP_BASE);
+    expect(appLink('focus=body-earth')).toMatch(/#focus=body-earth$/);
+  });
+});
+
 describe.each(PLACES)('place $id', (place) => {
   const view = linkIntentFrom(place.hash).view;
 
   it('the app parses its hash as a focus request', () => {
     expect(view.kind).toBe('focus');
-    expect(appLink(place.hash)).toBe(`${APP_BASE}#${place.hash}`);
   });
 
   it('the focus id names an object the app knows', () => {
@@ -40,7 +51,10 @@ describe.each(PLACES)('place $id', (place) => {
 
   it('its image exists in the shared featured set and its fact row exists', () => {
     expect(place.image).toMatch(/^\/images\/featured\/[^/]+\.webp$/);
-    expect(existsSync(resolve('public', place.image.slice(1))), place.image).toBe(true);
+    expect(
+      existsSync(resolve(import.meta.dirname, '../../../public', place.image.slice(1))),
+      place.image,
+    ).toBe(true);
     if (place.factId) expect(() => fact(place.factId!)).not.toThrow();
   });
 });

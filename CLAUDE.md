@@ -43,7 +43,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Code is liability**: the scarce resource is the user's maintenance attention — smallest diff wins, deletion beats addition, speculative generality and extra knobs are review findings, and neutral-or-negative evidence **halts** a landing pipeline (land/park is the user's ruling, never process momentum); `deletion-audit` is the standing counter-bias after fix waves and at `/feature-done`, per [`leanness.md`](docs/superpowers/conventions/leanness.md).
 - **Fix a bug** → reproduce it as a failing test first, then fix.
 - **Why is this slow?** → measure first with `npm run perf`, then [docs/RENDERER.md](docs/RENDERER.md) for the CPU mental model (per-frame work scales with ~2.5M on-screen galaxies: hoist constants, gate with squared distances, no per-galaxy `Math.tan`).
-- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
+- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports, CSS `@import` paths (the website imports the app's tokens.css) and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
 - **Refactors keep the services/ layout**: cross-cutting helpers in `utils/`, rendering subsystems in `services/gpu/`, tests mirroring src.
 - **Choices I must make**: if the `mcp__claude-dash-ui__ask_user` tool is available, put every one in ONE call (`options`, `recommended`, a `why` of ≤ 15 words; visual checks as `kind: "check"` with the image attached) and end the turn with one line saying they're in the dash, without repeating them in prose. Don't act on a question the answers list under "Left open". Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
 - **Process progress**: if the `mcp__claude-dash-ui__session_progress` tool is available, call it when your work moves between explore, design, plan, implement, verify, land and done (main session only; carry on if it fails). For your own steps, send `steps` once, then `{ step, label }` per task; set `doc` to the plan path.
@@ -65,7 +65,7 @@ tests/  Vitest suite — mirrors src/ tree
 npm run dev         # vite dev server (leave running)
 npm run build       # tsc --noEmit + vite build
 npm run typecheck   # both src and tools tsconfigs
-npm run typecheck:fast  # same two projects via tsgo (TS 7 preview) — ~7x faster
+npm run typecheck:fast  # same two projects via tsgo (TS 7 preview) — ~7x faster — then the website check
 npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs

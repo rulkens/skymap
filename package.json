@@ -132,7 +132,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json && npm run site:check",
-    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json"
+    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json && npm run site:check"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "4.7.2",

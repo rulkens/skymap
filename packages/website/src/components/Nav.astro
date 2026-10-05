@@ -7,36 +7,38 @@ import { sitePath } from '../utils/sitePath';
 const home = sitePath('/');
 ---
 
-<header class="nav">
+<header class="nav wrap">
   <a class="mark" href={home}>skymap</a>
 
-  <ul class="links">
-    {
-      NAV_ITEMS.map((item) => (
-        <li>
-          <ObjLink size="small" href={sitePath(item.path)}>
-            {item.label}
-          </ObjLink>
-        </li>
-      ))
-    }
-  </ul>
-
-  <!-- Phone: the same items behind a disclosure; the launch control stays outside it. -->
-  <details class="menu">
-    <summary>Menu</summary>
-    <ul>
+  <nav aria-label="Main">
+    <ul class="links">
       {
         NAV_ITEMS.map((item) => (
           <li>
-            <ObjLink href={sitePath(item.path)}>{item.label}</ObjLink>
+            <ObjLink size="small" href={sitePath(item.path)}>
+              {item.label}
+            </ObjLink>
           </li>
         ))
       }
     </ul>
-  </details>
 
-  <ObjLink class="launch" size="small" href={appLink()}>Fly it yourself</ObjLink>
+    <!-- Phone: the same items behind a disclosure. -->
+    <details class="menu">
+      <summary>Menu</summary>
+      <ul>
+        {
+          NAV_ITEMS.map((item) => (
+            <li>
+              <ObjLink href={sitePath(item.path)}>{item.label}</ObjLink>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+  </nav>
+
+  <ObjLink size="small" href={appLink()}>Fly it yourself</ObjLink>
 </header>
 
 <style>
@@ -45,7 +47,7 @@ const home = sitePath('/');
     display: flex;
     align-items: center;
     gap: 1.875rem;
-    padding: 1.375rem var(--gutter);
+    padding-block: 1.375rem;
   }
 
   /* Home: the nav floats over the flight's first frame instead of pushing it down. */
@@ -87,6 +89,7 @@ const home = sitePath('/');
     display: none;
   }
 
+  /* Same breakpoint as site.css. */
   @media (max-width: 900px) {
     .nav {
       gap: 1rem;
