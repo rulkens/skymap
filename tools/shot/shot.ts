@@ -1,5 +1,5 @@
 /**
- * shot — PNG of each deep link as the app shows it (`npm run shot -- <link>...`).
+ * shot — screenshot of each deep link as the app shows it (`npm run shot -- <link>...`).
  *
  * stdout carries exactly one absolute path per shot; everything else goes to
  * stderr, so the output can be piped. The build helpers print progress with
@@ -23,7 +23,6 @@ const SHOT_PORT = 4518;
 
 async function main(): Promise<number> {
   const options = parseShotArgs(process.argv.slice(2));
-  const stdoutLine = (line: string): void => void process.stdout.write(`${line}\n`);
   console.log = console.error;
 
   let server: PreviewHandle | undefined;
@@ -61,7 +60,7 @@ async function main(): Promise<number> {
         outPath,
       });
       const label = `#${link.hash}`;
-      if (outcome.path !== null) stdoutLine(outcome.path);
+      if (outcome.path !== null) process.stdout.write(`${outcome.path}\n`);
       if (outcome.timedOut) {
         console.error(
           `shot: ${label} did not settle within ${options.timeoutMs / 1000} s — shot what was on screen`,

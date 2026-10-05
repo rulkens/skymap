@@ -5,7 +5,7 @@ import { bootHookedPage } from '../browser/bootHookedPage';
 import { collectPageErrors } from '../browser/collectPageErrors';
 import { dispatchActions } from '../browser/dispatchActions';
 import { warnIfWrongCheckout } from '../browser/warnIfWrongCheckout';
-import { readCanvas } from '../browser/readCanvas';
+import { readCanvas } from './readCanvas';
 import { labelDeclutterActions } from '../capture/labelDeclutterActions';
 import { SHOT_JPEG_QUALITY } from './SHOT_JPEG_QUALITY';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
@@ -80,11 +80,11 @@ export async function shootLink(
         ...(opts.format === 'jpeg' ? { quality: SHOT_JPEG_QUALITY } : {}),
         timeout: opts.timeoutMs,
       });
-      path = resolve(opts.outPath);
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, image);
+      const target = resolve(opts.outPath);
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, image);
+      path = target;
     } catch (err) {
-      path = null;
       error ??= err instanceof Error ? err.message : String(err);
     }
     return { path, timedOut, error, pageErrors };

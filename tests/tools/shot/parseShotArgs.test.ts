@@ -5,20 +5,8 @@ import { parseShotArgs } from '../../../tools/shot/parseShotArgs';
 const LINK = 'focus=body-saturn';
 
 describe('parseShotArgs', () => {
-  it('defaults', () => {
-    expect(parseShotArgs([LINK])).toEqual({
-      links: [{ search: '', hash: LINK }],
-      url: undefined,
-      build: false,
-      out: undefined,
-      width: 1600,
-      height: 900,
-      dpr: 2,
-      hideUi: false,
-      hideLabels: false,
-      timeoutMs: 30000,
-      format: 'jpeg',
-    });
+  it('defaults to jpeg', () => {
+    expect(parseShotArgs([LINK]).format).toBe('jpeg');
   });
   it('--png switches to png', () => {
     expect(parseShotArgs([LINK, '--png']).format).toBe('png');

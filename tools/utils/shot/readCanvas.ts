@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { SHOT_JPEG_QUALITY } from '../shot/SHOT_JPEG_QUALITY';
+import { SHOT_JPEG_QUALITY } from './SHOT_JPEG_QUALITY';
 import type { ShotFormat } from '../../shot/@types/ShotFormat';
 
 /**

@@ -31,8 +31,7 @@ links make several shots in one run.
 | `--hide-labels`   | off        | Turns every label off before the shot.                              |
 | `--timeout <sec>` | `30`       | How long to wait for the link to settle.                            |
 
-With neither `--url` nor `--build` the tool runs `vite` on a free port from its own checkout. `--url`
-skips the server start; the tool warns when that server runs from another checkout.
+With neither `--url` nor `--build` the tool runs `vite` on a free port from its own checkout.
 
 `--hide-labels` also hides the selection ring and structure markers (the passes in
 `tools/utils/capture/hiddenPasses.ts`). A relative `--out` and `data/shots/` resolve against the
