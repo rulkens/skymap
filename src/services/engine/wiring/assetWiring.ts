@@ -24,6 +24,7 @@ import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotK
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
+import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
@@ -120,7 +121,9 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
       meshKey: body.meshKey,
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
     }),
+    // An absent craft is parked at Earth's centre, which must not demand its mesh.
     demand: (ctx) =>
+      spacecraftPresent(body.id, ctx.simDays) &&
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
     release: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) > 2 * meshBodyLoadRadiusMpc(body.id),

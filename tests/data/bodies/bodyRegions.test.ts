@@ -88,16 +88,29 @@ describe('BODY_REGIONS', () => {
     expect(galacticCentre.extentMpc).toBeGreaterThan(s2ApoapsisMpc * 10);
   });
 
-  it('the solar-system extent ignores the sampled rows', () => {
+  it('the solar-system extent ignores the sampled rows', async () => {
     // An escaping craft has no envelope, so `max |member − anchor|` is a clock
-    // reading rather than a scale: Voyager 1 is 172 au out today, against Pluto's ~30. The rows stay MEMBERS —
-    // `regionOfBody` and the palette chip still say "Solar System" — but are
-    // excluded from the extent, which `scaleFadeBands.bodyGlintBackdrop` reads.
-    // Pluto's aphelion is 49 au, so a bound under 55 au fails on a
-    // probe at Voyager range joining the max.
-    const solarSystem = regionById('solar-system');
+    // reading rather than a scale. With a 150 au track loaded at J2000 the rows
+    // would dominate the max; they stay MEMBERS (`regionOfBody`, the palette chip)
+    // but are excluded from the extent `scaleFadeBands.bodyGlintBackdrop` reads.
+    // Fresh modules, so the track is in the registry when BODY_REGIONS snapshots J2000
+    // and nothing leaks into this file's other tests.
+    vi.resetModules();
+    const { trajectoryRegistry } = await import(
+      '../../../src/services/bodies/trajectoryRegistry'
+    );
+    const au150Km = 150 * 1.495978707e8;
+    trajectoryRegistry.set({
+      id: 'voyager1',
+      tDays: Float64Array.from([CONST_J2000 - 1, CONST_J2000 + 1]),
+      posKm: Float64Array.from([au150Km, 0, 0, au150Km, 0, 0]),
+      velKmS: new Float32Array(6),
+    });
+    const { BODY_REGIONS: fresh } = await import('../../../src/data/bodies/bodyRegions');
+    const solarSystem = fresh.find((r) => r.id === 'solar-system')!;
 
     expect(solarSystem.memberIds).toContain('voyager1');
+    // Pluto's aphelion is 49 au.
     expect(solarSystem.extentMpc).toBeLessThan(55 * SCALE_UNITS.AU_TO_MPC);
   });
 

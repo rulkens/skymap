@@ -1,30 +1,66 @@
 import { describe, expect, it } from 'vitest';
 
+import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
 import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { PassState } from '../../../../src/@types/engine/frame/PassState';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
+const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-const state = {
-  data: { bodies: { planets: [], meshBodies: SCENE_MESH_BODIES } },
-  gpu: {},
-} as unknown as PassState;
+const STATE = {
+  booted: true,
+  gpu: {
+    galaxyPointRenderer: {},
+    galaxyPickRenderer: {},
+    renderTargets: {},
+    compositor: {},
+    texturedBodyRenderer: null,
+  },
+  subsystems: { texturedDisks: {} },
+  selectionRows: { hover: null, select: null, focus: null },
+  slabRows: [],
+  data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
+  settings: {
+    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+    bodies: { items: {} },
+  },
+  picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+} as unknown as EngineState;
 
-const ctxAt = (simDays: number): FrameView =>
-  ({
-    snapshot: { simDays },
-    drawCamPos: [0, 0, 0],
-    drawPxPerRad: 1000,
-  }) as unknown as FrameView;
+const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e-9 };
+
+const viewAt = (simDays: number) =>
+  canvasViewOf(
+    STATE,
+    {
+      cam: assembleOrbitCamera(
+        POSE,
+        { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 },
+        IDENTITY,
+        IDENTITY,
+      ),
+      arm: absoluteArm(POSE),
+      altitudeMpc: POSE.distance,
+      nowMs: 0,
+      simDays,
+      visibleSourceMask: 0,
+    },
+    { width: 1920, height: 1080 },
+  )!;
 
 const drawnIds = (simDays: number): string[] => {
-  const { glints, meshes } = sceneBodyPartition(state, ctxAt(simDays));
+  const view = viewAt(simDays);
+  const { glints, meshes } = sceneBodyPartition(STATE as never, view);
   return [...glints, ...meshes].map((body) => body.id);
 };
 const labelIds = (simDays: number): string[] =>
@@ -43,9 +79,10 @@ describe('spacecraft presence', () => {
       posKm: Float64Array.from([1e9, 0, 0, 1e9, 0, 0]),
       velKmS: new Float32Array(6),
     });
-    expect(drawnIds(T0 + 5)).toContain('voyager1');
+    expect(viewAt(T0 + 5).snapshot.meshBodies.map((b) => b.id)).toContain('voyager1');
     expect(labelIds(T0 + 5)).toContain('sceneBody-voyager1');
     // Before the first sample the track exists but the craft does not.
+    expect(viewAt(T0 - 1).snapshot.meshBodies.map((b) => b.id)).not.toContain('voyager1');
     expect(drawnIds(T0 - 1)).not.toContain('voyager1');
     expect(labelIds(T0 - 1)).not.toContain('sceneBody-voyager1');
   });

@@ -60,7 +60,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0 },
+    snapshot: { simDays: CONST_J2000, nowMs: 0, meshBodies: SCENE_MESH_BODIES },
     cam: { distance },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
