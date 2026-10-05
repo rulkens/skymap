@@ -745,7 +745,7 @@ async function captureTake(
   // take with it, so the capture loop deliberately has no such tolerance.
   // The suppression flag below is NOT armed yet during this wait — cold-start
   // full-reload recovery must keep working here.
-  await bootHookedPage(page, captureUrl, '__skymapRecorder');
+  await bootHookedPage(page, captureUrl);
   console.log('capture-ready (engine ready + loads settled, real time)');
 
   // Arm the mid-take full-reload suppression only now that boot has settled —

@@ -199,7 +199,7 @@ async function bootPerfPage(
 ): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
-  await bootHookedPage(page, `${url}/?perf`, '__skymapPerf');
+  await bootHookedPage(page, `${url}/?perf`);
   const slotGroups = (await page.evaluate(
     () =>
       (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf

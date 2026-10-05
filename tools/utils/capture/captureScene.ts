@@ -15,6 +15,7 @@ import { writeThumbnail } from './writeThumbnail';
 import { VIEWPORT } from './shotDefaults';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { SceneShot } from '../../@types/capture/SceneShot';
 import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
 
@@ -34,7 +35,7 @@ export async function captureScene(
         : shot.focusId !== undefined
           ? `focus=${shot.focusId}&t=${shot.t}`
           : `t=${shot.t}`;
-    await bootHookedPage(page, `${base}/?perf&cinema#${hash}`, '__skymapPerf');
+    await bootHookedPage(page, `${base}/?cinema#${hash}`);
 
     // Scene first, labels last, and the order is load-bearing: a snapshot is a
     // whole-cluster replacement, so a view's `galaxyCatalogs` carries its
@@ -58,13 +59,9 @@ export async function captureScene(
     if (shot.focusId !== undefined && shot.keepFocus !== true) {
       await page.keyboard.press('Escape');
     }
-    // The steps above only dispatch; the shot needs a frame that drew them.
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-        ),
-    );
+    // Escape and the pose-less dispatches land after any applyPose wait; the
+    // shot needs a frame that drew them.
+    await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());
 
     const bytes = await writeThumbnail(await page.screenshot({ type: 'png' }), shot.outPath);
     return { status: 'captured', label: shot.label, bytes };

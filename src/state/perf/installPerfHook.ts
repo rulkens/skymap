@@ -107,15 +107,12 @@ function setTier(store: AppStore, tier: Tier): Promise<void> {
 export function installPerfHook(store: AppStore, engine: EngineHandle): void {
   if (!isPerfMode()) return;
   const hook: SkymapPerfHook = {
-    ready: whenStablyReady(store),
     setPose: (pose: PerfPose) => setPose(store, engine, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
     memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),
-    dispatch: store.dispatch,
-    getState: () => store.getState(),
     slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;
