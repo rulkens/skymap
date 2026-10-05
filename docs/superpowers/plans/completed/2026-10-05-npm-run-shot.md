@@ -14,7 +14,7 @@ normalisation, output naming, the wrong-checkout comparison) is a pure helper wi
 
 **Tech Stack:** TypeScript run by `tsx`, Playwright (`chromium` channel), Vite, Vitest.
 
-**Spec:** [`docs/superpowers/specs/2026-10-05-npm-run-shot-design.md`](../specs/2026-10-05-npm-run-shot-design.md),
+**Spec:** [`docs/superpowers/specs/completed/2026-10-05-npm-run-shot-design.md`](../../specs/completed/2026-10-05-npm-run-shot-design.md),
 sections "Rulings" and "Design".
 
 ## Global Constraints
