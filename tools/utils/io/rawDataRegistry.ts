@@ -1653,14 +1653,14 @@ export const RAW_DATA = {
     description: 'What `meshes.sha256` pins, the R2 backup, and the restore command.',
   },
 
-  // ─── JPL Horizons planet vectors (ephemeris-correction fit input) ─────
+  // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
     path: 'data/raw/horizons',
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/` and `500@699/` = the Jupiter and Saturn moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',

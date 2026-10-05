@@ -309,13 +309,13 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
   Halt and report if the total exceeds 2× that, or if any moon fails verify.
 
 **Steps:**
-- [ ] Add the test `meanAnomalyCorrectionTarget recovers a known shift`. Take an eccentric
+- [x] Add the test `meanAnomalyCorrectionTarget recovers a known shift`. Take an eccentric
       (e = 0.2), inclined row. Build `horizonsKm` from the row with M + 0.7 rad, and expect 0.7 to
       1e-9. Repeat with −3.0 rad, to check the seed handles a near-half-orbit shift.
-- [ ] Add the moon rows, then run `npm run fetch-horizons` (moons only; it takes a while, so run it
+- [x] Add the moon rows, then run `npm run fetch-horizons` (moons only; it takes a while, so run it
       in the background) and `npm run build-ephemeris-corrections`. Every body must pass verify.
-- [ ] Wire ΔM into `deriveBodyStates`.
-- [ ] Commit the code, the generated file and the docs:
+- [x] Wire ΔM into `deriveBodyStates`.
+- [x] Commit the code, the generated file and the docs:
       `feat(bodies): moons match Horizons (ΔM + residual corrections, 1900–2100)`.
 
 ### Task 5: Moon accuracy tests and re-recorded fixtures
