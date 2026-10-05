@@ -44,6 +44,7 @@
  * the closures its sagas call into.
  */
 
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
@@ -98,13 +99,19 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // Recorder seam (`window.__skymapRecorder`) — gated on `?cinema` INSIDE the
   // installer, so this call stays unconditional. No-op on a normal visit.
   installRecorderHook(store);
-  createRoot(root).render(
-    <Provider store={store}>
-      <SagaContextProvider value={setSagaContext}>
-        <RunSagaProvider value={runSaga}>
-          <App />
-        </RunSagaProvider>
-      </SagaContextProvider>
-    </Provider>,
+  const reactRoot = createRoot(root);
+  // Synchronous, so index.html's boot shell comes down in the same task the
+  // app goes up in: no frame shows both, and none shows neither.
+  flushSync(() =>
+    reactRoot.render(
+      <Provider store={store}>
+        <SagaContextProvider value={setSagaContext}>
+          <RunSagaProvider value={runSaga}>
+            <App />
+          </RunSagaProvider>
+        </SagaContextProvider>
+      </Provider>,
+    ),
   );
+  document.getElementById('boot')?.remove();
 }

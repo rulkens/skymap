@@ -127,8 +127,202 @@
       them from main.tsx (side-effect import) rather than linking from this
       file so Vite's module graph owns the asset and HMR works during dev.
     -->
+
+    <!--
+      Boot shell.  The app bundle is ~600 KB gzipped, which is several seconds
+      of black screen on a slow mobile connection, so the first paint has to
+      come from this file alone: inline styles, static markup, no request
+      except the title font.  main.tsx removes #boot once React has rendered.
+
+      The colours, font stacks and offsets repeat design tokens from
+      src/styles/global.css and the Splash column's position, because that
+      stylesheet arrives with the bundle.  The hairline matches SplashProgress
+      so the bar carries through the handoff.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/CormorantGaramond-SemiBold.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <style>
+      @font-face {
+        font-family: 'Cormorant Garamond';
+        font-weight: 600;
+        font-display: swap;
+        src: url('/fonts/CormorantGaramond-SemiBold.woff2') format('woff2');
+      }
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        color: rgba(200, 220, 255, 0.85);
+        font:
+          11px/1.6 ui-monospace,
+          'SF Mono',
+          Menlo,
+          monospace;
+        letter-spacing: 0.1em;
+      }
+      #boot .boot-column {
+        position: absolute;
+        left: 80px;
+        bottom: 80px;
+        max-width: 440px;
+      }
+      #boot .boot-label {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+      }
+      #boot .boot-label::before {
+        content: '';
+        width: 32px;
+        height: 1px;
+        background: #a8d0ff;
+      }
+      #boot h1 {
+        margin: 24px 0;
+        color: #fff;
+        font:
+          600 48px/1.04 'Cormorant Garamond',
+          ui-serif,
+          Georgia,
+          serif;
+        letter-spacing: 0.005em;
+      }
+      /* The three status lines share one grid cell and hand over on a timer:
+         a visitor who is still here after 6 s is on a slow connection and
+         needs to hear that waiting is expected. */
+      #boot .boot-status {
+        display: grid;
+        margin: 0;
+      }
+      #boot .boot-status > * {
+        grid-area: 1 / 1;
+      }
+      #boot .boot-status > :nth-child(1) {
+        animation: bootOut 0.4s 6s forwards;
+      }
+      #boot .boot-status > :nth-child(2) {
+        opacity: 0;
+        animation:
+          bootIn 0.4s 6s forwards,
+          bootOut 0.4s 20s forwards;
+      }
+      #boot .boot-status > :nth-child(3) {
+        opacity: 0;
+        animation: bootIn 0.4s 20s forwards;
+      }
+      #boot .boot-failed,
+      #boot.failed .boot-status,
+      #boot.failed .boot-line {
+        display: none;
+      }
+      #boot.failed .boot-failed {
+        display: block;
+        margin: 0;
+        color: #ffb3b3;
+      }
+      #boot a {
+        color: inherit;
+      }
+      #boot .boot-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 12px;
+        height: 1px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      #boot .boot-line::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 30%;
+        background: linear-gradient(90deg, transparent, #a8d0ff, transparent);
+        animation: bootSweep 1.4s ease-in-out infinite;
+      }
+      @keyframes bootIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes bootOut {
+        to {
+          opacity: 0;
+        }
+      }
+      @keyframes bootSweep {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(400%);
+        }
+      }
+      @media (max-width: 768px) {
+        #boot .boot-column {
+          left: 24px;
+          right: 24px;
+          bottom: 56px;
+        }
+        #boot h1 {
+          margin: 20px 0;
+          font-size: 32px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot .boot-line::before {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot">
+      <div class="boot-column">
+        <div class="boot-label">SKYMAP</div>
+        <h1>A 3D map<br />of the universe</h1>
+        <p class="boot-status" role="status">
+          <span>Loading…</span>
+          <span aria-hidden="true">Still loading. A slow connection needs a little longer.</span>
+          <span aria-hidden="true"
+            >Still loading. Keep this tab open and Skymap starts by itself.</span
+          >
+        </p>
+        <p class="boot-failed">
+          Skymap could not be loaded. Check your connection and <a href="">reload the page</a>.
+        </p>
+        <noscript><p>Skymap needs JavaScript and WebGPU to run.</p></noscript>
+      </div>
+      <div class="boot-line"></div>
+    </div>
+    <script>
+      // A failed bundle or stylesheet request would otherwise leave the shell
+      // saying "Loading…" forever.  Resource errors do not bubble: capture.
+      addEventListener(
+        'error',
+        function (e) {
+          var tag = e.target && e.target.tagName;
+          var boot = document.getElementById('boot');
+          if (boot && (tag === 'SCRIPT' || tag === 'LINK')) boot.className = 'failed';
+        },
+        true,
+      );
+    </script>
     <!--
       React mounts the entire app — canvas, status bar, info card, scale bar —
       into this single div. The old imperative markup (canvas, #status, #info-card,

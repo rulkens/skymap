@@ -76,6 +76,7 @@ npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/ref
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run shot        # screenshot of any deep link → tools/shot/README.md
+npm run loadtime    # cold-load milestones on throttled 3G/4G → tools/loadtime/README.md
 npm run capture-featured # palette-card thumbnails → tools/capture/README.md
 npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
 ```
