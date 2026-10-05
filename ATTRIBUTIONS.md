@@ -480,6 +480,22 @@ All public domain; NASA asks that credit go to the named observatory / program.
   polar wander revisited", _Icarus_ 408,
   <https://doi.org/10.1016/j.icarus.2023.115827>.
 
+#### Paul Schenk (LPI): Uranian satellite mosaics and DEMs (Voyager 2)
+
+- **Use:** Global surface mosaics for Miranda, Ariel, Umbriel, Titania and
+  Oberon (shipped as greyscale body textures, unseen areas filled flat grey),
+  and the Miranda and Ariel DEMs, baked into their normal maps (the
+  DEMs are a build input, never shipped as runtime pixels). Based on Voyager 2
+  images (NASA/JPL).
+- **Source:** "Uranian Satellite Global Mosaics and Digital Elevation Models",
+  Paul Schenk, 2020, USRA Houston Repository, hdl:20.500.11753/1687,
+  <https://repository.hou.usra.edu/handle/20.500.11753/1687>.
+- **Licence:** Not public domain. The repository readme states no licence; it
+  asks users to cite and to contact the author. Citation: Schenk, P., and J.
+  Moore (2020), "Topography and Geology of Uranian Mid-sized Icy Satellites in
+  Comparison with Saturnian and Plutonian Satellites", _Phil. Trans. R. Soc. A_
+  378, 20200102.
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px

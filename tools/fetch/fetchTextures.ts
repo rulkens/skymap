@@ -129,7 +129,8 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   if (dev) {
     return TEXTURE_ENTRIES.map(devSource).filter((s): s is TextureSource => s !== null);
   }
-  return [...TEXTURE_ENTRIES.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
+  const downloadable = TEXTURE_ENTRIES.filter((e) => !('manualDownload' in RAW_DATA[e.native]));
+  return [...downloadable.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
 }
 
 /**

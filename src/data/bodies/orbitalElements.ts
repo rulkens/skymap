@@ -574,6 +574,119 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: SAT_ROCK,
   }),
 
+  // Uranus's moons. JPL sats/elem (Uranus-equatorial frame, epoch 2000-01-01.5 TDB, URA182), which
+  // tabulates no pole. The pole below is Uranus's ANGULAR-MOMENTUM pole (RA 77.311, Dec +15.175),
+  // the antipode of its IAU north pole: Uranus spins retrograde about that pole and the moons orbit
+  // with the spin, so the IAU pole here would run every orbit backwards.
+  satellite({
+    // Miranda: a=129846 e=0.001 ω=154.8 M=73.0 i=4.4 node=100.9 P=1.413479
+    // Papsis=8.939 Pnode=17.787. Prograde.
+    id: 'miranda',
+    focusId: 'uranus',
+    semiMajorKm: 129846,
+    eccentricity: 0.001,
+    inclinationDeg: 4.4,
+    ascendingNodeDeg: 100.9,
+    argPeriapsisDeg: 154.8,
+    meanAnomalyDeg: 73.0,
+    periodDays: 1.413479,
+    apsidalPrecessionYears: 8.939,
+    nodalPrecessionYears: 17.787,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Ariel: a=190929 e=0.001 ω=9.6 M=193.5 i=0.0 node=0.0 P=2.520379
+    // Papsis=28.901 Pnode=0.000. Prograde.
+    id: 'ariel',
+    focusId: 'uranus',
+    semiMajorKm: 190929,
+    eccentricity: 0.001,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 9.6,
+    meanAnomalyDeg: 193.5,
+    periodDays: 2.520379,
+    apsidalPrecessionYears: 28.901,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Umbriel: a=265986 e=0.004 ω=183.4 M=253.0 i=0.1 node=174.8 P=4.144177
+    // Papsis=64.126 Pnode=129.745. Prograde.
+    id: 'umbriel',
+    focusId: 'uranus',
+    semiMajorKm: 265986,
+    eccentricity: 0.004,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 174.8,
+    argPeriapsisDeg: 183.4,
+    meanAnomalyDeg: 253.0,
+    periodDays: 4.144177,
+    apsidalPrecessionYears: 64.126,
+    nodalPrecessionYears: 129.745,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Titania: a=436298 e=0.002 ω=184.0 M=68.1 i=0.1 node=29.5 P=8.705869
+    // Papsis=579.928 Pnode=1644.649. Prograde.
+    id: 'titania',
+    focusId: 'uranus',
+    semiMajorKm: 436298,
+    eccentricity: 0.002,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 29.5,
+    argPeriapsisDeg: 184.0,
+    meanAnomalyDeg: 68.1,
+    periodDays: 8.705869,
+    apsidalPrecessionYears: 579.928,
+    nodalPrecessionYears: 1644.649,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Oberon: a=583511 e=0.002 ω=132.2 M=143.6 i=0.1 node=76.8 P=13.463237
+    // Papsis=158.604 Pnode=192.798. Prograde.
+    id: 'oberon',
+    focusId: 'uranus',
+    semiMajorKm: 583511,
+    eccentricity: 0.002,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 76.8,
+    argPeriapsisDeg: 132.2,
+    meanAnomalyDeg: 143.6,
+    periodDays: 13.463237,
+    apsidalPrecessionYears: 158.604,
+    nodalPrecessionYears: 192.798,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Puck: a=86004 e=0.000 ω=0.0 M=50.1 i=0.3 node=216.1 P=0.761833
+    // Papsis=2.226 Pnode=4.454. Prograde.
+    id: 'puck',
+    focusId: 'uranus',
+    semiMajorKm: 86004,
+    eccentricity: 0.0,
+    inclinationDeg: 0.3,
+    ascendingNodeDeg: 216.1,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 50.1,
+    periodDays: 0.761833,
+    apsidalPrecessionYears: 2.226,
+    nodalPrecessionYears: 4.454,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+
   // Charon comes from a different page than every satellite() row above: JPL
   // sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL orbital elements, epoch
   // 2000-01-01.5 TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).

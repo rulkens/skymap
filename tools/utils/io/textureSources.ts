@@ -24,8 +24,9 @@ export type TextureSourceEntry = {
   readonly chroma?: RawDataKey;
   /** `'icq'`: `native` is a Gaskell shape-model point cloud, rasterised to a
    *  radius heightfield instead of read as an image. `'floatDem'`: a Float32
-   *  height GeoTIFF with longitude 0 at its left edge. */
-  readonly format?: 'icq' | 'floatDem';
+   *  height GeoTIFF with longitude 0 at its left edge. `'isisDem'`: a Float32
+   *  ISIS cube DEM whose left-edge longitude comes from its own label. */
+  readonly format?: 'icq' | 'floatDem' | 'isisDem';
   /** Source east longitude minus texture east longitude at the same spot (the
    *  frames differ: prime-meridian constants, or a DEM's own registration). */
   readonly lonOffsetDeg?: number;
@@ -82,6 +83,20 @@ export const TEXTURE_SOURCES = {
   },
   rhea: { surface: { native: 'textures.nasaRhea' } },
   iapetus: { surface: { native: 'textures.nasaIapetus' } },
+  // Schenk's Uranian cubes share one control network per moon, so mosaic and DEM register at 0.
+  miranda: {
+    surface: { native: 'textures.schenkMirandaMosaic' },
+    normal: { native: 'textures.schenkMirandaDem', format: 'isisDem', lonOffsetDeg: 0 },
+  },
+  ariel: {
+    surface: { native: 'textures.schenkArielMosaic' },
+    normal: { native: 'textures.schenkArielDem', format: 'isisDem', lonOffsetDeg: 0 },
+  },
+  umbriel: { surface: { native: 'textures.schenkUmbrielMosaic' } },
+  titania: {
+    surface: { native: 'textures.schenkTitaniaMosaic' },
+  },
+  oberon: { surface: { native: 'textures.schenkOberonMosaic' } },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },
