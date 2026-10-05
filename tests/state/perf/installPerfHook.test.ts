@@ -11,9 +11,7 @@
  * `setPose` / `setStrategy` / `collectTimings` end-to-end behaviour is NOT
  * exercised here: driving a camera pose to a settled frame and reading real GPU
  * timings both need a live engine + WebGPU device, which no unit surface
- * provides. The gate test asserts they are wired (present + callable); the
- * `ready` debounce is already covered by the recorder suite through the shared
- * `whenStablyReady`.
+ * provides. The gate test asserts they are wired (present + callable).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -43,7 +41,7 @@ function buildStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// A minimal fake engine handle: only `debug.timingService.subscribe` and
+// A minimal fake engine handle: only `nextFrame`, `debug.timingService.subscribe` and
 // `debug.requestRender` are reachable from the installer's gate, so those are
 // the only members the fake needs. `subscribe` is a vi.fn returning a no-op
 // unsubscribe.
@@ -52,7 +50,10 @@ function fakeEngine(): EngineHandle {
     enabled: true,
     subscribe: vi.fn<(listener: (frame: GpuTimingFrame) => void) => () => void>(() => () => {}),
   };
-  return { debug: { timingService, requestRender: vi.fn() } } as unknown as EngineHandle;
+  return {
+    nextFrame: () => Promise.resolve(),
+    debug: { timingService, requestRender: vi.fn() },
+  } as unknown as EngineHandle;
 }
 
 describe('installPerfHook', () => {
@@ -79,7 +80,6 @@ describe('installPerfHook', () => {
 
     const hook = getHook();
     expect(hook).toBeDefined();
-    expect(hook?.ready).toBeInstanceOf(Promise);
     expect(typeof hook?.setPose).toBe('function');
     expect(typeof hook?.setStrategy).toBe('function');
     expect(typeof hook?.collectTimings).toBe('function');

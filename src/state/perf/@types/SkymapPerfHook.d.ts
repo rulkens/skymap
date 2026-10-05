@@ -4,8 +4,7 @@
  *
  * Like the recorder hook, the perf harness drives the app from outside the page
  * (`page.evaluate`), so every method that must wait on the engine is
- * promise-shaped: awaiting `ready` blocks until the app is measure-ready,
- * `setPose` resolves once the camera has actually settled at the requested
+ * promise-shaped: `setPose` resolves once the camera has actually settled at the requested
  * vantage, and `collectTimings` resolves with the accumulated samples after the
  * requested frame count. `setStrategy` is the lone synchronous method — it just
  * flips which encode path the executor takes on the *next* frame, with nothing
@@ -20,11 +19,8 @@ import type { MemorySnapshot } from '../../../@types/perf/MemorySnapshot';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import type { Tier } from '../../../@types/data/Tier';
-import type { AppDispatch } from '../../../store/types';
-import type { RootState } from '../../../store/types';
 
 export type SkymapPerfHook = {
-  readonly ready: Promise<void>;
   readonly setPose: (pose: PerfPose) => Promise<void>;
   readonly setStrategy: (s: RenderStrategy) => void;
   readonly collectTimings: (frames: number) => Promise<PerfSample[]>;
@@ -53,15 +49,5 @@ export type SkymapPerfHook = {
    * the seam: the harness buckets its per-layer measurements into groups (for
    * the floor estimate) without ever loading a renderer module.
    */
-  /**
-   * The store's own `dispatch` and `getState`, so a harness (or a console at a
-   * phone on the far end of a CDP tunnel) can drive any app COMMAND action —
-   * `flyToLonLat`, a settings toggle — without a DOM path through the debug
-   * panel. Deliberately the raw pair rather than a curated per-action method:
-   * the actions are the app's own public vocabulary, and mirroring each one
-   * here would be a second surface to keep in sync.
-   */
-  readonly dispatch: AppDispatch;
-  readonly getState: () => RootState;
   readonly slotGroups: Readonly<Record<TimingSlotName, string>>;
 };

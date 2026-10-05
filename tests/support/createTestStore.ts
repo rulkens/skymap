@@ -72,6 +72,7 @@ const EMPTY_RESOLVE_DEPS: ResolveDeps = {
  * instead of hand-assembling the rest of the no-ops around it.
  */
 export const NOOP_SAGA_CONTEXT: SagaContext = {
+  nextFrame: () => Promise.resolve(),
   reconcile: NOOP_RECONCILE,
   resolveDeps: () => EMPTY_RESOLVE_DEPS,
   // The real core rows, over the empty bag above: a static id (body/star/

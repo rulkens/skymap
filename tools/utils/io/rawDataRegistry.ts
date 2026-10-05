@@ -22,6 +22,8 @@ export type RawDataEntry = {
   readonly upstream?: string;
   readonly fetcher?: string;
   readonly readme?: string;
+  /** `upstream` is a catalogue page that blocks scripted downloads; `fetchTextures` skips it. */
+  readonly manualDownload?: true;
 };
 
 export const RAW_DATA = {
@@ -940,6 +942,78 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  // ─── Uranian satellites — Schenk 2020 ISIS3 cubes (manual browser download) ──
+  'textures.schenkMirandaMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/mumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Miranda mosaic, 6294x3147, 240 m/px (Voyager 2): ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkArielMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/aumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Ariel mosaic, 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkUmbrielMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/uumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Umbriel mosaic, 919x460: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkTitaniaMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/tumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Titania mosaic, 1722x861: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~6 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkOberonMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/oumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Oberon mosaic, 957x479: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkMirandaDem': {
+    path: 'data/raw/textures/schenk-uranian-satellites/mudem-ZT-cyl.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Miranda merged photoclinometric+stereo DEM, 6294x3147, left edge at lon 0: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkArielDem': {
+    path: 'data/raw/textures/schenk-uranian-satellites/audem-ZTL-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Ariel DEM (stereo+photoclinometry+digitised limb arcs), 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+
   // ─── Saturn mid-sized moons — CICLOPS 2014 global colour maps ─────────
   //
   // Paul Schenk's (LPI) photometrically corrected Cassini ISS mosaics, chosen

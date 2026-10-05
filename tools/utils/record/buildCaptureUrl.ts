@@ -11,7 +11,7 @@
  * `--url` parsing strips a single trailing slash, so a doubled one
  * (`http://localhost:5173//`) reaches here intact and would otherwise compose
  * a `//?cinema` path that loads but never installs the recorder hook,
- * surfacing ~15s later as "`__skymapRecorder` never appeared" instead of a
+ * surfacing right after boot as "`__skymapRecorder` missing" instead of a
  * clear error here.
  *
  * `dome` adds `&dome` — the same URL gate `hasUrlGate('dome')` reads in

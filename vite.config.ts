@@ -66,9 +66,13 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 // `assetsInclude: ['**/*.wgsl']` is retained while a few `.wgsl` files
 // remain unmigrated; once Task 2 finishes the bulk rename it can be
 // dropped, but it's harmless until then.
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [viteWesl({ extensions: [staticBuildExtension] }), minifyStaticWgslPlugin(), react()],
   server: { port: DEV_PORTS.main, ...lanHttpsServer() },
+  // Dev only: a built bundle must not carry this machine's absolute path.
+  define: {
+    __SKYMAP_PROJECT_ROOT__: JSON.stringify(command === 'serve' ? import.meta.dirname : ''),
+  },
   assetsInclude: ['**/*.wgsl'],
   build: { outDir: distDir },
-});
+}));

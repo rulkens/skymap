@@ -27,4 +27,9 @@ export type BodyTextureId =
   | 'tethys'
   | 'dione'
   | 'rhea'
-  | 'iapetus';
+  | 'iapetus'
+  | 'miranda'
+  | 'ariel'
+  | 'umbriel'
+  | 'titania'
+  | 'oberon';
