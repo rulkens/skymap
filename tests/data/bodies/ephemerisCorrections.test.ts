@@ -1,8 +1,8 @@
 /**
  * Planet positions vs JPL Horizons at six dates (both span ends + the Voyager flybys).
- * Fixture query (one per target; Earth is 399, the rest as in fetchHorizonsPlanets):
+ * Fixture query (one per target; Earth is 399, the rest as in HORIZONS_BODIES):
  * https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='199'&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTORS'&CENTER='500@10'&REF_PLANE='FRAME'&TIME_TYPE='UT'&OUT_UNITS='KM-S'&CSV_FORMAT='YES'&VEC_TABLE='1'&TLIST_TYPE='JD'&TLIST='2415171.5' '2443937.5' '2444555.5' '2446454.5' '2447763.5' '2487855.5'
- * Fails when an element row or the frame changes without `npm run build-planet-ephemeris`.
+ * Fails when an element row or the frame changes without `npm run build-ephemeris-corrections`.
  */
 
 import { describe, it, expect } from 'vitest';

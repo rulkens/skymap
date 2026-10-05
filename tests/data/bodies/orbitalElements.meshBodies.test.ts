@@ -17,7 +17,7 @@ describe('the whale and petunias orbit rows', () => {
     const semiMajorMetres = SCENE_EARTH.surface.datumRadiusM + 400_000;
     const expectedOffsetRad = 40 / semiMajorMetres;
 
-    expect(whale.meanAnomalyRad - petunias.meanAnomalyRad).toBeCloseTo(expectedOffsetRad, 10);
+    expect(whale.orbit!.meanAnomalyRad - petunias.orbit!.meanAnomalyRad).toBeCloseTo(expectedOffsetRad, 10);
 
     // Physical sanity check: both bodies actually sit in the ~400 km orbit,
     // not on top of Earth or off at some other radius.
