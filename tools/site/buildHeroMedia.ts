@@ -1,9 +1,9 @@
 /**
  * Cut the website's hero media from the owner's Earth-to-universe recording:
- * the scrub video into `public/data/site/` (gitignored, never committed; it
- * ships to R2, see docs/DEPLOY.md "Site media") and the poster and section
- * stills into `packages/website/src/assets/` (committed, so the page is
- * complete without the video).
+ * one still per flight stop, landscape and portrait, into
+ * `packages/website/src/assets/flight/` (committed: they are the flight at
+ * every width) and the scrub video into `public/data/site/` (gitignored; it
+ * ships to R2, see docs/DEPLOY.md "Site media").
  *
  *   npm run site:media -- [path/to/recording.mp4]
  *
@@ -16,13 +16,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 
+import { FLIGHT_STOPS } from '../../packages/website/src/data/flightStops';
 import { HERO_MEDIA } from './heroMediaPlan';
+import { portraitCrop } from './utils/portraitCrop';
 import { scrubVideoArgs } from './utils/scrubVideoArgs';
 import { stillFrameArgs } from './utils/stillFrameArgs';
 
 const DEFAULT_RECORDING = 'recordings/earthUniverseLoop-3840x2160-60fps-20260817-152155-60M.mp4';
 const VIDEO_DIR = 'public/data/site';
-const STILLS_DIR = 'packages/website/src/assets';
+const STILLS_DIR = 'packages/website/src/assets/flight';
+const BLACK = { r: 0, g: 0, b: 0 };
 
 const input = process.argv[2] ?? DEFAULT_RECORDING;
 if (!existsSync(input)) {
@@ -33,21 +36,52 @@ if (!existsSync(input)) {
 mkdirSync(VIDEO_DIR, { recursive: true });
 mkdirSync(STILLS_DIR, { recursive: true });
 
+const avif = { quality: HERO_MEDIA.stillQuality, effort: 9 };
+const tall = {
+  width: HERO_MEDIA.stillPortraitWidth,
+  height: Math.round((HERO_MEDIA.stillPortraitWidth * 16) / 9),
+};
+let stillBytes = 0;
+
 const scratch = mkdtempSync(join(tmpdir(), 'skymap-hero-'));
 try {
-  for (const still of HERO_MEDIA.stills) {
-    const png = join(scratch, `${still.file}.png`);
-    execFileSync('ffmpeg', ['-v', 'error', ...stillFrameArgs(still, input, png)]);
-    await sharp(png).webp({ quality: 92, effort: 6 }).toFile(join(STILLS_DIR, still.file));
-    console.log(`still  ${still.file}`);
-  }
+  for (const stop of FLIGHT_STOPS) {
+    const png = join(scratch, `${stop.id}.png`);
+    execFileSync('ffmpeg', [
+      '-v',
+      'error',
+      ...stillFrameArgs(HERO_MEDIA.inSec + stop.atSec, input, png),
+    ]);
+    const meta = await sharp(png).metadata();
+    const crop = portraitCrop(meta, tall, stop.portraitX, stop.portraitZoom);
 
+    const landscape = join(STILLS_DIR, `${stop.id}-landscape.avif`);
+    await sharp(png).resize({ width: HERO_MEDIA.stillLandscapeWidth }).avif(avif).toFile(landscape);
+
+    const portrait = join(STILLS_DIR, `${stop.id}-portrait.avif`);
+    await sharp(png)
+      .extract({ left: crop.left, top: 0, width: crop.width, height: crop.height })
+      .resize({ width: tall.width, height: crop.scaledHeight, fit: 'fill' })
+      .extend({ top: crop.padTop, bottom: crop.padBottom, background: BLACK })
+      .avif(avif)
+      .toFile(portrait);
+
+    const sizes = [landscape, portrait].map((file) => statSync(file).size);
+    stillBytes += sizes[0]! + sizes[1]!;
+    console.log(`still  ${stop.id}  landscape ${sizes[0]} B  portrait ${sizes[1]} B`);
+  }
+  console.log(`stills ${stillBytes} B in ${STILLS_DIR}`);
+
+  // The name is versioned and the published copy immutable, so an existing file is never re-cut.
   const video = join(VIDEO_DIR, HERO_MEDIA.videoFile);
-  execFileSync('ffmpeg', ['-v', 'error', ...scrubVideoArgs(HERO_MEDIA, input, video)], {
-    stdio: 'inherit',
-  });
-  const mb = (statSync(video).size / 1024 / 1024).toFixed(1);
-  console.log(`video  ${video}  ${mb} MB`);
+  if (existsSync(video)) {
+    console.log(`video  ${video} exists, kept (bump videoFile to re-cut)`);
+  } else {
+    execFileSync('ffmpeg', ['-v', 'error', ...scrubVideoArgs(HERO_MEDIA, input, video)], {
+      stdio: 'inherit',
+    });
+    console.log(`video  ${video}  ${(statSync(video).size / 1024 / 1024).toFixed(1)} MB`);
+  }
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

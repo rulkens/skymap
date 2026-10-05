@@ -19,6 +19,14 @@ export const FACTS: readonly Fact[] = [
     short: '1.3 light-seconds away',
   },
   {
+    id: 'moon-orbit-light',
+    text: 'The Moon orbits Earth at an average of 384,400 km, which light covers in about 1.3 seconds.',
+    source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
+    sourceLabel: 'NASA Moon fact sheet',
+    checked: CHECKED,
+    short: 'The ring around Earth is the Moon’s orbit. Light takes about 1.3 seconds to cross from there to here.',
+  },
+  {
     id: 'saturn-distance',
     text: 'Saturn is between 67 and 92 light-minutes from Earth, depending on where both planets are on their orbits.',
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html',
