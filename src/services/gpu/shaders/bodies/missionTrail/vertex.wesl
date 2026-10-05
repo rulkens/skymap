@@ -41,6 +41,17 @@ fn vs(@builtin(vertex_index) vid: u32, seg: TrailSegment) -> VSOut {
     b = b + (a - b) * ((W_EPS - wb) / (wa - wb));
   }
 
+  // A zero-length segment (a head on a vertex) has no tangent; drop it.
+  let aClip = worldToClip(u.cam, a);
+  let bClip = worldToClip(u.cam, b);
+  let dPx = (bClip.xy / bClip.w - aClip.xy / aClip.w) * 0.5 * u.cam.viewportPx;
+  if (dot(dPx, dPx) < 1e-10) {
+    out.clip = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    out.relKm = vec3<f32>(0.0);
+    out.side = 0.0;
+    return out;
+  }
+
   let p = expandSegmentQuad(u.cam, a, b, corner, 0.5 * u.widthPx);
   // Depthless HDR target: pin z mid-range so no near/far plane clips the quad.
   out.clip = vec4<f32>(p.xy, 0.5 * p.w, p.w);

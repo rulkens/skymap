@@ -10,13 +10,15 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MissionTrailRenderer } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailRenderer';
-import type { MissionTrailDrawArgs } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailDrawArgs';
+import type { MissionTrailFrame } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailFrame';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { MissionTrailGeometry } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailGeometry';
 import vsCode from '../../shaders/bodies/missionTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/missionTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { splitF64HiLo } from '../../../../utils/math/splitF64HiLo';
+import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
 import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';
 
 /** One vertex record: posHi (3 floats) then posLo (3 floats). */
@@ -129,20 +131,32 @@ export function createMissionTrailRenderer(
   });
 
   let vertexBuffer: GPUBuffer | null = null;
+  let uploadedVersion = -1;
+  let tracks: ReadonlyMap<string, MissionTrailGeometry> = new Map();
   const firstVertex = new Map<string, number>();
   const uniformScratch = new Float32Array(TRAIL_UNIFORM_BYTES / 4);
   const headScratch = new Float32Array(HEAD_BYTES / 4);
+  const eyeScratch = new Float32Array(6);
   let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
+  let slot = 0;
 
-  function setTracks(tracks: readonly MissionTrailGeometry[]): void {
+  function ensureTracks(
+    version: number,
+    sunMpc: Readonly<Vec3>,
+    build: (sunMpc: Readonly<Vec3>) => readonly MissionTrailGeometry[],
+  ): ReadonlyMap<string, MissionTrailGeometry> {
+    if (version === uploadedVersion) return tracks;
+    uploadedVersion = version;
     vertexBuffer?.destroy();
     vertexBuffer = null;
     firstVertex.clear();
-    const total = tracks.reduce((sum, t) => sum + t.posMpc.length / 3, 0);
-    if (total === 0) return;
+    const built = build(sunMpc);
+    tracks = new Map(built.map((t) => [t.id, t]));
+    const total = built.reduce((sum, t) => sum + t.posMpc.length / 3, 0);
+    if (total === 0) return tracks;
     const data = new Float32Array(total * 6);
     let at = 0;
-    for (const t of tracks) {
+    for (const t of built) {
       firstVertex.set(t.id, at);
       data.set(interleaveHiLo(t.posMpc), at * 6);
       at += t.posMpc.length / 3;
@@ -153,15 +167,14 @@ export function createMissionTrailRenderer(
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(vertexBuffer, 0, data);
+    return tracks;
   }
 
-  function draw(pass: GPURenderPassEncoder, args: MissionTrailDrawArgs): void {
-    const { trails, vp, camPosMpc, viewportPx, pxPerRad, occluders, depth } = args;
-    if (vertexBuffer === null || trails.length === 0) return;
-
+  function beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void {
+    const { vp, camPosMpc, viewportPx, pxPerRad, occluders, depth } = frame;
+    slot = 0;
     occluderUniforms.write(occluders, depth.frame, viewportPx);
     device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-
     if (bindGroup === null || bindGroup.depthView !== depth.view) {
       bindGroup = {
         depthView: depth.view,
@@ -176,39 +189,58 @@ export function createMissionTrailRenderer(
         }),
       };
     }
-    const { hi: camHi, lo: camLo } = splitF64HiLo(Float64Array.from(camPosMpc));
-
-    pass.setPipeline(pipeline);
-    let slot = 0;
-    for (const trail of trails) {
-      const first = firstVertex.get(trail.id);
-      if (first === undefined || slot >= MAX_TRAILS) continue;
-      const o = TRAIL_UNIFORM_OFFSETS;
-      uniformScratch.set(vp, o.viewProj / 4);
-      uniformScratch.set(viewportPx, o.viewportPx / 4);
-      uniformScratch[o.pxPerRad / 4] = pxPerRad;
-      uniformScratch.set(camHi, o.camHi / 4);
-      uniformScratch[o.opacity / 4] = trail.opacity;
-      uniformScratch.set(camLo, o.camLo / 4);
-      uniformScratch[o.widthPx / 4] = trail.widthPx;
-      uniformScratch.set(trail.color, o.color / 4);
-      device.queue.writeBuffer(trailBuffer, slot * SLOT_STRIDE, uniformScratch);
-      pass.setBindGroup(0, bindGroup.group, [slot * SLOT_STRIDE]);
-
-      if (trail.segmentCount > 0) {
-        pass.setVertexBuffer(0, vertexBuffer, first * TRAIL_VERTEX_STRIDE);
-        pass.setVertexBuffer(1, vertexBuffer, (first + 1) * TRAIL_VERTEX_STRIDE);
-        pass.draw(6, trail.segmentCount);
-      }
-      if (trail.headPosMpc !== null) {
-        headScratch.set(interleaveHiLo(trail.headPosMpc));
-        device.queue.writeBuffer(headBuffer, slot * HEAD_BYTES, headScratch);
-        pass.setVertexBuffer(0, headBuffer, slot * HEAD_BYTES);
-        pass.setVertexBuffer(1, headBuffer, slot * HEAD_BYTES + TRAIL_VERTEX_STRIDE);
-        pass.draw(6, 1);
-      }
-      slot++;
+    // The per-view uniform fields are filled once here; drawTrail overwrites
+    // only opacity / width / colour.
+    const o = TRAIL_UNIFORM_OFFSETS;
+    writeHiLoVertex(camPosMpc, 0, eyeScratch, 0);
+    uniformScratch.set(vp, o.viewProj / 4);
+    uniformScratch[o.viewportPx / 4] = viewportPx[0];
+    uniformScratch[o.viewportPx / 4 + 1] = viewportPx[1];
+    uniformScratch[o.pxPerRad / 4] = pxPerRad;
+    for (let k = 0; k < 3; k++) {
+      uniformScratch[o.camHi / 4 + k] = eyeScratch[k]!;
+      uniformScratch[o.camLo / 4 + k] = eyeScratch[3 + k]!;
     }
+    pass.setPipeline(pipeline);
+  }
+
+  function drawTrail(
+    pass: GPURenderPassEncoder,
+    id: string,
+    color: Readonly<Vec3>,
+    opacity: number,
+    widthPx: number,
+    segmentCount: number,
+    tailVertex: number,
+    headMpc: Readonly<Vec3> | null,
+  ): void {
+    const first = firstVertex.get(id);
+    if (vertexBuffer === null || bindGroup === null || first === undefined || slot >= MAX_TRAILS) {
+      return;
+    }
+    const o = TRAIL_UNIFORM_OFFSETS;
+    uniformScratch[o.opacity / 4] = opacity;
+    uniformScratch[o.widthPx / 4] = widthPx;
+    uniformScratch[o.color / 4] = color[0];
+    uniformScratch[o.color / 4 + 1] = color[1];
+    uniformScratch[o.color / 4 + 2] = color[2];
+    device.queue.writeBuffer(trailBuffer, slot * SLOT_STRIDE, uniformScratch);
+    pass.setBindGroup(0, bindGroup.group, [slot * SLOT_STRIDE]);
+
+    if (segmentCount > 0) {
+      pass.setVertexBuffer(0, vertexBuffer, first * TRAIL_VERTEX_STRIDE);
+      pass.setVertexBuffer(1, vertexBuffer, (first + 1) * TRAIL_VERTEX_STRIDE);
+      pass.draw(6, segmentCount);
+    }
+    if (headMpc !== null) {
+      writeHiLoVertex(tracks.get(id)!.posMpc, 3 * tailVertex, headScratch, 0);
+      writeHiLoVertex(headMpc, 0, headScratch, 6);
+      device.queue.writeBuffer(headBuffer, slot * HEAD_BYTES, headScratch);
+      pass.setVertexBuffer(0, headBuffer, slot * HEAD_BYTES);
+      pass.setVertexBuffer(1, headBuffer, slot * HEAD_BYTES + TRAIL_VERTEX_STRIDE);
+      pass.draw(6, 1);
+    }
+    slot++;
   }
 
   function destroy(): void {
@@ -221,8 +253,9 @@ export function createMissionTrailRenderer(
 
   const renderer: MissionTrailRenderer = {
     label: 'missionTrailRenderer',
-    setTracks,
-    draw,
+    ensureTracks,
+    beginFrame,
+    drawTrail,
     destroy,
   };
   renderer satisfies Renderer;

@@ -1,21 +1,18 @@
 /**
  * missionTrailsPass — Voyager-style sampled-craft trails, additive into HDR
  * beside `orbitTrailsPass` (same NEAR0 step, same orbit-trails setting and fade).
- * Vertices are built once per `trajectoryRegistry.version()`; per frame the pass
- * only picks `k`, the vertices at or before the sim clock, and ends the trail on
- * the snapshot position so it welds to the mesh. The vp is rebased about the eye
- * in f64 (as `near0SelectionRingPass` does) and the shader subtracts the eye's
- * hi/lo pair from each hi/lo vertex, which keeps 160 AU inside the 1 km budget.
+ * The renderer builds and uploads vertices once per `trajectoryRegistry.version()`;
+ * per frame the pass only picks `k`, the vertices at or before the sim clock, and
+ * ends the trail on the snapshot position so it welds to the mesh. The vp is
+ * rebased about the eye in f64 (as `near0SelectionRingPass` does) and the shader
+ * subtracts the eye's hi/lo pair from each hi/lo vertex, keeping 160 AU in 1 km.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { MissionTrailDraw } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailDraw';
 import { SAMPLED_BODIES } from '../../../../data/missions/spacecraftBodies';
-import {
-  MISSION_TRAIL_COLOR,
-  MISSION_TRAIL_WIDTH_PX,
-} from '../../../../data/missions/missionTrailStyle';
-import { missionTrailGeometry } from '../../../bodies/missionTrailGeometry';
+import { MISSION_TRAIL_WIDTH_PX } from '../../../../data/missions/missionTrailStyle';
+import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
+import { buildMissionTrails } from '../../../bodies/buildMissionTrails';
 import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
 import { trailVertexCount } from '../../../../utils/orbit/trailVertexCount';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -45,30 +42,13 @@ export const missionTrailsPass: ContentPass = {
     const renderer = state.gpu.missionTrailRenderer;
     if (renderer === null) return;
     const states = sceneBodyStates(state, ctx);
+    const tracks = renderer.ensureTracks(
+      trajectoryRegistry.version(),
+      states.get('sun')!.positionMpc,
+      buildMissionTrails,
+    );
 
-    const trails = missionTrailGeometry(renderer, states.get('sun')!.positionMpc);
-    const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
-    const draws: MissionTrailDraw[] = [];
-    for (const { id } of SAMPLED_BODIES) {
-      const trail = trails.get(id);
-      if (trail === undefined || !spacecraftPresent(id, ctx.snapshot.simDays)) continue;
-      const k = trailVertexCount(trail.tDays, ctx.snapshot.simDays);
-      if (k === 0) continue;
-      const tail = trail.posMpc.subarray(3 * (k - 1), 3 * k);
-      const craft = states.get(id)!.positionMpc;
-      const atTail = tail[0] === craft[0] && tail[1] === craft[1] && tail[2] === craft[2];
-      draws.push({
-        id,
-        color: MISSION_TRAIL_COLOR[id]!,
-        opacity: layerOpacity,
-        widthPx: MISSION_TRAIL_WIDTH_PX,
-        segmentCount: k - 1,
-        headPosMpc: atTail ? null : Float64Array.of(tail[0]!, tail[1]!, tail[2]!, ...craft),
-      });
-    }
-
-    renderer.draw(pass, {
-      trails: draws,
+    renderer.beginFrame(pass, {
       vp: near0OverlayVpF32(rebaseViewProj(view.slab.vp, view.camPos)),
       camPosMpc: view.camPos,
       viewportPx: view.viewportPx,
@@ -76,5 +56,24 @@ export const missionTrailsPass: ContentPass = {
       occluders: sceneOccluderSpheres(state, ctx),
       depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
     });
+    const layerOpacity = resolveLayerOpacity(state, ctx, { kind: 'orbitTrails' });
+    for (const { id, trailColor } of SAMPLED_BODIES) {
+      const track = tracks.get(id);
+      if (track === undefined || !spacecraftPresent(id, ctx.snapshot.simDays)) continue;
+      const k = trailVertexCount(track.tDays, ctx.snapshot.simDays);
+      if (k === 0) continue;
+      // Past the last vertex the craft is held on it: no head segment to draw.
+      const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
+      renderer.drawTrail(
+        pass,
+        id,
+        trailColor,
+        layerOpacity,
+        MISSION_TRAIL_WIDTH_PX,
+        k - 1,
+        k - 1,
+        head,
+      );
+    }
   },
 };

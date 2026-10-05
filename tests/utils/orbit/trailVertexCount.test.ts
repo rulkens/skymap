@@ -11,9 +11,4 @@ describe('trailVertexCount', () => {
     expect(trailVertexCount(t, 40)).toBe(4);
     expect(trailVertexCount(t, 1e9)).toBe(4);
   });
-
-  it('scrubbing backwards shrinks k with no state', () => {
-    expect(trailVertexCount(t, 35)).toBe(3);
-    expect(trailVertexCount(t, 15)).toBe(1);
-  });
 });

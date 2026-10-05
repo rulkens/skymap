@@ -1,15 +1,35 @@
 /**
  * MissionTrailRenderer — additive screen-space trails for sampled spacecraft,
- * into the depthless HDR target. Geometry is uploaded once per ephemeris load
- * (`setTracks`); each frame only chooses how much of it to draw.
+ * into the depthless HDR target. Geometry is built and uploaded once per
+ * ephemeris version (`ensureTracks`); each frame is `beginFrame` then one
+ * `drawTrail` per craft, which take positional arguments so nothing allocates.
  */
 
+import type { Vec3 } from '../../math/Vec3';
 import type { Renderer } from '../Renderer';
-import type { MissionTrailDrawArgs } from './MissionTrailDrawArgs';
+import type { MissionTrailFrame } from './MissionTrailFrame';
 import type { MissionTrailGeometry } from './MissionTrailGeometry';
 
 export type MissionTrailRenderer = Renderer & {
-  /** Replace every craft's uploaded vertices. */
-  setTracks(tracks: readonly MissionTrailGeometry[]): void;
-  draw(pass: GPURenderPassEncoder, args: MissionTrailDrawArgs): void;
+  /** The uploaded tracks, rebuilt via `build(sunMpc)` only when `version` differs. */
+  ensureTracks(
+    version: number,
+    sunMpc: Readonly<Vec3>,
+    build: (sunMpc: Readonly<Vec3>) => readonly MissionTrailGeometry[],
+  ): ReadonlyMap<string, MissionTrailGeometry>;
+  beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
+  /**
+   * Draw the first `segmentCount` segments of `id`'s trail, then a head segment
+   * from vertex `tailVertex` to `headMpc` (the craft's own position) when given.
+   */
+  drawTrail(
+    pass: GPURenderPassEncoder,
+    id: string,
+    color: Readonly<Vec3>,
+    opacity: number,
+    widthPx: number,
+    segmentCount: number,
+    tailVertex: number,
+    headMpc: Readonly<Vec3> | null,
+  ): void;
 };

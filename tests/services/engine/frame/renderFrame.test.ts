@@ -575,6 +575,7 @@ function makeInput(
           // stay a pure cosmological-frame trace (like the other body handles).
           atmosphereShellRenderer: null,
           orbitTrailRenderer: null,
+          missionTrailRenderer: null,
           foregroundLabelRenderer: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
