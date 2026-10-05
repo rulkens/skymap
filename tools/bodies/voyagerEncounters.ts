@@ -1,8 +1,7 @@
 /**
- * VOYAGER_ENCOUNTERS — every Voyager flyby we mark. `date` is the published encounter date and
- * only centres the dense Horizons windows (1 min ±2 d, 1 h ±60 d); the closest-approach instant
- * itself is measured from the fetched vectors. `bodyTarget` is a body centre (599, not the
- * system barycentre 5), since the distance is to the body. Titan shares V1's Saturn date.
+ * VOYAGER_ENCOUNTERS — every Voyager flyby we mark. `date` is the published encounter date; it
+ * only centres the fetch windows (1 min ±2 d; 1 h ±60 d Sun-chain, ±120 d DE441 pair), and the
+ * closest-approach instant itself comes from Horizons. Titan shares V1's Saturn date.
  */
 import type { VoyagerEncounter } from './@types/VoyagerEncounter';
 

@@ -18,10 +18,10 @@ import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { hermiteTrackAt } from '../../src/utils/orbit/hermiteTrackAt';
 import { writeSpacecraftTracks } from '../utils/io/writeSpacecraftTracks';
 import { closestApproach } from '../utils/math/closestApproach';
 import { decimateHermiteSamples } from '../utils/math/decimateHermiteSamples';
-import { hermitePositionKm } from '../utils/math/hermitePositionKm';
 import { HORIZONS_BODIES } from './horizonsBodies';
 import { blendEncounterToDE441 } from './blendEncounterToDE441';
 import { VOYAGER_ENCOUNTERS } from './voyagerEncounters';
@@ -79,29 +79,16 @@ function gather(dense: SampledTrack, kept: Uint32Array): SampledTrack {
   return out;
 }
 
-/** Worst distance from any raw sample to the Hermite through the kept ones, as the app evaluates it. */
+/** Worst distance from any raw sample to the track the app will evaluate, via its own `hermiteTrackAt`. */
 function worstErrorKm(dense: SampledTrack, kept: Uint32Array): number {
   const thin = gather(dense, kept);
   let worst = 0;
-  for (let seg = 0; seg < kept.length - 1; seg++) {
-    for (let i = kept[seg]! + 1; i < kept[seg + 1]!; i++) {
-      const [x, y, z] = hermitePositionKm(
-        thin.tDays,
-        thin.posKm,
-        thin.velKmS,
-        seg,
-        seg + 1,
-        dense.tDays[i]!,
-      );
-      worst = Math.max(
-        worst,
-        Math.hypot(
-          x - dense.posKm[3 * i]!,
-          y - dense.posKm[3 * i + 1]!,
-          z - dense.posKm[3 * i + 2]!,
-        ),
-      );
-    }
+  for (let i = 0; i < dense.tDays.length; i++) {
+    const [x, y, z] = hermiteTrackAt(thin, dense.tDays[i]!);
+    worst = Math.max(
+      worst,
+      Math.hypot(x - dense.posKm[3 * i]!, y - dense.posKm[3 * i + 1]!, z - dense.posKm[3 * i + 2]!),
+    );
   }
   return worst;
 }
@@ -181,6 +168,7 @@ async function main(): Promise<void> {
     );
   }
 
+  events.sort((a, b) => a.iso.localeCompare(b.iso));
   const bin = writeSpacecraftTracks(tracks);
   writeFileSync(resolve(TRACKS_PATH), bin);
   console.log(`wrote ${TRACKS_PATH}: ${bin.length} bytes`);
@@ -189,7 +177,7 @@ async function main(): Promise<void> {
     '// src/data/missions/missionEvents.generated.ts\n' +
     '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
     '// Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks\n' +
-    '// Source of truth:  data/raw/horizons/500@10/ (JPL Horizons); heliopause dates are cited literals\n' +
+    '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch and heliopause instants are cited literals\n' +
     "import type { MissionEvent } from '../../@types/missions/MissionEvent';\n\n" +
     `export const MISSION_EVENTS: readonly MissionEvent[] = ${JSON.stringify(events)};\n`;
   const outPath = resolve(EVENTS_PATH);

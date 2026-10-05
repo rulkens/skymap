@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { decimateHermiteSamples } from '../../../../tools/utils/math/decimateHermiteSamples';
-import { hermitePositionKm } from '../../../../tools/utils/math/hermitePositionKm';
+import type { SampledTrack } from '../../../../src/@types/scene/SampledTrack';
+import { hermiteTrackAt } from '../../../../src/utils/orbit/hermiteTrackAt';
 
 const V = 15; // km/s
 const D = 6000; // km, closest-approach distance
@@ -30,22 +31,23 @@ describe('decimateHermiteSamples', () => {
     expect(kept[0]).toBe(0);
     expect(kept.at(-1)).toBe(N - 1);
 
-    const thinT = Float64Array.from(kept, (i) => t[i]!);
-    const thinPos = Float64Array.from(
-      kept.flatMap((i) => [pos[3 * i]!, pos[3 * i + 1]!, pos[3 * i + 2]!]),
-    );
-    const thinVel = Float32Array.from(
-      kept.flatMap((i) => [vel[3 * i]!, vel[3 * i + 1]!, vel[3 * i + 2]!]),
-    );
+    const thin: SampledTrack = {
+      id: 'synthetic',
+      tDays: Float64Array.from(kept, (i) => t[i]!),
+      posKm: Float64Array.from(
+        kept.flatMap((i) => [pos[3 * i]!, pos[3 * i + 1]!, pos[3 * i + 2]!]),
+      ),
+      velKmS: Float32Array.from(
+        kept.flatMap((i) => [vel[3 * i]!, vel[3 * i + 1]!, vel[3 * i + 2]!]),
+      ),
+    };
     let worst = 0;
-    for (let seg = 0; seg < kept.length - 1; seg++) {
-      for (let i = kept[seg]! + 1; i < kept[seg + 1]!; i++) {
-        const [x, y, z] = hermitePositionKm(thinT, thinPos, thinVel, seg, seg + 1, t[i]!);
-        worst = Math.max(
-          worst,
-          Math.hypot(x - pos[3 * i]!, y - pos[3 * i + 1]!, z - pos[3 * i + 2]!),
-        );
-      }
+    for (let i = 0; i < N; i++) {
+      const [x, y, z] = hermiteTrackAt(thin, t[i]!);
+      worst = Math.max(
+        worst,
+        Math.hypot(x - pos[3 * i]!, y - pos[3 * i + 1]!, z - pos[3 * i + 2]!),
+      );
     }
     expect(worst).toBeLessThanOrEqual(tolKm);
   });

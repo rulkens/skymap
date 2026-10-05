@@ -9,6 +9,10 @@ const align = (n: number, to: number): number => Math.ceil(n / to) * to;
 
 export function parseSpacecraftTracks(buf: ArrayBuffer): SampledTrack[] {
   const view = new DataView(buf);
+  const need = (end: number): void => {
+    if (end > buf.byteLength) throw new Error('parseSpacecraftTracks: truncated');
+  };
+  need(12);
   const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
   if (magic !== 'SCTK') throw new Error(`parseSpacecraftTracks: bad magic "${magic}"`);
   const version = view.getUint32(4, true);
@@ -18,7 +22,9 @@ export function parseSpacecraftTracks(buf: ArrayBuffer): SampledTrack[] {
   const table: { id: string; n: number }[] = [];
   let at = 12;
   for (let k = 0; k < count; k++) {
+    need(at + 4);
     const idLen = view.getUint32(at, true);
+    need(at + 4 + align(idLen, 4) + 4);
     const id = new TextDecoder().decode(new Uint8Array(buf, at + 4, idLen));
     at += 4 + align(idLen, 4);
     table.push({ id, n: view.getUint32(at, true) });
@@ -26,6 +32,7 @@ export function parseSpacecraftTracks(buf: ArrayBuffer): SampledTrack[] {
   }
 
   at = align(at, 8);
+  need(table.reduce((end, { n }) => end + align(44 * n, 8), at));
   return table.map(({ id, n }) => {
     const track: SampledTrack = {
       id,

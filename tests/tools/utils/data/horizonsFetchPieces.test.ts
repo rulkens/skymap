@@ -28,4 +28,11 @@ describe('horizonsFetchPieces', () => {
       expect((ms(b) - ms(a)) / (80 * 60_000)).toBeLessThanOrEqual(89_000);
     });
   });
+
+  it('keeps a minute-precision start and refuses one that would cross a chunk', () => {
+    expect(horizonsFetchPieces(['1977-09-05T13:59', '1977-09-06'], 1440)).toEqual([
+      ['1977-09-05 13:59', '1977-09-06 00:00'],
+    ]);
+    expect(() => horizonsFetchPieces(['1977-09-05T13:59', '2099-12-31'], 1440)).toThrow(/timed/);
+  });
 });

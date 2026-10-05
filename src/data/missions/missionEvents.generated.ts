@@ -1,10 +1,11 @@
 // src/data/missions/missionEvents.generated.ts
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
 // Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks
-// Source of truth:  data/raw/horizons/500@10/ (JPL Horizons); heliopause dates are cited literals
+// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch and heliopause instants are cited literals
 import type { MissionEvent } from '../../@types/missions/MissionEvent';
 
 export const MISSION_EVENTS: readonly MissionEvent[] = [
+  { bodyId: 'voyager2', kind: 'launch', iso: '1977-08-20T14:29:00.000Z', label: 'Launch' },
   { bodyId: 'voyager1', kind: 'launch', iso: '1977-09-05T12:56:00.000Z', label: 'Launch' },
   {
     bodyId: 'voyager1',
@@ -13,10 +14,10 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     label: 'Jupiter closest approach',
   },
   {
-    bodyId: 'voyager1',
+    bodyId: 'voyager2',
     kind: 'flyby',
-    iso: '1980-11-12T23:45:37.581Z',
-    label: 'Saturn closest approach',
+    iso: '1979-07-09T22:29:01.306Z',
+    label: 'Jupiter closest approach',
   },
   {
     bodyId: 'voyager1',
@@ -26,16 +27,9 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
   },
   {
     bodyId: 'voyager1',
-    kind: 'heliopause',
-    iso: '2012-08-25T00:00:00.000Z',
-    label: 'Heliopause crossing',
-  },
-  { bodyId: 'voyager2', kind: 'launch', iso: '1977-08-20T14:29:00.000Z', label: 'Launch' },
-  {
-    bodyId: 'voyager2',
     kind: 'flyby',
-    iso: '1979-07-09T22:29:01.306Z',
-    label: 'Jupiter closest approach',
+    iso: '1980-11-12T23:45:37.581Z',
+    label: 'Saturn closest approach',
   },
   {
     bodyId: 'voyager2',
@@ -54,6 +48,12 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     kind: 'flyby',
     iso: '1989-08-25T03:55:40.084Z',
     label: 'Neptune closest approach',
+  },
+  {
+    bodyId: 'voyager1',
+    kind: 'heliopause',
+    iso: '2012-08-25T00:00:00.000Z',
+    label: 'Heliopause crossing',
   },
   {
     bodyId: 'voyager2',

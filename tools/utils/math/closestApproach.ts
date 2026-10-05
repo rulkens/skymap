@@ -4,10 +4,12 @@
  * through the three squared distances around the smallest one places the minimum between
  * samples: relative motion in a short window is near-straight, so d² is near-quadratic in time.
  */
+import type { TimedPositions } from '../../@types/math/TimedPositions';
 
-type Track = { t: Float64Array; pos: Float64Array };
-
-export function closestApproach(craft: Track, target: Track): { jd: number; distanceKm: number } {
+export function closestApproach(
+  craft: TimedPositions,
+  target: TimedPositions,
+): { jd: number; distanceKm: number } {
   const d2: number[] = [];
   const at: number[] = [];
   let j = 0;

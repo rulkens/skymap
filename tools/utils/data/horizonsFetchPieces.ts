@@ -22,6 +22,9 @@ export function horizonsFetchPieces(
   const spanStop = parseSpanEnd(span[1]);
   const out: [string, string][] = [];
   const firstYear = Math.floor(new Date(spanStart).getUTCFullYear() / CHUNK_YEARS) * CHUNK_YEARS;
+  // Later chunks start at midnight, which would leave an off-midnight start's step grid.
+  if (span[0].length !== 10 && spanStop > Date.UTC(firstYear + CHUNK_YEARS, 0, 1))
+    throw new Error(`horizonsFetchPieces: a timed start must fit one 50-year chunk (${span[0]})`);
   for (let year = firstYear; Date.UTC(year, 0, 1) < spanStop; year += CHUNK_YEARS) {
     const t0 = Math.max(Date.UTC(year, 0, 1), spanStart);
     const t1 = Math.min(Date.UTC(year + CHUNK_YEARS, 0, 1), spanStop);
