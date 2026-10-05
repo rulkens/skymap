@@ -8,6 +8,7 @@ import Classroom from '../components/Classroom.astro';
 import Dome from '../components/Dome.astro';
 import Honesty from '../components/Honesty.astro';
 import Sources from '../components/Sources.astro';
+import Credits from '../components/Credits.astro';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { PLACES } from '../data/places';
 import { heroPoster } from '../utils/heroPoster';
@@ -43,5 +44,6 @@ const factIds = [
   <Honesty />
   <div class="wrap">
     <Sources ids={factIds} />
+    <Credits />
   </div>
 </Base>

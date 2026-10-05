@@ -2,32 +2,42 @@
 import ObjLink from './ObjLink.astro';
 import { HONESTY } from '../data/honesty';
 import { sitePath } from '../utils/sitePath';
+
+// The three words keep one meaning across the site (08, house style).
+const BINS = [
+  { id: 'measured', title: 'Measured', gloss: 'An instrument recorded it.' },
+  { id: 'derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
+  { id: 'drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
+] as const;
 ---
 
 <section class="wrap honest" id="honest">
   <div class="intro">
-    <h2>What is measured, what is drawn</h2>
+    <h2>What is measured, derived and drawn</h2>
     <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
   </div>
-  <div>
-    <h3>Measured</h3>
-    <ul>
-      {HONESTY.measured.map((item) => <li><a href={item.href} rel="noopener">{item.text}</a></li>)}
-    </ul>
-  </div>
-  <div>
-    <h3>Drawn</h3>
-    <ul>
-      {HONESTY.drawn.map((item) => <li><a href={item.href} rel="noopener">{item.text}</a></li>)}
-    </ul>
-  </div>
+  {
+    BINS.map((bin) => (
+      <div>
+        <h3>{bin.title}</h3>
+        <p class="gloss">{bin.gloss}</p>
+        <ul>
+          {HONESTY[bin.id].map((item) => (
+            <li>
+              <a href={item.href}>{item.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
 </section>
 
 <style>
   .honest {
     position: relative;
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 3.75rem;
     padding-block: 6.5rem;
   }
@@ -41,8 +51,18 @@ import { sitePath } from '../utils/sitePath';
     border-top: 1px solid var(--border-divider);
   }
 
+  .intro {
+    grid-column: 1 / -1;
+  }
+
   h2 {
     font-size: clamp(2.125rem, 3.6vw, 3.375rem);
+  }
+
+  .gloss {
+    margin: 0 0 0.75rem;
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
   }
 
   ul {
