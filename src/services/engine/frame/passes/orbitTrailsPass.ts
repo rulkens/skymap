@@ -96,8 +96,8 @@ export const orbitTrailsPass: ContentPass = {
     for (let i = 0; i < limit; i++) {
       const elements = rows[i]!;
       const body = states.get(elements.id)!;
-      // The snapshot's own elements, never a re-propagation: any correction the
-      // snapshot applied to them reaches the trail too. `keplerianEllipse` returns
+      // The snapshot's own elements, never a re-propagation: trail and body
+      // share one conic. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place anchoring below cannot alias a
       // shared scratch across orbits.
       const orbit = body.orbit;

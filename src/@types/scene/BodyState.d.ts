@@ -31,7 +31,6 @@ export type BodyState = {
   readonly positionMpc: Vec3;
   /** Local → equatorial-world rotation (identity when no facing is modelled). */
   readonly orientation: Mat3;
-  /** The elements `deriveBodyStates` positioned this body with at the instant (propagated, plus
-   *  any element-space correction). Absent for anchors and surface sites, which have no orbit. */
+  /** The elements `deriveBodyStates` positioned this body with at the instant. Absent for anchors and surface sites, which have no orbit. */
   readonly orbit?: OrbitalElements;
 };
