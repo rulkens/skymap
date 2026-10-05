@@ -8,6 +8,8 @@
  * Triton and Proteus (centre '500@899', targets '801' and '808'): the same query with
  * TLIST = both span ends, Voyager 2 at Neptune, J2000, 2026-10-05 and 2050-01-01
  * '2415020.5' '2447763.5' '2451545.0' '2461318.5' '2469807.5' '2488069.5'.
+ * Miranda, Ariel, Umbriel, Titania, Oberon (centre '500@799', targets '705' '701' '702' '703' '704'):
+ * the same, with Voyager 2 at Uranus '2446454.5' in place of Neptune '2447763.5'.
  * Fails when an element row or the frame changes without `npm run build-ephemeris-corrections`.
  */
 

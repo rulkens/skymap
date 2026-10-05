@@ -9,13 +9,10 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 // JPL Horizons, position relative to Uranus centre (500@799), ICRF equatorial axes (the scene's
 // world frame), JD 2451545.0 TDB, km. External contract: a pole on the wrong side of the sky
 // (IAU north instead of the angular-momentum pole) runs every orbit backwards and misses by
-// tens of degrees. Mean elements are not osculating, hence the loose bounds.
+// tens of degrees. Mean elements are not osculating, hence the loose bounds. Puck is the only
+// Uranus moon here: Horizons has no ephemeris for it before 1900-01-02, so it has no correction
+// series; the other five are pinned in `ephemerisCorrections.test.ts`.
 const HORIZONS_KM: Record<string, Vec3> = {
-  miranda: [-104329.532, 34868.033, -68865.437],
-  ariel: [175677.936, -19272.292, -72960.037],
-  umbriel: [100010.324, 45083.264, -242317.517],
-  titania: [-63107.002, 128000.323, -411987.194],
-  oberon: [-560569.96, 144960.989, -72810.14],
   puck: [5145.623, 21636.616, -82311.82],
 };
 const MAX_ANGLE_DEG = 4;
