@@ -91,6 +91,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Heliospheric current sheet Layer ("ballerina skirt")** `needs-design` — TimeBar-driven surface of the Sun's magnetic polarity boundary from WSO maps; look and data path proven by a render spike, live meshing and WSO permission open. → [details](backlog/2026-10-05-heliospheric-current-sheet-layer.md)
 - [ ] **Real relief displacement for near-spherical bodies** `needs-design` — `texturedBody` ray-traces an analytic sphere, so nothing displaces; a sibling rasterised path opted into by a `height` texture kind. → [details](backlog/2026-10-03-body-relief-displacement.md)
 - [ ] **Deselecting a volume field never frees its VRAM** `needs-design` — untick fades but keeps the cube resident; polyphorm-2mrs strands 217 MB until reload. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **S-stars are not lensed by Sgr A\*** `needs-design` — never enter the cubemap (capture-pose gate), and at-infinity is wrong for them anyway; analytic finite-distance images prototyped on branch worktree-s-star-analytic-lensing, parked on look (adaptive exposure needed). → [details](backlog/2026-09-03-s-star-analytic-lensing.md)
