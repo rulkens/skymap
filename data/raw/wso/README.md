@@ -6,11 +6,25 @@
 | -------- | --------------------------------------------------------------------------------------------------------- |
 | Source   | Wilcox Solar Observatory (WSO), Stanford University                                                       |
 | Upstream | <http://wso.stanford.edu/synsourcel.html> (maps), <http://wso.stanford.edu/Tilts.html> (rotation starts)  |
-| Licence  | Publicly served by Stanford; licence terms are not stated on the pages used                               |
+| Licence  | No formal licence. WSO Data Use Policy: <http://wso.stanford.edu/DataPolicy.html> (see below) |
 | Fetched  | 2026-10-05                                                                                                |
 | Fetcher  | `npm run fetch-wso`                                                                                       |
 
-Credit "Wilcox Solar Observatory" as the source.
+## Terms of use
+
+WSO publishes a data use policy rather than a licence. It asks three things of anyone using
+the data: notify them, acknowledge the source, and send a copy of resulting reports or papers.
+The policy is written for research use and says nothing either way about redistribution or
+non-research use, so ask J. T. Hoeksema (contact on the policy page) before shipping WSO-derived
+data in the public app.
+
+Acknowledgement wording WSO supplies (<http://wso.stanford.edu/src/ack.html>):
+
+> Wilcox Solar Observatory data used in this study was obtained via the web site
+> http://wso.stanford.edu at 2026:10:05_07:51:58 PDT courtesy of J.T. Hoeksema.
+
+Reference for the coronal (source-surface) synoptic maps: Hoeksema et al., J. Geophys. Res. 88,
+9910 (1983).
 
 ## What is held
 
