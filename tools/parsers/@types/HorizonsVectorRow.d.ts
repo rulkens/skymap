@@ -1,6 +1,7 @@
 /**
- * HorizonsVectorRow — one JPL Horizons state-vector row (VEC_TABLE=1: position only),
- * heliocentric equatorial ICRF in km, time-tagged by its UT Julian date.
+ * HorizonsVectorRow — one JPL Horizons vector row, heliocentric-or-centre-relative equatorial
+ * ICRF in km, time-tagged by its UT Julian date. Velocities (km/s) are present only for a
+ * VEC_TABLE=2 result.
  */
 
 export type HorizonsVectorRow = {
@@ -8,4 +9,7 @@ export type HorizonsVectorRow = {
   readonly xKm: number;
   readonly yKm: number;
   readonly zKm: number;
+  readonly vxKmS?: number;
+  readonly vyKmS?: number;
+  readonly vzKmS?: number;
 };
