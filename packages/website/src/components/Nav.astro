@@ -1,0 +1,108 @@
+---
+import ObjLink from './ObjLink.astro';
+import { appLink } from '../data/appLink';
+import { NAV_ITEMS } from '../data/nav';
+import { sitePath } from '../utils/sitePath';
+
+const home = sitePath('/');
+---
+
+<header class="nav">
+  <a class="mark" href={home}>skymap</a>
+
+  <ul class="links">
+    {
+      NAV_ITEMS.map((item) => (
+        <li>
+          <ObjLink size="small" href={sitePath(item.path)}>
+            {item.label}
+          </ObjLink>
+        </li>
+      ))
+    }
+  </ul>
+
+  <!-- Phone: the same items behind a disclosure; the launch control stays outside it. -->
+  <details class="menu">
+    <summary>Menu</summary>
+    <ul>
+      {
+        NAV_ITEMS.map((item) => (
+          <li>
+            <ObjLink href={sitePath(item.path)}>{item.label}</ObjLink>
+          </li>
+        ))
+      }
+    </ul>
+  </details>
+
+  <ObjLink class="launch" size="small" href={appLink()}>Fly it yourself</ObjLink>
+</header>
+
+<style>
+  .nav {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.875rem;
+    padding: 1.375rem var(--gutter);
+  }
+
+  .mark {
+    margin-right: auto;
+    font: var(--weight-display) 1.75rem / 1 var(--font-family-display);
+    color: var(--color-fg);
+    text-decoration: none;
+  }
+
+  .links,
+  .menu ul {
+    display: flex;
+    gap: 1.875rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .menu {
+    display: none;
+  }
+
+  summary {
+    cursor: pointer;
+    font: var(--weight-display) 1.125rem / 1.1 var(--font-family-display);
+    color: var(--color-fg);
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .nav {
+      gap: 1rem;
+    }
+
+    .links {
+      display: none;
+    }
+
+    .menu {
+      display: block;
+    }
+
+    .menu ul {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 1rem var(--gutter) 1.5rem;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--border-divider);
+    }
+  }
+</style>

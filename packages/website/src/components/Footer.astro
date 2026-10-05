@@ -1,0 +1,38 @@
+---
+import ObjLink from './ObjLink.astro';
+import pkg from '../../../../package.json';
+import { sitePath } from '../utils/sitePath';
+
+// Public repository named in the root package.json; no personal address is published.
+const REPO_URL = 'https://github.com/rulkens/skymap';
+---
+
+<footer class="wrap footer">
+  <p>
+    skymap is made by Alexander Rulkens. We build it in the open and the code is open source.
+    Version {pkg.version}.
+  </p>
+  <ObjLink size="small" href={sitePath('/docs/')}>Docs</ObjLink>
+  <ObjLink size="small" href={sitePath('/docs/credits/')}>Credits</ObjLink>
+  <ObjLink size="small" href={sitePath('/docs/cite/')}>Cite</ObjLink>
+  <ObjLink size="small" href={REPO_URL}>GitHub</ObjLink>
+</footer>
+
+<style>
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.875rem 2.125rem;
+    padding-block: 3rem 5.5rem;
+    border-top: 1px solid var(--border-divider);
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+
+  p {
+    margin: 0 auto 0 0;
+    max-width: none;
+    color: inherit;
+  }
+</style>

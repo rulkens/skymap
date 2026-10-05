@@ -1,0 +1,49 @@
+---
+/* Sources — the page's numbered source list, generated from the fact ids it used. */
+import { fact } from '../data/fact';
+
+type Props = { ids: readonly string[] };
+
+const rows = [...new Set(Astro.props.ids)].map(fact);
+---
+
+{
+  rows.length > 0 && (
+    <section class="sources" aria-labelledby="sources-title">
+      <h2 id="sources-title">Sources</h2>
+      <ol>
+        {rows.map((row) => (
+          <li>
+            {row.text}{' '}
+            <a href={row.source} rel="noopener">
+              {new URL(row.source).hostname}
+            </a>
+            , checked {row.checked}.
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+<style>
+  .sources {
+    padding-block: 3rem;
+    border-top: 1px solid var(--border-divider);
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+
+  h2 {
+    font-size: var(--text-h3);
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  li {
+    padding-block: 0.25rem;
+  }
+</style>

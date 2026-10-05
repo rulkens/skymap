@@ -1,0 +1,145 @@
+/*
+ * site.css — the website's type, spacing and page rules.
+ *
+ * The one cross-package import: the palette and the Cormorant font face are
+ * the app's own tokens, shared by path rather than copied, so a palette
+ * change reaches the site. The tokens file carries no page rules (that is
+ * why it was split out of the app's global.css).
+ *
+ * Nothing lighter than weight 300 is used anywhere: thinner strokes do not
+ * survive a projector or a bright-room phone.
+ */
+@import '../../../../src/styles/tokens.css';
+
+:root {
+  color-scheme: dark;
+
+  --site-text: #dfe6fb;
+  --site-text-muted: #c3cde8;
+  --site-text-dim: #9aa7c9;
+
+  --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --weight-body: 300;
+  --weight-display: 600;
+
+  /* Type scale, read off the accepted prototype. */
+  --text-body: 1.25rem;
+  --text-small: 0.9375rem;
+  --text-lead: 1.375rem;
+  --text-h1: clamp(3rem, 7vw, 6rem);
+  --text-h2: clamp(2.75rem, 5.2vw, 5.25rem);
+  --text-h3: 1.625rem;
+  --leading-body: 1.6;
+  --leading-display: 1;
+  --measure: 44ch;
+  --measure-lead: 52ch;
+
+  /* Spacing and section rhythm. */
+  --gutter: 2.75rem;
+  --wrap-max: 77.5rem;
+  --section-space: 9.375rem;
+  --section-gap: 5rem;
+  --stack: 1.625rem;
+  --nav-height: 4.5rem;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --text-body: 1.125rem;
+    --gutter: 1.25rem;
+    --section-space: 5rem;
+    --section-gap: 3rem;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+  scroll-padding-top: var(--nav-height);
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--site-text);
+  font: var(--weight-body) var(--text-body) / var(--leading-body) var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.45em;
+  font-family: var(--font-family-display);
+  font-weight: var(--weight-display);
+  letter-spacing: -0.015em;
+  line-height: var(--leading-display);
+  color: var(--color-fg);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-h1);
+}
+
+h2 {
+  font-size: var(--text-h2);
+}
+
+h3 {
+  font-size: var(--text-h3);
+  line-height: 1.1;
+}
+
+p {
+  margin: 0 0 var(--stack);
+  max-width: var(--measure);
+  color: var(--site-text-muted);
+}
+
+a {
+  color: var(--color-accent);
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+img {
+  max-width: 100%;
+}
+
+.wrap {
+  max-width: var(--wrap-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: var(--section-space);
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: 0;
+  z-index: 20;
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-bg);
+  border: 1px solid var(--color-accent);
+  transform: translateY(-120%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
