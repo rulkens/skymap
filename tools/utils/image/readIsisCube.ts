@@ -6,7 +6,9 @@
  * than width*height. Every ISIS special pixel (NULL, LRS, LIS, HIS, HRS) is a
  * float at or below -3.4e38, which is how they are told apart from data.
  * The left edge's longitude comes from x = R*(lon - CenterLongitude): the
- * Miranda DEM starts at lon 0 while its mosaic starts at -180.
+ * Miranda DEM starts at lon 0 while its mosaic starts at -180. The top latitude
+ * and pixel scale come from the label too, because a regional cube (Triton) is
+ * not a full globe.
  */
 
 import { readFileSync } from 'node:fs';
@@ -65,5 +67,7 @@ export function readIsisCube(path: string): IsisCubeRaster {
   const radius = Number(text('EquatorialRadius'));
   const leftLonDeg =
     Number(text('CenterLongitude')) + ((Number(text('UpperLeftCornerX')) / radius) * 180) / Math.PI;
-  return { data, width, height, leftLonDeg, equatorialRadiusM: radius };
+  const topLatDeg = ((Number(text('UpperLeftCornerY')) / radius) * 180) / Math.PI;
+  const degPerPixel = ((Number(text('PixelResolution')) / radius) * 180) / Math.PI;
+  return { data, width, height, leftLonDeg, topLatDeg, degPerPixel, equatorialRadiusM: radius };
 }

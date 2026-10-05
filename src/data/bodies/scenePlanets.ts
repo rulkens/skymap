@@ -160,4 +160,23 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     datumRadiusM: 81000,
     albedo: [0.11, 0.11, 0.11],
   }),
+  // Neptunian moon albedos are geometric albedos (NSSDC Neptunian Satellite Fact Sheet).
+  satelliteBody({
+    id: 'triton',
+    label: 'Triton',
+    datumRadiusM: 1353400,
+    albedo: [0.719, 0.719, 0.719],
+  }),
+  satelliteBody({
+    id: 'proteus',
+    label: 'Proteus',
+    datumRadiusM: 210000,
+    albedo: [0.096, 0.096, 0.096],
+  }),
+  satelliteBody({
+    id: 'nereid',
+    label: 'Nereid',
+    datumRadiusM: 170000,
+    albedo: [0.155, 0.155, 0.155],
+  }),
 ];

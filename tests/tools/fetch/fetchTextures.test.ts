@@ -79,6 +79,7 @@ describe('textureSourcesFor', () => {
         'Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
         'Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
         'Enceladus_Cassini_mosaic_global_110m.tif',
+        'Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif',
         // The CICLOPS Saturn-moon maps (Mimas, Tethys, Dione, Rhea, Iapetus).
         'PIA18437.tif',
         'PIA18439.tif',

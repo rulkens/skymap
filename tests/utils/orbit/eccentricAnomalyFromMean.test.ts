@@ -20,6 +20,8 @@ describe('eccentricAnomalyFromMean', () => {
       { m: 1.5, e: 0.05 },
       { m: 3.0, e: 0.5 },
       { m: 5.5, e: 0.5 },
+      { m: 0.05, e: 0.751 }, // Nereid
+      { m: 3.8, e: 0.751 },
     ];
     for (const { m, e } of cases) {
       const eAnom = eccentricAnomalyFromMean(m, e);

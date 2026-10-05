@@ -203,6 +203,24 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     poleRaDeg: 257.43,
     poleDecDeg: -15.1,
   },
+  // Triton's IAU pole swings over 20 degrees (periodic terms of 32 and 22 degrees in α/δ, period
+  // ~680 yr), so a fixed IAU constant is wrong at most dates. The pole here is instead OPPOSITE
+  // Triton's orbit normal at J2000, from the `orbitalElements` row (i 157.3, node 178.1 on the
+  // Laplace pole): Triton is retrograde and its IAU north pole is the one on the invariable
+  // plane's north side, so the spin axis is the orbit normal and the north pole is its antipode.
+  // The WGCCRE 2015 formula at J2000 gives RA 298.451, Dec 20.302, 0.13 degrees away. Fixed in time.
+  {
+    kind: 'tidallyLocked',
+    id: 'triton',
+    poleRaDeg: 298.47,
+    poleDecDeg: 20.427,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'proteus',
+    poleRaDeg: 299.27,
+    poleDecDeg: 42.91,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.

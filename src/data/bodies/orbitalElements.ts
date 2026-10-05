@@ -55,6 +55,9 @@ export const MESH_BODY_PERIOD_DAYS = periodDaysFromSemiMajorKm(MESH_BODY_SEMI_MA
 const PETUNIA_TRAIL_OFFSET_DEG =
   (40 / (2 * Math.PI * MESH_BODY_SEMI_MAJOR_KM * SCALE_UNITS.KM_TO_M)) * 360;
 
+// Neptune's J2 advances a retrograde node at 3/2 J2 (R/a)^2 n |cos i| = 0.514 deg/yr for Triton.
+const TRITON_NODE_ADVANCE_PERIOD_YEARS = 700;
+
 export function elementsById(id: string): OrbitalElements {
   return findByIdOrThrow(ORBITAL_ELEMENTS, id, 'orbitalElements');
 }
@@ -685,6 +688,80 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleRaDeg: 77.311,
     poleDecDeg: 15.175,
     color: SAT_ICE,
+  }),
+
+  // Neptune's moons. JPL sats/elem (epoch 2000-01-01.5 TDB, NEP097) for Triton and Proteus, each
+  // on its own Laplace plane; Nereid (NEP105) is on the ecliptic at 2020-01-01.0 and is moved back
+  // to J2000 by hand below, because `satellite()` assumes J2000.
+  {
+    // Triton: JPL a=354800 e=0.000 ω=0.0 M=63.0 i=157.3 node=178.1 P=5.876994 Papsis=0.000
+    // Pnode=340.379; pole RA=299.8 Dec=43.1. RETROGRADE (i > 90): the plane math needs no special
+    // case. Two columns are NOT used as printed. `moonRatesFromPeriods` regresses every node, but a
+    // retrograde orbit's node ADVANCES under Neptune's J2 (about 360/700 yr), and with the printed
+    // P and Pnode Triton drifts 15 deg from Horizons by 2026 and 46 deg by 1900. A fit against
+    // Horizons at 1900, 1989, 2000, 2026, 2050 and 2100 puts the mean-anomaly period at 5.87672 d
+    // (the sidereal period, 5.876854 d, minus the node advance) and the node at +0.51 deg/yr, with
+    // The node rate is set on the row because the maker cannot advance one. M and node are also
+    // refitted: the NEP097 table prints M=63.0 and node=178.1, but Horizons (nep098) sits a constant
+    // 5.26 and 1.33 deg away from them. Fitted to Horizons over J2000 +-200 d, the row is one
+    // consistent fit that stays within 0.55 deg of Horizons at 1900, 1989, 2000, 2026, 2050 and 2100.
+    ...satellite({
+      id: 'triton',
+      focusId: 'neptune',
+      semiMajorKm: 354800,
+      eccentricity: 0.0,
+      inclinationDeg: 157.3,
+      ascendingNodeDeg: 176.77,
+      argPeriapsisDeg: 0.0,
+      meanAnomalyDeg: 57.74,
+      periodDays: 5.87672,
+      apsidalPrecessionYears: 0.0,
+      nodalPrecessionYears: 0.0,
+      poleRaDeg: 299.8,
+      poleDecDeg: 43.1,
+      color: SAT_ICE,
+    }),
+    ascendingNodeRateRadPerCty: (2 * Math.PI * 100) / TRITON_NODE_ADVANCE_PERIOD_YEARS,
+  },
+  satellite({
+    // Proteus: a=117600 e=0.000 ω=0.0 M=276.8 i=0.0 node=0.0 P=1.122315
+    // Papsis=0.000 Pnode=0.000; pole RA=299.8 Dec=42.6. Prograde. M is refitted to 273.81: Horizons
+    // (nep098) sits a constant 2.99 deg from the NEP097 table, leaving under 0.75 deg at 1989 to 2026.
+    id: 'proteus',
+    focusId: 'neptune',
+    semiMajorKm: 117600,
+    eccentricity: 0.0,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 273.81,
+    periodDays: 1.122315,
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 299.8,
+    poleDecDeg: 42.6,
+    color: SAT_ROCK,
+  }),
+  satellite({
+    // Nereid (NEP105), JPL ecliptic frame, epoch 2020-01-01.0: a=5513900 e=0.751 ω=296.8 M=318.5
+    // i=5.1 node=319.5 P=360.133039 Papsis=7990.433 Pnode=9426.334. Moved back 7304.5 d
+    // (19.9986 yr) to J2000: M 318.5 - 0.99963058 deg/d * 7304.5 = 216.698; ω 296.8 - 0.901 =
+    // 295.899; node 319.5 + 0.764 = 320.264 (node regresses). The ecliptic is the plane of the
+    // ecliptic pole (RA 270, Dec 66.5607), whose node reference is the vernal equinox.
+    id: 'nereid',
+    focusId: 'neptune',
+    semiMajorKm: 5513900,
+    eccentricity: 0.751,
+    inclinationDeg: 5.1,
+    ascendingNodeDeg: 320.264,
+    argPeriapsisDeg: 295.899,
+    meanAnomalyDeg: 216.698,
+    periodDays: 360.133039,
+    apsidalPrecessionYears: 7990.433,
+    nodalPrecessionYears: 9426.334,
+    poleRaDeg: 270,
+    poleDecDeg: 66.5607,
+    color: SAT_ROCK,
   }),
 
   // Charon comes from a different page than every satellite() row above: JPL

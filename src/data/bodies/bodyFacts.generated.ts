@@ -388,6 +388,42 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       "Puck is a small, dark, heavily cratered moon of Uranus that circles just outside the planet's rings. It was found in Voyager 2 images in 1985, and is the largest of the inner moons.",
   },
+  triton: {
+    mass: '2.14 × 10²² kg',
+    gravity: '0.08 g',
+    dayLength: 'Tidally locked',
+    yearLength: '5.9 Earth days (retrograde)',
+    distance: '354,800 km',
+    parent: 'Neptune',
+    atmosphere: 'Very thin nitrogen',
+    wikiTitle: 'Triton_(moon)',
+    description:
+      'William Lassell found Triton on 10 October 1846, seventeen days after Neptune itself was discovered. It is the only large moon that circles its planet backwards, which suggests Neptune captured it from the Kuiper belt. With a surface near 38 kelvin it is one of the coldest places Voyager 2 visited, and in 1989 the probe saw dark plumes rising from its bright southern ice cap.',
+  },
+  proteus: {
+    mass: '5.0 × 10¹⁹ kg',
+    gravity: '0.008 g',
+    dayLength: 'Tidally locked',
+    yearLength: '1.1 Earth days',
+    distance: '117,600 km',
+    parent: 'Neptune',
+    atmosphere: 'None',
+    wikiTitle: 'Proteus_(moon)',
+    description:
+      'Proteus is the second-largest moon of Neptune, about 220 by 208 by 202 kilometres, and was first seen in Voyager 2 images in 1989. It is one of the darkest bodies in the Solar System, reflecting only about ten percent of the light that falls on it, and it is about as large as an irregular lump of rock and ice can be before its own gravity would pull it round.',
+  },
+  nereid: {
+    mass: '3.0 × 10¹⁹ kg',
+    gravity: '0.007 g',
+    dayLength: 'About 11.6 hours',
+    yearLength: '360 Earth days',
+    distance: '5.5 million km',
+    parent: 'Neptune',
+    atmosphere: 'None',
+    wikiTitle: 'Nereid_(moon)',
+    description:
+      'Gerard Kuiper discovered Nereid in 1949. It is about 340 kilometres across and follows one of the most eccentric orbits of any moon in the Solar System, swinging from about 1.4 million kilometres from Neptune out to nearly 10 million kilometres once every 360 days. That orbit suggests it was flung outward when Triton was captured.',
+  },
   charon: {
     mass: '1.59 × 10²¹ kg',
     gravity: '0.029 g',

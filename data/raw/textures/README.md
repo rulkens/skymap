@@ -229,6 +229,27 @@ directly). Full pull only — no dev variant. Base:
 | Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
 | Enceladus | `Enceladus_Cassini_mosaic_global_110m.tif`              | 14401×7201 | gray  | tinted + lifted in build (relief-shading mosaic, no albedo; blurred wedge NW and smeared N pole acceptable) |
+| Triton   | `Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif`          | 14138×7069 | RGB   | northern 39% is pure black (polar night): painted with the mean non-black colour at source resolution (`fillBlack`); colours otherwise untouched |
+
+Triton is Paul Schenk's 2014 Voyager 2 colour mosaic (PIA18668, Lunar and Planetary
+Institute), 600 m/px, east-positive longitude with 0 at the centre column, as
+distributed by USGS (300 MB). 38.6% of its pixels are exactly (0, 0, 0): the
+northern hemisphere Voyager 2 never saw lit. The build replaces them with the mean
+of the other pixels (about 153, 159, 134) before resizing, so no dark fringe is
+smeared into the boundary.
+
+### Schenk 2021 Triton topographic map (cite Schenk et al. 2021, Remote Sensing 13, 3476)
+
+`schenk-neptunian-satellites/tndem-Thr-cyl_TA_Tds91.cub` (70 MB), from the USRA
+Houston Repository item "Topographic map of Triton from shape-from-shading
+information" (`https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94`),
+a manual browser download. Cite Schenk, P., et al. (2021), "Triton: Topography and
+Geology of a Probable Ocean World with Comparison to Pluto and Charon", _Remote
+Sensing_ 13, 3476; no licence is stated, so it is not public domain. Same ISIS layout
+as the Uranian cubes, but REGIONAL: 6493x2636 px at 600 m, lon -70..95, lat -21..46,
+heights -1.45..1.48 km, half the pixels NULL. The build places it into a whole-globe
+grid from the label's `UpperLeftCornerY` and `PixelResolution` before binning, and
+bakes the normal map at 8192 px (1.04 km per texel, no upsampling of the 600 m data).
 
 ## NASA Photojournal — Saturn mid-sized moons (public domain; credit "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute")
 
