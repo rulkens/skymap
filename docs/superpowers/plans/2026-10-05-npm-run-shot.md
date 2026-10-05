@@ -206,9 +206,9 @@ report a timeout, an error, and page errors on stderr; after the first booted pa
 `warnIfWrongCheckout`. Close the browser and stop a spawned server in `finally`. Exit code 1 if any
 outcome timed out, errored, or has no path; page errors alone do not change it.
 
-- [ ] No unit test for `shootLink` or `shot.ts`: both are Playwright orchestration over tested helpers.
-- [ ] Implement. `npm run typecheck` passes.
-- [ ] Smoke against a running dev server (the controller supplies its URL): one body link writes a
+- [x] No unit test for `shootLink` or `shot.ts`: both are Playwright orchestration over tested helpers.
+- [x] Implement. `npm run typecheck` passes.
+- [x] Smoke against a running dev server (the controller supplies its URL): one body link writes a
       3200×1800 PNG and prints one absolute path on stdout. Commit.
 
 ### Task 6: Docs and convention
