@@ -65,6 +65,8 @@ Required behaviour beyond the prototype: the poster is the first paint and the L
 - **Science** (`/science/`): data sources at a glance, measured versus modelled, known simplifications, how to cite, links into the docs.
 - **Docs** (`/docs/`): Guide (every feature, by task) · Reference (keys, URL parameters, settings, object lists) · Data (every source: what it is, licence, attribution text, upstream link, where it enters the pipeline) · Rendering (the frame, techniques, precision, performance) · Science (models and their references) · Known simplifications · Roadmap · Credits · Cite. The page tree is fixed from 09's proposed site map; 10 supplies the roadmap and tells the tree where to leave room.
 
+Screenshots: every guide page shows the real app. Each image is a row in a shot manifest `{ id, deep link, caption, alt }` and is produced by `npm run shot` against a dev server with real data, so the whole set regenerates with one command when the app changes. No hand-captured or mocked images; a guide page whose feature cannot be reached by a deep link gets its shot scripted through the same tool or says so in the ledger.
+
 Cross-linking rule: every feature mention links to its guide page, every dataset mention to its data page, every technique to its rendering or science page, and every one of those links out to the primary source. Landing pages link down into docs; docs pages link back up to the relevant landing page and across to each other. The internal link check is the enforcement.
 
 ## Verification
