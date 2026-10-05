@@ -17,13 +17,13 @@ import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { SceneShot } from '../../@types/capture/SceneShot';
-import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
+import type { CaptureOutcome } from '../../@types/capture/CaptureOutcome';
 
 export async function captureScene(
   browser: Browser,
   base: string,
   shot: SceneShot,
-): Promise<ShotOutcome> {
+): Promise<CaptureOutcome> {
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
