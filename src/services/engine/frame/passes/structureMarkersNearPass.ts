@@ -1,5 +1,5 @@
 /**
- * structureMarkersNearPass: the NEAR0-slab twin of `structureMarkersPass`, for
+ * structureMarkersNearPass: the NEAR0-slab twin of `structureMarkersCosmoPass`, for
  * categories whose registry `slab` is 'near0'. Gating, upload and pick
  * rationale live there; this file differs only in slab, renderer and bands.
  */
@@ -21,7 +21,7 @@ export const structureMarkersNearPass: ContentPass = {
     return ctx.snapshot.plans.get(structureMarkersPlanner, ctx).length > 0;
   },
 
-  // Pick gates on the last drawn instances, as in `structureMarkersPass`.
+  // Pick gates on the last drawn instances, as in `structureMarkersCosmoPass`.
   pickEnabled(state, ctx, _view) {
     if (state.gpu.structureMarkerNearRenderer === null) return false;
     if (state.gpu.structureMarkerNearRenderer.markerCount() === 0) return false;

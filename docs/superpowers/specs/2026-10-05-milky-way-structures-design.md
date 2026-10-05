@@ -71,9 +71,9 @@ With the joints below in place, the feature is four source codes, four registry 
 
 | Touchpoint | Today | Verdict | Joint |
 |---|---|---|---|
-| Marker depth slab | `structure-markers` is one pass on the COSMO roster (`frameSections.ts:125`); COSMO's near plane is 10 kpc (`slabs.ts:113`); a pass sits on one slab only (`checkFrameOrder.ts:159`) | bolt-on | P1 |
+| Marker depth slab | `structure-markers-cosmo` is one pass on the COSMO roster (`frameSections.ts:125`); COSMO's near plane is 10 kpc (`slabs.ts:113`); a pass sits on one slab only (`checkFrameOrder.ts:159`) | bolt-on | P1 |
 | Label depth slab | every structure label goes to the COSMO director (`engine.ts:326`) | bolt-on | P2 |
-| Visibility band | `surveyDeepZoom` hard-coded for all structures (`structureMarkersPass.ts:28`, `produceStructureLabels.ts:76`) | bolt-on | P3 |
+| Visibility band | `surveyDeepZoom` hard-coded for all structures (`structureMarkersCosmoPass.ts:28`, `produceStructureLabels.ts:76`) | bolt-on | P3 |
 | Near-object guards | fade to zero within 1 kpc of the anchor (`produceStructureMarkers.ts:92`, `produceStructureLabels.ts:145`) | bolt-on | P4 |
 | Focus distance | clamped to ≥ 0.1 Mpc (`structureFocusDistance.ts:59`) | bolt-on | P5 |
 | Galaxy membership | focus dimming is a four-way `\|\|` (`structureFocusSubsystem.ts:80`); the count renders for any structure (`galaxyCatalog/frame.ts:68`) | bolt-on, second special case | P6 |

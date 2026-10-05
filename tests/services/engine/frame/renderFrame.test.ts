@@ -559,7 +559,7 @@ function makeInput(
           // clipPathDebugPass.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
-          structureMarkerRenderer: null,
+          structureMarkerCosmoRenderer: null,
           // Near-field handles null → the body layers and
           // foregroundLabelsPass all report enabled=false, so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and

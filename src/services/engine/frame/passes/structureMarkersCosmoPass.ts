@@ -11,11 +11,11 @@ import { anyFadeBandVisible } from '../../../../utils/math/anyFadeBandVisible';
 import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from '../../presentation/structureVisibleBands';
 import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
 
-export const structureMarkersPass: ContentPass = {
-  name: 'structure-markers',
+export const structureMarkersCosmoPass: ContentPass = {
+  name: 'structure-markers-cosmo',
 
   enabled(state, ctx, _view) {
-    if (state.gpu.structureMarkerRenderer === null) return false;
+    if (state.gpu.structureMarkerCosmoRenderer === null) return false;
     // The PLANNED list, never the renderer's marker count: `draw` is what
     // uploads the instances, and this gate decides whether `draw` runs.
     if (ctx.snapshot.plans.get(structureMarkersPlanner, ctx).length === 0) return false;
@@ -32,8 +32,8 @@ export const structureMarkersPass: ContentPass = {
   // frame uploaded — exactly what its pipeline would rasterize. Invisible ⇒
   // unpickable still holds: the band clause is the one `enabled` applies.
   pickEnabled(state, ctx, _view) {
-    if (state.gpu.structureMarkerRenderer === null) return false;
-    if (state.gpu.structureMarkerRenderer.markerCount() === 0) return false;
+    if (state.gpu.structureMarkerCosmoRenderer === null) return false;
+    if (state.gpu.structureMarkerCosmoRenderer.markerCount() === 0) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB.cosmo, camDistMpc);
   },
@@ -45,13 +45,13 @@ export const structureMarkersPass: ContentPass = {
     // Upload THIS view's planned markers before the draw — one instance buffer
     // is correct only because a `perView` section is its own submit
     // (`renderFrame`'s view-identity batching).
-    state.gpu.structureMarkerRenderer!.setMarkers(
+    state.gpu.structureMarkerCosmoRenderer!.setMarkers(
       ctx.snapshot.plans.get(structureMarkersPlanner, ctx),
       view.camPos,
     );
     // No FadeRegistry handle: the renderer binds a real fade group at @group(1)
     // anyway, so the BGL matches what the other HDR layers bind at that slot.
-    state.gpu.structureMarkerRenderer!.draw(
+    state.gpu.structureMarkerCosmoRenderer!.draw(
       pass,
       // The renderer rebases this on the eye it packed; pick reuses those
       // instances through the same rebase, so draw and pick cannot diverge.
@@ -68,7 +68,7 @@ export const structureMarkersPass: ContentPass = {
     // edges, so they must not claim pick hits there either.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB.cosmo, camDistMpc)) return;
-    state.gpu.structureMarkerRenderer!.pickRing(
+    state.gpu.structureMarkerCosmoRenderer!.pickRing(
       pass,
       view.slab.vp,
       view.viewportPx,

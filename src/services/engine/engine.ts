@@ -182,7 +182,7 @@ export function createEngine(
       foregroundLabelPickRenderer: null,
       debugLineRenderer: null,
       selectionRingRenderer: null,
-      structureMarkerRenderer: null,
+      structureMarkerCosmoRenderer: null,
       structureMarkerNearRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
@@ -325,7 +325,7 @@ export function createEngine(
   // `foregroundLabelDirector` (NEAR0) from the constellations Layer, later in
   // boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
-    id: 'structureLabels',
+    id: 'structureLabelsCosmo',
     produceLabels: (s, c) => produceStructureLabels(s, c, 'cosmo'),
   });
 

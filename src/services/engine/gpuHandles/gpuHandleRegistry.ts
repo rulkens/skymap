@@ -163,7 +163,7 @@ export const GPU_HANDLE_ROWS = [
   },
 
   {
-    key: 'structureMarkerRenderer',
+    key: 'structureMarkerCosmoRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createStructureMarkerRenderer(
         deps.ctx,

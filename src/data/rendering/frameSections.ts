@@ -122,7 +122,7 @@ export const SCENE: FrameSection = {
         'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
         'horizon-shell',
-        'structure-markers',
+        'structure-markers-cosmo',
       ],
     },
     // The survey-star AGGREGATE stream (interior flux-mip glows) into its own

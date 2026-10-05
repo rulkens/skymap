@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { horizonShellPass } from './horizonShellPass';
-import { structureMarkersPass } from './structureMarkersPass';
+import { structureMarkersCosmoPass } from './structureMarkersCosmoPass';
 import { structureMarkersNearPass } from './structureMarkersNearPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
@@ -37,7 +37,7 @@ import { domeResamplePass } from './domeResamplePass';
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   horizonShellPass,
-  structureMarkersPass,
+  structureMarkersCosmoPass,
   structureMarkersNearPass,
   orbitTrailsPass,
   bodyGlintsPass,

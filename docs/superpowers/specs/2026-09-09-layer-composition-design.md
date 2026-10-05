@@ -433,7 +433,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
       'volume-upsample',
       'zone-of-avoidance-upsample',
       'horizon-shell',
-      'structure-markers',
+      'structure-markers-cosmo',
     ],
   },
   { kind: 'render', target: 'star-aggregates', slab: NEAR0, passes: ['star-aggregates'] },

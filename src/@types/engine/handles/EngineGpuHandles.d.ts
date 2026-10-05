@@ -244,7 +244,7 @@ export type EngineGpuHandles = {
    * the renderer's GPU buffers (per-category bind groups + per-instance
    * buffer + corner VBO).
    */
-  structureMarkerRenderer: StructureMarkerRenderer | null;
+  structureMarkerCosmoRenderer: StructureMarkerRenderer | null;
   /** The NEAR0-slab categories' marker renderer; same lifecycle, separate buffers. */
   structureMarkerNearRenderer: StructureMarkerRenderer | null;
   /**

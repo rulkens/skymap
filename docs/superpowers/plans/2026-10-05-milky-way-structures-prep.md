@@ -101,12 +101,12 @@ Seed rows change three fields; nothing else:
 
 ### Task 5 (P3): Visibility band on the style row — `review: yes`
 
-**Files:** `src/services/engine/presentation/structureMarkerStyles.ts`, `src/services/engine/presentation/produceStructureMarkers.ts`, `src/services/engine/presentation/produceStructureLabels.ts`, `src/services/engine/frame/passes/structureMarkersPass.ts`, `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, a new helper under `src/utils/structure/` if the "any category visible" check needs one, and the matching tests
+**Files:** `src/services/engine/presentation/structureMarkerStyles.ts`, `src/services/engine/presentation/produceStructureMarkers.ts`, `src/services/engine/presentation/produceStructureLabels.ts`, `src/services/engine/frame/passes/structureMarkersCosmoPass.ts`, `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, a new helper under `src/utils/structure/` if the "any category visible" check needs one, and the matching tests
 
 **Contract:** the style row type gains `visibleBand`, typed as the element type of `SCALE_FADE_BANDS`. All four rows say `SCALE_FADE_BANDS.surveyDeepZoom`.
 
 - [x] `produceStructureMarkers` multiplies each descriptor's alpha by `fadeBand(style.visibleBand, camDistFromOrigin)`. `produceStructureLabels` replaces its hoisted global read (`:75-77`) with the same per-category factor, and still returns early when every category is at zero.
-- [x] `structureMarkersPass` stops reading `SCALE_FADE_BANDS.surveyDeepZoom` directly in `enabled`, `pickEnabled`, `draw` and `drawPick`. Its gate becomes "at least one category this pass draws has a band above zero at this camera distance".
+- [x] `structureMarkersCosmoPass` stops reading `SCALE_FADE_BANDS.surveyDeepZoom` directly in `enabled`, `pickEnabled`, `draw` and `drawPick`. Its gate becomes "at least one category this pass draws has a band above zero at this camera distance".
 - [x] Trace where the pass-level `surveyFade` scalar goes inside `structureMarkerRenderer.draw` (ring and halo). The per-descriptor factor must reach exactly the same terms. If the halo reads the scalar through a path the descriptor alpha does not feed, stop and report before changing the renderer signature. Once equivalent, remove the scalar parameter.
 - [x] Add the test `marker alpha at a camera distance equals the band value times the unbanded alpha` at three distances: above `fullAt`, mid-band, and below `goneAt` (zero).
 - [x] Commit.
@@ -122,21 +122,21 @@ Seed rows change three fields; nothing else:
 
 ### Task 7 (P7): Camera-relative marker instances — `review: yes`
 
-**Files:** `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, `src/services/gpu/shaders/structureMarker/ring.wesl`, `ringPick.wesl` and the halo shader beside them, `src/services/engine/frame/passes/structureMarkersPass.ts`, `tests/services/gpu/renderers/structureMarker/` tests
+**Files:** `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, `src/services/gpu/shaders/structureMarker/ring.wesl`, `ringPick.wesl` and the halo shader beside them, `src/services/engine/frame/passes/structureMarkersCosmoPass.ts`, `tests/services/gpu/renderers/structureMarker/` tests
 
 Load the `wesl-shaders` skill before editing the shaders.
 
 - [x] `setMarkers(descriptors, camPos)` packs `positionAndRadius.xyz = worldPos − camPos`, subtracted in f64 before the write into the `Float32Array`.
 - [x] The pass hands the renderer a rebased view-projection: `narrowMat4(rebaseViewProj(view.slab.vp, view.camPos))`, the pattern at `src/layers/constellations/passes/constellationsPass.ts:36-43`. `draw` and `pickRing` take that matrix.
 - [x] The shaders use the instance position as eye-relative. Remove the `camPosMpc` uniform tail (`MARKER_UNIFORM_BYTES`, `CAM_POS_FLOAT_OFFSET` at `structureMarkerRenderer.ts:93-100`) if nothing else reads it; if a shader still needs the eye-to-marker distance, it is now `length(position)`.
-- [x] `pickEnabled` reads "the instances the last drawn frame uploaded" (`structureMarkersPass.ts:31-33`). Those are now relative to the drawn frame's camera. Confirm the pick draw uses the same view's rebased matrix, so the pair stays consistent, and say so in the report.
+- [x] `pickEnabled` reads "the instances the last drawn frame uploaded" (`structureMarkersCosmoPass.ts:31-33`). Those are now relative to the drawn frame's camera. Confirm the pick draw uses the same view's rebased matrix, so the pair stays consistent, and say so in the report.
 - [x] Add the test `setMarkers packs positions relative to the camera`: a marker at `[100, 0, 0]` with the camera at `[99.5, 0, 0]` packs `[0.5, 0, 0]`.
 - [x] Run `npm run build` (not only typecheck): shader specifiers are invisible to `tsc`.
 - [x] Commit.
 
 ### Task 8 (P1): `slab` on the registry row; a second marker pass — `review: yes`
 
-**Files:** `src/@types/data/structure/StructureSourceEntry.d.ts`, the four structure rows under `src/data/sources/`, `src/data/structure/structureIdsBySlab.ts` (new), `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, `src/services/engine/frame/passes/structureMarkersPass.ts`, `src/services/engine/frame/passes/structureMarkersNearPass.ts` (new), `src/data/rendering/frameSections.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`, `src/services/engine/gpuHandles/gpuHandleRegistry.ts`, `src/services/engine/engine.ts`, `src/services/engine/helpers/resolveStructureFromPick.ts` (read; change only if it names the renderer), and tests
+**Files:** `src/@types/data/structure/StructureSourceEntry.d.ts`, the four structure rows under `src/data/sources/`, `src/data/structure/structureIdsBySlab.ts` (new), `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts`, `src/services/engine/frame/passes/structureMarkersCosmoPass.ts`, `src/services/engine/frame/passes/structureMarkersNearPass.ts` (new), `src/data/rendering/frameSections.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`, `src/services/engine/gpuHandles/gpuHandleRegistry.ts`, `src/services/engine/engine.ts`, `src/services/engine/helpers/resolveStructureFromPick.ts` (read; change only if it names the renderer), and tests
 
 **Contract:**
 
@@ -150,8 +150,8 @@ createStructureMarkerRenderer(…, categories: readonly StructureId[])
 ```
 
 - [x] `createStructureMarkerRenderer` buckets only the categories it is given, in the order given. `setMarkers` ignores descriptors of other categories.
-- [x] Two renderer instances: `structureMarkerRenderer` (cosmo categories) and `structureMarkerNearRenderer` (near0 categories), each with its own uniform and instance buffers. They must not share buffers: both passes record into one command encoder with one submit, so a shared uniform buffer would give both draws the last-written matrix (`near0SelectionRingPass.ts` header, "writeBuffer/submit race").
-- [x] `structureMarkersNearPass`, named `structure-markers-near`, mirrors `structureMarkersPass` against the near renderer and the NEAR0 view. It is disabled whenever the near renderer has no categories or no planned markers, which is always in this PR. No far-plane clamp yet.
+- [x] Two renderer instances: `structureMarkerCosmoRenderer` (cosmo categories) and `structureMarkerNearRenderer` (near0 categories), each with its own uniform and instance buffers. They must not share buffers: both passes record into one command encoder with one submit, so a shared uniform buffer would give both draws the last-written matrix (`near0SelectionRingPass.ts` header, "writeBuffer/submit race").
+- [x] `structureMarkersNearPass`, named `structure-markers-near`, mirrors `structureMarkersCosmoPass` against the near renderer and the NEAR0 view. It is disabled whenever the near renderer has no categories or no planned markers, which is always in this PR. No far-plane clamp yet.
 - [x] Both passes read the one existing `structureMarkersPlanner` result; each renderer filters by its categories.
 - [x] `frameSections.ts`: add `'structure-markers-near'` to the `(hdr, NEAR0)` roster immediately before `'constellations'`, so the comment that `constellations` is the last row the lens line samples stays true. `checkFrameOrder` must pass at boot.
 - [x] Add the test `every structure category is drawn by exactly one marker pass`: the union of `STRUCTURE_IDS_BY_SLAB` values equals `STRUCTURE_IDS` with no overlap.
