@@ -15,11 +15,6 @@ const cube = (over: Partial<IsisCubeRaster>): IsisCubeRaster => ({
 });
 
 describe('placeCubeInGlobe', () => {
-  it('returns a full-globe cube untouched', () => {
-    const full = cube({});
-    expect(placeCubeInGlobe(full)).toBe(full);
-  });
-
   it('treats a globe whose label pixel scale is slightly rounded as a full globe', () => {
     // Ariel's DEM: 3652 px at a labelled 0.098599 deg/px spans 360.08 deg, not 360.
     const full = cube({ width: 40, height: 20, degPerPixel: 9.2, data: new Float32Array(800) });

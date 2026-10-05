@@ -229,14 +229,7 @@ directly). Full pull only — no dev variant. Base:
 | Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
 | Enceladus | `Enceladus_Cassini_mosaic_global_110m.tif`              | 14401×7201 | gray  | tinted + lifted in build (relief-shading mosaic, no albedo; blurred wedge NW and smeared N pole acceptable) |
-| Triton   | `Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif`          | 14138×7069 | RGB   | northern 39% is pure black (polar night): painted with the mean non-black colour at source resolution (`fillBlack`); colours otherwise untouched |
-
-Triton is Paul Schenk's 2014 Voyager 2 colour mosaic (PIA18668, Lunar and Planetary
-Institute), 600 m/px, east-positive longitude with 0 at the centre column, as
-distributed by USGS (300 MB). 38.6% of its pixels are exactly (0, 0, 0): the
-northern hemisphere Voyager 2 never saw lit. The build replaces them with the mean
-of the other pixels (about 153, 159, 134) before resizing, so no dark fringe is
-smeared into the boundary.
+| Triton   | `Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif`          | 14138×7069 | RGB   | Schenk 2014 Voyager 2 mosaic (PIA18668, LPI), east-positive longitude, 0 at the centre column. Northern 39% is pure black (polar night): painted with the mean non-black colour at source resolution (`fillBlack`); colours otherwise untouched |
 
 ### Schenk 2021 Triton topographic map (cite Schenk et al. 2021, Remote Sensing 13, 3476)
 

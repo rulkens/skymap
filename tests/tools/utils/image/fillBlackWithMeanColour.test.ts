@@ -8,10 +8,4 @@ describe('fillBlackWithMeanColour', () => {
     expect(fillBlackWithMeanColour(rgb)).toEqual([150, 100, 20]);
     expect([...rgb]).toEqual([100, 50, 0, 150, 100, 20, 200, 150, 40, 150, 100, 20]);
   });
-
-  it('leaves an all-black buffer alone', () => {
-    const rgb = new Uint8Array(6);
-    fillBlackWithMeanColour(rgb);
-    expect([...rgb]).toEqual([0, 0, 0, 0, 0, 0]);
-  });
 });

@@ -694,17 +694,10 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // on its own Laplace plane; Nereid (NEP105) is on the ecliptic at 2020-01-01.0 and is moved back
   // to J2000 by hand below, because `satellite()` assumes J2000.
   {
-    // Triton: JPL a=354800 e=0.000 ω=0.0 M=63.0 i=157.3 node=178.1 P=5.876994 Papsis=0.000
-    // Pnode=340.379; pole RA=299.8 Dec=43.1. RETROGRADE (i > 90): the plane math needs no special
-    // case. Two columns are NOT used as printed. `moonRatesFromPeriods` regresses every node, but a
-    // retrograde orbit's node ADVANCES under Neptune's J2 (about 360/700 yr), and with the printed
-    // P and Pnode Triton drifts 15 deg from Horizons by 2026 and 46 deg by 1900. A fit against
-    // Horizons at 1900, 1989, 2000, 2026, 2050 and 2100 puts the mean-anomaly period at 5.87672 d
-    // (the sidereal period, 5.876854 d, minus the node advance) and the node at +0.51 deg/yr, with
-    // The node rate is set on the row because the maker cannot advance one. M and node are also
-    // refitted: the NEP097 table prints M=63.0 and node=178.1, but Horizons (nep098) sits a constant
-    // 5.26 and 1.33 deg away from them. Fitted to Horizons over J2000 +-200 d, the row is one
-    // consistent fit that stays within 0.55 deg of Horizons at 1900, 1989, 2000, 2026, 2050 and 2100.
+    // Triton: JPL NEP097 prints a=354800 e=0 M=63.0 i=157.3 node=178.1 P=5.876994 Pnode=340.379.
+    // RETROGRADE (i > 90): the node ADVANCES under Neptune's J2, so the node rate is set on the row
+    // because `moonRatesFromPeriods` regresses every node. M, node and P are fitted to JPL Horizons
+    // (nep098); the row stays within 0.55 deg of Horizons from 1900 to 2100.
     ...satellite({
       id: 'triton',
       focusId: 'neptune',

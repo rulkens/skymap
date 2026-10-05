@@ -410,7 +410,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     atmosphere: 'None',
     wikiTitle: 'Proteus_(moon)',
     description:
-      'Proteus is the second-largest moon of Neptune, about 220 by 208 by 202 kilometres, and was first seen in Voyager 2 images in 1989. It is one of the darkest bodies in the Solar System, reflecting only about ten percent of the light that falls on it, and it is about as large as an irregular lump of rock and ice can be before its own gravity would pull it round.',
+      'Proteus is the second-largest moon of Neptune, about 420 kilometres across, and was first seen in Voyager 2 images in 1989. It is one of the darkest bodies in the Solar System, reflecting only about ten percent of the light that falls on it, and it is about as large as an irregular lump of rock and ice can be before its own gravity would pull it round.',
   },
   nereid: {
     mass: '3.0 × 10¹⁹ kg',
