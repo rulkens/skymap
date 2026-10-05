@@ -18,6 +18,7 @@ import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadius
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { SAMPLED_BODIES } from '../../../../src/data/missions/spacecraftBodies';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import BODY_STATES_J2000 from '../../../fixtures/bodyStatesJ2000.json';
 
@@ -37,7 +38,10 @@ describe('deriveBodyStates', () => {
     // anchor drifting in — the local star map is not clock-driven state. The
     // three summands are the three position tables `positionDrivers` unions.
     expect(states.size).toBe(
-      SCENE_ANCHORS.length + ORBITAL_ELEMENTS.length + SURFACE_FIXED_SITES.length,
+      SCENE_ANCHORS.length +
+        ORBITAL_ELEMENTS.length +
+        SAMPLED_BODIES.length +
+        SURFACE_FIXED_SITES.length,
     );
     for (const el of ORBITAL_ELEMENTS) {
       expect(states.has(el.id)).toBe(true);

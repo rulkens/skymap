@@ -31,6 +31,8 @@ import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
 import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../data/bodies/barycentricPairs';
 import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
+import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { hermiteTrackAt } from '../../../utils/orbit/hermiteTrackAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 
 // The focus graph is authored, static data, so its order is resolved once at
@@ -122,6 +124,22 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
       offsetM[2] * SCALE_UNITS.M_TO_MPC,
     ];
     positions.set(site.id, addVec3(hostPos, offsetMpc));
+  }
+
+  // 1d — sampled craft: Hermite on the loaded track, else Earth's position, so the
+  // state always exists (22 sites do `states.get(id)!`) and the presence gate, not
+  // this phase, decides whether the craft is drawn. Earth is placed by 1b.
+  const earthMpc = positions.get('earth')!;
+  const sunMpc = positions.get('sun')!;
+  for (const { id } of SAMPLED_BODIES) {
+    const track = trajectoryRegistry.get(id);
+    if (track === undefined || simDays < track.tDays[0]!) {
+      positions.set(id, earthMpc);
+      continue;
+    }
+    const km = hermiteTrackAt(track, simDays);
+    const k = SCALE_UNITS.KM_TO_MPC;
+    positions.set(id, [sunMpc[0] + km[0] * k, sunMpc[1] + km[1] * k, sunMpc[2] + km[2] * k]);
   }
 
   // Phase 2 — orientations over the finished position map. Anchors go through
