@@ -250,16 +250,16 @@ export function fitSinusoidSeries(
   Its signature does not change.
 
 **Steps:**
-- [ ] Add the test `moonRatesFromPeriods: a negative apsidal period gives a negative ω-rate, a
+- [x] Add the test `moonRatesFromPeriods: a negative apsidal period gives a negative ω-rate, a
       sub-sentinel one in either sign gives 0`. Check −1.333 → −2π·100/1.333; and −0.005 and
       +0.005 → 0.
-- [ ] Add the test `Saturn satellites advance at their IAU spin rate in longitude`. For each Saturn
+- [x] Add the test `Saturn satellites advance at their IAU spin rate in longitude`. For each Saturn
       moon, (dM + dω + dΩ)/dt in °/day equals 360/P to 1e-9. That is the longitude-rate identity,
       and it fails on today's double count.
-- [ ] Add the test `Io's apsis regresses`: its `argPeriapsisRateRadPerCty < 0`.
-- [ ] Update the rows, the maker and the helper header. Delete the backlog line and its detail
+- [x] Add the test `Io's apsis regresses`: its `argPeriapsisRateRadPerCty < 0`.
+- [x] Update the rows, the maker and the helper header. Delete the backlog line and its detail
       file.
-- [ ] Commit `fix(bodies): satellite periods read per row (longitude vs anomalistic), Io/Europa
+- [x] Commit `fix(bodies): satellite periods read per row (longitude vs anomalistic), Io/Europa
       apsides regress`.
 
 ### Task 4: Moon Horizons rows, fit path and the ΔM term
