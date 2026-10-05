@@ -17,7 +17,11 @@ describe('parseShotArgs', () => {
       hideUi: false,
       hideLabels: false,
       timeoutMs: 30000,
+      format: 'jpeg',
     });
+  });
+  it('--png switches to png', () => {
+    expect(parseShotArgs([LINK, '--png']).format).toBe('png');
   });
   it('reads --size, --dpr and --timeout (seconds to ms)', () => {
     const o = parseShotArgs([LINK, '--size', '1280x720', '--dpr', '1', '--timeout', '5']);

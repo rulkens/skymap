@@ -53,7 +53,8 @@ async function main(): Promise<number> {
     browser = await launchChromium();
     const taken = new Set<string>();
     for (const link of options.links) {
-      const outPath = options.out ?? shotOutName({ link, now: new Date(), taken });
+      const outPath =
+        options.out ?? shotOutName({ link, format: options.format, now: new Date(), taken });
       taken.add(outPath);
       const outcome = await shootLink(browser, base, link, {
         ...options,

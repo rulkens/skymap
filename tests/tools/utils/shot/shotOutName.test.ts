@@ -5,8 +5,8 @@ import { shotOutName } from '../../../../tools/utils/shot/shotOutName';
 // 2026-10-05 14:30:05 local time; component-wise construction keeps this timezone-stable.
 const now = new Date(2026, 9, 5, 14, 30, 5);
 const link = (hash: string) => ({ search: '', hash });
-const name = (hash: string, taken: string[] = []) =>
-  shotOutName({ link: link(hash), now, taken: new Set(taken) });
+const name = (hash: string, taken: string[] = [], format: 'jpeg' | 'png' = 'png') =>
+  shotOutName({ link: link(hash), format, now, taken: new Set(taken) });
 
 describe('shotOutName', () => {
   it('names the shot after its focus id', () => {
@@ -29,5 +29,8 @@ describe('shotOutName', () => {
     expect(name('focus=body-saturn', [first, 'data/shots/body-saturn-20261005-143005-2.png'])).toBe(
       'data/shots/body-saturn-20261005-143005-3.png',
     );
+  });
+  it('uses .jpg for jpeg', () => {
+    expect(name('focus=x', [], 'jpeg')).toBe('data/shots/x-20261005-143005.jpg');
   });
 });

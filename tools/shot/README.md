@@ -1,7 +1,7 @@
-# Shot — PNG of any deep link
+# Shot — screenshot of any deep link
 
 `npm run shot` opens each link in headless Chromium, waits for the app to settle on it, and writes
-a PNG of what the app shows. It prints one absolute path per shot on stdout and everything else
+a JPEG (or PNG) of what the app shows. It prints one absolute path per shot on stdout and everything else
 on stderr.
 
 ## Usage
@@ -25,7 +25,8 @@ links make several shots in one run.
 | `--build`         | off        | Rebuild into `tools/shot/.build` and serve it. Conflicts `--url`.   |
 | `--out <file>`    | see below  | Output file; one link only.                                         |
 | `--size WxH`      | `1600x900` | Viewport in CSS pixels.                                             |
-| `--dpr <n>`       | `2`        | Device pixel ratio; the PNG is size × dpr.                          |
+| `--dpr <n>`       | `2`        | Device pixel ratio; the image is size × dpr.                        |
+| `--png`           | off        | Lossless PNG instead of the default JPEG (quality 90).              |
 | `--hide-ui`       | off        | Adds `cinema` to the link's query unless it is already there.       |
 | `--hide-labels`   | off        | Turns every label off before the shot.                              |
 | `--timeout <sec>` | `30`       | How long to wait for the link to settle.                            |
@@ -39,13 +40,25 @@ project root, where `npm run` starts the tool.
 
 ## Output
 
-Shots land in `data/shots/<subject>-<YYYYMMDD-HHMMSS>.png` (local time, gitignored). The subject is
+Shots land in `data/shots/<subject>-<YYYYMMDD-HHMMSS>.jpg` (`.png` under `--png`; local time, gitignored). The subject is
 the first of `focus`, `exhibit`, `tour`, `clip` in the hash, else `shot`; a second shot of the same
 subject in one run gets `-2`, `-3`, ….
 
+The format flag decides the bytes, whatever extension `--out` carries.
+
+## Capture path
+
+Before shooting, the tool awaits `window.__skymap.settled()`: it resolves after the first frame
+with no fade or label animation running (always at least one frame, never times out). Auto-rotate
+and a playing clock do not hold it back.
+
+With `--hide-ui` the image is read straight from the WebGPU canvas (`toBlob`, in the same task as a
+fresh frame, since a presented WebGPU canvas is cleared), so no page chrome can leak in; otherwise,
+and whenever that read fails, it is a Playwright page screenshot.
+
 ## Timeouts and exit code
 
-A link that does not settle within `--timeout` still gets a PNG of whatever is on screen, with a
+A link that does not settle within `--timeout` still gets an image of whatever is on screen, with a
 notice on stderr. A link whose boot throws is reported on stderr and the remaining links still run.
 The exit code is 1 if any shot timed out, errored or wrote no file; page console errors alone do
 not change it.

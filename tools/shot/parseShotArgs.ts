@@ -5,7 +5,7 @@ import type { ShotOptions } from './@types/ShotOptions';
 
 const USAGE =
   'usage: npm run shot -- <link>... [--url URL | --build] [--out FILE] [--size WxH] [--dpr N] ' +
-  '[--hide-ui] [--hide-labels] [--timeout SECONDS]';
+  '[--hide-ui] [--hide-labels] [--png] [--timeout SECONDS]';
 
 const VALUE_FLAGS: readonly string[] = ['--url', '--out', '--size', '--dpr', '--timeout'];
 
@@ -21,11 +21,13 @@ export function parseShotArgs(argv: readonly string[]): ShotOptions {
   let build = false;
   let hideUi = false;
   let hideLabels = false;
+  let png = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
     if (arg === '--build') build = true;
     else if (arg === '--hide-ui') hideUi = true;
     else if (arg === '--hide-labels') hideLabels = true;
+    else if (arg === '--png') png = true;
     else if (VALUE_FLAGS.includes(arg)) {
       const value = argv[++i];
       if (value === undefined || value.startsWith('--'))
@@ -63,5 +65,6 @@ export function parseShotArgs(argv: readonly string[]): ShotOptions {
     hideUi,
     hideLabels,
     timeoutMs: (rawTimeout === undefined ? 30 : positiveNumber('--timeout', rawTimeout)) * 1000,
+    format: png ? 'png' : 'jpeg',
   };
 }

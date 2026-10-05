@@ -1,3 +1,4 @@
+import type { ShotFormat } from '../../shot/@types/ShotFormat';
 import type { ShotLink } from '../../shot/@types/ShotLink';
 
 const SUBJECT_KEYS = ['focus', 'exhibit', 'tour', 'clip'] as const;
@@ -11,6 +12,7 @@ const SUBJECT_KEYS = ['focus', 'exhibit', 'tour', 'clip'] as const;
  */
 export function shotOutName(opts: {
   link: ShotLink;
+  format: ShotFormat;
   now: Date;
   taken: ReadonlySet<string>;
 }): string {
@@ -23,7 +25,8 @@ export function shotOutName(opts: {
     `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
     `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const base = `data/shots/${subject}-${stamp}`;
-  let name = `${base}.png`;
-  for (let n = 2; opts.taken.has(name); n++) name = `${base}-${n}.png`;
+  const ext = opts.format === 'png' ? 'png' : 'jpg';
+  let name = `${base}.${ext}`;
+  for (let n = 2; opts.taken.has(name); n++) name = `${base}-${n}.${ext}`;
   return name;
 }

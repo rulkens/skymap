@@ -1,3 +1,4 @@
+import type { ShotFormat } from './ShotFormat';
 import type { ShotLink } from './ShotLink';
 
 export type ShotOptions = {
@@ -11,4 +12,5 @@ export type ShotOptions = {
   readonly hideUi: boolean;
   readonly hideLabels: boolean;
   readonly timeoutMs: number;
+  readonly format: ShotFormat;
 };
