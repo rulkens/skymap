@@ -3,7 +3,9 @@
  * fetchHorizons — pull equatorial (ICRF) positions over 1900–2100 for every `HORIZONS_BODIES` row
  * from the JPL Horizons API into data/raw/horizons/<centre>/<target>.csv (`jd,x_km,y_km,z_km`),
  * each relative to its row's centre at its row's step. UT time tags, so the fit absorbs TDB−UT
- * and the app's UTC `simDays` needs no conversion. Query in the README.
+ * and the app's UTC `simDays` needs no conversion. Query in the README. Ids on the command line
+ * fetch only those rows. Horizons caps one answer at ~90k rows, so a fine-step moon splits each
+ * 50-year chunk into whole-step pieces; steps divide a day, so every piece starts on the grid.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -23,6 +25,30 @@ const CHUNKS: readonly [string, string][] = [
   ['2050-01-01', '2100-01-01'],
 ];
 const MAX_ATTEMPTS = 5;
+const MAX_ROWS = 89_000;
+const MS_PER_MINUTE = 60_000;
+const MINUTES_PER_DAY = 1440;
+
+/** `YYYY-MM-DD HH:MM` (UT) — exact, since every piece starts on a whole minute. */
+const calendar = (ms: number): string => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+
+function pieces(start: string, stop: string, stepMinutes: number): [string, string][] {
+  const t0 = Date.parse(`${start}T00:00Z`);
+  const steps = (Date.parse(`${stop}T00:00Z`) - t0) / (stepMinutes * MS_PER_MINUTE);
+  const perPiece = Math.ceil(steps / Math.ceil(steps / MAX_ROWS));
+  const out: [string, string][] = [];
+  for (let k = 0; k < steps; k += perPiece) {
+    const end = Math.min(k + perPiece, steps);
+    out.push(
+      [t0 + k * stepMinutes * MS_PER_MINUTE, t0 + end * stepMinutes * MS_PER_MINUTE].map(
+        calendar,
+      ) as [string, string],
+    );
+  }
+  return out;
+}
+
+const stepMinutes = (body: HorizonsBody): number => Math.round(body.stepDays * MINUTES_PER_DAY);
 
 function queryUrl(body: HorizonsBody, start: string, stop: string): string {
   const params: Record<string, string> = {
@@ -39,7 +65,7 @@ function queryUrl(body: HorizonsBody, start: string, stop: string): string {
     VEC_TABLE: "'1'",
     START_TIME: `'${start}'`,
     STOP_TIME: `'${stop}'`,
-    STEP_SIZE: `'${body.stepDays} d'`,
+    STEP_SIZE: `'${stepMinutes(body)} m'`,
   };
   return `${API}?${new URLSearchParams(params).toString()}`;
 }
@@ -65,12 +91,16 @@ async function fetchChunk(
 }
 
 async function main(): Promise<void> {
-  console.log(`fetchHorizons: downloading ${HORIZONS_BODIES.length} bodies from JPL Horizons`);
-  for (const body of HORIZONS_BODIES) {
+  const only = process.argv.slice(2);
+  const bodies = HORIZONS_BODIES.filter((b) => only.length === 0 || only.includes(b.id));
+  console.log(`fetchHorizons: downloading ${bodies.length} bodies from JPL Horizons`);
+  for (const body of bodies) {
     const outDir = join(rawDataPath('horizons'), body.centre);
     mkdirSync(outDir, { recursive: true });
     const chunks: HorizonsVectorRow[][] = [];
-    for (const [start, stop] of CHUNKS) chunks.push(await fetchChunk(body, start, stop));
+    for (const [chunkStart, chunkStop] of CHUNKS)
+      for (const [start, stop] of pieces(chunkStart, chunkStop, stepMinutes(body)))
+        chunks.push(await fetchChunk(body, start, stop));
     const rows = mergeHorizonsChunks(chunks);
     const csv = ['jd,x_km,y_km,z_km', ...rows.map((r) => `${r.jd},${r.xKm},${r.yKm},${r.zKm}`)];
     const outPath = join(outDir, `${body.target}.csv`);

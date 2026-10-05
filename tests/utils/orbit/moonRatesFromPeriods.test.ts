@@ -44,4 +44,13 @@ describe('moonRatesFromPeriods', () => {
     expect(rates.argPeriapsisRateRadPerCty).toBe(0);
     expect(rates.ascendingNodeRateRadPerCty).toBeLessThan(0);
   });
+
+  it('moonRatesFromPeriods: a negative apsidal period gives a negative ω-rate, a sub-sentinel one in either sign gives 0', () => {
+    const rate = (apsidalPrecessionYears: number): number =>
+      moonRatesFromPeriods({ periodDays: 1, apsidalPrecessionYears, nodalPrecessionYears: 0 })
+        .argPeriapsisRateRadPerCty;
+    expect(rate(-1.333)).toBeCloseTo((-2 * Math.PI * 100) / 1.333, 12);
+    expect(rate(-0.005)).toBe(0);
+    expect(rate(0.005)).toBe(0);
+  });
 });

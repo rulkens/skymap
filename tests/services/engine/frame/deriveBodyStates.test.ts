@@ -129,20 +129,21 @@ describe('deriveBodyStates', () => {
   });
 
   it("a moon's snapshot position rides its propagated parent", () => {
-    // 0.1 century off epoch: Jupiter has moved, and Io (1.76 d period) is many
-    // orbits from its epoch phase. Io's snapshot offset from Jupiter's snapshot
-    // must equal Io's Jupiter-relative PROPAGATED position — the parent hop uses
-    // the snapshot Jupiter, and the moon offset uses propagated (not epoch)
-    // elements. An epoch-only moon offset would miss by ~a whole orbit radius.
+    // 0.1 century off epoch: Mars has moved, and Phobos (0.32 d period) is many
+    // orbits from its epoch phase. Phobos's snapshot offset from Mars's snapshot
+    // must equal its Mars-relative PROPAGATED position — the parent hop uses the
+    // snapshot Mars, and the moon offset uses propagated (not epoch) elements.
+    // An epoch-only moon offset would miss by ~a whole orbit radius. Phobos has
+    // no Horizons correction row, so raw Kepler is its whole offset.
     const t = CONST_J2000 + 3652.5;
     const snap = deriveBodyStates(t);
-    const io = snap.get('io')!;
-    const jupiter = snap.get('jupiter')!;
-    const ioRelative = keplerianPositionMpc(propagateElements(elementsById('io'), t));
+    const phobos = snap.get('phobos')!;
+    const mars = snap.get('mars')!;
+    const relative = keplerianPositionMpc(propagateElements(elementsById('phobos'), t));
 
-    expect(io.positionMpc[0] - jupiter.positionMpc[0]).toBeCloseTo(ioRelative[0], 18);
-    expect(io.positionMpc[1] - jupiter.positionMpc[1]).toBeCloseTo(ioRelative[1], 18);
-    expect(io.positionMpc[2] - jupiter.positionMpc[2]).toBeCloseTo(ioRelative[2], 18);
+    expect(phobos.positionMpc[0] - mars.positionMpc[0]).toBeCloseTo(relative[0], 18);
+    expect(phobos.positionMpc[1] - mars.positionMpc[1]).toBeCloseTo(relative[1], 18);
+    expect(phobos.positionMpc[2] - mars.positionMpc[2]).toBeCloseTo(relative[2], 18);
   });
 
   it('Earth–Moon reflex keeps the barycentre and the separation', () => {
