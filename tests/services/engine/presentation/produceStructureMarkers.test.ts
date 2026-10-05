@@ -216,4 +216,20 @@ describe('produceStructureMarkers', () => {
     }
     expect(fadeBand(band, band.goneAt * 0.5)).toBe(0);
   });
+
+  it('a 4 pc structure seen from 100 pc is not faded by the near guard', () => {
+    // 100 pc is inside the old fixed 1 kpc cut-off but outside the structure's
+    // own 4 pc radius, so the ring must draw.
+    const state = makeState();
+    const camZ = FULL_BAND_CAM_Z;
+    state.data.structures.setGroup('anchors', [
+      rec('tiny', 'cluster', {
+        worldPos: [0, 0, camZ - 1e-4],
+        physicalRadiusMpc: 4e-6,
+        significance: 1,
+      }),
+    ]);
+    const [m] = produceStructureMarkers(state, makeCtx(0, camZ));
+    expect(m!.ringColor[3]).toBeGreaterThan(0);
+  });
 });

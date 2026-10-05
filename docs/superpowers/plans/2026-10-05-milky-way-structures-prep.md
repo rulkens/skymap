@@ -115,10 +115,10 @@ Seed rows change three fields; nothing else:
 
 **Files:** `src/services/engine/presentation/produceStructureMarkers.ts`, `src/services/engine/presentation/produceStructureLabels.ts`, their tests
 
-- [ ] `produceStructureMarkers.ts:92` (`distanceMpc < 0.001`) becomes "camera inside the drawn radius" (`distanceMpc <= radiusMpc`). The descriptor is still emitted at alpha 0, to keep index alignment.
-- [ ] `produceStructureLabels.ts:145` (`distanceMpc > 0.001`) becomes `distanceMpc > 0`, so only the division is guarded.
-- [ ] Every existing structure has a radius far above 1 kpc and its ring is already at alpha 0 inside its own radius (the max-apparent-radius fade), so no expected value changes. Add the test `a 4 pc structure seen from 100 pc is not faded by the near guard`.
-- [ ] Commit.
+- [x] `produceStructureMarkers.ts:92` (`distanceMpc < 0.001`) becomes "camera inside the drawn radius" (`distanceMpc <= radiusMpc`). The descriptor is still emitted at alpha 0, to keep index alignment.
+- [x] `produceStructureLabels.ts:145` (`distanceMpc > 0.001`) becomes `distanceMpc > 0`, so only the division is guarded.
+- [x] Every existing structure has a radius far above 1 kpc and its ring is already at alpha 0 inside its own radius (the max-apparent-radius fade), so no expected value changes. Add the test `a 4 pc structure seen from 100 pc is not faded by the near guard`.
+- [x] Commit.
 
 ### Task 7 (P7): Camera-relative marker instances — `review: yes`
 

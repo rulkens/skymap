@@ -141,7 +141,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
     // extent, falling back to the core for structures that set only
     // physicalRadiusMpc.
     const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-    if (distanceMpc > 0.001) {
+    if (distanceMpc > 0) {
       const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
       prominencePx = apRadPx;
       if (apRadPx > style.markerMaxApparentRadiusPx) {
