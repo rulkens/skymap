@@ -1576,4 +1576,50 @@
   "source": "Distance: Sankrit et al. 2016 (HST filament proper motions and shock speeds, 5.1 +0.8/-0.7 kpc; Ruiz-Lapuente 2017, ApJ 842, 112 give 5 +/-0.7 kpc); angular size: Green SNR catalogue G4.5+6.8, 3 arcmin",
   "nebulaKind": "supernova-remnant"
 }
+,
+{
+  "id": "central-cluster",
+  "names": [
+    "Nuclear Star Cluster",
+    "Milky Way nuclear star cluster"
+  ],
+  "category": "galactic-centre",
+  "raHours": 17.761122667,
+  "decDeg": -29.00781,
+  "distance": { "value": 8178, "unit": "pc" },
+  "physicalRadius": { "value": 4.2, "unit": "pc" },
+  "apparentRadius": { "value": 4.2, "unit": "pc" },
+  "description": "The dense star cluster around the central black hole Sgr A*, with a half-light radius of about 4 pc. It is the nuclear star cluster of the Milky Way.",
+  "source": "Radius: half-light radius 4.2 +/-0.4 pc, Schodel et al. 2014, A&A 566, A47 (arXiv:1403.6657); no larger outer extent found, so apparent radius equals it; position: Sgr A*, Reid & Brunthaler 2004; distance: GRAVITY Collaboration 2019 (R0 = 8178 pc)"
+},
+{
+  "id": "arches",
+  "names": [
+    "Arches Cluster"
+  ],
+  "category": "galactic-centre",
+  "raHours": 17.764027778,
+  "decDeg": -28.82444444,
+  "distance": { "value": 8178, "unit": "pc" },
+  "lineOfSightAssumed": true,
+  "physicalRadius": { "value": 0.48, "unit": "pc" },
+  "apparentRadius": { "value": 2.8, "unit": "pc" },
+  "description": "A young, very dense cluster of massive stars near the Galactic Centre. Its half-light radius is about 0.5 pc.",
+  "source": "Radii: half-light radius 0.48 pc and 3-sigma lower limit on tidal radius 2.8 pc, Hosek et al. 2015 (arXiv:1509.04716); position: SIMBAD; distance set to R0 = 8178 pc (GRAVITY Collaboration 2019)"
+},
+{
+  "id": "quintuplet",
+  "names": [
+    "Quintuplet Cluster"
+  ],
+  "category": "galactic-centre",
+  "raHours": 17.770518847,
+  "decDeg": -28.83003348,
+  "distance": { "value": 8178, "unit": "pc" },
+  "lineOfSightAssumed": true,
+  "physicalRadius": { "value": 1.05, "unit": "pc" },
+  "apparentRadius": { "value": 3, "unit": "pc" },
+  "description": "A young massive cluster near the Galactic Centre, older and more extended than the Arches Cluster. Its half-light radius is about 1 pc.",
+  "source": "Radii: half-light radius 1.05 pc and 3-sigma lower limit on tidal radius 3 pc, Rui et al. 2019, ApJ 877, 37 (arXiv:1904.02395); position: SIMBAD; distance set to R0 = 8178 pc (GRAVITY Collaboration 2019)"
+}
 ]
