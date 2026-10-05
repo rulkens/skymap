@@ -70,7 +70,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 describe('captureScene', () => {
   it('captures the sixteen settings clusters + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
-    const snap = captureScene(state);
+    const snap = captureScene(state, 0);
 
     // Settings half carries exactly the tour-owned clusters — orientation
     // is NOT among them.
@@ -91,7 +91,7 @@ describe('captureScene', () => {
 
   it('captureScene is detached', () => {
     const state = makeState(FOCUS_REF);
-    const snap = captureScene(state);
+    const snap = captureScene(state, 0);
 
     // Settings detachment: mutation of a nested cluster field must not bleed
     // into the snapshot (structuredClone via captureSettings).

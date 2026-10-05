@@ -38,6 +38,13 @@
  * and corrupt. The settings half already requires a `structuredClone` (mutable
  * nested cluster objects); focus does not.
  *
+ * ### Why `time` rides along
+ *
+ * Takeovers move the clock (an exhibit pins an instant, a tour may scrub), and
+ * exit must hand it back: live returns to the real now, manual returns to the
+ * instant it showed at `capturedAtMs`. `TimeState` is held verbatim; the
+ * derivation needs the capture instant, hence `capturedAtMs`.
+ *
  * ### Why Readonly
  *
  * A captured snapshot is a frozen baseline — restore reads it, nothing writes
@@ -48,9 +55,13 @@
 import type { SettingsSnapshot } from './SettingsSnapshot';
 import type { SelectionRef } from '../SelectionRef';
 import type { OrientationFrameId } from '../../camera/OrientationFrameId';
+import type { TimeState } from '../../time/TimeState';
 
 export type SceneSnapshot = Readonly<{
   settings: SettingsSnapshot;
   orientation: OrientationFrameId;
   focus: SelectionRef | null;
+  time: TimeState;
+  /** `performance.now()` at capture: the `nowMs` that resolves a manual clock's anchor. */
+  capturedAtMs: number;
 }>;

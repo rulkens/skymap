@@ -14,6 +14,7 @@ import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnap
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { setSimDays, pause, setRate } from '../../../src/state/time/timeSlice';
 import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -67,5 +68,27 @@ describe('withSceneSnapshotSaga', () => {
     store.dispatch(exitTakeover());
     await flush();
     expect(store.getState().settings.cosmicWebDensity.enabled).toBe(true);
+  });
+
+  it("winds back a clock the body scrubbed and re-rated, to the viewer's paused instant", async () => {
+    const { store, sagaMiddleware } = buildStore();
+    store.dispatch(setSimDays({ simDays: 2460000.5, nowMs: performance.now() }));
+    store.dispatch(pause({ nowMs: performance.now() }));
+
+    sagaMiddleware.run(function* () {
+      yield* withSceneSnapshotSaga(function* () {
+        yield* put(setSimDays({ simDays: 2470000, nowMs: performance.now() }));
+        yield* put(setRate({ rateIndex: 4, nowMs: performance.now() }));
+        yield* take(exitTakeover);
+      });
+    });
+    await flush();
+    store.dispatch(exitTakeover());
+    await flush();
+
+    const { time } = store.getState();
+    expect(time.paused).toBe(true);
+    expect(time.rateIndex).toBe(0);
+    expect(time.anchor.simDays).toBeCloseTo(2460000.5, 5);
   });
 });

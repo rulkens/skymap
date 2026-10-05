@@ -117,9 +117,24 @@ const timeSlice = createSlice({
       // from the real rate rather than jumping from wherever manual left off.
       time.rateIndex = 0;
     },
+
+    // Put a captured clock back verbatim except for the anchor, which the
+    // caller resolved (wall-clock JD for live, the captured instant for manual).
+    restoreTime: (
+      time,
+      action: PayloadAction<{ captured: TimeState; simDays: number; nowMs: number }>,
+    ) => {
+      const { captured, simDays, nowMs } = action.payload;
+      time.mode = captured.mode;
+      time.anchor = { simDays, realMs: nowMs };
+      time.rateIndex = captured.rateIndex;
+      time.direction = captured.direction;
+      time.paused = captured.paused;
+    },
   },
 });
 
-export const { setRate, setDirection, pause, resume, setSimDays, goLive } = timeSlice.actions;
+export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime } =
+  timeSlice.actions;
 
 export default timeSlice.reducer;

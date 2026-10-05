@@ -1,6 +1,6 @@
 /**
  * restoreSceneSaga — put a captured `SceneSnapshot` back onto the live store:
- * settings, then orientation, then selection focus. Pure Intent — three
+ * settings, orientation, selection focus, then the sim clock. Pure Intent — four
  * dispatches, no engine context of its own.
  *
  * This is the close of a takeover's capture → play → restore round-trip
@@ -39,7 +39,10 @@
  * but that context lives in the watcher, not here — same split as the fade
  * pass, reached by `watchFadesSaga` rather than by this saga.
  *
- * All three `put`s block until their effect lands, true even inside a `finally`
+ * 4. `put(restoreTime(...))` — the clock returns last (live to the real now,
+ *    manual to its captured instant, with the captured rate/direction/paused).
+ *
+ * All four `put`s block until their effect lands, true even inside a `finally`
  * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
  * bracket to settle, so on a supersede this restore is complete before the
  * successor run's snapshot reads the store.
@@ -53,10 +56,24 @@ import { put } from 'typed-redux-saga';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
+import { restoreTime } from '../time/timeSlice';
+import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 
 export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
   yield* put(updateSelectionFocus(snapshot.focus));
+  yield* put(restoreTime(resolveRestoredTime(snapshot)));
+}
+
+// Live returns to the wall clock's now (never the frozen capture instant);
+// manual returns to the instant it showed at capture. `Date.now()` and
+// `performance.now()` are read together for the same reason as `goLiveNowAction`.
+function resolveRestoredTime({ time, capturedAtMs }: SceneSnapshot) {
+  const nowMs = performance.now();
+  const simDays =
+    time.mode === 'live' ? unixMsToJulianDays(Date.now()) : deriveSimDays(time, capturedAtMs);
+  return { captured: time, simDays, nowMs };
 }
