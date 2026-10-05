@@ -331,22 +331,22 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
 1900-06-01 and 2099-06-01.
 
 **Steps:**
-- [ ] Add the test `every moon is within 1,000 km of Horizons (parent-relative) on the fixture
+- [x] Add the test `every moon is within 1,000 km of Horizons (parent-relative) on the fixture
       dates`. Compare `deriveBodyStates` moon − parent against the fixture. The tolerance is
       1,000 km plus the measured barycentre-vs-centre offset for that parent. Measure the offset
       first (≤ ~300 km expected) and state the constant with its reason in the test.
-- [ ] Add the test `a moon past 2100 is raw Kepler`. At `endJd + 1`, Titan − Saturn equals
+- [x] Add the test `a moon past 2100 is raw Kepler`. At `endJd + 1`, Titan − Saturn equals
       `keplerianPositionMpc(propagateElements(titanRow, t))` to ≤ 1 m.
-- [ ] Add the test `Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby`.
+- [x] Add the test `Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby`.
       Run the real states through `orbitTrailsPass` (pattern: `orbitTrailsPass.test.ts`, the
       snapshot-offset test). Check two things:
       - the packed ellipse centre, minus Saturn + `centerOffsetMpc(orbit)`, is ≤ 0.06 × the
         semi-major axis;
       - the body point at the orbit's E equals the body position to ≤ 1 m.
-- [ ] Re-record `bodyStatesJ2000.json` and the golden traces (`SETTLE_GOLDEN_RECORD=1`,
+- [x] Re-record `bodyStatesJ2000.json` and the golden traces (`SETTLE_GOLDEN_RECORD=1`,
       `DRIVER_GOLDEN_RECORD=1`) where moon positions moved. Run `npm test` and
       `npm run typecheck`.
-- [ ] Commit `test(bodies): moon Horizons accuracy, trail centring, re-recorded fixtures`.
+- [x] Commit `test(bodies): moon Horizons accuracy, trail centring, re-recorded fixtures`.
 
 ## Definition of Done
 

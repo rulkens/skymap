@@ -716,6 +716,58 @@ describe('orbitTrailsPass.draw', () => {
     }
   });
 
+  it('Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby', () => {
+    // 1980-11-12 23:46 UT. The ΔM channel rides `orbit`, so the trail centre moves off
+    // Saturn + centerOffset only by the Cartesian residual (measured ≤ 0.058 a, Mimas).
+    // The body-on-trail check reads f32 staging, whose ulp at a ≈ 1.2e6 km is ~0.1 km:
+    // 5e-7·a is the honest bound there, not metres.
+    const simDays = 2_444_556.490277778;
+    const states = deriveBodyStates(simDays);
+    const saturnMpc = states.get('saturn')!.positionMpc;
+    const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
+    for (const id of ['mimas', 'titan']) {
+      const el = CORE_TRAIL_ELEMENTS.find((e) => e.id === id)!;
+      const { positionMpc: bodyMpc, orbit } = states.get(id)!;
+      const semiMajorKm = orbit!.semiMajorMpc * kmPerMpc;
+      const offset = keplerianEllipse(orbit!).centerOffsetMpc;
+      const eye: Vec3 = [bodyMpc[0] + 100 * SCALE_UNITS.KM_TO_MPC, bodyMpc[1], bodyMpc[2]];
+      const ctx = {
+        snapshot: {
+          simDays,
+          focusBlend: 0,
+          nowMs: 0,
+          renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+        },
+        bodyPose: () => null,
+        drawCamPos: eye,
+        drawPxPerRad: FIXTURE_PX_PER_RAD,
+        cam: { distance: 1e-13 },
+      } as unknown as FrameView;
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, {
+        ...makeState(renderer),
+        orbitTrailRows: [el],
+      } as unknown as EngineState);
+
+      const [, { instances: staging, count }] = renderer.draw.mock.calls[0]!;
+      expect(count).toBe(1);
+      const centreOff = [0, 1, 2].map(
+        (a) => staging[34 + a]! - (saturnMpc[a]! + offset[a]! - eye[a]!) * kmPerMpc,
+      );
+      expect(Math.hypot(...centreOff) / semiMajorKm, id).toBeLessThan(0.06);
+
+      const eAnom = eccentricAnomalyFromMean(orbit!.meanAnomalyRad, orbit!.eccentricity);
+      const bodyOff = [0, 1, 2].map(
+        (a) =>
+          staging[34 + a]! +
+          staging[38 + a]! * Math.cos(eAnom) +
+          staging[42 + a]! * Math.sin(eAnom) -
+          (bodyMpc[a]! - eye[a]!) * kmPerMpc,
+      );
+      expect(Math.hypot(...bodyOff), id).toBeLessThan(5e-7 * semiMajorKm);
+    }
+  });
+
   it('stages no conic for the mesh bodies (whale, petunias) even when the Moon trail is emitted', () => {
     // Same pose as "rides a moon trail on its propagated parent" above — parking
     // the camera at Earth is what makes the Moon's tiny geocentric orbit survive
