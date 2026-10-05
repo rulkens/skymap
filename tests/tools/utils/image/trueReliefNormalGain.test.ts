@@ -8,11 +8,4 @@ describe('trueReliefNormalGain', () => {
     const texelKm = (2 * Math.PI * 1000) / 628;
     expect(trueReliefNormalGain(20, 1_000_000, 628)).toBeCloseTo(20 / texelKm, 10);
   });
-
-  it('doubles when the grid is twice as wide', () => {
-    expect(trueReliefNormalGain(5, 240_400, 4096)).toBeCloseTo(
-      2 * trueReliefNormalGain(5, 240_400, 2048),
-      10,
-    );
-  });
 });

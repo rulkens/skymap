@@ -1,7 +1,7 @@
 /**
  * dropSmallRegions — set to NaN every 8-connected region of valid (non-NaN)
  * cells smaller than `minFraction` of the largest region, in place. Wraps in x.
- * The Schenk Ariel/Titania DEMs carry digitised limb-profile arcs, one cell thin,
+ * The Schenk Ariel DEM carries digitised limb-profile arcs, one cell thin,
  * far from the stereo coverage; left in, they bake into ridges. Dotted arcs are
  * 8-connected, so the diagonal neighbours are needed to see them as one region.
  */

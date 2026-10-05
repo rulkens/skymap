@@ -20,7 +20,6 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
-import type { IsisCubeRaster } from '../@types/image/IsisCubeRaster';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
@@ -116,25 +115,13 @@ function firstExisting(paths: readonly string[]): string | null {
 /** Region-size floor for `isisDem`: a limb-profile arc is a sliver beside the stereo coverage. */
 const MIN_REGION_FRACTION = 0.05;
 
-const cubeCache = new Map<string, IsisCubeRaster>();
-function loadCube(path: string): IsisCubeRaster {
-  let cube = cubeCache.get(path);
-  if (cube === undefined) {
-    cube = readIsisCube(path);
-    cubeCache.set(path, cube);
-  }
-  return cube;
-}
-
 /** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
  *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
 const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
 
-/** An `isisDem` grid is the tier ceiling, or the cube's own (even) width when that is
- *  narrower, so a small DEM is never binned onto a grid wider than its pixels. */
-function isisDemGridWidth(bodyId: BodyTextureId, srcPath: string): number {
-  const ceilingPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
-  return Math.min(ceilingPx, loadCube(srcPath).width & ~1);
+/** The largest normal-map tier: an `isisDem` grid is rasterised at this width. */
+function normalCeilingPx(bodyId: BodyTextureId): number {
+  return tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
 }
 
 /** The one home of a scene body's grey albedo, which the ISIS mosaic scale is pinned to. */
@@ -150,7 +137,7 @@ function openGreySource(srcPath: string, albedo: number | undefined): ReturnType
   if (!srcPath.endsWith('.cub')) return sharp(srcPath, { limitInputPixels: false });
   if (albedo === undefined)
     throw new Error(`buildTextures: ISIS mosaic ${srcPath} needs an albedo`);
-  const { data, width, height } = isisMosaicToGrey(loadCube(srcPath), albedo);
+  const { data, width, height } = isisMosaicToGrey(readIsisCube(srcPath), albedo);
   return sharp(Buffer.from(data.buffer), { raw: { width, height, channels: 1 } });
 }
 
@@ -179,7 +166,7 @@ function toByteScale(radius: Float32Array): Float32Array {
 
 /** Source width in pixels; 0 if sharp can't report it. */
 async function sourceWidth(srcPath: string): Promise<number> {
-  if (srcPath.endsWith('.cub')) return loadCube(srcPath).width;
+  if (srcPath.endsWith('.cub')) return readIsisCube(srcPath).width;
   const meta = await sharp(srcPath, { limitInputPixels: false }).metadata();
   return meta.width ?? 0;
 }
@@ -376,12 +363,11 @@ function bakeNormalOnce(
 ): Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }> {
   let baked = bakedNormalCache.get(srcPath);
   if (baked === undefined) {
-    const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    const capPx = normalCeilingPx(bodyId);
     const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
       if ('format' in entry) {
-        const width =
-          entry.format === 'isisDem' ? isisDemGridWidth(bodyId, srcPath) : GRID_WIDTH[entry.format];
+        const width = entry.format === 'isisDem' ? capPx : GRID_WIDTH[entry.format];
         const height = width / 2;
         let grid: Float32Array;
         if (entry.format === 'icq') {
@@ -392,8 +378,8 @@ function bakeNormalOnce(
             entry.lonOffsetDeg,
           );
         } else if (entry.format === 'isisDem') {
-          const cube = loadCube(srcPath);
-          const src = cube.data.slice();
+          const cube = readIsisCube(srcPath);
+          const src = cube.data;
           dropSmallRegions(src, cube.width, cube.height, MIN_REGION_FRACTION);
           // Column 0 is lon `leftLonDeg`, not 0, so the registration shift absorbs it.
           grid = binFloatDemToEquirect(
@@ -566,7 +552,7 @@ export async function buildTextures(outDir: string): Promise<void> {
     const width =
       'format' in entry
         ? entry.format === 'isisDem'
-          ? isisDemGridWidth(bodyId, srcPath)
+          ? normalCeilingPx(bodyId)
           : GRID_WIDTH[entry.format]
         : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);

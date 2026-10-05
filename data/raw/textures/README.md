@@ -311,8 +311,8 @@ as flat grey. The mosaics are narrower than the usual tier ladder (Titania 1722 
 Oberon 957, Umbriel 919), so they are written at native width under the `small`
 filename and never upscaled.
 
-The DEMs hold the same Voyager 2 coverage as the mosaics (about a third of the
-globe each; Ariel only in the south). Ariel's cube
+The DEMs hold the same Voyager 2 coverage as the mosaics (Miranda 43% of the
+globe, Ariel 32%; Ariel only in the south). Ariel's cube
 also carries limb-profile arcs, thin slivers beside the stereo coverage; the build
 drops valid regions smaller than 5% of the largest before binning. Texels
 without DEM coverage get a flat normal, so relief stops at the coverage edge.

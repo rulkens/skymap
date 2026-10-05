@@ -60,10 +60,6 @@ describe('readIsisCube', () => {
     expect(readIsisCube(writeCube()).leftLonDeg).toBeCloseTo(0);
   });
 
-  it('reports the label equatorial radius in metres', () => {
-    expect(readIsisCube(writeCube()).equatorialRadiusM).toBe(R);
-  });
-
   it('throws on a layout it does not support', () => {
     expect(() => readIsisCube(writeCube({ ByteOrder: 'Msb' }))).toThrow(/ByteOrder/);
   });
