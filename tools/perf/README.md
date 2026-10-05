@@ -111,7 +111,7 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 
 - **504 "Outdated Optimize Dep" → boot timeout.** A long-running Vite server whose dependency
   graph changed underneath it (branch switch, new imports) serves 504s to the headless page; the
-  perf hook never installs and the harness times out waiting for `__skymapPerf`. Fix: restart the
+  base hook never installs and the harness times out waiting for `__skymap`. Fix: restart the
   dev server. Diagnose with `.superpowers/sdd/probeBoot.ts`-style console dumping if in doubt.
 - **The harness measures whatever the server serves.** After editing renderer/shader code, make
   sure the dev server picked it up (HMR or restart) before trusting a comparison run.
@@ -120,7 +120,7 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 ## Architecture (for extending)
 
 The browser side is `window.__skymapPerf` (`src/state/perf/installPerfHook.ts`, gated behind
-`?perf`), a deliberately tiny seam: `ready`, `setPose`, `setStrategy`, `collectTimings`,
+`?perf`; boot waits on the always-on `window.__skymap`), a deliberately tiny seam: `setPose`, `setStrategy`, `collectTimings`,
 `setTier`, `getTier`, `slotGroups`, `memory`. The Node side (`tools/perf/measurePerf.ts`) may import
 Playwright, `tools/utils/*`, and **type-only** `src/@types/*` — never renderer/shader/
 frameProgram modules. Formatters are pure `(report, palette)` functions in `tools/utils/perf/`

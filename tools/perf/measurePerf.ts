@@ -15,7 +15,8 @@
  * benchmark must therefore place the camera at an exact, reproducible vantage
  * and read the GPU's own timestamp queries, neither of which belongs in the
  * shipping app. The app's entire contribution is the `window.__skymapPerf` seam
- * (installed only under `?perf`) that this process drives through
+ * (installed only under `?perf`; boot and `ready` go through `window.__skymap`)
+ * that this process drives through
  * `page.evaluate`: `setStrategy` flips the encode path, `setPose` hard-cuts the
  * camera, `collectTimings` resolves with the accumulated `PerfSample[]`, and
  * `slotGroups` snapshots the name→groupKey map (see below).
@@ -199,7 +200,7 @@ async function bootPerfPage(
 ): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
-  await bootHookedPage(page, `${url}/?perf`, '__skymapPerf');
+  await bootHookedPage(page, `${url}/?perf`);
   const slotGroups = (await page.evaluate(
     () =>
       (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf
