@@ -126,13 +126,13 @@ Seed rows change three fields; nothing else:
 
 Load the `wesl-shaders` skill before editing the shaders.
 
-- [ ] `setMarkers(descriptors, camPos)` packs `positionAndRadius.xyz = worldPos − camPos`, subtracted in f64 before the write into the `Float32Array`.
-- [ ] The pass hands the renderer a rebased view-projection: `narrowMat4(rebaseViewProj(view.slab.vp, view.camPos))`, the pattern at `src/layers/constellations/passes/constellationsPass.ts:36-43`. `draw` and `pickRing` take that matrix.
-- [ ] The shaders use the instance position as eye-relative. Remove the `camPosMpc` uniform tail (`MARKER_UNIFORM_BYTES`, `CAM_POS_FLOAT_OFFSET` at `structureMarkerRenderer.ts:93-100`) if nothing else reads it; if a shader still needs the eye-to-marker distance, it is now `length(position)`.
-- [ ] `pickEnabled` reads "the instances the last drawn frame uploaded" (`structureMarkersPass.ts:31-33`). Those are now relative to the drawn frame's camera. Confirm the pick draw uses the same view's rebased matrix, so the pair stays consistent, and say so in the report.
-- [ ] Add the test `setMarkers packs positions relative to the camera`: a marker at `[100, 0, 0]` with the camera at `[99.5, 0, 0]` packs `[0.5, 0, 0]`.
-- [ ] Run `npm run build` (not only typecheck): shader specifiers are invisible to `tsc`.
-- [ ] Commit.
+- [x] `setMarkers(descriptors, camPos)` packs `positionAndRadius.xyz = worldPos − camPos`, subtracted in f64 before the write into the `Float32Array`.
+- [x] The pass hands the renderer a rebased view-projection: `narrowMat4(rebaseViewProj(view.slab.vp, view.camPos))`, the pattern at `src/layers/constellations/passes/constellationsPass.ts:36-43`. `draw` and `pickRing` take that matrix.
+- [x] The shaders use the instance position as eye-relative. Remove the `camPosMpc` uniform tail (`MARKER_UNIFORM_BYTES`, `CAM_POS_FLOAT_OFFSET` at `structureMarkerRenderer.ts:93-100`) if nothing else reads it; if a shader still needs the eye-to-marker distance, it is now `length(position)`.
+- [x] `pickEnabled` reads "the instances the last drawn frame uploaded" (`structureMarkersPass.ts:31-33`). Those are now relative to the drawn frame's camera. Confirm the pick draw uses the same view's rebased matrix, so the pair stays consistent, and say so in the report.
+- [x] Add the test `setMarkers packs positions relative to the camera`: a marker at `[100, 0, 0]` with the camera at `[99.5, 0, 0]` packs `[0.5, 0, 0]`.
+- [x] Run `npm run build` (not only typecheck): shader specifiers are invisible to `tsc`.
+- [x] Commit.
 
 ### Task 8 (P1): `slab` on the registry row; a second marker pass — `review: yes`
 

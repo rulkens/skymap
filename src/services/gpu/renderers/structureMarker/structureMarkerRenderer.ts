@@ -72,7 +72,7 @@ import { createDummyFadeBindGroup } from '../../lib/dummyFade';
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
  *
  * Layout (matches VsIn in structureMarker/io.wesl):
- *   [0..2]   position.xyz       — world-space centre
+ *   [0..2]   position.xyz       — centre relative to the eye (f64-subtracted)
  *   [3]      radiusMpc          — world-space half-extent (ring + halo)
  *   [4..7]   haloColor.rgba     — additive halo tint + final alpha
  *   [8..11]  ringColor.rgba     — ring tint + final alpha
@@ -88,16 +88,6 @@ const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
-
-/**
- * The 80-byte CameraUniforms prefix plus a 16-byte camPosMpc tail (the eye,
- * absolute Mpc — vec3 + one unused pad float) — see structureMarker/io.wesl's
- * `Uniforms` struct, which the ring/halo vertex stage needs to build its
- * eye-facing world basis (`expandBillboardWorld`).
- */
-export const MARKER_UNIFORM_BYTES = CAMERA_UNIFORM_BYTES + 16;
-/** Float index of camPosMpc.xyz — right after the 80-byte (20-float) prefix. */
-export const CAM_POS_FLOAT_OFFSET = CAMERA_UNIFORM_BYTES / 4;
 
 /** A per-category bag seeded to `init` — a new structure source can't leave a bucket unset. */
 function byCategory<T>(init: T): Record<StructureId, T> {
@@ -357,7 +347,7 @@ export function createStructureMarkerRenderer(
 
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
-      size: MARKER_UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     pickCameraBindGroup = device.createBindGroup({
@@ -368,7 +358,7 @@ export function createStructureMarkerRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
-      size: MARKER_UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -445,7 +435,7 @@ export function createStructureMarkerRenderer(
     }
   }
 
-  function setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void {
+  function setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void {
     // Partition descriptors by category — preserves order within each
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
@@ -477,9 +467,11 @@ export function createStructureMarkerRenderer(
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;
-      instanceBuf[base + 0] = d.worldPos[0];
-      instanceBuf[base + 1] = d.worldPos[1];
-      instanceBuf[base + 2] = d.worldPos[2];
+      // Subtract in f64 BEFORE the Float32Array write narrows: absolute Mpc
+      // positions would quantise a nearby marker onto a coarse f32 grid.
+      instanceBuf[base + 0] = d.worldPos[0] - camPos[0];
+      instanceBuf[base + 1] = d.worldPos[1] - camPos[1];
+      instanceBuf[base + 2] = d.worldPos[2] - camPos[2];
       instanceBuf[base + 3] = d.radiusMpc;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
@@ -507,7 +499,6 @@ export function createStructureMarkerRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
   ): void {
     if (
       !device ||
@@ -522,13 +513,10 @@ export function createStructureMarkerRenderer(
       return;
     if (currentMarkerCount === 0) return;
 
-    // Write the 80-byte CameraUniforms prefix, then the eye at floats
-    // 20..22 (byte 80..91) — the ring/halo vertex stage's eye-facing world
-    // basis.  The reserved pad (float 19) and camPosMpc.w (float 23) stay
-    // zero via Float32Array zero-init.
-    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
+    // The 80-byte CameraUniforms prefix; `viewProj` is the rebased matrix that
+    // pairs with the eye-relative instances `setMarkers` packed.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
-    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setBindGroup(0, cameraBindGroup);
@@ -601,17 +589,14 @@ export function createStructureMarkerRenderer(
     viewProj: Float32Array,
     viewportPx: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
   ): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    // Same prefix + eye write as `draw`, into the pick buffer: the pad
-    // (float 19) and camPosMpc.w (float 23) stay zero via Float32Array
-    // zero-init.
-    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
+    // Same prefix write as `draw`, into the pick buffer; `viewProj` must be
+    // the one rebased on the eye `setMarkers` last packed against.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
-    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);

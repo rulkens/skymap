@@ -7,12 +7,10 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { STRUCTURE_IDS } from '../../../../data/structure/structureIds';
+import { rebasedViewProjOf } from '../../../../utils/camera/rebasedViewProjOf';
 import { anyFadeBandVisible } from '../../../../utils/math/anyFadeBandVisible';
-import { STRUCTURE_MARKER_STYLES } from '../../presentation/structureMarkerStyles';
+import { STRUCTURE_VISIBLE_BANDS } from '../../presentation/structureVisibleBands';
 import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
-
-const CATEGORY_BANDS = STRUCTURE_IDS.map((id) => STRUCTURE_MARKER_STYLES[id].visibleBand);
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
@@ -27,7 +25,7 @@ export const structureMarkersPass: ContentPass = {
     // into the solar system), so the executor should drop the layer from the
     // pass plan entirely. Keyed on distance from the heliocentric render origin.
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return anyFadeBandVisible(CATEGORY_BANDS, camDistMpc);
+    return anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc);
   },
 
   // The pick program derives its own frame context (`pickFrameContext`), which
@@ -38,27 +36,29 @@ export const structureMarkersPass: ContentPass = {
     if (state.gpu.structureMarkerRenderer === null) return false;
     if (state.gpu.structureMarkerRenderer.markerCount() === 0) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return anyFadeBandVisible(CATEGORY_BANDS, camDistMpc);
+    return anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc);
   },
 
   draw(pass, view, ctx, state) {
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     // The bands reach 0 continuously before this skip engages, so no pop.
-    if (!anyFadeBandVisible(CATEGORY_BANDS, camDistMpc)) return;
+    if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc)) return;
     // Upload THIS view's planned markers before the draw — one instance buffer
     // is correct only because a `perView` section is its own submit
     // (`renderFrame`'s view-identity batching).
     state.gpu.structureMarkerRenderer!.setMarkers(
       ctx.snapshot.plans.get(structureMarkersPlanner, ctx),
+      view.camPos,
     );
     // No FadeRegistry handle: the renderer binds a real fade group at @group(1)
     // anyway, so the BGL matches what the other HDR layers bind at that slot.
     state.gpu.structureMarkerRenderer!.draw(
       pass,
-      view.vp,
+      // Instances are eye-relative to `view.camPos`; pick reuses them, so it
+      // takes the same view's rebased matrix.
+      rebasedViewProjOf(view),
       view.viewportPx,
       ctx.drawPxPerRad,
-      view.camPos,
     );
   },
 
@@ -68,13 +68,12 @@ export const structureMarkersPass: ContentPass = {
     // Invisible ⇒ unpickable: the rings stop drawing past their bands' goneAt
     // edges, so they must not claim pick hits there either.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
-    if (!anyFadeBandVisible(CATEGORY_BANDS, camDistMpc)) return;
+    if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc)) return;
     state.gpu.structureMarkerRenderer!.pickRing(
       pass,
-      view.vp,
+      rebasedViewProjOf(view),
       view.viewportPx,
       ctx.drawPxPerRad,
-      view.camPos,
     );
   },
 };

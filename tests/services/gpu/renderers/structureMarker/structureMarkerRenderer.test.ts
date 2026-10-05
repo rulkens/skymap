@@ -1,13 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  createStructureMarkerRenderer,
-  MARKER_UNIFORM_BYTES,
-  CAM_POS_FLOAT_OFFSET,
-} from '../../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
+import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
@@ -61,8 +57,8 @@ const group = (id: number): StructureMarkerDescriptor => ({
 describe('StructureMarkerRenderer (CPU state)', () => {
   it('replaces (not appends) on subsequent setMarkers', () => {
     const r = newRenderer();
-    r.setMarkers([cluster(1)]);
-    r.setMarkers([cluster(2), cluster(3)]);
+    r.setMarkers([cluster(1)], [0, 0, 0]);
+    r.setMarkers([cluster(2), cluster(3)], [0, 0, 0]);
     expect(r.markerCount()).toBe(2);
   });
 
@@ -71,7 +67,7 @@ describe('StructureMarkerRenderer (CPU state)', () => {
     // drops descriptors in insertion order (clusters saturate the buffer
     // and superclusters/voids never pack).
     const r = newRenderer(2);
-    r.setMarkers([cluster(1), cluster(2), cluster(3), cluster(4), cluster(5)]);
+    r.setMarkers([cluster(1), cluster(2), cluster(3), cluster(4), cluster(5)], [0, 0, 0]);
     expect(r.markerCount()).toBe(5);
   });
 
@@ -80,7 +76,7 @@ describe('StructureMarkerRenderer (CPU state)', () => {
     // write-pass guard.  Feed a mix of all four marker-bearing categories
     // and assert every descriptor is counted.
     const r = newRenderer();
-    r.setMarkers([cluster(1), void_(2), group(3), group(4)]);
+    r.setMarkers([cluster(1), void_(2), group(3), group(4)], [0, 0, 0]);
     expect(r.markerCount()).toBe(4);
   });
 
@@ -88,7 +84,7 @@ describe('StructureMarkerRenderer (CPU state)', () => {
     // Buckets are independent: adding group markers must not bleed into
     // the cluster or void buckets (which would desync pick indices).
     const r = newRenderer();
-    r.setMarkers([cluster(1), cluster(2), void_(3), group(4), group(5), group(6)]);
+    r.setMarkers([cluster(1), cluster(2), void_(3), group(4), group(5), group(6)], [0, 0, 0]);
     // Total = 6; if any bucket bleed occurred markerCount would be wrong.
     expect(r.markerCount()).toBe(6);
   });
@@ -169,7 +165,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       {} as unknown as FadeUniformsBgl,
       false,
     );
-    renderer.setMarkers([cluster(1)]);
+    renderer.setMarkers([cluster(1)], [0, 0, 0]);
     (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
 
     const viewProj = Float32Array.from({ length: 16 }, (_, i) => i + 1);
@@ -182,16 +178,13 @@ describe('StructureMarkerRenderer pick camera', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    const pickCamPos: Vec3 = [3, 4, 5];
-    renderer.pickRing(passEncoder, viewProj, viewportPx, 1000, pickCamPos);
+    renderer.pickRing(passEncoder, viewProj, viewportPx, 1000);
 
     const pickCameraBuffer = buffersByLabel.get('structure-marker-pick-camera');
     const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
     expect(pickCameraBuffer).toBeDefined();
     expect(drawTimeBuffer).toBeDefined();
-    // The ring vertex stage declares the 80-byte CameraUniforms prefix plus
-    // a 16-byte camPosMpc tail, so the buffer holds exactly that.
-    expect(bufferSizesByLabel.get('structure-marker-pick-camera')).toBe(MARKER_UNIFORM_BYTES);
+    expect(bufferSizesByLabel.get('structure-marker-pick-camera')).toBe(CAMERA_UNIFORM_BYTES);
 
     // The pick-time pose lands on pickRing's OWN buffer as the prefix —
     // never on the draw-time `structure-marker-uniforms` buffer, which still
@@ -202,16 +195,10 @@ describe('StructureMarkerRenderer pick camera', () => {
     ).mock.calls.at(-1) as [GPUBuffer, number, Float32Array];
     expect(target).toBe(pickCameraBuffer);
     expect(offset).toBe(0);
-    expect(payload.byteLength).toBe(MARKER_UNIFORM_BYTES);
+    expect(payload.byteLength).toBe(CAMERA_UNIFORM_BYTES);
     expect(Array.from(payload.subarray(0, 16))).toEqual(Array.from(viewProj));
     expect(payload[16]).toBe(viewportPx[0]);
     expect(payload[17]).toBe(viewportPx[1]);
-    // The eye lands at floats 20..22, right after the 80-byte prefix — a
-    // TS<->WESL byte-layout drift here is exactly the bug class this file
-    // guards against.
-    expect(payload[CAM_POS_FLOAT_OFFSET]).toBe(pickCamPos[0]);
-    expect(payload[CAM_POS_FLOAT_OFFSET + 1]).toBe(pickCamPos[1]);
-    expect(payload[CAM_POS_FLOAT_OFFSET + 2]).toBe(pickCamPos[2]);
     expect(device.queue.writeBuffer).not.toHaveBeenCalledWith(
       drawTimeBuffer,
       expect.anything(),
@@ -234,11 +221,8 @@ describe('StructureMarkerRenderer pick camera', () => {
     expect(setBindGroupOrder).toBeLessThan(firstDrawOrder);
   });
 
-  it('draw writes the eye at floats 20..22 of the camera upload', () => {
-    // Regression guard for the TS<->WESL Uniforms layout: ring/halo's
-    // vertex stage reads camPosMpc.xyz right after the 80-byte prefix
-    // (structureMarker/io.wesl) to build its eye-facing world basis.
-    const buffersByLabel = new Map<string, GPUBuffer>();
+  it('setMarkers packs positions relative to the camera', () => {
+    const writes: Float32Array[] = [];
     const device = {
       createBindGroupLayout: vi.fn(() => ({})),
       createPipelineLayout: vi.fn(() => ({})),
@@ -246,49 +230,27 @@ describe('StructureMarkerRenderer pick camera', () => {
         getCompilationInfo: () => Promise.resolve({ messages: [] }),
       })),
       createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
-        const buf = { label: desc.label, destroy: vi.fn() } as unknown as GPUBuffer;
-        buffersByLabel.set(desc.label!, buf);
-        return buf;
-      }),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
       createBindGroup: vi.fn(() => ({})),
-      queue: { writeBuffer: vi.fn() },
+      queue: {
+        writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
+      },
     } as unknown as GPUDevice;
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'bgra8unorm' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
     const renderer = createStructureMarkerRenderer(
-      ctx,
+      {
+        device,
+        context: null as unknown as GPUCanvasContext,
+        format: 'bgra8unorm' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
     );
-    renderer.setMarkers([cluster(1)]);
-    (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
-
-    const viewProj = Float32Array.from({ length: 16 }, (_, i) => i + 1);
-    const viewportPx: Vec2 = [1920, 1080];
-    const camPos: Vec3 = [7, 8, 9];
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-
-    renderer.draw(pass, viewProj, viewportPx, 1000, camPos);
-
-    const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
-    const [target, , payload] = (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mock
-      .calls[0] as [GPUBuffer, number, Float32Array];
-    expect(target).toBe(drawTimeBuffer);
-    expect(payload.byteLength).toBe(MARKER_UNIFORM_BYTES);
-    expect(payload[CAM_POS_FLOAT_OFFSET]).toBe(camPos[0]);
-    expect(payload[CAM_POS_FLOAT_OFFSET + 1]).toBe(camPos[1]);
-    expect(payload[CAM_POS_FLOAT_OFFSET + 2]).toBe(camPos[2]);
+    writes.length = 0;
+    renderer.setMarkers([{ ...cluster(1), worldPos: [100, 0, 0] }], [99.5, 0, 0]);
+    const packed = writes.at(-1)!;
+    expect(Array.from(packed.subarray(0, 3))).toEqual([0.5, 0, 0]);
   });
 });
