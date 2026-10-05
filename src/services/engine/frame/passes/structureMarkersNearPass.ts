@@ -14,9 +14,11 @@ export const structureMarkersNearPass: ContentPass = {
 
   enabled(state, ctx, _view) {
     if (state.gpu.structureMarkerNearRenderer === null) return false;
-    if (ctx.snapshot.plans.get(structureMarkersPlanner, ctx).length === 0) return false;
+    // Band before plan: the (hdr, NEAR0) group must empty above the foreground
+    // gate from camera distance alone, without reading this frame's plans.
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
-    return anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB.near0, camDistMpc);
+    if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB.near0, camDistMpc)) return false;
+    return ctx.snapshot.plans.get(structureMarkersPlanner, ctx).length > 0;
   },
 
   // Pick gates on the last drawn instances, as in `structureMarkersPass`.
