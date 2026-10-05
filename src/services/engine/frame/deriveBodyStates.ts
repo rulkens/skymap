@@ -2,7 +2,8 @@
  * deriveBodyStates — derives every scene body's time-varying `BodyState` from
  * the three authored position tables — anchors, Keplerian elements, surface
  * sites (`positionDrivers.ts` reads the same three as a union) — keyed by id.
- * A body is Kepler plus its fitted Horizons correction, less any pair reflex.
+ * A body is Kepler plus its fitted Horizons correction, less any pair reflex;
+ * a moon's correction also shifts M before Kepler, so it stays on its conic.
  * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
  * the orbit trail draws the same conic instead of re-deriving its own.
  * Memoized on `simDays`: every pass (draw, pick, labels) reads the same
@@ -65,9 +66,13 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // focus id throws — so the lookup here is total.
   for (const el of FOCUS_ORDER) {
     const focus = positions.get(el.focusId)!;
-    const propagated = propagateElements(el, simDays);
-    const position = addVec3(focus, keplerianPositionMpc(propagated));
     const correction = EPHEMERIS_CORRECTIONS[el.id];
+    let propagated = propagateElements(el, simDays);
+    const dM =
+      correction?.meanAnomalyRad &&
+      correctionSeriesAt(correction.meanAnomalyRad, simDays, correction.outside);
+    if (dM) propagated = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + dM[0]! };
+    const position = addVec3(focus, keplerianPositionMpc(propagated));
     const km =
       correction?.positionKm &&
       correctionSeriesAt(correction.positionKm, simDays, correction.outside);

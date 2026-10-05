@@ -21,7 +21,9 @@ Europa's apsis rates are negative.
 
 **Tech stack:** TypeScript, Vitest, tsx tools, the JPL Horizons API.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-accurate-moon-positions-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-05-accurate-moon-positions-design.md`
+
+**Completed 2026-10-05** (#843 prep, #846 feature). Deviations and rulings: see the archived ledger `2026-10-05-accurate-moon-positions.ledger.md`. User smoke passed via deep links.
 
 ## Global constraints
 
@@ -250,16 +252,16 @@ export function fitSinusoidSeries(
   Its signature does not change.
 
 **Steps:**
-- [ ] Add the test `moonRatesFromPeriods: a negative apsidal period gives a negative ω-rate, a
+- [x] Add the test `moonRatesFromPeriods: a negative apsidal period gives a negative ω-rate, a
       sub-sentinel one in either sign gives 0`. Check −1.333 → −2π·100/1.333; and −0.005 and
       +0.005 → 0.
-- [ ] Add the test `Saturn satellites advance at their IAU spin rate in longitude`. For each Saturn
+- [x] Add the test `Saturn satellites advance at their IAU spin rate in longitude`. For each Saturn
       moon, (dM + dω + dΩ)/dt in °/day equals 360/P to 1e-9. That is the longitude-rate identity,
       and it fails on today's double count.
-- [ ] Add the test `Io's apsis regresses`: its `argPeriapsisRateRadPerCty < 0`.
-- [ ] Update the rows, the maker and the helper header. Delete the backlog line and its detail
+- [x] Add the test `Io's apsis regresses`: its `argPeriapsisRateRadPerCty < 0`.
+- [x] Update the rows, the maker and the helper header. Delete the backlog line and its detail
       file.
-- [ ] Commit `fix(bodies): satellite periods read per row (longitude vs anomalistic), Io/Europa
+- [x] Commit `fix(bodies): satellite periods read per row (longitude vs anomalistic), Io/Europa
       apsides regress`.
 
 ### Task 4: Moon Horizons rows, fit path and the ΔM term
@@ -309,13 +311,13 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
   Halt and report if the total exceeds 2× that, or if any moon fails verify.
 
 **Steps:**
-- [ ] Add the test `meanAnomalyCorrectionTarget recovers a known shift`. Take an eccentric
+- [x] Add the test `meanAnomalyCorrectionTarget recovers a known shift`. Take an eccentric
       (e = 0.2), inclined row. Build `horizonsKm` from the row with M + 0.7 rad, and expect 0.7 to
       1e-9. Repeat with −3.0 rad, to check the seed handles a near-half-orbit shift.
-- [ ] Add the moon rows, then run `npm run fetch-horizons` (moons only; it takes a while, so run it
+- [x] Add the moon rows, then run `npm run fetch-horizons` (moons only; it takes a while, so run it
       in the background) and `npm run build-ephemeris-corrections`. Every body must pass verify.
-- [ ] Wire ΔM into `deriveBodyStates`.
-- [ ] Commit the code, the generated file and the docs:
+- [x] Wire ΔM into `deriveBodyStates`.
+- [x] Commit the code, the generated file and the docs:
       `feat(bodies): moons match Horizons (ΔM + residual corrections, 1900–2100)`.
 
 ### Task 5: Moon accuracy tests and re-recorded fixtures
@@ -331,26 +333,26 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
 1900-06-01 and 2099-06-01.
 
 **Steps:**
-- [ ] Add the test `every moon is within 1,000 km of Horizons (parent-relative) on the fixture
+- [x] Add the test `every moon is within 1,000 km of Horizons (parent-relative) on the fixture
       dates`. Compare `deriveBodyStates` moon − parent against the fixture. The tolerance is
       1,000 km plus the measured barycentre-vs-centre offset for that parent. Measure the offset
       first (≤ ~300 km expected) and state the constant with its reason in the test.
-- [ ] Add the test `a moon past 2100 is raw Kepler`. At `endJd + 1`, Titan − Saturn equals
+- [x] Add the test `a moon past 2100 is raw Kepler`. At `endJd + 1`, Titan − Saturn equals
       `keplerianPositionMpc(propagateElements(titanRow, t))` to ≤ 1 m.
-- [ ] Add the test `Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby`.
+- [x] Add the test `Mimas and Titan trails stay centred on Saturn at the Voyager 1 Saturn flyby`.
       Run the real states through `orbitTrailsPass` (pattern: `orbitTrailsPass.test.ts`, the
       snapshot-offset test). Check two things:
       - the packed ellipse centre, minus Saturn + `centerOffsetMpc(orbit)`, is ≤ 0.06 × the
         semi-major axis;
       - the body point at the orbit's E equals the body position to ≤ 1 m.
-- [ ] Re-record `bodyStatesJ2000.json` and the golden traces (`SETTLE_GOLDEN_RECORD=1`,
+- [x] Re-record `bodyStatesJ2000.json` and the golden traces (`SETTLE_GOLDEN_RECORD=1`,
       `DRIVER_GOLDEN_RECORD=1`) where moon positions moved. Run `npm test` and
       `npm run typecheck`.
-- [ ] Commit `test(bodies): moon Horizons accuracy, trail centring, re-recorded fixtures`.
+- [x] Commit `test(bodies): moon Horizons accuracy, trail centring, re-recorded fixtures`.
 
 ## Definition of Done
 
-- [ ] **Deliverables:**
+- [x] **Deliverables:**
   - `CorrectionSeries` and the reshaped `EphemerisCorrection`
   - `correctionSeriesAt`
   - `EPHEMERIS_CORRECTIONS` with 8 planet rows (`'hold'`) and 11 moon rows (`'off'`, `meanAnomalyRad`
@@ -358,13 +360,13 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
   - `HORIZONS_BODIES`, `fetch-horizons` and `build-ephemeris-corrections`
   - `BodyState.orbit`
   - `satellite` `periodKind` and the signed apsis
-- [ ] **Smoke (user, on the dev server):**
+- [x] **Smoke (user, on the dev server):**
   - Set the clock to 1980-11-12 23:46 UT with Saturn focused. Titan is near Voyager 1's
     approach side, and every Saturn-moon trail is centred on Saturn.
   - Set 1979-03-05 at Jupiter. The Galilean trails are centred, and each moon sits on its trail.
   - Scrub across 2100: the moons jump once and keep orbiting, with no NaN or vanishing body.
   - Planets are unchanged.
-- [ ] **Out of scope (deferred):**
+- [x] **Out of scope (deferred):**
   - Earth's Moon accuracy.
   - Uranus and Neptune moons (#838 adds rows later).
   - Edge taper.
