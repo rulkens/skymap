@@ -107,10 +107,10 @@ import { tourFrameCap } from '../utils/record/tourFrameCap';
 import { clipFrameCap } from '../utils/record/clipFrameCap';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
-import type { PreviewHandle } from '../@types/serve/PreviewHandle';
+import type { ViteServerHandle } from '../@types/serve/ViteServerHandle';
 import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
 import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
-import { spawnPreviewServer } from '../utils/serve/spawnPreviewServer';
+import { spawnViteServer } from '../utils/serve/spawnViteServer';
 
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
@@ -123,7 +123,7 @@ const FFMPEG_STDERR_TAIL_LINES = 40;
 // belongs to deploys), and is reused across takes unless --rebuild forces one.
 const SERVE_BUILD_DIR = 'tools/record/.build';
 // Arbitrary and quiet; strictPort is left off (vite's default) so a busy
-// port just bumps instead of failing — see spawnPreviewServer, which reads
+// port just bumps instead of failing — see spawnViteServer, which reads
 // the actual bound port back off stdout rather than assuming this one held.
 const SERVE_PORT = 4517;
 
@@ -800,12 +800,15 @@ async function main(): Promise<void> {
   // a try/finally purely to guarantee this child is killed on every path out
   // of main, success or failure, without duplicating a kill call at each of
   // the several places the ffmpeg block below already handles its own child.
-  let preview: PreviewHandle | undefined;
+  let preview: ViteServerHandle | undefined;
   if (options.serve) {
     console.log('record — --serve: self-hosting a production build for this take');
     await ensureServeBuild(SERVE_BUILD_DIR, options.rebuild);
     ensureDataSymlink(SERVE_BUILD_DIR);
-    preview = await spawnPreviewServer(SERVE_BUILD_DIR, SERVE_PORT);
+    preview = await spawnViteServer(
+      ['preview', '--outDir', SERVE_BUILD_DIR, '--port', String(SERVE_PORT)],
+      'vite preview',
+    );
     options.url = preview.url;
     console.log(`  serving at ${preview.url} (no dev-client HMR — immune to reload-mid-take)`);
   }

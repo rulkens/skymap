@@ -38,6 +38,7 @@ import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
 import { liveWorldPose } from './helpers/liveWorldPose';
+import { waitUntilSettled } from './helpers/waitUntilSettled';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
@@ -268,6 +269,7 @@ export function createEngine(
       loadProgress: null,
     },
     booted: false,
+    fadesAnimating: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
@@ -496,6 +498,11 @@ export function createEngine(
   // direct to the store.
   const handle: EngineHandle = {
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
+    settled: () =>
+      waitUntilSettled(
+        () => state.subsystems.scheduler.nextFrame(),
+        () => state.fadesAnimating,
+      ),
     debug: {
       // The same Map the bootstrap populates, so the dev panel observes slots as
       // they appear. Read-only at the type level, so React-side mutation trips tsc.

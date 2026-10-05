@@ -17,13 +17,13 @@ import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { SceneShot } from '../../@types/capture/SceneShot';
-import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
+import type { CaptureOutcome } from '../../@types/capture/CaptureOutcome';
 
 export async function captureScene(
   browser: Browser,
   base: string,
   shot: SceneShot,
-): Promise<ShotOutcome> {
+): Promise<CaptureOutcome> {
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
@@ -61,7 +61,7 @@ export async function captureScene(
     }
     // Escape and the pose-less dispatches land after any applyPose wait; the
     // shot needs a frame that drew them.
-    await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());
+    await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
 
     const bytes = await writeThumbnail(await page.screenshot({ type: 'png' }), shot.outPath);
     return { status: 'captured', label: shot.label, bytes };
