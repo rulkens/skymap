@@ -25,21 +25,27 @@ import {
   INSTANCE_ATTRIBUTES,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
+} from '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
+import {
   OCCLUDER_CAM_POS_OFFSET,
   OCCLUDER_COUNT_OFFSET,
   OCCLUDER_INV_MVP_OFFSET,
   OCCLUDER_SPHERES_OFFSET,
   OCCLUDER_UNIFORM_BYTES,
   OCCLUDER_VIEWPORT_OFFSET,
-} from '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
+} from '../../../../src/services/gpu/renderers/bodies/trailOcclusionUniforms';
+
+const TRAIL_OCCLUSION_WESL = 'src/services/gpu/shaders/lib/trailOcclusion.wesl';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from
  * orbitTrail/constants.wesl. Handles the `u`/`f` literal suffixes and float
  * syntax, parsing with `parseFloat` so `96u` -> 96 and `2.5` -> 2.5 alike.
  */
-function parseWeslConstants(): Map<string, number> {
-  const path = join(process.cwd(), 'src/services/gpu/shaders/bodies/orbitTrail/constants.wesl');
+function parseWeslConstants(
+  file = 'src/services/gpu/shaders/bodies/orbitTrail/constants.wesl',
+): Map<string, number> {
+  const path = join(process.cwd(), file);
   const text = readFileSync(path, 'utf-8');
   const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
   const map = new Map<string, number>();
@@ -64,10 +70,10 @@ describe('orbitTrail/constants.wesl ↔ orbitTrailConstants.ts parity', () => {
     ).toBe(RIBBON_SEGMENTS);
   });
 
-  it('MAX_OCCLUDERS in orbitTrail/constants.wesl equals MAX_ORBIT_OCCLUDERS', () => {
+  it('MAX_OCCLUDERS in lib/trailOcclusion.wesl equals MAX_ORBIT_OCCLUDERS', () => {
     // A drift here is a uniform-buffer size mismatch: the fragment's array
     // and the renderer's buffer disagree, and the pipeline fails at bind time.
-    const weslValue = parseWeslConstants().get('MAX_OCCLUDERS');
+    const weslValue = parseWeslConstants(TRAIL_OCCLUSION_WESL).get('MAX_OCCLUDERS');
     expect(weslValue, 'WESL constant MAX_OCCLUDERS is missing').toBeDefined();
     expect(weslValue).toBe(MAX_ORBIT_OCCLUDERS);
   });
@@ -186,11 +192,11 @@ describe('orbitTrail/io.wesl OrbitInstance ↔ orbitTrailRenderer INSTANCE_ATTRI
  * widest member) and return each field's byte offset plus the struct size.
  */
 function occlusionUniformLayout(): { offsets: Map<string, number>; size: number } {
-  const path = join(process.cwd(), 'src/services/gpu/shaders/bodies/orbitTrail/fragment.wesl');
+  const path = join(process.cwd(), TRAIL_OCCLUSION_WESL);
   const text = readFileSync(path, 'utf-8');
   const structMatch = text.match(/struct OcclusionUniforms \{([\s\S]*?)\n\};/);
-  if (!structMatch) throw new Error('OcclusionUniforms struct not found in fragment.wesl');
-  const maxOccluders = parseWeslConstants().get('MAX_OCCLUDERS')!;
+  if (!structMatch) throw new Error('OcclusionUniforms struct not found in trailOcclusion.wesl');
+  const maxOccluders = parseWeslConstants(TRAIL_OCCLUSION_WESL).get('MAX_OCCLUDERS')!;
 
   // WGSL's uniform-address-space align/size pair per type. An array's size
   // depends on MAX_OCCLUDERS, so it is resolved below rather than tabulated.
@@ -221,7 +227,7 @@ function occlusionUniformLayout(): { offsets: Map<string, number>; size: number 
   return { offsets, size: Math.ceil(offset / maxAlign) * maxAlign };
 }
 
-describe('orbitTrail/fragment.wesl OcclusionUniforms ↔ orbitTrailRenderer occluder offsets', () => {
+describe('lib/trailOcclusion.wesl OcclusionUniforms ↔ trailOcclusionUniforms offsets', () => {
   // The renderer writes `count` and the sphere array into ONE ArrayBuffer at
   // hand-written offsets. A drift — a field added, a pad word dropped — is
   // invisible to both compilers and lands the spheres where the shader reads

@@ -7,7 +7,7 @@
  * fallback pipeline for the behind-camera case. Same profile as
  * `planetRenderer` otherwise — additive, depthless, cull-none. Every per-orbit
  * quantity rides the instance record; the one bind group is the frame's
- * occluder spheres plus the sampled scene depth, written once per draw.
+ * occluder spheres plus the sampled scene depth (lib/trailOcclusion.wesl), written once per draw.
  * @module
  */
 
@@ -18,7 +18,8 @@ import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { MAX_ORBIT_OCCLUDERS, RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
+import { RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
+import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';
 
 /**
  * Float32 slots per per-instance record: three `Ginv` columns (12) + colour
@@ -61,22 +62,6 @@ export const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 12, offset: 168, format: 'float32x4' }, // eye-relative semi-minor B (km)
 ];
 
-/**
- * The occluder uniform's layout: `count` (u32) + three pad words, then
- * MAX_ORBIT_OCCLUDERS vec4s, then the sampled depth row's frame — its inverse
- * MVP, its camera (vec3, padded to 16), and the viewport the fragment divides
- * its pixel by (vec2, padded to 16). The ONE TS home for the byte offsets,
- * mirroring `OcclusionUniforms` in orbitTrail/fragment.wesl — pinned against
- * that struct by orbitTrailConstants.parity.test.ts, since a silent drift here
- * writes the spheres where the shader reads padding.
- */
-export const OCCLUDER_COUNT_OFFSET = 0;
-export const OCCLUDER_SPHERES_OFFSET = 16;
-export const OCCLUDER_INV_MVP_OFFSET = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLUDERS * 16;
-export const OCCLUDER_CAM_POS_OFFSET = OCCLUDER_INV_MVP_OFFSET + 64; // mat4x4<f32>
-export const OCCLUDER_VIEWPORT_OFFSET = OCCLUDER_CAM_POS_OFFSET + 16; // camPosKm (vec3) ends at 348; vec2 aligns to 8 → 352
-export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_VIEWPORT_OFFSET + 16; // vec2<f32> + pad
-
 /** Float slot of `viewportPx.x` in an instance record (location 5's `.zw`).
  *  Taking the viewport from the record the vertex stage divides by is what
  *  keeps the two stages' idea of the viewport from ever diverging. */
@@ -97,16 +82,7 @@ export function createOrbitTrailRenderer(
     size: OCCLUDER_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const occluderScratch = new ArrayBuffer(OCCLUDER_UNIFORM_BYTES);
-  const occluderCount = new Uint32Array(occluderScratch, OCCLUDER_COUNT_OFFSET, 1);
-  const occluderSpheres = new Float32Array(
-    occluderScratch,
-    OCCLUDER_SPHERES_OFFSET,
-    MAX_ORBIT_OCCLUDERS * 4,
-  );
-  const occluderInvMvp = new Float32Array(occluderScratch, OCCLUDER_INV_MVP_OFFSET, 16);
-  const occluderCamPos = new Float32Array(occluderScratch, OCCLUDER_CAM_POS_OFFSET, 3);
-  const occluderViewport = new Float32Array(occluderScratch, OCCLUDER_VIEWPORT_OFFSET, 2);
+  const occluderUniforms = createTrailOcclusionUniforms();
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'orbit-trail-bgl',
     entries: [
@@ -205,17 +181,12 @@ export function createOrbitTrailRenderer(
     device.queue.writeBuffer(instanceBuffer, 0, instances, 0, instances.length);
     pass.setVertexBuffer(0, instanceBuffer);
 
-    const spheres = Math.min(occluders.count, MAX_ORBIT_OCCLUDERS);
-    occluderCount[0] = spheres;
-    occluderSpheres.set(occluders.spheresKm.subarray(0, spheres * 4));
-    // A null depth.frame always arrives with the far-cleared placeholder view,
-    // so the fragment never reads invMvp/camPosKm in that case — skip them.
-    if (depth.frame !== null) {
-      occluderInvMvp.set(depth.frame.invMvp);
-      occluderCamPos.set(depth.frame.camPosKm);
-    }
-    occluderViewport.set(instances.subarray(INSTANCE_VIEWPORT_FLOAT, INSTANCE_VIEWPORT_FLOAT + 2));
-    device.queue.writeBuffer(occluderBuffer, 0, occluderScratch);
+    occluderUniforms.write(
+      occluders,
+      depth.frame,
+      instances.subarray(INSTANCE_VIEWPORT_FLOAT, INSTANCE_VIEWPORT_FLOAT + 2),
+    );
+    device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
 
     if (bindGroup === null || bindGroup.depthView !== depth.view) {
       bindGroup = {
