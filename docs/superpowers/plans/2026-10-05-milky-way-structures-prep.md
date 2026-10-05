@@ -111,13 +111,13 @@ Seed rows change three fields; nothing else:
 - [x] Add the test `marker alpha at a camera distance equals the band value times the unbanded alpha` at three distances: above `fullAt`, mid-band, and below `goneAt` (zero).
 - [x] Commit.
 
-### Task 6 (P4): Radius-relative near guard
+### Task 6 (P4): Near guards protect only the division
 
 **Files:** `src/services/engine/presentation/produceStructureMarkers.ts`, `src/services/engine/presentation/produceStructureLabels.ts`, their tests
 
-- [x] `produceStructureMarkers.ts:92` (`distanceMpc < 0.001`) becomes "camera inside the drawn radius" (`distanceMpc <= radiusMpc`). The descriptor is still emitted at alpha 0, to keep index alignment.
+- [x] `produceStructureMarkers.ts:92` (`distanceMpc < 0.001`) becomes `distanceMpc <= 0`, guarding only the division. The descriptor is still emitted at alpha 0, to keep index alignment. (First landed as `distanceMpc <= radiusMpc`; the final review showed that pops rings on viewports with `pxPerRad` < 1100, where the max-apparent fade is not yet zero at d = r.)
 - [x] `produceStructureLabels.ts:145` (`distanceMpc > 0.001`) becomes `distanceMpc > 0`, so only the division is guarded.
-- [x] Every existing structure has a radius far above 1 kpc and its ring is already at alpha 0 inside its own radius (the max-apparent-radius fade), so no expected value changes. Add the test `a 4 pc structure seen from 100 pc is not faded by the near guard`.
+- [x] Within 1 kpc of any existing anchor the ring's apparent radius is far past the max-apparent fade band (smallest radius 0.089 Mpc), so no expected value changes. Add the test `a 4 pc structure seen from 100 pc is not faded by the near guard`.
 - [x] Commit.
 
 ### Task 7 (P7): Camera-relative marker instances — `review: yes`
@@ -172,8 +172,8 @@ createStructureMarkerRenderer(…, categories: readonly StructureId[])
 
 **Files:** none (report only)
 
-- [ ] Read `.claude/skills/perf/SKILL.md`. Run `npm run perf` against this worktree's dev server (`--url` from its own `Local:` line) at this branch's head and at `origin/main`, and report the structure-marker and total frame times side by side. Task 7 moves a subtraction to the CPU per marker per frame; a regression above noise halts the landing.
-- [ ] `npm run build` passes.
+- [x] Read `.claude/skills/perf/SKILL.md`. Run `npm run perf` against this worktree's dev server (`--url` from its own `Local:` line) at this branch's head and at `origin/main`, and report the structure-marker and total frame times side by side. Task 7 moves a subtraction to the CPU per marker per frame; a regression above noise halts the landing.
+- [x] `npm run build` passes.
 
 ## Definition of Done
 

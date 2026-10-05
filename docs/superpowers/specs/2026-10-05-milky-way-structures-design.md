@@ -90,7 +90,7 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - **P1 — slab on the registry row; two marker passes.** `StructureSourceEntry.slab`; the four existing rows say `'cosmo'`. A second pass `structure-markers-near` joins the NEAR0 hdr roster with its own `structureMarkerRenderer` instance. Each pass draws the categories whose `slab` matches; the near one draws nothing yet. Its far-plane clamp (as in `near0SelectionRingPass`) lands in PR 2, where there are rows to judge it on.
 - **P2 — labels follow the slab.** `produceStructureLabels` runs once per slab and feeds the matching director (`foregroundLabelDirector` for `'near0'`, camera-relative anchors as constellation captions do).
 - **P3 — band on the style row.** `visibleBand` on every row, all four `surveyDeepZoom`. The pass keeps a cheap skip when every category it draws is at zero.
-- **P4 — radius-relative near guard.** Both 1 kpc guards become "camera inside the object's apparent radius", which is what they protect against.
+- **P4 — near guards protect only the division.** Both 1 kpc guards become "distance is zero". Inside its own radius a ring is already faded by the max-apparent-radius band, which scales with the object, so no fixed distance is needed.
 - **P5 — focus from radius.** Drop `MIN_FRAMING_DISTANCE_MPC`; keep the maximum. No seeded row has a radius under 0.05 Mpc, so today's framing is unchanged.
 - **P6 — `galaxyMembers` on the registry row.** The four existing rows say `true`. `structureFocusSubsystem`'s predicate and the member-count publisher read it.
 - **P7 — camera-relative marker instances.** `setMarkers` uploads `worldPos − camPos` computed in f64; `ring.wesl` and `ringPick.wesl` drop their `camPosMpc` add.
