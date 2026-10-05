@@ -1,6 +1,6 @@
 # Milky Way structures — PR 2 feature
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Four in-Galaxy structure categories (`open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`) with 71 seed rows, drawn as rings and labels on the NEAR0 slab, focusable, pickable, searchable, with two new card rows.
 
@@ -87,11 +87,11 @@ Style rows (all `visibleBand: SCALE_FADE_BANDS.galacticStructures`; every value 
 
 Other style fields copy the `cluster` row.
 
-- [ ] Add the codes, rows, type, arms, band and style rows. `buildAnchorStructure`'s switch gains four arms: the nebula arm carries `nebulaKind`, the Galactic Centre arm carries `lineOfSightAssumed ?? false`.
-- [ ] Test `open-cluster and globular-cluster ids are not claimed as cluster`: the structure row's `claims` (`structureSelectionRow.ts:42`) resolves `open-cluster-pleiades` to category `open-cluster` and `globular-cluster-m13` to `globular-cluster`; the place id `galactic-centre` (no suffix) is not claimed, `galactic-centre-arches` is.
-- [ ] Test `a near0 category is full at the Sun and gone at the foreground gate; a cosmo category is the reverse`: `fadeBand` over each slab's bands at camera distance 0 and at `FOREGROUND_MAX_DISTANCE_MPC`.
-- [ ] No other new test: the registry, style table and record union are compiler-checked, and toggles, counts, pick codes and search chips derive from `STRUCTURE_IDS`.
-- [ ] `npm run typecheck` and `npm test` green. Commit.
+- [x] Add the codes, rows, type, arms, band and style rows. `buildAnchorStructure`'s switch gains four arms: the nebula arm carries `nebulaKind`, the Galactic Centre arm carries `lineOfSightAssumed ?? false`.
+- [x] Test `open-cluster and globular-cluster ids are not claimed as cluster`: the structure row's `claims` (`structureSelectionRow.ts:42`) resolves `open-cluster-pleiades` to category `open-cluster` and `globular-cluster-m13` to `globular-cluster`; the place id `galactic-centre` (no suffix) is not claimed, `galactic-centre-arches` is.
+- [x] Test `a near0 category is full at the Sun and gone at the foreground gate; a cosmo category is the reverse`: `fadeBand` over each slab's bands at camera distance 0 and at `FOREGROUND_MAX_DISTANCE_MPC`.
+- [x] No other new test: the registry, style table and record union are compiler-checked, and toggles, counts, pick codes and search chips derive from `STRUCTURE_IDS`.
+- [x] `npm run typecheck` and `npm test` green. Commit.
 
 ### Task 2: Seed parser knows the new fields
 
@@ -111,10 +111,10 @@ type StructureSeedEntry = { …;
 
 `source` names where the row's distance and radii come from ("Hunt & Reffert 2024", "Harris 2010", a paper's bibcode). It is build-time documentation; the runtime never reads it.
 
-- [ ] Tests, one per rule: `rejects a nebula without nebulaKind`, `rejects nebulaKind on a non-nebula`, `rejects an unknown nebulaKind`, `rejects lineOfSightAssumed outside galactic-centre`, `rejects a Milky Way row without source`.
-- [ ] Implement beside the existing checks (`parseStructureSeed.ts:76-122`). The set of categories that require `source` is derived from the registry (`slab === 'near0'`), not a second hand-written list.
-- [ ] `docs/DATA.md`: document the three fields in the seed section.
-- [ ] Commit.
+- [x] Tests, one per rule: `rejects a nebula without nebulaKind`, `rejects nebulaKind on a non-nebula`, `rejects an unknown nebulaKind`, `rejects lineOfSightAssumed outside galactic-centre`, `rejects a Milky Way row without source`.
+- [x] Implement beside the existing checks (`parseStructureSeed.ts:76-122`). The set of categories that require `source` is derived from the registry (`slab === 'near0'`), not a second hand-written list.
+- [x] `docs/DATA.md`: document the three fields in the seed section.
+- [x] Commit.
 
 ### Task 3: The near marker pass clamps inside NEAR0's far plane
 
@@ -135,12 +135,12 @@ setMarkers(descriptors, camPos: Vec3, maxDistanceMpc?: number): void
 
 An instance whose camera-relative length `d` exceeds `maxDistanceMpc` is packed at `worldPos − camPos` scaled by `k = maxDistanceMpc / d`, with its radius scaled by the same `k`. Position and radius scale together, so the ring's direction and angular size are unchanged; only depth moves. The near pass passes `view.slab.far * NEAR0_FAR_CLAMP_FRACTION`, the same bound `near0SelectionRingPass.ts:163` uses.
 
-- [ ] Read how `near0SelectionRingPass.ts:152-166` reasons about both planes. Confirm from `ring.wesl` that the instance radius is a world length multiplied into the quad (if the radius reaches the shader in pixels instead, stop and report: the contract above would be wrong).
-- [ ] Test `an instance beyond maxDistanceMpc keeps its direction and its radius-to-distance ratio`, on the packed instance data.
-- [ ] Test `an instance inside maxDistanceMpc is packed unchanged`.
-- [ ] Implement in the f64 packing step, before narrowing. Pick reads the same buffer, so it needs no change; say so in the commit body after checking `pickRing`.
-- [ ] `frameSections.ts`: the `(hdr, NEAR0)` roster comment near line 168 says the remaining rows are "additive and so a listing choice". Near rings blend premultiplied-over, so their position matters. Reword the comment to say which rows that holds for.
-- [ ] Commit.
+- [x] Read how `near0SelectionRingPass.ts:152-166` reasons about both planes. Confirm from `ring.wesl` that the instance radius is a world length multiplied into the quad (if the radius reaches the shader in pixels instead, stop and report: the contract above would be wrong).
+- [x] Test `an instance beyond maxDistanceMpc keeps its direction and its radius-to-distance ratio`, on the packed instance data.
+- [x] Test `an instance inside maxDistanceMpc is packed unchanged`.
+- [x] Implement in the f64 packing step, before narrowing. Pick reads the same buffer, so it needs no change; say so in the commit body after checking `pickRing`.
+- [x] `frameSections.ts`: the `(hdr, NEAR0)` roster comment near line 168 says the remaining rows are "additive and so a listing choice". Near rings blend premultiplied-over, so their position matters. Reword the comment to say which rows that holds for.
+- [x] Commit.
 
 ### Tasks 4–7: Seed rows
 
@@ -161,7 +161,7 @@ Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, h Persei (NGC 869), χ
 
 Preferred source: Hunt & Reffert (2023, 2024) Gaia DR3 cluster catalogue, via VizieR. `physicalRadius` = the radius containing half the members (r50), `apparentRadius` = the tidal or total radius. Westerlund 1 is heavily reddened and may need its own paper.
 
-- [ ] Add the rows; `npm test -- structureAnchors parseStructureSeed buildStaticAnchorStructures` passes. Commit.
+- [x] Add the rows; `npm test -- structureAnchors parseStructureSeed buildStaticAnchorStructures` passes. Commit.
 
 ### Task 5: Globular clusters (21 rows)
 
@@ -169,7 +169,7 @@ Preferred source: Hunt & Reffert (2023, 2024) Gaia DR3 cluster catalogue, via Vi
 
 Preferred source: Harris (1996, 2010 edition) for half-light and tidal radii; Baumgardt & Vasiliev (2021) for distances. `physicalRadius` = half-light radius, `apparentRadius` = tidal radius.
 
-- [ ] Add the rows; the same three test files pass. Commit.
+- [x] Add the rows; the same three test files pass. Commit.
 
 ### Task 6: Nebulae (22 rows)
 
@@ -180,7 +180,7 @@ Preferred source: Harris (1996, 2010 edition) for half-light and tidal radii; Ba
 
 No single catalogue covers these: each row cites the paper its distance comes from (Gaia-based where one exists). `physicalRadius` = `apparentRadius` = half the catalogued angular extent at that distance, unless a bright core is separately measured. Each row carries `nebulaKind`. The Tarantula is out: it is in the Large Magellanic Cloud.
 
-- [ ] Add the rows; the same three test files pass. Commit.
+- [x] Add the rows; the same three test files pass. Commit.
 
 ### Task 7: Galactic Centre places (3 rows) and seed sanity
 
@@ -188,11 +188,11 @@ No single catalogue covers these: each row cites the paper its distance comes fr
 
 Central cluster (the nuclear star cluster around Sgr A\*), Arches, Quintuplet. Arches and Quintuplet carry `lineOfSightAssumed: true` and `distance: { value: 8178, unit: 'pc' }`, the value `src/data/places/galacticCentre.ts:29` uses, with their own published RA/Dec. The central cluster sits at Sgr A\*'s coordinates (`galacticCentre.ts:20-21`) and the same distance, without the flag.
 
-- [ ] Add the rows.
-- [ ] Test `every Milky Way row lies within 0.1 Mpc of the origin`, over the four new categories.
-- [ ] Test `every Galactic Centre place lies within 50 pc of GALACTIC_CENTRE_ANCHOR`.
-- [ ] Test `the central cluster sits on the anchor` (within 1 pc), which catches a transcribed coordinate drifting from the place seed.
-- [ ] Commit.
+- [x] Add the rows.
+- [x] Test `every Milky Way row lies within 0.1 Mpc of the origin`, over the four new categories.
+- [x] Test `every Galactic Centre place lies within 50 pc of GALACTIC_CENTRE_ANCHOR`.
+- [x] Test `the central cluster sits on the anchor` (within 1 pc), which catches a transcribed coordinate drifting from the place seed.
+- [x] Commit.
 
 ### Task 8: Card rows
 
@@ -216,9 +216,9 @@ export const NEBULA_KIND_LABELS: Readonly<Record<NebulaKind, string>> = {
 - The "Galaxies" row is already absent when `memberCount` is null. Check that a `galaxyMembers: false` category reaches the card with a null count (PR 1 made the publisher read the registry); change nothing if so.
 - The "r" line formats the radius for a parsec-scale object in pc, not as `0.00 Mpc`. Check what the card prints for the Pleiades and route it through the existing distance formatter if it does not already adapt its unit.
 
-- [ ] Test `a nebula card shows its kind; a cluster card has no Type row`.
-- [ ] Test `the Line of sight row appears only when lineOfSightAssumed`.
-- [ ] Implement. Commit.
+- [x] Test `a nebula card shows its kind; a cluster card has no Type row`.
+- [x] Test `the Line of sight row appears only when lineOfSightAssumed`.
+- [x] Implement. Commit.
 
 ### Task 9: On-screen tuning (controller with the user)
 
