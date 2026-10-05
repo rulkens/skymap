@@ -1,0 +1,3 @@
+# Atmosphere shell depth sampling duplication
+
+Flagged during mission-trails review (Task 10, shared occlusion). `atmosphereShellPass` binds the sampled depth via `sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets)` and its shader reconstructs km from that depth; other depth-reading passes (the trail occlusion in `lib::trailOcclusion`) reconstruct depth separately. Collapse the depth-to-distance reconstruction into one shared WESL helper plus one binding helper. The exact duplicated sites were not itemised in the review; list them (grep `sampledDepthBinding` and depth reconstruction under `src/services/gpu/shaders/`) before scoping.
