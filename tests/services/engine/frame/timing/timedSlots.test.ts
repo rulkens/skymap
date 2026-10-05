@@ -37,3 +37,17 @@ describe('TIMED_SLOTS — body slot pool', () => {
     expect(() => buildTimingSlotMap(TIMED_SLOTS)).not.toThrow();
   });
 });
+
+describe('TIMED_SLOTS — query-set budget', () => {
+  it('fits the WebGPU query-set cap', () => {
+    // 4096 is WebGPU's fixed maximum query count per query set; one slot costs two (begin + end).
+    expect(TIMED_SLOTS.length * 2).toBeLessThanOrEqual(4096);
+  });
+
+  it('bills each cubemap capture to exactly one slot, never per face', () => {
+    for (const key of ['sgrAStar', 'solarSystem', 'probe']) {
+      expect(TIMED_SLOTS.filter((n) => n === `${key}·capture`)).toHaveLength(1);
+    }
+    expect(TIMED_SLOTS.filter((n) => /@[^@]+:\d+$/.test(n))).toEqual([]);
+  });
+});

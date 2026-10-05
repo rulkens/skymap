@@ -67,6 +67,10 @@ export type GpuTimingService = {
    * from the injected slot-name list via `buildTimingSlotMap`), so this
    * method doesn't need the frame context.  A name with no allocated
    * slot returns `undefined` — the pass draws untimed.
+   *
+   * The first claim of a slot since `beginFrame` writes begin and end; a
+   * repeat claim in the same frame writes end only, so a slot shared by
+   * contiguous passes spans from the first pass's start to the last's end.
    */
   descriptorFor(slot: TimingSlotName): GPURenderPassTimestampWrites | undefined;
   /**

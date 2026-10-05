@@ -126,7 +126,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/math/cubeSphereMesh.ts',
   'src/utils/occlusion/selectOccluderSpheresKm.ts',
   'src/utils/occlusion/subjectOccludedByBodies.ts',
-  'src/utils/perf/foldCaptureFaceRows.ts',
   'src/utils/render/disk/byDistanceToCamera.ts',
   'src/utils/surfaceTiles/cutSurfaceTiles.ts',
   'src/utils/volume/packLogTraceVoxels.ts',

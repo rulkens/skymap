@@ -91,6 +91,7 @@ import {
   renderStepTimingSlotName,
 } from './slabs';
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
+import { captureTimingSlotName } from './timing/captureTimingSlotName';
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
@@ -277,14 +278,15 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
         // `descriptorFor(groupKey)` resolves exactly that slot.
-        // `renderStepTimingSlotName` appends the drawing view's id — a
-        // capture's 6 faces all share one `(row, NEAR0)` group, so the bare
-        // groupKey would look up the SAME slot for all 6 (see its doc,
-        // slabs.ts); `stepCtx.id` is that face's own `<key>:<face>`, minted at
-        // `faceViewSpec`. The authored `slot` separates the several
-        // `FRAME_ORDER` lines sharing `(hdr, NEAR0)` the same way; for a
-        // canvas line with neither this is a no-op passthrough of `groupKey`.
+        // The authored `slot` separates the several `FRAME_ORDER` lines
+        // sharing `(hdr, NEAR0)`; a line without one is a passthrough of
+        // `groupKeyOf`.
         const groupKey = renderStepTimingSlotName(groupKeyOf(step), stepCtx.id, step.slot);
+        // A capture bills every pass of every face to its ONE slot (see
+        // `captureTimingSlotName`); the timing service turns the repeat claims
+        // into end-only writes, so the slot spans the whole bake.
+        const captureSlot =
+          step.capture === undefined ? undefined : captureTimingSlotName(step.capture.key);
         // The destination, resolved once — the executor's only branch on what a
         // step writes into. An ordinary step names a render-target row; a
         // capture step names a capture ROW, which owns the texture its faces
@@ -341,6 +343,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           group,
           view,
           groupKey,
+          captureSlot,
           alreadyTouched: destination.touchSet.has(destination.touchKey),
         });
         destination.touchSet.add(destination.touchKey);
@@ -457,11 +460,25 @@ function renderGroup(
     group: readonly ContentPass[];
     view: SlabView;
     groupKey: string;
+    /** A capture step's one bake-wide slot; overrides both strategies' own slots. */
+    captureSlot?: string;
     alreadyTouched: boolean;
   },
 ): void {
-  const { encoder, ctx, state, timing, label, dest, depth, group, view, groupKey, alreadyTouched } =
-    p;
+  const {
+    encoder,
+    ctx,
+    state,
+    timing,
+    label,
+    dest,
+    depth,
+    group,
+    view,
+    groupKey,
+    captureSlot,
+    alreadyTouched,
+  } = p;
 
   if (strategy === 'merged') {
     // Tile-local: one pass holds the whole group, so OVER blends read coherent
@@ -476,7 +493,7 @@ function renderGroup(
       // timing a single-pass shape can give (per-layer slots are the
       // `perLayerTimed` path's alone). A no-op timing service returns undefined,
       // so this spreads to nothing in production merged frames.
-      ...timestampSpread(timing, groupKey),
+      ...timestampSpread(timing, captureSlot ?? groupKey),
     });
     for (const contentPass of group) {
       contentPass.draw(pass, view, ctx, state);
@@ -497,7 +514,7 @@ function renderGroup(
   // others' timestamps (see `passTimingSlotName`'s doc, slabs.ts).
   group.forEach((contentPass, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = passTimingSlotName(contentPass.name, view.slab.index, ctx.id);
+    const slot = captureSlot ?? passTimingSlotName(contentPass.name, view.slab.index, ctx.id);
     const pass = encoder.beginRenderPass({
       label: `render-${label}-${slot}`,
       colorAttachments: [colorAttachment(dest.view, dest.clearValue, touchedBefore)],
