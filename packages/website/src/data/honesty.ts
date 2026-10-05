@@ -91,6 +91,10 @@ export const HONESTY: Honesty = {
       href: 'https://visibleearth.nasa.gov/',
     },
     {
+      text: 'Betelgeuse’s surface: a plain disc sized from its catalogued radius',
+      href: `${REPO_BLOB}/data/seeds/famous_stars.seed.json`,
+    },
+    {
       text: 'Black holes: a lensing model with an invented glowing disc, not an image',
       href: 'https://arxiv.org/abs/2010.08735',
     },
