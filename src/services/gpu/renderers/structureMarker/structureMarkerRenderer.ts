@@ -1,7 +1,7 @@
 /**
  * structureMarkerRenderer — instanced halo + ring overlay for the
- * `type:'structure'` categories of one slab (cosmo: cluster, supercluster,
- * void, group); each slab gets its own instance and buffers.
+ * `type:'structure'` categories of one slab; each slab gets its own instance
+ * and buffers.
  * The producer (`produceStructureMarkers`) feeds it descriptors; the
  * store it visualises is `state.data.structures`.
  *
@@ -444,7 +444,11 @@ export function createStructureMarkerRenderer(
     }
   }
 
-  function setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void {
+  function setMarkers(
+    descriptors: readonly StructureMarkerDescriptor[],
+    camPos: Vec3,
+    maxDistanceMpc = Infinity,
+  ): void {
     // Partition descriptors by category — preserves order within each
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
@@ -480,10 +484,17 @@ export function createStructureMarkerRenderer(
       const base = slot * MARKER_INSTANCE_FLOATS;
       // Subtract in f64 BEFORE the Float32Array write narrows: absolute Mpc
       // positions would quantise a nearby marker onto a coarse f32 grid.
-      instanceBuf[base + 0] = d.worldPos[0] - camPos[0];
-      instanceBuf[base + 1] = d.worldPos[1] - camPos[1];
-      instanceBuf[base + 2] = d.worldPos[2] - camPos[2];
-      instanceBuf[base + 3] = d.radiusMpc;
+      const rx = d.worldPos[0] - camPos[0];
+      const ry = d.worldPos[1] - camPos[1];
+      const rz = d.worldPos[2] - camPos[2];
+      // Beyond the slab's far plane the whole quad is clipped. Position and
+      // radius scale together, so direction and angular size hold; only depth moves.
+      const dist = Math.hypot(rx, ry, rz);
+      const k = dist > maxDistanceMpc ? maxDistanceMpc / dist : 1;
+      instanceBuf[base + 0] = rx * k;
+      instanceBuf[base + 1] = ry * k;
+      instanceBuf[base + 2] = rz * k;
+      instanceBuf[base + 3] = d.radiusMpc * k;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
       instanceBuf[base + 6] = d.haloColor[2];

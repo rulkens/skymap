@@ -334,3 +334,48 @@ describe('StructureMarkerRenderer instance eye', () => {
     );
   });
 });
+
+describe('StructureMarkerRenderer maxDistanceMpc', () => {
+  const packWith = (worldPos: [number, number, number], maxDistanceMpc?: number): Float32Array => {
+    const writes: Float32Array[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: {
+        writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
+      },
+    } as unknown as GPUDevice;
+    const renderer = createStructureMarkerRenderer(
+      {
+        device,
+        context: null as unknown as GPUCanvasContext,
+        format: 'bgra8unorm' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      false,
+      STRUCTURE_IDS,
+    );
+    writes.length = 0;
+    renderer.setMarkers([{ ...cluster(1), worldPos, radiusMpc: 2 }], [0, 0, 0], maxDistanceMpc);
+    return writes.at(-1)!;
+  };
+
+  it('an instance beyond maxDistanceMpc keeps its direction and its radius-to-distance ratio', () => {
+    const packed = packWith([30, 0, 40], 10);
+    expect(Array.from(packed.subarray(0, 4))).toEqual([6, 0, 8, 0.4].map((v) => Math.fround(v)));
+  });
+
+  it('an instance inside maxDistanceMpc is packed unchanged', () => {
+    const packed = packWith([3, 0, 4], 10);
+    expect(Array.from(packed.subarray(0, 4))).toEqual([3, 0, 4, 2]);
+  });
+});

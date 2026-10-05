@@ -7,6 +7,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { anyFadeBandVisible } from '../../../../utils/math/anyFadeBandVisible';
 import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from '../../presentation/structureVisibleBands';
+import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
 
 export const structureMarkersNearPass: ContentPass = {
@@ -35,6 +36,7 @@ export const structureMarkersNearPass: ContentPass = {
     state.gpu.structureMarkerNearRenderer!.setMarkers(
       ctx.snapshot.plans.get(structureMarkersPlanner, ctx),
       view.camPos,
+      view.slab.far * NEAR0_FAR_CLAMP_FRACTION,
     );
     state.gpu.structureMarkerNearRenderer!.draw(
       pass,
