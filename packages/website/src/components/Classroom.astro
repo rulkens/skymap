@@ -16,7 +16,7 @@ const host = new URL(Astro.site!).host;
   <div class="frame">
     <Picture
       src={still}
-      alt="The solar system as skymap draws it: the Sun with the planets' orbits, labelled, among catalogued stars."
+      alt="The solar system in skymap: the Sun, the planets' orbits with labels, and catalogued stars behind."
       formats={["avif", "webp"]}
     fallbackFormat="webp"
       widths={[640, 960, 1280]}
@@ -30,8 +30,8 @@ const host = new URL(Astro.site!).host;
   <div class="copy">
     <h2>Use it in a classroom</h2>
     <p>
-      Point the camera at Jupiter, set the date, and copy the address. The whole class opens the link and sees what
-      you see. No accounts, nothing to install.
+      Point the camera at Jupiter, set the date, and copy the address. Every pupil who opens the link lands on Jupiter
+      at that date. No accounts, nothing to install.
     </p>
     <ObjLink href={sitePath('/educators/')}>Skymap for educators</ObjLink>
   </div>

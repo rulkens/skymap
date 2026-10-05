@@ -20,14 +20,17 @@ const factIds = [
   ...FLIGHT_STOPS.flatMap((s) => (s.factId ? [s.factId] : [])),
   ...PLACES.flatMap((p) => (p.factId ? [p.factId] : [])),
   'proxima-distance',
+  'betelgeuse-estimates',
+  '2mrs-coverage',
   'sondermarken-flyout',
+  'geodanmark-orthophoto',
   'grand-tour-steps',
 ];
 ---
 
 <Base
-  title="skymap"
-  description="Fly from Earth to the edge of the observable universe at true scale, through the galaxies and stars the surveys have measured. Free, in the browser."
+  title="skymap: the mapped universe at true scale, in your browser"
+  description="Fly through the mapped universe, from a Copenhagen park to the cosmic web, in real star and galaxy catalogues. Free, no account, in a current browser."
   heroNav
 >
   <link slot="head" rel="preload" as="image" imagesrcset={poster.srcset} imagesizes={poster.sizes} fetchpriority="high" />

@@ -1,6 +1,7 @@
 ---
 /* Sources — the page's numbered source list, generated from the fact ids it used. */
 import { fact } from '../data/fact';
+import { formatDate } from '../utils/formatDate';
 
 type Props = { ids: readonly string[] };
 
@@ -15,10 +16,7 @@ const rows = [...new Set(Astro.props.ids)].map(fact);
         {rows.map((row) => (
           <li>
             {row.text}{' '}
-            <a href={row.source} rel="noopener">
-              {new URL(row.source).hostname}
-            </a>
-            , checked {row.checked}.
+            <a href={row.source}>{row.sourceLabel}</a>, checked {formatDate(row.checked)}.
           </li>
         ))}
       </ol>

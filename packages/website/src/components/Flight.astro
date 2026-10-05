@@ -19,6 +19,9 @@ import type { HeroPoster } from '../@types/HeroPoster';
 type Props = { poster: HeroPoster; videoUrl: string };
 
 const { poster, videoUrl } = Astro.props;
+// Shown at the end of the flight and under the stop list; the Milky Way and the web glow are the two drawn things a viewer has seen by then.
+const closing =
+  'The stars and galaxies in this flight sit where the catalogues put them. The Milky Way’s disc and the glow of the web are drawn, and the flight says so.';
 const duration = HERO_MEDIA.outSec - HERO_MEDIA.inSec;
 const stops = FLIGHT_STOPS.map((stop) => ({
   ...stop,
@@ -45,7 +48,7 @@ const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, li
         sizes={poster.sizes}
         width={poster.width}
         height={poster.height}
-        alt="Earth against a field of labelled stars and galaxies, from the opening of the flight."
+        alt="Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight."
         fetchpriority="high"
         decoding="async"
       />
@@ -56,7 +59,7 @@ const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, li
       <div class="intro" data-intro>
         <div class="titles">
           <h1 class="word">skymap</h1>
-          <p class="tag">The measured universe at true scale. You hold the camera.</p>
+          <p class="tag">The mapped universe at true scale. You hold the camera.</p>
         </div>
         <div class="start">
           <ObjLink class="launch" size="big" href={appLink()}>Fly it yourself</ObjLink>
@@ -67,7 +70,7 @@ const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, li
 
       <div class="caption" data-caption aria-hidden="true"><b></b><span></span></div>
       <div class="arrive" data-arrive>
-        <p>In skymap, each of those points is a catalogued star or galaxy at its measured position.</p>
+        <p>{closing}</p>
         <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
       </div>
 
@@ -75,7 +78,7 @@ const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, li
         <i data-fill></i>
         {
           stops.map((stop) => (
-            <button type="button" style={`top:${((stop.atSec / duration) * 100).toFixed(2)}%`} data-stop={stop.atSec} aria-label={`Go to ${stop.name}`}>
+            <button type="button" style={`top:${((stop.atSec / duration) * 100).toFixed(2)}%`} data-stop={stop.atSec} aria-label={`Scroll the flight to ${stop.name}`}>
               <span>{stop.name}</span>
             </button>
           ))
@@ -96,7 +99,7 @@ const stopData = JSON.stringify(stops.map((s) => ({ t: s.atSec, name: s.name, li
     }
   </ol>
   <div class="end wrap">
-    <p>In skymap, each of those points is a catalogued star or galaxy at its measured position.</p>
+    <p>{closing}</p>
     <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
   </div>
 </section>
