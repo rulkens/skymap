@@ -6,7 +6,7 @@ Decision ledger: [`docs/grill-sessions/npm-run-shot-2026-10-05.md`](../../grill-
 ## Goal
 
 `npm run shot -- '<share URL or bare hash>' …` opens each link in a headless browser, waits until the
-app has arrived and drawn, and writes a PNG. Its main use is an agent's debugging loop: shoot the dev
+app has arrived and drawn, and writes a JPEG (PNG with `--png`). Its main use is an agent's debugging loop: shoot the dev
 server that is already running, look at the result, and hand the shot plus its deep link to the user
 as a dash check (Q1, Q13).
 
@@ -25,7 +25,7 @@ same run. That is accepted as is (Q4).
 - A spawned server is a dev server; `--build` uses the production build + preview path (Q8).
 - A shot shows the link as given, plus `--hide-ui` and `--hide-labels` (Q9).
 - Default frame 1600×900 at DPR 2; `--size` and `--dpr` override (Q10).
-- Output is `data/shots/<subject>-<timestamp>.png`, one absolute path per shot on stdout (Q11).
+- Output is `data/shots/<subject>-<timestamp>.jpg` (`.png` under `--png`), one absolute path per shot on stdout (Q11).
 - `--timeout` defaults to 30 s; on expiry the tool shoots anyway and exits non-zero. Page errors go to
   stderr and do not change the exit code (Q12).
 - The tool warns when the server it shot runs from a different checkout; `perf` gets the same warning
@@ -52,6 +52,7 @@ export type SkymapHook = {
   readonly dispatch: AppDispatch;
   readonly getState: () => RootState;
   readonly nextFrame: () => Promise<void>;
+  readonly settled: () => Promise<void>; // nextFrame, repeated while the frame reported a fade or label animation
   readonly projectRoot: string; // the serving checkout's root, injected by vite `define`
 };
 // src/@types/automation/SkymapWindow.d.ts — the window cast, as PerfWindow/RecorderWindow do.
@@ -109,7 +110,7 @@ A greenfield cross-check diverged in three places, each ruled:
 
 ```
 npm run shot -- <link>... [--url <server>] [--build] [--out <file>] [--size WxH] [--dpr N]
-                          [--hide-ui] [--hide-labels] [--timeout <seconds>]
+                          [--hide-ui] [--hide-labels] [--png] [--timeout <seconds>]
 ```
 
 - A link is a full share URL or a bare hash (`focus=body-saturn`, with or without `#`). The origin and
@@ -131,15 +132,15 @@ npm run shot -- <link>... [--url <server>] [--build] [--out <file>] [--size WxH]
 1. New browser context at the requested size and DPR.
 2. `bootHookedPage` on `<server>/?<flags>#<hash>`, with `cinema` added to the flags under `--hide-ui`.
 3. Under `--hide-labels`, dispatch `labelDeclutterActions()`.
-4. Await `__skymap.nextFrame()`.
-5. `page.screenshot` as PNG, written to the output path; the absolute path goes to stdout.
+4. Await `__skymap.settled()`: at least one frame, then until a frame reports no fade or label animation. Auto-rotate and a playing clock do not count, so it cannot hang on them.
+5. Capture as JPEG (quality 90) or, under `--png`, PNG, written to the output path; the absolute path goes to stdout. Under `--hide-ui` after a successful boot the bytes come from the WebGPU canvas (`toBlob` in the same task as a fresh frame); otherwise, and if that read fails, from `page.screenshot`.
 
 Steps 2–4 race the `--timeout`. On expiry the tool still takes step 5, reports the timeout on stderr,
 and the run exits non-zero after the remaining links are shot.
 
 ### Output name
 
-`data/shots/<subject>-<YYYYMMDD-HHMMSS>.png`, local time. `<subject>` is the link's `focus`, `exhibit`,
+`data/shots/<subject>-<YYYYMMDD-HHMMSS>.jpg` (`.png` under `--png`), local time. `<subject>` is the link's `focus`, `exhibit`,
 `tour` or `clip` id, else `shot`. `data/shots/` is gitignored. Two links with the same subject in one
 run get a numeric suffix.
 
@@ -165,4 +166,4 @@ the Commands list with a `tools/shot/README.md`.
 
 - A warm browser or page between runs, parallel contexts, and boot-time tuning (Q3, Q4).
 - Changing `perf`'s default URL.
-- Formats other than PNG.
+- Formats other than JPEG and PNG.

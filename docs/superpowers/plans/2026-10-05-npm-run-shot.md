@@ -4,7 +4,7 @@
 > [`sdd-execution.md`](../conventions/sdd-execution.md) to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `npm run shot -- <link>...` writes a PNG of each deep link as the app shows it, against a
+**Goal:** `npm run shot -- <link>...` writes an image (JPEG by default, PNG with `--png`) of each deep link as the app shows it, against a
 running server (`--url`) or one it starts itself.
 
 **Architecture:** A thin Playwright entry point over the joints the prep PR (#842) landed: it boots each
@@ -23,7 +23,7 @@ sections "Rulings" and "Design".
   types in `tools/@types/<area>/`. One function per file under `tools/utils/`, filename = symbol.
 - stdout carries exactly one absolute path per shot and nothing else; every other message (progress,
   warnings, page errors, the timeout notice) goes to stderr.
-- Defaults: 1600×900, DPR 2, `--timeout` 30 seconds, output `data/shots/<subject>-<YYYYMMDD-HHMMSS>.png`
+- Defaults: 1600×900, DPR 2, `--timeout` 30 seconds, output `data/shots/<subject>-<YYYYMMDD-HHMMSS>.jpg` (`.png` under `--png`)
   in local time.
 - There is no default server URL. `--url` reuses a server and never starts or stops one; without it the
   tool starts a dev server, or a production build + preview under `--build`.
@@ -34,7 +34,7 @@ sections "Rulings" and "Design".
 
 - **Link forms a person will paste:** a full share URL with query and hash, a bare `focus=body-saturn`,
   the same with a leading `#`, a `?dome#focus=…` fragment, and a link with no hash at all.
-- **A subject that never resolves:** the timeout must still produce a PNG of whatever is on screen and
+- **A subject that never resolves:** the timeout must still produce an image of whatever is on screen and
   the run must exit non-zero after shooting the remaining links.
 - **A link whose boot throws** (server down, hook missing): reported on stderr for that link, the other
   links still run, the run exits non-zero, and a spawned server is still stopped.
@@ -103,13 +103,13 @@ export function shotOutName(opts: {
   link: ShotLink;
   now: Date;
   taken: ReadonlySet<string>; // names already used in this run
-}): string; // relative: 'data/shots/<subject>-<YYYYMMDD-HHMMSS>.png'
+}): string; // relative: 'data/shots/<subject>-<YYYYMMDD-HHMMSS>.<jpg|png>'
 ```
 
 **Behaviour:** `<subject>` is the value of the first of `focus`, `exhibit`, `tour`, `clip` present in
 the link's hash, with every character outside `[A-Za-z0-9._-]` replaced by `-`; `shot` when none is
 present. Local time, as `tools/utils/record/defaultOutName.ts` stamps it. If the name is in `taken`,
-append `-2`, `-3`, … before `.png` until it is free.
+append `-2`, `-3`, … before the extension until it is free.
 
 - [x] Tests: `names the shot after its focus id`; `falls back to exhibit, tour, clip in that order`;
       `uses "shot" when the hash names no subject`; `sanitises a subject with path characters`
@@ -194,7 +194,7 @@ export async function shootLink(
    `tools/utils/capture/labelDeclutterActions.ts`'s actions through
    `tools/utils/browser/dispatchActions.ts`, then await `window.__skymap.nextFrame()`.
 4. Step 3 races `timeoutMs`. On expiry set `timedOut` and continue to step 5.
-5. `page.screenshot({ type: 'png' })` written to `outPath` (create the directory). If step 3 threw,
+5. The image (page screenshot, or the canvas under `--hide-ui`) written to `outPath` (create the directory). If step 3 threw,
    record `error` and still attempt the screenshot; `path` is null only if the screenshot itself fails.
 6. Close the context in `finally`.
 
@@ -209,7 +209,7 @@ outcome timed out, errored, or has no path; page errors alone do not change it.
 - [x] No unit test for `shootLink` or `shot.ts`: both are Playwright orchestration over tested helpers.
 - [x] Implement. `npm run typecheck` passes.
 - [x] Smoke against a running dev server (the controller supplies its URL): one body link writes a
-      3200×1800 PNG and prints one absolute path on stdout. Commit.
+      3200×1800 image and prints one absolute path on stdout. Commit.
 
 ### Task 6: Docs and convention
 
@@ -222,7 +222,7 @@ tells worktree users to pass `--url`)
 - [x] `CLAUDE.md`, "Dev server stays running" bullet — replace its last sentence with: for a visual
       check, shoot the link with `npm run shot -- '<link>' --url <your server>`, look at the result,
       then send the shot and its deep link to the user as a dash check; the user keeps the verdict.
-- [x] `CLAUDE.md` Commands block: `npm run shot        # PNG of any deep link → tools/shot/README.md`.
+- [x] `CLAUDE.md` Commands block: `npm run shot        # screenshot of any deep link → tools/shot/README.md`.
 - [x] Commit.
 
 ---
@@ -240,12 +240,12 @@ tells worktree users to pass `--url`)
 **Observable behaviours**
 
 - `npm run shot -- 'focus=body-saturn' --url <this worktree's server>`: one path on stdout, a
-  3200×1800 PNG of Saturn with the UI panels, exit 0.
-- The same with `--hide-ui --hide-labels --size 1280x720 --dpr 1`: a 1280×720 PNG with no panels and
+  3200×1800 JPEG of Saturn with the UI panels, exit 0.
+- The same with `--hide-ui --hide-labels --size 1280x720 --dpr 1`: a 1280×720 JPEG with no panels and
   no labels.
 - Two links in one run, one of them `exhibit=cosmicWeb`: two paths, two files.
-- `focus=body-does-not-exist`: lands home, still writes a PNG.
-- `--timeout 1`: a PNG is written, a timeout line appears on stderr, exit 1.
+- `focus=body-does-not-exist`: lands home, still writes an image.
+- `--timeout 1`: an image is written, a timeout line appears on stderr, exit 1.
 - No `--url`: a dev server starts, the shot is taken, the server is gone afterwards.
 - `--build`: the same through the production build.
 - `--url` pointing at another checkout's server: one warning line on stderr naming both paths; the
@@ -255,5 +255,5 @@ tells worktree users to pass `--url`)
 
 - A warm browser or page between runs, parallel contexts, boot-time tuning.
 - Changing `perf`'s default URL.
-- Formats other than PNG.
+- Formats other than JPEG and PNG.
 - The `cosmicWeb` thumbnail drift in `capture-featured`.

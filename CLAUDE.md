@@ -75,7 +75,7 @@ npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
-npm run shot        # PNG of any deep link → tools/shot/README.md
+npm run shot        # screenshot of any deep link → tools/shot/README.md
 npm run capture-featured # palette-card thumbnails → tools/capture/README.md
 npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
 ```
