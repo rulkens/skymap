@@ -6,7 +6,7 @@ Rulings came from the brainstorm of 2026-10-04 → 2026-10-05 (dash asks B28N an
 
 ## 1. What this is
 
-- Four `type: 'structure'` registry rows: `openCluster`, `globularCluster`, `nebula`, `galacticCentrePlace`.
+- Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`.
 - About 70 hand-authored seed rows (§5), each a ring plus label at its true 3D position, focusable, pickable and searchable.
 - The rings and labels are visible while the camera is inside or near the Milky Way and fade out in intergalactic space. The existing four categories keep fading out on the way in, as today.
 - Focusing a row frames it by its radius: the Pleiades from tens of parsecs, not from 100 kpc.
@@ -26,6 +26,7 @@ Packaging: **two PRs**. PR 1 is the ground preparation (§3): nine behaviour-neu
 | R6 | A category states where and when it draws through **independent fields**: `slab` on the registry row, `visibleBand` on the style row, focus distance from the row's radius. There is no `scale: 'cosmic' \| 'galactic'` grouping. |
 | R7 | Seed lengths are **unit-tagged** (`{ value, unit }`) in the one existing seed file. The 42 existing rows migrate. |
 | R8 | PR packaging: one prep PR (P1–P9), then the feature PR. |
+| R9 | New category ids are kebab-case, so every structure deep link stays lowercase kebab. Deep links stay in the URL hash; path-based object links and a `kind/slug` scheme are backlogged. |
 
 ## 3. Ground preparation
 
@@ -52,13 +53,13 @@ type StructureSeedEntry = {
   distance: Length; physicalRadius: Length; apparentRadius: Length;
   abell?: string;                    // cluster
   nebulaKind?: NebulaKind;           // nebula, required there
-  lineOfSightAssumed?: boolean;      // galacticCentrePlace
+  lineOfSightAssumed?: boolean;      // galactic-centre
 };
 
 // StructureInfo arms
 NebulaRecord              = StructureBase & { category: 'nebula'; nebulaKind: NebulaKind };
-GalacticCentrePlaceRecord = StructureBase & { category: 'galacticCentrePlace'; lineOfSightAssumed: boolean };
-OpenClusterRecord, GlobularClusterRecord = StructureBase & { category: … };
+GalacticCentrePlaceRecord = StructureBase & { category: 'galactic-centre'; lineOfSightAssumed: boolean };
+OpenClusterRecord, GlobularClusterRecord = StructureBase & { category: 'open-cluster' | 'globular-cluster' };
 
 // scaleFadeBands.ts
 galacticStructures: { fullAt: <inside the Galaxy>, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
@@ -101,12 +102,13 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - `selectionEncoding.wesl:41-50` hand-lists `SOURCE_CODE_*` constants no shader imports.
 - `toStructureSearchEntry.ts:17` and the card's Abell row are per-category branches; a third per-category card fact is the trigger to give arms their own card rows.
 - Forming the `structure` Layer (layer-composition spec §9) is not needed here.
+- Path-based object links with share previews: [`docs/backlog/2026-10-05-path-based-object-links.md`](../../backlog/2026-10-05-path-based-object-links.md).
 
 The `add-data-source` skill's Path B table is stale (files that no longer exist, a 5-bit sentinel). It is refreshed in PR 2, since that PR walks it.
 
 ## 4. Registry, style and records
 
-- Ids are `openCluster`, `globularCluster`, `nebula`, `galacticCentrePlace`; structure ids stay `${category}-${seed.id}`, so a deep link reads `#focus=openCluster-pleiades`.
+- Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=galactic-centre-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `galactic-centre-…` does not collide with the `galactic-centre` place id.
 - All four rows: `slab: 'near0'`, `galaxyMembers: false`, `bearsLabel` and `bearsMarker` true, `labelLayer: 'structure'`. They share the structure fade and recession channel, so existing tour cues on structure rings and labels apply to them too.
 - Display copy: "Open cluster / Open clusters", "Globular cluster / Globular clusters", "Nebula / Nebulae", "Galactic Centre place / Galactic Centre".
 - Style rows: all four use `galacticStructures`. Colours form a ramp distinct from the existing warm cluster ramp; the exact values and the min/max apparent-radius thresholds are tuned on screen with real rows (§8).
