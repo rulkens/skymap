@@ -218,6 +218,8 @@ describe('deriveBodyStates', () => {
     'titania',
     'oberon',
     'puck',
+    'triton',
+    'proteus',
   ];
 
   it.each(SYNCHRONOUS_MOONS)(

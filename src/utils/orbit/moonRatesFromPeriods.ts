@@ -25,11 +25,10 @@
  *   `dω/dt = sign(Papsis) · 2π · 100 / |Papsis|`. A prograde moon's apsis
  *   usually advances, but the Laplace resonance drives Io's and Europa's
  *   backwards, and JPL lists only the magnitude.
- * - `nodalPrecessionYears` (Pnode): the period of the ascending node Ω. A
- *   prograde satellite's node REGRESSES, so `dΩ/dt = −2π · 100 / Pnode`.
- *
- * Every moon in the scene table is prograde, so the node's fixed sign holds
- * for all of them; a retrograde moon (none seeded) would flip it.
+ * - `nodalPrecessionYears` (Pnode): the period of the ascending node Ω, SIGNED
+ *   like the apsis. A prograde satellite's node REGRESSES, so a positive period
+ *   gives `dΩ/dt = −2π · 100 / Pnode`. A retrograde moon's (Triton) node ADVANCES
+ *   and JPL lists only the magnitude, so its row enters Pnode negative.
  *
  * ### The 0-period sentinel (load-bearing — lives here once, not per row)
  *

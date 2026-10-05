@@ -869,6 +869,30 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[1]![2]).not.toBe(args.ctx);
     });
 
+    it.each(['merged', 'perLayerTimed'] as const)(
+      "%s: every pass of every face claims the capture's ONE slot",
+      (strategy) => {
+        const { svc, descriptorFor } = makeTimingService();
+        const a = makeContentPass({ name: 'a' });
+        const b = makeContentPass({ name: 'b' });
+        const program: FrameStep[] = [0, 1].map((face) => ({
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: face as CubeFace },
+          passes: [a, b],
+        }));
+        const faceContexts = new Map<CubeFace, FrameView>([
+          [0, makeCtx()],
+          [1, makeCtx()],
+        ]);
+        executeFrame(makeArgs({ program, strategy, timing: svc, faceContexts }).args);
+
+        const claimed = descriptorFor.mock.calls.map(([slot]) => slot);
+        expect(claimed.length).toBeGreaterThan(0);
+        expect(new Set(claimed)).toEqual(new Set(['sgrAStar·capture']));
+      },
+    );
+
     it('skips a capture step cleanly when its face has no context (the row was not ready to bake)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [

@@ -167,6 +167,7 @@ recordings/
 # takes until `--rebuild` forces a fresh one. Deliberately its own directory,
 # never `dist/` — that one is the deploy build.
 /tools/record/.build/
+/tools/shot/.build/
 
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so

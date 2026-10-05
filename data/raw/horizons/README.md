@@ -10,7 +10,9 @@ regenerate with `npm run fetch-horizons`.
 - **`500@10/`** (Sun body centre), 1-day step, ~3 MB each: Mercury `199`, Venus `299`, Earth–Moon barycentre `3`, then the system barycentres `4`–`8` (Mars through Neptune).
 - **`500@599/`** (Jupiter body centre): Io `501` (144 min), Europa `502` (288 min), Ganymede `503` (480 min), Callisto `504` (1 day).
 - **`500@699/`** (Saturn body centre): Mimas `601` (80 min), Enceladus `602` (120 min), Tethys `603` (160 min), Dione `604` (240 min), Rhea `605` (360 min), Titan `606` (720 min), Iapetus `608` (1 day).
-- A moon's step is ≤ P/16 and divides a day, so every piece below starts on the row's grid. The moons total ~5.2M rows, ~340 MB.
+- **`500@899/`** (Neptune body centre): Triton `801` (480 min, retrograde), Proteus `808` (96 min).
+- **`500@799/`** (Uranus body centre): Miranda `705` (120 min), Ariel `701` (180 min), Umbriel `702` (360 min), Titania `703` and Oberon `704` (720 min). Puck `715` is not fetched: Horizons has no ephemeris for it before 1900-01-02.
+- A moon's step is ≤ P/16 and divides a day, so every piece below starts on the row's grid. The moons total ~8.5M rows, ~550 MB.
 
 ## Query
 
@@ -37,4 +39,4 @@ STOP_TIME='<chunk stop>'
 STEP_SIZE='<step> m'   # stepDays in whole minutes (1440 m for a 1-day row)
 ```
 
-Planets fetched 2026-10-04, moons 2026-10-05.
+Planets fetched 2026-10-04, Jupiter and Saturn moons 2026-10-05, Neptune and Uranus moons 2026-10-05.

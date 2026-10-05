@@ -65,22 +65,20 @@ export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string
   return `${base}·${slabName(step.slab)}`;
 }
 
-// Body rows and capture faces are appended because both draw the same pass more
-// than once per frame against one `(target, slab)` — without them the passes attach
-// the same query pair and the last silently overwrites the rest. `viewId` is the
-// drawing view's own name (`timingSlotForView`'s doc): the canvas contributes no
-// suffix, a capture face's `<key>:<face>` keeps its six faces apart.
+// Body rows are appended because they draw the same pass more than once per frame
+// against one `(target, slab)` — without them the passes attach the same query pair
+// and the last silently overwrites the rest. `viewId` is the drawing view's own name
+// (`timingSlotForView`'s doc): the canvas contributes no suffix. Cubemap captures
+// never reach here — they bill `captureTimingSlotName`.
 export function passTimingSlotName(passName: string, slabIndex: number, viewId: string): string {
   const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
   return timingSlotForView(base, viewId);
 }
 
-// The same disambiguation one level up, for the STEP's own slot: six capture steps
-// share one `(target, slab)` — the array layer they write is not part of that key —
-// so `groupKeyOf` alone collides across faces. `slot` is the authored suffix
-// (`RenderStepSpec.slot`) that separates several `FRAME_ORDER` lines sharing one
-// group; the line without one owns the bare key. `viewId` rides on top of that,
-// same rule as `passTimingSlotName`.
+// The same disambiguation one level up, for the STEP's own slot: `slot` is the
+// authored suffix (`RenderStepSpec.slot`) that separates several `FRAME_ORDER` lines
+// sharing one group; the line without one owns the bare key. `viewId` rides on top
+// of that, same rule as `passTimingSlotName`.
 export function renderStepTimingSlotName(groupKey: string, viewId: string, slot?: string): string {
   const withSlot = slot === undefined ? groupKey : `${groupKey}·${slot}`;
   return timingSlotForView(withSlot, viewId);

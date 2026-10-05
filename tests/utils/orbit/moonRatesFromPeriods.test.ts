@@ -53,4 +53,12 @@ describe('moonRatesFromPeriods', () => {
     expect(rate(-0.005)).toBe(0);
     expect(rate(0.005)).toBe(0);
   });
+
+  it('a negative nodal period advances the node (a retrograde moon), a positive one regresses it', () => {
+    const rate = (nodalPrecessionYears: number): number =>
+      moonRatesFromPeriods({ periodDays: 1, apsidalPrecessionYears: 0, nodalPrecessionYears })
+        .ascendingNodeRateRadPerCty;
+    expect(rate(-340.379)).toBeCloseTo((2 * Math.PI * 100) / 340.379, 12);
+    expect(rate(340.379)).toBeCloseTo((-2 * Math.PI * 100) / 340.379, 12);
+  });
 });
