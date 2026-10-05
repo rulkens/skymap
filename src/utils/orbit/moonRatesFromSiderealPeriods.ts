@@ -9,9 +9,9 @@
  * ### Why a second converter exists at all
  *
  * `moonRatesFromPeriods` reads JPL's `P` column as the MEAN-ANOMALY period
- * (`dM/dt = 2π/P`), which is what the planetary-satellite rows tabulate — Io's
- * listed 1.762732 d is its M-period, not its 1.769 d sidereal period. But the
- * Moon's row lists `P = 27.322 d`, the famous SIDEREAL month; its mean-anomaly
+ * (`dM/dt = 2π/P`), which is what the Galilean rows tabulate — Io's listed
+ * 1.762732 d is its M-period, not its 1.769 d sidereal period. But the column's
+ * meaning is per row: the Saturn rows list longitude periods, and the Moon's row lists `P = 27.322 d`, the famous SIDEREAL month; its mean-anomaly
  * (anomalistic) month is 27.5545 d. Feeding a sidereal period through the
  * anomalistic converter silently double-counts the precessions into longitude:
  * the mean longitude is `λ = Ω + ω + M`, so with `dM/dt = 2π/P_sid` PLUS the
