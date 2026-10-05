@@ -9,7 +9,7 @@ const groups = [
 ];
 ---
 
-<section class="credits" id="credits" aria-labelledby="credits-title">
+<section class="credits small" id="credits" aria-labelledby="credits-title">
   <h2 id="credits-title">Credits</h2>
   {
     groups.map((group) => (
@@ -33,7 +33,6 @@ const groups = [
   .credits {
     padding-block: 2rem 3rem;
     border-top: 1px solid var(--border-divider);
-    font-size: var(--text-small);
     color: var(--site-text-dim);
   }
 
@@ -42,8 +41,9 @@ const groups = [
   }
 
   p {
-    max-width: none;
+    max-width: 62rem;
     margin-block: 0 0.75rem;
+    color: inherit;
   }
 
   b {

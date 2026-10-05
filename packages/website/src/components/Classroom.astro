@@ -2,29 +2,35 @@
 import { Picture } from 'astro:assets';
 
 import ObjLink from './ObjLink.astro';
-import still from '../assets/still-solar-system.webp';
-import { APP_BASE } from '../data/appLink';
+// PLACEHOLDER SLOT (classroom-image): the copy and the address say Jupiter on 14 March 2027; this is the flight's
+// outer-planets still until that exact view is shot from the app.
+import still from '../assets/flight/outer-planets-landscape.avif';
+import { APP_BASE, appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
 import { sitePath } from '../utils/sitePath';
 
 // The example address is built from the same hash the deep-link test parses.
 const params = new URLSearchParams(HOME_LINKS.classroom);
+const origin = new URL(Astro.site!).origin;
 const host = new URL(Astro.site!).host;
 ---
 
-<section class="wrap row" id="classroom">
+<section class="wrap section row" id="classroom">
   <div class="frame">
     <Picture
       src={still}
-      alt="The solar system in skymap: the Sun, the planets' orbits with labels, and catalogued stars behind."
-      formats={["avif", "webp"]}
-    fallbackFormat="webp"
+      alt="The solar system in skymap: the planets' orbits with labels, and catalogued stars behind."
+      formats={['avif', 'webp']}
+      fallbackFormat="webp"
       widths={[640, 960, 1280]}
       sizes="(max-width: 900px) 100vw, 55vw"
       loading="lazy"
     />
-    <div class="address">
-      {host}{APP_BASE}#focus=<b>{params.get('focus')}</b>&amp;t=<i>{params.get('t')}</i>
+    <div class="strip">
+      <a class="address" href={appLink(HOME_LINKS.classroom)}>
+        {host}{APP_BASE}#focus=<wbr /><b>{params.get('focus')}</b><wbr />&amp;t=<b>{params.get('t')}</b>
+      </a>
+      <button class="ring small" type="button" data-copy={origin + appLink(HOME_LINKS.classroom)}>Copy the address</button>
     </div>
   </div>
   <div class="copy">
@@ -37,17 +43,24 @@ const host = new URL(Astro.site!).host;
   </div>
 </section>
 
+<script>
+  // The label changes instead of anything appearing, so nothing shifts; it reverts so the control can be used again.
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    const label = button.textContent;
+    button.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(button.dataset.copy!);
+      button.textContent = 'Copied';
+      setTimeout(() => (button.textContent = label), 2000);
+    });
+  }
+</script>
+
 <style>
   .row {
     display: grid;
     grid-template-columns: 6fr 5fr;
     gap: 5rem;
     align-items: center;
-    padding-block: var(--section-space);
-  }
-
-  .frame {
-    position: relative;
   }
 
   .frame :global(img) {
@@ -58,39 +71,40 @@ const host = new URL(Astro.site!).host;
     object-fit: cover;
   }
 
+  /* The one boxed element on the site: it depicts a browser's address field, and it is the real link. */
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.5rem;
+    margin-top: 0.75rem;
+  }
+
   .address {
-    position: absolute;
-    left: -1.375rem;
-    right: 2.5rem;
-    bottom: -1.625rem;
-    padding: 1rem 1.25rem;
-    background: #05070f;
+    flex: 1 1 18rem;
+    padding: 0.75rem;
     border: 1px solid rgb(232 238 255 / 0.28);
     border-radius: 0.25rem;
-    font: 0.8125rem / 1.6 ui-monospace, 'SF Mono', Menlo, monospace;
+    font: 400 0.875rem / 1.6 var(--font-family-mono);
     color: var(--site-text-dim);
-    overflow-wrap: anywhere;
+    text-decoration: none;
   }
 
+  /* Lines break only between parameters, never inside a name or a date. */
   .address b {
+    white-space: nowrap;
     font-weight: 400;
-    color: #ffd97a;
+    color: var(--color-fg);
   }
 
-  .address i {
-    font-style: normal;
-    color: var(--color-accent);
+  .address:hover {
+    border-color: var(--color-accent);
   }
 
   @media (max-width: 900px) {
     .row {
       grid-template-columns: 1fr;
-      gap: 3.5rem;
-    }
-
-    .address {
-      left: 0;
-      right: 0;
+      gap: 2.5rem;
     }
   }
 </style>

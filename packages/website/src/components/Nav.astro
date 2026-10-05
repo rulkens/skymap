@@ -1,4 +1,10 @@
 ---
+/*
+ * Nav — sticky on every page, so the launch control is never more than a
+ * glance away. Its black ground is a separate layer below the bar: a hero
+ * (Flight, z-index 2) paints over the ground and the bar floats on the
+ * picture; every other section passes under it. No script decides that.
+ */
 import ObjLink from './ObjLink.astro';
 import { appLink } from '../data/appLink';
 import { NAV_ITEMS } from '../data/nav';
@@ -7,7 +13,8 @@ import { sitePath } from '../utils/sitePath';
 const home = sitePath('/');
 ---
 
-<header class="nav wrap">
+<div class="ground" aria-hidden="true"></div>
+<header class="nav">
   <a class="mark" href={home}>skymap</a>
 
   <nav aria-label="Main">
@@ -24,8 +31,8 @@ const home = sitePath('/');
     </ul>
 
     <!-- Phone: the same items behind a disclosure. -->
-    <details class="menu">
-      <summary>Menu</summary>
+    <details class="menu" data-menu>
+      <summary class="ring small">Menu</summary>
       <ul>
         {
           NAV_ITEMS.map((item) => (
@@ -38,27 +45,61 @@ const home = sitePath('/');
     </details>
   </nav>
 
-  <ObjLink size="small" href={appLink()}>Fly it yourself</ObjLink>
+  <ObjLink size="small" class="launch" href={appLink()}>Fly it yourself</ObjLink>
 </header>
 
+<script>
+  // A disclosure that stays open over the page is a trap on a phone: Escape and a tap outside close it.
+  const menu = document.querySelector<HTMLDetailsElement>('[data-menu]');
+  if (menu) {
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !menu.open) return;
+      menu.open = false;
+      menu.querySelector('summary')?.focus();
+    });
+    document.addEventListener('click', (event) => {
+      if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
+    });
+  }
+</script>
+
 <style>
+  .ground,
   .nav {
-    position: relative;
+    position: sticky;
+    top: 0;
+    height: var(--nav-height);
+  }
+
+  .ground {
+    z-index: 1;
+    margin-bottom: calc(-1 * var(--nav-height));
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  .nav {
+    z-index: 6;
     display: flex;
     align-items: center;
     gap: 1.875rem;
-    padding-block: 1.375rem;
+    /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
+    padding-inline: var(--gutter);
+    /* Over a picture the labels sit on stars; the shadow is their local scrim. */
+    text-shadow:
+      0 0 0.75rem #000,
+      0 0 0.25rem #000;
   }
 
-  /* Home: the nav floats over the flight's first frame instead of pushing it down. */
+  /* A hero starts under the bar instead of below it. */
   :global(.hero-nav) .nav {
-    position: absolute;
-    inset-inline: 0;
-    top: 0;
-    z-index: 6;
+    margin-bottom: calc(-1 * var(--nav-height));
   }
 
   .mark {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     margin-right: auto;
     font: var(--weight-display) 1.75rem / 1 var(--font-family-display);
     color: var(--color-fg);
@@ -79,9 +120,6 @@ const home = sitePath('/');
   }
 
   summary {
-    cursor: pointer;
-    font: var(--weight-display) 1.125rem / 1.1 var(--font-family-display);
-    color: var(--color-fg);
     list-style: none;
   }
 
@@ -103,17 +141,43 @@ const home = sitePath('/');
       display: block;
     }
 
+    /* The launch control keeps its place beside the mark; the menu sits at the thumb's edge. */
+    nav {
+      order: 3;
+    }
+
     .menu ul {
       position: absolute;
       left: 0;
       right: 0;
       top: 100%;
-      z-index: 10;
       flex-direction: column;
-      gap: 0.25rem;
-      padding: 1rem var(--gutter) 1.5rem;
+      gap: 0;
+      padding: 0.5rem var(--gutter) 1.5rem;
       background: var(--color-bg);
       border-bottom: 1px solid var(--border-divider);
+      text-shadow: none;
+    }
+
+    .menu li :global(.ring) {
+      width: 100%;
+      min-height: 3.5rem;
+    }
+
+    /* The open list needs the bar's ground even over a hero. */
+    .nav:has(.menu[open]) {
+      background: var(--color-bg);
+      text-shadow: none;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .nav {
+      gap: 0.75rem;
+    }
+
+    .mark {
+      font-size: 1.5rem;
     }
   }
 </style>

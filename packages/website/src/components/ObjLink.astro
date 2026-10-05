@@ -1,81 +1,15 @@
 ---
 /*
- * ObjLink — the site's only control: a ring plus a label in the display face,
- * the marker the app draws around objects. Always a link; there is no button
- * form until a page needs one.
+ * ObjLink — a link dressed as the site's one control, the ring plus a label
+ * (styles/site.css `.ring`, shared with the menu's summary and real buttons).
  */
 import type { HTMLAttributes } from 'astro/types';
 
 type Props = HTMLAttributes<'a'> & { href: string; size?: 'small' | 'default' | 'big' };
 
-const { size = 'default', ...rest } = Astro.props;
-const classes = ['obj', size !== 'default' && size].filter(Boolean).join(' ');
+const { size = 'default', class: extra, ...rest } = Astro.props;
 ---
 
-<a class={classes} {...rest}>
+<a class:list={['ring', size !== 'default' && size, extra]} {...rest}>
   <slot />
 </a>
-
-<style>
-  .obj {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.875rem;
-    padding: 0.375rem 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    text-decoration: none;
-    color: var(--color-fg);
-    font: var(--weight-display) 1.5rem / 1.1 var(--font-family-display);
-  }
-
-  .obj::before {
-    content: '';
-    flex: none;
-    width: 0.9375rem;
-    height: 0.9375rem;
-    border: 1px solid var(--color-accent);
-    border-radius: 50%;
-    transition:
-      transform 0.25s ease,
-      background-color 0.25s ease;
-  }
-
-  .obj:hover::before,
-  .obj:focus-visible::before {
-    transform: scale(1.5);
-    background: color-mix(in srgb, var(--color-accent) 25%, transparent);
-  }
-
-  .obj:focus-visible {
-    outline: 1px solid var(--color-accent);
-    outline-offset: 6px;
-  }
-
-  .obj.big {
-    gap: 1.25rem;
-    font-size: clamp(1.875rem, 3.4vw, 3rem);
-  }
-
-  .obj.big::before {
-    width: 1.625rem;
-    height: 1.625rem;
-  }
-
-  .obj.small {
-    gap: 0.625rem;
-    font-size: 1.125rem;
-  }
-
-  .obj.small::before {
-    width: 0.6875rem;
-    height: 0.6875rem;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .obj::before {
-      transition: none;
-    }
-  }
-</style>

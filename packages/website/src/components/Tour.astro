@@ -2,7 +2,8 @@
 import { Picture } from 'astro:assets';
 
 import ObjLink from './ObjLink.astro';
-import tourStill from '../assets/still-local-group.webp';
+// PLACEHOLDER SLOT (tour-image): the flight's Local Group still stands in until a frame from the tour itself is shot.
+import tourStill from '../assets/flight/local-group-landscape.avif';
 import { appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
 ---
@@ -11,9 +12,9 @@ import { HOME_LINKS } from '../data/homeLinks';
   <Picture
     src={tourStill}
     alt="The Local Group and nearby galaxy groups in skymap: translucent spheres mark the groups among catalogued galaxies."
-    formats={["avif", "webp"]}
+    formats={['avif', 'webp']}
     fallbackFormat="webp"
-    widths={[800, 1200, 1600]}
+    widths={[640, 960, 1280, 1600]}
     sizes="100vw"
     loading="lazy"
   />
@@ -27,7 +28,7 @@ import { HOME_LINKS } from '../data/homeLinks';
 <style>
   .tour {
     position: relative;
-    margin-top: 2rem;
+    margin-top: var(--section-space);
     background: #000;
   }
 
@@ -40,6 +41,7 @@ import { HOME_LINKS } from '../data/homeLinks';
     object-fit: cover;
   }
 
+  /* Local scrim: the left third, where the words are. */
   .tour::after {
     content: '';
     position: absolute;
@@ -51,9 +53,13 @@ import { HOME_LINKS } from '../data/homeLinks';
   .over {
     position: absolute;
     z-index: 2;
-    left: var(--gutter);
+    left: max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter));
     bottom: 12%;
     max-width: 26rem;
+  }
+
+  .over :global(.ring) {
+    margin-top: -0.5rem;
   }
 
   @media (max-width: 900px) {

@@ -7,7 +7,8 @@ const FEATURED = '/images/featured';
  * app's own palette card thumbnail, a root file of the main shell.
  */
 export const PLACES: readonly Place[] = [
-  { id: 'earth', name: 'Earth, now', image: `${FEATURED}/body-earth.webp`, hash: 'focus=body-earth' },
+  // The app's own label for home, borrowed (it is in the flight above the Milky Way).
+  { id: 'earth', name: 'Earth, now', note: 'you are here', image: `${FEATURED}/body-earth.webp`, hash: 'focus=body-earth' },
   { id: 'moon', name: 'The Moon', factId: 'moon-distance', image: `${FEATURED}/body-moon.webp`, hash: 'focus=body-moon' },
   { id: 'saturn', name: 'Saturn', factId: 'saturn-distance', image: `${FEATURED}/body-saturn.webp`, hash: 'focus=body-saturn' },
   { id: 'voyager1', name: 'Voyager 1', factId: 'voyager1-light-day', image: `${FEATURED}/body-voyager1.webp`, hash: 'focus=body-voyager1' },

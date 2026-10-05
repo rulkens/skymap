@@ -11,17 +11,17 @@ const BINS = [
 ] as const;
 ---
 
-<section class="wrap honest" id="honest">
+<section class="wrap section honest" id="honest">
   <div class="intro">
     <h2>What is measured, derived and drawn</h2>
     <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
   </div>
   {
     BINS.map((bin) => (
-      <div>
+      <div class="bin">
         <h3>{bin.title}</h3>
-        <p class="gloss">{bin.gloss}</p>
-        <ul>
+        <p class="gloss small">{bin.gloss}</p>
+        <ul class="small">
           {HONESTY[bin.id].map((item) => (
             <li>
               <a href={item.href}>{item.text}</a>
@@ -35,33 +35,33 @@ const BINS = [
 
 <style>
   .honest {
-    position: relative;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 3.75rem;
-    padding-block: 6.5rem;
-  }
-
-  .honest::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: var(--gutter);
-    right: var(--gutter);
-    border-top: 1px solid var(--border-divider);
+    gap: 2.5rem 3.75rem;
   }
 
   .intro {
     grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0 2rem;
   }
 
   h2 {
-    font-size: clamp(2.125rem, 3.6vw, 3.375rem);
+    margin-bottom: 0;
+  }
+
+  /* The rule belongs to each list, so the three read as columns of one table. */
+  .bin {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-divider);
   }
 
   .gloss {
+    min-height: 3em;
     margin: 0 0 0.75rem;
-    font-size: var(--text-small);
     color: var(--site-text-dim);
   }
 
@@ -69,22 +69,21 @@ const BINS = [
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 1.0625rem;
-  }
-
-  li {
-    padding-block: 0.5rem;
   }
 
   li a {
+    display: block;
+    padding-block: 0.5rem;
     color: var(--site-text-muted);
   }
 
   @media (max-width: 900px) {
     .honest {
       grid-template-columns: 1fr;
-      gap: 2.5rem;
-      padding-block: 4rem;
+    }
+
+    .gloss {
+      min-height: 0;
     }
   }
 </style>
