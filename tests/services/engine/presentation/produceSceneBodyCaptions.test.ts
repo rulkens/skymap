@@ -42,7 +42,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 // The producer binds its caption epoch to `ctx.simDays`; pin it at J2000 so
 // this file's anchors match the producer's internal `sceneBodyStates` read.
 const J2000_STATES = deriveBodyStates(CONST_J2000);
-const BASE = sceneBodyLabels(J2000_STATES);
+const BASE = sceneBodyLabels(J2000_STATES, CONST_J2000);
 
 const EARTH_LABEL_ID = 'sceneBody-earth';
 const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(

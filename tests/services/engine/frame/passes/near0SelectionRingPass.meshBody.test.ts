@@ -155,7 +155,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `foregroundLabelsPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = sceneBodyLabels(states).find((l) => l.id === `sceneBody-${bodyId}`)!;
+  const caption = sceneBodyLabels(states, SIM_DAYS).find((l) => l.id === `sceneBody-${bodyId}`)!;
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],

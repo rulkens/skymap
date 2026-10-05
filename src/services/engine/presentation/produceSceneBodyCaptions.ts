@@ -23,9 +23,10 @@ let cachedLabels: ReturnType<typeof sceneBodyLabels> = [];
 
 function baseLabelsFor(
   bodyStates: ReadonlyMap<string, BodyState>,
+  simDays: number,
 ): ReturnType<typeof sceneBodyLabels> {
   if (bodyStates !== cachedStates) {
-    cachedLabels = sceneBodyLabels(bodyStates);
+    cachedLabels = sceneBodyLabels(bodyStates, simDays);
     cachedStates = bodyStates;
   }
   return cachedLabels;
@@ -59,7 +60,7 @@ export function produceSceneBodyCaptions(
     occluders: sceneOccluderBodies(state, ctx),
   };
 
-  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx), ctx.snapshot.simDays).map((label) =>
     composeForegroundCaption(composeCtx, label, clipFactorBody),
   );
 

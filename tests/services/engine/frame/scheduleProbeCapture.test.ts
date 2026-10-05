@@ -22,6 +22,7 @@ vi.mock('../../../../src/services/engine/frame/deriveView', () => ({
 
 import { scheduleProbeCapture } from '../../../../src/services/engine/frame/scheduleProbeCapture';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../../src/data/rendering/probeRefreshIntervalMs';
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
@@ -34,6 +35,15 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 
 const SIM_DAYS = 0;
+
+// Voyager is the hostless probe here, and an absent craft is not drawn: give it a track
+// that spans the pinned instant.
+trajectoryRegistry.set({
+  id: 'voyager1',
+  tDays: Float64Array.from([-1, 1]),
+  posKm: new Float64Array(6),
+  velKmS: new Float32Array(6),
+});
 const NOW_MS = 100_000;
 
 // A hosted rover (rides Mars's row) and a hostless probe (owns its row).

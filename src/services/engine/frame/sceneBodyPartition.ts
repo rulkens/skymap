@@ -36,6 +36,7 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import { partitionBodiesByPresentation } from './partitionBodiesByPresentation';
 import { sceneBodyStates } from './sceneBodyStates';
+import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 
 export function sceneBodyPartition(
   state: PassState,
@@ -47,7 +48,13 @@ export function sceneBodyPartition(
   meshes: readonly MeshBody[];
 } {
   return partitionBodiesByPresentation({
-    bodies: [...state.data.bodies.planets, ...state.data.bodies.meshBodies],
+    // An absent craft is dropped here, so glints, mesh draw and pick draw all agree.
+    bodies: [
+      ...state.data.bodies.planets,
+      ...state.data.bodies.meshBodies.filter((body) =>
+        spacecraftPresent(body.id, ctx.snapshot.simDays),
+      ),
+    ],
     bodyStates: sceneBodyStates(state, ctx),
     camPosMpc: ctx.drawCamPos,
     pxPerRad: ctx.drawPxPerRad,
