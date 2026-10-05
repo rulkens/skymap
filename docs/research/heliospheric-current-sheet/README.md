@@ -11,8 +11,8 @@ scales, not product code.
 ## Reproduce
 
 ```bash
-./fetch.sh              # ~14 MB: WSO tilt table + 661 source-surface synoptic maps
-python3 parse.py        # -> hcs.json / hcs.js (rotation start dates + 72x30 field grids)
+npm run fetch-wso                  # ~14 MB: WSO tilt table + 661 source-surface synoptic maps -> data/raw/wso/
+npm run build-current-sheet-maps   # -> hcs.js (rotation start dates + 72x30 field grids)
 node capture.mjs render.html frames 0 708   # WebGL2 in headless Chromium (SwiftShader), ~1 s/frame
 ffmpeg -framerate 24 -i frames/f%04d.png -vf "tpad=stop_mode=clone:stop_duration=3,format=yuv420p" \
   -c:v libx264 -crf 21 -preset slow ballerina-skirt.mp4
@@ -34,7 +34,7 @@ ideal Parker spiral and skirt.
 
 - **Measured:** the neutral line at 2.5 R☉, from WSO's potential-field source-surface maps
   (radial model R250, one per Carrington rotation). Gaps are filled from the classic model
-  (CR 2215–2217, 2302); CR 2258 is partly filled from the previous rotation.
+  (CR 2215–2217); CR 2258 and 2302 are partly filled from the previous rotation.
 - **Measured:** the polar polarity and the flips. North-pole sign is the mean of the top 3
   latitude rows, smoothed over ±6 rotations. Flips land around 1980, 1990, 2000, 2013 and 2023.
 - **Modelled:** everything beyond the Sun. The sheet is carried outward radially by a

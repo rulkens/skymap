@@ -1672,6 +1672,36 @@ export const RAW_DATA = {
     description: 'Provenance for the Horizons planet vectors — the exact query, targets and span.',
   },
 
+  // ─── Wilcox Solar Observatory — source-surface synoptic maps ──────────
+
+  'wso.synoptic': {
+    path: 'data/raw/wso/synoptic',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Holds `WSO-R250.<cr>.txt` (radial potential-field source-surface model, 2.5 Rsun, CR 1642–2302) and a few `WSO-S.<cr>.txt` (classic model) fallbacks for rotations where R250 has gaps.',
+    upstream: 'http://wso.stanford.edu/synsourcel.html',
+    fetcher: 'tools/fetch/fetchWso.ts',
+    readme: 'wso.readme',
+  },
+  'wso.tilts': {
+    path: 'data/raw/wso/Tilts.html',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'WSO heliospheric current sheet tilt table; the parser reads each Carrington rotation start date from it.',
+    upstream: 'http://wso.stanford.edu/Tilts.html',
+    fetcher: 'tools/fetch/fetchWso.ts',
+    readme: 'wso.readme',
+  },
+  'wso.readme': {
+    path: 'data/raw/wso/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the WSO synoptic maps — upstream pages, file format, rotation span, model variants.',
+  },
+
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────
 
   'starnet.weights': {
