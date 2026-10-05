@@ -10,8 +10,8 @@ export type RenderScheduler = {
   /**
    * Request a render and resolve once the next `onFrame` has returned. Callers
    * arriving before that frame share it; a call made inside `onFrame` waits for
-   * the following one. Never times out or rejects: on a destroyed scheduler or a
-   * hidden tab the promise stays pending, so do not await it on a path that must
+   * the following one. Never times out or rejects: promises pending at destroy stay
+   * pending, and so do those in a hidden tab, so do not await it on a path that must
    * finish.
    */
   nextFrame(): Promise<void>;

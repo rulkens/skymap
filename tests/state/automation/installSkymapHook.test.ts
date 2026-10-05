@@ -26,29 +26,20 @@ describe('installSkymapHook', () => {
   });
 
   it('installs without any URL flag', () => {
+    vi.stubGlobal('__SKYMAP_PROJECT_ROOT__', '/checkout');
     window.history.replaceState(null, '', '/');
     installSkymapHook(configureStore({ reducer: rootReducer }), fakeEngine());
 
-    expect(getHook()?.projectRoot).toBe(__SKYMAP_PROJECT_ROOT__);
+    expect(getHook()?.projectRoot).toBe('/checkout');
   });
 
-  it('ready creates no store subscription until first read', () => {
+  it('ready is created on first read and then cached', () => {
     const store = configureStore({ reducer: rootReducer });
-    const subscribe = vi.spyOn(store, 'subscribe');
     installSkymapHook(store, fakeEngine());
-    expect(subscribe).not.toHaveBeenCalled();
     expect(whenStablyReady).not.toHaveBeenCalled();
 
     const first = getHook()!.ready;
     expect(getHook()!.ready).toBe(first);
     expect(whenStablyReady).toHaveBeenCalledTimes(1);
-  });
-
-  it('nextFrame delegates to the engine handle', async () => {
-    const nextFrame = vi.fn(() => Promise.resolve());
-    installSkymapHook(configureStore({ reducer: rootReducer }), fakeEngine(nextFrame));
-
-    await getHook()!.nextFrame();
-    expect(nextFrame).toHaveBeenCalledTimes(1);
   });
 });

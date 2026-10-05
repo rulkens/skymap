@@ -1,8 +1,7 @@
 /**
  * installSkymapHook — publishes `window.__skymap`, the hook every Playwright
  * tool waits on. Always installed (no URL gate); `ready` is lazy so a normal
- * visit never subscribes to the store for it. Install it after the mode-gated
- * hooks: tools wait on this one and then read theirs at once.
+ * visit never subscribes to the store for it.
  */
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import type { SkymapHook } from '../../@types/automation/SkymapHook';

@@ -41,7 +41,7 @@ function buildStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// A minimal fake engine handle: only `debug.timingService.subscribe` and
+// A minimal fake engine handle: only `nextFrame`, `debug.timingService.subscribe` and
 // `debug.requestRender` are reachable from the installer's gate, so those are
 // the only members the fake needs. `subscribe` is a vi.fn returning a no-op
 // unsubscribe.

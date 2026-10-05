@@ -146,7 +146,7 @@ export type ClipPathInspectSeam = {
   pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
-  /** Resolves after the next frame has drawn; stays pending if no frame ever comes. */
+  /** Resolves after the next frame callback returns; stays pending if no frame ever comes. */
   readonly nextFrame: () => Promise<void>;
   reconcile: ReconcileEffects; // provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */

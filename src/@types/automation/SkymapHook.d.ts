@@ -6,7 +6,7 @@ export type SkymapHook = {
   readonly ready: Promise<void>;
   readonly dispatch: AppDispatch;
   readonly getState: () => RootState;
-  /** Resolves after the next frame has drawn. */
+  /** Resolves after the next frame callback returns. */
   readonly nextFrame: () => Promise<void>;
   /** Absolute path of the checkout this build came from. */
   readonly projectRoot: string;

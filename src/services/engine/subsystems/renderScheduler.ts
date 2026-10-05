@@ -80,8 +80,12 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     // fresh array and waits for the following frame, not this one.
     const served = frameWaiters;
     frameWaiters = [];
-    opts.onFrame();
-    for (const resolve of served) resolve();
+    // finally: a throwing frame must not strand waiters (arrival would never report).
+    try {
+      opts.onFrame();
+    } finally {
+      for (const resolve of served) resolve();
+    }
   }
 
   function requestRender(): void {

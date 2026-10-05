@@ -223,6 +223,21 @@ describe('createRenderScheduler', () => {
       expect(order).toEqual(['frame', 'resolved']);
     });
 
+    it('nextFrame still resolves when onFrame throws', async () => {
+      const fake = makeFakeRaf();
+      const sched = createRenderScheduler({
+        onFrame: () => {
+          throw new Error('frame failed');
+        },
+        rafImpl: fake.rafImpl,
+        cafImpl: fake.cafImpl,
+      });
+
+      const p = sched.nextFrame();
+      expect(() => fake.fireOne()).toThrow('frame failed');
+      await p;
+    });
+
     it('nextFrame requests a render when none is queued', () => {
       const fake = makeFakeRaf();
       const sched = createRenderScheduler({
