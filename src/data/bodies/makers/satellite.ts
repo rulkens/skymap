@@ -70,7 +70,11 @@ export function satellite(spec: {
           apsidalPrecessionYears: spec.apsidalPrecessionYears,
           nodalPrecessionYears: spec.nodalPrecessionYears,
         })
-      : moonRatesFromPeriods(spec)),
+      : moonRatesFromPeriods({
+          periodDays: spec.periodDays,
+          apsidalPrecessionYears: spec.apsidalPrecessionYears,
+          nodalPrecessionYears: spec.nodalPrecessionYears,
+        })),
     color: spec.color,
     plane: planeFrameFromPole(spec.poleRaDeg, spec.poleDecDeg),
   };

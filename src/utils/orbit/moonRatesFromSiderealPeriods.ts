@@ -1,8 +1,10 @@
 /**
  * moonRatesFromSiderealPeriods — convert a satellite row whose tabulated
- * period is the SIDEREAL one (the Moon's row) into the three per-Julian-century
- * rate fields `OrbitalElements` stores, keeping `propagateElements` one
- * branch-free affine map.
+ * period is a LONGITUDE (sidereal) one into the three per-Julian-century rate
+ * fields `OrbitalElements` stores, keeping `propagateElements` one affine map.
+ * Serves the Moon's row and the seven Saturn satellite rows (`periodKind:
+ * 'longitude'`, whose JPL P equals the IAU spin period); rows tabulating a
+ * mean-anomaly period use `moonRatesFromPeriods`.
  *
  * ### Why a second converter exists at all
  *
