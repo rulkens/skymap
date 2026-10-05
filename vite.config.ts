@@ -69,6 +69,7 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 export default defineConfig({
   plugins: [viteWesl({ extensions: [staticBuildExtension] }), minifyStaticWgslPlugin(), react()],
   server: { port: DEV_PORTS.main, ...lanHttpsServer() },
+  define: { __SKYMAP_PROJECT_ROOT__: JSON.stringify(import.meta.dirname) },
   assetsInclude: ['**/*.wgsl'],
   build: { outDir: distDir },
 });

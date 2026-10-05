@@ -14,12 +14,10 @@ import react from '@vitejs/plugin-react';
 // test files triggers a parse error in the SSR pipeline.
 export default defineConfig({
   plugins: [react(), viteWesl({ extensions: [staticBuildExtension] })],
+  define: { __SKYMAP_PROJECT_ROOT__: JSON.stringify(import.meta.dirname) },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    setupFiles: [
-      'tests/setup/webgpuGlobals.ts',
-      'tests/setup/reactTestEnv.ts',
-    ],
+    setupFiles: ['tests/setup/webgpuGlobals.ts', 'tests/setup/reactTestEnv.ts'],
   },
 });

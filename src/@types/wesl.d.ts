@@ -6,4 +6,9 @@
 // A triple-slash reference here is the belt-and-braces fallback that
 // guarantees resolution from any compiler entry point.
 /// <reference types="wesl-plugin/suffixes" />
+
+// Build-time constant from `define` in vite.config.ts / vitest.config.ts.
+declare global {
+  const __SKYMAP_PROJECT_ROOT__: string;
+}
 export {};
