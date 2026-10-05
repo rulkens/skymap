@@ -8,6 +8,14 @@ export type RenderScheduler = {
    */
   requestRender(): void;
   /**
+   * Request a render and resolve once the next `onFrame` has returned. Callers
+   * arriving before that frame share it; a call made inside `onFrame` waits for
+   * the following one. Never times out or rejects: on a destroyed scheduler or a
+   * hidden tab the promise stays pending, so do not await it on a path that must
+   * finish.
+   */
+  nextFrame(): Promise<void>;
+  /**
    * Arm a one-shot coarse "wake me in `delayMs`" timer, then let the loop
    * sleep. When the timer fires it calls `requestRender` once; the frame body
    * re-arms it while it still wants a slow heartbeat. This is the render-on-
