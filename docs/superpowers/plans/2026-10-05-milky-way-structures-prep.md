@@ -42,11 +42,11 @@
 
 **Files:** `src/services/engine/wiring/wireStructureProjection.ts`, `tools/parsers/parseStructureSeed.ts`, `src/data/structure/buildStaticAnchorStructures.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`
 
-- [ ] `emitCounts` (`wireStructureProjection.ts:58-65`) builds its payload by iterating `STRUCTURE_IDS` (`src/data/structure/structureIds.ts`) instead of naming four keys.
-- [ ] `VALID_CATEGORIES` (`parseStructureSeed.ts:22`) becomes `STRUCTURE_IDS`; the error message lists them from the array. Confirm the tools tsconfig can import from `src/data/` (other tools already do); if it cannot, stop and report.
-- [ ] `SeedEntry.category` (`buildStaticAnchorStructures.ts:64`) is typed `StructureId`.
-- [ ] No new test: these are type and plumbing changes the compiler and the existing suites cover. Update `parseStructureSeed.test.ts:30` only if it asserts the error string.
-- [ ] Commit.
+- [x] `emitCounts` (`wireStructureProjection.ts:58-65`) builds its payload by iterating `STRUCTURE_IDS` (`src/data/structure/structureIds.ts`) instead of naming four keys.
+- [x] `VALID_CATEGORIES` (`parseStructureSeed.ts:22`) becomes `STRUCTURE_IDS`; the error message lists them from the array. Confirm the tools tsconfig can import from `src/data/` (other tools already do); if it cannot, stop and report.
+- [x] `SeedEntry.category` (`buildStaticAnchorStructures.ts:64`) is typed `StructureId`.
+- [x] No new test: these are type and plumbing changes the compiler and the existing suites cover. Update `parseStructureSeed.test.ts:30` only if it asserts the error string.
+- [x] Commit.
 
 ### Task 2 (P9): Unit-tagged seed lengths — `review: yes`
 

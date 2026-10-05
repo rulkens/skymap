@@ -18,8 +18,8 @@
  * would silently shadow one entry in every consumer that keyed on the id.
  */
 
-/** Valid structural categories. */
-const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;
+import type { StructureId } from '../../src/@types/data/structure/StructureId';
+import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 
 /**
  * One featured structure from `structure_anchors.seed.json`.
@@ -45,7 +45,7 @@ export type StructureSeedEntry = {
   /** Abell/ACO designation where applicable (clusters only). */
   abell?: string;
   /** Structural category. */
-  category: (typeof VALID_CATEGORIES)[number];
+  category: StructureId;
   /** Right Ascension in hours, [0, 24). */
   raHours: number;
   /** Declination in degrees, [-90, 90]. */
@@ -77,16 +77,20 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
   if (!Array.isArray(e.names) || e.names.length === 0) {
     throw new Error(`structure seed: ${e.id} has empty names array`);
   }
-  if (!VALID_CATEGORIES.includes(e.category as (typeof VALID_CATEGORIES)[number])) {
+  if (!(STRUCTURE_IDS as readonly string[]).includes(e.category)) {
     throw new Error(
-      `structure seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void' | 'group')`,
+      `structure seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected ${STRUCTURE_IDS.map((id) => `'${id}'`).join(' | ')})`,
     );
   }
   if (!Number.isFinite(e.raHours) || e.raHours < 0 || e.raHours >= 24) {
-    throw new Error(`structure seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`);
+    throw new Error(
+      `structure seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`,
+    );
   }
   if (!Number.isFinite(e.decDeg) || e.decDeg < -90 || e.decDeg > 90) {
-    throw new Error(`structure seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`);
+    throw new Error(
+      `structure seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`,
+    );
   }
   if (!Number.isFinite(e.distMpc) || e.distMpc <= 0) {
     throw new Error(`structure seed: ${e.id} has non-positive distMpc ${e.distMpc}`);
@@ -104,7 +108,10 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
   if (typeof e.description !== 'string' || e.description.trim().length === 0) {
     throw new Error(`structure seed: ${e.id} missing description`);
   }
-  if (e.commonName !== undefined && (typeof e.commonName !== 'string' || e.commonName.length === 0)) {
+  if (
+    e.commonName !== undefined &&
+    (typeof e.commonName !== 'string' || e.commonName.length === 0)
+  ) {
     throw new Error(`structure seed: ${e.id} has invalid commonName (must be a non-empty string)`);
   }
   if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {

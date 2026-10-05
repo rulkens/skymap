@@ -43,6 +43,7 @@
  */
 
 import { raDecDistToEqCart } from '../../utils/math/raDecDistToEqCart';
+import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
@@ -61,7 +62,7 @@ import structureSeedJson from '../../../data/seeds/structure_anchors.seed.json';
 type SeedEntry = {
   readonly id: string;
   readonly names: readonly string[];
-  readonly category: 'cluster' | 'supercluster' | 'void' | 'group';
+  readonly category: StructureId;
   readonly raHours: number;
   readonly decDeg: number;
   readonly distMpc: number;
