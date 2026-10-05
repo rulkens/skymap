@@ -20,7 +20,7 @@
 import { defineConfig } from 'astro/config';
 import { statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
@@ -64,7 +64,11 @@ const devRootStatics = {
   name: 'dev-root-statics',
   hooks: {
     'astro:config:setup': ({ command, updateConfig }) => {
-      if (command === 'dev') updateConfig({ publicDir, vite: { plugins: [rootStatics] } });
+      if (command === 'dev')
+        updateConfig({
+          publicDir: pathToFileURL(`${publicDir}/`),
+          vite: { plugins: [rootStatics] },
+        });
     },
   },
 };
