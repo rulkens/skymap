@@ -12,6 +12,11 @@ export type StructureSourceEntry = SourceEntryBase & {
   /** Stable numeric tag, matching the upper 6 bits of the packed pick ID. */
   readonly code: number;
   /**
+   * The projection slab whose marker pass draws this category: Mpc-scale
+   * structures project through COSMO, parsec-scale ones need NEAR0's adaptive planes.
+   */
+  readonly slab: 'cosmo' | 'near0';
+  /**
    * True when the category is a region of the extragalactic galaxy distribution:
    * focusing one dims non-member galaxies and its InfoCard counts members.
    */

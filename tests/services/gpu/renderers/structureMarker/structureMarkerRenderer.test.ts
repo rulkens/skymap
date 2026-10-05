@@ -4,6 +4,7 @@ import type { StructureMarkerDescriptor } from '../../../../../src/@types/render
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import { STRUCTURE_IDS } from '../../../../../src/data/structure/structureIds';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 
@@ -21,6 +22,7 @@ const newRenderer = (initialCapacity?: number) => {
     'rgba16float',
     null as unknown as FadeUniformsBgl,
     false,
+    STRUCTURE_IDS,
     initialCapacity,
   );
 };
@@ -92,6 +94,26 @@ describe('StructureMarkerRenderer (CPU state)', () => {
   });
 });
 
+describe('StructureMarkerRenderer categories', () => {
+  it('a renderer ignores descriptors outside its categories', () => {
+    const r = createStructureMarkerRenderer(
+      {
+        device: null as unknown as GPUDevice,
+        context: null as unknown as GPUCanvasContext,
+        format: 'rgba16float' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      null as unknown as FadeUniformsBgl,
+      false,
+      ['void'],
+    );
+    r.setMarkers([cluster(1), void_(2), group(3), void_(4)], [0, 0, 0]);
+    expect(r.markerCount()).toBe(2);
+  });
+});
+
 describe('StructureMarkerRenderer colour target', () => {
   it('bakes the given targetFormat into the halo + ring pipelines (pick stays r32uint)', () => {
     const captured: GPURenderPipelineDescriptor[] = [];
@@ -116,7 +138,13 @@ describe('StructureMarkerRenderer colour target', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createStructureMarkerRenderer(ctx, 'rgba16float', {} as unknown as FadeUniformsBgl, false);
+    createStructureMarkerRenderer(
+      ctx,
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      false,
+      STRUCTURE_IDS,
+    );
 
     const formatByLabel = new Map(
       captured.map((p) => [p.label, Array.from(p.fragment!.targets!)[0]!.format]),
@@ -166,6 +194,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      STRUCTURE_IDS,
     );
     renderer.setMarkers([cluster(1)], [0, 0, 0]);
     (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
@@ -253,6 +282,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      STRUCTURE_IDS,
     );
     writes.length = 0;
     renderer.setMarkers([{ ...cluster(1), worldPos: [100, 0, 0] }], [99.5, 0, 0]);
@@ -286,6 +316,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      STRUCTURE_IDS,
     );
     const eyeA: [number, number, number] = [10, 20, 30];
     renderer.setMarkers([cluster(1)], eyeA);

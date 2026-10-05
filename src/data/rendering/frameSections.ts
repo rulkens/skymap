@@ -180,6 +180,7 @@ export const SCENE: FrameSection = {
         'star-points',
         'star-catalog',
         'star-upsample',
+        'structure-markers-near',
         'constellations',
       ],
     },

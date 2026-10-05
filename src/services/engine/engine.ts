@@ -183,6 +183,7 @@ export function createEngine(
       debugLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
+      structureMarkerNearRenderer: null,
       horizonShellRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,

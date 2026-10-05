@@ -149,14 +149,14 @@ export const STRUCTURE_IDS_BY_SLAB: Readonly<Record<'cosmo' | 'near0', readonly 
 createStructureMarkerRenderer(…, categories: readonly StructureId[])
 ```
 
-- [ ] `createStructureMarkerRenderer` buckets only the categories it is given, in the order given. `setMarkers` ignores descriptors of other categories.
-- [ ] Two renderer instances: `structureMarkerRenderer` (cosmo categories) and `structureMarkerNearRenderer` (near0 categories), each with its own uniform and instance buffers. They must not share buffers: both passes record into one command encoder with one submit, so a shared uniform buffer would give both draws the last-written matrix (`near0SelectionRingPass.ts` header, "writeBuffer/submit race").
-- [ ] `structureMarkersNearPass`, named `structure-markers-near`, mirrors `structureMarkersPass` against the near renderer and the NEAR0 view. It is disabled whenever the near renderer has no categories or no planned markers, which is always in this PR. No far-plane clamp yet.
-- [ ] Both passes read the one existing `structureMarkersPlanner` result; each renderer filters by its categories.
-- [ ] `frameSections.ts`: add `'structure-markers-near'` to the `(hdr, NEAR0)` roster immediately before `'constellations'`, so the comment that `constellations` is the last row the lens line samples stays true. `checkFrameOrder` must pass at boot.
-- [ ] Add the test `every structure category is drawn by exactly one marker pass`: the union of `STRUCTURE_IDS_BY_SLAB` values equals `STRUCTURE_IDS` with no overlap.
-- [ ] Add the test `a renderer ignores descriptors outside its categories`: `markerCount()` counts only its own.
-- [ ] Commit.
+- [x] `createStructureMarkerRenderer` buckets only the categories it is given, in the order given. `setMarkers` ignores descriptors of other categories.
+- [x] Two renderer instances: `structureMarkerRenderer` (cosmo categories) and `structureMarkerNearRenderer` (near0 categories), each with its own uniform and instance buffers. They must not share buffers: both passes record into one command encoder with one submit, so a shared uniform buffer would give both draws the last-written matrix (`near0SelectionRingPass.ts` header, "writeBuffer/submit race").
+- [x] `structureMarkersNearPass`, named `structure-markers-near`, mirrors `structureMarkersPass` against the near renderer and the NEAR0 view. It is disabled whenever the near renderer has no categories or no planned markers, which is always in this PR. No far-plane clamp yet.
+- [x] Both passes read the one existing `structureMarkersPlanner` result; each renderer filters by its categories.
+- [x] `frameSections.ts`: add `'structure-markers-near'` to the `(hdr, NEAR0)` roster immediately before `'constellations'`, so the comment that `constellations` is the last row the lens line samples stays true. `checkFrameOrder` must pass at boot.
+- [x] Add the test `every structure category is drawn by exactly one marker pass`: the union of `STRUCTURE_IDS_BY_SLAB` values equals `STRUCTURE_IDS` with no overlap.
+- [x] Add the test `a renderer ignores descriptors outside its categories`: `markerCount()` counts only its own.
+- [x] Commit.
 
 ### Task 9 (P2): Labels follow the slab — `review: yes`
 

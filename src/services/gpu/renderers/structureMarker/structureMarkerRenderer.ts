@@ -1,6 +1,7 @@
 /**
- * structureMarkerRenderer — instanced halo + ring overlay for every
- * `type:'structure'` category: cluster, supercluster, void, and group.
+ * structureMarkerRenderer — instanced halo + ring overlay for the
+ * `type:'structure'` categories of one slab (cosmo: cluster, supercluster,
+ * void, group); each slab gets its own instance and buffers.
  * The producer (`produceStructureMarkers`) feeds it descriptors; the
  * store it visualises is `state.data.structures`.
  *
@@ -21,8 +22,8 @@
  * 6-bit `sourceCode`, which the ringPick fragment composes into
  * `(sourceCode << 26) | structureIndex + PICK_SENTINEL_OFFSET` — the same
  * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
- * data-driven from `STRUCTURE_IDS`, so a new structure source
- * needs no change here.
+ * the categories handed to the factory (one instance per slab), so a new
+ * structure source needs no change here.
  *
  * Voids skip the halo draw — a halo implies matter where the structure
  * is defined by absence.  The descriptor's `haloColor` alpha 0 is the
@@ -129,6 +130,8 @@ export function createStructureMarkerRenderer(
    * depth test, resolved through `resolveDepthCompare`.
    */
   reversedZ: boolean,
+  /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
+  categories: readonly StructureId[],
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
@@ -161,6 +164,7 @@ export function createStructureMarkerRenderer(
   // the start of every setMarkers call.
   const bucketOffsets = byCategory(0);
   const bucketCounts = byCategory(0);
+  const owned: ReadonlySet<StructureId> = new Set(categories);
 
   // GPU resources — null when device is null.
   let haloPipeline: GPURenderPipeline | null = null;
@@ -395,7 +399,7 @@ export function createStructureMarkerRenderer(
     });
 
     // Per-category SourceUniforms — written once at construction.
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       const buf = device.createBuffer({
         label: `structure-marker-source-${cat}`,
         size: SOURCE_UNIFORM_BYTES,
@@ -446,7 +450,7 @@ export function createStructureMarkerRenderer(
     // of categories means a few passes over the input is fine.
     currentMarkerCount = 0;
     packedEye = [camPos[0], camPos[1], camPos[2]];
-    for (const c of STRUCTURE_IDS) bucketCounts[c] = 0;
+    for (const c of categories) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
     // and the `capacity` docstring for why a cap here would be a
@@ -457,11 +461,11 @@ export function createStructureMarkerRenderer(
     // First pass: count per category to compute offsets.
     const count = descriptors.length;
     for (let i = 0; i < count; i++) {
-      bucketCounts[descriptors[i]!.category]++;
+      if (owned.has(descriptors[i]!.category)) bucketCounts[descriptors[i]!.category]++;
     }
     // Prefix-sum the counts into per-category run offsets.
     let acc = 0;
-    for (const c of STRUCTURE_IDS) {
+    for (const c of categories) {
       bucketOffsets[c] = acc;
       acc += bucketCounts[c];
     }
@@ -470,6 +474,7 @@ export function createStructureMarkerRenderer(
     const writeCursor: Record<StructureId, number> = { ...bucketOffsets };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
+      if (!owned.has(d.category)) continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;
@@ -547,7 +552,7 @@ export function createStructureMarkerRenderer(
     // the visible draws (their shaders don't read instance_index for
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       if (cat === 'void') continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -559,7 +564,7 @@ export function createStructureMarkerRenderer(
 
     // Ring passes second (premultiplied OVER — composites over halo).
     pass.setPipeline(ringPipeline);
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -606,7 +611,7 @@ export function createStructureMarkerRenderer(
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -626,7 +631,7 @@ export function createStructureMarkerRenderer(
     fadeBuffer?.destroy();
     pickDummyFadeBuffer?.destroy();
     pickCameraBuffer?.destroy();
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       sourceBuffers[cat]?.destroy();
     }
   }
