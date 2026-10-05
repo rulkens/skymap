@@ -107,7 +107,7 @@ import { tourFrameCap } from '../utils/record/tourFrameCap';
 import { clipFrameCap } from '../utils/record/clipFrameCap';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
-import type { PreviewHandle } from '../@types/serve/PreviewHandle';
+import type { ViteServerHandle } from '../@types/serve/ViteServerHandle';
 import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
 import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
 import { spawnViteServer } from '../utils/serve/spawnViteServer';
@@ -800,7 +800,7 @@ async function main(): Promise<void> {
   // a try/finally purely to guarantee this child is killed on every path out
   // of main, success or failure, without duplicating a kill call at each of
   // the several places the ffmpeg block below already handles its own child.
-  let preview: PreviewHandle | undefined;
+  let preview: ViteServerHandle | undefined;
   if (options.serve) {
     console.log('record — --serve: self-hosting a production build for this take');
     await ensureServeBuild(SERVE_BUILD_DIR, options.rebuild);

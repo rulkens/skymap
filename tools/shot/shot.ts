@@ -13,7 +13,7 @@ import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
 import { spawnViteServer } from '../utils/serve/spawnViteServer';
 import { shootLink } from '../utils/shot/shootLink';
 import { shotOutName } from '../utils/shot/shotOutName';
-import type { PreviewHandle } from '../@types/serve/PreviewHandle';
+import type { ViteServerHandle } from '../@types/serve/ViteServerHandle';
 import { parseShotArgs } from './parseShotArgs';
 
 // Its own directory, so a concurrent `record-tour --serve` build is never clobbered.
@@ -24,7 +24,7 @@ async function main(): Promise<number> {
   const options = parseShotArgs(process.argv.slice(2));
   console.log = console.error;
 
-  let server: PreviewHandle | undefined;
+  let server: ViteServerHandle | undefined;
   let browser: Browser | undefined;
   let failed = false;
   try {

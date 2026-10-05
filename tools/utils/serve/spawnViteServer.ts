@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { parsePreviewUrl } from '../record/parsePreviewUrl';
-import type { PreviewHandle } from '../../@types/serve/PreviewHandle';
+import type { ViteServerHandle } from '../../@types/serve/ViteServerHandle';
 
 const READY_TIMEOUT_MS = 30_000;
 const OUTPUT_TAIL_CHARS = 1000;
@@ -12,7 +12,7 @@ const OUTPUT_TAIL_CHARS = 1000;
  * in errors. Rejects with the output tail when vite exits or stays silent,
  * since a bare "no URL" would hide why (port clash, config error).
  */
-export async function spawnViteServer(args: string[], label: string): Promise<PreviewHandle> {
+export async function spawnViteServer(args: string[], label: string): Promise<ViteServerHandle> {
   const proc = spawn('npx', ['vite', ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
   await new Promise<void>((resolve, reject) => {
     proc.once('spawn', () => resolve());
