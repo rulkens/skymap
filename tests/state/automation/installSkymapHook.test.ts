@@ -17,7 +17,8 @@ import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 
 const getHook = () => (window as SkymapWindow).__skymap;
-const fakeEngine = () => ({ nextFrame: () => Promise.resolve() }) as EngineHandle;
+const fakeEngine = () =>
+  ({ nextFrame: () => Promise.resolve(), settled: () => Promise.resolve() }) as EngineHandle;
 
 describe('installSkymapHook', () => {
   beforeEach(() => {

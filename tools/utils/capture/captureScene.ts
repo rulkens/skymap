@@ -61,7 +61,7 @@ export async function captureScene(
     }
     // Escape and the pose-less dispatches land after any applyPose wait; the
     // shot needs a frame that drew them.
-    await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());
+    await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
 
     const bytes = await writeThumbnail(await page.screenshot({ type: 'png' }), shot.outPath);
     return { status: 'captured', label: shot.label, bytes };

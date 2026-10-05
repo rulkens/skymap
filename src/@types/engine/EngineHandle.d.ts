@@ -15,6 +15,10 @@ export type EngineHandle = {
   /** Resolves after the next frame callback returns; stays pending if no frame ever comes. */
   nextFrame: () => Promise<void>;
 
+  /** Resolves after the first frame with no fade or label animation running (at
+   *  least one frame); same never-rejects, may-stay-pending contract as `nextFrame`. */
+  settled: () => Promise<void>;
+
   /** Stops the render loop, releases GPU resources, detaches listeners; call
    *  from React's `useEffect` cleanup so StrictMode's double-mount doesn't
    *  leave an orphaned RAF loop. */

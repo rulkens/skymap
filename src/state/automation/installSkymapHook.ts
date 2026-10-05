@@ -18,6 +18,7 @@ export function installSkymapHook(store: AppStore, engine: EngineHandle): void {
     dispatch: store.dispatch,
     getState: () => store.getState(),
     nextFrame: () => engine.nextFrame(),
+    settled: () => engine.settled(),
     projectRoot: __SKYMAP_PROJECT_ROOT__,
   };
   (window as SkymapWindow).__skymap = hook;
