@@ -58,17 +58,15 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
     m.set('sun', {
       positionMpc: [0, 0, 0],
       orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1] as BodyState['orientation'],
-      meanAnomalyRad: 0,
     });
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
     }
     const earth = state.data.bodies.earth as SeededPlanet | null;
     if (earth)
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
         orientation: earth.orientation,
-        meanAnomalyRad: 0,
       });
     return m;
   }),

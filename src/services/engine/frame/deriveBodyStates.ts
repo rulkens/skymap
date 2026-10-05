@@ -3,15 +3,16 @@
  * the three authored position tables — anchors, Keplerian elements, surface
  * sites (`positionDrivers.ts` reads the same three as a union) — keyed by id.
  * A planet is Kepler plus its fitted Horizons correction, less any pair reflex.
- * `meanAnomalyRad` is the PROPAGATED `M` at `t` (not epoch) — the
- * orbit-trail falloff anchor, so a trail fading behind the body must
- * track where it actually is. Memoized on `simDays`: every pass (draw,
- * pick, labels) reads the same snapshot each frame, so recomputing per
- * reader would tear a mid-frame clock tick between passes.
+ * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
+ * the orbit trail draws the same conic instead of re-deriving its own.
+ * Memoized on `simDays`: every pass (draw, pick, labels) reads the same
+ * snapshot each frame, so recomputing per reader would tear a mid-frame
+ * clock tick between passes.
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
@@ -50,15 +51,13 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // Phase 1 — positions only, so phase 2 can orient a body against where the
   // *other* bodies ended up rather than against iteration order.
   const positions = new Map<string, Vec3>();
-  const meanAnomalies = new Map<string, number>();
+  const orbits = new Map<string, OrbitalElements>();
 
-  // 1a — the roots: position authored, not orbited, and M = 0: an anchor has
-  // no orbit for a trail to fade along. The authored position is shared by
-  // reference rather than copied: it is never mutated, and a copy would
-  // allocate per instant for nothing.
+  // 1a — the roots: position authored, not orbited, so no orbit. The authored
+  // position is shared by reference rather than copied: it is never mutated,
+  // and a copy would allocate per instant for nothing.
   for (const anchor of SCENE_ANCHORS) {
     positions.set(anchor.id, anchor.positionMpc);
-    meanAnomalies.set(anchor.id, 0);
   }
 
   // 1b — every element row, focus before dependant. The focus is already in
@@ -84,13 +83,13 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
       position[2] -= reflex.k * s[2];
     }
     positions.set(el.id, position);
-    meanAnomalies.set(el.id, propagated.meanAnomalyRad);
+    orbits.set(el.id, propagated);
   }
 
   // 1c — sites pinned to a host's surface: the host's own spin carries them, so
   // the host's orientation is needed HERE, mid-phase-1. Safe because every such
-  // host is an IAU-pole body and that arm ignores `positions`. M = 0, as for an
-  // anchor: no orbit for a trail to fade along.
+  // host is an IAU-pole body and that arm ignores `positions`. No orbit, as for
+  // an anchor.
   for (const site of SURFACE_FIXED_SITES) {
     const hostPos = positions.get(site.hostId);
     if (hostPos === undefined) {
@@ -113,7 +112,6 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
       offsetM[2] * SCALE_UNITS.M_TO_MPC,
     ];
     positions.set(site.id, addVec3(hostPos, offsetMpc));
-    meanAnomalies.set(site.id, 0);
   }
 
   // Phase 2 — orientations over the finished position map. Anchors go through
@@ -123,7 +121,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     states.set(id, {
       positionMpc,
       orientation: orientationForBody(id, simDays, positions),
-      meanAnomalyRad: meanAnomalies.get(id)!,
+      orbit: orbits.get(id),
     });
   }
 

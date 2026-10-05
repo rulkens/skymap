@@ -88,7 +88,7 @@ describe('deriveBodyStates', () => {
       expect(actual, `state for '${id}'`).toBeDefined();
       expect(actual!.positionMpc, id).toEqual(expected.positionMpc);
       expect(actual!.orientation, id).toEqual(expected.orientation);
-      expect(actual!.meanAnomalyRad, id).toBe(expected.meanAnomalyRad);
+      expect(actual!.orbit?.meanAnomalyRad, id).toBe(expected.orbit.meanAnomalyRad);
     }
     for (const el of ORBITAL_ELEMENTS) {
       expect(Object.hasOwn(BODY_STATES_J2000, el.id), `'${el.id}' is in the fixture`).toBe(true);

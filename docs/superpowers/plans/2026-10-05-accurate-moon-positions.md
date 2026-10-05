@@ -98,17 +98,17 @@ readonly orbit?: OrbitalElements;
 - Every orbit-trail row is an element row, so `orbit` is present. A missing one throws with the id.
 
 **Steps:**
-- [ ] Sweep `meanAnomalyRad` off `BodyState` and onto `orbit`. Test literals build `orbit` from the
+- [x] Sweep `meanAnomalyRad` off `BodyState` and onto `orbit`. Test literals build `orbit` from the
       row's propagated elements, or omit it for anchors. This is a type sweep, so it gets no new
       test.
-- [ ] Add the test `orbitTrailsPass reads the snapshot orbit, not its own propagation`. Stub one
+- [x] Add the test `orbitTrailsPass reads the snapshot orbit, not its own propagation`. Stub one
       row's `state.orbit` with `meanAnomalyRad` shifted by +1 rad from the propagated value, and
       `positionMpc` = focus + `keplerianPositionMpc(stubbedOrbit)`. The packed ellipse centre (eye
       basis C) must equal focus + `centerOffsetMpc`, eye-relative in km, to ≤ 1 m. Staging float 16
       must equal the stubbed M. The test fails on today's code, where the centre moves by the
       chord of a 1 rad shift.
-- [ ] Regenerate `bodyStatesJ2000.json` (same regen script as #835), then run `npm test`.
-- [ ] Commit `refactor(bodies): snapshot carries propagated orbit; trails stop re-propagating`.
+- [x] Regenerate `bodyStatesJ2000.json` (same regen script as #835), then run `npm test`.
+- [x] Commit `refactor(bodies): snapshot carries propagated orbit; trails stop re-propagating`.
 
 ### Task 2: Body-agnostic correction table and tools (P2)
 
