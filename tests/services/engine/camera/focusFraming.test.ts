@@ -15,11 +15,15 @@ import { galaxyFocusDistance } from '../../../../src/services/engine/camera/gala
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { Source } from '../../../../src/data/sources';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
+import { schwarzschildRadiusM } from '../../../../src/utils/physics/schwarzschildRadiusM';
+import { SGR_A_STAR_MASS_SOLAR } from '../../../../src/data/bodies/sgrAStarMassSolar';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -29,12 +33,13 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
+import { starRowDriver } from '../../../fixtures/starRowDriver';
 
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
 
 const FOVY = 0.8;
 
-const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
+const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
     source: 1,
     index: 7,
@@ -48,7 +53,7 @@ const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
     ...over,
   });
 
-const structureRow = (over: Partial<StructureInfo> = {}): StructureInfo =>
+const structureRow = (over: Partial<StructureInfo> = {}) =>
   ({
     type: 'structure',
     worldPos: [10, -20, 30],
@@ -125,6 +130,7 @@ describe('focusFraming', () => {
     id: 'earth',
     label: 'Earth',
     positionMpc: [4.8481e-12, 0, 0], // ~1 AU in Mpc
+    driver: bodyDriverGeometry(over.id ?? 'earth'),
     ...over,
   });
 
@@ -156,20 +162,21 @@ describe('focusFraming', () => {
     expect(result.radius).toBeCloseTo(EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC, 20);
   });
 
-  it('body arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
+  const sgrAStarRow = () =>
+    blackHoleSelectionRow().extractRow({ type: 'blackHole', id: 'sgr-a-star' }, 0)!;
+
+  it('blackHole arm — focusDistanceRadii override lands at a fixed radius multiple, bypassing screen-fill', () => {
     // Sgr A*'s arrival distance is an r_s count the user framed live, not a
     // FOV-dependent viewport fraction — this pins that the override replaces
-    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it. The
-    // multiple rides the SEED, so the row no longer carries it.
-    const radiusMpc = bodyFootprintRadiusM(SGR_A_STAR) * SCALE_UNITS.M_TO_MPC;
-    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
-    const result = focusFraming(row, FOVY);
-    expect(result.distance).toBe(radiusMpc * SGR_A_STAR.focusDistanceRadii!);
+    // bodyFocusDistance's tan(fovY/2) math rather than merely scaling it.
+    const radiusMpc = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR) * SCALE_UNITS.M_TO_MPC;
+    const result = focusFraming(sgrAStarRow(), FOVY);
+    expect(result.distance / (radiusMpc * 30.4)).toBeCloseTo(1, 12);
     expect(result.distance).not.toBe(bodyFocusDistance(radiusMpc, FOVY));
   });
 
-  it('body arm — focusDistanceRadii override is independent of FOV', () => {
-    const row = bodyRow({ id: SGR_A_STAR.id, label: SGR_A_STAR.label });
+  it('blackHole arm — focusDistanceRadii override is independent of FOV', () => {
+    const row = sgrAStarRow();
     const atFovA = focusFraming(row, 0.5).distance;
     const atFovB = focusFraming(row, 1.4).distance;
     expect(atFovA).toBe(atFovB);
@@ -185,17 +192,29 @@ describe('focusFraming', () => {
   // ── shared body/star framing (bodyLikeFraming) ───────────────────────────────
 
   it('frames a star and a body identically for equal position + radius', () => {
-    // Star and body rows differ in shape (the essential asymmetry the switch
-    // keeps), but both delegate their framing to the one bodyLikeFraming helper.
-    // Given the same position + physical radius they must yield the same pose —
-    // pinning that the two arms share a single framing body, not two drifting copies.
+    // Star and body rows differ in shape, but each stamps its own driver and the
+    // one case frames off that. Given the same position + physical radius they
+    // must yield the same pose — pinning that the two arms share a single
+    // framing body, not two drifting copies.
     const positionMpc: Vec3 = [4.8481e-12, 0, 0];
     // The Sun is the one seeded body whose radius is the star arm's stamped
     // nominal radius, so the two arms are comparable without a fabricated row.
     const radiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
-    const bodyResult = focusFraming({ type: 'body', id: 'sun', label: 'Sun', positionMpc }, FOVY);
+    const bodyResult = focusFraming(
+      { type: 'body', id: 'sun', label: 'Sun', positionMpc, driver: bodyDriverGeometry('sun') },
+      FOVY,
+    );
     const starResult = focusFraming(
-      { type: 'star', index: 3, positionMpc, absMag: 4, bpRp: 0.5, radiusM },
+      {
+        type: 'starCatalog',
+        source: Source.GaiaStars,
+        index: 3,
+        id: null,
+        label: 'Field star',
+        positionMpc,
+        radiusM,
+        driver: starRowDriver(null, radiusM),
+      },
       FOVY,
     );
     expect(starResult).toEqual(bodyResult);

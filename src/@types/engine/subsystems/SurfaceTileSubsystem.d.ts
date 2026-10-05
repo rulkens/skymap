@@ -63,9 +63,18 @@ export type SurfaceTileSubsystem = Destroyable & {
    * Terrain height (metres above the datum) under a body-fixed direction —
    * the CPU twin of the shader's `lattice.wesl` sampler (spec §8.4). `0` for
    * a body other than the one currently ENGAGED (§ one engaged): body-generic
-   * by construction, so Mars (F4) is a registry row away, not a second query.
+   * by construction, so a new body is a registry row away, not a second query.
    */
   terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
+
+  /**
+   * The pyramid level `terrainHeightAt`'s ancestor climb actually resolved
+   * under the same direction; `null` when nothing is resident there (or the
+   * body is not the engaged one). A debug readout, because the height alone
+   * cannot tell "sea level" from "no tile": the floor can stand on a level
+   * several coarser than the albedo on screen, and this is what shows it.
+   */
+  residentHeightLevelAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number | null;
 
   /**
    * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —

@@ -14,7 +14,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
 const { layersRef } = vi.hoisted(() => ({
-  layersRef: { current: [] as ReadonlyArray<{ name: string; ui?: () => React.ReactElement }> },
+  layersRef: {
+    current: [] as ReadonlyArray<{
+      name: string;
+      ui?: ReadonlyArray<{ slot: string; content: () => React.ReactElement }>;
+    }>,
+  },
 }));
 
 vi.mock('../../../src/compositions/app', () => ({
@@ -25,15 +30,6 @@ vi.mock('../../../src/compositions/app', () => ({
 
 vi.mock('../../../src/components/containers/TierChipContainer', () => ({
   default: () => <div data-testid="tier-chip" />,
-}));
-vi.mock('../../../src/components/containers/StarsSectionContainer', () => ({
-  default: () => <div data-testid="stars-section" />,
-}));
-vi.mock('../../../src/components/containers/CosmicWebSectionContainer', () => ({
-  default: () => <div data-testid="cosmic-web-section" />,
-}));
-vi.mock('../../../src/components/containers/FlowSectionContainer', () => ({
-  default: () => <div data-testid="flow-section" />,
 }));
 vi.mock('../../../src/components/containers/StructuresSectionContainer', () => ({
   default: () => <div data-testid="structures-section" />,
@@ -54,13 +50,18 @@ import { SettingsPanel } from '../../../src/components/SettingsPanel/SettingsPan
 
 describe('SettingsPanel — composition order (D13)', () => {
   it('renders a present Layer’s ui section before the core sections', () => {
-    layersRef.current = [{ name: 'stub', ui: () => <div data-testid="stub-layer-section" /> }];
+    layersRef.current = [
+      {
+        name: 'stub',
+        ui: [{ slot: 'main', content: () => <div data-testid="stub-layer-section" /> }],
+      },
+    ];
     const { getByTestId, container } = render(<SettingsPanel />);
 
     const layerEl = getByTestId('stub-layer-section');
-    const starsEl = getByTestId('stars-section');
-    // DOCUMENT_POSITION_FOLLOWING: layerEl comes before starsEl.
-    expect(layerEl.compareDocumentPosition(starsEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    const coreEl = getByTestId('structures-section');
+    // DOCUMENT_POSITION_FOLLOWING: layerEl comes before coreEl.
+    expect(layerEl.compareDocumentPosition(coreEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     expect(container.querySelectorAll('[data-testid]').length).toBeGreaterThan(1);

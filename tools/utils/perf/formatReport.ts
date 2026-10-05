@@ -56,11 +56,15 @@
  *     scenario has no floor to separate, so this section is skipped entirely.
  *   - SUMMARY — the at-a-glance verdict: budget line, hottest merged pass, floor
  *     caveat.
+ *   - MEMORY — measure-only: GPU ledger total + JS heap, then the top 10 GPU
+ *     owners by resident bytes (see `trackGpuMemory.ts`). No heat colors —
+ *     this section reports what's resident, not frame cost.
  *   - ⚠ page errors — a trailing summary that de-duplicates `report.pageErrors`
  *     to one line per unique message with its count; nothing when there are none.
  */
 
 import type { ScenarioReport, LayerStat } from '../../perf/scenarioReport';
+import type { GpuMemoryOwnerRow } from '../../../src/@types/gpu/memory/GpuMemoryOwnerRow';
 import type { Palette } from '../cli/ansiPalette';
 import { formatPageErrors } from './formatPageErrors';
 import { budgetTone } from './budgetTone';
@@ -68,6 +72,12 @@ import { heatColor } from './heatColor';
 import { shareBar } from './shareBar';
 
 const ms = (value: number): string => value.toFixed(1);
+const mb = (bytes: number): string => (bytes / (1024 * 1024)).toFixed(1);
+
+/** How many owner rows the MEMORY section lists — the ledger can carry
+ *  hundreds of owners (one per unlabeled create site's caller); the report
+ *  wants the heaviest few, not an exhaustive dump. */
+const MEMORY_TOP_OWNERS = 10;
 
 /** Width of each row's inline share bar. */
 const SHARE_BAR_WIDTH = 15;
@@ -143,6 +153,7 @@ export function formatReport(report: ScenarioReport, palette: Palette): string {
   }
 
   pushSummary(lines, palette, report);
+  pushMemory(lines, palette, report);
 
   // Page errors are collected during the run, not warned inline, so the report
   // can collapse a storm of identical messages into one counted line each. The
@@ -255,4 +266,35 @@ function pushSummary(lines: string[], palette: Palette, report: ScenarioReport):
         ),
     );
   }
+}
+
+/**
+ * pushMemory — GPU ledger total + JS heap, then the top `MEMORY_TOP_OWNERS`
+ * GPU owners by resident bytes. Measure-only: this section reports what's
+ * resident, not what the frame cost, so it carries no heat colors or verdict.
+ */
+function pushMemory(lines: string[], palette: Palette, report: ScenarioReport): void {
+  const { gpu, jsHeapBytes } = report.memory;
+  lines.push('  ' + palette.bold('MEMORY'));
+  lines.push(
+    '    ' +
+      `GPU ${mb(gpu.totalBytes)} MB` +
+      (jsHeapBytes === null ? '' : ` · JS heap ${mb(jsHeapBytes)} MB`),
+  );
+  if (gpu.owners.length === 0) return;
+
+  const top = gpu.owners.slice(0, MEMORY_TOP_OWNERS);
+  const header: readonly string[] = ['owner', 'kind', 'count', 'MB', "gc'd"];
+  const bodyRows = top.map((row: GpuMemoryOwnerRow) => [
+    row.owner,
+    row.kind === 'texture' ? 'tex' : 'buf',
+    String(row.count),
+    mb(row.bytes),
+    row.gcReclaimed > 0 ? String(row.gcReclaimed) : '—',
+  ]);
+  const cells = table([header, ...bodyRows], ['left', 'left', 'right', 'right', 'right']);
+  const headerLine = cells[0]!.join('  ');
+  lines.push('    ' + headerLine);
+  lines.push('    ' + '─'.repeat(headerLine.length));
+  for (let i = 1; i < cells.length; i++) lines.push('    ' + cells[i]!.join('  '));
 }

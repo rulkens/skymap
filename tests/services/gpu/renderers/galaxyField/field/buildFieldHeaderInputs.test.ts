@@ -101,7 +101,12 @@ describe('buildFieldHeaderInputs', () => {
 
   it('zeroes the HII draw of dust it never accumulates, but keeps the shared attenuation lanes live', () => {
     expect(inputs.hii.dust!.count).toBe(0);
-    expect(inputs.hii.dust!.noise).toEqual({ tileUnits: 1, amplitude: 0, cloudOffset: 0, contrastExp: 1 });
+    expect(inputs.hii.dust!.noise).toEqual({
+      tileUnits: 1,
+      amplitude: 0,
+      cloudOffset: 0,
+      contrastExp: 1,
+    });
     // extinctionRgb/slices are the two lanes dustAttenuation.wesl's
     // componentEmission actually reads, so they carry the field's real values.
     expect(inputs.hii.dust!.extinctionRgb).toEqual(inputs.field.dust!.extinctionRgb);

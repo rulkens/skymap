@@ -2,31 +2,36 @@
  * rankPaletteMatches — the command palette's pure ranking pipeline.
  *
  * Filters + ranks the parallel indexes (the curated famous atlas, the seeded
- * scene bodies, the PGC-keyed alias index, and the large-scale structure
- * catalog) against the current query, plus the always-present Milky Way row,
- * into one ordered `ScoredRow[]` ready to render.  Pulled out of the component
- * so it has no React / DOM dependency and can be tested in isolation.
+ * scene bodies, the fixed Earth-places table, the PGC-keyed alias index, and
+ * the large-scale structure catalog) against the current query, plus the
+ * always-present Milky Way row, into one ordered `ScoredRow[]` ready to
+ * render.  Pulled out of the component so it has no React / DOM dependency
+ * and can be tested in isolation.
  *
- * Empty query shows the full famous atlas in seed-file order so the user can
- * browse without typing — alias, body, and structure entries are NOT shown for
- * empty queries (48k aliases / ~370 structures) because rendering the full list
- * every time the palette opens would be a DOM-thrashing disaster.
+ * An empty query yields no rows — the featured grid owns browsing
+ * (`FeaturedGrid` over `FEATURED_TABS`), so this only scores non-empty queries.
  *
- * Non-empty query: score every index and sort.  Famous rows and seeded scene
- * bodies (Earth, the planets, the stars) are one class of "primary named
- * object" and share a single score-sorted list, so an exact body match like
- * "earth" outranks a famous row that only matched "earth" in its description.
- * The alias and structure lists are scored, capped, and appended after.
+ * Famous rows, seeded scene bodies (Earth, the planets), the seeded stars, and
+ * Earth places are one class of "primary named object" and share a single
+ * score-sorted list, so an exact body match like "earth" outranks a famous
+ * row that only matched "earth" in its description. The alias and structure
+ * lists are scored, capped, and appended after.
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../../data/bodies/bodySearchNames';
+import { isRegistryBodyId } from '../../../utils/scene/isRegistryBodyId';
+import { exhibitRegistry } from '../../../data/exhibits/exhibitRegistry';
+import { tourRegistry } from '../../../data/animation/tours/tourRegistry';
+import { EARTH_PLACES } from '../../../data/palette/earthPlaces';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../../@types/engine/layer/LayerSearchEntry';
 
 /**
  * The maximum number of alias rows to include in the rendered list.
@@ -58,22 +63,18 @@ export function rankPaletteMatches(
   entries: readonly FamousGalaxyMetaEntry[],
   aliasIndex: readonly AliasIndexEntry[] | undefined,
   structures: readonly StructureSearchEntry[] | undefined,
+  layerRows: readonly LayerSearchEntry[],
   query: string,
 ): ScoredRow[] {
-  // The Milky Way row is always present (no catalog membership): on an empty
-  // query it heads the list as the most-asked-after object; on a query it's
-  // scored over MILKY_WAY_NAMES like a famous row and only kept if it hits.
-  const mwScore =
-    query.trim().length === 0
-      ? 0
-      : scoreFamousMatch({ id: 'milky-way', names: MILKY_WAY_NAMES, description: '' }, query);
-  const milkyWayRow: ScoredRow | null =
-    query.trim().length === 0 || mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
+  if (query.trim().length === 0) return [];
 
-  if (query.trim().length === 0) {
-    const famousAll = entries.map<ScoredRow>((e) => ({ kind: 'famous', entry: e, score: 0 }));
-    return milkyWayRow ? [milkyWayRow, ...famousAll] : famousAll;
-  }
+  // The Milky Way row has no catalog membership; scored over MILKY_WAY_NAMES
+  // like a famous row and only kept if it hits.
+  const mwScore = scoreFamousMatch(
+    { id: 'milky-way', names: MILKY_WAY_NAMES, description: '' },
+    query,
+  );
+  const milkyWayRow: ScoredRow | null = mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
 
   const famousScored: ScoredRow[] = entries
     .map<ScoredRow>((entry) => {
@@ -82,27 +83,108 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  // Seeded scene bodies (Earth, the stars, the planets) are scored like a famous
-  // row; they skip the empty-query browse list (like aliases/structures) so
-  // browsing stays famous + Milky Way. The wheel-zoom floor (clampDistance.ts)
-  // is derived from the focused body's own radius, so a picked body always
-  // resolves to a reachable, non-sub-pixel focus target.
+  // Seeded scene bodies (Earth, the planets, the mesh bodies) are scored like a
+  // famous row. The wheel-zoom floor (clampDistance.ts) is derived from the
+  // focused body's own radius, so a picked body always resolves to a
+  // reachable, non-sub-pixel focus target.
   //
   // A body scores over its full alias list (BODY_SEARCH_NAMES), so a Bayer
   // designation ("Alpha Canis Majoris") surfaces the same row as the common
   // name ("Sirius"). Earth/planets aren't in the map and fall back to their
   // single label.
-  const bodyScored: ScoredRow[] = SCENE_BODIES.map<ScoredRow>((body) => {
-    const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
-    const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
-    return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+  //
+  // `SCENE_BODIES` still lists the seeded stars for the camera and occluder
+  // readers, so the body rows are narrowed to the ids a body source actually
+  // seeds; the stars get their own rows below, carrying star identity.
+  const bodyScored: ScoredRow[] = SCENE_BODIES.filter((body) => isRegistryBodyId(body.id))
+    .map<ScoredRow>((body) => {
+      const names = BODY_SEARCH_NAMES.get(body.id) ?? [body.label];
+      const raw = scoreFamousMatch({ id: body.id, names, description: '' }, query);
+      return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  // The seeded stars, scored the same way off the same alias map — the row that
+  // results carries the source + seed index its `starCatalog` ref needs.
+  const starScored: ScoredRow[] = [...SEEDED_STAR_CATALOGS_BY_SOURCE]
+    .flatMap<ScoredRow>(([source, row]) =>
+      row.stars.map((star, index) => {
+        const names = BODY_SEARCH_NAMES.get(star.id) ?? [star.label];
+        const raw = scoreFamousMatch({ id: star.id, names, description: '' }, query);
+        return {
+          kind: 'starCatalog',
+          source,
+          index,
+          star,
+          score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0,
+        };
+      }),
+    )
+    .filter((s) => s.score > 0);
+
+  // Exhibits and tours are scored on their registry label alone — only a
+  // registry row gets a search row (spec §7.4), so a focus card never
+  // duplicates the object it takes over to. `Tour.dev` tours are harnesses for
+  // the tour machinery and stay out of search; they remain launchable from the
+  // debug panel and by id.
+  const exhibitScored: ScoredRow[] = Object.values(exhibitRegistry)
+    .map<ScoredRow>((exhibit) => {
+      const raw = scoreFamousMatch(
+        { id: exhibit.id, names: [exhibit.label], description: '' },
+        query,
+      );
+      return { kind: 'exhibit', exhibit, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  const tourScored: ScoredRow[] = Object.values(tourRegistry)
+    .filter((tour) => tour.dev !== true)
+    .map<ScoredRow>((tour) => {
+      const raw = scoreFamousMatch({ id: tour.id, names: [tour.label], description: '' }, query);
+      return { kind: 'tour', tour, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  // Earth places are scored the same way as a scene body: a fixed, small
+  // table with no catalog membership, so no cap/append treatment like alias
+  // or structure rows.
+  const placeScored: ScoredRow[] = EARTH_PLACES.map<ScoredRow>((place) => {
+    const raw = scoreFamousMatch({ id: place.id, names: place.names, description: '' }, query);
+    return { kind: 'place', entry: place, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
 
-  // Famous rows and scene bodies are one class of primary named object: merge
-  // and sort together so an exact body match ("earth") outranks a famous row
-  // that only matched "earth" in its description. The sort is stable, so a
-  // famous row stays ahead of a body on an exact score tie (famous listed first).
-  const primaryScored = [...famousScored, ...bodyScored].sort((a, b) => b.score - a.score);
+  // Layer-published rows, scored off their own `names` like any primary row.
+  // `class` decides where they land: `primary` merges into the sorted primary
+  // list below, `catalog` is capped beside the alias rows, so a Layer that one
+  // day publishes a loaded catalog cannot drown the named objects.
+  const layerScored: ScoredRow[] = layerRows
+    .map<ScoredRow>((entry) => {
+      const raw = scoreFamousMatch({ id: entry.id, names: entry.names, description: '' }, query);
+      const boost = entry.class === 'primary' ? PRIMARY_TIEBREAK : 0;
+      return { kind: 'layer', entry, score: raw > 0 ? raw + boost : 0 };
+    })
+    .filter((s) => s.score > 0);
+  const layerPrimaryScored = layerScored.filter(
+    (s) => s.kind === 'layer' && s.entry.class === 'primary',
+  );
+  const layerCatalogScored = layerScored.filter(
+    (s) => s.kind === 'layer' && s.entry.class === 'catalog',
+  );
+
+  // Famous rows, scene bodies, Earth places, exhibits and tours are one class
+  // of primary named object: merge and sort together so an exact match
+  // ("earth") outranks a famous row that only matched "earth" in its
+  // description. The sort is stable, so earlier arrays stay ahead on an exact
+  // score tie (famous first).
+  const primaryScored = [
+    ...famousScored,
+    ...bodyScored,
+    ...starScored,
+    ...placeScored,
+    ...exhibitScored,
+    ...tourScored,
+    ...layerPrimaryScored,
+  ].sort((a, b) => b.score - a.score);
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])
     .map<ScoredRow>((entry) => ({
@@ -111,8 +193,10 @@ export function rankPaletteMatches(
       score: scoreAliasMatch(entry, query),
     }))
     .filter((s) => s.score > 0);
-  aliasScored.sort((a, b) => b.score - a.score);
-  const aliasCapped = aliasScored.slice(0, MAX_ALIAS_RESULTS);
+  // One capped bucket, not two: a Layer's catalog rows and the alias index are
+  // the same class of bulk row, so they compete for the same DOM budget.
+  const catalogScored = [...aliasScored, ...layerCatalogScored].sort((a, b) => b.score - a.score);
+  const catalogCapped = catalogScored.slice(0, MAX_ALIAS_RESULTS);
 
   // Structures score through the same heuristic as famous rows: we fold the
   // Abell designation into the searchable `names` so 'A1656' and 'Coma' both
@@ -138,7 +222,7 @@ export function rankPaletteMatches(
   return [
     ...(milkyWayRow ? [milkyWayRow] : []),
     ...primaryScored,
-    ...aliasCapped,
+    ...catalogCapped,
     ...structureCapped,
   ];
 }

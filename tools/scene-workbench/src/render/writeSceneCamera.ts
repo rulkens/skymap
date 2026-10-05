@@ -10,11 +10,10 @@
  */
 import { mat4 } from 'wgpu-matrix';
 
+import type { CameraProjection } from '../../@types/CameraProjection';
+import type { CameraProjectionRow } from '../../@types/CameraProjectionRow';
+import { CAMERA_PROJECTIONS } from './cameraProjections';
 import type { SceneCameraView } from './sceneCameraView';
-
-/** Near/far in metres: hand-scale detail up to the ~2.5 km scene diagonal. */
-const NEAR_M = 0.5;
-const FAR_M = 5000;
 
 export const SCENE_CAMERA_BYTES = 192;
 
@@ -31,9 +30,9 @@ export function writeSceneCamera(
   opacityScale: number,
 ): void {
   const [width, height] = view.viewportPx;
-  // wgpu-matrix takes the destination LAST and returns it; `perspective` maps
-  // depth to [0, 1], WebGPU's range.
-  const proj = mat4.perspective(view.fovYRad, width / height, NEAR_M, FAR_M, projScratch);
+  // TS can't correlate the kind with the row it selects; the table's type proves it.
+  const row = CAMERA_PROJECTIONS[view.projection.kind] as CameraProjectionRow<CameraProjection>;
+  const proj = row.matrix(view.projection, width / height, projScratch);
   const look = mat4.lookAt(view.eyeM, view.targetM, view.upM, viewScratch);
   const viewProj = mat4.multiply(proj, look, viewProjScratch);
 
@@ -43,7 +42,7 @@ export function writeSceneCamera(
   out.set(view.upM, 20);
   out[23] = height;
   out.set(view.eyeM, 24);
-  out[27] = (2 * Math.tan(view.fovYRad * 0.5)) / height;
+  out[27] = row.metresPerPx(view.projection, height);
   out.set(look, 28);
   out[44] = splatScale;
   out[45] = opacityScale;

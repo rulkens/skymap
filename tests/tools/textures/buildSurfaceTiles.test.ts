@@ -7,8 +7,8 @@ import sharp from 'sharp';
 
 import { bakeAll, bakeCoarserLevel } from '../../../tools/textures/buildSurfaceTiles';
 import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import type { SurfaceTileProduct } from '../../../src/@types/data/SurfaceTileProduct';

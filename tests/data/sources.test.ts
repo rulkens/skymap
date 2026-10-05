@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
+
+// Default-visible galaxy catalog bits: 1 (SDSS), 2 (2MRS), 3 (Glade),
+// 4 (Famous), 8 (Milliquas). The DESI patches (bits 18-20) and the
+// structure codes (5/6/7) stay clear — see the test below.
+const VISIBLE_MASK = 0b100011110;
 
 describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
@@ -27,22 +31,13 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
     expect(Source.Void).toBe(7);
   });
 
-  it('ALL_VISIBLE_MASK covers default-visible galaxy catalog sources only (no structure bits)', () => {
-    // Default-visible galaxy catalog bits: 1 (SDSS), 2 (2MRS), 3 (Glade),
-    // 4 (Famous), 8 (Milliquas) = 0b100011110. Milliquas ships on
-    // by default now that the quasar source is stable. The DESI patches —
-    // DesiDeep (bit 18), DesiWedge (bit 19), and DesiSgw (bit 20) — are
-    // deliberately CLEAR: all three drill geometries are specialist opt-in
-    // overlays, not part of the all-sky default scene, so their bits stay off.
-    // Structure codes 5/6/7 stay clear so the galaxy catalog draw loop
-    // doesn't accidentally gate on them.
-    expect(ALL_VISIBLE_MASK).toBe(0b100011110);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiDeep)).toBe(false);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiWedge)).toBe(false);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.DesiSgw)).toBe(false);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);
+  it('maskHas reads a galaxy catalog visibility mask without structure bits leaking in', () => {
+    expect(maskHas(VISIBLE_MASK, Source.Milliquas)).toBe(true);
+    expect(maskHas(VISIBLE_MASK, Source.DesiDeep)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.DesiWedge)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.DesiSgw)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.Cluster)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.Supercluster)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.Void)).toBe(false);
   });
 });

@@ -1,11 +1,12 @@
 import sharp from 'sharp';
 
 /** sharp's `metadata().depth` names that carry real elevation numbers, mapped
- *  to the `raw({ depth })` request and the view that reads the bytes back. */
+ *  to the `raw({ depth })` request and the view that reads the bytes back.
+ *  No 16-bit entries: sharp loads them as `grey16`, rescaling to 8 bits under
+ *  `b-w` and clamping negatives to 0 on every route (MOLA read 0 m at Gale),
+ *  so an Int16 DEM is converted to Float32 first. */
 const DEPTHS = {
   float: { raw: 'float' as const, view: Float32Array },
-  short: { raw: 'short' as const, view: Int16Array },
-  ushort: { raw: 'ushort' as const, view: Uint16Array },
   int: { raw: 'int' as const, view: Int32Array },
 };
 

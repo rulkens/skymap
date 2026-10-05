@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/StructuresSection.tsx
 /**
  * StructuresSection — presentational component for the Structures thematic group
  * inside the SettingsPanel.

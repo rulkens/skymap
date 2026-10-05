@@ -23,7 +23,9 @@ import {
   STAR_RESOLVE_PX,
 } from '../../../../src/services/engine/frame/partitionStarsByResolution';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
+import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
+import { Source } from '../../../../src/data/sources';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { PositionedStar } from '../../../../src/@types/scene/PositionedStar';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -31,9 +33,14 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const ANCHOR_POS = new Map(SCENE_ANCHORS.map((anchor) => [anchor.id, anchor.positionMpc]));
 
 /** The record + the position the frame resolves for it, as the layers pair them. */
-const POSITIONED: readonly PositionedStar[] = SCENE_STARS.map((star) => ({
+const POSITIONED: readonly PositionedStar[] = [
+  ...SCENE_SUN.map((star, seedIndex) => ({ star, source: Source.Sun, seedIndex })),
+  ...SCENE_STARS.map((star, seedIndex) => ({ star, source: Source.FamousStar, seedIndex })),
+].map(({ star, source, seedIndex }) => ({
   ...star,
   positionMpc: ANCHOR_POS.get(star.id)!,
+  source,
+  seedIndex,
 }));
 
 const byId = (id: string) => POSITIONED.find((star) => star.id === id)!;
@@ -43,6 +50,7 @@ const SIRIUS = byId('sirius');
 
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
+const PX_PER_RAD = VIEWPORT_HEIGHT_PX / (2 * Math.tan(FOV_Y_RAD / 2));
 
 /**
  * A camera half an AU from the given position: a sphere the size of the near
@@ -63,8 +71,7 @@ describe('partitionStarsByResolution', () => {
       stars: [SIRIUS, PROXIMA],
       camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(spheres.map((star) => star.id)).toEqual(['sirius']);
@@ -84,8 +91,7 @@ describe('partitionStarsByResolution', () => {
       stars: [SUN, PROXIMA, SIRIUS],
       camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(points.map((star) => star.id)).toEqual(['sun', 'proxima-centauri']);
@@ -100,8 +106,7 @@ describe('partitionStarsByResolution', () => {
       stars: POSITIONED,
       camPosMpc: SUN.positionMpc,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(spheres).toEqual([SUN]);

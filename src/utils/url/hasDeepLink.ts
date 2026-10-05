@@ -9,11 +9,7 @@
  * kinds of URL content qualify:
  *
  *   - a hash param whose row in `HASH_PARAM_SOURCES` is marked
- *     `deepLink: true` — today that is `#focus=<id>` (pin a specific galaxy,
- *     structure, or body) and `#t=<instant>` (a shared link carrying a
- *     specific sim moment). `#orientation=<frame>` is present in the same
- *     table but `deepLink: false`: a pole preference is a view setting, not
- *     intent worth skipping the introduction for.
+ *     `deepLink: true`.
  *   - `?tour=<name>` — request the tour at a specific anchor.
  *
  * Dev/power-user query gates (`?gpuTimings`, `?impostor`, …) don't qualify —

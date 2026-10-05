@@ -11,9 +11,7 @@
  * `setPose` / `setStrategy` / `collectTimings` end-to-end behaviour is NOT
  * exercised here: driving a camera pose to a settled frame and reading real GPU
  * timings both need a live engine + WebGPU device, which no unit surface
- * provides. The gate test asserts they are wired (present + callable); the
- * `ready` debounce is already covered by the recorder suite through the shared
- * `whenStablyReady`.
+ * provides. The gate test asserts they are wired (present + callable).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -23,14 +21,15 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { installPerfHook, PERF_WARMUP_FRAMES } from '../../../src/state/perf/installPerfHook';
 import { isPerfMode } from '../../../src/utils/url/isPerfMode';
 import { requestTier } from '../../../src/state/tier/requestTier';
-import { setTier } from '../../../src/state/tier/tierSlice';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
+import { arrived } from '../../../src/state/arrival/arrivalSlice';
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
-import { Source } from '../../../src/data/sources';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
-import type { SkymapPerfHook } from '../../../src/@types/perf/SkymapPerfHook';
-import type { PerfWindow } from '../../../src/@types/perf/PerfWindow';
+import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
+import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { BodyId } from '../../../src/@types/data/body/BodyId';
 
 vi.mock('../../../src/utils/url/isPerfMode', () => ({
   isPerfMode: vi.fn<() => boolean>(() => false),
@@ -42,15 +41,19 @@ function buildStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// A minimal fake engine handle: only `debug.timingService.subscribe` is
-// reachable from the installer's gate, so that is the only member the fake
-// needs. `subscribe` is a vi.fn returning a no-op unsubscribe.
+// A minimal fake engine handle: only `nextFrame`, `debug.timingService.subscribe` and
+// `debug.requestRender` are reachable from the installer's gate, so those are
+// the only members the fake needs. `subscribe` is a vi.fn returning a no-op
+// unsubscribe.
 function fakeEngine(): EngineHandle {
   const timingService = {
     enabled: true,
     subscribe: vi.fn<(listener: (frame: GpuTimingFrame) => void) => () => void>(() => () => {}),
   };
-  return { debug: { timingService } } as unknown as EngineHandle;
+  return {
+    nextFrame: () => Promise.resolve(),
+    debug: { timingService, requestRender: vi.fn() },
+  } as unknown as EngineHandle;
 }
 
 describe('installPerfHook', () => {
@@ -77,7 +80,6 @@ describe('installPerfHook', () => {
 
     const hook = getHook();
     expect(hook).toBeDefined();
-    expect(hook?.ready).toBeInstanceOf(Promise);
     expect(typeof hook?.setPose).toBe('function');
     expect(typeof hook?.setStrategy).toBe('function');
     expect(typeof hook?.collectTimings).toBe('function');
@@ -118,8 +120,9 @@ describe('installPerfHook', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(requestTier('large'));
 
     // Drive the store to the "settled" reading (engine ready + no load in
-    // flight) so the fresh whenStablyReady arms its stability timer.
+    // flight + arrived) so the fresh whenStablyReady arms its stability timer.
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
+    store.dispatch(arrived());
     // Not yet: the predicate must HOLD for the full stability window first.
     await Promise.resolve();
     expect(resolved).toBe(false);
@@ -141,7 +144,7 @@ describe('installPerfHook', () => {
       () => () => {},
     );
     const engine = {
-      debug: { timingService: { enabled: false, subscribe } },
+      debug: { timingService: { enabled: false, subscribe }, requestRender: vi.fn() },
     } as unknown as EngineHandle;
 
     installPerfHook(buildStore(), engine);
@@ -172,6 +175,7 @@ describe('installPerfHook', () => {
             };
           }),
         },
+        requestRender: vi.fn(),
       },
     } as unknown as EngineHandle;
 
@@ -215,5 +219,65 @@ describe('installPerfHook', () => {
     // so the frame tags run 0…FRAMES-1 in arrival order.
     const expectedFrames = Array.from({ length: FRAMES }, (_, i) => i);
     expect(samples.map((s) => s.frame)).toEqual(expectedFrames);
+  });
+
+  it('collectTimings requests the next render on every delivered frame', async () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    // Nothing else wakes the render-on-demand loop at a body- or site-arm hold:
+    // auto-rotate drives the world arm only. If sampling stops pumping the
+    // scheduler the loop sleeps mid-window and `collectTimings` never settles —
+    // a silent hang inside `page.evaluate`, which is how this defect presented.
+    let listener: ((frame: GpuTimingFrame) => void) | undefined;
+    const requestRender = vi.fn();
+    const engine = {
+      debug: {
+        timingService: {
+          enabled: true,
+          subscribe: vi.fn((l: (frame: GpuTimingFrame) => void) => {
+            listener = l;
+            return () => {
+              listener = undefined;
+            };
+          }),
+        },
+        requestRender,
+      },
+    } as unknown as EngineHandle;
+
+    installPerfHook(buildStore(), engine);
+
+    const FRAMES = 2;
+    const promise = getHook()!.collectTimings(FRAMES);
+    const total = PERF_WARMUP_FRAMES + FRAMES;
+    for (let i = 0; i < total; i++) listener?.({ frameIndex: i, perPassMs: new Map([['hdr', 1]]) });
+    await promise;
+
+    // Warmup frames pump too — the loop must stay awake through them or the
+    // measured window never starts.
+    expect(requestRender).toHaveBeenCalledTimes(total);
+  });
+
+  it('setPose commits the framed arm it was given, body arm included', async () => {
+    vi.mocked(isPerfMode).mockReturnValue(true);
+
+    // The defect: every pose was re-spelled through `absoluteArm`, so a
+    // body-parented vantage landed at the right world coordinates in the wrong
+    // frame — Earth's atmosphere while parked over Mars.
+    const framed: FramedCameraPose = {
+      frame: { body: 'mars' as BodyId },
+      pose: {
+        bodyId: 'mars' as BodyId,
+        anchorLocalM: [711639.0023079902, 3140420.910021869, 1073467.4616577267],
+        eyeRelAnchorM: [22764.552087539458, 95693.15918994322, -107497.79259981122],
+        basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      },
+    };
+
+    const store = buildStore();
+    installPerfHook(store, fakeEngine());
+    await getHook()!.setPose({ framed });
+
+    expect(store.getState().camera.base).toEqual(framed);
   });
 });

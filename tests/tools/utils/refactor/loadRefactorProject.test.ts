@@ -14,19 +14,15 @@ import { loadRefactorProject } from '../../../../tools/utils/refactor/loadRefact
 describe('loadRefactorProject', () => {
   // Legitimately slow: ts-morph parses all three real source trees. ~8s
   // under load — sized ~2.5x that.
-  it(
-    'loads all three source trees',
-    () => {
-      const project = loadRefactorProject();
-      // getFilePath() returns ts-morph's branded StandardizedFilePath; widen to
-      // plain string so the resolve()-based has() checks below type-check.
-      const paths = new Set<string>(project.getSourceFiles().map((f) => f.getFilePath()));
+  it('loads all three source trees', () => {
+    const project = loadRefactorProject();
+    // getFilePath() returns ts-morph's branded StandardizedFilePath; widen to
+    // plain string so the resolve()-based has() checks below type-check.
+    const paths = new Set<string>(project.getSourceFiles().map((f) => f.getFilePath()));
 
-      // One known file from each tree — src/, tests/, tools/.
-      expect(paths.has(resolve('src/data/galaxyCatalog/galaxyCatalogFormat.ts'))).toBe(true);
-      expect(paths.has(resolve('tests/tools/utils/refactor/applyMoves.test.ts'))).toBe(true);
-      expect(paths.has(resolve('tools/utils/refactor/applyMoves.ts'))).toBe(true);
-    },
-    20000,
-  );
+    // One known file from each tree — src/, tests/, tools/.
+    expect(paths.has(resolve('src/data/galaxyCatalog/galaxyCatalogFormat.ts'))).toBe(true);
+    expect(paths.has(resolve('tests/tools/utils/refactor/applyMoves.test.ts'))).toBe(true);
+    expect(paths.has(resolve('tools/utils/refactor/applyMoves.ts'))).toBe(true);
+  }, 20000);
 });

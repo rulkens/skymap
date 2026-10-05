@@ -1,9 +1,8 @@
 /**
  * meshTextureSlots — the baked material maps of a mesh body: the bind-group
- * binding the shader reads each at, and the `<key><suffix>.png` the bake writes
- * and the fetcher asks for (those file names are already on R2, so they are
- * fixed). Only albedo is sRGB: a metal-rough or normal map decoded through sRGB
- * returns wrong roughness and wrong slopes.
+ * binding the shader reads each at, and the `<key><suffix>.webp` the bake
+ * writes and the fetcher asks for. Only albedo is sRGB: a metal-rough or normal
+ * map decoded through sRGB returns wrong roughness and wrong slopes.
  */
 
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';

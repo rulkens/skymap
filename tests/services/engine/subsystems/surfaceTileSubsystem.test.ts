@@ -4,8 +4,7 @@
  * derives from the tier the whole-globe texture is bound at and passes in, the
  * residency query (`residentSlot`) `cutSurfaceTiles` calls back into, and the
  * engage/disengage transition the atlas view + debug snapshot both key off.
- * All exercised against the registry's one row (`earth`) — R7 defers the
- * multi-body switch path's own test to F4's Mars row.
+ * All exercised against the `earth` row, plus one Earth-to-Mars switch.
  *
  * The base level is the one of the three that is invisible when it is wrong. The
  * three tiers bind three different whole-globe images — z2, z3 and z4 on the
@@ -47,6 +46,7 @@ import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTi
 import type { SurfaceTilePlan } from '../../../../src/@types/scene/SurfaceTilePlan';
 import type { SurfaceCutTile } from '../../../../src/@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../src/@types/data/Tier';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import {
   createSurfaceTileSubsystem,
   EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
@@ -260,11 +260,9 @@ const DISENGAGED: SurfaceTilePlan = {
  * genuinely resident, not merely requested, so `residentSlot`/debug-snapshot
  * assertions exercise the real post-fetch state.
  */
-async function engagedSubsystem() {
+async function engagedSubsystem(close: () => void = () => {}) {
   vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
-  vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
-    close: () => {},
-  } as unknown as ImageBitmap);
+  vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({ close } as unknown as ImageBitmap);
 
   const subsystem = createSurfaceTileSubsystem({
     device: recordingDevice(),
@@ -299,6 +297,25 @@ async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
   subsystem.update({ bodyId: 'earth', plan });
   return subsystem.getAtlasView() !== null;
 }
+
+describe('surfaceTileSubsystem body switch', () => {
+  it('stands down and refetches the manifest when the engaged body switches from earth to mars', async () => {
+    // A stale atlas would draw Earth's tiles, at Earth's slots, over Mars.
+    const close = vi.fn();
+    const subsystem = await engagedSubsystem(close);
+    expect(subsystem.residentSlot(TILE)).not.toBeNull();
+    vi.mocked(fetchSurfaceTileManifest).mockClear();
+
+    const mars = 'mars' as BodyId;
+    subsystem.plannerParams(mars, baseLevelForTier('mars', 'large'));
+    subsystem.update({ bodyId: mars, plan: ENGAGED });
+
+    expect(fetchSurfaceTileManifest).toHaveBeenCalledWith('mars-tiles');
+    expect(subsystem.residentSlot(TILE)).toBeNull();
+    expect(subsystem.getAtlasView()).toBeNull();
+    expect(close).toHaveBeenCalled();
+  });
+});
 
 describe('surfaceTileSubsystem engage gate', () => {
   it('engages on the very plan a finer-tiered session stands down on', async () => {

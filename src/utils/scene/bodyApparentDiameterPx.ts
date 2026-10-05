@@ -32,10 +32,9 @@ export function bodyApparentDiameterPx(input: {
   positionMpc: Readonly<Vec3>;
   radiusM: number;
   camPosMpc: Readonly<Vec3>;
-  viewportHeightPx: number;
-  fovYRad: number;
+  pxPerRad: number;
 }): number {
-  const { positionMpc, radiusM, camPosMpc, viewportHeightPx, fovYRad } = input;
+  const { positionMpc, radiusM, camPosMpc, pxPerRad } = input;
   const dx = positionMpc[0] - camPosMpc[0];
   const dy = positionMpc[1] - camPosMpc[1];
   const dz = positionMpc[2] - camPosMpc[2];
@@ -47,5 +46,5 @@ export function bodyApparentDiameterPx(input: {
   // Physical diameter in kpc: radiusM·2 → Mpc → kpc, every step through a named
   // SCALE_UNITS constant (no inline magic factors).
   const diameterKpc = (radiusM * 2 * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
-  return apparentSizePx({ diameterKpc, distanceMpc, viewportHeightPx, fovYRad });
+  return apparentSizePx({ diameterKpc, distanceMpc, pxPerRad });
 }

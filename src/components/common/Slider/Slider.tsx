@@ -1,4 +1,3 @@
-// src/components/common/Slider/Slider.tsx
 /**
  * Slider — a horizontal value slider that folds the LABEL and the current
  * VALUE into the track itself, instead of laying them out as a separate

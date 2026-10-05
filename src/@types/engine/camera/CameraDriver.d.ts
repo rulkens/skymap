@@ -1,5 +1,6 @@
 /** CameraDriver — one precedence-table row; the ranking and its why live with the table. */
 
+import type { DriverActivity } from './DriverActivity';
 import type { DriverCtx } from './DriverCtx';
 import type { DriverId } from './DriverId';
 import type { EpochRow } from './EpochRow';
@@ -24,8 +25,7 @@ export type CameraDriver = {
   // pose), so it settles the follow approach's debt instead of leaving it owed
   // for the approach to undo at the row's exit.
   readonly deliversFraming?: boolean;
-  // `approachDone` = the follow memory saturated last frame; only `followApproach` reads it.
-  isActive(s: RootState, approachDone?: boolean): boolean;
+  isActive(s: RootState, activity: DriverActivity): boolean;
   // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
   pose(
     ctx: DriverCtx,

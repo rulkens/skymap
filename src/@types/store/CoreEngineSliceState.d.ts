@@ -12,8 +12,8 @@ import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
 export type CoreEngineSliceState = {
   status: EngineStatus;
@@ -48,26 +48,11 @@ export type CoreEngineSliceState = {
    */
   structureSearchList: readonly StructureSearchEntry[];
   /**
-   * Curated JSON sidecar payloads that the React layer selects — narrative and
-   * physical metadata not carried in a catalog's binary rows. Each field is
-   * written wholesale by its own asset slot when that sidecar's fetch settles,
-   * and is empty both before the slot settles and after a failed fetch, so no
-   * field needs a separate "loaded" flag beside its array.
-   *
-   * Grouping them keeps the qualifier in the key path instead of repeating it
-   * through every symbol, and gives the next sidecar a home rather than another
-   * flat field on `CoreEngineSliceState`. React-read is the criterion, not
-   * curated-ness: `structures_meta.json` is a curated sidecar too, but the
-   * engine is what consumes it, so its payload lives in `structureStore`.
+   * Palette rows published by each Layer's `search` feed, keyed by Layer name
+   * — a whole-snapshot replace per yield, so a Layer that clears its rows
+   * yields an empty array rather than deleting a key; only teardown drops the
+   * Layer's key (`layerSearchCleared`). `selectLayerSearchRows`
+   * flattens it for the ranker.
    */
-  meta: {
-    /**
-     * Famous-star narrative/physical metadata (`famous_stars_meta.json`), written
-     * wholesale by `engineFamousStarsMetaReported` when the sidecar's asset slot
-     * settles, empty both before that and after a failed fetch, which is the
-     * InfoCard's headline-alone path. The famous-GALAXY sidecar's twin left with
-     * the galaxyCatalog Layer, which publishes it as a fact.
-     */
-    readonly famousStars: readonly FamousStarMetaEntry[];
-  };
+  layerSearch: Record<string, readonly LayerSearchEntry[]>;
 };

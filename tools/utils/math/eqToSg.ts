@@ -1,8 +1,8 @@
 /**
  * Equatorial Cartesian (Mpc) → Supergalactic Cartesian (Mpc).
  *
- * Used by the CF-4 / flow diagnostics to map sky positions into the
- * supergalactic frame the volume cubes are defined in.
+ * Used by the flow-field diagnostics and workbench to map sky positions
+ * into the supergalactic frame the flow cube is defined in.
  */
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { applyMat3 } from './applyMat3';

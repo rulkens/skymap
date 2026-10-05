@@ -3,7 +3,7 @@
  * texture names for a picked star) into the star it identifies: heliocentric
  * world position in Mpc plus the dequantised absolute magnitude and BP-RP
  * colour. This is the load-bearing "the pick names the right star" resolver;
- * `starSelectionRow`'s `extractRow` reads through it.
+ * `starCatalogSelectionRow`'s `extractRow` reads through it.
  *
  * ── Why binary-search the LEAF nodes, not the whole node table ─────────────
  *
@@ -42,7 +42,7 @@ import {
   RECORD_BYTES,
   STAR_OFFSET_LEVELS,
 } from '../../../data/starCatalog/starCatalogFormat';
-import { starNodeOriginRelCamMpc } from '../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];

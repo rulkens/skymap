@@ -10,9 +10,9 @@
  */
 
 import { isPerfMode } from '../../utils/url/isPerfMode';
+import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
@@ -20,12 +20,13 @@ import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
-import type { SkymapPerfHook } from '../../@types/perf/SkymapPerfHook';
-import type { PerfWindow } from '../../@types/perf/PerfWindow';
+import type { SkymapPerfHook } from './@types/SkymapPerfHook';
+import type { PerfWindow } from './@types/PerfWindow';
 import type { PerfPose } from '../../@types/perf/PerfPose';
 import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { Tier } from '../../@types/data/Tier';
+import type { MemorySnapshot } from '../../@types/perf/MemorySnapshot';
 
 // Per-frame yaw advance in radians; mirrors the camera slice's inline
 // `initialState.autoRotate.rate`, which the slice does not export.
@@ -46,29 +47,18 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
   TIMED_SLOT_GROUPS.flatMap((group) => group.rows.map((row) => [row.name, row.groupKey])),
 );
 
-// Hard-cut the camera to `pose`: a benchmark wants an exact vantage, and the
-// re-armed auto-rotate keeps the render-on-demand loop awake for the whole window.
-async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+// Hard-cut the camera to `pose.framed`: a benchmark wants an exact vantage, and
+// the arm is committed as authored — re-spelling a body-parented pose on the
+// world arm lands the right coordinates in the wrong frame (wrong host body,
+// wrong atmosphere).
+function setPose(store: AppStore, engine: EngineHandle, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
-    // Let one frame elapse first: the deactivating follow driver's commit-on-edge
-    // bake writes its stale last pose into `camera.base` on the next produce, and
-    // must land BEFORE the commit below or it overwrites this pose's target.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
   store.dispatch(cancelCameraTween());
-  store.dispatch(
-    commitCameraPose(
-      absoluteArm({
-        target: pose.target,
-        yaw: pose.yaw,
-        pitch: pose.pitch,
-        distance: pose.distance,
-      }),
-    ),
-  );
+  store.dispatch(commitCameraPose(pose.framed));
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  return engine.nextFrame();
 }
 
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {
@@ -87,6 +77,10 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
     let delivered = 0;
     let measured = 0;
     const unsubscribe = engine.debug.timingService.subscribe((frame) => {
+      // Sampling pumps its own window: auto-rotate wakes the render-on-demand
+      // loop on the world arm only, so a body- or site-arm hold would deliver
+      // no further frames and this promise would never settle.
+      engine.debug.requestRender();
       delivered += 1;
       if (delivered <= PERF_WARMUP_FRAMES) return;
       // `frame` is the 0-based MEASURED-frame ordinal (post-warmup), the tag
@@ -113,14 +107,12 @@ function setTier(store: AppStore, tier: Tier): Promise<void> {
 export function installPerfHook(store: AppStore, engine: EngineHandle): void {
   if (!isPerfMode()) return;
   const hook: SkymapPerfHook = {
-    ready: whenStablyReady(store),
-    setPose: (pose: PerfPose) => setPose(store, pose),
+    setPose: (pose: PerfPose) => setPose(store, engine, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
-    dispatch: store.dispatch,
-    getState: () => store.getState(),
+    memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),
     slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;

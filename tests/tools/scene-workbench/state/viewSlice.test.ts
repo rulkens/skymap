@@ -41,4 +41,15 @@ describe('viewSlice.frameCamera', () => {
     expect(framed.camera.targetM).toEqual([60, -5, 20]);
     expect(framed.camera.distanceM).toBe(90);
   });
+
+  it('frameCamera resets the projection to perspective', () => {
+    const ortho = {
+      ...defaultViewSlice,
+      camera: { ...defaultViewSlice.camera, projection: 'orthographic' as const },
+    };
+
+    const framed = viewSlice.reducer(ortho, frameCamera({ min: [0, 0, 0], max: [1, 1, 1] }));
+
+    expect(framed.camera.projection).toBe('perspective');
+  });
 });

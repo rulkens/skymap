@@ -1,6 +1,8 @@
 /**
  * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
- * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>.*`.
+ * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>-<px>.*`
+ * (`req.tier` already clamped to the body's ceiling by `meshBodyRow.req`); the
+ * contact mask stays untiered at `<key>_contact.webp`.
  *
  * A slot whose format is not sRGB carries numeric channels rather than a
  * picture, so it decodes with `colorSpaceConversion: 'none'` — the full writeup
@@ -11,8 +13,10 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
 import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshTextureField } from '../../../@types/data/mesh/MeshTextureField';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { decodeMesh } from '../../../data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
+import { meshTierPrefix } from '../../../utils/meshBodies/meshTierPrefix';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 async function fetchTexture(
@@ -35,27 +39,37 @@ async function fetchTexture(
 }
 
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
-  const prefix = `meshes/${req.meshKey}`;
-  const buf = await fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress);
-  const geometry = decodeMesh(buf);
+  const prefix = meshTierPrefix(req.meshKey, req.tier);
+  const contactUrl = dataUrl(`meshes/${req.meshKey}_contact.webp`);
+  const hasContactDecal = MESH_ASSETS[req.meshKey]?.contactDecal !== undefined;
 
-  // `fromEntries` widens the key back to `string`; the slot table is what makes
-  // the record exhaustive, so the assertion is restating it, not hiding a gap.
-  const textures = Object.fromEntries(
-    await Promise.all(
+  const [buf, textures, contactShadow] = await Promise.all([
+    fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress),
+    // `fromEntries` widens the key back to `string`; the slot table is what
+    // makes the record exhaustive, so the assertion is restating it, not
+    // hiding a gap.
+    Promise.all(
       MESH_TEXTURE_SLOTS.map(
         async (slot) =>
           [
             slot.field,
             await fetchTexture(
-              dataUrl(`${prefix}${slot.suffix}.png`),
+              dataUrl(`${prefix}${slot.suffix}.webp`),
               signal,
               !slot.format.endsWith('-srgb'),
             ),
           ] as const,
       ),
-    ),
-  ) as Record<MeshTextureField, ImageBitmap>;
+    ).then((entries) => Object.fromEntries(entries) as Record<MeshTextureField, ImageBitmap>),
+    // The shadow is garnish: a missing mask drops it, never the rover.
+    hasContactDecal
+      ? fetchTexture(contactUrl, signal, true).catch((err: Error) => {
+          if (err.name === 'AbortError') throw err;
+          return undefined;
+        })
+      : undefined,
+  ]);
+  const geometry = await decodeMesh(buf);
 
-  return { ...geometry, ...textures };
+  return { ...geometry, ...textures, ...(contactShadow ? { contactShadow } : {}) };
 };

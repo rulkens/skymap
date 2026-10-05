@@ -1,4 +1,3 @@
-// src/components/containers/TourDebugPillContainer.tsx
 /**
  * TourDebugPillContainer — TEMPORARY top-bar pill that starts the grand tour.
  *

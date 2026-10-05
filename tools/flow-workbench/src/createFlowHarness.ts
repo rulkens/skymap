@@ -19,7 +19,7 @@
  *      workbench keeps the renderer out of React the same way the runtime does:
  *      store-driven, never a React effect poking the GPU.
  *   3. Encode the flow compute pass (seed-when-armed + integrate) via the shared
- *      `encodeFlowCompute` gate.
+ *      `flowCompute` row the engine composes.
  *   4. Open the HDR accumulation pass; the renderer draws its additive ribbons.
  *   5. Tonemap the HDR target to the swap-chain.
  *   6. Publish `viewProj` back to the store so the React LabelsOverlay projects
@@ -38,15 +38,18 @@
  */
 import type { Store } from '../@types/state/Store';
 import type { AppState } from '../@types/state/AppState';
-import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
-import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
-import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
+import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
+import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
+import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
@@ -115,6 +118,14 @@ export async function createFlowHarness(
   let lastT = 0;
   let autoYaw = 0;
 
+  // Built once, not per frame. `flowCompute` closes over a `FlowRuntime`; the
+  // workbench has no engine, so it assembles just the slice the gate consumes —
+  // the renderer handle and a slot that reads ready once the cube is uploaded.
+  const flowComputeRow = flowCompute({
+    renderer,
+    slot: { committed: () => (loaded ? { kind: 'ready' } : null) },
+  } as unknown as FlowRuntime);
+
   function tick(now: number): void {
     if (!running) return;
     rafHandle = requestAnimationFrame(tick);
@@ -134,7 +145,7 @@ export async function createFlowHarness(
     cam.distance = s.camera.distance;
     cam.aspect = canvas.width / canvas.height || 1;
     updatePosition(cam);
-    const viewProj = computeViewProj(cam);
+    const viewProj = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
 
     resizeCanvasToDisplay(canvas);
     renderGraph.resize(canvas.width, canvas.height);
@@ -146,18 +157,12 @@ export async function createFlowHarness(
     const encoder = device.createCommandEncoder();
 
     // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded. `encodeFlowCompute` reads its
-    // gates off an `EngineState`; the workbench has no engine, so it assembles
-    // just the slice the gate consumes — the renderer handle, the flow settings,
-    // and a ready-when-loaded asset slot (the shape `slotReady` inspects).
-    encodeFlowCompute(
+    // the layer is off or the cube hasn't loaded.
+    flowComputeRow.encode(
       encoder,
-      {
-        gpu: { flowFieldRenderer: renderer },
-        settings: { flow: s.flow },
-        assetSlots: { flow: loaded ? { state: () => ({ kind: 'ready' }) } : null },
-      } as unknown as EngineState,
-      now,
+      { snapshot: { nowMs: now } } as unknown as FrameView,
+      { settings: { flow: s.flow } } as unknown as PassState,
+      () => ({}),
     );
 
     // HDR accumulation pass — the renderer draws its additive ribbons into it.

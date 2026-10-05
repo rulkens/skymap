@@ -16,7 +16,9 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
    ```
 
    Without `--url` the harness assumes 5173 — which in a worktree may be a _different branch's_
-   server. If your numbers make no sense, check which server you actually measured.
+   server. If your numbers make no sense, check which server you actually measured. The harness
+   also prints a warning on stderr when the server reports a different checkout than the one the
+   tool runs from.
 
 2. **WebGPU `timestamp-query`** — present on Chrome/Metal (macOS dev machines). If the adapter
    lacks it the hook rejects loudly rather than returning zeros.
@@ -24,7 +26,7 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
 ## Usage
 
 ```bash
-npm run perf                                        # all 8 scenarios, 30 frames, dpr 2
+npm run perf                                        # all 11 scenarios, 30 frames, dpr 2
 npm run perf -- --scenario solar-system --frames 60 # one scenario (repeatable flag)
 npm run perf -- --tier large                        # measure at a specific catalog tier
 npm run perf -- --compare-tiers                     # each scenario at small/medium/large
@@ -62,13 +64,32 @@ Progress goes to stderr in both modes, so stdout is pure JSON.
   is the honest classifier.
 - **`--compare-tiers`** — a `pass × small/medium/large` table, fresh browser context per tier,
   `—` where a tier excludes a source.
+- **MEMORY** — measure-only, not part of the timing verdict: the GPU-memory ledger's total
+  (`trackGpuMemory.ts`, wraps every `createBuffer`/`createTexture`) plus JS heap (Chrome only —
+  needs `--enable-precise-memory-info`, which `launchChromium` always passes), then the top 10 GPU
+  owners by resident bytes. `gc'd` counts objects reclaimed by GC without an explicit `destroy()` —
+  the leak signal.
 
 ## Scenarios
 
-Poses live in `tools/perf/perfScenarios.ts` — eight regimes from `earth-surface` to `full-survey`,
-captured from real flights via the in-app `l` (logState) key. To add one: fly there, press `l`,
-copy the dumped pose into a new entry. Keep poses stable — the value of the harness is comparing
-runs across commits, which dies if the poses drift.
+Poses live in `tools/perf/perfScenarios.ts` — eleven regimes from `earth-surface` to
+`full-survey`, all captured from real flights. Each scenario's `framed` is a camera **arm**: the
+world arm via `absoluteArm({ target, yaw, pitch, distance })`, or a body/site arm as its own
+literal. Keep poses stable — the value of the harness is comparing runs across commits, which
+dies if the poses drift.
+
+Two ways to author one:
+
+- **From the `l` (logState) key** — fly there, press `l`, copy the dumped target/yaw/pitch/
+  distance into `absoluteArm(...)`. World arm only; `fovYRad` in the dump is the 60° default and
+  not part of a pose.
+- **From a share URL** — copy a `#pose=…` value and run it through `decodeFramedPose`
+  (`src/utils/url/decodeFramedPose.ts`); paste the decoded OBJECT, not the string, so the
+  scenario reads as coordinates rather than an opaque blob. This is the route for a body- or
+  site-arm vantage (`mars-jezero-146km` came from one), which no logState dump spells.
+
+A body- or site-arm scenario is parented to its body, so it frames the same ground whatever the
+sim clock reads — the harness sets no time and none is needed.
 
 ## CPU-side star-cut bench (`starCutCpuBench.mts`)
 
@@ -92,7 +113,7 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 
 - **504 "Outdated Optimize Dep" → boot timeout.** A long-running Vite server whose dependency
   graph changed underneath it (branch switch, new imports) serves 504s to the headless page; the
-  perf hook never installs and the harness times out waiting for `__skymapPerf`. Fix: restart the
+  base hook never installs and the harness times out waiting for `__skymap`. Fix: restart the
   dev server. Diagnose with `.superpowers/sdd/probeBoot.ts`-style console dumping if in doubt.
 - **The harness measures whatever the server serves.** After editing renderer/shader code, make
   sure the dev server picked it up (HMR or restart) before trusting a comparison run.
@@ -101,8 +122,8 @@ so treat the **deltas and cut-size ratios** as the portable results, not the abs
 ## Architecture (for extending)
 
 The browser side is `window.__skymapPerf` (`src/state/perf/installPerfHook.ts`, gated behind
-`?perf`), a deliberately tiny seam: `ready`, `setPose`, `setStrategy`, `collectTimings`,
-`setTier`, `getTier`, `slotGroups`. The Node side (`tools/perf/measurePerf.ts`) may import
+`?perf`; boot waits on the always-on `window.__skymap`), a deliberately tiny seam: `setPose`, `setStrategy`, `collectTimings`,
+`setTier`, `getTier`, `slotGroups`, `memory`. The Node side (`tools/perf/measurePerf.ts`) may import
 Playwright, `tools/utils/*`, and **type-only** `src/@types/*` — never renderer/shader/
 frameProgram modules. Formatters are pure `(report, palette)` functions in `tools/utils/perf/`
 with injected ANSI palettes (`--json`/piped output stays plain); the pure pieces are all

@@ -1,7 +1,7 @@
 /**
  * Tests for `createRenderTargets` — the single owner of every offscreen
- * `RenderTargetSpec` row's texture lifecycle (the HDR + half-res volume
- * targets that used to live in `postProcess.ts` / `volumeOffscreen.ts`).
+ * `RenderTargetSpec` row's texture lifecycle, core's rows and the Layers'
+ * composed in beside them.
  *
  * Vitest runs in Node without a real GPU, so `device.createTexture` is
  * mocked; each mock returns a fresh `{ createView, destroy }` pair so the
@@ -10,8 +10,14 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
+import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
+import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
+import { MILKY_WAY_AGGREGATE_TARGET } from '../../../src/layers/milkyWay/render/milkyWayAggregateTarget';
+import { cosmicWebDensityLayer } from '../../../src/layers/cosmicWebDensity/layer';
+import { blackHolesLayer } from '../../../src/layers/blackHoles/layer';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
 
 function mockDevice(): GPUDevice {
@@ -20,6 +26,14 @@ function mockDevice(): GPUDevice {
       createView: vi.fn(() => ({})),
       destroy: vi.fn(),
     })),
+    // The far-depth placeholder is cleared at construction via its own
+    // encoder — every test below constructs `createRenderTargets` at least
+    // once, so this needs a real stub, not an afterthought.
+    createCommandEncoder: vi.fn(() => ({
+      beginRenderPass: vi.fn(() => ({ end: vi.fn() })),
+      finish: vi.fn(),
+    })),
+    queue: { submit: vi.fn() },
   } as unknown as GPUDevice;
 }
 
@@ -30,8 +44,8 @@ const SWAP_FORMAT: GPUTextureFormat = 'bgra8unorm';
 // and the row behaves like any other fixed-scale row.
 const MW_DIVISOR = 2;
 
-// The production `sky-cubemap` row's `fixedSizePx.size` reads
-// `settings.sgrAStarLensingTuning.cubemapResolutionPx` — every
+// The blackHoles Layer's `sky-cubemap` row's `fixedSizePx.size` reads
+// `settings.blackHoleLensingTuning.cubemapResolutionPx` — every
 // `createRenderTargets`/`reconcile` call below goes through the real table,
 // so this fixture needs the field even in tests that don't care about the
 // sky-cubemap row itself.
@@ -53,7 +67,7 @@ function stateWithDivisor(
   return {
     settings: {
       milkyWay: { aggregateDivisor },
-      sgrAStarLensingTuning: { cubemapResolutionPx },
+      blackHoleLensingTuning: { cubemapResolutionPx },
     },
     cubemapCaptures: makeCubemapCaptureRuntimes({
       sgrAStar: { lastBandActive, lastAnchorDistanceMpc },
@@ -72,17 +86,25 @@ describe('renderTargetRows', () => {
   });
 });
 
+// The density Layer's reduced-res target: the tests below use it as the
+// scale-3 offscreen row, composed in as `composeRenderTargetRows` does at boot.
+const DENSITY_TARGETS = cosmicWebDensityLayer.targets!;
+// The blackHoles Layer's `sky-cubemap` row, composed in beside core's as at boot.
+const LENS_TARGETS = blackHolesLayer.targets!;
+const CORE_AND_LENS_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS]);
+const DENSITY_ROWS = composeRenderTargetRows(SWAP_FORMAT, [LENS_TARGETS, DENSITY_TARGETS]);
+
 describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      DENSITY_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
     // Offscreen rows resolve to a live view.
     expect(targets.viewOf('hdr')).toBeDefined();
-    expect(targets.viewOf('volume')).toBeDefined();
+    expect(targets.viewOf('cosmic-web-density')).toBeDefined();
     // The swap chain is executor-resolved from the acquired frame view, not
     // allocated here — so it (and any unknown id) throws.
     expect(() => targets.viewOf('swap')).toThrow();
@@ -92,23 +114,35 @@ describe('createRenderTargets', () => {
   it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
+    // `star-aggregates`, `mw-aggregate` and `cosmic-web-density` are
+    // Layer-owned targets — composed in exactly as `composeRenderTargetRows`
+    // does at boot, so this test still exercises their scale/divisor math
+    // against the real rows.
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      composeRenderTargetRows(SWAP_FORMAT, [
+        LENS_TARGETS,
+        [STAR_AGGREGATES_TARGET],
+        [MILKY_WAY_AGGREGATE_TARGET],
+        DENSITY_TARGETS,
+      ]),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), zoa @ scale 5 (colour), star-aggregates @
-    // scale 2 (colour), mw-aggregate @ scale 2 (colour), foreground:0 @
-    // scale 1 (colour + depth), the five bloom-pyramid mips bloom0..bloom4 @
-    // scale 2/4/8/16/32 (colour only), and sky-cubemap @ fixedSizePx (colour)
-    // → 13 textures. hdr at full size, volume at floor(size/3),
-    // star-aggregates and mw-aggregate at floor(size/2).
+    // cosmic-web-density @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
+    // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
+    // (colour only), and sky-cubemap @ fixedSizePx (colour) → 12 textures,
+    // plus the far-depth placeholder (outside the spec table, never resized)
+    // → 13. hdr at full size, cosmic-web-density at floor(size/3), star-aggregates and
+    // mw-aggregate at floor(size/2).
     expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
-    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
+    const volDesc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-cosmic-web-density',
+    )![0];
     const aggDesc = create.mock.calls.find(
       (c) => c[0].label === 'render-target-star-aggregates',
     )![0];
@@ -120,19 +154,19 @@ describe('createRenderTargets', () => {
     expect(aggDesc.format).toBe('rgba16float');
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
-    // Each SCALE-driven offscreen row reallocated at the new canvas size → 12
+    // Each SCALE-driven offscreen row reallocated at the new canvas size → 11
     // more textures; sky-cubemap's fixedSizePx row holds its declared size
-    // and is not one of them.
-    expect(create.mock.calls).toHaveLength(25);
+    // and is not one of them, nor is the far-depth placeholder.
+    expect(create.mock.calls).toHaveLength(24);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
     const volResized = create.mock.calls
-      .filter((c) => c[0].label === 'render-target-volume')
+      .filter((c) => c[0].label === 'render-target-cosmic-web-density')
       .at(-1)![0];
     const aggResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-star-aggregates')
@@ -142,7 +176,7 @@ describe('createRenderTargets', () => {
     expect(aggResized.size).toEqual({ width: 600, height: 450, depthOrArrayLayers: 1 });
     // New views replaced the old ones.
     expect(targets.viewOf('hdr')).not.toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).not.toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).not.toBe(volViewBefore);
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
@@ -150,7 +184,7 @@ describe('createRenderTargets', () => {
     const device = mockDevice();
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -160,12 +194,57 @@ describe('createRenderTargets', () => {
     expect(() => targets.cubeViewOf('nope')).toThrow();
   });
 
+  // `layers` is independent of `fixedSizePx` — a canvas-scaled row (the
+  // dome-cube row) can carry array layers too, sized off the canvas like any
+  // other `scale: 1` row rather than a fixed declared size.
+  it('a canvas-scaled layered row allocates canvas-sized with one layer view per layer and reallocates on resize', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const layeredRow: RenderTargetSpec = {
+      id: 'layered-canvas',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      layers: 5,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...CORE_AND_LENS_ROWS, layeredRow],
+      { width: 64, height: 64 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-layered-canvas')![0];
+    expect(desc.size).toEqual({ width: 64, height: 64, depthOrArrayLayers: 5 });
+
+    // The default view spans the whole array (`viewOf` of a non-6-layer row
+    // is still the WHOLE 2d-array view, not a per-layer one) — cube sampling
+    // depends on this for any layer count, not just 6.
+    expect(targets.viewOf('layered-canvas')).toBeDefined();
+    // One single-layer view per layer, all distinct.
+    const layerViews = [0, 1, 2, 3, 4].map((layer) => targets.layerViewOf('layered-canvas', layer));
+    expect(new Set(layerViews).size).toBe(5);
+    expect(() => targets.layerViewOf('layered-canvas', 5)).toThrow();
+    // Not 6 layers — no cube view.
+    expect(() => targets.cubeViewOf('layered-canvas')).toThrow();
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 128, height: 128 });
+    const resized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-layered-canvas')
+      .at(-1)![0];
+    expect(resized.size).toEqual({ width: 128, height: 128, depthOrArrayLayers: 5 });
+    const layerViewsAfter = [0, 1, 2, 3, 4].map((layer) =>
+      targets.layerViewOf('layered-canvas', layer),
+    );
+    for (const view of layerViewsAfter) expect(layerViews).not.toContain(view);
+  });
+
   it('a fixedSizePx row whose size is a function resolves it against live state, and reconcile reallocates when the resolved size moves', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR, 256),
     );
@@ -194,7 +273,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false),
     );
@@ -238,7 +317,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true, 0),
     );
@@ -266,15 +345,18 @@ describe('createRenderTargets', () => {
   it("reconcile reallocates a row whose state-driven scale moved and leaves the other rows' views untouched", () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
+    // mw-aggregate is a Layer-owned target, composed in beside the density
+    // row so this test still exercises its state-driven divisor against the
+    // real row.
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      composeRenderTargetRows(SWAP_FORMAT, [[MILKY_WAY_AGGREGATE_TARGET], DENSITY_TARGETS]),
       { width: 800, height: 600 },
       stateWithDivisor(2),
     );
 
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const callsBefore = create.mock.calls.length;
 
     // The divisor is a DebugPanel slider, but a texture's dimensions are fixed
@@ -291,7 +373,7 @@ describe('createRenderTargets', () => {
     // still the object its consumers resolved before the call.
     expect(create.mock.calls.length).toBe(callsBefore + 1);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
   });
 
   it('reconcile allocates nothing when neither the canvas size nor a resolved scale moved', () => {
@@ -302,7 +384,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -313,11 +395,18 @@ describe('createRenderTargets', () => {
     expect(create.mock.calls.length).toBe(callsBefore);
   });
 
-  it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
+  it('clamps cosmic-web-density to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, stateWithDivisor(MW_DIVISOR));
-    const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
+    createRenderTargets(
+      device,
+      DENSITY_ROWS,
+      { width: 2, height: 2 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const volDesc = create.mock.calls.find(
+      (c) => c[0].label === 'render-target-cosmic-web-density',
+    )![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1, depthOrArrayLayers: 1 });
   });
@@ -327,7 +416,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -369,7 +458,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -387,17 +476,17 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      DENSITY_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
 
     const specsBefore = targets.specs;
     const hdrSpecBefore = specsBefore.find((s) => s.id === 'hdr')!;
-    const volSpecBefore = specsBefore.find((s) => s.id === 'volume')!;
+    const volSpecBefore = specsBefore.find((s) => s.id === 'cosmic-web-density')!;
     const fgSpecBefore = specsBefore.find((s) => s.id === 'foreground:0')!;
     const hdrViewBefore = targets.viewOf('hdr');
-    const volViewBefore = targets.viewOf('volume');
+    const volViewBefore = targets.viewOf('cosmic-web-density');
     const fgViewBefore = targets.viewOf('foreground:0');
     const callsBefore = create.mock.calls.length;
 
@@ -412,25 +501,50 @@ describe('createRenderTargets', () => {
     // rebuilt — and has no new texture allocated (the swap row carries no
     // texture, so this is allocation-free).
     expect(targets.specs.find((s) => s.id === 'hdr')).toBe(hdrSpecBefore);
-    expect(targets.specs.find((s) => s.id === 'volume')).toBe(volSpecBefore);
+    expect(targets.specs.find((s) => s.id === 'cosmic-web-density')).toBe(volSpecBefore);
     expect(targets.specs.find((s) => s.id === 'foreground:0')).toBe(fgSpecBefore);
     expect(create.mock.calls.length).toBe(callsBefore);
     expect(targets.viewOf('hdr')).toBe(hdrViewBefore);
-    expect(targets.viewOf('volume')).toBe(volViewBefore);
+    expect(targets.viewOf('cosmic-web-density')).toBe(volViewBefore);
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
+  });
+
+  // `createRenderTargets` allocates whatever table its caller hands it, not
+  // just core's own `renderTargetRows` — the shape a Layer's `targets` (via
+  // `composeRenderTargetRows`) relies on.
+  it('allocates a caller-supplied row beyond core’s and keeps it across setSwapFormat', () => {
+    const device = mockDevice();
+    const stubRow: RenderTargetSpec = {
+      id: 'stub-target',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...CORE_AND_LENS_ROWS, stubRow],
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+
+    expect(targets.viewOf('stub-target')).toBeDefined();
+
+    targets.setSwapFormat('rgba8unorm');
+
+    expect(targets.specOf('stub-target')).toBe(stubRow);
+    expect(targets.specOf('swap').format).toBe('rgba8unorm');
   });
 
   it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      DENSITY_ROWS,
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
-    // volume @ scale 3 -> floor(900/3), floor(600/3); zoa @ scale 5 ->
-    // floor(900/5), floor(600/5).
-    expect(targets.sizeOf('volume')).toEqual({ width: 300, height: 200 });
-    expect(targets.sizeOf('zoa')).toEqual({ width: 180, height: 120 });
+    // cosmic-web-density @ scale 3 -> floor(900/3), floor(600/3).
+    expect(targets.sizeOf('cosmic-web-density')).toEqual({ width: 300, height: 200 });
     expect(() => targets.sizeOf('swap')).toThrow();
     expect(() => targets.sizeOf('nope')).toThrow();
   });
@@ -441,19 +555,40 @@ describe('createRenderTargets', () => {
   // copy-pasted from `hdr` keeping its a=1): `hdr`/`swap` are the only two
   // rows that clear opaque; every other row must clear to zero coverage so
   // its upsample/composite adds nothing for a fragment it didn't reach.
-  it('only hdr and swap clear to opaque alpha', () => {
+  it('only hdr, swap, and dome-cube clear to opaque alpha', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      CORE_AND_LENS_ROWS,
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
     for (const spec of targets.specs) {
-      const expectedAlpha = spec.id === 'hdr' || spec.id === 'swap' ? 1 : 0;
+      // dome-cube holds five DISPLAY-READY composited faces (each copied in
+      // whole, not accumulated into), same as hdr/swap.
+      const expectedAlpha =
+        spec.id === 'hdr' || spec.id === 'swap' || spec.id === 'dome-cube' ? 1 : 0;
       // Every row in this table is written as a `{r,g,b,a}` dict (never the
       // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
       const clearValue = spec.clearValue as GPUColorDict;
       expect(clearValue.a).toBe(expectedAlpha);
     }
+  });
+
+  it('creates and clears the far-depth placeholder once, and farDepthView is stable across reconcile', () => {
+    const device = mockDevice();
+    const state = stateWithDivisor(MW_DIVISOR);
+    // Same size handed to construction and to reconcile below: every row's
+    // held size already matches, so reconcile allocates NOTHING — isolating
+    // the assertion to the placeholder alone, which `reconcile` never touches.
+    const size = { width: 640, height: 480 };
+    const targets = createRenderTargets(device, CORE_AND_LENS_ROWS, size, state);
+    const before = (device.createTexture as ReturnType<typeof vi.fn>).mock.calls.length;
+    const a = targets.farDepthView();
+    targets.reconcile(state, size);
+    expect(targets.farDepthView()).toBe(a);
+    expect((device.createTexture as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before);
+    const submit = (device as unknown as { queue: { submit: ReturnType<typeof vi.fn> } }).queue
+      .submit;
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 });

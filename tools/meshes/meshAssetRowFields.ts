@@ -12,14 +12,22 @@ import { quote } from '../utils/codegen/quote';
 export type MeshAssetRowField = {
   readonly name: keyof MeshAssetRow & string;
   readonly tsType: string;
+  /** Marks the field `?` in the generated type; `emit` returning `undefined`
+   *  then skips the row line entirely rather than writing a literal `undefined`. */
+  readonly optional?: boolean;
   /** Rendered as a docblock above the field, one array entry per line. */
   readonly doc?: readonly string[];
-  readonly emit: (row: MeshAssetRow) => string;
+  readonly emit: (row: MeshAssetRow) => string | undefined;
 };
 
 export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
   { name: 'key', tsType: 'string', emit: (row) => quote(row.key) },
-  { name: 'path', tsType: 'string', emit: (row) => quote(row.path) },
+  {
+    name: 'tierCeiling',
+    tsType: 'Tier',
+    doc: ['The highest tier this body ships; `meshBodyRow.req` clamps to it.'],
+    emit: (row) => quote(row.tierCeiling),
+  },
   { name: 'boundingRadiusM', tsType: 'number', emit: (row) => String(row.boundingRadiusM) },
   {
     name: 'groundOffsetM',
@@ -46,5 +54,21 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
     tsType: 'string',
     doc: ['author + URL; empty string for CC0'],
     emit: (row) => quote(row.attribution),
+  },
+  {
+    name: 'contactDecal',
+    tsType: 'ContactDecal',
+    optional: true,
+    doc: [
+      'The ground-contact box `contactShadow` projects into, body frame,',
+      'metres; absent for a floating mesh.',
+    ],
+    emit: (row) =>
+      row.contactDecal === undefined
+        ? undefined
+        : // Pre-broken the way prettier prints an object too wide for one line.
+          `{\n      centre: [${row.contactDecal.centre.join(', ')}],\n` +
+          `      halfU: [${row.contactDecal.halfU.join(', ')}],\n` +
+          `      halfV: [${row.contactDecal.halfV.join(', ')}],\n    }`,
   },
 ];

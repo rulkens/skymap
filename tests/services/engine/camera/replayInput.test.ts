@@ -33,6 +33,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../fixtures/earthArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
@@ -55,6 +56,7 @@ const EARTH_ROW: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 /** The replay's frame context with the store snapshot taken NOW. */
@@ -314,7 +316,12 @@ describe('replayInput', () => {
     if (!isBodyArm(committed)) throw new Error('the arm flipped');
     const got = committed.pose.eyeRelAnchorM;
     const cursorAnchor = anchorFor([700, 500]);
-    expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), 3);
+    // Loosened from millimetre-tight (F2): the anchor now marches over
+    // terrain to a pixel-sized tolerance rather than an exact analytic root,
+    // so this holds to metres on a multi-Mm range, not the bit — a real
+    // regression (e.g. reverting to the screen-centre anchor) misses by
+    // ~500 km, six orders of magnitude past this margin.
+    expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), -1);
     const centreAnchor = anchorFor([500, 500]);
     expect(rangeTo(centreAnchor, cursorAnchor)).toBeGreaterThan(100_000);
     expect(Math.abs(rangeTo(centreAnchor, got) - f * rangeTo(centreAnchor, eyeM))).toBeGreaterThan(

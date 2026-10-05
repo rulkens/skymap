@@ -1,4 +1,3 @@
-// src/components/containers/EarthSectionContainer.tsx
 /**
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *
@@ -23,12 +22,12 @@ import {
   selectAtmosphereExposure,
   selectAmbientLight,
   selectOceanRoughness,
-} from '../../state/settings/selectors';
+} from '../../layers/body/state/earth/selectors';
 import {
   setAtmosphereExposure,
   setAmbientLight,
   setOceanRoughness,
-} from '../../layers/body/settings/earthSlice';
+} from '../../layers/body/state/earth/slice';
 
 function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

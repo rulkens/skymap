@@ -15,9 +15,10 @@ import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/L
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
 import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -37,13 +38,16 @@ function makeState(): EngineState {
 // pure function of it, so tests step time by passing explicit stamps.  The
 // envelope ramp is 300 ms of smoothstep, so 0 / 150 / 300 hit alpha
 // 0 / 0.5 / 1 exactly.
-function makeCtx(nowMs = 0): ReadyFrameContext {
+function makeCtx(nowMs = 0): FrameView {
   return {
+    snapshot: { nowMs },
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
-    nowMs,
-  } as unknown as ReadyFrameContext;
+    // The pxPerRad that, through the label sizing's retune factor, reproduces
+    // the pre-pxPerRad `viewportHeight / 2` projection these rects assume.
+    drawPxPerRad: 500 / LABEL_EM_PX_RETUNE,
+  } as unknown as FrameView;
 }
 
 // The FOREGROUND_LABEL_DIRECTOR's `project` (`near0LabelProjection`) rebases
@@ -61,13 +65,16 @@ const NEAR0_SLAB: Slab = {
   reversedZ: true,
 };
 
-function makeNear0Ctx(nowMs = 0): ReadyFrameContext {
+function makeNear0Ctx(nowMs = 0): FrameView {
   return {
+    snapshot: { nowMs },
     drawCamPos: [0, 0, 0],
     slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
-    nowMs,
-  } as unknown as ReadyFrameContext;
+    // The pxPerRad that, through the label sizing's retune factor, reproduces
+    // the pre-pxPerRad `viewportHeight / 2` projection these rects assume.
+    drawPxPerRad: 500 / LABEL_EM_PX_RETUNE,
+  } as unknown as FrameView;
 }
 
 function makeProducer(id: string, labels: Label2D[], awake = false): Label2DProducer {

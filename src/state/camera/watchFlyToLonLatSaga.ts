@@ -1,9 +1,7 @@
 /**
- * watchFlyToLonLatSaga — the effect of `camera/flyToLonLat`: focus the body, then
- * TWEEN (the goHome pattern) to a centre-looking pose over the lon/lat. A plain
- * commit is lost under a followed focus: its winner edge bakes last frame's pose
- * back into `base` and `followHold` wins again. The tween delivers the framing,
- * so the follow row adopts where it lands.
+ * watchFlyToLonLatSaga — the effect of `camera/flyToLonLat`: focus the body,
+ * then TWEEN (the goHome pattern) to a centre-looking pose over the lon/lat —
+ * the tween delivers the framing, and the follow row adopts where it lands.
  */
 import { takeLatest, select, put, getContext } from 'typed-redux-saga';
 
@@ -20,16 +18,14 @@ import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { centreLookingArm } from '../../utils/camera/centreLookingArm';
-import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../utils/scene/bodyFootprintRadiusM';
+import { bodyRowAt } from '../../utils/scene/bodyRowAt';
 import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
 import { toBodyArm, toWorldArm } from '../../services/engine/camera/poseFrameConversion';
-import { bodyFocusDistance } from '../../services/engine/camera/bodyFocusDistance';
+import { focusFraming } from '../../services/engine/camera/focusFraming';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../data/camera/flyToLonLatTweenMs';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { SCENE_BODIES } from '../../data/bodies/sceneBodies';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -49,7 +45,13 @@ export function* watchFlyToLonLatSaga() {
     // An idle command: the steady frame basis serves as both bases.
     const frame = yield* select(selectOrientation);
     const basis = ORIENTATION_FRAMES[frame];
-    const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
+    // The body at the flight's END, not at dispatch: `CameraTweenDescriptor`
+    // carries ABSOLUTE world poses, so a target built against where the body is
+    // NOW is where it has already left by the time the tween gets there. Earth
+    // covers ~45 km of its orbit in the default 1.5 s — enough to land the eye
+    // kilometres underground. Only a frame of slack survives this (the tween can
+    // end no sooner than the first frame past `durationMs`).
+    const simDays = deriveSimDays(yield* select(selectTimeState), performance.now() + durationMs);
     const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
     // No terrain lookup reaches a saga (SagaContext carries none): a lon/lat fly-to
     // over hilly terrain lands `rangeM` above the datum, not the ground under it.
@@ -65,12 +67,10 @@ export function* watchFlyToLonLatSaga() {
     // to whatever it aims at, not the eye's height.
     const here = toBodyArm(runtime.from, basis, basis, body, host.state);
     // Off the focused body, the eye stands where a click-to-focus frames it.
-    const footprintMpc =
-      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, body, 'flyToLonLat')) *
-      SCALE_UNITS.M_TO_MPC;
     const eyeRadiusM = sameBody
       ? Math.hypot(...bodyFixedEyeM(here))
-      : bodyFocusDistance(footprintMpc, runtime.fovYRad) / SCALE_UNITS.M_TO_MPC;
+      : focusFraming(bodyRowAt(body, host.state.positionMpc), runtime.fovYRad).distance /
+        SCALE_UNITS.M_TO_MPC;
     const rangeM = altKm !== undefined ? altKm * 1000 : eyeRadiusM - host.radiusM;
     const heading =
       headingRad ?? (sameBody ? (eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0) : 0);

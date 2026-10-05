@@ -31,7 +31,7 @@ describe('skyInclinationToFrameInclination', () => {
     // convention, not from this code — which is what makes it a gate.
     const elements: OrbitalElements = {
       id: 'face-on-prograde',
-      focusId: 'sgr-a-star',
+      focusId: 'galactic-centre',
       semiMajorMpc: 1,
       eccentricity: 0,
       inclinationRad: skyInclinationToFrameInclination(0),

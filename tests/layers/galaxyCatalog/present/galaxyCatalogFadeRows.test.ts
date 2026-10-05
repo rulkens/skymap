@@ -14,7 +14,7 @@ import { seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 function runtimeWith(loaded: readonly string[]): GalaxyCatalogRuntime {
   return {

@@ -6,7 +6,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
   return {
@@ -27,6 +27,7 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
         pass,
         view.vp,
         view.viewportPx,
+        ctx.drawPxPerRad,
         view.camPos,
         state.gpu.focusUniform!.bindGroup,
         disks,

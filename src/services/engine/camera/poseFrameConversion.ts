@@ -18,12 +18,11 @@ import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
 import type { GroundRadiusLookup } from '../../../@types/camera/GroundRadiusLookup';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { cameraBasisWorld } from '../../../utils/camera/cameraBasisWorld';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { rollFromScreenUp } from '../../../utils/camera/rollFromScreenUp';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
-import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
@@ -55,14 +54,12 @@ export function toBodyArm(
     pose.target[1] - camPosMpc[1],
     pose.target[2] - camPosMpc[2],
   ]);
-  const { right, up } = imagePlaneBasis(forward, pose.roll ?? 0, frameUp(upBasis));
-
   // Provider A IS the Mpc→metre seam, so the body arm reuses it rather than
   // repeating the subtract-then-scale ordering the precision depends on
   // (spec §5.2: both providers agree at the flip because it is one derivation).
   const { eyeRelBodyM, basisM } = bodyRelativePose({
     camPosMpc,
-    camBasisWorld: mat3FromColumns(right, up, forward),
+    camBasisWorld: cameraBasisWorld(forward, pose.roll ?? 0, upBasis),
     bodyState,
   });
 

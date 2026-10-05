@@ -1,4 +1,3 @@
-// src/components/AutoRotateToggle/AutoRotateToggle.tsx
 /**
  * AutoRotateToggle — top-bar pill that toggles the engine's
  * autoRotate setting. Thin semantic wrapper over PillButton; owns

@@ -11,7 +11,7 @@
  * special-case both axes at every site that walks the layers. First, the
  * cardinality differs — `milkyWay`/`filament`/`flow` are singletons,
  * while surveys fan out per `GalaxyCatalogId`, structures per
- * `StructureId`, and volumes per `VolumeFieldId`. Second, the *seed*
+ * `StructureId`, and volumes per `CosmicWebDensityFieldId`. Second, the *seed*
  * differs — some layers seed their fade from settings (a toggle that is
  * already on must register at opacity 1.0), while demand-loaded layers
  * must seed at 0 so they fade *in* when their data arrives. A naive

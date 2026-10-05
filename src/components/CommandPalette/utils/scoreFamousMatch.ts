@@ -20,7 +20,7 @@
  * queries that match exactly still beat shorter queries that prefix.
  */
 
-export type ScorableEntry = {
+type ScorableEntry = {
   id: string;
   names: readonly string[];
   description: string;

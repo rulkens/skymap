@@ -14,6 +14,12 @@ import type { LabelBBox } from '../../../src/@types/rendering/LabelBBox';
 
 const BBOX: LabelBBox = { minX: -10, minY: -20, maxX: 30, maxY: 5 };
 
+// The pxPerRad that projects a 1 Mpc em at clipW 1 to exactly ATLAS_FONT_SIZE
+// pixels — the reference the hand-computed expectations below are written
+// against. tan(30 degrees) is spelled out rather than imported so a drifted
+// `LABEL_EM_PX_RETUNE` cannot cancel itself out of both sides.
+const PX_PER_RAD = ATLAS_FONT_SIZE / 0.57735;
+
 const label = (over: Partial<Label2D> = {}): Label2D =>
   ({
     id: 'l',
@@ -26,8 +32,8 @@ const label = (over: Partial<Label2D> = {}): Label2D =>
 
 describe('labelScreenRect', () => {
   it('places the ink box at the anchor, atlas px scaled by displayEm / ATLAS_FONT_SIZE', () => {
-    // worldEmMpc 1 at clipW 1 with a 168 px viewport height projects to
-    // (1 / 1) · 84 = 84 px per em — exactly ATLAS_FONT_SIZE, so the scale is 1
+    // worldEmMpc 1 at clipW 1 against PX_PER_RAD projects to 84 px per em —
+    // exactly ATLAS_FONT_SIZE, so the scale is 1
     // and the bbox lands on the anchor unchanged. The clamps are opened wide so
     // neither of them is what makes this pass.
     const rect = labelScreenRect({
@@ -35,7 +41,7 @@ describe('labelScreenRect', () => {
       bbox: BBOX,
       screenPx: [100, 200],
       clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      pxPerRad: PX_PER_RAD,
     });
     expect(rect).toEqual({ x0: 90, y0: 180, x1: 130, y1: 205 });
   });
@@ -48,7 +54,7 @@ describe('labelScreenRect', () => {
       bbox: BBOX,
       screenPx: [100, 200],
       clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      pxPerRad: PX_PER_RAD,
     });
     expect(rect).toEqual({ x0: 95, y0: 190, x1: 115, y1: 202.5 });
   });
@@ -59,7 +65,7 @@ describe('labelScreenRect', () => {
       bbox: BBOX,
       screenPx: [100, 200],
       clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      pxPerRad: PX_PER_RAD,
       padPx: 8,
     });
     expect(rect).toEqual({ x0: 82, y0: 172, x1: 138, y1: 213 });
@@ -73,7 +79,7 @@ describe('labelScreenRect', () => {
       bbox: BBOX,
       screenPx: [100, 200],
       clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      pxPerRad: PX_PER_RAD,
     });
     expect(rect).toEqual({ x0: 90, y0: 180, x1: 130, y1: 205 });
   });
@@ -87,7 +93,7 @@ describe('labelScreenRect', () => {
       bbox: BBOX,
       screenPx: [100, 200],
       clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
+      pxPerRad: PX_PER_RAD,
       includeOutline: true,
     });
     const fringe = 0.16 * 84;

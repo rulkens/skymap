@@ -53,7 +53,7 @@ import type { OrientationFrameId } from '../../../@types/camera/OrientationFrame
 import type { ClipPathInspector } from '../../../@types/engine/subsystems/ClipPathInspector';
 import type { ClipPathInspectSeam } from '../../../store/types';
 
-export type ClipPathInspectSeamDeps = {
+type ClipPathInspectSeamDeps = {
   /** The subsystem that holds the snapshot for the debug pass to read. */
   inspector: ClipPathInspector;
   /**

@@ -84,4 +84,30 @@ describe('satellite() moon elements', () => {
     const apsisBwd = io.argPeriapsisRad - backward.argPeriapsisRad;
     expect(apsisFwd).toBeCloseTo(apsisBwd, 12);
   });
+
+  it('Saturn satellites advance at their IAU spin rate in longitude', () => {
+    // Saturn's P column is a longitude period (360/P is the IAU spin rate), so λ̇ = Ṁ + ω̇ + Ω̇
+    // must equal 360/P. Read as anomalistic, the precessions double-count into λ̇.
+    const periods: Record<string, number> = {
+      mimas: 0.942422,
+      enceladus: 1.370218,
+      tethys: 1.887802,
+      dione: 2.736916,
+      rhea: 4.517503,
+      titan: 15.945448,
+      iapetus: 79.331002,
+    };
+    for (const [id, periodDays] of Object.entries(periods)) {
+      const el = elementsById(id);
+      const radPerCty =
+        el.meanAnomalyRateRadPerCty! + el.argPeriapsisRateRadPerCty! + el.ascendingNodeRateRadPerCty!;
+      const degPerDay = (radPerCty * 180) / Math.PI / 36_525;
+      expect(Math.abs(degPerDay - 360 / periodDays), id).toBeLessThan(1e-9);
+    }
+  });
+
+  it("Triton's node advances: it is retrograde, so Pnode = 340.379 yr enters the row negative", () => {
+    const rate = elementsById('triton').ascendingNodeRateRadPerCty!;
+    expect(rate).toBeCloseTo((2 * Math.PI * 100) / 340.379, 12);
+  });
 });

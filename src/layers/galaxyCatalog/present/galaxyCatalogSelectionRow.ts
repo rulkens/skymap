@@ -13,7 +13,7 @@ import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
 /** The two live reads every branch here makes; the runtime satisfies it. */
@@ -32,8 +32,15 @@ export function galaxyCatalogSelectionRow(runtime: Catalogs): SelectionKindRow<G
       source: pick.sourceCode as GalaxyCatalogSourceType,
       index: pick.localIdx,
     }),
-    extractRow: (ref) =>
-      extractGalaxyRow(runtime.catalogs.get(ref.source), ref.index, ref.source, runtime.famousMeta),
+    extractRow: (ref) => {
+      const row = extractGalaxyRow(
+        runtime.catalogs.get(ref.source),
+        ref.index,
+        ref.source,
+        runtime.famousMeta,
+      );
+      return row;
+    },
     focusId: {
       claims: (id) =>
         id.startsWith('pgc-') ||

@@ -96,7 +96,6 @@ const VIRGO: StructureInfo = {
  */
 const DEPS: ResolveDeps = {
   structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null), byCategory: () => [] },
-  stars: { current: () => null },
 };
 const RESOLVER = selectionResolverOver(DEPS);
 

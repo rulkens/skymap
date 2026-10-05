@@ -11,67 +11,18 @@
 import ismMapDustCdfScanWgsl from '../../../shaders/milkyWay/ismMap/ismMapDustCdfScan.wesl?static';
 
 import { packIsmMapCdfParams, ISM_MAP_CDF_PARAMS_BUFFER_SIZE } from './packIsmMapCdfParams';
-import type { IsmMapCdfChannelWeights } from './packIsmMapCdfParams';
+import type { IsmMapCdfChannelWeights } from '../../../../../@types/galaxy/IsmMapCdfChannelWeights';
 import {
   packIsmMapCdfArmEnvelope,
   ISM_MAP_CDF_ARM_ENVELOPE_FLOATS_PER_ENTRY,
 } from './packIsmMapCdfArmEnvelope';
-import type { IsmMapCdfArmEnvelopeEntry } from './packIsmMapCdfArmEnvelope';
+import type { IsmMapCdfArmEnvelopeEntry } from '../../../../../@types/galaxy/IsmMapCdfArmEnvelopeEntry';
+import type { IsmMapDustCdfScan } from '../../../../../@types/galaxy/IsmMapDustCdfScan';
 
 export type { IsmMapCdfChannelWeights, IsmMapCdfArmEnvelopeEntry };
 
 /** Headroom over any real preset's arm count (hiiRegions.ts callers run well under this) — just sizes the fixed armEnvelopeBuffer allocation. */
-export const ISM_MAP_CDF_MAX_ARM_COUNT = 8;
-
-export type IsmMapCdfScanGrid = {
-  readonly rings: number;
-  readonly az: number;
-  readonly rMin: number;
-  readonly rMax: number;
-};
-
-/**
- * 'channel': dust density for `placeDust` — the per-texel channel
- * dot, ring-mean-normalised and optionally capped by `ringCap`
- * (`dustParticleCloud.ts`'s `density()` closure, :208-218 — `cloud.
- * dustPlacementCap`, `<=0`/omitted is that field's own "uncapped"
- * convention). 'armBiased': `placeDigVeil` — the bare channel dot
- * (no ring normalisation), reweighted toward `entries`' packed ridge
- * envelope (`buildArmProximityEnvelope`/`armBiasedDensity`,
- * `hiiRegions.ts:484-539`). `entries` is ring-major, length `rings *
- * armCount` — see `packIsmMapCdfArmEnvelope.ts`'s own doc for how a caller
- * fills it (one `refresh(radius)` per ring, not per texel).
- */
-export type IsmMapCdfWeightTable =
-  | {
-      readonly kind: 'channel';
-      readonly channelWeights: IsmMapCdfChannelWeights;
-      readonly ringCap?: number;
-    }
-  | {
-      readonly kind: 'armBiased';
-      readonly channelWeights: IsmMapCdfChannelWeights;
-      readonly armBias: number;
-      readonly armCount: number;
-      readonly entries: readonly IsmMapCdfArmEnvelopeEntry[];
-    };
-
-export type IsmMapDustCdfScan = {
-  /** `grid.rings * grid.az` floats after `dispatchScan` — the running mass through each texel, `buildIsmMapDustCdf.ts`'s own `prefix` array. Sized to `maxRings * maxAz`; only the leading `grid.rings * grid.az` floats are meaningful after a call with a smaller grid. */
-  readonly prefixBuffer: GPUBuffer;
-  /** Encode all three passes into the CALLER's encoder — one compute pass, WebGPU's own cross-dispatch storage-buffer sync (see `createIsmMapFluidRunner.ts`'s own doc) makes a pass split unnecessary. */
-  dispatchScan(
-    enc: GPUCommandEncoder,
-    params: {
-      readonly ismMapTexture: GPUTexture;
-      readonly grid: IsmMapCdfScanGrid;
-      readonly weights: IsmMapCdfWeightTable;
-      /** ringReduce.wesl's per-ring dust means (ismMapGenerator.ringMeansBuffer) — always bound, whether the active weight table's own branch reads it or not (evalWeight's static reference — see ismMapDustCdfScan.wesl's own doc). */
-      readonly ringMeansBuffer: GPUBuffer;
-    },
-  ): void;
-  dispose(): void;
-};
+const ISM_MAP_CDF_MAX_ARM_COUNT = 8;
 
 export function createIsmMapDustCdfScan(
   device: GPUDevice,

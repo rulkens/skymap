@@ -11,7 +11,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { CAMERA_DRIVERS } from '../../../src/services/engine/camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../../../src/services/engine/camera/controlSchemes';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../src/services/engine/camera/cameraFraming';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createInputAggregator } from '../../../src/services/engine/subsystems/inputAggregator';
@@ -22,6 +22,7 @@ import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -50,14 +51,6 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-
-  const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
-  const radiusM = (id: SimBodyId): number =>
-    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
-
   const neutralPose: CameraPose = {
     target: [0, 0, 0],
     yaw: 0,
@@ -65,9 +58,21 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     distance: neutralDistance,
   };
 
+  const store = configureStore({ reducer: rootReducer });
+  store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
+  store.dispatch(pause({ nowMs: 0 }));
+  // Dispatched before the seed below, matching production's boot order —
+  // `seedCameraRuntime` copies `base`, so the runtime's first frame reads
+  // this commit as an outside one (see its header).
+  store.dispatch(commitCameraPose(absoluteArm(neutralPose)));
+
+  const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
+  const radiusM = (id: SimBodyId): number =>
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
+
   const state = {
     settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
-    gpu: { galaxyPointRenderer: null, renderTargets: null, milkyWayCloud: null },
+    gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
       clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
@@ -75,10 +80,16 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     },
     booted: true,
     cameraRuntime: seedCameraRuntime({
-      committed: absoluteArm(neutralPose),
+      state: store.getState(),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
     cubemapCaptures: makeCubemapCaptureRuntimes(),
+    // Live off the store, same as `engine.ts`'s own getter: `runFrame` reads
+    // this post-dispatch, so a fixed snapshot would go stale the instant a
+    // test dispatches a focus change.
+    get selectionRows() {
+      return store.getState().selectionRows;
+    },
   } as unknown as EngineState;
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
@@ -99,14 +110,14 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     device: {},
     context: {},
     timingService: {},
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   } as unknown as RunFrameDeps;
 
   /** Commit `framed` to the store and re-seed the runtime from it. */
   const seedPose = (framed: FramedCameraPose): void => {
     store.dispatch(commitCameraPose(framed));
     state.cameraRuntime = seedCameraRuntime({
-      committed: framed,
+      state: store.getState(),
       projection: state.cameraRuntime.outputs.projection,
     });
     deepFreeze(state.cameraRuntime);
@@ -127,6 +138,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
           id,
           label: id[0]!.toUpperCase() + id.slice(1),
           positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
+          driver: bodyDriverGeometry(id),
         },
       }),
     );

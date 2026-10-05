@@ -1,4 +1,3 @@
-// src/components/TourOverlay/PrevIcon.tsx
 /**
  * PrevIcon — left-pointing triangle for the tour nav's "previous beat"
  * button. Inherits currentColor so the button's muted/hover/ghost tint

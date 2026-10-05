@@ -63,8 +63,8 @@ describe('cluster seed — cluster entries', () => {
 });
 
 describe('cluster seed — void entries', () => {
-  it('Boötes Void sits inside the 500 Mpc CF-4 box', () => {
-    // The CF-4 reconstruction volume is 500 Mpc radius from the observer;
+  it('Boötes Void sits inside the 500 Mpc CF4++ reconstruction volume', () => {
+    // The CF4++ reconstruction volume is 500 Mpc radius from the observer;
     // Boötes is at the edge of reliable reconstruction.  This test pins
     // the value at 245 Mpc so a casual revision can't accidentally place
     // it outside the box.

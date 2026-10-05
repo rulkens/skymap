@@ -17,10 +17,11 @@ import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLay
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import type { AppDispatch } from '../../../store/types';
-import type { CompiledClip, SceneCue } from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { ClipData } from '../../../@types/animation/ClipData';
+import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
-export type ClipPlayerDeps = {
+type ClipPlayerDeps = {
   /** A narrow `{ getState, dispatch }` stub satisfies this at the wiring site. */
   store: { getState(): RootState; dispatch: AppDispatch };
   /** Wakes the loop after a `fade` cue so the ramp is drawn. */

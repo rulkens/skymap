@@ -9,6 +9,7 @@
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { positionDriverById } from '../../data/bodies/positionDrivers';
+import { siteGroundRadiusM } from './siteGroundRadiusM';
 import { sitePointBodyFixed } from './sitePointBodyFixed';
 
 export function hostedFocusPivotM(
@@ -19,6 +20,6 @@ export function hostedFocusPivotM(
   if (focusBodyId === null || focusBodyId === hostId) return null;
   const driver = positionDriverById(focusBodyId);
   return driver.kind === 'surfaceFixed' && driver.hostId === hostId
-    ? sitePointBodyFixed(driver, hostRadiusM)
+    ? sitePointBodyFixed(driver, siteGroundRadiusM(driver, hostRadiusM))
     : null;
 }

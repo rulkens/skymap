@@ -25,7 +25,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
-import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
@@ -55,7 +55,6 @@ function makeCloud(objId: bigint): GalaxyCatalog {
 function makeSdssResolveDeps(): ResolveDeps {
   return {
     structures: { byId: () => null, byCategory: () => [] },
-    stars: { current: () => null },
   };
 }
 
@@ -136,7 +135,6 @@ describe('captureGalaxyFocusIds', () => {
     // same request for every tier — every swap, not just one pair, must skip.
     const resolveDeps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     };
 
     for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
@@ -182,7 +180,6 @@ describe('captureGalaxyFocusIds', () => {
     const emptyDeps: ResolveDeps = {
       // SDSS cloud absent
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     };
 
     const result = captureGalaxyFocusIds(

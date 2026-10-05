@@ -1,4 +1,3 @@
-// src/components/AutoRotateToggle/PlayIcon.tsx
 /**
  * PlayIcon — solid right-pointing triangle. Inherits currentColor
  * from its parent button so PillButton hover/focus can tint it via

@@ -2,19 +2,26 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
- * the composed sets stay disjoint (D5) — a bad composition throws at boot.
+ * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
+ * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
+ * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
-import type { Task } from 'redux-saga';
+import { put } from 'typed-redux-saga';
+import type { SagaIterator, Task } from 'redux-saga';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
+import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { instantiateLayer } from '../layer/instantiateLayer';
+import { NEAR0, COSMO, slabName } from '../frame/slabs';
+import { runLayerFeedSaga } from '../../../state/engine/sagas/runLayerFeedSaga';
+import { runLayerSearchSaga } from '../../../state/engine/sagas/runLayerSearchSaga';
 import {
   factsReported,
   layerFactsSeeded,
@@ -23,7 +30,12 @@ import {
 } from '../../../state/engine/engineSlice';
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
+import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
+import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
+import { LAYER_SLAB_ROW_HEADROOM } from '../../../data/rendering/layerSlabRowHeadroom';
 import { CONTENT_PASSES } from '../frame/passes';
+import { CORE_COMPUTES } from '../frame/computes';
+import { CORE_PLANNERS } from '../frame/planners';
 import { ASSET_WIRING } from '../wiring/assetWiring';
 import { FADE_LAYERS } from '../wiring/fadeLayers';
 
@@ -54,16 +66,16 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // echo is per-arrival, not per-boot: a catalog the user enables mid-session
   // echoes too, where the deleted gate only subscribed to boot-enabled sources.
   const countBySource = new Map<SourceType, number>();
-  const reportSourceCount = (source: SourceType, count: number): void => {
-    deps.cb.store.dispatch(engineSourceCountReported({ source, count }));
+  function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
+    yield* put(engineSourceCountReported(report));
     // A catalog landing IS a content change for the sky capture keyed on it.
     state.contentVersion += 1;
-    countBySource.set(source, count);
-    if (count > 0) {
+    countBySource.set(report.source, report.count);
+    if (report.count > 0) {
       const total = [...countBySource.values()].reduce((sum, n) => sum + n, 0);
-      deps.cb.store.dispatch(engineStatusChanged({ kind: 'ready', count: total }));
+      yield* put(engineStatusChanged({ kind: 'ready', count: total }));
     }
-  };
+  }
 
   // Collected here (not read back off `runSaga`'s call sites) so `state.layers = instances`
   // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
@@ -84,7 +96,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       focusUniform,
       store: deps.cb.store,
       requestRender,
-      reportSourceCount,
     };
     // Facts is erased to `undefined` at this composition boundary
     // (`Layer<string, unknown>`), so `publish` cannot appear in a
@@ -109,56 +120,96 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
             deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
         }
       : common;
-    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
+    const instance = instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
+    // The feeds are tasks like `sagas`, on the same array, so `engine.ts`'s
+    // teardown cancels them the same way — which is what closes each iterator.
+    const { search, sourceCounts } = instance;
+    if (search) {
+      layerSagaTasks.push(deps.cb.runSaga(() => runLayerSearchSaga(layer.name, search)));
+    }
+    if (sourceCounts) {
+      layerSagaTasks.push(
+        deps.cb.runSaga(() => runLayerFeedSaga(sourceCounts, consumeSourceCountSaga)),
+      );
+    }
+    return instance;
   });
 
   state.layers = instances;
   state.layerSagaTasks = layerSagaTasks;
-  state.passes = [...CONTENT_PASSES, ...instances.flatMap((instance) => instance.passes)];
   // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass that
   // answers to it, and `checkFrameOrder` counts order lines rather than passes —
   // so a core pass left behind under a name a Layer now contributes would keep
   // drawing, silently, with the Layer's own version never reached.
-  const passNames = new Set<string>();
-  for (const pass of state.passes) {
-    if (passNames.has(pass.name)) {
-      throw new Error(
-        `createLayers: two composed passes are named '${pass.name}'; ` +
-          'the frame order resolves a name to one pass, so the second never draws',
-      );
-    }
-    passNames.add(pass.name);
-  }
-  // One fold over the whole list: a companion's parent may sit in the other
-  // half, and `expandCompanionRows` is only correct over a list holding both.
-  state.assetRows = expandCompanionRows([
-    ...ASSET_WIRING,
-    ...instances.flatMap((instance) => instance.assets),
+  state.passes = concatUniqueRows('createLayers: passes', (pass) => pass.name, [
+    CONTENT_PASSES,
+    ...instances.map((instance) => instance.passes),
   ]);
+  state.computes = concatUniqueRows('createLayers: compute rows', (compute) => compute.name, [
+    CORE_COMPUTES,
+    ...instances.map((instance) => instance.computes),
+  ]);
+  state.planners = concatUniqueRows('createLayers: planner rows', (planner) => planner.name, [
+    CORE_PLANNERS,
+    ...instances.map((instance) => instance.planners),
+  ]);
+  // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
+  // first — so a duplicate would silently SHADOW the other rather than surface,
+  // leaving whichever slot core still mints loading into nothing. One fold over
+  // the whole list: a companion's parent may sit in the other half, and
+  // `expandCompanionRows` is only correct over a list holding both.
+  state.assetRows = expandCompanionRows(
+    concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
+      ASSET_WIRING,
+      ...instances.map((instance) => instance.assets),
+    ]),
+  );
+  // Static, so read off the composition rather than the instances — `targets`
+  // is composed the same way. The ceiling sizes the GPU query set before any
+  // Layer exists (`slabRowCeiling.ts`), so the composition must fit the
+  // headroom that reserved; a duplicate `anchorId` would give two rows one
+  // pose and one `SlabFrame.hostId`, with the second silently unreachable.
+  const slabRows = concatUniqueRows(
+    'createLayers: slab rows',
+    (row) => row.anchorId,
+    deps.composition.layers.map((layer) => layer.slabs ?? []),
+  );
+  if (slabRows.length > LAYER_SLAB_ROW_HEADROOM) {
+    throw new Error(
+      `createLayers: slab rows exceed LAYER_SLAB_ROW_HEADROOM — ${slabRows.length} composed rows, ` +
+        `LAYER_SLAB_ROW_HEADROOM is ${LAYER_SLAB_ROW_HEADROOM}`,
+    );
+  }
+  state.slabRows = slabRows;
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
+  state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
+  state.orbitTrailRows = [
+    ...CORE_TRAIL_ELEMENTS,
+    ...instances.flatMap((instance) => instance.orbitTrails),
+  ];
 
-  const coreAssetKeys = new Set<AssetKey>(ASSET_WIRING.map((row) => row.key));
+  // Two directors, each owning one slab's screen-space projection — a
+  // producer names the slab whose director it registers on (`LayerGuides`'s
+  // header explains why NEAR0 vs COSMO matters).
+  const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
+    [NEAR0]: state.subsystems.foregroundLabelDirector,
+    [COSMO]: state.subsystems.cosmoLabelDirector,
+  };
+
   const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {
     for (const row of instance.assets) {
-      // Two maps answer "the slot for key K", and `slotFor` consults the Layer
-      // one first — so a duplicate would silently SHADOW the other rather than
-      // surface, leaving whichever slot core still mints loading into nothing.
-      if (coreAssetKeys.has(row.key) || layerSlots.has(row.key)) {
-        throw new Error(
-          `createLayers: Layer '${instance.name}' mints a slot for asset key ` +
-            `'${String(row.key)}', which another row already owns`,
-        );
-      }
       // Once, here — not per frame: the slot IS the Layer's runtime-owned
       // object, and a second call would mint a second subscriber. `SlotDeps` is
       // passed for signature parity; a Layer row's factory ignores it.
       layerSlots.set(row.key, row.factory({ state, cb: deps.cb }) as AssetSlot<unknown, unknown>);
     }
-    // The COSMO slab is the only director a Layer contributes to in (d); NEAR0's
-    // producers are core's foreground captions.
-    for (const producer of instance.labels) {
-      state.subsystems.cosmoLabelDirector.registerProducer(producer);
+    for (const { slab, ...producer } of instance.screenLabels) {
+      const director = screenLabelDirectors[slab];
+      if (!director) {
+        throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);
+      }
+      director.registerProducer(producer);
     }
   }
   state.layerSlots = layerSlots;

@@ -1,4 +1,3 @@
-// src/components/containers/NavigationPanelContainer.tsx
 /**
  * NavigationPanelContainer — App-boundary for `NavigationPanel`'s mount-time
  * viewport read.

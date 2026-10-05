@@ -45,8 +45,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { parseFitsBinTable } from '../parsers/desiFits';
-import type { DesiTracer, FitsColumn } from '../parsers/desiFits';
+import { parseFitsBinTable } from '../parsers/parseFitsBinTable';
+import type { DesiTracer } from '../parsers/desiFits';
+import type { FitsColumn } from '../parsers/@types/FitsColumn';
 import { eqRaDecToUnitCart } from '../../src/utils/math/eqRaDecToUnitCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { DESI_CONE, DESI_TRACER_FILE_KEYS } from './desiPatches';

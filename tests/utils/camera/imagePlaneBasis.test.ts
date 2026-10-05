@@ -31,8 +31,8 @@ describe('imagePlaneBasis', () => {
     const forward = normalize([0.4, -0.7, 0.55]);
     const upRef: Vec3 = [0, 1, 0];
     const basis = imagePlaneBasis(forward, 0, upRef);
-    // Byte-identical: the reroute of computeViewProj/cameraBillboardBasis relies
-    // on roll=0 returning upRef untouched.
+    // Byte-identical: computeViewProj's reroute relies on roll=0 returning
+    // upRef untouched.
     expect(basis.rolledUp[0]).toBe(upRef[0]);
     expect(basis.rolledUp[1]).toBe(upRef[1]);
     expect(basis.rolledUp[2]).toBe(upRef[2]);

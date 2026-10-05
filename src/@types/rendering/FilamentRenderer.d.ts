@@ -22,6 +22,7 @@ export type FilamentRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
+    pxPerRad: number,
     halfWidthPx: number,
     intensityScale: number,
     fadeOpacity: number,

@@ -1,4 +1,3 @@
-// src/components/containers/TimeBarContainer.tsx
 /**
  * TimeBarContainer — store boundary for the sim clock's transport bar.
  *

@@ -1,4 +1,3 @@
-// src/components/TourOverlay/StopIcon.tsx
 /**
  * StopIcon — a real filled square (the media "stop" glyph) for the tour's
  * exit button. Replaces the former hairline ✕, which read as too small and

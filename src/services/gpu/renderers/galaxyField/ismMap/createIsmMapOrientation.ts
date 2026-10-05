@@ -14,7 +14,6 @@ import {
   ISM_MAP_RINGS,
   ISM_MAP_WORKGROUP_SIZE,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { alignedBytesPerRow } from '../../../../../utils/gpu/alignedBytesPerRow';
 
 import orientationPresentWgsl from '../../../shaders/milkyWay/ismMap/orientationPresent.wesl?static';
@@ -22,26 +21,7 @@ import ismMapOrientationFieldWgsl from '../../../shaders/milkyWay/ismMap/ismMapO
 import ismMapOrientationTensorWgsl from '../../../shaders/milkyWay/ismMap/ismMapOrientationTensor.wesl?static';
 import ismMapOrientationTensorBlurWgsl from '../../../shaders/milkyWay/ismMap/ismMapOrientationTensorBlur.wesl?static';
 import ismMapOrientationCoherenceWgsl from '../../../shaders/milkyWay/ismMap/ismMapOrientationCoherence.wesl?static';
-
-export type IsmMapOrientation = {
-  readonly texture: GPUTexture;
-  readonly readbackBuffer: GPUBuffer;
-  readonly readbackBytesPerRow: number;
-  readonly presentPipeline: GPURenderPipeline;
-  readonly presentBindGroup: GPUBindGroup;
-  /** Run the six passes over the current source texture. The caller gates this; it does not gate itself. */
-  dispatch(input: {
-    readonly grid: GalaxyIsmMapGridRadius;
-    readonly sigmaDerivTexels: number;
-    readonly sigmaIntegTexels: number;
-    /** `ismMapOrientationField.wesl`'s pedestal-subtraction inputs — see `IsmMapOrientationPedestal` there. `gasFloor: 1` collapses `gasProfile` to a flat pedestal (the blank-map case, generator off); `gasScaleLength` is then unused algebraically but must stay finite (the shader still evaluates `exp(-r/gasScaleLength)` before the zero multiply). */
-    readonly gasFloor: number;
-    readonly gasScaleLength: number;
-    /** The ambient dust pedestal the generator seeds at step 0 — `ISM_MAP_AMBIENT_DUST` (`ismMapAmbientDust.ts`), passed live rather than baked in so the shader carries no restated constant. */
-    readonly ambient: number;
-  }): void;
-  dispose(): void;
-};
+import type { IsmMapOrientation } from '../../../../../@types/galaxy/IsmMapOrientation';
 
 export function createIsmMapOrientation(
   device: GPUDevice,

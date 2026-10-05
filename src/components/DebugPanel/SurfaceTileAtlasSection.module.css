@@ -29,6 +29,15 @@
   composes: button from './debugSection.module.css';
 }
 
+/* Landmark shortcuts, directly under the box they stand in for. Wraps rather
+   than scrolls: the row is read at a glance, not paged through. */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
 .levels {
   display: grid;
   grid-template-columns: repeat(3, auto);
@@ -67,11 +76,4 @@
   margin-top: var(--space-2);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-divider);
-}
-
-.checkRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
 }

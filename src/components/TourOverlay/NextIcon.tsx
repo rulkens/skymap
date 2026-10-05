@@ -1,4 +1,3 @@
-// src/components/TourOverlay/NextIcon.tsx
 /**
  * NextIcon — right-pointing triangle for the tour nav's "next beat" button.
  * Inherits currentColor from its parent button, mirroring PrevIcon.

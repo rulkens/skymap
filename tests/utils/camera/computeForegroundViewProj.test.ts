@@ -7,6 +7,7 @@ import { narrowMat4 } from '../../../src/utils/math/narrowMat4';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../src/services/engine/frame/slabs';
 import { depthClearValueFor } from '../../../src/utils/gpu/depthClearValueFor';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 describe('computeForegroundViewProj', () => {
   it('with renderOrigin=[0,0,0] the narrowed result ≈ computeViewProj element-wise', () => {
@@ -25,7 +26,7 @@ describe('computeForegroundViewProj', () => {
     });
 
     // f32 reference
-    const vpF32 = computeViewProj(cam);
+    const vpF32 = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
 
     // f64 path with renderOrigin at the world origin — must narrow to ≈ same matrix.
     const vpF64 = computeForegroundViewProj({
@@ -33,8 +34,7 @@ describe('computeForegroundViewProj', () => {
       targetMpc: cam.target,
       up: [0, 1, 0],
       renderOrigin: [0, 0, 0],
-      fovYRad: cam.fovYRad,
-      aspect: cam.aspect,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       near: cam.near,
       far: cam.far,
       reversedZ: false,
@@ -68,8 +68,7 @@ describe('computeForegroundViewProj', () => {
       targetMpc,
       up: [0, 1, 0],
       renderOrigin,
-      fovYRad: Math.PI / 4,
-      aspect: 1,
+      frustum: symmetricFrustum(Math.PI / 4, 1),
       near: auInMpc * 0.01,
       far: auInMpc * 10,
       reversedZ: false,
@@ -152,8 +151,7 @@ describe('computeForegroundViewProj', () => {
       targetMpc: [0, 0, -1],
       up: [0, 1, 0],
       renderOrigin: [0, 0, 0],
-      fovYRad: Math.PI / 4,
-      aspect: 1,
+      frustum: symmetricFrustum(Math.PI / 4, 1),
       near,
       far,
       reversedZ,

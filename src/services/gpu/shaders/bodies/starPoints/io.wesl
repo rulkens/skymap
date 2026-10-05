@@ -33,13 +33,15 @@ import package::lib::camera::CameraUniforms;
 //   offset  0  cam         CameraUniforms  (80 B; viewProj + viewportPx + 2 pads)
 //   offset 80  sizePx      f32             (user base star-dot size in px)
 //   offset 84  brightness  f32             (user exposure trim; 1.0 = identity)
-//   struct size 96 (rounded up from 88 to the 16-byte alignment CameraUniforms'
-//   mat4x4 demands; the two scalars ride the rounding tail, so the padding is
-//   float32[22..23] in the renderer scratch).
+//   offset 88  pxPerRad    f32             (target px per radian, toRefPx)
+//   struct size 96 (rounded up from 92 to the 16-byte alignment CameraUniforms'
+//   mat4x4 demands; the three scalars ride the rounding tail, so the padding is
+//   float32[23] in the renderer scratch).
 struct StarPointUniforms {
   cam: CameraUniforms,
   sizePx: f32,
   brightness: f32,
+  pxPerRad: f32,
 };
 
 struct VSOut {

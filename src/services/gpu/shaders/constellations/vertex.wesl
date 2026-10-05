@@ -49,13 +49,6 @@ import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
 
-// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
-// ndc-z terms) so an endpoint sitting exactly ON it still passes the clip test.
-// Inert for depth here — the constellation pass is depthless additive HDR (no
-// depth test or write), so a clamped z perturbs no comparison; it only keeps a
-// beyond-far endpoint from frustum-clipping. Mirrors markerLines/vertex.wesl.
-const CLIP_Z_EPS : f32 = 1e-4;
-
 // Apparent magnitude at/above which an endpoint star barely glows, so the gap
 // is just the point-source floor. ~6 = the naked-eye limit; eye-tuning start.
 const GAP_FAINT_MAG : f32 = 6.0;
@@ -108,9 +101,7 @@ fn vs(in : PerVertex) -> VSOut {
 
   var out : VSOut;
   let gapped = base.xy + gapNdc * base.w;
-  // Clamp z just inside the far plane so a beyond-far endpoint survives (inert
-  // for depth — depthless additive pass), mirroring markerLines/vertex.wesl.
-  out.clip = vec4<f32>(gapped, min(base.z, base.w * (1.0 - CLIP_Z_EPS)), base.w);
+  out.clip = vec4<f32>(gapped, base.z, base.w);
   out.uv = in.uv;
   return out;
 }

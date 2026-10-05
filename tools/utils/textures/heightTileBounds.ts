@@ -1,4 +1,4 @@
-import type { HeightTile } from '../../textures/HeightTile';
+import type { HeightTile } from '../../textures/@types/HeightTile';
 
 /**
  * heightTileBounds — a tile's `subtreeMin/MaxM`: the range of the FINEST data

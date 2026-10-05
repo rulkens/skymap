@@ -119,7 +119,7 @@ export async function bakeLidar(
   const asset: PointCloudAsset = {
     kind: 'pointCloud',
     id: ASSET_ID,
-    label: `${group.name} — DHM Punktsky LiDAR`,
+    label: 'DHM Punktsky LiDAR',
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {
       source: 'nationalGeodataApi',

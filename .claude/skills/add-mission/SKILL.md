@@ -141,16 +141,19 @@ Every step is a literal edit site. Tick them all.
    line to `meshes.sha256`. Edits the row cannot express are hand edits in
    Blender 5.2 LTS that a re-import overwrites, so the README lists each one.
 4. **Prebake** — `tools/meshes/prebake/meshPrebake.py` `SOURCES`: one
-   `source("<key>", triangles=…)` row, `triangles` when over the 150k budget.
+   `source("<key>")` row, no per-row `triangles=`: the prebake decimates to the
+   one `MESH_TRIANGLE_BUDGET` (`src/data/mesh/meshTriangleBudget.ts`).
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
    log: extent in metres must match the fact sheet.
-5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `native:
-'meshes.<key>'`, licence, the attribution string, and `bodyFromSource` as a
+5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `tiers: { small: {
+raw: 'meshes.<key>' } }`, licence, the attribution string, and `bodyFromSource` as a
    column-major **proper** rotation (det +1) from the axis table. Same source
    frame as a rover (up +Y, forward +Z) → `[0, 1, 0, 0, 0, 1, 1, 0, 0]`;
    dish/boresight on +Y, up +Z → `[0, -1, 0, 1, 0, 0, 0, 0, 1]`.
 6. **Bake** — `npm run build-meshes` rewrites `meshAssets.generated.ts` (all
-   keys; the others must not change) and `public/data/meshes/<key>.*`. Check the
+   keys; the others must not change) and per-tier
+   `public/data/meshes/<key>-<tier>.mesh` / `<key>-<tier>_{albedo,mr,normal}.webp`
+   plus the untiered `<key>_contact.webp`. Check the
    row: `substituted: []` for a PBR-baked source, `boundingRadiusM` plausible,
    `groundOffsetM` for a lander. In a worktree every OTHER key's prebaked GLB
    must be copied in from the main checkout first, or this step DELETES their
@@ -166,7 +169,9 @@ Every step is a literal edit site. Tick them all.
 8. **Driver** — `src/data/bodies/orbitalElements.ts` (`probe()` / `orbiter()`
    row + a `palette.ts` tint, comment naming the Horizons epoch) **or**
    `src/data/bodies/surfaceFixedSites.ts` (`altitudeM: groundOffsetM('<key>')`,
-   host must be an IAU-pole body in `SCENE_CELESTIAL_BODIES`).
+   `seat: 'resting'` for a lander or rover set down on the terrain — `'anchored'`
+   is for a georeferenced scan that carries its own height; host must be an
+   IAU-pole body in `SCENE_CELESTIAL_BODIES`).
 9. **Rotation** — `src/data/bodies/rotationElements.ts`: one row per the arm
    chosen. On the `iau-pole` arm the row's pole IS body +Z, so aiming the
    boresight (+X) somewhere means putting the pole PERPENDICULAR to it and

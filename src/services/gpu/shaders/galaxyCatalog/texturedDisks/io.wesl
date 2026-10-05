@@ -33,7 +33,7 @@ import package::lib::camera::CameraUniforms;
 //
 // 96-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
 // 'instancedQuadRenderer.ts'. First 80 bytes are the shared
-// 'CameraUniforms' prefix (viewProj + viewportPx + 8B reserved pad);
+// 'CameraUniforms' prefix (viewProj + viewportPx + pxPerRad + 4B pad);
 // 'camPos' sits at offset 80 followed by an f32 tail pad to round up
 // to 16 bytes.
 //

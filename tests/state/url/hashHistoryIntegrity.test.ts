@@ -28,7 +28,7 @@
  *    reported the PREVIOUS target. `clearSelection` tears the same ladder the
  *    same way and still does, because its reducer nulls `pending` directly while
  *    the row survives until the reconciler runs.
- *  - A CROSS-ROW gap. `applyHash` dispatches one table row's worth of actions at
+ *  - A CROSS-ROW gap. `applyNavigation` dispatches one table row's worth of actions at
  *    a time and each of them is a write trigger, so a two-param URL published
  *    itself half-applied — `focus=body-mars` while `orientation` was still the
  *    default — before publishing the real thing.
@@ -51,7 +51,7 @@
  * first, hiding exactly the pushes this file exists to count.
  *
  * Bodies are the subject rather than galaxies because a body is what fits inside
- * the gap. A galaxy deep link parks in `resolveFocusRefDeferring` until its
+ * the gap. A galaxy deep link parks in `resolveFocusRefDeferringSaga` until its
  * catalog pulses, so its ref write lands well after the read pass has finished
  * and no other row's trigger is left to fall into the window; a body resolves
  * inline off the static `SCENE_BODIES` table, mid-pass.
@@ -78,8 +78,24 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 
-import { createTestStore } from '../../support/createTestStore';
+import { NOOP_SAGA_CONTEXT } from '../../support/createTestStore';
+import { createAppStore } from '../../../src/store/createAppStore';
+import { selectArrivalPending } from '../../../src/state/arrival/selectors';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+
+/** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
+const EARTH_ARM: FramedCameraPose = {
+  frame: { body: 'earth' },
+  pose: {
+    bodyId: 'earth',
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: [1000, 2000, 3000],
+    basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  },
+};
 
 /** A macrotask, so the write saga's debounce window has closed. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -110,14 +126,29 @@ describe('hash history integrity', () => {
     pushState.mock.calls.map(([, , url]) => new URL(String(url), window.location.href).hash);
 
   /**
-   * The real store, the real root saga, the real URL seam — and `createTestStore`
-   * rather than a hand-built harness precisely because registering the context is
-   * what releases the hash bridge, so this call IS the arrival read.
+   * The real store, the real root saga, the real URL seam — registering the
+   * context is what releases the hash bridge, so this call IS the arrival read.
    * `NOOP_SAGA_CONTEXT.selection` composes the real core rows over an empty
    * `ResolveDeps`, so a body deep link resolves off the static `SCENE_BODIES`
-   * table through that resolver, with no engine resource in the path.
+   * table with no engine resource in the path. The camera is live so the
+   * arrival can land, and the boot waits for it: until then every publish
+   * canonicalizes in place, which is the arrival's own business.
    */
-  const boot = () => createTestStore();
+  const boot = async () => {
+    const handle = createAppStore();
+    handle.setSagaContext({
+      ...NOOP_SAGA_CONTEXT,
+      cameraRuntime: () => ({
+        from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+        fovYRad: 0.8,
+        aspect: 1,
+        upBasisQuat: [0, 0, 0, 1],
+      }),
+    });
+    while (selectArrivalPending(handle.store.getState())) await flush();
+    await flush();
+    return handle;
+  };
 
   beforeEach(() => {
     pushState = vi.spyOn(window.history, 'pushState');
@@ -129,7 +160,7 @@ describe('hash history integrity', () => {
 
   it('pushes nothing when Back returns to a previously focused body', async () => {
     seedHash('focus=body-mars');
-    boot();
+    await boot();
     await flush();
 
     navigate('focus=body-saturn');
@@ -148,7 +179,7 @@ describe('hash history integrity', () => {
 
   it('pushes nothing when a navigation moves two params at once', async () => {
     seedHash('');
-    boot();
+    await boot();
     await flush();
 
     pushState.mockClear();
@@ -166,7 +197,7 @@ describe('hash history integrity', () => {
   it('pushes nothing on a cold load of a body deep link', async () => {
     seedHash('focus=body-mars');
 
-    boot();
+    await boot();
     await flush();
 
     // What this case pins is `writeHashBody`'s compare-and-skip, which is one
@@ -178,13 +209,57 @@ describe('hash history integrity', () => {
     expect(pushedHashes()).toEqual([]);
   });
 
-  it('pushes exactly once for a selection the store makes on its own', async () => {
+  it('canonicalizes a #pose= arrival with replaceState instead of pushing', async () => {
+    // `pose` never writes (`poseSource.write` is `() => null`), so the
+    // settled body of this arrival omits it — a plain push here would be the
+    // Back trap: Back returns to this same URL, re-applies, and pushes again,
+    // truncating the forward stack on every visit. The arrival must instead
+    // be canonicalized IN PLACE.
+    const iso = '2000-01-01T12:00:00.000Z';
+    seedHash(`focus=body-mars&t=${iso}&pose=${encodeFramedPose(EARTH_ARM)}`);
+
+    await boot();
+    await flush();
+
+    expect(pushedHashes()).toEqual([]);
+    expect(window.location.hash).not.toContain('pose=');
+  });
+
+  it("keeps a takeover navigation's key without pushing", async () => {
     seedHash('');
-    const { store } = boot();
+    await boot();
     await flush();
 
     pushState.mockClear();
-    store.dispatch(requestFocus('body-mars'));
+    navigate('exhibit=zoneOfAvoidance');
+    await flush();
+
+    // The running exhibit writes its own key back, so the settled body is the
+    // URL the browser already moved to; a push would truncate Forward.
+    expect(pushedHashes()).toEqual([]);
+    expect(window.location.hash).toContain('exhibit=zoneOfAvoidance');
+  });
+
+  it('a palette-opened exhibit writes exhibit=', async () => {
+    seedHash('');
+    const { store } = await boot();
+    await flush();
+
+    pushState.mockClear();
+    store.dispatch(openExhibit({ id: 'zoneOfAvoidance', entry: 'fly' }));
+    await flush();
+
+    // Opening one is the viewer's own act, so it leaves an entry Back undoes.
+    expect(pushedHashes().at(-1)).toContain('exhibit=zoneOfAvoidance');
+  });
+
+  it('pushes exactly once for a selection the store makes on its own', async () => {
+    seedHash('');
+    const { store } = await boot();
+    await flush();
+
+    pushState.mockClear();
+    store.dispatch(requestFocus({ id: 'body-mars', transition: 'fly' }));
     await flush();
 
     // The counterweight to every empty assertion above: focusing something IS a

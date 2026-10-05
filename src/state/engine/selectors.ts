@@ -22,6 +22,8 @@
  * framework-agnostic.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
+
 import { engineRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
@@ -36,6 +38,7 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
+import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
 const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
@@ -51,6 +54,7 @@ const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
+const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
 
@@ -82,6 +86,16 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
   selectEngine(state).structureSearchList;
 
 /**
+ * Every Layer's published palette rows, flattened for the ranker. The one
+ * `createSelector` here: the flatten mints a new array, which as a plain arrow
+ * would re-fire the palette's `useMemo` on every unrelated store write.
+ */
+export const selectLayerSearchRows = createSelector(
+  [(state: RootState) => selectEngine(state).layerSearch],
+  (byLayer): readonly LayerSearchEntry[] => Object.values(byLayer).flat(),
+);
+
+/**
  * Famous-galaxy metadata sidecar, published as a galaxyCatalog fact (Ruling 6):
  * empty until its asset slot settles, and after a failed fetch. The slot
  * publishes once, so the array identity is stable and a subscriber sees a
@@ -108,11 +122,11 @@ export const selectStructureMemberCount = (state: RootState): number | null =>
   selectEngineFacts(state).galaxyCatalog?.structureMemberCount ?? null;
 
 /**
- * Famous-star metadata sidecar, on the same contract as
- * `selectFamousGalaxiesMeta`.
+ * Famous-star metadata sidecar, published as a starCatalog fact, on the same
+ * pre-seed contract as `selectFamousGalaxiesMeta`.
  */
 export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
-  selectEngine(state).meta.famousStars;
+  selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
 
 /**
  * Live distance (Mpc) from the camera to the focused scene body, or null when no

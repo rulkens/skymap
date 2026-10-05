@@ -302,11 +302,16 @@ export function createLabel3DRenderer(
     }
   }
 
-  function draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    pxPerRad: number,
+  ): void {
     if (currentGlyphCount === 0) return;
 
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportPx);
+    writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setPipeline(pipeline);

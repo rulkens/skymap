@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { Source } from '../src/data/sources';
 import { maskHas } from '../src/utils/maskHas';
 import { maskWith } from '../src/utils/maskWith';
-import { maskWithout } from '../src/utils/maskWithout';
 
 describe('Source enum', () => {
   it('has stable numeric values used in the binary format', () => {
@@ -16,12 +15,10 @@ describe('Source enum', () => {
 });
 
 describe('source mask helpers', () => {
-  it('maskHas / maskWith / maskWithout flip individual bits', () => {
+  it('maskHas / maskWith flip individual bits', () => {
     let m = 0;
     expect(maskHas(m, Source.SDSS)).toBe(false);
     m = maskWith(m, Source.SDSS);
     expect(maskHas(m, Source.SDSS)).toBe(true);
-    m = maskWithout(m, Source.SDSS);
-    expect(maskHas(m, Source.SDSS)).toBe(false);
   });
 });

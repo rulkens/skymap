@@ -14,14 +14,14 @@ describe('notedTiltMemory', () => {
     const seeded: TiltMemory = { hostId: 'earth', rememberedTiltRad: 0.4 };
 
     // Ruling 18: a host SWITCH wipes the memory, never restores it per body.
-    expect(notedTiltMemory(seeded, 'sun')).toEqual({ hostId: 'sun', rememberedTiltRad: 0 });
+    expect(notedTiltMemory(seeded, 'planet')).toEqual({ hostId: 'planet', rememberedTiltRad: 0 });
     // No host to key on this frame — the world arm still reads the tilt, so
     // the absence of a host must not read as a switch.
     expect(notedTiltMemory(seeded, null)).toBe(seeded);
     expect(notedTiltMemory(seeded, 'earth')).toBe(seeded);
     // Nothing noted yet is not a switch: the first note adopts the host.
-    expect(notedTiltMemory({ hostId: null, rememberedTiltRad: 0.4 }, 'sun')).toEqual({
-      hostId: 'sun',
+    expect(notedTiltMemory({ hostId: null, rememberedTiltRad: 0.4 }, 'planet')).toEqual({
+      hostId: 'planet',
       rememberedTiltRad: 0.4,
     });
   });

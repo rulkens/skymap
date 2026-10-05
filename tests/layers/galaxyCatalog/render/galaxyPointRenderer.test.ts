@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createGalaxyPointRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer';
-import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/types/BuildRunner';
+import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { VIEW_SLOT_COUNT } from '../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';

@@ -14,7 +14,7 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 src/@types/  one type per file; deep relative imports, no barrels
 src/compositions/  build-time engine compositions (app; reference engines later)
 src/layers/  self-contained Layers, colocated (galaxyCatalog shipped in (d)/(e);
-             sources/, settings/, load/, render/, passes/, present/, sagas/, ui/, types/)
+             sources/, state/, load/, render/, passes/, present/, sagas/, ui/, @types/)
 src/services/engine/galaxyGenerator/  v1/ sprite stars (to be deleted),
                                       v2/ analytic field, shared/ — READMEs in each
 src/state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
@@ -27,12 +27,12 @@ tests/  Vitest suite — mirrors src/ tree
 
 ## Project conventions (these override defaults)
 
-- **Didactic but budgeted comments**: explain _why_ (landmines, units, derivations, cross-file contracts), never _what_, within **module header ≤ 5 lines, comment lines ≤ half the code lines** — overrides the default no-comments rule, see [`comments.md`](docs/superpowers/conventions/comments.md).
+- **Didactic but budgeted comments**: explain _why_ (landmines, units, derivations, cross-file contracts), never _what_, within **module header ≤ 10 lines, comment lines ≤ half the code lines** — overrides the default no-comments rule, see [`comments.md`](docs/superpowers/conventions/comments.md).
 - **`type` aliases, never `interface`**: `export type X = { ... }` for all TS shapes.
 - **No barrel exports for components**: import React components directly from their `.tsx`; no `index.ts` re-export files.
-- **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels. Types never live inline in implementation files (a React component's own `Props` is the one exception); inside a Layer, its own `types/` folder is this convention's home — not a second `@types/` — for the Layer's own contract types (e.g. `src/layers/galaxyCatalog/types/GalaxyCatalogRuntime.ts`), while types shared with core or with a sibling subsystem still live under `src/@types/`.
+- **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels. Types never live inline in implementation files (a React component's own `Props` is the one exception); inside a Layer, its own `@types/` folder is this convention's home for the Layer's own contract types (e.g. `src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime.ts`), while types shared with core or with a sibling subsystem still live under `src/@types/`. Under `tools/`, a tool app owns its types in `tools/<tool>/@types/` (the same pattern) and shared-helper types live in `tools/@types/<area>/` (the `src/@types/` analogue) — never loose beside the implementation.
 - **Frame files declare only their own symbol**: files in `src/services/engine/frame/` (incl. `timing/`, `passes/`) export the one symbol they are named for and nothing else — helpers to `src/utils/` or `frame/`, constants to `src/data/`; ratchet test `tests/services/engine/frame/frameFilePurity.test.ts` allow-lists today's offenders and only ever shrinks.
-- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look.
+- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. For a visual check, shoot the link with `npm run shot -- '<link>' --url <your server>`, look at the result, then send the shot and its deep link to the user as a dash check; the user keeps the verdict.
 - **Plans coexist**: multiple in-flight plans is normal — check `docs/BACKLOG.md` and the plans file list before starting work, to reuse what exists and avoid stomping on it.
 - **TDD via plans**: substantial features get a bite-sized-task plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`, executed via the `subagent-driven-development` workflow under the lean protocol in [`sdd-execution.md`](docs/superpowers/conventions/sdd-execution.md) (grouped dispatches, one whole-branch review at the end, CI as the gate) and written per [`plan-style.md`](docs/superpowers/conventions/plan-style.md) — contract code yes, implementation code no, overriding the `writing-plans` skill; `/feature-done` gates the DoD and files plan + spec under `*/completed/`.
 - **Add a feature** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` first; if substantial, write a plan via the `writing-plans` skill rather than coding inline, and remove the matching backlog item in the same change.
@@ -45,6 +45,19 @@ tests/  Vitest suite — mirrors src/ tree
 - **Why is this slow?** → measure first with `npm run perf`, then [docs/RENDERER.md](docs/RENDERER.md) for the CPU mental model (per-frame work scales with ~2.5M on-screen galaxies: hoist constants, gate with squared distances, no per-galaxy `Math.tan`).
 - **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
 - **Refactors keep the services/ layout**: cross-cutting helpers in `utils/`, rendering subsystems in `services/gpu/`, tests mirroring src.
+- **Choices I must make**: if the `mcp__claude-dash-ui__ask_user` tool is available, put every one in ONE call (`options`, `recommended`, a `why` of ≤ 15 words; visual checks as `kind: "check"` with the image attached) and end the turn with one line saying they're in the dash, without repeating them in prose. Don't act on a question the answers list under "Left open". Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
+- **Process progress**: if the `mcp__claude-dash-ui__session_progress` tool is available, call it when your work moves between explore, design, plan, implement, verify, land and done (main session only; carry on if it fails). For your own steps, send `steps` once, then `{ step, label }` per task; set `doc` to the plan path.
+
+## Reply shape
+
+- Replies longer than ~15 lines open with a `> [!TLDR]` of at most 3 lines: the outcome, not the process.
+- Mark what a reader scans for with GitHub alert blockquotes, one idea each. The `>` is required:
+  `> [!DONE]` finished and verified · `> [!DECISION]` a choice made and why · `> [!QUESTION]` something needed from me ·
+  `> [!RISK]` what could break · `> [!NEXT]` what happens next · `> [!WAITING]` blocked on an agent or CI ·
+  `> [!BLOCKED]` can't continue. NOTE / TIP / IMPORTANT / WARNING / CAUTION keep their GitHub meaning.
+- Write each callout as a headline on the marker line (at most ~8 words, readable on its own), then an optional
+  one- or two-sentence body on the following `> ` lines. Add `-` after the `]` (`> [!DONE]- …`) to start it folded.
+- Keep `[!QUESTION]` for a single free-text question: at most one per reply, as the last callout.
 
 ## Commands
 
@@ -57,11 +70,14 @@ npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
-npm run format      # prettier
+npm run format      # prettier, only files this branch touches (format:all = whole repo)
 npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/refactor)
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
+npm run shot        # screenshot of any deep link → tools/shot/README.md
+npm run capture-featured # palette-card thumbnails → tools/capture/README.md
+npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
 ```
 
 `typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.

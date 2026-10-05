@@ -15,16 +15,17 @@
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { AtmosphereShellDepth } from '../../../../@types/rendering/AtmosphereShellDepth';
 import type { AtmosphereShellRenderer } from '../../../../@types/rendering/AtmosphereShellRenderer';
 import type { AtmosphereParams } from '../../../../@types/scene/AtmosphereParams';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../utils/gpu/packAtmosphereUniforms';
-import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import {
   packScatteringParams,
   SCATTERING_PARAMS_BYTES,
 } from '../../../../utils/gpu/packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import transmittanceCode from '../../shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../shaders/atmosphere/skyViewLut.wesl?static';
@@ -66,6 +67,21 @@ const SKY_VIEW_PARAMS_BYTES = 16;
  *  source of truth), not restated as a literal. */
 const ATMOSPHERE_UNIFORM_BYTES = ATMOSPHERE_UNIFORM_FLOATS * 4;
 
+/**
+ * Byte offsets of the shell fragment's `ShellDepthFrame` (binding 6): the
+ * sampled row's inverse MVP, its camera, the viewport the fragment divides its
+ * pixel by, and km→local for this body. The ONE TS home for them, pinned
+ * against that struct by `atmosphereShellDepth.parity.test.ts` — a silent drift
+ * writes the camera where the shader reads the viewport, and every ray is
+ * classified against garbage. `camPosKm` (vec3) ends at 76 and the following
+ * vec2 aligns to 8, so 80; the struct rounds up to its 16-byte alignment.
+ */
+export const SHELL_DEPTH_INV_MVP_OFFSET = 0;
+export const SHELL_DEPTH_CAM_POS_OFFSET = 64; // mat4x4<f32>
+export const SHELL_DEPTH_VIEWPORT_OFFSET = 80;
+export const SHELL_DEPTH_KM_TO_LOCAL_OFFSET = 88;
+export const SHELL_DEPTH_UNIFORM_BYTES = 96;
+
 /** Ceil-divide a LUT dimension into 8×8 workgroups. */
 function dispatchCount(px: number): number {
   return Math.ceil(px / WORKGROUP_SIZE);
@@ -87,25 +103,23 @@ type AtmosphereBundle = {
   scatteringBuffer: GPUBuffer;
   skyViewParamsBuffer: GPUBuffer;
   shellUniformBuffer: GPUBuffer;
+  /** This body's own `ShellDepthFrame` — per-body for the `writeBuffer`
+   *  ordering reason the module header gives, since km→local differs per row. */
+  depthFrameBuffer: GPUBuffer;
   transmittanceBindGroup: GPUBindGroup;
   multiScatterBindGroup: GPUBindGroup;
   skyViewBindGroup: GPUBindGroup;
-  shellBindGroup: GPUBindGroup;
+  /** Built at the first draw and dropped to `null` by anything that
+   *  invalidates it, because it binds a depth view only the draw knows. */
+  shellBindGroup: GPUBindGroup | null;
+  /** The depth view `shellBindGroup` was built over — identity, not size, is
+   *  the key: it is the only thing that always changes on a reallocation. */
+  shellDepthView: GPUTextureView | null;
 };
 
-/**
- * @param reversedZ selects this slab's depth convention (single-sourced in
- *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins
- *   (`depthCompare: 'less-equal'`), `true` ⇒ reversed-Z greater-wins. The shell
- *   wants the nearer-OR-tied fragment (`'nearer-or-equal'`) so it can draw over
- *   the coplanar body surface it shares a radius with; `resolveDepthCompare`
- *   resolves that intent against the convention.
- */
 export function createAtmosphereShellRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat, // 'rgba16float' (foreground:0)
-  depthFormat: GPUTextureFormat, // 'depth32float' (foreground:0)
-  reversedZ: boolean,
   paramsById: Readonly<Record<string, AtmosphereParams>>, // one bundle per row (Earth, six planets, Pluto)
 ): AtmosphereShellRenderer {
   // ── Sampler: linear + clamp-to-edge both axes (SHARED across bodies) ────────
@@ -249,7 +263,8 @@ export function createAtmosphereShellRenderer(
   // ── Shell render pipeline (SHARED) ─────────────────────────────────────────
   // group 0: [0] AtmosphereUniforms (VERTEX+FRAGMENT), [1] sampler,
   //          [2] skyView tex, [3] transmittance tex, [4] ring-alpha strip
-  //          (1×1 transparent placeholder on every ringless body).
+  //          (1×1 transparent placeholder on every ringless body),
+  //          [5] sampled scene depth, [6] the frame that unprojects it.
   const shellBgl = device.createBindGroupLayout({
     label: 'atmosphere-shell-bgl',
     entries: [
@@ -262,6 +277,8 @@ export function createAtmosphereShellRenderer(
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+      { binding: 6, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
   });
 
@@ -284,11 +301,11 @@ export function createAtmosphereShellRenderer(
   );
 
   // The shell is drawn TWICE per body over one shared pipeline layout, geometry,
-  // bind group and depth/primitive state — only the fragment entry point and the
-  // blend differ. Everything except those two is built here ONCE so the pair can
-  // never diverge: any drift in depth compare, cull mode or the `front_facing`
-  // wall split would make the two passes cover different pixels, which
-  // double-counts the limb or drops it (`fragment.wesl`'s wall-duty split).
+  // bind group and primitive state — only the fragment entry point and the blend
+  // differ. Everything except those two is built here ONCE so the pair can never
+  // diverge: any drift in cull mode or the `front_facing` wall split would make
+  // the two passes cover different pixels, which double-counts the limb or drops
+  // it (`fragment.wesl`'s wall-duty split).
   const shellPipelineLayout = device.createPipelineLayout({
     label: 'atmosphere-shell-pipeline-layout',
     bindGroupLayouts: [shellBgl],
@@ -306,67 +323,27 @@ export function createAtmosphereShellRenderer(
   const shellPrimitiveState: GPUPrimitiveState = {
     topology: 'triangle-list',
     // Draw BOTH walls (no cull): the fragment splits duty by front_facing — the
-    // NEAR (front) wall carries the over-disc aerial perspective, the FAR (back)
-    // wall carries the limb + sky. Depth-testing each wall against the opaque
-    // scene keeps cross-body occlusion for both (disc haze via the near wall's
-    // depth, the limb via the far wall's).
+    // NEAR (front) wall carries the finite-depth pixels (the over-disc aerial
+    // perspective and the terrain at the limb), the FAR (back) wall the rest.
     frontFace: 'ccw',
     cullMode: 'none',
   };
-  const shellDepthState: GPUDepthStencilState = {
-    format: depthFormat,
-    // Depth-TESTED against the opaque planet (reversed-Z 'greater-equal') but
-    // writes NO depth — a translucent overlay must not stamp z, and the ADD pass
-    // must see exactly the depth the MULTIPLY pass tested against.
-    depthWriteEnabled: false,
-    depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
-  };
 
-  // Inside-shell state (camera inside the atmosphere top): a full-screen
-  // triangle, no vertex buffer, and an always-pass depth test — there is no
-  // scene depth to test against from inside (spec §4.4). NOT routed through
-  // `resolveDepthCompare`: that helper resolves a reversed-Z-dependent INTENT,
-  // and 'always' has no such intent to resolve.
-  const insideVertexState: GPUVertexState = { module: shellVsModule, entryPoint: 'insideVs' };
-  const insidePrimitiveState: GPUPrimitiveState = { topology: 'triangle-list' };
-  const insideDepthState: GPUDepthStencilState = {
-    format: depthFormat,
-    depthWriteEnabled: false,
-    depthCompare: 'always',
-  };
-
-  /** The outside (proxy-sphere) and inside (full-screen) draws differ only in
-   *  this triple — vertex/primitive/depthStencil are otherwise identical
-   *  across all four shell pipelines. */
-  type ShellPipelineState = {
-    vertex: GPUVertexState;
-    primitive: GPUPrimitiveState;
-    depthStencil: GPUDepthStencilState;
-  };
-  const outsideShellState: ShellPipelineState = {
-    vertex: shellVertexState,
-    primitive: shellPrimitiveState,
-    depthStencil: shellDepthState,
-  };
-  const insideShellState: ShellPipelineState = {
-    vertex: insideVertexState,
-    primitive: insidePrimitiveState,
-    depthStencil: insideDepthState,
-  };
-
+  // NO depthStencil: the shell's step SAMPLES `foreground:0`'s depth rather than
+  // attaching it, and a pipeline declaring a depth format is rejected by a pass
+  // that has none. Occlusion moved into the fragment with the classification:
+  // a sampled depth nearer than the shell entry drops the fragment.
   function createShellPipeline(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
-    state: ShellPipelineState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
-      vertex: state.vertex,
+      vertex: shellVertexState,
       fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
-      primitive: state.primitive,
-      depthStencil: state.depthStencil,
+      primitive: shellPrimitiveState,
     });
   }
 
@@ -377,9 +354,6 @@ export function createAtmosphereShellRenderer(
   // luminance-collapsed alpha let a λ⁻⁴ Rayleigh ramp add blue to the disc
   // without removing blue from it (cyan wash).
   //
-  // Hoisted (not inlined) so the inside pair below shares the SAME blend object —
-  // multiply/add semantics do not change between the outside proxy-mesh draw and
-  // the inside full-screen draw, only the vertex/depth state does.
   const multiplyBlend: GPUBlendState = {
     color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
     alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
@@ -388,7 +362,6 @@ export function createAtmosphereShellRenderer(
     'atmosphere-shell-multiply-pipeline',
     'fsMultiply',
     multiplyBlend,
-    outsideShellState,
   );
 
   // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
@@ -399,26 +372,7 @@ export function createAtmosphereShellRenderer(
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
-  const shellAddPipeline = createShellPipeline(
-    'atmosphere-shell-add-pipeline',
-    'fsAdd',
-    addBlend,
-    outsideShellState,
-  );
-
-  // Inside pair — SAME blend objects as the outside pair (see above).
-  const shellInsideMultiplyPipeline = createShellPipeline(
-    'atmosphere-shell-inside-multiply-pipeline',
-    'fsInsideMultiply',
-    multiplyBlend,
-    insideShellState,
-  );
-  const shellInsideAddPipeline = createShellPipeline(
-    'atmosphere-shell-inside-add-pipeline',
-    'fsInsideAdd',
-    addBlend,
-    insideShellState,
-  );
+  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
   //
@@ -426,7 +380,8 @@ export function createAtmosphereShellRenderer(
   // TEXTURE binding — STORAGE lets the bake compute pass write via `textureStore`,
   // TEXTURE lets downstream passes + the shell fragment SAMPLE), its three uniform
   // buffers (ScatteringParams written once from the body's params; SkyViewParams
-  // rewritten per frame; AtmosphereUniforms rewritten per draw), and the four bind
+  // rewritten per frame; AtmosphereUniforms per outside draw, per inside bake),
+  // and the four bind
   // groups wiring those to the shared pipelines. Built here, stored by id.
   const bundles = new Map<string, AtmosphereBundle>();
 
@@ -480,6 +435,12 @@ export function createAtmosphereShellRenderer(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    const depthFrameBuffer = device.createBuffer({
+      label: `atmosphere-shell-depth-frame-${bodyId}`,
+      size: SHELL_DEPTH_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
     const transmittanceBindGroup = device.createBindGroup({
       label: `atmosphere-transmittance-bg-${bodyId}`,
       layout: transmittanceBgl,
@@ -508,13 +469,6 @@ export function createAtmosphereShellRenderer(
       skyViewTex,
     });
 
-    const shellBindGroup = buildShellBindGroup(bodyId, {
-      shellUniformBuffer,
-      skyViewTex,
-      transmittanceTex,
-      ringTexture: null,
-    });
-
     return {
       transmittanceTex,
       multiScatterTex,
@@ -523,10 +477,12 @@ export function createAtmosphereShellRenderer(
       scatteringBuffer,
       skyViewParamsBuffer,
       shellUniformBuffer,
+      depthFrameBuffer,
       transmittanceBindGroup,
       multiScatterBindGroup,
       skyViewBindGroup,
-      shellBindGroup,
+      shellBindGroup: null,
+      shellDepthView: null,
     };
   }
 
@@ -558,25 +514,25 @@ export function createAtmosphereShellRenderer(
     });
   }
 
-  /** (Re)build a body's shell bind group. Split out so `setRingTexture` can swap
-   *  the binding-4 strip in without re-deriving the rest — `ringTexture: null`
-   *  binds the shared transparent placeholder (the `texturedBodyRenderer`
-   *  `buildBindGroup` pattern). */
+  /** (Re)build a body's shell bind group over the depth view the current draw
+   *  hands in. `ringTexture: null` binds the shared transparent placeholder
+   *  (the `texturedBodyRenderer` `buildBindGroup` pattern). */
   function buildShellBindGroup(
     bodyId: string,
-    res: Pick<AtmosphereBundle, 'shellUniformBuffer' | 'skyViewTex' | 'transmittanceTex'> & {
-      ringTexture: GPUTexture | null;
-    },
+    bundle: AtmosphereBundle,
+    depthView: GPUTextureView,
   ): GPUBindGroup {
     return device.createBindGroup({
       label: `atmosphere-shell-bg-${bodyId}`,
       layout: shellBgl,
       entries: [
-        { binding: 0, resource: { buffer: res.shellUniformBuffer } },
+        { binding: 0, resource: { buffer: bundle.shellUniformBuffer } },
         { binding: 1, resource: sampler },
-        { binding: 2, resource: res.skyViewTex.createView() },
-        { binding: 3, resource: res.transmittanceTex.createView() },
-        { binding: 4, resource: (res.ringTexture ?? placeholderRing).createView() },
+        { binding: 2, resource: bundle.skyViewTex.createView() },
+        { binding: 3, resource: bundle.transmittanceTex.createView() },
+        { binding: 4, resource: (bundle.ringTexture ?? placeholderRing).createView() },
+        { binding: 5, resource: depthView },
+        { binding: 6, resource: { buffer: bundle.depthFrameBuffer } },
       ],
     });
   }
@@ -625,6 +581,17 @@ export function createAtmosphereShellRenderer(
     device.queue.submit([encoder.finish()]);
   }
 
+  // The inside-the-shell half, over the SAME bundles: one atmosphere, two
+  // consumers. Built after the bundle loop so every body's resources exist.
+  const placeholderRingView = placeholderRing.createView();
+  const aerial = createAerialPerspectiveRenderer(
+    device,
+    targetFormat,
+    sampler,
+    placeholderRingView,
+    bundles,
+  );
+
   /** Look up a body's bundle. An unknown id is a programming error: callers only
    *  ever pass `atmosphereDrawList` ids, which come from the same `paramsById`
    *  table this renderer bundles — so a miss means the two drifted. */
@@ -671,9 +638,12 @@ export function createAtmosphereShellRenderer(
       bundle.skyViewTex = createLut(`atmosphere-skyview-lut-${bodyId}`, currentSkyViewLutSize);
       // Both bind groups that reference the texture must be rebuilt — a
       // GPUBindGroup binds a specific GPUTextureView, not the JS variable, so
-      // it keeps pointing at the destroyed texture until replaced.
+      // it keeps pointing at the destroyed texture until replaced. The shell's
+      // is only dropped: it also binds a depth view none of the resize path
+      // knows, so its rebuild waits for the next draw.
       bundle.skyViewBindGroup = buildSkyViewBindGroup(bodyId, bundle);
-      bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+      bundle.shellBindGroup = null;
+      aerial.rebind(bodyId, bundle);
     }
   }
 
@@ -703,40 +673,69 @@ export function createAtmosphereShellRenderer(
       1,
     ]);
     bundle.ringTexture = texture;
-    bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+    bundle.shellBindGroup = null;
   }
 
   // ── draw ───────────────────────────────────────────────────────────────────
+
+  // One scratch for every body: `writeBuffer` copies at call time, so nothing
+  // outlives the draw that filled it — it is the GPU buffers that must be
+  // per-body, not this.
+  const depthScratch = new ArrayBuffer(SHELL_DEPTH_UNIFORM_BYTES);
+  const depthInvMvp = new Float32Array(depthScratch, SHELL_DEPTH_INV_MVP_OFFSET, 16);
+  const depthCamPosKm = new Float32Array(depthScratch, SHELL_DEPTH_CAM_POS_OFFSET, 3);
+  const depthViewportPx = new Float32Array(depthScratch, SHELL_DEPTH_VIEWPORT_OFFSET, 2);
+  const depthKmToLocal = new Float32Array(depthScratch, SHELL_DEPTH_KM_TO_LOCAL_OFFSET, 1);
 
   function draw(
     pass: GPURenderPassEncoder,
     bodyId: string,
     uniforms: Float32Array,
-    inside: boolean,
+    depth: AtmosphereShellDepth,
   ): void {
     // Write THIS body's own shell uniform buffer immediately before its draw — no
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
-    pass.setBindGroup(0, bundle.shellBindGroup);
-    // `inside` selects the full-screen no-scene-depth pipeline pair (camera past
-    // the atmosphere top, no proxy-mesh silhouette to rasterise) over the
-    // proxy-sphere pair. MULTIPLY strictly BEFORE ADD in both branches: the
-    // multiply pass scales whatever is already in the target, so running it
-    // second would attenuate this body's own in-scatter by its own transmittance.
-    if (inside) {
-      pass.setPipeline(shellInsideMultiplyPipeline);
-      pass.draw(3);
-      pass.setPipeline(shellInsideAddPipeline);
-      pass.draw(3);
-      return;
+    // A null frame always arrives with the far-cleared placeholder view, so
+    // the fragment's FAR_DEPTH arm never reads invMvp/camPosKm — skip them.
+    if (depth.frame !== null) {
+      depthInvMvp.set(depth.frame.invMvp);
+      depthCamPosKm.set(depth.frame.camPosKm);
     }
+    depthViewportPx.set(depth.viewportPx);
+    depthKmToLocal[0] = depth.kmToLocal;
+    device.queue.writeBuffer(bundle.depthFrameBuffer, 0, depthScratch);
+    if (bundle.shellBindGroup === null || bundle.shellDepthView !== depth.view) {
+      bundle.shellDepthView = depth.view;
+      bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle, depth.view);
+    }
+    pass.setBindGroup(0, bundle.shellBindGroup);
+    // MULTIPLY strictly BEFORE ADD: the multiply pass scales whatever is already
+    // in the target, so running it second would attenuate this body's own
+    // in-scatter by its own transmittance.
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.setPipeline(shellMultiplyPipeline);
     pass.drawIndexed(indexCount);
     pass.setPipeline(shellAddPipeline);
     pass.drawIndexed(indexCount);
+  }
+
+  function bakeAerialPerspective(
+    pass: GPUComputePassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+  ): void {
+    aerial.bake(pass, bodyId, uniforms);
+  }
+
+  function drawAerialPerspective(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    depthView: GPUTextureView,
+  ): void {
+    aerial.draw(pass, bodyId, depthView);
   }
 
   // ── destroy ────────────────────────────────────────────────────────────────
@@ -750,8 +749,10 @@ export function createAtmosphereShellRenderer(
       bundle.scatteringBuffer.destroy();
       bundle.skyViewParamsBuffer.destroy();
       bundle.shellUniformBuffer.destroy();
+      bundle.depthFrameBuffer.destroy();
     }
     bundles.clear();
+    aerial.destroy();
     placeholderRing.destroy();
     positionBuffer.destroy();
     indexBuffer.destroy();
@@ -762,6 +763,8 @@ export function createAtmosphereShellRenderer(
     dispatchSkyView,
     setRingTexture,
     draw,
+    bakeAerialPerspective,
+    drawAerialPerspective,
     destroy,
     reconcile,
   };

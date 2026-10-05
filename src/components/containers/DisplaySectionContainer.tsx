@@ -1,4 +1,3 @@
-// src/components/containers/DisplaySectionContainer.tsx
 /**
  * DisplaySectionContainer — store boundary for the Display settings section.
  *

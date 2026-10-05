@@ -41,12 +41,12 @@ const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 
 const EMPTY_DEPS: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 const RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 

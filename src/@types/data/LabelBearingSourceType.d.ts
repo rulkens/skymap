@@ -25,4 +25,5 @@ export type LabelBearingSourceType =
   | 'galaxyCatalog'
   | 'starCatalog'
   | 'body'
+  | 'blackHole'
   | 'milkyWay';

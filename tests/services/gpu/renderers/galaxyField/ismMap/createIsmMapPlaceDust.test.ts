@@ -9,10 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import {
-  computePlaceDustBudget,
-  type PlaceDustBudget,
-} from '../../../../../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import { computePlaceDustBudget } from '../../../../../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
 import {
   packPlaceDustParams,
   PLACE_DUST_PARAMS_FLOATS,
@@ -32,6 +29,7 @@ import { layoutWgslStruct } from '../../../../../../tools/utils/wgsl/layoutWgslS
 import { parseWgslStructFields } from '../../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../../tools/utils/wgsl/readShaderSource';
 import { wgslPrimitiveLayout } from '../../../../../../tools/utils/wgsl/wgslPrimitiveLayout';
+import { PlaceDustBudget } from '../../../../../../src/@types/galaxy/PlaceDustBudget';
 
 const geometry: GalaxyDescription = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 const noDiscGeometry: GalaxyDescription = {

@@ -3,16 +3,17 @@
  * toggle key, which are one string by design: `executeFrame` reads the toggle
  * under the same name it bills.
  *
- * The suffix is not decoration. A compute step's name is free to collide with a
- * content pass's — `'flow'` is both the particle integrator and the ribbon that
- * draws its output — and an undecorated key would make `buildTimingSlotMap`
- * throw on the duplicate, and one toggle silently disable both.
- *
- * A plain `-compute` suffix rather than the `·` the render slots use: those
- * separate a pass from the ROW it drew in, where this just distinguishes two
- * kinds of work under one name, and the panel is read on a phone.
+ * The `-compute` suffix is not decoration. A compute step's name is free to
+ * collide with a content pass's — `'flow'` is both the particle integrator and
+ * the ribbon that draws its output — and an undecorated key would make
+ * `buildTimingSlotMap` throw on the duplicate, and one toggle silently disable
+ * both. `viewId` rides on top of that (`timingSlotForView`'s rule), so a
+ * perView compute — `aerial-perspective` — claims one slot per view rather
+ * than one shared name every view's dispatch would overwrite.
  */
 
-export function computeTimingSlotName(stepName: string): string {
-  return `${stepName}-compute`;
+import { timingSlotForView } from '../../../../utils/frame/timingSlotForView';
+
+export function computeTimingSlotName(stepName: string, viewId: string): string {
+  return timingSlotForView(`${stepName}-compute`, viewId);
 }

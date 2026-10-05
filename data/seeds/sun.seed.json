@@ -1,0 +1,22 @@
+[
+  {
+    "id": "sun",
+    "commonName": "Sun",
+    "names": ["Sun", "Sol"],
+    "constellation": "None",
+    "ra": 0,
+    "dec": 0,
+    "distancePc": 0,
+    "magV": -26.74,
+    "absMag": 4.83,
+    "spectralType": "G2V",
+    "radiusSolar": 1,
+    "temperatureK": 5772,
+    "massSolar": 1,
+    "luminositySolar": 1,
+    "ageGyr": 4.6,
+    "gaiaDr3": null,
+    "hip": null,
+    "description": "The Sun is a G-type main-sequence star, about 4.6 billion years old and roughly halfway through its hydrogen-burning life. Its core fuses some 600 million tonnes of hydrogen every second at a temperature near 15 million K. This map is heliocentric, so the Sun sits at the origin and every distance, brightness and radius in it is quoted relative to the Sun (R☉, L☉, M☉). It belongs to no constellation. Seen from Earth it moves along the ecliptic through the zodiac over the course of a year."
+  }
+]

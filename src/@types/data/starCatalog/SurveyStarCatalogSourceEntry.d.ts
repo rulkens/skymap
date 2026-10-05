@@ -3,7 +3,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 /**
  * A star catalog streamed from disk — the survey-wide Gaia bin today.
  *
- * Its presentation defaults live in-row (like `VolumeSourceEntry`) rather than
+ * Its presentation defaults live in-row (like `CosmicWebDensitySourceEntry`) rather than
  * in a separate settings table, so the draw budget and the crossfade band that
  * hands off to the procedural Milky-Way cloud sit next to the `binBaseName`
  * they govern. Leaf stars ARE pickable — `drawPick` stamps a resolved star's

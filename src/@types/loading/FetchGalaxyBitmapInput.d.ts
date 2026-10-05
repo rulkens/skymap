@@ -1,3 +1,5 @@
+import type { DeadHostSet } from '../network/DeadHostSet';
+
 export type FetchGalaxyBitmapInput = {
   ra: number;
   dec: number;
@@ -33,4 +35,14 @@ export type FetchGalaxyBitmapInput = {
    * `fetchHiRes` is unset.
    */
   hiResTargetDim?: number;
+  /**
+   * Session memory of hosts that stopped answering, consulted for the SDSS and
+   * DSS legs only — the famous/hi-res legs are our own origin, where a missing
+   * file is expected rather than an outage, so retiring it would kill every
+   * curated thumbnail for the session.
+   *
+   * Absent ⇒ every host is attempted, which is the pre-existing behaviour and
+   * what the tests that don't care about host health get.
+   */
+  deadHosts?: DeadHostSet;
 };

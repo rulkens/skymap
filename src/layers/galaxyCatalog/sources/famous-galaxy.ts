@@ -8,7 +8,6 @@ export const FAMOUS_GALAXY_ENTRY = {
   label: 'Famous',
   binBaseName: 'famous',
   allSky: true, // hand-picked entries from across the sky
-  visible: true,
   bearsLabel: true,
   bearsMarker: false,
   labelLayer: 'galaxy',

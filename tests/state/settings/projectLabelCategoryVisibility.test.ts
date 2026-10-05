@@ -23,6 +23,7 @@ function homesOf(state: EngineSettingsState): LabelHomes {
     galaxyCatalogs: state.galaxyCatalogs.items,
     starCatalogs: state.starCatalogs.items,
     bodies: state.bodies.items,
+    blackHoles: state.blackHoles.items,
     milkyWayLabelEnabled: state.milkyWay.labelEnabled,
   };
 }

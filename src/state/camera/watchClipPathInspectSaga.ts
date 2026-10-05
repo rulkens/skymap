@@ -9,20 +9,20 @@
  * samples the route into the `clipPathInspector` subsystem, which the
  * `clipPathDebugPass` reads each frame. `clearClipPath` drops the snapshot.
  *
- * ### Why mirror watchClipSaga's foci-wait verbatim
+ * ### Why mirror clipBodySaga's foci-wait verbatim
  *
  * A clip carrying `flyPath`-with-`atFocus` (the demo path's case) can't be
  * compiled until those ids resolve against loaded catalog/structure data —
  * `compileClip` (called inside the seam) throws on an unresolved cue. So this
  * path waits on `clipFociReady` + a non-null `cameraRuntime` then calls
- * `resolveClipFoci`, exactly like `watchClipSaga` and the tour's `visitBeatSaga`.
+ * `resolveClipFoci`, exactly like `clipBodySaga` and the tour's `visitBeatSaga`.
  * The only divergence: there's no play/cancel lifecycle — sampling is a single
  * synchronous compute, so no `race`/`[CANCEL]`. `takeLatest` still guards against
  * a rapid re-click superseding an in-flight foci-wait.
  *
  * ### getContext inside the worker
  *
- * Same rationale as `watchClipSaga`: the engine registers saga context AFTER the
+ * Same rationale as `clipBodySaga`: the engine registers saga context AFTER the
  * root saga forks, so the seam is read inside the worker (when an action arrives)
  * rather than at fork time.
  */
@@ -50,7 +50,7 @@ import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
 import { applyPathTuning } from '../../services/engine/animation/applyPathTuning';
 import { clipFociReady } from '../tour/clipFociReady';
-import { waitUntil } from '../tour/waitUntil';
+import { waitUntilSaga } from '../tour/waitUntilSaga';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import type { SagaContext } from '../../store/types';
@@ -69,8 +69,8 @@ function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const clip = clipRegistry[clipId];
 
   // Block until every id-bearing cue resolves AND the camera runtime (which
-  // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
-  yield* call(waitUntil, () => clipFociReady(clip.data, selection) && cameraRuntime() !== null);
+  // carries the FOV resolveClipFoci needs) exists — same gate as clipBodySaga.
+  yield* call(waitUntilSaga, () => clipFociReady(clip.data, selection) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
   const orientation = yield* select(selectOrientation);
   const frameBasis = ORIENTATION_FRAMES[orientation];

@@ -8,40 +8,14 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { InputStep } from '../../@types/camera/InputStep';
+import type { SurfaceStepCtx } from '../../@types/camera/SurfaceStepCtx';
 import type { SurfaceGestureMemory } from '../../@types/camera/SurfaceGestureMemory';
 import type { TiltMemory } from '../../@types/camera/TiltMemory';
-import type { Vec2 } from '../../@types/math/Vec2';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
-import { MAX_REMEMBERED_TILT_RAD } from '../../data/camera/cameraTuning';
-import { ORIENT_DECAY } from '../../data/camera/orientDecay';
-import { bodyFixedEyeM } from '../../utils/camera/bodyFixedEyeM';
-import { bodyUpWeight } from '../../utils/camera/bodyUpWeight';
 import { draggedSurfacePose } from '../../utils/camera/draggedSurfacePose';
-import { eyeFrameOf } from '../../utils/camera/eyeFrameOf';
-import { flooredBodyPose } from '../../utils/camera/flooredBodyPose';
 import { latchSurfaceGesture } from '../../utils/camera/latchSurfaceGesture';
-import { levelledPose } from '../../utils/camera/levelledPose';
+import { settledDragPose } from '../../utils/camera/settledDragPose';
 import { surfaceZoomStep } from '../../utils/camera/surfaceZoomStep';
-import { unmappedTiltRad } from '../../utils/camera/unmappedTiltRad';
-
-type SurfaceStepCtx = {
-  readonly viewportPx: Readonly<Vec2>;
-  readonly fovYRad: number;
-  readonly bodyRadiusM: number;
-  /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
-  readonly standoffRadii: number;
-  /** What the floor stands off from, per direction; `bodyRadiusM` keeps the band arithmetic. */
-  readonly groundRadiusAtM: GroundRadiusLookup;
-  /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
-  readonly sceneUpLocal: Readonly<Vec3>;
-  /** A focus HOSTED on this body, body-fixed metres — it owns the zoom's pivot. */
-  readonly focusPivotM: Readonly<Vec3> | null;
-  readonly tuning: CameraTuning;
-};
 
 /** The body rung's empty memory. */
 export const EMPTY_SURFACE_GESTURE_MEMORY: SurfaceGestureMemory = { gesture: null };
@@ -63,6 +37,8 @@ export function surfaceStep(
     bodyRadiusM,
     standoffRadii,
     groundRadiusAtM,
+    innerBoundRadiusM,
+    outerBoundRadiusM,
     sceneUpLocal,
     focusPivotM,
     tuning,
@@ -79,6 +55,8 @@ export function surfaceStep(
         bodyRadiusM,
         standoffRadii,
         groundRadiusAtM,
+        innerBoundRadiusM,
+        outerBoundRadiusM,
         sceneUpLocal,
         tilt.rememberedTiltRad,
         tuning,
@@ -93,54 +71,29 @@ export function surfaceStep(
   if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, gesture: prev, tilt };
   const gesture =
     prev.gesture === 'down'
-      ? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM)
+      ? latchSurfaceGesture(
+          arm,
+          step,
+          viewportPx,
+          fovYRad,
+          bodyRadiusM,
+          groundRadiusAtM,
+          innerBoundRadiusM,
+          outerBoundRadiusM,
+        )
       : prev.gesture;
-  // The step's ENTRY heading, which pan transports. Drags level against the
-  // PURE body ENU — the band blend is the zoom's authority; a drag-created
-  // deviation from the blend is "unauthored" and the next notch's decay
-  // settles it.
-  const preInPoleFrame = eyeFrameOf(arm, 1, BODY_LOCAL_FRAME.pole);
   const { pose, mode } = draggedSurfacePose(arm, gesture, step, viewportPx, fovYRad);
-  // One floor site, after every position write — `anchoredZoomStep` owns
-  // its own, so the zoom arm above is already floored. The level runs on the
-  // FLOORED pose: the floor moves the eye radially, and the ENU it settles
-  // against has to be the final standpoint.
-  // No pivot: a drag serves its own gesture anchor, not the focus, and the
-  // tilt handle already spends its floor budget before reaching here.
-  const floored = flooredBodyPose(pose, groundRadiusAtM, standoffRadii, null);
-  // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
-  // may ROLL: pan and orbit hold their entry heading (the transport that makes
-  // holonomy unrepresentable), look and tilt level around the heading they
-  // authored. Strafe translates with its basis untouched, a known small hole in
-  // the no-roll rule: it lives in a few-pixel grazing-incidence latch window at
-  // the limb (~0.03 rad over 30 steps, measured), settled by the next notch.
-  const final =
-    mode === 'strafe' || preInPoleFrame === null
-      ? floored
-      : levelledPose(floored, {
-          blendW: 1,
-          sceneUpLocal: BODY_LOCAL_FRAME.pole,
-          heldAzimuthRad: mode === 'pan' || mode === 'orbit' ? preInPoleFrame.azimuthRad : null,
-          pivotM: null,
-          capRad: ORIENT_DECAY.dragLevelCapRad,
-        });
-  // Ruling 12: tilt-authoring handles update the memory. Un-mapping
-  // through the band weight keeps the just-set display a FIXED POINT of
-  // the zoom mapping — a notch at the set altitude must not move it
-  // (zoom never authors tilt). Near w → 0 the ratio diverges:
-  // `MAX_REMEMBERED_TILT_RAD` is the only cap on the memory, and a degenerate
-  // weight leaves it untouched (no intent is readable there).
-  let rememberedTiltRad = tilt.rememberedTiltRad;
-  if (mode === 'tilt' || mode === 'look') {
-    const f = eyeFrameOf(final, 1, BODY_LOCAL_FRAME.pole);
-    const hr = Math.hypot(...bodyFixedEyeM(final)) / bodyRadiusM - 1;
-    if (f !== null && bodyUpWeight(hr, tuning) > 1e-6) {
-      rememberedTiltRad = Math.min(unmappedTiltRad(f.tiltRad, hr, tuning), MAX_REMEMBERED_TILT_RAD);
-    }
-  }
+  // One floor site, after every position write — `anchoredZoomStep` owns its
+  // own, so the zoom arm above is already floored.
+  const settled = settledDragPose(arm, pose, mode, tilt, {
+    groundRadiusAtM,
+    standoffRadii,
+    bodyRadiusM,
+    tuning,
+  });
   return {
-    pose: final,
+    pose: settled.pose,
     gesture: { gesture: { ...gesture, mode, prevPixel: step.endPx } },
-    tilt: { ...tilt, rememberedTiltRad },
+    tilt: settled.tilt,
   };
 }

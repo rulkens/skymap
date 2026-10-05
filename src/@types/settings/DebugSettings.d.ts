@@ -13,6 +13,13 @@ import type { DebugOverlayKey } from '../data/debug/DebugOverlayKey';
 export type DebugSettings = {
   overlays: Record<DebugOverlayKey, boolean>;
   /**
+   * Radius of the `terrain-pick-marker` overlay's sphere, in WORLD metres —
+   * the gauge the user reads the CPU-floor/GPU-surface height gap against, so
+   * it is a physical size the user sets, never a screen-pixel one. Only the
+   * marker pass and its readout read it; dead with that overlay off.
+   */
+  terrainPickMarkerRadiusM: number;
+  /**
    * Pass names toggled off, membership by `[name] === true`. Consulted AFTER
    * each pass's own `enabled()`, so the override is ONE-WAY: it can hide a pass
    * that would run, never force-enable one whose gate said false.

@@ -11,15 +11,15 @@
  * its COSMO sibling.
  */
 
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { near0OverlayVpF32 } from './near0OverlayVpF32';
 import { NEAR0 } from './slabs';
 
-const cache = new WeakMap<ReadyFrameContext, Label2DProjection>();
+const cache = new WeakMap<FrameView, Label2DProjection>();
 
-export function near0LabelProjection(ctx: ReadyFrameContext): Label2DProjection {
+export function near0LabelProjection(ctx: FrameView): Label2DProjection {
   const cached = cache.get(ctx);
   if (cached) return cached;
 
@@ -30,6 +30,7 @@ export function near0LabelProjection(ctx: ReadyFrameContext): Label2DProjection 
     vp,
     vpF32: near0OverlayVpF32(vp),
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+    pxPerRad: ctx.drawPxPerRad,
   };
   cache.set(ctx, projection);
   return projection;

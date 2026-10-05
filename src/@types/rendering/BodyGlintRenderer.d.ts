@@ -41,5 +41,6 @@ export type BodyGlintRenderer = Renderer & {
     count: number,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
   ): void;
 };

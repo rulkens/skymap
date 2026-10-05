@@ -16,13 +16,7 @@
  *      iteration would tax every catalog rebuild for no signal change.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { copyHiResToPublic } from '../../../tools/famous/copyHiResToPublic';

@@ -18,10 +18,10 @@ import { equirectFileSource } from '../equirectFileSource';
 import { eoxTileSource } from '../eoxTileSource';
 import { etopoHeightSource } from '../etopoHeightSource';
 import { geodanmarkTileSource } from '../geodanmarkTileSource';
-import type { HeightSource } from '../HeightSource';
+import type { HeightSource } from '../@types/HeightSource';
 import { skadiHeightSource } from '../skadiHeightSource';
-import type { SurfaceBakeBand } from '../SurfaceBakeBand';
-import type { SurfaceBodyBake } from '../SurfaceBodyBake';
+import type { SurfaceBakeBand } from '../@types/SurfaceBakeBand';
+import type { SurfaceBodyBake } from '../@types/SurfaceBodyBake';
 import { voidFilledHeightSource } from '../voidFilledHeightSource';
 
 /** Stable location of the manifest and index — the pointer clients always

@@ -83,9 +83,9 @@ describe('buildStarOctree', () => {
 
     // The fat leaf's finest cells (level-0 mortons 8 and 9) do NOT appear —
     // they folded away, which is the whole point of the merge.
-    expect(cat.nodes.some((n) => n.level === 0 && (n.mortonIndex === 8 || n.mortonIndex === 9))).toBe(
-      false,
-    );
+    expect(
+      cat.nodes.some((n) => n.level === 0 && (n.mortonIndex === 8 || n.mortonIndex === 9)),
+    ).toBe(false);
 
     // A real aggregate spans the dense chain and the fat leaf (childMask != 0).
     expect(cat.nodes.some((n) => n.childMask !== 0)).toBe(true);

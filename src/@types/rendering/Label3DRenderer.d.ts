@@ -10,7 +10,12 @@ import type { Vec2 } from '../math/Vec2';
  */
 export type Label3DRenderer = Renderer & {
   setLabels(labels: readonly Label3D[]): void;
-  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    pxPerRad: number,
+  ): void;
   glyphCount(): number;
   destroy(): void;
 };

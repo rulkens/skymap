@@ -7,7 +7,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 export function proceduralDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
   return {

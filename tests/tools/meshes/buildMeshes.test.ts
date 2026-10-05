@@ -7,9 +7,15 @@ import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
-import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
+import type { Tier } from '../../../src/@types/data/Tier';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
-import { buildMeshes } from '../../../tools/meshes/buildMeshes';
+import { buildMeshes, type MeshBuildTarget } from '../../../tools/meshes/buildMeshes';
+import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
+import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
+import { nearestVertex } from '../../helpers/meshes/nearestVertex';
 
 // Every fixture is synthesised here rather than read from data/raw/meshes:
 // the real sources are gitignored downloads that only exist after the human
@@ -67,8 +73,68 @@ function addPrim(
   return prim;
 }
 
+/** A flat `size` x `size`-cell grid in the XY plane — plenty of coplanar
+ *  triangles for the simplifier to collapse with no geometric detail lost. */
+function addGrid(doc: Document, material: Material, size: number): Primitive {
+  const verts = size + 1;
+  const positions: number[] = [];
+  const normals: number[] = [];
+  for (let y = 0; y <= size; y++) {
+    for (let x = 0; x <= size; x++) {
+      positions.push(x, y, 0);
+      normals.push(0, 0, 1);
+    }
+  }
+  const indices: number[] = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const a = y * verts + x;
+      const b = a + 1;
+      const c = a + verts;
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+  return addPrim(doc, material, { positions, normals, indices });
+}
+
+/**
+ * The first triangle's geometric normal dotted with its first vertex's normal:
+ * positive when the winding agrees with the shading. The writer may reorder and
+ * rotate triangles, so winding is judged by facing, never by index order.
+ */
+function faceFacing(decoded: DecodedMeshGeometry): number {
+  const [a, b, c] = [0, 1, 2].map((k) => {
+    const v = decoded.indices[k]!;
+    return [0, 1, 2].map((i) => decoded.positions[v * 3 + i]!);
+  }) as [number[], number[], number[]];
+  const e1 = [0, 1, 2].map((i) => b[i]! - a[i]!);
+  const e2 = [0, 1, 2].map((i) => c[i]! - a[i]!);
+  const face = [
+    e1[1]! * e2[2]! - e1[2]! * e2[1]!,
+    e1[2]! * e2[0]! - e1[0]! * e2[2]!,
+    e1[0]! * e2[1]! - e1[1]! * e2[0]!,
+  ];
+  const n = decoded.indices[0]! * 3;
+  return face.reduce((sum, f, i) => sum + f * decoded.normals[n + i]!, 0);
+}
+
 function near(actual: ArrayLike<number>, expected: number[]): void {
   expected.forEach((e, i) => expect(actual[i]).toBeCloseTo(e, 4));
+}
+
+/** Assert `expected` is *some* decoded vertex's position (order-free, see `nearestVertex`). */
+function expectVertexNear(
+  file: ArrayBuffer,
+  decoded: DecodedMeshGeometry,
+  expected: number[],
+): void {
+  const best = nearestVertex(decoded.positions, expected);
+  expectPositionNear(
+    file,
+    [0, 1, 2].map((c) => decoded.positions[best * 3 + c]!),
+    expected,
+  );
 }
 
 async function solidPng(r: number, g: number, b: number): Promise<Uint8Array> {
@@ -111,33 +177,55 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function writeGlb(doc: Document): Promise<string> {
-  const glbPath = join(dir, 'source.glb');
+async function writeGlbNamed(doc: Document, name: string): Promise<string> {
+  const glbPath = join(dir, name);
   await new NodeIO().write(glbPath, doc);
   return glbPath;
 }
 
+async function writeGlb(doc: Document): Promise<string> {
+  return writeGlbNamed(doc, 'source.glb');
+}
+
 /** Node's Buffer is a view into a shared pool — hand decodeMesh only its own bytes. */
 function readMesh(): ArrayBuffer {
-  const bytes = readFileSync(join(dir, 'out', 'testmesh.mesh'));
+  const bytes = readFileSync(join(dir, 'out', 'testmesh-small.mesh'));
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function run(glbPath: string, bodyFromSource?: Mat3) {
+function runTiers(
+  glbPaths: Partial<Record<Tier, string>>,
+  bodyFromSource?: Mat3,
+  groundUp?: Vec3,
+  tierTriangles?: Partial<Record<Tier, number>>,
+  georeferencedCentreM?: Vec2,
+) {
+  const tiers = Object.fromEntries(
+    Object.entries(glbPaths).map(([tier, path]) => [
+      tier,
+      { path, triangles: tierTriangles?.[tier as Tier] },
+    ]),
+  ) as MeshBuildTarget['tiers'];
   return buildMeshes({
     targets: [
       {
         key: 'testmesh',
-        glbPath,
+        tiers,
         source: 'https://example.invalid/model',
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
+        groundUp,
+        georeferencedCentreM,
       },
     ],
     outDir: join(dir, 'out'),
     generatedPath: join(dir, 'meshAssets.generated.ts'),
   });
+}
+
+function run(glbPath: string, bodyFromSource?: Mat3, groundUp?: Vec3) {
+  return runTiers({ small: glbPath }, bodyFromSource, groundUp);
 }
 
 describe('buildMeshes()', () => {
@@ -154,6 +242,42 @@ describe('buildMeshes()', () => {
     await expect(run(await writeGlb(doc))).rejects.toThrow(/material/i);
   });
 
+  it('refuses a GLB prebaked for a different ground than the scene seats it on', async () => {
+    const stamped = new Document();
+    stamped.createBuffer();
+    const stampedMaterial = await withBaseColour(stamped, stamped.createMaterial('one'));
+    const stampedMesh = stamped
+      .createMesh('m')
+      .addPrimitive(addTriangle(stamped, stampedMaterial, 0));
+    const stampedNode = stamped
+      .createNode('n')
+      .setMesh(stampedMesh)
+      .setExtras({ aoGroundUp: [0, 1, 0] });
+    stamped.createScene('s').addChild(stampedNode);
+
+    // Stamped for a ground, but the scene (no `groundUp` passed) floats it.
+    await expect(run(await writeGlb(stamped))).rejects.toThrow(
+      /prebaked for ground \[0, 1, 0\], the scene seats it on none/,
+    );
+    // Seated on both sides, but on different grounds.
+    await expect(run(await writeGlb(stamped), undefined, [0, 0, 1])).rejects.toThrow(
+      /prebaked for ground \[0, 1, 0\], the scene seats it on \[0, 0, 1\]/,
+    );
+
+    const unstamped = new Document();
+    unstamped.createBuffer();
+    const unstampedMaterial = await withBaseColour(unstamped, unstamped.createMaterial('one'));
+    const unstampedMesh = unstamped
+      .createMesh('m')
+      .addPrimitive(addTriangle(unstamped, unstampedMaterial, 0));
+    unstamped.createScene('s').addChild(unstamped.createNode('n').setMesh(unstampedMesh));
+
+    // The reverse: never baked against a ground, but the scene seats it.
+    await expect(run(await writeGlb(unstamped), undefined, [0, 1, 0])).rejects.toThrow(
+      /prebaked for ground none, the scene seats it on \[0, 1, 0\]/,
+    );
+  });
+
   it('merges several primitives sharing one material', async () => {
     const doc = new Document();
     doc.createBuffer();
@@ -166,7 +290,7 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
     expect(decoded.vertexCount).toBe(6);
     expect(decoded.indexCount).toBe(6);
     expect(row.triangleCount).toBe(2);
@@ -201,11 +325,12 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
     expect(decoded.vertexCount).toBe(3);
     // The joint/weight attributes left without taking the rest of the vertex.
     expect([...decoded.uvs]).toEqual([0, 0, 1, 0, 0, 1]);
-    expect([...decoded.normals]).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+    for (let v = 0; v < 3; v++)
+      expectDirectionNear(decoded.normals.slice(v * 3, v * 3 + 3), [0, 0, 1]);
     expect(row.attribution).toBe('A. Modeller — https://example.invalid/author');
   });
 
@@ -237,17 +362,18 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(parent);
 
     const row = (await run(await writeGlb(doc)))[0]!;
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (0,2,0) and (0,1,0) -> (-3,0,0); third vertex of each triangle
     // stays (0,0,0). Triangle A = (0,2,0),(-3,0,0),(0,0,0), area 3, own centroid
     // (-1, 2/3, 0). Triangle B = (0,4,0),(0,0,0),(0,0,1), area 2, own centroid
     // (0, 4/3, 1/3). Area-weighted: (3*A + 2*B) / 5 = (-3/5, 14/15, 2/15).
-    near(decoded.positions.slice(0, 6), [0.6, 16 / 15, -2 / 15, -2.4, -14 / 15, -2 / 15]);
-    near(decoded.normals.slice(0, 3), [0, 0, 1]);
+    expectVertexNear(readMesh(), decoded, [0.6, 16 / 15, -2 / 15]);
+    expectVertexNear(readMesh(), decoded, [-2.4, -14 / 15, -2 / 15]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
     // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
     // it through the cofactor matrix normals use would give (-2,3,0) instead.
-    near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
     // Farthest vertex from the centroid is (0,4,0), at distance sqrt(2201)/15.
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(2201) / 15, 4);
   });
@@ -269,13 +395,14 @@ describe('buildMeshes()', () => {
 
     // 90 deg about Z: x -> +y, y -> -x.
     await run(await writeGlb(doc), [0, 1, 0, -1, 0, 0, 0, 0, 1]);
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (0,1,0), (0,1,0) -> (-1,0,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is just the plain vertex average: (-1/3, 1/3, 0).
-    near(decoded.positions.slice(0, 6), [1 / 3, 2 / 3, 0, -2 / 3, -1 / 3, 0]);
-    near(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
-    near(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
+    expectVertexNear(readMesh(), decoded, [1 / 3, 2 / 3, 0]);
+    expectVertexNear(readMesh(), decoded, [-2 / 3, -1 / 3, 0]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
   });
 
   it('flips normals, handedness and winding for a mirrored node', async () => {
@@ -295,16 +422,16 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(node);
 
     await run(await writeGlb(doc));
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (-1,0,0), (0,1,0) -> (0,1,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is the plain vertex average: (-1/3, 1/3, 0).
-    near(decoded.positions.slice(0, 3), [-2 / 3, -1 / 3, 0]);
+    expectVertexNear(readMesh(), decoded, [-2 / 3, -1 / 3, 0]);
     // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
     // the determinant's sign put back, or every normal points into the surface.
-    near(decoded.normals.slice(0, 3), [0, 0, 1]);
-    near(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
-    expect([...decoded.indices]).toEqual([0, 2, 1]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
+    expect(faceFacing(decoded)).toBeGreaterThan(0);
   });
 
   it('rewinds a triangle whose order disagrees with its authored normal', async () => {
@@ -324,7 +451,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    expect([...decodeMesh(readMesh()).indices]).toEqual([0, 2, 1]);
+    expect(faceFacing(await decodeMesh(readMesh()))).toBeGreaterThan(0);
   });
 
   it('recentres an off-origin authored pivot instead of inflating the radius', async () => {
@@ -338,7 +465,7 @@ describe('buildMeshes()', () => {
 
     // The triangle's own centroid — (1000+1001+1000)/3, (0+0+1)/3 — not its
     // ~1000 m distance from the origin.
-    near(decodeMesh(readMesh()).positions.slice(0, 3), [-1 / 3, -1 / 3, 0]);
+    expectVertexNear(readMesh(), await decodeMesh(readMesh()), [-1 / 3, -1 / 3, 0]);
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(5) / 3, 4);
   });
 
@@ -361,14 +488,14 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
 
     await run(await writeGlb(doc));
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // Body centroid (4/3, 4/3, 0) at area 8; sliver centroid (301/3, 1/3, 0) at
     // area 0.5. Weighted: (8*(4/3) + 0.5*(301/3)) / 8.5 = 365/51, and
     // (8*(4/3) + 0.5*(1/3)) / 8.5 = 65/51 — nowhere near the bbox centre of
     // (50.5, 2, 0) a naive min/max midpoint would give.
-    near(decoded.positions.slice(0, 3), [-365 / 51, -65 / 51, 0]);
-    near(decoded.positions.slice(9, 12), [100 - 365 / 51, -65 / 51, 0]);
+    expectVertexNear(readMesh(), decoded, [-365 / 51, -65 / 51, 0]);
+    expectVertexNear(readMesh(), decoded, [100 - 365 / 51, -65 / 51, 0]);
   });
 
   it('ignores geometry orphaned off the scene graph', async () => {
@@ -386,7 +513,7 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    expect(decodeMesh(readMesh()).vertexCount).toBe(3);
+    expect((await decodeMesh(readMesh())).vertexCount).toBe(3);
     expect(row.triangleCount).toBe(1);
   });
 
@@ -411,7 +538,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    expect([...decodeMesh(readMesh()).tangents.slice(0, 4)]).toEqual([0, 1, 0, -1]);
+    expectDirectionNear((await decodeMesh(readMesh())).tangents.slice(0, 4), [0, 1, 0, -1]);
   });
 
   it('substitutes a flat normal and a constant mr map when the source has neither', async () => {
@@ -425,20 +552,22 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.substituted).toEqual(['metalRough', 'normalMap']);
-    const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.png'))
+    const normalPx = await sharp(join(dir, 'out', 'testmesh-small_normal.webp'))
       .raw()
       .toBuffer();
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
       .raw()
       .toBuffer();
     expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
     // glTF packs roughness in G and metallic in B; the material set 1 and 0.
-    expect([...mrPx.subarray(0, 3)]).toEqual([0, 255, 0]);
+    // R is glTF's occlusion — 255 (no occlusion) absent a packed AO bake.
+    expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
     expect(warn.mock.calls.flat().join(' ')).toMatch(/testmesh/);
-    // Pure red albedo — the mean the glint fallback reads back.
-    expect(row.meanAlbedo).toEqual([1, 0, 0]);
+    // Pure red albedo — the mean the glint fallback reads back, through a
+    // lossy codec.
+    row.meanAlbedo.forEach((c, i) => expect(c).toBeCloseTo([1, 0, 0][i]!, 2));
     expect(readFileSync(join(dir, 'meshAssets.generated.ts'), 'utf8')).toContain(
-      "path: 'meshes/testmesh.mesh'",
+      "tierCeiling: 'small'",
     );
   });
 
@@ -455,6 +584,43 @@ describe('buildMeshes()', () => {
     expect(warn.mock.calls.flat().join(' ')).not.toMatch(/substituting/);
   });
 
+  it('writes R = 255 when the mr texture carries no occlusion', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    // withEveryMap's mr texture is solid rgb(0, 255, 0) with no occlusionTexture.
+    const material = await withEveryMap(doc, doc.createMaterial('everyMap'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
+      .raw()
+      .toBuffer();
+    expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
+  });
+
+  it('keeps R when occlusion is packed into the mr texture', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('packedOcclusion'));
+    // Same Texture object on both slots — the ORM convention a real prebake emits.
+    const orm = doc
+      .createTexture('orm')
+      .setImage(await solidPng(77, 255, 0))
+      .setMimeType('image/png');
+    material.setMetallicRoughnessTexture(orm).setOcclusionTexture(orm);
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+
+    const mrPx = await sharp(join(dir, 'out', 'testmesh-small_mr.webp'))
+      .raw()
+      .toBuffer();
+    expect([...mrPx.subarray(0, 3)]).toEqual([77, 255, 0]);
+  });
+
   it('writes every MESH_TEXTURE_SLOTS suffix, so a slot added to the table lands on disk', async () => {
     const doc = new Document();
     doc.createBuffer();
@@ -465,7 +631,7 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
 
     for (const slot of MESH_TEXTURE_SLOTS) {
-      expect(existsSync(join(dir, 'out', `testmesh${slot.suffix}.png`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-small${slot.suffix}.webp`))).toBe(true);
     }
   });
 
@@ -501,5 +667,263 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.groundOffsetM).toBeCloseTo(1, 5);
+  });
+
+  it('carries the contact decal into the body frame', async () => {
+    // Same one-triangle fixture and 90-deg-about-Z remap as the "reorients
+    // every attribute" case above, so its area-weighted centroid is known:
+    // remapped vertices average to (-1/3, 1/3, 0).
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    const node = doc
+      .createNode('n')
+      .setMesh(doc.createMesh('m').addPrimitive(prim))
+      .setExtras({
+        aoGroundUp: [0, 1, 0],
+        // Off-origin and distinct from the geometry, so dropping either the
+        // remap or the centroid shift below lands on the wrong number.
+        contactDecal: { centre: [2, 3, 5], u: [1, 0, 0], v: [0, 1, 0] },
+      });
+    doc.createScene('s').addChild(node);
+
+    const glbPath = await writeGlb(doc);
+    await sharp({
+      create: { width: 1024, height: 1024, channels: 3, background: { r: 128, g: 128, b: 128 } },
+    })
+      .png()
+      .toFile(glbPath.replace(/\.glb$/, '.contact.png'));
+
+    // x -> +y, y -> -x.
+    const row = (await run(glbPath, [0, 1, 0, -1, 0, 0, 0, 0, 1], [0, 1, 0]))[0]!;
+
+    // remap(2,3,5) = (-3,2,5); minus the centroid (-1/3, 1/3, 0).
+    near(row.contactDecal!.centre, [-3 + 1 / 3, 2 - 1 / 3, 5]);
+    near(row.contactDecal!.halfU, [0, 1, 0]);
+    near(row.contactDecal!.halfV, [-1, 0, 0]);
+
+    const meta = await sharp(join(dir, 'out', 'testmesh_contact.webp')).metadata();
+    expect([meta.width, meta.height]).toEqual([512, 512]);
+  });
+
+  it('refuses a contact decal without a ground stamp', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(
+      doc
+        .createNode('n')
+        .setMesh(mesh)
+        .setExtras({ contactDecal: { centre: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] } }),
+    );
+
+    await expect(run(await writeGlb(doc))).rejects.toThrow(
+      'has one of aoGroundUp/contactDecal without the other (missing aoGroundUp)',
+    );
+  });
+
+  it('writes <key>-<tier> geometry and slot textures for every source tier', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await runTiers({ small: glbPath, medium: glbPath });
+
+    expect(existsSync(join(dir, 'out', 'testmesh-small.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh-medium.mesh'))).toBe(true);
+    expect(existsSync(join(dir, 'out', 'testmesh.mesh'))).toBe(false);
+    for (const slot of MESH_TEXTURE_SLOTS) {
+      expect(existsSync(join(dir, 'out', `testmesh-small${slot.suffix}.webp`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh-medium${slot.suffix}.webp`))).toBe(true);
+    }
+  });
+
+  it("caps each tier's textures at tierToTexturePx(tier)", async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = doc.createMaterial('one');
+    // A thin strip, not a full 4096x4096 square: `fit: 'inside'` still caps
+    // width at 2048/4096 per tier (the strip's height is never the binding
+    // dimension), and encoding it as webp is orders of magnitude cheaper —
+    // a full square blew CI's 5000 ms per-test timeout.
+    const bigAlbedo = await sharp({
+      create: { width: 4096, height: 8, channels: 3, background: { r: 200, g: 100, b: 50 } },
+    })
+      .png()
+      .toBuffer();
+    material.setBaseColorTexture(
+      doc.createTexture('albedo').setImage(new Uint8Array(bigAlbedo)).setMimeType('image/png'),
+    );
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await runTiers({ small: glbPath, medium: glbPath });
+
+    const small = await sharp(join(dir, 'out', 'testmesh-small_albedo.webp')).metadata();
+    const medium = await sharp(join(dir, 'out', 'testmesh-medium_albedo.webp')).metadata();
+    expect(small.width).toBe(2048);
+    expect(medium.width).toBe(4096);
+  });
+
+  it('takes row metrics from the ceiling tier', async () => {
+    // Both triangles share xy so only z (hence groundOffsetM) differs: small's
+    // centred minimum sits 2 m below its centroid, medium's 6 m below.
+    const smallDoc = new Document();
+    smallDoc.createBuffer();
+    const smallMaterial = await withBaseColour(smallDoc, smallDoc.createMaterial('one'));
+    const smallPrim = addPrim(smallDoc, smallMaterial, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, -3],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    smallDoc
+      .createScene('s')
+      .addChild(smallDoc.createNode('n').setMesh(smallDoc.createMesh('m').addPrimitive(smallPrim)));
+
+    const mediumDoc = new Document();
+    mediumDoc.createBuffer();
+    const mediumMaterial = await withBaseColour(mediumDoc, mediumDoc.createMaterial('one'));
+    const mediumPrim = addPrim(mediumDoc, mediumMaterial, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, -9],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    mediumDoc
+      .createScene('s')
+      .addChild(
+        mediumDoc.createNode('n').setMesh(mediumDoc.createMesh('m').addPrimitive(mediumPrim)),
+      );
+
+    const row = (
+      await runTiers({
+        small: await writeGlbNamed(smallDoc, 'small.glb'),
+        medium: await writeGlbNamed(mediumDoc, 'medium.glb'),
+      })
+    )[0]!;
+
+    expect(row.tierCeiling).toBe('medium');
+    expect(row.groundOffsetM).toBeCloseTo(6, 4);
+  });
+
+  it('refuses a tier set that skips a rung', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(doc);
+
+    await expect(runTiers({ small: glbPath, large: glbPath })).rejects.toThrow(
+      'buildMeshes: testmesh ships tiers [small, large] — tiers must run contiguously from small',
+    );
+  });
+
+  it('keeps the contact mask untiered', async () => {
+    const seatedDoc = () => {
+      const doc = new Document();
+      doc.createBuffer();
+      return withBaseColour(doc, doc.createMaterial('one')).then((material) => {
+        const prim = addPrim(doc, material, {
+          positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+          normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+        });
+        const node = doc
+          .createNode('n')
+          .setMesh(doc.createMesh('m').addPrimitive(prim))
+          .setExtras({
+            aoGroundUp: [0, 1, 0],
+            contactDecal: { centre: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] },
+          });
+        doc.createScene('s').addChild(node);
+        return doc;
+      });
+    };
+
+    const smallGlb = await writeGlbNamed(await seatedDoc(), 'small.glb');
+    const mediumGlb = await writeGlbNamed(await seatedDoc(), 'medium.glb');
+    // Only the CEILING tier's sibling .contact.png exists — if a non-ceiling
+    // tier still tried to bake a contact mask it would throw for a missing file.
+    await sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 1, g: 1, b: 1 } } })
+      .png()
+      .toFile(mediumGlb.replace(/\.glb$/, '.contact.png'));
+
+    await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, [0, 1, 0]);
+
+    expect(existsSync(join(dir, 'out', 'testmesh_contact.webp'))).toBe(true);
+  });
+
+  it('simplifies only the tier whose tiers entry carries a triangle target', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    // A 5x5 grid (50 tris): small enough that LockBorder's pinned perimeter
+    // still leaves room to reach the 20-tri target below.
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 5));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const smallGlb = await writeGlbNamed(gridDoc, 'small.glb');
+    const mediumGlb = await writeGlbNamed(gridDoc, 'medium.glb');
+
+    const row = (
+      await runTiers({ small: smallGlb, medium: mediumGlb }, undefined, undefined, { small: 20 })
+    )[0]!;
+
+    // Row metrics come from the ceiling tier (medium), which was never
+    // simplified — the full 50-triangle grid.
+    expect(row.triangleCount).toBe(50);
+    // The small tier actually ran simplification, rather than the wiring
+    // silently passing the source through untouched.
+    const smallTriangleCount = (await decodeMesh(readMesh())).indexCount / 3;
+    expect(smallTriangleCount).toBeGreaterThanOrEqual(19);
+    expect(smallTriangleCount).toBeLessThanOrEqual(21);
+  });
+
+  it('refuses a tier whose simplified count misses its target by more than 5%', async () => {
+    const gridDoc = new Document();
+    gridDoc.createBuffer();
+    const material = await withBaseColour(gridDoc, gridDoc.createMaterial('one'));
+    const mesh = gridDoc.createMesh('m').addPrimitive(addGrid(gridDoc, material, 8));
+    gridDoc.createScene('s').addChild(gridDoc.createNode('n').setMesh(mesh));
+    const glbPath = await writeGlb(gridDoc);
+
+    // The grid has 128 triangles; a 500-triangle target can never be reached
+    // by a simplifier that only ever removes triangles.
+    await expect(
+      runTiers({ small: glbPath }, undefined, undefined, { small: 500 }),
+    ).rejects.toThrow(/missing its 500-tri target/);
+  });
+
+  it('translates a georeferenced source by its offset instead of recentring on the mass centroid', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [0, 0, 0, 2, 0, 0, 0, 2, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(prim)));
+
+    const row = (
+      await runTiers({ small: await writeGlb(doc) }, undefined, undefined, undefined, [-5, 3])
+    )[0]!;
+    const decoded = await decodeMesh(readMesh());
+
+    // Every vertex shifts by the fixed offset — not the area-weighted mass
+    // centroid, which for this triangle would sit at (2/3, 2/3, 0).
+    expectVertexNear(readMesh(), decoded, [5, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [7, -3, 0]);
+    expectVertexNear(readMesh(), decoded, [5, -1, 0]);
+    // boundingRadiusM/minZ are measured from the new (site) origin: the
+    // farthest translated vertex is (7, -3, 0), at distance sqrt(58).
+    expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(58), 4);
+    expect(row.groundOffsetM).toBeCloseTo(0, 6);
   });
 });

@@ -8,7 +8,6 @@ export const SDSS_ENTRY = {
   label: 'SDSS',
   binBaseName: 'sdss',
   allSky: false,
-  visible: true,
   bearsLabel: false,
   bearsMarker: false,
   // Main galaxy sample reaches z ~ 0.7+ for luminous red galaxies;

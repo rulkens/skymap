@@ -114,11 +114,12 @@ describe('packGalaxyPointUniforms — CameraUniforms prefix (bytes 0..79)', () =
     expect(f32[17]).toBe(VIEWPORT_PX[1]); // 1080
   });
 
-  it('leaves cam._pad0/1 (bytes 72..79, float indices 18/19) as zero', () => {
+  // The shared prefix's focal term: a zero here divides by zero in any
+  // shader that reads cam.pxPerRad instead of the tail copy at byte 108.
+  it('writes cam.pxPerRad at byte 72 (float index 18)', () => {
     const buf = packGalaxyPointUniforms(VIEW_PROJ, VIEWPORT_PX, SETTINGS);
     const f32 = new Float32Array(buf);
-    expect(f32[18]).toBe(0);
-    expect(f32[19]).toBe(0);
+    expect(f32[18]).toBe(SETTINGS.pxPerRad);
   });
 });
 

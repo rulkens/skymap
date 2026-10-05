@@ -50,14 +50,11 @@ import {
   STAR_OFFSET_LEVELS,
 } from '../../../data/starCatalog/starCatalogFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { starOctreeIndex } from '../../gpu/renderers/starCatalog/starOctreeIndex';
-import { starNodeOriginRelCamMpc } from '../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
+import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
-
-/** The box arrays are in parsecs; the camera and radius arrive in Mpc. */
-const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
 
 /**
  * The nearest catalogued star whose heliocentric position lies within
@@ -80,10 +77,10 @@ export function nearestResolvableStar(
 
   // The expanded-box containment test runs in parsecs (the box arrays' unit); the
   // nearest-record compare runs in Mpc (the reconstruction's unit).
-  const camXPc = camPosMpc[0] * MPC_TO_PC;
-  const camYPc = camPosMpc[1] * MPC_TO_PC;
-  const camZPc = camPosMpc[2] * MPC_TO_PC;
-  const radiusPc = searchRadiusMpc * MPC_TO_PC;
+  const camXPc = camPosMpc[0] * SCALE_UNITS.MPC_TO_PC;
+  const camYPc = camPosMpc[1] * SCALE_UNITS.MPC_TO_PC;
+  const camZPc = camPosMpc[2] * SCALE_UNITS.MPC_TO_PC;
+  const radiusPc = searchRadiusMpc * SCALE_UNITS.MPC_TO_PC;
 
   const radiusSqMpc = searchRadiusMpc * searchRadiusMpc;
   let bestSqMpc = radiusSqMpc;

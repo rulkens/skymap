@@ -10,21 +10,13 @@
 
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
-import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
-import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
+import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
-import { createZoneOfAvoidanceRenderer } from '../../gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
-import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
-import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
-import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
-import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
-import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
-import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
+import { createTerrainPickMarkerRenderer } from '../../gpu/renderers/devTools/terrainPickMarkerRenderer';
 import { SURFACE_TILE_MESH_RESOLUTION } from '../../../data/bodies/surfaceTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
@@ -32,18 +24,12 @@ import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
 import { createCloudShellRenderer } from '../../gpu/renderers/bodies/cloudShellRenderer';
 import { createAtmosphereShellRenderer } from '../../gpu/renderers/atmosphere/atmosphereShellRenderer';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
-import { createStarRenderer } from '../../gpu/renderers/bodies/starRenderer';
 import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer';
-import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
-import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
-import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
-import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
+import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
-import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
 import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
@@ -54,7 +40,6 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineR
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
@@ -94,7 +79,7 @@ export const GPU_HANDLE_ROWS = [
     construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(
         deps.ctx.device,
-        deps.ctx.format,
+        composeRenderTargetRows(deps.ctx.format, state.layerTargets),
         { width: deps.ctx.canvas.width, height: deps.ctx.canvas.height },
         state,
       ),
@@ -104,7 +89,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelRenderer',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, undefined, undefined, {
+      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, {
         occludeAgainstScene: true,
       }),
   },
@@ -144,8 +129,6 @@ export const GPU_HANDLE_ROWS = [
         deps.ctx,
         deps.ctx.format,
         deps.fontAtlases,
-        FOREGROUND_LABEL_CAPACITY,
-        undefined,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
         // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
@@ -189,19 +172,9 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
-    key: 'milkyWayPickRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayPickRenderer(deps.ctx, deps.fadeBgl, SLAB_REVERSED_Z[NEAR0]!),
-  },
-  {
     key: 'horizonShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
-  },
-  {
-    key: 'zoneOfAvoidanceRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Draws into HDR (rgba16float), not the swap chain — no
@@ -209,54 +182,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'label3DRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
-  },
-  {
-    key: 'constellationRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createConstellationRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
-  },
-  {
-    // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `state.settings.milkyWay`:
-    // runFrame regenerates the cloud on divergence from the live setting, so
-    // reading settings here would just add a second path to the same answer.
-    key: 'milkyWayCloud',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayCloud(deps.ctx.device, MILKY_WAY_TUNING_DEFAULTS.starCount),
-  },
-  {
-    key: 'milkyWayCloudRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMilkyWayCloudRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
-  },
-  {
-    key: 'volumeFieldRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
-  },
-  {
-    key: 'flowFieldRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createFlowFieldRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
-  },
-  {
-    key: 'volumeUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    key: 'milkyWayAggregateUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    key: 'zoneOfAvoidanceUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    key: 'starAggregateUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarAggregateUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     key: 'bloomPyramid',
@@ -269,16 +194,6 @@ export const GPU_HANDLE_ROWS = [
   // (data/renderTargetFormats.ts) with that row's format/depth in
   // renderTargets.ts, so the two can't drift apart.
   {
-    key: 'starRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
-  },
-  {
     key: 'planetRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createPlanetRenderer(
@@ -289,39 +204,9 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
-    // The camera-free boot seed: the whole star list, positioned at the fixed
-    // J2000 epoch (a star is a static anchor, so the epoch cannot move it).
-    // Folded into `construct` per the plan's risk-register note — this is a
-    // one-time boot seed with no other handle reading it in between.
-    key: 'starPointRenderer',
-    construct: (state: EngineState, deps: GpuHandleConstructDeps) => {
-      const bootBodyStates = deriveBodyStates(CONST_J2000);
-      const starPointRenderer = createStarPointRenderer(deps.ctx.device, HDR_TARGET_FORMAT);
-      starPointRenderer.setStars(
-        state.data.bodies.stars.map((star) => ({
-          ...star,
-          positionMpc: bootBodyStates.get(star.id)!.positionMpc,
-        })),
-        // Boot seed, no frame yet — the main view's slot. `starPointsPass`
-        // re-uploads every real frame (its own module header), so this is
-        // overwritten before the first draw.
-        0,
-      );
-      return starPointRenderer;
-    },
-  },
-  {
     key: 'bodyGlintRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createBodyGlintRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    // Boot-eager like every other renderer row, deliberately: the deflection
-    // LUT build + its 2 KB texture + two pipelines are a one-off cost, unlike
-    // the 50 MB `sky-cubemap` target, which is lazy (`allocateWhen`).
-    key: 'sgrAStarLensingRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   {
     // Draws into a probe's cube (`meshBodyRenderer` mints it in this format).
@@ -330,21 +215,11 @@ export const GPU_HANDLE_ROWS = [
       createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
-    key: 'starCatalogRenderer',
+    // Boot-eager like every other renderer row; `dome-cube` itself is the lazy
+    // one (`allocateWhen: state.viewRig === 'dome'`).
+    key: 'domeResampleRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarCatalogRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    // Cross-handle read: borrows the visual renderer's exposed BGLs + records
-    // bind group so its own pick pipeline stays bind-group compatible.
-    // `starCatalogRenderer` must be (and is) an earlier row.
-    key: 'starCatalogPickRenderer',
-    construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
-      createStarCatalogPickRenderer(
-        deps.ctx.device,
-        state.gpu.starCatalogRenderer!.pickResources(),
-        SLAB_REVERSED_Z[NEAR0]!,
-      ),
+      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'bodyPickRenderer',
@@ -377,6 +252,16 @@ export const GPU_HANDLE_ROWS = [
         FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
         SURFACE_TILE_MESH_RESOLUTION,
+      ),
+  },
+  {
+    key: 'terrainPickMarkerRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createTerrainPickMarkerRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
       ),
   },
   {
@@ -425,13 +310,7 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'atmosphereShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAtmosphereShellRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-        ATMOSPHERE_PARAMS,
-      ),
+      createAtmosphereShellRenderer(deps.ctx.device, HDR_TARGET_FORMAT, ATMOSPHERE_PARAMS),
   },
 
   // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────

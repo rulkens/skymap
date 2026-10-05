@@ -5,7 +5,8 @@ import type { ScalarFieldPaletteId } from '../../../../../src/@types/data/volume
 /**
  * defaultViewSlice — raymarch + galaxies on, framing a box a few hundred Mpc across
  * (the sim's own scale, not the runtime's power-of-ten ladder). `inferno`
- * matches the runtime MCPM volume entry's default palette (`src/data/sources/mcpm.ts`)
+ * matches the runtime MCPM volume entry's default palette
+ * (`src/layers/cosmicWebDensity/sources/mcpm.ts`)
  * so a workbench/app comparison isn't also a palette diff. `trimDensity`/
  * `sampleWeight`/`stepVoxels` are the fork's shipped raymarch defaults (vendor
  * main.cpp:764,:770) — keep them exact so a workbench/fork comparison isn't

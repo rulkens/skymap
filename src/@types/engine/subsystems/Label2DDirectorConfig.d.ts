@@ -1,4 +1,4 @@
-import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
+import type { FrameView } from '../frame/FrameView';
 import type { Label2DProjection } from '../../rendering/Label2DProjection';
 import type { Label2DDeclutterPolicy } from './Label2DDeclutterPolicy';
 import type { Label2DEnvelopePolicy } from './Label2DEnvelopePolicy';
@@ -14,7 +14,7 @@ import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
 export type Label2DDirectorConfig = {
   readonly id: string;
   /** Resolves this frame's projection for the director's slab. Memoised per ctx. */
-  readonly project: (ctx: ReadyFrameContext) => Label2DProjection;
+  readonly project: (ctx: FrameView) => Label2DProjection;
   readonly declutter: Label2DDeclutterPolicy;
   readonly envelope: Label2DEnvelopePolicy;
   /** `null` STATES the stance — not optional, so a third instance must decide. */

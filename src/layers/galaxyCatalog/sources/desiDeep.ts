@@ -14,12 +14,6 @@ export const DESI_DEEP_ENTRY = {
   allSky: false,
   bearsLabel: false,
   bearsMarker: false,
-  // Off by default: a single 2.5°-radius pencil-beam reaching z ≈ 3.5 / ~7 Gpc
-  // is a specialist overlay, not part of the all-sky default scene the other
-  // bulk catalogs populate — dropping a lone spike of far-field points into an
-  // otherwise coherent local view would mislead more than inform. The
-  // GalaxiesSection toggle is the opt-in for anyone who wants the deep cone.
-  visible: false,
   // The QSO tracer's z ≈ 3.5 ceiling maps to ~7100 Mpc of line-of-sight
   // comoving distance under the flat-ΛCDM conversion the pipeline applies to
   // every row (`redshiftToDistanceMpc`, Simpson-integrated) — NOT the linear

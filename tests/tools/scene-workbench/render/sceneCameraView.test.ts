@@ -14,7 +14,13 @@ describe('sceneCameraView', () => {
     // rightM = normalize(forward × upRef) = [-1,0,0],
     // upM = normalize(rightM × forward) = [0,0,1].
     const view = sceneCameraView(
-      { yaw: Math.PI / 2, pitch: 0, distanceM: 100, targetM: [10, 0, 0] },
+      {
+        yaw: Math.PI / 2,
+        pitch: 0,
+        distanceM: 100,
+        targetM: [10, 0, 0],
+        projection: 'perspective',
+      },
       [800, 600],
     );
 
@@ -50,7 +56,13 @@ describe('sceneCameraView', () => {
 
   it('keeps the basis finite looking straight down', () => {
     const view = sceneCameraView(
-      { yaw: 0.7, pitch: Math.PI / 2 - 1e-9, distanceM: 50, targetM: [0, 0, 0] },
+      {
+        yaw: 0.7,
+        pitch: Math.PI / 2 - 1e-9,
+        distanceM: 50,
+        targetM: [0, 0, 0],
+        projection: 'perspective',
+      },
       [800, 600],
     );
 

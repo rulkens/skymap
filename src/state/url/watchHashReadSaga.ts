@@ -1,9 +1,9 @@
 /**
  * watchHashReadSaga — the URL→store half of the hash sync. It applies the hash
  * the visitor arrived on once at boot, then drains `createHashChangeChannel`
- * forever, applying every subsequent navigation the same way. Routing (which
- * param means which actions) lives entirely in `HASH_PARAM_SOURCES`; this saga
- * is the uniform pump, exactly as `watchKeyboardEventsSaga` is for keys.
+ * forever, applying every subsequent navigation the same way. What each param
+ * means lives in `HASH_PARAM_SOURCES` and `linkIntentFrom`; this saga is the
+ * uniform pump, exactly as `watchKeyboardEventsSaga` is for keys.
  *
  * ### Why its dispatches need the engine context to exist
  *
@@ -23,18 +23,15 @@
  * starts — safe only where nothing downstream of its dispatches reaches for the
  * engine, which is true of its test and of nowhere in the app.
  *
- * ### Two passes, one flag
+ * ### Two passes
  *
- * The boot read and a back/forward navigation differ in precisely one respect:
- * what an ABSENT param means. On arrival it means nothing at all — the store
- * has just booted at its defaults, so there is nothing to restore. On a
- * navigation it means "this history entry claims no value here", and the param
- * must return to its default or the entry is a lie: `#orientation=galactic` →
- * Back would otherwise leave the camera galactic forever.
- *
- * That distinction is a property of the PASS, not of any row, which is why
- * `isInitial` is read exactly once, in `applyHash`, and never reaches a row.
- * See `applyHash` for what the alternative would have cost.
+ * The boot read hands its intent to `arrivalSaga`, which owns the first view;
+ * a back/forward navigation is applied here. They also differ in what an
+ * ABSENT param means. On arrival it means nothing at all — the store has just
+ * booted at its defaults, so there is nothing to restore. On a navigation it
+ * means "this history entry claims no value here", and the param must return
+ * to its default or the entry is a lie: `#orientation=galactic` → Back would
+ * otherwise leave the camera galactic forever.
  *
  * ### Why the channel is opened before the boot read
  *
@@ -54,7 +51,7 @@
  *
  * No cycle is not the same as no interaction, and the difference is where the
  * history stack gets damaged. Every action this saga dispatches is a candidate
- * hash-write trigger, and `applyHash` dispatches one row's worth at a time — so
+ * hash-write trigger, and `applyNavigation` dispatches one action at a time — so
  * a store part-way through the pass is a store that has applied SOME of the URL,
  * and any write composing from it publishes a hash that was never on any history
  * entry. A `pushState` during a Back navigation truncates the forward stack, so
@@ -70,45 +67,47 @@
  * the write half's question to answer, and it is the only half that can.
  */
 
-import { take, call, put } from 'typed-redux-saga';
+import { take, call, put, select } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
+import { hashNavigationStarted } from './hashNavigationStarted';
+import { arrivalPending } from '../arrival/arrivalSlice';
+import { navigateSaga } from '../navigation/navigateSaga';
+import { selectTakeoverSource } from '../takeover/selectors';
+import { exitTakeover } from '../takeover/takeoverActions';
+import { linkIntentFrom } from '../../utils/url/linkIntentFrom';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
 import { parseHashParams } from '../../utils/url/parseHashParams';
 
 /**
- * Apply one hash body to the store: walk the table, hand each row its value,
- * and `put` whatever actions come back.
- *
- * `isInitial` is consumed here and only here. Threading it into every row's
- * `read` instead — which is the shape this replaced — hands three rows a flag
- * they would all branch on identically, and turns "the boot read restores
- * nothing" into a claim re-stated once per row, free to drift in any one of
- * them. Stated at the pass, a new row inherits it by existing.
+ * Apply one navigation to the store: leave the running play the entry drops,
+ * what the link says (`navigateSaga`, which flies), then each ABSENT row's
+ * default.
  */
-function* applyHash(body: string, isInitial: boolean) {
+function* applyNavigation(body: string) {
+  yield* put(hashNavigationStarted());
+  const intent = linkIntentFrom(body);
+  const { view } = intent;
+  const names = (kind: string, id: string) => view.kind === kind && 'id' in view && view.id === id;
+  const takeover = yield* select(selectTakeoverSource);
+  const keepsTakeover = takeover !== null && names(takeover.kind, takeover.id);
+
+  // An entry that leaves out the running play's key is one from before it,
+  // such as Back to the pre-tour URL.
+  if (takeover !== null && !keepsTakeover) yield* put(exitTakeover());
+  // The app's own writes push silently, so an entry naming what runs is
+  // Back/Forward across that play's own history (a tour pushes one per
+  // focus); navigating would restart it.
+  if (!keepsTakeover) yield* call(navigateSaga, intent, 'fly' as const);
+
   const params = parseHashParams(body);
   for (const source of HASH_PARAM_SOURCES) {
-    const value = params.get(source.key);
-
-    // The falsy check is deliberate and is NOT interchangeable with
-    // `value !== undefined`. `#focus=` parses to the key `focus` mapped to
-    // `''` — present on the URL, but saying nothing — and routing it to the
-    // absent arm here is what makes `HashParamSource.read`'s "never called
-    // with an empty value" contract true. No row carries an empty-string
-    // guard of its own because of this line: widening it would have `focus`
-    // request the id `''` and `t` try to parse `''` as a date, from a URL that
-    // was merely truncated in a chat client.
-    //
-    // The boot read skips the absent arm entirely. The store has just booted
-    // at its defaults so there is nothing for `readAbsent` to correct, and it
-    // would not be inert: `clearSelection()` on a bare load races the engine's
-    // own home seed (`wireInput`'s Earth focus/select), and whichever landed
-    // second would win. Absence only carries meaning once something was there
-    // to lose, which is exactly what a hashchange reports.
-    const actions = value ? source.read(value) : isInitial ? [] : source.readAbsent();
-    for (const action of actions) yield* put(action);
+    // Falsy, NOT `=== undefined`: `#focus=` (a URL truncated in a chat client)
+    // is present but says nothing, so it restores the default like an absence
+    // — the same test by which `linkIntentFrom` keeps `''` from any row's `read`.
+    if (params.get(source.key)) continue;
+    for (const action of source.readAbsent()) yield* put(action);
   }
 }
 
@@ -118,9 +117,9 @@ export function* watchHashReadSaga() {
     // The boot read sits INSIDE the try. It is the pass most likely to throw —
     // it is the only one fed a URL nobody in this session composed — and a
     // throw outside would leave the DOM listener attached with no owner.
-    yield* call(applyHash, yield* call(readHashBody), true);
+    yield* put(arrivalPending(linkIntentFrom(yield* call(readHashBody))));
     while (true) {
-      yield* call(applyHash, yield* take(channel), false);
+      yield* call(applyNavigation, yield* take(channel));
     }
   } finally {
     channel.close();

@@ -10,6 +10,7 @@ import type { TonemapSettings } from './TonemapSettings';
 import type { HdrSettings } from './HdrSettings';
 import type { BloomSettings } from './BloomSettings';
 import type { LabelSettings } from './LabelSettings';
+import type { PickingSettings } from './PickingSettings';
 import type { DebugSettings } from './DebugSettings';
 
 export type CoreSettingsState = {
@@ -21,5 +22,7 @@ export type CoreSettingsState = {
   bloom: BloomSettings;
   /** Cross-cutting label knobs — they MULTIPLY on top of per-layer label gates. */
   labels: LabelSettings;
+  /** Cross-cutting: which selection kinds a scene click or hover may resolve. */
+  picking: PickingSettings;
   debug: DebugSettings;
 };

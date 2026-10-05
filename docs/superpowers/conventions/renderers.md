@@ -101,7 +101,7 @@ Two rules follow from that:
   consumed by both `labels/markerLineRenderer.ts` and `devTools/debugLineRenderer.ts`, so
   filing it under either family would mislead the next reader who greps for its other caller.
   `milkyWay/sprites/` is not that case despite two callers: its draw pair is
-  `renderers/milkyWay/`'s and its three generation shaders are
+  the milkyWay Layer's `render/milkyWayCloudRenderer.ts` and its three generation shaders are
   `engine/galaxyGenerator/v1/`'s, but both are the one point-cloud tier — a renderer and the
   producer feeding it, not two families.
 

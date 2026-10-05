@@ -10,14 +10,25 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { handleProcessAlphaOnly } from '../../../../tools/famous-curator/plugin/routes/processAlphaOnly';
 
-async function seedSessionWithStarless(): Promise<{ tmpId: string; dir: string; starlessMtimeMs: number }> {
+async function seedSessionWithStarless(): Promise<{
+  tmpId: string;
+  dir: string;
+  starlessMtimeMs: number;
+}> {
   const root = mkdtempSync(join(tmpdir(), 'curator-alpha-only-'));
   const tmpId = 'sess';
   const dir = join(root, tmpId);
   require('node:fs').mkdirSync(dir, { recursive: true });
   const png = await sharp({
-    create: { width: 64, height: 64, channels: 4, background: { r: 200, g: 200, b: 200, alpha: 1 } },
-  }).png().toBuffer();
+    create: {
+      width: 64,
+      height: 64,
+      channels: 4,
+      background: { r: 200, g: 200, b: 200, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
   writeFileSync(join(dir, 'starless.png'), png);
   return { tmpId, dir, starlessMtimeMs: statSync(join(dir, 'starless.png')).mtimeMs };
 }

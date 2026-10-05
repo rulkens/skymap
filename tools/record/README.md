@@ -39,8 +39,8 @@ full design and the spike's findings.
 ## Usage
 
 Full take, defaults (`grandTour`, all beats, 3840×2160 output @ 60 fps —
-rendered in a 1920×1080 viewport at `deviceScaleFactor: 2` so captions keep
-their designed proportions — H.264 `-crf 16`, output
+rendered in a 3840×2160 viewport at `deviceScaleFactor: 1` — H.264 `-crf 16`,
+output
 `recordings/grandTour-3840x2160-60fps-<timestamp>.mp4`):
 
 ```bash
@@ -51,44 +51,49 @@ Flags (all optional; positional `tour id` defaults to `grandTour`). `--clip`
 switches the take to a standalone clip and is mutually exclusive with the
 positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 
-| Flag         | Default                                             | Notes                                                                                                                                                                                 |
-| ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--clip`     | none — the take is a tour                           | clip id, must exist in `clipRegistry`; the take plays whole (`--beats` is rejected alongside it)                                                                                      |
-| `--beats`    | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based; tour-only, rejected alongside `--clip`                                                                                                                    |
-| `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                                                      |
-| `--fps`      | `60`                                                | positive integer                                                                                                                                                                      |
-| `--size`     | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                                                                                                                           |
-| `--dpr`      | `2`                                                 | viewport = size/dpr; `1` for CSS-px-native capture                                                                                                                                    |
-| `--out`      | `recordings/<take>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created); `<take>` is the tour or clip id                                                                   |
-| `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either; rejected alongside `--serve` |
-| `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                       |
-| `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                    |
-| positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                    |
+| Flag         | Default                                             | Notes                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--clip`     | none — the take is a tour                           | clip id, must exist in `clipRegistry`; the take plays whole (`--beats` is rejected alongside it)                                                                                                         |
+| `--beats`    | full tour (`0..lastBeat`)                           | `a..b`, inclusive, 0-based; tour-only, rejected alongside `--clip`                                                                                                                                       |
+| `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                                                                         |
+| `--fps`      | `60`                                                | positive integer                                                                                                                                                                                         |
+| `--size`     | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                                                                                                                                              |
+| `--dpr`      | `1`                                                 | viewport = size/dpr; `2` only to reproduce older, softer takes — it halves the rendered resolution                                                                                                       |
+| `--out`      | `recordings/<take>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created); `<take>` is the tour or clip id                                                                                      |
+| `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either; rejected alongside `--serve`                    |
+| `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                                          |
+| `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                                       |
+| `--dome`     | off                                                 | fulldome fisheye take — see [Fulldome (Wisdome)](#fulldome-wisdome); implies `--size 4096x4096 --dpr 1 --fps 30` (`--fps 60` also accepted), encodes with `libx264` at level 6.1 instead of VideoToolbox |
+| `--frames`   | none — plays to the take's natural end              | stop after this many CAPTURED frames (positive integer); the take ends at min(natural end, a looping clip's cycle, `--frames`) — never a way to run a loop twice                                         |
+| positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                                       |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
-how they are produced. At the default `--dpr 2` the page runs in a size/2
-viewport at `deviceScaleFactor: 2`: DOM captions are typeset in CSS pixels,
-so this renders them at the relative size a designer sees on a 2× display,
-while the app's DPR-capped canvas sizing (`min(devicePixelRatio, 2)` in
-`src/services/gpu/device.ts`) rasterizes the identical native canvas either
-way — dpr 2 costs nothing. The harness captures with an explicit screenshot
-clip at `scale = dpr` (unclipped CDP captures come back in CSS pixels), so
-the output stays size-exact. Both `--size` dimensions must divide evenly by
-`--dpr`.
+how they are produced. At the default `--dpr 1` the viewport IS the film
+resolution. `--dpr 2` runs the page in a size/2 viewport at
+`deviceScaleFactor: 2`, which typesets DOM captions as a 2× display would —
+but it also **halves the rendered resolution**: the first clipped capture
+drops the page's `devicePixelRatio` to 1 permanently, the canvas backing
+store follows it down, and every later frame is a half-size render upscaled
+into the file (soft stars, px-clamped labels twice their intended size). It
+survives only to reproduce the older, softer takes. The harness captures
+with an explicit screenshot clip at `scale = dpr` (unclipped CDP captures
+come back in CSS pixels), so the output stays size-exact. Both `--size`
+dimensions must divide evenly by `--dpr`.
 
 Beat indices are the 0-based numbers `npm run tour-length` prints for a tour
 — use that command first to find the range you want.
 
 Partial take for iteration, against a dev server on a non-standard port
-(1920×1080 output, i.e. a 960×540 viewport at the default dpr 2):
+(1920×1080 output, i.e. a 1920×1080 viewport at the default dpr 1):
 
 ```bash
 npm run record-tour -- --beats 4..6 --fps 30 --size 1920x1080 \
   --url http://localhost:5174 --out recordings/beat-4-6.mp4
 ```
 
-Add `--dpr 1` to capture CSS-px-native instead (viewport = `--size` exactly,
-captions proportionally smaller — how the app looks on a 1× monitor).
+Add `--dpr 2` to typeset captions as a 2× display would (viewport = size/2,
+captions proportionally larger) — at the cost of the resolution collapse
+described above.
 
 A windowed take (`--beats` with a nonzero start) automatically burns and
 discards `FOLD_SETTLE_MS` (1 s) of virtual time before capturing — the saga's
@@ -125,6 +130,37 @@ the same way the rest of the recorder logs its ffmpeg/Chromium steps; the
 served URL is read back from `vite preview`'s own stdout banner rather than
 assumed, since `vite preview --port` bumps to the next free port when the
 requested one is busy.
+
+## Fulldome (Wisdome)
+
+```bash
+npm run record-tour -- --beats 4..6 --dome --frames 150 --out recordings/dome-smoke.mp4
+```
+
+`--dome` records the fulldome fisheye rig (`?dome`, `VIEW_RIGS.dome`) instead
+of the flat main view: a single equidistant-fisheye disc composited from five
+face renders, square by construction. It implies `--size 4096x4096 --dpr 1
+--fps 30`, the delivery format for the Wisdome dome; an explicit `--size` may
+still override it, but only to another square (`--size 1024x1024` is a fast
+pipeline check, `--size 1920x1080` is rejected), and an explicit `--dpr` or
+`--fps` that disagrees with the pinned value throws rather than silently
+recording a take the venue can't play.
+
+A 4096×4096 frame is 65 536 macroblocks — over H.264 level 5.2's limit — so
+`--dome` encodes with software `libx264` (`-profile:v main -level 6.1 -crf
+20`) instead of the VideoToolbox path the rest of this tool uses; there is no
+hardware encoder available at level 6.1. A full-size dome take is
+correspondingly slow to encode; use `--frames` (below) to check the pipeline
+at a fraction of the frame count before committing to a multi-hour render.
+
+Expected `ffprobe` report for a dome take: `4096x4096`, `profile Main`,
+`level 61`, `pix_fmt yuv420p`, `r_frame_rate 30/1`.
+
+`--frames N` stops the take after N captured frames, closing the file
+cleanly rather than erroring — useful for any take, not just `--dome`, to
+check a pipeline change cheaply: a full dome frame renders five faces, so an
+early smoke test at `--frames 150` (5 s of film) costs minutes instead of the
+full take's hour-plus.
 
 ## Clip takes
 
@@ -205,7 +241,7 @@ not settle or dress a clip's opening the way it settles a windowed tour take
 `scene()` / `show()` / `hide()` cues placed at t=0 on the clip's OWN timeline,
 authored with `over: 0` so they fire as a single instant rather than a fade.
 `cosmicFlows` (`src/data/animation/clips/cosmicFlows.ts`) shows the cue
-shape — `hide(['volumesMaster', 'filaments', 'surveyLabel'], 0)`,
+shape — `hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0)`,
 `fade(['flow'], 0, 0)`, and `scene(setFlowEnabled(true))` are all instant
 cues — though in that clip they land 2 s into the timeline, after a leading
 `wait(2)` lead-in, not at literal t=0: a clip whose dressing must be visible

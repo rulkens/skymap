@@ -119,8 +119,7 @@ export function InfoTip({
   // React's CSSProperties typings include the modern anchor-positioning
   // declarations as of @types/react 19, but to keep the project portable
   // across older toolchains we cast through `Record<string, string>`.
-  const triggerStyle: CSSProperties = { anchorName } as CSSProperties &
-    Record<string, string>;
+  const triggerStyle: CSSProperties = { anchorName } as CSSProperties & Record<string, string>;
   const tipStyle: CSSProperties = { positionAnchor: anchorName } as CSSProperties &
     Record<string, string>;
 

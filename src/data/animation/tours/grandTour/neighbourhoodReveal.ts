@@ -42,7 +42,7 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
-export const REVEAL_DWELL_SEC = 12;
+const REVEAL_DWELL_SEC = 12;
 
 // Where the pull-out lands: wide enough that the neighbouring groups' scale
 // reads (the flythrough's subjects sit ~3.5 Mpc out), eye-tuned from there.

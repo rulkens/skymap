@@ -11,15 +11,19 @@ import type { BloomStepSpec } from './BloomStepSpec';
 import type { CaptureStepSpec } from './CaptureStepSpec';
 import type { CompositeStepSpec } from './CompositeStepSpec';
 import type { ComputeStepSpec } from './ComputeStepSpec';
+import type { CopyStepSpec } from './CopyStepSpec';
 import type { ForegroundStepSpec } from './ForegroundStepSpec';
+import type { PlannerStepSpec } from './PlannerStepSpec';
 import type { RenderStepSpec } from './RenderStepSpec';
 import type { TonemapStepSpec } from './TonemapStepSpec';
 
 export type FrameStepSpec =
+  | PlannerStepSpec
   | ComputeStepSpec
   | CaptureStepSpec
   | RenderStepSpec
   | ForegroundStepSpec
   | CompositeStepSpec
   | BloomStepSpec
-  | TonemapStepSpec;
+  | TonemapStepSpec
+  | CopyStepSpec;

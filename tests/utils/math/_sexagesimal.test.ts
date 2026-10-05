@@ -10,10 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  decomposeSexagesimal,
-  decomposeSexagesimalTrunc,
-} from '../../../src/utils/math/_sexagesimal';
+import { decomposeSexagesimal } from '../../../src/utils/math/_sexagesimal';
 
 describe('decomposeSexagesimal (rounding variant)', () => {
   it('decomposes 12.5 hours into [12, 30, 0]', () => {
@@ -33,16 +30,5 @@ describe('decomposeSexagesimal (rounding variant)', () => {
     expect(d).toBe(24);
     expect(m).toBe(0);
     expect(sub).toBe(0);
-  });
-});
-
-describe('decomposeSexagesimalTrunc (truncation variant)', () => {
-  it('truncates rather than rounds — 12.99999 hours stays in 12h', () => {
-    // Truncation is required for catalog names (SDSS J...) so the published
-    // designation never increments under measurement noise. 12.99999 hours
-    // would naively round to 13h, but truncation keeps it in 12h59m59.x.
-    const [h, m, _sub] = decomposeSexagesimalTrunc(12.99999, 100);
-    expect(h).toBe(12);
-    expect(m).toBe(59);
   });
 });

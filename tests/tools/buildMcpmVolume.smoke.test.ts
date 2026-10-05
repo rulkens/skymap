@@ -1,11 +1,6 @@
 /**
- * End-to-end smoke test for tools/buildMcpmVolume.ts. Mirrors the
- * tests/tools/buildCf4Density.smoke.test.ts shape: write a synthetic
+ * End-to-end smoke test for tools/buildMcpmVolume.ts: write a synthetic
  * .npy, build, decode the .scfd, assert header fields.
- *
- * MCPM differs from CF-4 in two ways the test must exercise:
- *   - frameKind = 'equatorial-cartesian' (CF-4 is 'supergalactic-cartesian')
- *   - origin = grid_center − grid_size/2 (CF-4 centers on observer)
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
@@ -68,14 +63,16 @@ describe('buildMcpmVolume (smoke)', () => {
 
     expect(cube.dims).toEqual(dims);
     // MCPM uses equatorial-cartesian (id=1 in the SCFD spec); this is the
-    // assertion that catches an accidental copy-paste of CF-4's frameKind.
+    // assertion that catches an accidental copy-paste of a supergalactic-
+    // frame cube's frameKind.
     expect(cube.frameKind).toBe('equatorial-cartesian');
     expect(cube.voxelSize).toBeCloseTo(overrideVoxelSize, 4);
     expect(cube.origin[0]).toBeCloseTo(overrideOrigin[0], 3);
     expect(cube.origin[1]).toBeCloseTo(overrideOrigin[1], 3);
     expect(cube.origin[2]).toBeCloseTo(overrideOrigin[2], 3);
-    // Identity rotation — see CF-4 smoke test's matching assertion for the
-    // pre-existing rotation-doubling pitfall this guards against.
+    // Identity rotation — guards against writing a non-identity quaternion
+    // here, which would compound with FRAME_TO_WORLD's own rotation at
+    // draw time (see buildCubeModelMatrix.ts).
     expect(cube.rotation[0]).toBeCloseTo(0, 6);
     expect(cube.rotation[1]).toBeCloseTo(0, 6);
     expect(cube.rotation[2]).toBeCloseTo(0, 6);

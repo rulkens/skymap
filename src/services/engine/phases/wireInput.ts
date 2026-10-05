@@ -12,22 +12,22 @@ import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
 import { attachEngineInputs } from '../interaction/inputBindings';
-import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
+import { DEFAULT_FOV_Y_RAD, NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../camera/cameraFraming';
+import { homePose } from '../camera/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
   updateSelectionSelect,
   updateSelectionFocus,
   updateSelectionHover,
   clearSelection,
 } from '../../../state/selection/selectionSlice';
-import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/selection/selectors';
+import { selectSelectedRef } from '../../../state/selection/selectors';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { isCinemaMode } from '../../../utils/url/isCinemaMode';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -91,73 +91,32 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     resolvePick: deps.selection.resolvePick,
   });
 
-  // Boot straight into the composition's home pose. The live wall-clock instant
-  // `startLoop`'s `goLive` re-anchors the sim clock to, NOT
-  // `deriveSimDays(state.time, …)` — that would run against the still-placeholder
-  // J2000 anchor at this phase and frame the body where it isn't, giving a jump
-  // on the first follow frame.
+  // The neutral base the runtime starts from: the composition's home pose at
+  // the live wall-clock instant `arrivalSaga`'s `goLive` anchored to. The view
+  // itself is `arrivalSaga`'s, which commits over this base in the same
+  // dispatch, before any frame draws.
   const simDays = unixMsToJulianDays(Date.now());
-  // The committed orientation basis the boot pose encodes through, so first-paint
-  // yaw/pitch round-trip under the same frame the render path decodes with.
+  // The URL's orientation is already in the store: `createEngine` dispatches
+  // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap this phase
+  // runs inside, and `arrivalSaga` lands it on that boot read, before it
+  // waits for this runtime. A seed in another frame re-encodes on frame 1.
   const frameBasis = ORIENTATION_FRAMES[selectOrientation(store.getState())];
-  const bodyId = home.focus === null ? null : home.focus.ref.id;
-  const initialCam = computeInitialCamera({
-    bodyId,
-    fovYRad: DEFAULT_FOV_Y_RAD,
-    simDays,
-    frameBasis,
-  });
 
   state.booted = true;
 
-  // Without this seed the first resting frame returns the placeholder `base`
-  // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
-  // camera jump on frame one.
-  //
-  // The URL orientation frame is already committed here because `createEngine`
-  // dispatches `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE
-  // this phase runs inside. Registration-before-bootstrap is the load-bearing
-  // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
-  // synchronous with engine construction, silently regresses the boot frame to
-  // the default orientation.
-  // `target` is COPIED: `initialCam.target` is mutable and this pose outlives the seed.
-  const committed = absoluteArm({
-    target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-    yaw: initialCam.yaw,
-    pitch: initialCam.pitch,
-    distance: initialCam.distance,
-  });
+  // Seeded BEFORE the commit below, off the still-placeholder store — the one
+  // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
+  // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
   state.cameraRuntime = seedCameraRuntime({
-    committed,
+    state: store.getState(),
     projection: {
-      fovYRad: initialCam.fovYRad,
+      fovYRad: DEFAULT_FOV_Y_RAD,
       aspect: canvas.width / canvas.height,
-      near: initialCam.near,
-      far: initialCam.far,
+      near: NEAR_CLIP_MPC,
+      far: FAR_CLIP_MPC,
     },
   });
-  store.dispatch(commitCameraPose(committed));
-
-  // Boot IS the home state: the sim clock boots live, so Earth moves from the
-  // first frame and a bare pose would let the globe slide out of frame.
-  //
-  // The guard is INTENT, not resolved refs: a galaxy/star id from `#focus=`
-  // defers until its catalog pulse lands, so the resolved ref slot reads null
-  // for the whole boot window this phase runs in. A ref-only guard would seed
-  // the home body over a deep link that is merely still resolving, and
-  // `resolveRef` would then clear the pending id along with it. Consequence
-  // accepted: a junk `#focus=zzz` parks forever and suppresses the seed for
-  // that session.
-  const rootState = store.getState();
-  if (home.focus !== null && !selectHasSelectionIntent(rootState)) {
-    // Cinema is an app mode gating what the composition asked for — the same
-    // class of override as the deep-link deference guard above — so it stays
-    // a phase-level gate rather than a composition knob.
-    if (home.seedSelection && !isCinemaMode()) {
-      store.dispatch(updateSelectionSelect(home.focus.ref));
-    }
-    store.dispatch(updateSelectionFocus(home.focus.ref));
-  }
+  store.dispatch(commitCameraPose(homePose(home, DEFAULT_FOV_Y_RAD, simDays, frameBasis)));
 
   // Callbacks are the semantic engine actions: `inputBindings` already converts
   // `e.clientX/Y` to CSS pixels and owns the requestRender wake for
@@ -167,6 +126,18 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     scheduler: state.subsystems.scheduler,
     onPointerMove: (cssPx) => {
       hoverPickDriver.onPointerMove(cssPx);
+      // The terrain-pick marker is drawn where the cursor is, so it needs a
+      // frame to follow it — the one place a pointermove earns the wake this
+      // input mouth otherwise refuses (`inputBindings`' contract). Both the
+      // write and the wake are gated on the toggle, so hover stays wake-free
+      // and this whole debug path is unreachable with the overlay off. Also
+      // gated on the rig's `pickable` flag: a dome frame has no single cursor
+      // ray, so `terrainPickMarkerPass`'s `cursorTexPx === null` gate must stay
+      // satisfied there.
+      if (!state.settings.debug.overlays['terrain-pick-marker']) return;
+      if (!VIEW_RIGS[state.viewRig].pickable) return;
+      state.picking.cursorTexPx = [cssToTexPx(cssPx.x), cssToTexPx(cssPx.y)];
+      state.subsystems.scheduler.requestRender();
     },
     onPointerLeave: () => {
       store.dispatch(updateSelectionHover(null));

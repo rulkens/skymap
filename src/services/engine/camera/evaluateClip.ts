@@ -94,12 +94,7 @@
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipFrameOptions } from '../../../@types/animation/ClipFrameOptions';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
-import type {
-  CompiledClip,
-  BaseSegment,
-  VelRamp,
-  PathTrack,
-} from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -117,6 +112,9 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -335,7 +333,7 @@ function outsideLeg(seg: BaseSegment, window: LegWindow): boolean {
  * Walks the channel's segments in order, accumulating the "running value" that
  * each completed segment leaves. Applies the active or last segment to t.
  *
- * For `yaw`, the interpolation uses `lerpAngleShortest` instead of
+ * For `yaw` and `roll`, the interpolation uses `lerpAngleShortest` instead of
  * `lerpInSpace` to prevent multi-revolution artifacts when the user has
  * accumulated a large yaw from prior dragging.
  */
@@ -375,7 +373,7 @@ function evaluateBaseScalar(
         const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
         const e = EASE[seg.ease](localT);
 
-        if (channel === 'yaw') {
+        if (channel === 'yaw' || channel === 'roll') {
           return lerpAngleShortest(from, to, e);
         }
         return lerpInSpace(seg.space, from, to, e);
@@ -457,7 +455,7 @@ function evaluateBaseVec3(
 }
 
 // ---------------------------------------------------------------------------
-// Path layer — a flyPath supersedes the base layer for all four channels.
+// Path layer — a flyPath supersedes the base layer for every channel but roll.
 // ---------------------------------------------------------------------------
 
 /**
@@ -598,26 +596,31 @@ function originOfLeg(
  * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
  * opening leg, so every segment counts and the walk is the pre-frames one.
  * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
+ * Clips author no `lookOffset`, so one starting from an offset pose snaps it to 0.
  */
 function evaluateBaseAt(
   compiled: CompiledClip,
   t: number,
   origin: LegOrigin,
   beforeSec = Infinity,
-): CameraPose {
+): Required<Omit<CameraPose, 'lookOffset'>> {
   const { baseTracks } = compiled;
+  const { atSec, pose: start } = origin;
+  const window: LegWindow =
+    atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
+  // A path authors no roll; `validatePathExclusivity` keeps roll writers out of
+  // its window, so this holds the roll the path flew in with.
+  const roll = evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window);
   const path = activePathAt(compiled.pathTracks, t);
   if (path !== null) {
     // Clamp into the path's own window: before it starts we never get here
     // (activePathAt requires startSec ≤ t); after it ends, hold the final pose.
     const localSec = Math.min(Math.max(t - path.startSec, 0), path.endSec - path.startSec);
     const pose = path.sample(localSec);
-    return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance };
+    return { target: pose.target, yaw: pose.yaw, pitch: pose.pitch, distance: pose.distance, roll };
   }
-  const { atSec, pose: start } = origin;
-  const window: LegWindow =
-    atSec === -Infinity && beforeSec === Infinity ? WHOLE_CLIP : { fromSec: atSec, beforeSec };
   return {
+    roll,
     target: evaluateBaseVec3(baseTracks['target'], start.target, t, window),
     yaw: evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
     pitch: evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
@@ -680,6 +683,7 @@ export function evaluateFramedClip(
       yaw: base.yaw + velYaw + oscYaw,
       pitch: base.pitch + velPitch + oscPitch,
       distance: base.distance + velDist + oscDist,
+      roll: base.roll + velDisplacement(compiled, 'roll', t) + oscOffset(compiled, 'roll', t),
     },
   };
 }
@@ -688,7 +692,7 @@ export function evaluateFramedClip(
  * evaluateClip — the channel values at `elapsedSec`, WITHOUT their frame: Mpc
  * and orientation-frame angles for every untagged clip, which is every clip in
  * the registry. A caller that must survive a body-framed endpoint — where the
- * same four numbers are body-fixed metres — reads `evaluateFramedClip` instead.
+ * same numbers are body-fixed metres — reads `evaluateFramedClip` instead.
  *
  * @param data        The authored clip description.
  * @param elapsedSec  Seconds since the clip started (≥ 0).

@@ -1,4 +1,3 @@
-// src/components/containers/SettingsPanelContainer.tsx
 /**
  * SettingsPanelContainer — App-boundary for `SettingsPanel`'s mount-time
  * viewport read.

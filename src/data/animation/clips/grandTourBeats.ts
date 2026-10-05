@@ -9,8 +9,8 @@
  * because there is nothing here but the id/label envelope — the choreography
  * lives in `tours/grandTour/`.
  *
- * Caveat for standalone playback: outside `guidedTourSaga` there is no
- * settings snapshot/restore, so a beat's scene cues (the opening hide sweep,
+ * Caveat for standalone playback: a registry clip runs without
+ * `withSceneSnapshotSaga`, so a beat's scene cues (the opening hide sweep,
  * focusedOnly flips) persist after the clip ends — wind them back via the
  * settings panel or a reload.
  */

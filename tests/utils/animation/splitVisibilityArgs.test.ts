@@ -9,9 +9,9 @@ import { splitVisibilityArgs } from '../../../src/utils/animation/splitVisibilit
 describe('splitVisibilityArgs', () => {
   it('separates scoped entries from atomic keys, preserving each order', () => {
     expect(
-      splitVisibilityArgs(['volumesMaster', 'survey:milliquas', 'flow', 'structureRing:group']),
+      splitVisibilityArgs(['cosmicWebDensity', 'survey:milliquas', 'flow', 'structureRing:group']),
     ).toEqual({
-      layers: ['volumesMaster', 'flow'],
+      layers: ['cosmicWebDensity', 'flow'],
       scoped: ['survey:milliquas', 'structureRing:group'],
     });
   });

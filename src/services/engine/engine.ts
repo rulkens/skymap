@@ -22,17 +22,13 @@ import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCa
 import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createEngineData } from './data/createEngineData';
-import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
-import { produceConstellationCaptions } from './presentation/produceConstellationCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -42,14 +38,15 @@ import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
 import { liveWorldPose } from './helpers/liveWorldPose';
+import { waitUntilSettled } from './helpers/waitUntilSettled';
 import { deriveBodyStates } from './frame/deriveBodyStates';
-import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
+import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyState } from '../../@types/scene/BodyState';
-import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
+import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
 import { runBootstrapPhases } from './phases/bootstrap';
@@ -62,6 +59,7 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
+import { EMPTY_GPU_MEMORY_SNAPSHOT } from '../gpu/memory/trackGpuMemory';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -69,6 +67,7 @@ import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import { coreSelectionRows } from './selection/coreSelectionRows';
 import { composeSelectionRows } from './selection/composeSelectionRows';
+import { hasUrlGate } from '../../utils/url/hasUrlGate';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -101,7 +100,7 @@ export function createEngine(
   // exists. The register seeds from the camera slice's initial `base` — the
   // single home for the pre-bootstrap placeholder pose, arm tag included.
   const cameraRuntime = seedCameraRuntime({
-    committed: cb.store.getState().camera.base,
+    state: cb.store.getState(),
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
@@ -125,13 +124,7 @@ export function createEngine(
 
   const store = cb.store;
 
-  // Famous stars are seeded at construction, not fetched, so there is no async slot
-  // commit to carry the usual `engineSourceCountReported` pulse — report it here so
-  // the Stars panel's count chip lights up for the curated row too.
   const engineData = createEngineData();
-  store.dispatch(
-    engineSourceCountReported({ source: Source.FamousStar, count: SCENE_STARS.length }),
-  );
 
   const state: EngineState = {
     // These getters delegate straight to the store: sagas and sub-handle
@@ -157,6 +150,7 @@ export function createEngine(
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
       pointerDown: false,
+      cursorTexPx: null,
     },
     gpu: {
       // Every handle here is null until the async bootstrap constructs it and is
@@ -164,7 +158,6 @@ export function createEngine(
       // downstream; the rest are optional and null-checked at their use site. See
       // `@types/EngineGpuHandles.d.ts` for the lifecycle.
       pickProgram: null,
-      milkyWayPickRenderer: null,
       // Canonical bind-group layouts, threaded into every renderer's
       // createPipelineLayout so consumers share one layout identity — see
       // services/gpu/bindGroupLayouts/fadeUniforms.ts (the layout:'auto' trap).
@@ -174,8 +167,10 @@ export function createEngine(
       focusUniform: null,
       renderTargets: null,
       compositor: null,
-      constellationRenderer: null,
       envBrdfLut: null,
+      // Installed by initGpu right after the device resolves — see
+      // `EngineGpuHandles.memory`'s field doc.
+      memory: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
@@ -189,24 +184,15 @@ export function createEngine(
       debugLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      milkyWayCloud: null,
-      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      zoneOfAvoidanceRenderer: null,
       label3DRenderer: null,
-      volumeFieldRenderer: null,
-      flowFieldRenderer: null,
-      volumeUpsample: null,
-      milkyWayAggregateUpsample: null,
-      zoneOfAvoidanceUpsample: null,
-      starAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
       bloomPyramid: null,
       pickDebugOverlay: null,
       earthRenderer: null,
       surfaceTileRenderer: null,
-      starRenderer: null,
+      terrainPickMarkerRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
       // Lit triangle-mesh bodies attached to a host body's slab;
@@ -215,12 +201,9 @@ export function createEngine(
       ringRenderer: null,
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
-      starPointRenderer: null,
       bodyGlintRenderer: null,
-      sgrAStarLensingRenderer: null,
       cubeFaceBlitRenderer: null,
-      starCatalogRenderer: null,
-      starCatalogPickRenderer: null,
+      domeResampleRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
@@ -286,26 +269,19 @@ export function createEngine(
       loadProgress: null,
     },
     booted: false,
+    fadesAnimating: false,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
+    // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
+    // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
+    viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming
     // `initGpu` already assigned them.
     assetSlots: {
-      starCatalogs: new Map(),
-      famousStarsMeta: null,
       structureCatalog: null,
-      cf4Density: null,
-      // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
-      // when the tier changes.
-      mcpm: null,
-      flow: null,
-      // Tier-aware like mcpm.
-      polyphorm2Mrs: null,
-      mcpmWorkbench: null,
-      constellations: null,
       bodyTextures: new Map(),
       // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
@@ -320,37 +296,46 @@ export function createEngine(
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
+    // Static per Layer, known before any GPU phase runs — the `renderTargets`
+    // GPU-handle row reads this to compose its table, and that row constructs
+    // BEFORE `createLayers`.
+    layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the four (`pickProgram` is `wireInput`).
+    // phase before it reads any of these (`pickProgram` is `wireInput`).
     passes: [],
+    computes: [],
+    planners: [],
     assetRows: [],
+    slabRows: [],
     fadeRows: [],
+    label3DProducers: [],
+    orbitTrailRows: [],
     layerSlots: new Map(),
   };
 
+  // React doesn't own this attribute, so it survives re-renders; `global.css`'s
+  // `#c[data-view-rig='dome']` rule reads it to square the canvas.
+  canvas.dataset.viewRig = state.viewRig;
+
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
-  // the director declutters by prominence otherwise. The constellation figure NAMES
-  // are deliberately NOT here: their anchors sit at parsec distances, inside the
-  // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw — they
-  // register on `foregroundLabelDirector` (NEAR0) below.
-  state.subsystems.cosmoLabelDirector.registerProducer({
-    id: 'milkyWayLabel',
-    produceLabels: produceMilkyWayLabel,
-  });
+  // the director declutters by prominence otherwise. Every Layer's own COSMO
+  // producer registers later, from `createLayers`, so this core row wins any
+  // tie. The constellation figure NAMES are deliberately NOT here: their
+  // anchors sit at parsec distances, inside the COSMO slab's fixed 0.01-Mpc
+  // near plane, so a label here could never draw — they register on
+  // `foregroundLabelDirector` (NEAR0) from the constellations Layer, later in
+  // boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,
   });
 
   // Scene-body captions first so an equal-prominence tiebreak favours the
-  // navigation aid over the diffuse constellation overlay.
+  // navigation aid over the diffuse constellation overlay — the constellations
+  // Layer's own producer registers later, from `createLayers`, landing second.
   state.subsystems.foregroundLabelDirector.registerProducer({
     id: 'sceneBodyCaptions',
     produceLabels: produceSceneBodyCaptions,
-  });
-  state.subsystems.foregroundLabelDirector.registerProducer({
-    id: 'constellationCaptions',
-    produceLabels: produceConstellationCaptions,
   });
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a
@@ -377,24 +362,18 @@ export function createEngine(
       byCategory: (cat) => state.data.structures.byCategory(cat),
       loaded: () => state.data.structures.loaded(),
     },
-    // The first (only, in v1) committed Gaia catalog, or null before the star cloud
-    // lands and after the GPU tears down.
-    stars: {
-      current: () => {
-        const renderer = state.gpu.starCatalogRenderer;
-        if (!renderer) return null;
-        for (const { catalog } of renderer.loadedCatalogs()) return catalog;
-        return null;
-      },
-    },
   });
 
   // The one row array core owns (D5); createLayers appends each Layer's rows
   // once, in tuple order, over the empty composition today. `selection` reads
-  // it lazily (never rebuilds a list), so a deep link resolving during the
-  // boot window — before createLayers has run — still sees the core rows.
+  // it lazily (never rebuilds a list), so a deep link seen before createLayers
+  // sees only core rows — a Layer-only id instead waits on
+  // resolveFocusRefDeferringSaga's engineStatusChanged pulse to resolve.
   state.selectionKindRows = coreSelectionRows(resolveDeps);
-  const selection = composeSelectionRows(() => state.selectionKindRows);
+  const selection = composeSelectionRows(
+    () => state.selectionKindRows,
+    () => state.settings.picking.kinds,
+  );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
@@ -425,6 +404,7 @@ export function createEngine(
   });
 
   cb.setSagaContext({
+    nextFrame: () => state.subsystems.scheduler.nextFrame(),
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     selection,
@@ -436,11 +416,13 @@ export function createEngine(
         ? {
             from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
+            aspect: state.cameraRuntime.outputs.projection.aspect,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
     playClip,
     clipPathInspect,
+    home: composition.home,
   });
 
   // `void`: nothing awaits engine construction, and the catch routes failures to
@@ -504,6 +486,8 @@ export function createEngine(
     // The LUT does own one, and it is no row, so nothing else releases it.
     state.gpu.envBrdfLut?.destroy();
     state.gpu.envBrdfLut = null;
+    // Owns no GPU resource of its own — re-nulled for lifecycle symmetry.
+    state.gpu.memory = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
@@ -513,6 +497,12 @@ export function createEngine(
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
+    nextFrame: () => state.subsystems.scheduler.nextFrame(),
+    settled: () =>
+      waitUntilSettled(
+        () => state.subsystems.scheduler.nextFrame(),
+        () => state.fadesAnimating,
+      ),
     debug: {
       // The same Map the bootstrap populates, so the dev panel observes slots as
       // they appear. Read-only at the type level, so React-side mutation trips tsc.
@@ -522,6 +512,7 @@ export function createEngine(
       get timingService() {
         return state.gpu.timingService;
       },
+      requestRender: () => state.subsystems.scheduler.requestRender(),
       // `idle` is derived, not stored, from the wall-clock gap since the last frame,
       // so a sleeping render-on-demand loop reads "idle" rather than a stale fps.
       frameStats: (): FrameStats => ({
@@ -531,21 +522,14 @@ export function createEngine(
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
       // The prelude's compute steps first (they run first, and their dispatches
-      // are GPU work no render toggle could reach), then every composed pass
-      // except the volume-target raymarch, which has no user toggle — the frame
-      // order is what says which pass that is.
+      // are GPU work no render toggle could reach), then every composed pass.
       passOverrides: {
         allNames: [
+          // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
-            computeTimingSlotName(step.name),
+            computeTimingSlotName(step.name, 'canvas'),
           ),
-          ...FRAME_ORDER_PASS_NAMES.filter(
-            (name) =>
-              !FRAME_ORDER.some(
-                (step) =>
-                  step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
-              ),
-          ),
+          ...FRAME_ORDER_PASS_NAMES,
         ],
       },
       // Re-derived per call, not snapshotted: the slots this joins against are
@@ -553,6 +537,7 @@ export function createEngine(
       assetPriorities: () => assetPriorityBySlotName(state),
       surfaceTiles: () =>
         state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+      gpuMemory: () => state.gpu.memory?.() ?? EMPTY_GPU_MEMORY_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.
@@ -578,6 +563,15 @@ export function createEngine(
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+          residentHeightLevelAt: (bodyId, dir) =>
+            state.subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
+          // Null unless the `terrain-pick-marker` overlay is on — its listener
+          // is the only writer, so the pick row is dead with the toggle off.
+          cursorTexPx: state.picking.cursorTexPx,
+          viewportPx: [canvas.width, canvas.height],
+          // What the last frame DREW with (`FrameOutputs`), the same rule this
+          // whole snapshot follows — a mid-poll resize must not retro-change it.
+          fovYRad: outputs.projection.fovYRad,
         });
       },
     },

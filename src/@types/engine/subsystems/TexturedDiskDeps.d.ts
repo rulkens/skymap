@@ -1,5 +1,5 @@
-import type { TileStreamSubsystem } from './TileStreamSubsystem';
-import type { HiResFamousSubsystem } from './HiResFamousSubsystem';
+import type { TileStreamSubsystem } from './tileStreamSubsystem/TileStreamSubsystem';
+import type { HiResFamousSubsystem } from './hiResFamousSubsystem/HiResFamousSubsystem';
 
 /** Construction options for `createTexturedDiskSubsystem`. */
 export type TexturedDiskDeps = {

@@ -1,4 +1,3 @@
-// src/components/containers/TopBarContainer.tsx
 /**
  * TopBarContainer — store boundary for the top-center pill row.
  *

@@ -40,12 +40,10 @@ import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { HiResFamousDeps } from '../../../@types/engine/subsystems/HiResFamousDeps';
-import type {
-  HiResFamousFrameInput,
-  HiResFamousFrameOutput,
-  HiResFamousPerGalaxyState,
-  HiResFamousSubsystem,
-} from '../../../@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
+import type { HiResFamousFrameInput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameInput';
+import type { HiResFamousPerGalaxyState } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
+import type { HiResFamousFrameOutput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
 
 /**
  * Upper-bound clamp for the squared-distance early-out, tuned higher

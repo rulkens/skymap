@@ -19,18 +19,23 @@ import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import type { RootState } from '../../../src/store/types';
 import { stateAfter } from '../../fixtures/stateAfter';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
+import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
@@ -51,6 +56,7 @@ const earthRow: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 function focusedOn(row: SelectionRow): RootState {
@@ -62,10 +68,8 @@ afterEach(() => {
 });
 
 describe('focus row', () => {
-  it('reads a value as a pinned card plus a camera fly', () => {
-    // Arriving by URL must look the same as a scene click (requestSelect pins
-    // the InfoCard) plus a fly (requestFocus moves the camera).
-    expect(focusSource.read('m31')).toEqual([requestSelect('m31'), requestFocus('m31')]);
+  it('reads a value as a focus view on that id', () => {
+    expect(focusSource.read('m31')).toEqual({ view: { kind: 'focus', id: 'm31' } });
   });
 
   it('reads an absent value as a cleared selection', () => {
@@ -73,10 +77,12 @@ describe('focus row', () => {
   });
 
   it('writes the pending id while a request is still resolving', () => {
-    // A galaxy/star request parks in `resolveFocusRefDeferring` until its
+    // A galaxy/star request parks in `resolveFocusRefDeferringSaga` until its
     // catalog pulses, leaving the resolved slot null for the whole boot window.
     // Publishing the in-flight id is what keeps a cold deep link on the URL.
-    expect(focusSource.write(stateAfter(requestFocus('m31')))).toBe('m31');
+    expect(focusSource.write(stateAfter(requestFocus({ id: 'm31', transition: 'fly' })))).toBe(
+      'm31',
+    );
   });
 
   it('writes the encoded target once the request has resolved', () => {
@@ -89,7 +95,7 @@ describe('focus row', () => {
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
       setSelectionRow({ slot: 'focus', row: virgoRow }),
-      requestFocus('m31'),
+      requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');
   });
@@ -100,16 +106,14 @@ describe('focus row', () => {
 });
 
 describe('t row', () => {
-  it('reads an ISO instant as manual-and-paused at that moment', () => {
-    const actions = timeSource.read(J2000_ISO);
-    expect(actions.map((action) => action.type)).toEqual(['time/setSimDays', 'time/pause']);
-    expect(actions[0]).toMatchObject({ payload: { simDays: CONST_J2000 } });
+  it('reads an ISO instant as that Unix instant', () => {
+    expect(timeSource.read(J2000_ISO)).toEqual({ t: J2000_UNIX_MS });
   });
 
   it('reads an unparseable value as no change at all', () => {
     // The hash is external input; a hand-typed timestamp is not a reason to
     // move the clock somewhere arbitrary.
-    expect(timeSource.read('not-a-timestamp')).toEqual([]);
+    expect(timeSource.read('not-a-timestamp')).toEqual({});
   });
 
   it('reads an absent value as live-at-now', () => {
@@ -121,7 +125,7 @@ describe('t row', () => {
   });
 
   it('writes a manual anchor as an ISO instant', () => {
-    const actions = timeSource.read(J2000_ISO);
+    const actions = manualPausedAtActions(new Date(J2000_ISO));
     expect(timeSource.write(stateAfter(...actions))).toBe(J2000_ISO);
   });
 
@@ -132,17 +136,60 @@ describe('t row', () => {
 });
 
 describe('orientation row', () => {
-  it('reads a recognised frame as a snap', () => {
-    expect(orientationSource.read('galactic')).toEqual([setOrientation('galactic')]);
+  it('reads a recognised frame as that orientation', () => {
+    expect(orientationSource.read('galactic')).toEqual({ orientation: 'galactic' });
   });
 
   it('reads a junk frame as no change at all', () => {
-    expect(orientationSource.read('polaris')).toEqual([]);
+    expect(orientationSource.read('polaris')).toEqual({});
   });
 
   it('reads an absent value as the default frame', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('pose row', () => {
+  const WORLD_ARM: FramedCameraPose = {
+    frame: 'absolute',
+    pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, roll: 0.42 },
+  };
+
+  it('reads a valid value as a pose view', () => {
+    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual({
+      view: { kind: 'pose', pose: WORLD_ARM },
+    });
+  });
+
+  it('reads a malformed value as no change at all', () => {
+    expect(poseSource.read('not,a,pose')).toEqual({});
+  });
+
+  it('reads an absent value as no change at all — the camera is left alone', () => {
+    expect(poseSource.readAbsent()).toEqual([]);
+  });
+
+  it('writes nothing: the rendered pose changes every frame of a drag, so this row never publishes', () => {
+    expect(poseSource.write(stateAfter())).toBeNull();
+  });
+});
+
+describe('takeover rows', () => {
+  it.each([
+    ['tour', { kind: 'tour', id: 'grandTour' }],
+    ['exhibit', { kind: 'exhibit', id: 'zoneOfAvoidance', entry: 'cut' }],
+    ['clip', { kind: 'clip', id: 'flyout' }],
+  ] as const)('a running %s keeps its key in the hash and drops it when it ends', (key, source) => {
+    const row = HASH_PARAM_SOURCES.find((candidate) => candidate.key === key)!;
+    const started = takeoverStarted(source);
+    const ended = takeoverEnded();
+
+    expect(row.write(stateAfter(started))).toBe(source.id);
+    expect(row.write(stateAfter(started, ended))).toBeNull();
+    // A miss here leaves the key stale until some other row's trigger fires.
+    expect(row.writesOn.some((matches) => matches(started))).toBe(true);
+    expect(row.writesOn.some((matches) => matches(ended))).toBe(true);
   });
 });

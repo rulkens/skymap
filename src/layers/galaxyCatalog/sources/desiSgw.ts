@@ -15,12 +15,6 @@ export const DESI_SGW_ENTRY = {
   allSky: false,
   bearsLabel: false,
   bearsMarker: false,
-  // Off by default: the first depth-bounded DESI patch — a bounded volume
-  // isolating one named structure (the Sloan Great Wall), a third way of
-  // drilling through DESI DR1 alongside the deep cone and the dec-band wedge —
-  // is a specialist overlay, not part of the all-sky default scene the other
-  // bulk catalogs populate. The GalaxiesSection toggle is the opt-in.
-  visible: false,
   // Pure BGS by geometry: LRG/ELG/QSO contribute nothing at z<0.1, so the
   // selection holds only Bright Galaxy Sample rows, topping out at z ≈ 0.095 (~400 Mpc of
   // line-of-sight comoving distance under the pipeline's flat-ΛCDM conversion).

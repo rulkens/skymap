@@ -8,7 +8,6 @@ export const GLADE_ENTRY = {
   label: 'GLADE',
   binBaseName: 'glade',
   allSky: true,
-  visible: true,
   bearsLabel: false,
   bearsMarker: false,
   // Covers most of the GLADE distance distribution. GLADE has a long

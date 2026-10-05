@@ -83,12 +83,12 @@ function collectTimelineNodes<T>(
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
-  stars: { current: () => null },
   structures: {
     byId: (id) =>
       ({
@@ -203,7 +203,6 @@ describe('visitBeatSaga', () => {
 
     const lazyDeps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
-      stars: { current: () => null },
     };
     // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
     const lazyGalaxies = {
@@ -233,7 +232,7 @@ describe('visitBeatSaga', () => {
 
     sagaMiddleware.run(visitBeatSaga, famousBeat, 0);
 
-    // Cloud not loaded, runtime null — saga blocked in waitUntil.
+    // Cloud not loaded, runtime null — saga blocked in waitUntilSaga.
     await vi.advanceTimersByTimeAsync(200);
     expect(playClipMock).not.toHaveBeenCalled();
 

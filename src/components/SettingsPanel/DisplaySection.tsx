@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/DisplaySection.tsx
 /**
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.

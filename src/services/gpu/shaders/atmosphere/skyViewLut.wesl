@@ -7,7 +7,7 @@
 // camera altitude and the sun direction change, and folding them into a small
 // 2D table means the shell fragment does a single texture sample instead of a
 // per-pixel march (spec §11 performance). Dispatched by 'encodeSkyView' before
-// the foreground render pass (Task 5/6), modeled on 'encodeFlowCompute'.
+// the foreground render pass (Task 5/6), modeled on the flow compute dispatch.
 //
 // It reads both startup LUTs: the transmittance LUT for the sun's attenuation to
 // each march point, and the multi-scatter LUT for the isotropic higher-order

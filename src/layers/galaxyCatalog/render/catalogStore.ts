@@ -53,10 +53,10 @@ import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/Bu
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { CatalogDrawEntry } from '../types/CatalogDrawEntry';
-import type { CatalogStore } from '../types/CatalogStore';
-import type { BuildRunner } from '../types/BuildRunner';
-import type { LoadedSource } from '../types/LoadedSource';
+import type { CatalogDrawEntry } from '../@types/CatalogDrawEntry';
+import type { CatalogStore } from '../@types/CatalogStore';
+import type { BuildRunner } from '../@types/BuildRunner';
+import type { LoadedSource } from '../@types/LoadedSource';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';

@@ -41,6 +41,11 @@ export function makeSurfaceDriver() {
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,
         groundRadiusAtM: () => bodyRadiusM,
+        // No-relief fixture: tight shells, since their separation sets the
+        // marcher's step cap and any slack becomes pick error (see the note in
+        // surfaceStep.test.ts's CTX).
+        innerBoundRadiusM: bodyRadiusM * (1 - 1e-6),
+        outerBoundRadiusM: bodyRadiusM * (1 + 1e-6),
         sceneUpLocal,
         focusPivotM: null,
         tuning,

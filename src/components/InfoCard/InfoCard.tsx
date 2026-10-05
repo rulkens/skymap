@@ -9,10 +9,11 @@
  *
  * Both `hovered` and `selected` accept the full `FocusableTarget` union
  * (`GalaxyInfo | StructureInfo | MilkyWayInfo`).  Dispatch is entirely
- * table-driven: `DETAIL_CARD[target.type]` picks the detail + compact card for
- * whichever target lands in each slot, so there is no per-kind branching and a
- * new focusable kind is one table row.  The only logic here is slot precedence —
- * pinned target → detail, a different hovered target → compact preview.
+ * table-driven: `detailCardFor(DETAIL_CARD, target)` picks the detail + compact
+ * card for whichever target lands in each slot, so there is no per-kind
+ * branching and a new focusable kind is one table row.  The only logic here is
+ * slot precedence — pinned target → detail, a different hovered target →
+ * compact preview.
  *
  * On mobile (`useIsMobile`) hover has no cursor, so the card drops to a single
  * MobileSheet showing only the selected target's full detail — no compact slot.
@@ -24,9 +25,16 @@ import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
 import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { DETAIL_CARD } from './detailCardTable';
+import { APP_COMPOSITION } from '../../compositions/app';
+import { detailCardTable } from './detailCardTable';
+import { detailCardFor } from '../../utils/infoCard/detailCardFor';
 import MobileSheet from './MobileSheet/MobileSheet';
 import styles from './InfoCard.module.css';
+
+// Folded once at module load, not per-render: the composition is static for
+// the app's lifetime, and a missing arm should throw at boot, not on the
+// first hover.
+const DETAIL_CARD = detailCardTable(APP_COMPOSITION.layers);
 
 export type InfoCardProps = {
   /**
@@ -43,13 +51,6 @@ export type InfoCardProps = {
    */
   selected: FocusableTarget | null;
   /**
-   * Catalogued galaxy count for the pinned structure (cluster / supercluster
-   * / void), or null/undefined when not applicable.  Forwarded to
-   * StructureDetailCard, which renders it as the "Galaxies" row.  Ignored for
-   * galaxy selections (GalaxyDetailCard has no such row).
-   */
-  selectedMemberCount?: number | null;
-  /**
    * Optional callback fired when the user clicks the "Focus" pill on the pinned
    * card.  App dispatches `updateSelectionFocus(refOf(target))`.
    */
@@ -62,29 +63,17 @@ export type InfoCardProps = {
   onClose?: () => void;
 };
 
-function InfoCard({
-  hovered,
-  selected,
-  selectedMemberCount,
-  onFocus,
-  onClose,
-}: InfoCardProps): ReactNode {
+function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
 
   // Mobile has no hover cursor: only the pinned target matters, and it shows as
   // a single MobileSheet wrapping the same Detail card the desktop branch uses.
   if (isMobile) {
     if (selected === null) return null;
+    const { Detail } = detailCardFor(DETAIL_CARD, selected);
     return (
       <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
-        {DETAIL_CARD[selected.type].Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          chrome: false,
-          onFocus,
-          onClose,
-        })}
+        <Detail target={selected} isPinned hasChrome={false} onFocus={onFocus} onClose={onClose} />
       </MobileSheet>
     );
   }
@@ -97,18 +86,15 @@ function InfoCard({
   // (`targetEq` suppresses the redundant preview of an already-pinned target).
   // Adding a focusable kind is a DETAIL_CARD row, never a branch here.
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
+  const Detail = selected ? detailCardFor(DETAIL_CARD, selected).Detail : null;
+  const Compact = compactTarget ? detailCardFor(DETAIL_CARD, compactTarget).Compact : null;
 
   return (
     <div className={cx(styles.root, 'infoCardStack')}>
-      {selected &&
-        DETAIL_CARD[selected.type].Detail({
-          target: selected,
-          pinned: true,
-          selectedMemberCount,
-          onFocus,
-          onClose,
-        })}
-      {compactTarget && DETAIL_CARD[compactTarget.type].Compact({ target: compactTarget })}
+      {selected && Detail && (
+        <Detail target={selected} isPinned onFocus={onFocus} onClose={onClose} />
+      )}
+      {compactTarget && Compact && <Compact target={compactTarget} />}
     </div>
   );
 }

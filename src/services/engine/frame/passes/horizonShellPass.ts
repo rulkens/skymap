@@ -4,11 +4,11 @@
  *
  * ### What it draws
  *
- * A static UV-sphere mesh centred at the world origin with a Fresnel-
- * rim fragment shader, so the silhouette reads as a soft glowing
- * shell.  The shell radius is fixed at construction time (see
- * `HORIZON_RADIUS_MPC` in `horizonShellRenderer.ts`); only the
- * per-frame camera pose updates the uniform block.
+ * A fullscreen ray-march of an analytic sphere centred at the world
+ * origin, with a Fresnel-rim fragment shader, so the silhouette reads
+ * as a soft glowing shell.  The shell radius is fixed at construction
+ * time (see `HORIZON_RADIUS_MPC` in `data/rendering/`); only
+ * the per-frame camera pose updates the uniform block.
  *
  * ### When it draws
  *
@@ -24,7 +24,7 @@
  * `draw` and handed to the renderer; both reads use the frame-frozen
  * `ctx.drawCamPos`, so they agree.
  *
- * ### Why drawn after `volume-upsample` and before `structure-markers`
+ * ### Why drawn after `cosmic-web-density-upsample` and before `structure-markers`
  *
  * The shell is a background contributor — drawing it after the volume
  * layers means the cosmic-web densities composite over it cleanly,
@@ -44,10 +44,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
-import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonShellRenderer';
-
-/** Shell radius in Mpc — the fade band is a fraction of this. */
-const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;
+import { HORIZON_RADIUS_MPC } from '../../../../data/rendering/horizonRadiusMpc';
 
 export const horizonShellPass: ContentPass = {
   name: 'horizon-shell',

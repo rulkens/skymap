@@ -1,4 +1,5 @@
 import type { CameraDofAngles } from './CameraDofAngles';
+import type { FramedCameraPose } from './FramedCameraPose';
 import type { OrientDeltas } from './OrientDeltas';
 import type { PoseFrame } from './PoseFrame';
 import type { SitePose } from './SitePose';
@@ -8,8 +9,9 @@ import type { Vec3 } from '../math/Vec3';
 export type CameraDebugSnapshot = {
   /** `camera.base.frame` — the regime itself. */
   readonly storedFrame: PoseFrame;
-  /** `cameraRuntime.register.pose.frame` — the arm actually drawn last frame. */
-  readonly renderedFrame: PoseFrame;
+  /** The exact pose drawn last frame — the share-URL / `commitCameraPose` restore payload;
+   *  `framed.frame` is `cameraRuntime.register.pose.frame`, the arm actually drawn. */
+  readonly framed: FramedCameraPose;
   readonly armMismatch: boolean;
   /** h/R for `dofs.bodyId`; null when no scene body resolved this instant. */
   readonly hOverR: number | null;
@@ -33,11 +35,11 @@ export type CameraDebugSnapshot = {
   readonly epochDeltaDays: number;
   /** True when `epochDeltaDays` exceeds normal render-loop/poll drift. */
   readonly epochMismatch: boolean;
-  /** Body-fixed anchor, metres, when `renderedFrame` is a body arm; else null. */
+  /** Body-fixed anchor, metres, when `framed.frame` is a body arm; else null. */
   readonly anchorLocalM: Vec3 | null;
-  /** `|eyeRelAnchorM|`, metres, when `renderedFrame` is a body arm; else null. */
+  /** `|eyeRelAnchorM|`, metres, when `framed.frame` is a body arm; else null. */
   readonly eyeRelAnchorMagM: number | null;
-  /** The turntable's whole state when `renderedFrame` is a site arm; else null. */
+  /** The turntable's whole state when `framed.frame` is a site arm; else null. */
   readonly sitePose: SitePose | null;
   /** `cameraRuntime.register.winner` — last frame's driver-table winner. */
   readonly activeDriverId: string;
@@ -45,4 +47,17 @@ export type CameraDebugSnapshot = {
   readonly gestureMode: string | null;
   /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
   readonly gestureCursorHit: boolean | null;
+  /**
+   * Terrain height above the datum under the `terrain-pick-marker` overlay's
+   * own pick, metres — the number the marker is standing on. Null without that
+   * overlay (no cursor is carried otherwise), off a body arm, or on a miss.
+   */
+  readonly terrainPickHeightM: number | null;
+  /**
+   * The pyramid level the height lattice UNDER THE EYE actually resolved to
+   * (`SurfaceTileSubsystem.residentHeightLevelAt`). Null when nothing is
+   * resident there — which `altitudeM` alone cannot show, since an unresident
+   * direction and sea level both read 0 metres.
+   */
+  readonly residentHeightLevelAtEye: number | null;
 };

@@ -152,7 +152,8 @@ export async function buildRhizomeVolume(args: {
     origin: sidecar.originMpc,
     voxelSize,
     // Identity — FRAME_TO_WORLD already applies the frame rotation; writing
-    // it again here would compound it (buildCf4Density.ts:193-204).
+    // it again here would compound it, placing cube features at
+    // FRAME_TO_WORLD²·X instead of FRAME_TO_WORLD·X.
     rotation: [0, 0, 0, 1],
     valueMin,
     valueMax,

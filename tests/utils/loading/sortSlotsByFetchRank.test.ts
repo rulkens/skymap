@@ -33,10 +33,7 @@ describe('sortSlotsByFetchRank', () => {
 
   it('sorts unranked slots last as a block, not first or dropped', () => {
     const ranks = new Map([['glade-points', 62]]);
-    const sorted = sortSlotsByFetchRank(
-      rows('debug-spherical', 'debug-cartesian', 'glade-points'),
-      ranks,
-    );
-    expect(named(sorted)).toEqual(['glade-points', 'debug-cartesian', 'debug-spherical']);
+    const sorted = sortSlotsByFetchRank(rows('unranked-b', 'unranked-a', 'glade-points'), ranks);
+    expect(named(sorted)).toEqual(['glade-points', 'unranked-a', 'unranked-b']);
   });
 });

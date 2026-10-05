@@ -10,7 +10,7 @@
  */
 import { ismMapRingRadius } from './ismMapRingRadius';
 
-export type IsmMapRingEdges = { readonly rInner: number; readonly rOuter: number };
+type IsmMapRingEdges = { readonly rInner: number; readonly rOuter: number };
 
 export function ismMapDustRingEdges(
   ring: number,

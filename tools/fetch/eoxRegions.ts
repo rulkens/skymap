@@ -25,7 +25,8 @@ export type EoxRegionName =
   | 'sossusvlei'
   | 'everest'
   | 'giza'
-  | 'sjaelland';
+  | 'sjaelland'
+  | 'malmo';
 
 export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
   copenhagen: { west: 12.2, south: 54.93, east: 13.05, north: 56.14 },
@@ -48,4 +49,7 @@ export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
   // East edge abuts copenhagen's west edge at the z13 tile column boundary
   // (col 8746 vs 8747) — no duplicate tiles between the two region dirs.
   sjaelland: { west: 10.85, south: 54.93, east: 12.18, north: 56.14 },
+  // West edge abuts copenhagen's east edge the same way (col 8785 vs 8786):
+  // eastern Malmö and Lund, which copenhagen's box stops short of.
+  malmo: { west: 13.06, south: 55.45, east: 13.3, north: 55.75 },
 };

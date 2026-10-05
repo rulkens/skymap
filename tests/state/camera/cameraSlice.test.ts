@@ -17,7 +17,9 @@ import reducer, {
   clipStarted,
   clipEnded,
   resolveClipStart,
+  commitCameraPose,
 } from '../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -91,6 +93,17 @@ describe('cameraSlice — clip lifecycle', () => {
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();
+  });
+});
+
+describe('cameraSlice — commitCameraPose identity', () => {
+  it('stores the payload BY REFERENCE, not a copy', () => {
+    // `stepCameraRuntime`'s outside-commit check (`base !== prev.base`) and its
+    // `next.base` fold both depend on this: a defensive spread here would make
+    // every loop-authored commit misread as an outside one.
+    const payload = absoluteArm(pose);
+    const state = reducer(base(), commitCameraPose(payload));
+    expect(state.base).toBe(payload);
   });
 });
 

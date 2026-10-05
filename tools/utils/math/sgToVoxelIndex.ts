@@ -1,10 +1,10 @@
 /**
- * SG Cartesian (Mpc) → continuous voxel indices in the CF-4 cube's
+ * SG Cartesian (Mpc) → continuous voxel indices in the CF4++ grid's
  * native numpy axis order.  Linear: corner 0 at −500 Mpc, corner 128
  * at +500 Mpc.
  *
- * The CF-4-specific origin and voxel-size constants live here rather than
- * in src/ because they are coupled to the CF-4 catalog box specifically
+ * The CF4++-specific origin and voxel-size constants live here rather than
+ * in src/ because they are coupled to the CF4++ ensemble's box specifically
  * (128³, ±500 Mpc) — moving them into src/ would suggest runtime use, of
  * which there is none.  If a second volume needs a similar helper we'd
  * parameterise; hard-coding keeps the call sites short.

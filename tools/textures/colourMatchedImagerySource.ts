@@ -13,11 +13,11 @@ import sharp from 'sharp';
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
-import type { GreyRaster } from '../utils/image/GreyRaster';
+import type { GreyRaster } from '../@types/image/GreyRaster';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
-import type { TileIndexRect } from '../utils/scene/TileIndexRect';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { TileIndexRect } from '../@types/scene/TileIndexRect';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { colourOffsetFields } from './colourOffsetFields';
 
 /** Canvas-space offset fields for one contiguous group of `primary`'s coverage,
@@ -45,8 +45,10 @@ function intersects(a: LonLatBounds, b: LonLatBounds): boolean {
 }
 
 /** Land fraction 0..1 at `lon`/`lat`, bilinear over a whole-globe equirect
- *  mask with land 255 and water 0. Cell CENTRES sit at half-cell offsets. */
-function landFractionAt(mask: GreyRaster, lon: number, lat: number): number {
+ *  mask with land 255 and water 0. Cell CENTRES sit at half-cell offsets.
+ *  `null` means no mask was given — every pixel is land, one class. */
+function landFractionAt(mask: GreyRaster | null, lon: number, lat: number): number {
+  if (mask === null) return 1;
   const perDegree = mask.width / 360;
   const fx = Math.min(mask.width - 1, Math.max(0, (lon + 180) * perDegree - 0.5));
   const fy = Math.min(mask.height - 1, Math.max(0, (90 - lat) * perDegree - 0.5));
@@ -69,8 +71,10 @@ export function colourMatchedImagerySource(
   reference: SurfaceImagerySource,
   opts: {
     readonly sigmaDeg: number;
-    /** Whole-globe equirect mask, land 255 and water 0 — inverted swaps the classes silently. */
-    readonly waterMaskPath: string;
+    /** Whole-globe equirect mask, land 255 and water 0 — inverted swaps the classes
+     *  silently. Omitted means every pixel is land, one class (grey HiRISE orthos:
+     *  Gusev, Endeavour — spec §4.2). */
+    readonly waterMaskPath?: string;
   },
 ): SurfaceImagerySource {
   const canvasLevel = reference.maxLevel + 1;
@@ -134,8 +138,9 @@ export function colourMatchedImagerySource(
 
   // Lazy, because `bakeDeepestLevel` probes every box on the globe and the
   // decline path below must stay as cheap as `primary.readBox` makes it.
-  let waterMask: Promise<GreyRaster> | undefined;
-  const loadWaterMask = async (): Promise<GreyRaster> => {
+  let waterMask: Promise<GreyRaster | null> | undefined;
+  const loadWaterMask = async (): Promise<GreyRaster | null> => {
+    if (opts.waterMaskPath === undefined) return null;
     const { data, info } = await sharp(opts.waterMaskPath, { limitInputPixels: false })
       .greyscale()
       .raw()

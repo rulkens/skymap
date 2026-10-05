@@ -33,9 +33,13 @@ import type { FadeId } from '../../../@types/animation/FadeId';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SGR_A_STAR_ENTRY } from '../../../data/sources/sgr-a-star';
+import { SOURCE_REGISTRY, Source } from '../../../data/sources';
 import { MESH_BODY_ENTRY } from '../../../data/sources/mesh-body';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMaxDistance';
+
+// Through the registry: the row is the blackHoles Layer's, and core reads a
+// Layer's data through the composition, never an import.
+const SGR_A_STAR_ID = SOURCE_REGISTRY[Source.SgrAStar].id;
 
 /**
  * One caption kind's fade routing. `distanceMpc` is the caption anchor's
@@ -74,19 +78,19 @@ const PRODUCER_SUPPLIED = (): number => 0;
 
 export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> = {
   /**
-   * The descent's aim point. Its own body row governs the name, so muting the
-   * curated neighbourhood leaves the Sun captioning; `bodies.items.sun.enabled`
-   * is the same flag `visibleStars` reads to hide the Sun's dot (unwritable
-   * today — no setter exists — but reachable via a snapshot restore, so the
-   * caption consults it rather than assuming it is always true). The band makes
-   * the name fade IN smoothly on the way down: exactly 0 at the layer's enable
-   * gate (no pop) up to full alpha by half that distance.
+   * The descent's aim point. Its own star-catalog row governs the name, so
+   * muting the curated neighbourhood leaves the Sun captioning; the visibility
+   * axis is BOTH levels, exactly as `visibleStars` composes them, so the caption
+   * never outlives the dot. The band makes the name fade IN smoothly on the way
+   * down: exactly 0 at the layer's enable gate (no pop) up to full alpha by half
+   * that distance.
    */
   sun: {
-    labelEnabled: (settings) => settings.bodies.items.sun.labelEnabled,
-    subjectVisible: (settings) => settings.bodies.items.sun.enabled,
+    labelEnabled: (settings) => settings.starCatalogs.items.sun.labelEnabled,
+    subjectVisible: (settings) =>
+      settings.starCatalogs.enabled && settings.starCatalogs.items.sun.enabled,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sunCaption, distanceMpc),
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: 'sun' },
+    fadeHandle: { kind: 'labelLayer', layer: 'starCatalog', item: 'sun' },
   },
 
   /** Inside the caption range Earth is simply on — no band, no visibility axis. */
@@ -126,12 +130,10 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
   },
 
   /**
-   * The Galactic Centre's aim point. Its own body row governs the name — riding
-   * the `star` row above would hide it whenever the famous-star catalog is
-   * muted, and would key its band on a 2.3 kpc star map it sits 8 kpc outside.
-   * No visibility axis: it draws nothing, so there is no dot the caption could
-   * outlive (`bodies.items['sgr-a-star'].enabled` gates nothing — see that
-   * registry row).
+   * The Galactic Centre's name, owned by the blackHoles Layer's settings —
+   * riding the `star` row above would hide it whenever the famous-star catalog
+   * is muted, and would key its band on a 2.3 kpc star map it sits 8 kpc
+   * outside. No visibility axis: the hole has no toggle, only its scale band.
    *
    * It does NOT take Earth's and the planets' `SOLAR_SYSTEM_REACH` row: this is
    * the one caption that must survive OUTSIDE the solar system's range, since
@@ -139,10 +141,10 @@ export const CAPTION_FADE_RULES: Readonly<Record<CaptionKind, CaptionFadeRule>> 
    * one framing the whole galaxy.
    */
   sgrAStar: {
-    labelEnabled: (settings) => settings.bodies.items[SGR_A_STAR_ENTRY.id].labelEnabled,
+    labelEnabled: (settings) => settings.blackHoles.items[SGR_A_STAR_ID].labelEnabled,
     subjectVisible: UNGATED,
     fadeTarget: (distanceMpc) => fadeBand(SCALE_FADE_BANDS.sgrAStarCaption, distanceMpc),
-    fadeHandle: { kind: 'labelLayer', layer: 'body', item: SGR_A_STAR_ENTRY.id },
+    fadeHandle: { kind: 'labelLayer', layer: 'blackHoles', item: SGR_A_STAR_ID },
   },
 
   /**

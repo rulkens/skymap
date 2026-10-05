@@ -23,11 +23,7 @@ import {
   MILKY_WAY_RADIUS_MPC,
 } from './milkyWayCalibration';
 
-export function milkyWayFadeAlpha(
-  camDistMpc: number,
-  fovYRad: number,
-  viewportHeightPx: number,
-): number {
-  const px = apparentDiameterPx(2 * MILKY_WAY_RADIUS_MPC, camDistMpc, fovYRad, viewportHeightPx);
+export function milkyWayFadeAlpha(camDistMpc: number, pxPerRad: number): number {
+  const px = apparentDiameterPx(2 * MILKY_WAY_RADIUS_MPC, camDistMpc, pxPerRad);
   return smoothstep(MILKY_WAY_FADE_GONE_PX, MILKY_WAY_FADE_FULL_PX, px);
 }

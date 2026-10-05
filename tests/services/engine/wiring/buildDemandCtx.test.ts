@@ -54,7 +54,7 @@ function makeState(
     settings: {
       marker: 'sentinel',
       galaxyCatalogs: { items: {} },
-      volumes: { items: {} },
+      cosmicWebDensity: { items: {} },
     },
     ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
     assetSlots: {

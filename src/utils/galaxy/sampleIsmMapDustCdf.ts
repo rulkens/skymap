@@ -14,7 +14,7 @@
 import { ismMapDustRingEdges } from './ismMapDustRingEdges';
 import type { GalaxyIsmMapDustCdf } from '../../@types/galaxy/GalaxyIsmMapDustCdf';
 
-export type IsmMapDustCdfSample = { readonly radius: number; readonly angle: number };
+type IsmMapDustCdfSample = { readonly radius: number; readonly angle: number };
 
 /** First index with `prefix[index] > u` — `u` drawn strictly below `prefix[length-1] === total`, so this never runs off the end. */
 function upperBound(prefix: Float32Array, u: number): number {

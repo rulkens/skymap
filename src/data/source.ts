@@ -14,6 +14,8 @@
  *
  * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
  * same "append, never renumber" discipline applies for consistency.
+ * Codes 10 and 12-14 are likewise retired (the deleted CF-4 density volume
+ * and the deleted DEV-only synthetic volume fixtures) and stay unassigned.
  */
 export const Source = {
   /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
@@ -62,28 +64,11 @@ export const Source = {
    */
   Filaments: 9,
   /**
-   * Cosmicflows-4 dark-matter density volume (Valade 2024 HAMLET cube,
-   * 256³). Default-off scalar field; the registry entry carries its
-   * presentation defaults (palette, contrast, exposure, …).
-   */
-  Cf4Density: 10,
-  /**
    * MCPM ("Cosmic Slime" / rhizome) cosmic-web density volume — SDSS DR17
    * VAC, tier-aware. Default-on scalar field; the registry entry carries
    * its presentation defaults.
    */
   Mcpm: 11,
-  /**
-   * DEV-only synthetic Gaussian-blob volume — verifies "is anything
-   * visible at the cube origin?". Procedurally generated; no on-disk
-   * payload. Bundled out of production builds via `import.meta.env.DEV`
-   * gating at the slot-registration site.
-   */
-  DebugGaussian: 12,
-  /** DEV-only Cartesian-grid volume for axis-alignment verification. */
-  DebugCartesian: 13,
-  /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
-  DebugSpherical: 14,
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 6
@@ -94,9 +79,10 @@ export const Source = {
    */
   Group: 15,
   /**
-   * Procedural Milky-Way galactic-disk overlay. Registry-key-only code (not
-   * persisted, not pickable); the entry carries the default-visible master
-   * toggle. Appended at 16.
+   * Procedural Milky-Way galactic-disk overlay. Not persisted, but PICKABLE:
+   * `milkyWayPickRenderer` stamps this code and `milkyWaySelectionRow` resolves
+   * it to the singleton ref, so it spends a pick code. The entry carries the
+   * default-visible master toggle. Appended at 16.
    */
   MilkyWay: 16,
   /**
@@ -211,7 +197,7 @@ export const Source = {
    * the solar neighbourhood — and their own CODE because the packed pick id is
    * an index INTO a seed table: sharing FamousStar's code would renumber every
    * famous star. The star layers draw both sets and stamp whichever code the
-   * star's table dictates (`starPickId`). Not persisted. Appended at 28.
+   * star's table dictates. Not persisted. Appended at 28.
    *
    * BUDGET: the pick texture's source field is 6 bits with 63 reserved as the
    * all-ones sentinel (`selectionEncoding.ts`), so after this row codes
@@ -232,7 +218,7 @@ export const Source = {
    * Polyphorm ("2MRS Polyphorm") cosmic-web density volume — a test field
    * for a Polyphorm-derived run over the 2MRS footprint. Registry-key-only
    * code (not persisted, not pickable); the entry carries its presentation
-   * defaults like CF-4/MCPM. Default-off — it's a test field the user
+   * defaults like MCPM. Default-off — it's a test field the user
    * toggles on. Appended at 30 — never renumber the codes below it.
    */
   Polyphorm2MRS: 30,
@@ -241,8 +227,8 @@ export const Source = {
    * home for cubes promoted from the workbench dev tool via
    * `tools/volumes/promoteWorkbenchExport.ts`. Registry-key-only code (not
    * persisted, not pickable); the entry carries its presentation defaults
-   * like CF-4/MCPM/Polyphorm2MRS. Hidden (`visible: false`) until Phase 4
-   * validation clears — see `src/data/sources/mcpm-workbench.ts`. Appended
+   * like MCPM/Polyphorm2MRS. Hidden until a promotion decision clears
+   * — see `src/layers/cosmicWebDensity/sources/mcpm-workbench.ts`. Appended
    * at 31, the first code the 6-bit pick-source widening opened up — never
    * renumber the codes below it.
    */

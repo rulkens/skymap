@@ -53,7 +53,8 @@ import { RunSagaProvider } from './store/RunSagaProvider';
 import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
-import { persistSplashVersion } from './state/ui/persistSplashVersion';
+import { PERSISTED_VALUES } from './state/persistedValues';
+import { persistValues } from './utils/storage/persistValues';
 import { installRecorderHook } from './state/recorder/installRecorderHook';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { injectAnalytics } from './utils/analytics/injectAnalytics';
@@ -93,7 +94,7 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
     [uiRoute]: buildInitialUiState(),
   });
   // Store lives for the page lifetime; unsubscribe is intentionally not held.
-  persistSplashVersion(store);
+  persistValues(store, PERSISTED_VALUES);
   // Recorder seam (`window.__skymapRecorder`) — gated on `?cinema` INSIDE the
   // installer, so this call stays unconditional. No-op on a normal visit.
   installRecorderHook(store);

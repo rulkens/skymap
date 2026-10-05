@@ -1,4 +1,3 @@
-// src/components/containers/SplashContainer.tsx
 /**
  * SplashContainer — store boundary for the splash overlay.
  *

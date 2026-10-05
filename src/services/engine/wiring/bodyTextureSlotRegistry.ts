@@ -12,24 +12,13 @@
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { bodyTextureFetcher } from '../../loading/fetchers/bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
-import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
 import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
+import { isTexturedBodyKey } from '../../../utils/bodyTextures/isTexturedBodyKey';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
-import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
-import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
-
-/**
- * True iff `bodyId` names a textured SPHERE body other than Earth — the set the
- * shared `texturedBodyRenderer` owns. Registry membership, not a hardcoded ring id,
- * is what excludes the rings, so a second ring joins with no dispatch edit.
- */
-function isTexturedBodyKey(bodyId: BodyTextureId | RingTextureId): bodyId is BodyTextureId {
-  return bodyId !== 'earth' && bodyTextureSpec(bodyId) !== null;
-}
 
 /** Route a committed bitmap to every resident renderer that consumes `entry`. */
 function commitBodyTexture(state: EngineState, entry: BodyTextureKey, bitmap: ImageBitmap): void {

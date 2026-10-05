@@ -11,8 +11,8 @@ import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { HeightSource } from './HeightSource';
-import type { HeightTile } from './HeightTile';
+import type { HeightSource } from './@types/HeightSource';
+import type { HeightTile } from './@types/HeightTile';
 import { voidFilledHeightSource } from './voidFilledHeightSource';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';

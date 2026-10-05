@@ -55,10 +55,19 @@ describe('allowDataFile', () => {
 
   it('rejects a mesh file with the same basename outside meshes/', () => {
     expect(allowDataFile('whale.mesh')).toBe(false);
-    expect(allowDataFile('other/whale_albedo.png')).toBe(false);
+    expect(allowDataFile('other/whale_albedo.webp')).toBe(false);
   });
 
-  it('rejects an unrelated png under meshes/', () => {
-    expect(allowDataFile('meshes/whale_thumbnail.png')).toBe(false);
+  it('accepts a seated mesh contact shadow under meshes/', () => {
+    expect(allowDataFile('meshes/mer_contact.webp')).toBe(true);
+  });
+
+  it('rejects an unrelated webp under meshes/', () => {
+    expect(allowDataFile('meshes/whale_thumbnail.webp')).toBe(false);
+  });
+
+  it('accepts a hashed tiered mesh file and texture under meshes/', () => {
+    expect(allowDataFile('meshes/whale-small.a3f19c2e.mesh')).toBe(true);
+    expect(allowDataFile('meshes/whale-small_albedo.a3f19c2e.webp')).toBe(true);
   });
 });

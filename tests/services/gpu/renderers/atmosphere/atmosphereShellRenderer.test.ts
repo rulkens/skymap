@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createAtmosphereShellRenderer } from '../../../../../src/services/gpu/renderers/atmosphere/atmosphereShellRenderer';
 import { ATMOSPHERE_PARAMS } from '../../../../../src/data/bodies/atmosphereParams';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../../src/utils/gpu/packAtmosphereUniforms';
+import type { AtmosphereShellDepth } from '../../../../../src/@types/rendering/AtmosphereShellDepth';
 
 /**
  * The shell draws its geometry TWICE (MULTIPLY then ADD) because per-channel
@@ -30,7 +31,9 @@ type Harness = {
   shaderCode: string[];
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
   texturesByLabel: Map<string, StubTexture>;
-  bindGroupCreations: () => number;
+  /** Every bind group built so far, by label — so a `reconcile` test can say
+   *  WHICH groups were rebuilt, not merely how many. */
+  bindGroupLabels: string[];
 };
 
 function mockDevice(): Harness {
@@ -44,7 +47,11 @@ function mockDevice(): Harness {
     dispatchWorkgroups: vi.fn(),
     end: vi.fn(),
   };
-  const createBindGroup = vi.fn(() => ({}));
+  const bindGroupLabels: string[] = [];
+  const createBindGroup = vi.fn((desc: GPUBindGroupDescriptor) => {
+    bindGroupLabels.push(desc.label ?? '');
+    return {};
+  });
   const device = {
     createSampler: vi.fn(() => ({})),
     createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
@@ -80,16 +87,44 @@ function mockDevice(): Harness {
     shaderCode,
     descOf,
     texturesByLabel,
-    bindGroupCreations: () => createBindGroup.mock.calls.length,
+    bindGroupLabels,
   };
 }
 
 function build() {
   const h = mockDevice();
-  const renderer = createAtmosphereShellRenderer(h.device, 'rgba16float', 'depth32float', true, {
+  const renderer = createAtmosphereShellRenderer(h.device, 'rgba16float', {
     earth: ATMOSPHERE_PARAMS.earth!,
   });
   return { ...h, renderer };
+}
+
+const SCENE_DEPTH_VIEW = { label: 'foreground-depth' } as unknown as GPUTextureView;
+
+/** The sampled-depth record a shell draw takes. A null frame is the
+ *  far-placeholder case, which is what every draw below is. */
+function shellDepth(view: GPUTextureView = SCENE_DEPTH_VIEW): AtmosphereShellDepth {
+  return { frame: null, view, viewportPx: [1280, 720], kmToLocal: 1 / 6471 };
+}
+
+/** Enough of a render pass for the shell's MULTIPLY/ADD pair. */
+function shellRenderPass(): GPURenderPassEncoder {
+  return {
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    setIndexBuffer: vi.fn(),
+    drawIndexed: vi.fn(),
+  } as unknown as GPURenderPassEncoder;
+}
+
+/** Enough of a render pass for the aerial apply's two full-screen draws. */
+function aerialRenderPass(): GPURenderPassEncoder {
+  return {
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    draw: vi.fn(),
+  } as unknown as GPURenderPassEncoder;
 }
 
 /** Classify a shell pipeline by what its colour blend DOES, not by its label —
@@ -106,8 +141,21 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   it('builds one multiplicative and one additive shell pipeline', () => {
     const { renderPipelines } = build();
     // The three LUT bakes go through createComputePipeline, so every render
-    // pipeline here is a shell pass: the outside pair, then the inside pair.
+    // pipeline here is a shell pass: the outside pair, then the aerial pair.
     expect(renderPipelines.map(blendRole)).toEqual(['multiply', 'add', 'multiply', 'add']);
+  });
+
+  it('declares no depth state on either shell pass — the step attaches none', () => {
+    // The shell's step SAMPLES `foreground:0`'s depth, so its pass has no depth
+    // attachment, and WebGPU rejects a pipeline that names a depth format there.
+    // Headless-only: on hardware this surfaces as a dropped draw, not an error
+    // anything in this suite would see.
+    const [multiply, add] = build().renderPipelines as [
+      GPURenderPipelineDescriptor,
+      GPURenderPipelineDescriptor,
+    ];
+    expect(multiply.depthStencil).toBeUndefined();
+    expect(add.depthStencil).toBeUndefined();
   });
 
   it('gives both shell passes identical depth, primitive and vertex state', () => {
@@ -150,106 +198,58 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
       drawIndexed: vi.fn(() => order.push('draw')),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), false);
+    renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), shellDepth());
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
   });
 
-  it('shares shellPipelineLayout across all four shell pipelines', () => {
-    const { renderPipelines } = build();
-    const [multiply, add, insideMultiply, insideAdd] = renderPipelines as [
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-    ];
-    expect(insideMultiply.layout).toBe(multiply.layout);
-    expect(insideAdd.layout).toBe(add.layout);
-  });
+  it('rebuilds the bind group only when the sampled depth view changes', () => {
+    // A bind group holds a specific GPUTextureView, and `depthViewOf` hands
+    // back a NEW one once the target reallocates — a cached group would keep
+    // pointing at the destroyed texture (on iOS, a silently dropped frame).
+    // Rebuilding on every draw instead would be a per-frame allocation the
+    // shell does not need.
+    const { renderer, bindGroupLabels } = build();
+    const uniforms = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
+    renderer.draw(shellRenderPass(), 'earth', uniforms, shellDepth());
+    const afterFirst = bindGroupLabels.length;
 
-  it('gives fsInsideMultiply the multiply blend and fsInsideAdd the add blend, matching the outside pair', () => {
-    const { renderPipelines } = build();
-    const [, , insideMultiply, insideAdd] = renderPipelines as [
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-    ];
-    expect(blendRole(insideMultiply)).toBe('multiply');
-    expect(blendRole(insideAdd)).toBe('add');
-  });
+    renderer.draw(shellRenderPass(), 'earth', uniforms, shellDepth());
+    expect(bindGroupLabels.length).toBe(afterFirst);
 
-  it('gives both inside pipelines the always-compare, no-depth-write profile', () => {
-    const { renderPipelines } = build();
-    const [, , insideMultiply, insideAdd] = renderPipelines as [
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-      GPURenderPipelineDescriptor,
-    ];
-    const expected = {
-      format: 'depth32float',
-      depthWriteEnabled: false,
-      depthCompare: 'always',
-    };
-    expect(insideMultiply.depthStencil).toEqual(expected);
-    expect(insideAdd.depthStencil).toEqual(expected);
-  });
-
-  it('draws the inside geometry twice, MULTIPLY before ADD, with no vertex/index buffer bound', () => {
-    const { descOf, renderer } = build();
-    const order: string[] = [];
-    const pass = {
-      setPipeline: vi.fn((p: unknown) => {
-        const desc = descOf.get(p);
-        order.push(desc === undefined ? 'unknown' : blendRole(desc));
-      }),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      setIndexBuffer: vi.fn(),
-      drawIndexed: vi.fn(() => order.push('drawIndexed')),
-      draw: vi.fn(() => order.push('draw')),
-    } as unknown as GPURenderPassEncoder;
-
-    renderer.draw(pass, 'earth', new Float32Array(ATMOSPHERE_UNIFORM_FLOATS), true);
-
-    expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
-    expect(pass.setVertexBuffer).not.toHaveBeenCalled();
-    expect(pass.setIndexBuffer).not.toHaveBeenCalled();
-  });
-
-  it('names sampleShellRay as the shared hit predicate inside fsInsideMultiply and fsInsideAdd', () => {
-    // Not a call-detection grep (testing.md bans that) — Task 5's extraction
-    // makes "same predicate" true BY CONSTRUCTION: one function, one `!s.hit`
-    // check, both entry points call it. This regex fails only if a future edit
-    // forks one entry point onto its own inline hit test instead of the shared
-    // function, which is the real regression this guards against.
-    const { shaderCode } = build();
-    const linked = shaderCode.join('\n');
-    for (const entryPoint of ['fsInsideMultiply', 'fsInsideAdd']) {
-      const body = new RegExp(`fn\\s+${entryPoint}\\([^{]*\\{([^]*?)\\n\\}`).exec(linked)?.[1];
-      expect(body).toContain('sampleShellRay(');
-    }
+    const resized = { label: 'foreground-depth-resized' } as unknown as GPUTextureView;
+    renderer.draw(shellRenderPass(), 'earth', uniforms, shellDepth(resized));
+    expect(bindGroupLabels.slice(afterFirst)).toEqual(['atmosphere-shell-bg-earth']);
   });
 });
 
 describe('reconcile — tier-switchable sky-view LUT size', () => {
   it('is a no-op when the size matches what is already built (the every-frame common case)', () => {
-    const { renderer, texturesByLabel, bindGroupCreations } = build();
+    const { renderer, texturesByLabel, bindGroupLabels } = build();
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth');
-    const bindGroupsBefore = bindGroupCreations();
+    const bindGroupsBefore = bindGroupLabels.length;
 
     // Matches the construction-time default (SKY_VIEW_LUT_SIZE) — nothing to do.
     renderer.reconcile({ skyViewLutSize: [192, 108] });
 
     expect(texturesByLabel.get('atmosphere-skyview-lut-earth')).toBe(before);
-    expect(bindGroupCreations()).toBe(bindGroupsBefore);
+    expect(bindGroupLabels.length).toBe(bindGroupsBefore);
   });
 
-  it('recreates skyViewTex and rebuilds both bind groups that reference it on a size change', () => {
-    const { renderer, texturesByLabel, bindGroupCreations } = build();
+  it('recreates skyViewTex and rebuilds every bind group that references it, the aerial renderer included', () => {
+    const { renderer, texturesByLabel, bindGroupLabels } = build();
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth')!;
-    const bindGroupsBefore = bindGroupCreations();
+    const depthView = { label: 'depth' } as unknown as GPUTextureView;
+    // Both the aerial apply and the shell cache their group over a depth view,
+    // so each rebuilds after `reconcile` only if it was invalidated there.
+    renderer.drawAerialPerspective(aerialRenderPass(), 'earth', depthView);
+    renderer.draw(
+      shellRenderPass(),
+      'earth',
+      new Float32Array(ATMOSPHERE_UNIFORM_FLOATS),
+      shellDepth(),
+    );
+    const bindGroupsBefore = bindGroupLabels.length;
 
     renderer.reconcile({ skyViewLutSize: [64, 36] });
 
@@ -259,8 +259,20 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
     const after = texturesByLabel.get('atmosphere-skyview-lut-earth');
     expect(after).not.toBe(before);
     // skyViewBindGroup (binding 5, storage output) and shellBindGroup
-    // (binding 2, sampled) both reference the resized texture and must be
-    // rebuilt; transmittance/multi-scatter bind groups do not.
-    expect(bindGroupCreations()).toBe(bindGroupsBefore + 2);
+    // (binding 2, sampled) reference the resized texture; the aerial apply
+    // samples it too. The two cached groups rebuild lazily, at their next draw
+    // — the SAME depth view each time, so the rebuild can only be reconcile's.
+    renderer.draw(
+      shellRenderPass(),
+      'earth',
+      new Float32Array(ATMOSPHERE_UNIFORM_FLOATS),
+      shellDepth(),
+    );
+    renderer.drawAerialPerspective(aerialRenderPass(), 'earth', depthView);
+    expect(bindGroupLabels.slice(bindGroupsBefore)).toEqual([
+      'atmosphere-skyview-bg-earth',
+      'atmosphere-shell-bg-earth',
+      'atmosphere-aerial-bg-earth',
+    ]);
   });
 });

@@ -60,7 +60,7 @@ import package::lib::camera::CameraUniforms;
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
 // The first 80 bytes are the shared 'CameraUniforms' prefix from
-// 'lib/camera.wesl' (viewProj + viewportPx + two reserved pad slots).
+// 'lib/camera.wesl' (viewProj + viewportPx + pxPerRad + one pad slot).
 // Embedding it as a named member 'cam' rather than inlining viewProj
 // + viewport keeps the cross-renderer audit story explicit: every
 // renderer's first uniform field is now 'cam: CameraUniforms', and

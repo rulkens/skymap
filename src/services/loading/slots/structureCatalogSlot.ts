@@ -22,7 +22,7 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { structureCatalogFetcher } from '../fetchers/structureCatalogFetcher';
-import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 

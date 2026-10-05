@@ -43,9 +43,9 @@ describe('sStar()', () => {
     expect(dot(semiMinorMpc, GALACTIC_CENTRE_SKY_FRAME.xAxis)).toBeGreaterThan(0);
   });
 
-  it('every S-star focuses on sgr-a-star', () => {
+  it('every S-star focuses on the galactic-centre place', () => {
     for (const seed of S_STAR_SEEDS) {
-      expect(sStar(seed).focusId).toBe('sgr-a-star');
+      expect(sStar(seed).focusId).toBe('galactic-centre');
     }
   });
 

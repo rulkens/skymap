@@ -25,8 +25,6 @@ type Stub = {
   upload: ReturnType<typeof vi.fn>;
   setBiasMode: ReturnType<typeof vi.fn>;
   setLabels: ReturnType<typeof vi.fn>;
-  setStars: ReturnType<typeof vi.fn>;
-  pickResources: ReturnType<typeof vi.fn>;
 };
 
 const stubs: Record<string, Stub> = {};
@@ -42,21 +40,6 @@ function makeStub(name: string): Stub {
     // shape because other stubbed renderers built from the same factory
     // expose the method.
     setLabels: vi.fn(),
-    // The `starPointRenderer` row's construct closure (gpuHandleRegistry.ts)
-    // calls `setStars(<the seeded star list>)` synchronously right after
-    // constructing the renderer.
-    setStars: vi.fn(),
-    // The `starCatalogPickRenderer` row's construct closure calls
-    // `starCatalogRenderer.pickResources()` synchronously to hand the pick
-    // twin its shared BGLs + the per-source records bind-group lookup. The
-    // pick factory is itself mocked here, so this only needs to be a
-    // callable returning the resource shape.
-    pickResources: vi.fn(() => ({
-      cameraBgl: { __mockStarCameraBgl: true },
-      drawBgl: { __mockStarDrawBgl: true },
-      recordsBgl: { __mockStarRecordsBgl: true },
-      recordsBindGroup: () => null,
-    })),
   };
   stubs[name] = stub;
   return stub;
@@ -82,6 +65,10 @@ vi.mock('../../../../src/services/gpu/device', () => ({
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({})),
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      // `trackGpuMemory` (installed by the real, un-mocked `initGpu` phase)
+      // wraps both create calls on whatever device `gpu/device`'s mocked
+      // `initGpu` hands back, so the stub needs this method too.
+      createTexture: vi.fn(() => ({ destroy: vi.fn() })),
       // surfaceTileRenderer uploads its shared template index buffer at
       // construction, so a queue is part of the construction-time surface now.
       queue: { writeBuffer: vi.fn() },
@@ -128,6 +115,9 @@ vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer', () =>
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({
   createRenderTargets: vi.fn(() => makeStub('renderTargets')),
+  // `composeRenderTargetRows` (real, unmocked) calls this to build its core
+  // half — the renderTargets row's construct closure now goes through it.
+  renderTargetRows: vi.fn(() => []),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
@@ -150,24 +140,8 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer', () => ({
-  createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () => ({
   createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRenderer', () => ({
-  createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
-}));
-
-vi.mock('../../../../src/services/engine/galaxyGenerator/v1/milkyWayCloud', () => ({
-  createMilkyWayCloud: vi.fn(() => makeStub('milkyWayCloud')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer', () => ({
-  createMilkyWayCloudRenderer: vi.fn(() => makeStub('milkyWayCloudRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/labels/labelRenderer', () => ({
@@ -194,24 +168,8 @@ vi.mock('../../../../src/services/gpu/renderers/structureMarker/structureMarkerR
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer', () => ({
-  createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer', () => ({
-  createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
-}));
-
-vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', () => ({
-  createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
   createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
-}));
-
-vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({
-  createStarAggregateUpsample: vi.fn(() => makeStub('starAggregateUpsample')),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
@@ -231,9 +189,6 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
 // JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
 // renderer draws every seeded planet (see EngineGpuHandles) — so the shared
 // `stubs.planetRenderer` key is the constructed instance.
-vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
-  createStarRenderer: vi.fn(() => makeStub('starRenderer')),
-}));
 // The shared textured-body renderer keeps its `?static` WESL imports out of
 // JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
 // lands a stub on `state.gpu.texturedBodyRenderer`.
@@ -270,9 +225,6 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
   >()),
   createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
 }));
-vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
-  createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
-}));
 // Partial mock, same rationale as planetRenderer's below: bodyGlintsPass.ts
 // (loaded transitively via the frame program's registry import) reads the real
 // MAX_GLINTS / INSTANCE_FLOATS constants at module scope to size its staging
@@ -286,32 +238,6 @@ vi.mock(
     createBodyGlintRenderer: vi.fn(() => makeStub('bodyGlintRenderer')),
   }),
 );
-// The Sgr A* lens renderer's constructor builds a real LUT texture
-// (createTexture + writeTexture), which the plain stub device above doesn't
-// support — mock the factory like every other renderer here.
-vi.mock(
-  '../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('../../../../src/services/gpu/renderers/bodies/sgrAStarLensingRenderer')
-    >()),
-    createSgrAStarLensingRenderer: vi.fn(() => makeStub('sgrAStarLensingRenderer')),
-  }),
-);
-// The survey star-catalog renderer's constructor uses the full device API
-// (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
-// the plain stub device wouldn't survive the next line — mock the factory
-// like every other renderer here.
-vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
-  createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
-}));
-// The pick twin borrows the visual renderer's BGLs + records bind group and
-// builds its OWN r32uint pick pipeline against them — a full device pipeline
-// dance the plain stub device can't service, so mock the factory like every
-// other renderer. `initGpu` calls it with `starCatalogRenderer.pickResources()`.
-vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer', () => ({
-  createStarCatalogPickRenderer: vi.fn(() => makeStub('starCatalogPickRenderer')),
-}));
 // The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
 // sphere path + an instanced point path) against the full device API the plain
 // stub device can't service, so mock the factory like the other pick providers.
@@ -360,10 +286,8 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
 // happens AFTER the listener is registered but before `initGpu` returns.
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-// The real seeded data bag: the starPointRenderer row's construct closure
-// reads `state.data.bodies` (the far-star partition for setStars; the seeded
-// planet list drives planetsPass), so the state fixture carries the real
-// construction-time seeds.
+// The real seeded data bag: the seeded planet list drives planetsPass, so
+// the state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 // The registry itself: derives the expected non-null / null key sets for the
 // phase-split assertion below, rather than a hand-written key list that
@@ -383,7 +307,6 @@ function makeState(): EngineState {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
       pickProgram: null,
-      milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
       labelRenderer: null,
@@ -394,32 +317,24 @@ function makeState(): EngineState {
       structureMarkerRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
-      milkyWayCloud: null,
-      milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      zoneOfAvoidanceRenderer: null,
-      volumeFieldRenderer: null,
-      flowFieldRenderer: null,
-      volumeUpsample: null,
-      zoneOfAvoidanceUpsample: null,
-      starAggregateUpsample: null,
       pickDebugOverlay: null,
       earthRenderer: null,
-      starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
       ringRenderer: null,
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
-      starPointRenderer: null,
       bodyPickRenderer: null,
       bodyGlintRenderer: null,
       orbitTrailRenderer: null,
     },
     // The real seeded stores: planets draw through a single instanced
-    // planetRenderer fed by bodies.planets, and initGpu partitions
-    // bodies.stars for setStars.
+    // planetRenderer fed by bodies.planets.
     data: createEngineData(),
+    // Read by the `renderTargets` row's construct closure via
+    // `composeRenderTargetRows`; no Layer targets in this fixture.
+    layerTargets: [],
     subsystems: {
       biasCorrection: {
         attachRenderer: vi.fn(),
@@ -439,7 +354,6 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    settings: {},
     // Both families are minted in wireSlots, not initGpu; declared here (empty,
     // untouched by this phase) only because EngineState requires them.
     assetSlots: {

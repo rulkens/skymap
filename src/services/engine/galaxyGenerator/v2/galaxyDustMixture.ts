@@ -12,7 +12,7 @@ import type { GalaxyDustParams } from '../../../../@types/galaxy/GalaxyDustParam
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 
 /** Exported so `dustParticleCloud.ts` sizes its mass budget off the SAME disc profile rather than re-deriving it. */
-export type DustDiscShape = {
+type DustDiscShape = {
   readonly hDust: number;
   readonly sigmaZ: number;
   readonly sigmaRCap: number;
@@ -39,26 +39,4 @@ export function dustDiscShape(geometry: GalaxyDescription, dust: GalaxyDustParam
 /** Component i's radial sigma, capped at the flat-model validity boundary — shared by `dustFaceOnColumn` below and `dustParticleCloud.ts`. */
 export function dustSigmaR(i: number, shape: DustDiscShape): number {
   return Math.min(DISC_SIGMA_RATIOS[i]! * shape.hDust, shape.sigmaRCap);
-}
-
-/**
- * The disc's azimuthally-symmetric face-on V-band column Sigma(R), in
- * closed form from the same four-Gaussian fit `dustDiscShape`/`dustSigmaR`
- * describe. `dustLaneFeatures.ts` reads this to redistribute column into
- * arm-concentrated lane amplitude. Carries the full `dust.tau` — this is
- * exactly what `dustParticleCloud.ts` renders, read back in closed form.
- */
-export function dustFaceOnColumn(
-  radius: number,
-  geometry: GalaxyDescription,
-  dust: GalaxyDustParams,
-): number {
-  if (geometry.light.disc <= 0 || dust.tau <= 0) return 0;
-  const shape = dustDiscShape(geometry, dust);
-  let sigma = 0;
-  for (let i = 0; i < DISC_SIGMA_RATIOS.length; i++) {
-    const sigmaR = dustSigmaR(i, shape);
-    sigma += DISC_SURFACE_WEIGHTS[i]! * Math.exp(-(radius * radius) / (2 * sigmaR * sigmaR));
-  }
-  return (dust.tau / shape.sumW) * sigma;
 }

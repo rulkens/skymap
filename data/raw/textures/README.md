@@ -216,7 +216,7 @@ _(pending — filled by the fetch task)_.
 https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif
 ```
 
-## USGS Astrogeology — Galilean moons (public domain; credit "NASA/USGS")
+## USGS Astrogeology — moons (public domain; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF
 directly). Full pull only — no dev variant. Base:
@@ -228,6 +228,108 @@ directly). Full pull only — no dev variant. Base:
 | Europa   | `Europa_Voyager_GalileoSSI_global_mosaic_500m.tif`       | 19631×9816 | gray  | tinted in build (no global colour; S-pole gap below −83° acceptable) |
 | Ganymede | `Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif` | 11520×5760 | RGB   | —                                                                    |
 | Callisto | `Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif`      | 15138×7569 | gray  | tinted in build (no global colour; near-uniform)                     |
+| Enceladus | `Enceladus_Cassini_mosaic_global_110m.tif`              | 14401×7201 | gray  | tinted + lifted in build (relief-shading mosaic, no albedo; blurred wedge NW and smeared N pole acceptable) |
+| Triton   | `Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif`          | 14138×7069 | RGB   | Schenk 2014 Voyager 2 mosaic (PIA18668, LPI), east-positive longitude, 0 at the centre column. Northern 39% is pure black (polar night): painted with the mean non-black colour at source resolution (`fillBlack`); colours otherwise untouched |
+
+### Schenk 2021 Triton topographic map (cite Schenk et al. 2021, Remote Sensing 13, 3476)
+
+`schenk-neptunian-satellites/tndem-Thr-cyl_TA_Tds91.cub` (70 MB), from the USRA
+Houston Repository item "Topographic map of Triton from shape-from-shading
+information" (`https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94`),
+a manual browser download. Cite Schenk, P., et al. (2021), "Triton: Topography and
+Geology of a Probable Ocean World with Comparison to Pluto and Charon", _Remote
+Sensing_ 13, 3476; no licence is stated, so it is not public domain. Same ISIS layout
+as the Uranian cubes, but REGIONAL: 6493x2636 px at 600 m, lon -70..95, lat -21..46,
+heights -1.45..1.48 km, half the pixels NULL. The build places it into a whole-globe
+grid from the label's `UpperLeftCornerY` and `PixelResolution` before binning, and
+bakes the normal map at 8192 px (1.04 km per texel, no upsampling of the 600 m data).
+
+## NASA Photojournal — Saturn mid-sized moons (public domain; credit "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute")
+
+Paul Schenk's 2014 Cassini ISS colour maps. Base:
+`https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia<n>/PIA<n>.tif`
+(the old `photojournal.jpl.nasa.gov/tiff/` path now serves HTML). Chosen over
+the USGS Cassini mosaics (`<Body>_Cassini[_Voyager]_mosaic_global_*.tif`), which
+are brightness-normalised relief shading: Iapetus's dark leading hemisphere
+vanishes from them entirely. All five are centred on longitude 180°, verified
+by cross-correlating each against its USGS counterpart (a clean half-turn, no
+mirror); the build rolls them back (`antimeridianCentred`).
+
+| Body    | File           | Native      | Bands | Build note                                          |
+| ------- | -------------- | ----------- | ----- | --------------------------------------------------- |
+| Mimas   | `PIA18437.tif` | 6356×3178   | RGB   | greyed, tinted + lifted; `medium` is the ceiling    |
+| Tethys  | `PIA18439.tif` | 13467×6734  | RGB   | greyed, tinted + lifted                             |
+| Dione   | `PIA18434.tif` | 14134×7067  | RGB   | greyed, tinted + lifted                             |
+| Rhea    | `PIA18438.tif` | 12015×6008  | RGB   | greyed, tinted + lifted                             |
+| Iapetus | `PIA18436.tif` | 11741×5871  | RGB   | greyed, tinted; two-terrain albedo fit, small lift  |
+
+### Gaskell shape models: Mimas, Tethys, Dione (public domain; credit "Robert Gaskell / NASA PDS Small Bodies Node")
+
+`<body>_quad512q.tab` (~60 MB each, `https://sbnarchive.psi.edu/pds4/non_mission/gaskell.<body>.shape-model/data/<body>_quad512q.tab`):
+ASCII, line 1 = Q (512), then 6·(Q+1)² body-fixed `x y z` lines in km. Not a
+texture: the build rasterises the radius to a 2048×1024 heightfield and
+Sobel-bakes the body's `normal` map from it. Each shape frame's prime meridian
+differs from its texture's, so `lonOffsetDeg` in `textureSources.ts` is
+measured by cross-correlating shape shading against the texture.
+
+| Body   | Radius (km)   | Spacing  | `lonOffsetDeg` | Note                                                                 |
+| ------ | ------------- | -------- | -------------- | -------------------------------------------------------------------- |
+| Mimas  | 187.6-210.8   | ~0.6 km  | +4             | constants 337.46 vs 333.46; Herschel overlay agrees                  |
+| Tethys | 519.2-541.6   | ~1.6 km  | -0.1           | measured; the constants (W0 10.45 vs pck 8.95) would predict +1.5    |
+| Dione  | 554.2-566.1   | ~1.7 km  | -0.6           | measured; agrees with the constants (W0 357.00 vs pck 357.6)         |
+
+### Schenk 2024 Enceladus DEM (cite Schenk & McKinnon 2024, Icarus 408)
+
+Catalogue page (use constraint "Please cite authors"):
+`https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk`,
+doi:10.1016/j.icarus.2023.115827.
+
+`Enceladus_Cassini_DEM_global_200m_schenk2024.tif` (124 MB, 8049×4025 Float32,
+heights in km, nodata ≈ -3.4e38 on 0.04% of cells;
+`https://asc-astropedia.s3.us-west-2.amazonaws.com/Enceladus/Cassini/Enceladus_Cassini_DEM_global_200m_schenk2024.tif`).
+Not a texture: the build bins it to a 4096×2048 grid (longitude 0 is at the
+LEFT edge, so it is rolled to the centre column), fills the nodata cells from
+their neighbours and Sobel-bakes Enceladus's `normal` map. Its content sits
+0.35° east of the 110 m mosaic texture (cross-correlation), encoded as
+`lonOffsetDeg: 0.35` in `textureSources.ts`.
+
+### Schenk 2020 Uranian satellite mosaics and DEMs (cite Schenk 2020, hdl:20.500.11753/1687)
+
+Repository page: `https://repository.hou.usra.edu/handle/20.500.11753/1687`
+(USRA Houston Repository). The readme there states no licence; it asks users to
+cite and to contact the author, so this is not public domain. The files are a
+manual browser download (no stable direct URLs), kept in
+`schenk-uranian-satellites/` and listed in `textures.sha256` by basename. Only
+the `.cub` files are read; the `.jpg` previews and `aaReadMe_uranian_MAP_DEM.txt`
+sit beside them for reference.
+
+| Moon    | Mosaic                       | Size (MB) | DEM                          | Size (MB) |
+| ------- | ---------------------------- | --------- | ---------------------------- | --------- |
+| Miranda | `mumap-cyl-180180.cub`       | 82.0      | `mudem-ZT-cyl.cub`           | 82.0      |
+| Ariel   | `aumap-cyl-180180.cub`       | 26.8      | `audem-ZTL-cyl-180180.cub`   | 26.7      |
+| Umbriel | `uumap-cyl-180180.cub`       | 2.0       | none                         |           |
+| Titania | `tumap-cyl-180180.cub`       | 6.0       | none                         |           |
+| Oberon  | `oumap-cyl-180180.cub`       | 1.9       | none                         |           |
+
+ISIS cubes: tiled, 32-bit Real, little-endian, one band, simple cylindrical.
+`readIsisCube` maps the "special pixel" values to NaN and takes the left edge
+longitude from the label (`CenterLongitude + UpperLeftCornerX / EquatorialRadius`).
+All mosaics start at -180 (to within 0.22° of pixel rounding), so the centre
+column is longitude 0 like the other body textures: no roll, `lonOffsetDeg: 0`.
+The Miranda DEM starts at 0° instead, which the DEM binning's built-in half-turn
+roll absorbs. The mosaics are values proportional to reflectance (0 = black); the build
+scales them so the mean of the valid pixels equals the moon's geometric albedo
+(`scenePlanets.ts`), sRGB-encodes, clamps hot pixels (the maximum is four times
+the 99.5th percentile) and fills the unseen half with the albedo, so it renders
+as flat grey. The mosaics are narrower than the usual tier ladder (Titania 1722 px,
+Oberon 957, Umbriel 919), so they are written at native width under the `small`
+filename and never upscaled.
+
+The DEMs hold the same Voyager 2 coverage as the mosaics (Miranda 43% of the
+globe, Ariel 32%; Ariel only in the south). Ariel's cube
+also carries limb-profile arcs, thin slivers beside the stereo coverage; the build
+drops valid regions smaller than 5% of the largest before binning. Texels
+without DEM coverage get a flat normal, so relief stops at the coverage edge.
 
 **Titan is intentionally absent, and the search is closed.** Re-checked
 2026-08-18 across the USGS mosaic bucket (every Titan product is ISS 938 nm or

@@ -46,7 +46,9 @@ afterAll(() => {
 it('tints a 1-band mono source without throwing and applies the per-channel multiply', async () => {
   const outPath = join(dir, 'mono-8.jpg');
 
-  await expect(writeTintedMonoTier(srcPath, [...TINT], 8, outPath)).resolves.toBeUndefined();
+  await expect(
+    writeTintedMonoTier(srcPath, { kind: 'monoTint', tint: [...TINT] }, 8, outPath),
+  ).resolves.toBeUndefined();
 
   const means = (await sharp(outPath).stats()).channels.map((ch) => ch.mean);
   // Per-channel multiply of gray 200: R·1.0=200, G·0.95=190, B·0.8=160.
@@ -58,4 +60,54 @@ it('tints a 1-band mono source without throwing and applies the per-channel mult
   expect(means[1]).toBeLessThan(GRAY * TINT[1] + 2);
   expect(means[2]).toBeGreaterThan(GRAY * TINT[2] - 2);
   expect(means[2]).toBeLessThan(GRAY * TINT[2] + 2);
+});
+
+it('applies an additive lift after the tint multiply (tint*in + lift*255), the Enceladus path', async () => {
+  const outPath = join(dir, 'mono-lifted-8.jpg');
+  const LIFT = 0.05;
+
+  await expect(
+    writeTintedMonoTier(srcPath, { kind: 'monoTint', tint: [...TINT], lift: LIFT }, 8, outPath),
+  ).resolves.toBeUndefined();
+
+  const means = (await sharp(outPath).stats()).channels.map((ch) => ch.mean);
+  expect(means).toHaveLength(3);
+  TINT.forEach((t, i) => {
+    const expected = GRAY * t + LIFT * 255;
+    expect(means[i]).toBeGreaterThan(expected - 2);
+    expect(means[i]).toBeLessThan(expected + 2);
+  });
+});
+
+it('greys a colour source and re-centres an antimeridian-centred one (the CICLOPS Saturn moons)', async () => {
+  // Left half saturated red, right half saturated blue: after greying, the two
+  // halves differ only in luminance, and the roll must swap them.
+  const colourPath = join(dir, 'colour.png');
+  const half = (r: number, b: number) =>
+    sharp({ create: { width: 8, height: 8, channels: 3, background: { r, g: 0, b } } })
+      .png()
+      .toBuffer();
+  await sharp({ create: { width: 16, height: 8, channels: 3, background: { r: 0, g: 0, b: 0 } } })
+    .composite([
+      { input: await half(255, 0), left: 0, top: 0 },
+      { input: await half(0, 255), left: 8, top: 0 },
+    ])
+    .png()
+    .toFile(colourPath);
+  const outPath = join(dir, 'rolled-16.jpg');
+
+  await writeTintedMonoTier(
+    colourPath,
+    { kind: 'monoTint', tint: [1, 1, 1], antimeridianCentred: true },
+    16,
+    outPath,
+  );
+
+  const { data } = await sharp(outPath).raw().toBuffer({ resolveWithObject: true });
+  const pixel = (x: number) => [...data.subarray((4 * 16 + x) * 3, (4 * 16 + x) * 3 + 3)];
+  const [left, right] = [pixel(2), pixel(13)];
+  // Grey: no channel spread beyond JPEG noise. Rolled: red is brighter than blue
+  // in luminance, so the brighter half must now sit on the RIGHT.
+  for (const p of [left, right]) expect(Math.max(...p) - Math.min(...p)).toBeLessThan(6);
+  expect(right[0]).toBeGreaterThan(left[0]! + 20);
 });

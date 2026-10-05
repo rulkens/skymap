@@ -18,7 +18,7 @@
  *      master-enable toggles (`filaments.enabled`, `volumes.enabled`,
  *      `milkyWay.enabled`).  Most predicates start here.  Per-item gates
  *      read the type's items map directly — volumes via
- *      `settings.volumes.items[id]?.enabled`, structures via
+ *      `settings.cosmicWebDensity.items[id]?.enabled`, structures via
  *      `settings.structures.items[cat].enabled`, galaxy catalogs via
  *      `settings.galaxyCatalogs.items[id].enabled` (wiring rows hoist the
  *      source → galaxy-catalog-id registry mapping at construction).  The galaxy catalog

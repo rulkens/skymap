@@ -1,4 +1,3 @@
-// src/components/TourOverlay/PauseIcon.tsx
 /**
  * PauseIcon — two rounded vertical bars shown inside the dwell ring while the
  * tour is auto-advancing (clicking it pauses). Distinct testid from the

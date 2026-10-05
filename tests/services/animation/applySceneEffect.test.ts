@@ -25,6 +25,8 @@ vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', async (import
 
 import { applySceneEffect } from '../../../src/services/animation/applySceneEffect';
 import { frameTo } from '../../../src/services/engine/animation/effectHelpers';
+import settingsReducer from '../../../src/state/settings/settingsReducer';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { VISIBILITY_ACTION_ROW } from '../../../src/services/animation/visibilityActionRow';
 import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
@@ -35,29 +37,29 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
-import { setFlowEnabled } from '../../../src/layers/flow/settings/flowSlice';
+import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-} from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+} from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-} from '../../../src/layers/structure/settings/structuresSlice';
-import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
+} from '../../../src/layers/structure/state/structures/slice';
+import { writeCosmicWebDensityField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/layers/galaxyCatalog/state/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 /**
  * Minimal EngineSettingsState covering every VISIBILITY_ACTION_ROW factory's
- * leaf reads: galaxyCatalogs.items, structures.items, volumes.items, plus the
- * scalar enable fields the gate-backed factories don't read (but are present
- * for type completeness).
+ * leaf reads: galaxyCatalogs.items, structures.items, cosmicWebDensity.items,
+ * plus the scalar enable fields the gate-backed factories don't read (but are
+ * present for type completeness).
  */
 function makeSettings(opts?: {
   galaxyCatalogIds?: readonly string[];
@@ -90,8 +92,8 @@ function makeSettings(opts?: {
     },
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
-    filaments: { enabled: true, intensity: 1 },
-    volumes: { enabled: true, items: volumeItems },
+    cosmicWebFilaments: { enabled: true, intensity: 1 },
+    cosmicWebDensity: { enabled: true, items: volumeItems },
     flow: { enabled: true } as EngineSettingsState['flow'],
     tonemap: { exposure: 1, curve: 0 } as EngineSettingsState['tonemap'],
     bias: { mode: 0, absMagLimit: -20 } as EngineSettingsState['bias'],
@@ -115,7 +117,6 @@ function makeEngineState(settings?: EngineSettingsState): EngineState {
       fades: { fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()), setImmediate: vi.fn() },
       scheduler: { requestRender: vi.fn() },
     },
-    gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
   } as unknown as EngineState;
 }
@@ -213,14 +214,14 @@ describe('applySceneEffect — show', () => {
     vi.mocked(syncVisibilityFades).mockClear();
   });
 
-  it('dispatches visibility-on for a gate-backed layer (filaments)', () => {
+  it('dispatches visibility-on for a gate-backed layer (cosmicWebFilaments)', () => {
     const { store } = createAppStore();
     const settings = store.getState().settings;
     const state = makeEngineState(settings as unknown as EngineSettingsState);
 
-    applySceneEffect({ kind: 'show', layers: ['filaments'] }, { state, store });
+    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'] }, { state, store });
 
-    expect(store.getState().settings.filaments.enabled).toBe(true);
+    expect(store.getState().settings.cosmicWebFilaments.enabled).toBe(true);
     // The action is the settings action the UI dispatches.
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledTimes(1);
   });
@@ -254,7 +255,7 @@ describe('applySceneEffect — show', () => {
     // `over` is authored in SECONDS (like every clip-land duration); the fade
     // bridge consumes milliseconds. Forwarding it unconverted made a 9-second
     // volume reveal run as a 9-millisecond pop.
-    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 9 }, { state, store });
+    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'], over: 9 }, { state, store });
 
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
       expect.anything(),
@@ -289,17 +290,17 @@ describe('applySceneEffect — hide', () => {
     vi.mocked(syncVisibilityFades).mockClear();
   });
 
-  it('dispatches visibility-off for a gate-backed layer (filaments)', () => {
+  it('dispatches visibility-off for a gate-backed layer (cosmicWebFilaments)', () => {
     const { store } = createAppStore();
     const settings = store.getState().settings as unknown as EngineSettingsState;
     const state = makeEngineState(settings);
     const dispatch = vi.spyOn(store, 'dispatch');
 
-    applySceneEffect({ kind: 'hide', layers: ['filaments'] }, { state, store });
+    applySceneEffect({ kind: 'hide', layers: ['cosmicWebFilaments'] }, { state, store });
 
     const filamentAction = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setFilamentsEnabled>)
-      .find((a) => a.type === setFilamentsEnabled.type);
+      .map(([a]) => a as ReturnType<typeof setCosmicWebFilamentsEnabled>)
+      .find((a) => a.type === setCosmicWebFilamentsEnabled.type);
 
     expect(filamentAction).toBeDefined();
     expect(filamentAction!.payload).toBe(false);
@@ -355,7 +356,7 @@ describe('applySceneEffect — over === 0 routes through animate:false', () => {
     const settings = store.getState().settings as unknown as EngineSettingsState;
     const state = makeEngineState(settings);
 
-    applySceneEffect({ kind: 'show', layers: ['filaments'], over: 0 }, { state, store });
+    applySceneEffect({ kind: 'show', layers: ['cosmicWebFilaments'], over: 0 }, { state, store });
 
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
       expect.anything(),
@@ -372,7 +373,10 @@ describe('applySceneEffect — fade', () => {
     const { store } = makeSpyStore();
 
     expect(() =>
-      applySceneEffect({ kind: 'fade', layers: ['filaments'], to: 0, over: 500 }, { state, store }),
+      applySceneEffect(
+        { kind: 'fade', layers: ['cosmicWebFilaments'], to: 0, over: 500 },
+        { state, store },
+      ),
     ).toThrow();
   });
 });
@@ -403,13 +407,22 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     expect(actions[0]!.payload).toEqual({ id: 'supercluster', enabled: true });
   });
 
-  it('volumeField factory emits one writeVolumeField({ id, patch:{enabled} }) per volume item', () => {
-    const settingsWithVolume = makeSettings({ volumeFieldIds: ['cf4-density'] });
-    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(
+  it('cosmicWebDensityField factory emits one writeCosmicWebDensityField({ id, patch:{enabled} }) per volume item', () => {
+    const settingsWithVolume = makeSettings({ volumeFieldIds: ['mcpm'] });
+    const actions = VISIBILITY_ACTION_ROW['cosmicWebDensityField'].actions(
       true,
       settingsWithVolume,
-    ) as ReturnType<typeof writeVolumeField>[];
+    ) as ReturnType<typeof writeCosmicWebDensityField>[];
     expect(actions).toHaveLength(1);
-    expect(actions[0]!.payload).toEqual({ id: 'cf4-density', patch: { enabled: true } });
+    expect(actions[0]!.payload).toEqual({ id: 'mcpm', patch: { enabled: true } });
+  });
+
+  it('a bodyLabel hide cue also turns the Galactic Centre caption off', () => {
+    // The caption is full at R0, so a `hideLabels` beat that skipped it would
+    // leave the one name on an otherwise bare galaxy view.
+    const hidden = VISIBILITY_ACTION_ROW['bodyLabel']
+      .actions(false, INITIAL_SETTINGS)
+      .reduce(settingsReducer, INITIAL_SETTINGS);
+    expect(hidden.blackHoles.items['sgr-a-star'].labelEnabled).toBe(false);
   });
 });

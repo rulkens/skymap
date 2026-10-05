@@ -38,16 +38,13 @@ import {
   MILKY_WAY_CENTER_WORLD,
 } from '../../../data/milkyWay/galacticCenter';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { NEAR0, COSMO } from '../frame/slabs';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-export type SelectionHalo = {
+type SelectionHalo = {
   readonly radiusMpc: number;
   readonly worldPos: Vec3;
   /** The depth slab (`NEAR0`/`COSMO`) whose frustum contains `worldPos`. */
@@ -57,7 +54,8 @@ export type SelectionHalo = {
 type MilkyWayRow = { readonly type: 'milkyWay' };
 type ZoneOfAvoidanceRow = { readonly type: 'zoneOfAvoidance' };
 type BodyRow = Extract<SelectionRow, { type: 'body' }>;
-type StarRow = Extract<SelectionRow, { type: 'star' }>;
+type StarCatalogRow = Extract<SelectionRow, { type: 'starCatalog' }>;
+type BlackHoleRow = Extract<SelectionRow, { type: 'blackHole' }>;
 
 // Table keyed on the SelectionRow union tag. Each arm receives the narrowed row
 // and returns a descriptor (or null for the structure/zoneOfAvoidance arms,
@@ -69,7 +67,8 @@ const SELECTION_HALO_TABLE: {
   structure: (row: StructureInfo) => null;
   zoneOfAvoidance: (row: ZoneOfAvoidanceRow) => null;
   body: (row: BodyRow) => SelectionHalo;
-  star: (row: StarRow) => SelectionHalo;
+  starCatalog: (row: StarCatalogRow) => SelectionHalo;
+  blackHole: (row: BlackHoleRow) => SelectionHalo;
 } = {
   // `max(diameterKpc, 30)` handles any pre-v4-format galaxy without a measured
   // size; *2 = diameter→radius span.
@@ -90,28 +89,25 @@ const SELECTION_HALO_TABLE: {
   // The band has no ring center — it's a line-of-sight effect along the whole
   // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
-  // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
-  // its ring rides its true physical radius — the outer bound → Mpc — letting the
+  // A scene body and a star are both drawn as a real sphere, so the ring rides
+  // the driver's footprint — the outer bound / photosphere → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
-  // it through `near0SelectionRingPass` (not the COSMO layer), so the two
+  // them through `near0SelectionRingPass` (not the COSMO layer), so the two
   // layers stay slab-exclusive on the shared renderer.
-  body: (row) => ({
-    radiusMpc:
-      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, row.id, 'selectionHaloTable')) *
-      SCALE_UNITS.M_TO_MPC,
-    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-    slab: NEAR0,
-  }),
-  // A survey star carries the nominal solar radius (`radiusM`, stamped by the
-  // extractor) and resolves to a sphere on close approach, so its ring rides
-  // that physical radius in Mpc too — same NEAR0 treatment as a scene body.
-  star: (row) => ({
-    radiusMpc: row.radiusM * SCALE_UNITS.M_TO_MPC,
-    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
-    slab: NEAR0,
-  }),
+  body: nearFieldHalo,
+  starCatalog: nearFieldHalo,
+  // A hole's footprint is r_s: the ring hugs the horizon on close approach.
+  blackHole: nearFieldHalo,
 };
+
+function nearFieldHalo(row: BodyRow | StarCatalogRow | BlackHoleRow): SelectionHalo {
+  return {
+    radiusMpc: row.driver.footprintRadiusM * SCALE_UNITS.M_TO_MPC,
+    worldPos: [row.positionMpc[0], row.positionMpc[1], row.positionMpc[2]],
+    slab: NEAR0,
+  };
+}
 
 /**
  * selectionHalo — dispatch wrapper for the per-kind halo table.

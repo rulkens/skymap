@@ -44,10 +44,12 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let n = normalize(t * tilt.x + b * tilt.y + ng * tilt.z);
 
   let albedo = textureSample(albedoTexture, meshSampler, in.uv).rgb;
-  // glTF packs roughness in G and metallic in B ('tools/meshes/buildMeshes.ts').
-  let mr = textureSample(metalRoughTexture, meshSampler, in.uv).gb;
-  let roughness = mr.x;
-  let metallic = mr.y;
+  // glTF ORM packing: R baked occlusion (255 when the mesh has none), G roughness,
+  // B metallic ('tools/meshes/buildMeshes.ts').
+  let orm = textureSample(metalRoughTexture, meshSampler, in.uv).rgb;
+  let ao = orm.r;
+  let roughness = orm.g;
+  let metallic = orm.b;
   let f0 = mix(vec3<f32>(DIELECTRIC_F0), albedo, metallic);
   let diffuseAlbedo = albedo * (1.0 - metallic);
 
@@ -56,7 +58,7 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
     pbrDirectSphere(n, v, u.sunDirLocal, diffuseAlbedo, roughness, f0, u.sinSunAngularRadius) *
     SUN_IRRADIANCE * u.sunVisibleFraction;
   let env = envSplitSum(
-    n, v, diffuseAlbedo, roughness, f0, probeTexture, meshSampler, envBrdfLut, lutSampler,
+    n, v, diffuseAlbedo, roughness, f0, probeTexture, meshSampler, envBrdfLut, lutSampler, ao,
   );
 
   return vec4<f32>(direct + env, 1.0);

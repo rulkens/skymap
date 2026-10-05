@@ -11,6 +11,7 @@
 
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { BodyTextureSpec } from '../../@types/scene/BodyTextureSpec';
+import { MARS_GLOBE_GRADE } from './marsSurfaceParams';
 
 // Keyed by id rather than an array so a missing or extra body is a compile error,
 // and so the per-body-per-frame proximity-loader lookup stays O(1).
@@ -45,11 +46,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'nasa',
     treatment: { kind: 'colour' },
   },
+  // Graded to colour-match the tuned Viking surface tiles (marsAlbedoRecipe.ts).
   mars: {
     bodyId: 'mars',
     kinds: { surface: 'large' },
     provenance: 'sss',
-    treatment: { kind: 'colour' },
+    treatment: { kind: 'grade', grade: MARS_GLOBE_GRADE },
   },
   // Jupiter / Saturn: a SOURCE ceiling, not a look one. Their Solar System Scope
   // files are 4096×2048 despite the `8k_` filename prefix, so `large` has no tile to
@@ -143,6 +145,95 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     kinds: { surface: 'medium' },
     provenance: 'usgs',
     treatment: { kind: 'monoTint', tint: [0.6, 0.58, 0.56] },
+  },
+  // Cassini's global mosaic is relief SHADING (mean 104/255), not albedo, of the
+  // most reflective body in the solar system: the tint alone compresses the
+  // relief, so `lift` adds the missing brightness (mean lands ≈227/255, ~5%
+  // highlight clip).
+  enceladus: {
+    bodyId: 'enceladus',
+    kinds: { surface: 'large', normal: 'medium' },
+    provenance: 'usgs',
+    treatment: { kind: 'monoTint', tint: [0.5, 0.5, 0.5], lift: 0.686 },
+  },
+  // Saturn's mid-sized moons: CICLOPS albedo maps, greyed (their colour is
+  // enhanced UV/IR) and stretched for display. The four bright moons are fitted so
+  // the texture's mean lands on the body's flat albedo with ~3% highlight clip;
+  // Iapetus is anchored on its two terrains instead (dark-hemisphere median ->
+  // albedo 0.04, bright -> 0.6) with a mild warm cast, by eye. Mimas's source is
+  // 6356 px wide, so `medium` is its ceiling.
+  mimas: {
+    bodyId: 'mimas',
+    // `small` normal: the shape model's ~0.6 km spacing resolves 2k, not 4k.
+    kinds: { surface: 'medium', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.49, 0.49, 0.49], lift: 0.635, antimeridianCentred: true },
+  },
+  tethys: {
+    bodyId: 'tethys',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.47, 0.47, 0.47], lift: 0.678, antimeridianCentred: true },
+  },
+  dione: {
+    bodyId: 'dione',
+    kinds: { surface: 'large', normal: 'small' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.58, 0.58, 0.58], lift: 0.584, antimeridianCentred: true },
+  },
+  rhea: {
+    bodyId: 'rhea',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [0.57, 0.57, 0.57], lift: 0.602, antimeridianCentred: true },
+  },
+  iapetus: {
+    bodyId: 'iapetus',
+    kinds: { surface: 'large' },
+    provenance: 'nasa',
+    treatment: { kind: 'monoTint', tint: [1.2, 1.16, 1.08], lift: 0.107, antimeridianCentred: true },
+  },
+  // Uranus's five big moons: Schenk's Voyager 2 mosaics, scaled to each moon's geometric albedo and neutral grey; the
+  // unseen hemisphere is flat albedo grey. Tiers follow source width (Miranda 6294, Ariel 3652, the
+  // rest under 2048: their `small` tier is written at the source's own width, never upscaled).
+  miranda: {
+    bodyId: 'miranda',
+    kinds: { surface: 'medium', normal: 'medium' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  ariel: {
+    bodyId: 'ariel',
+    kinds: { surface: 'small', normal: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  umbriel: {
+    bodyId: 'umbriel',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  titania: {
+    bodyId: 'titania',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  oberon: {
+    bodyId: 'oberon',
+    kinds: { surface: 'small' },
+    provenance: 'schenk',
+    treatment: { kind: 'monoTint', tint: [1, 1, 1] },
+  },
+  // Triton: Schenk's 2014 Voyager 2 colour mosaic as distributed by USGS (hence `usgs`, the host the
+  // build pulls from; the Uranian moons, taken from Schenk's own repository, are `schenk`). Published
+  // colours are kept as they are; the build fills the polar-night black with the mean colour.
+  triton: {
+    bodyId: 'triton',
+    kinds: { surface: 'large', normal: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
   },
 };
 

@@ -64,7 +64,9 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
     ...actual,
     deriveFrameContext: (...args: Parameters<typeof actual.deriveFrameContext>) => {
       probe.order.push('deriveFrameContext');
-      probe.drawnPoses.push(args[2]);
+      // The caller now assembles `cam` itself; its `target`/`yaw`/`pitch`/
+      // `distance` are the pose that used to arrive as the 3rd positional.
+      probe.drawnPoses.push(args[1].cam);
       return actual.deriveFrameContext(...args);
     },
   };

@@ -22,7 +22,7 @@
  * The first-visit / deep-link / seen-version decision is seeded once into the
  * slice by `buildInitialUiState` at store construction.  localStorage
  * persistence (writing `seenVersion` on dismiss) is handled by the
- * `persistSplashVersion` store effect, not here.
+ * `SPLASH_SEEN_VERSION` persisted-value row, not here.
  *
  * ### Readiness signal
  *
@@ -67,7 +67,7 @@ import { selectEngineStatus, selectLoadProgress } from '../state/engine/selector
 import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 
 /** Milliseconds before the "Continue anyway" escape appears. */
-export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
+const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
 export function useSplash(): UseSplashReturn {
   // ── Engine state from the Redux slice ────────────────────────────────────
@@ -126,8 +126,8 @@ export function useSplash(): UseSplashReturn {
   //
   // Both dismiss paths dispatch the same action — the version stamp is the
   // only thing that varies, and both CTAs stamp CURRENT_SPLASH_VERSION.
-  // localStorage persistence is handled by the persistSplashVersion store
-  // effect, not here.
+  // localStorage persistence is handled by the SPLASH_SEEN_VERSION
+  // persisted-value row, not here.
 
   const dismissExplore = useCallback(
     () => dispatch(dismissSplash(CURRENT_SPLASH_VERSION)),

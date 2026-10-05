@@ -38,6 +38,9 @@ playwright-report/
 # committed (it pins the exact dependency graph the reproducible builder needs).
 /tools/stars-rs/target/
 
+# `npm run structure-audit` output — a generated page, rebuilt on every run.
+/tools/structure-audit/out/
+
 # ── Environment files ─────────────────────────────────────────────────────────
 # Default-deny `.env*` keeps secrets out by accident.  The carve-out below
 # is `.env.production`: it carries `VITE_DATA_BASE_URL`, the public R2 URL
@@ -98,6 +101,8 @@ pnpm-debug.log*
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf
+# Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
+!/data/geo3d/**/*.outline.json
 # Vendored d3-celestial constellation line data — a committed raw JSON the
 # common globs above don't cover (they re-include only READMEs / checksums /
 # fonts / seeds). It is external source, not a build artefact, so it lives in
@@ -162,6 +167,7 @@ recordings/
 # takes until `--rebuild` forces a fresh one. Deliberately its own directory,
 # never `dist/` — that one is the deploy build.
 /tools/record/.build/
+/tools/shot/.build/
 
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so

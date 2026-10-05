@@ -8,9 +8,11 @@
 
 import { rotationRowById } from './rotationElements';
 import { bodyHostId } from './positionDrivers';
+import { SITE_GROUND_UPS_ENU } from './siteGroundHeights.generated';
 import { CONST_J2000 } from '../time/constJ2000';
 import { rotationFromIau } from '../../utils/orbit/rotationFromIau';
 import { rotationLookAt } from '../../utils/orbit/rotationLookAt';
+import { rotationTidallyLocked } from '../../utils/orbit/rotationTidallyLocked';
 import { rotationSurfaceLocked } from '../../utils/orbit/rotationSurfaceLocked';
 import { IDENTITY_MAT3 } from '../../utils/math/identityMat3';
 import type { Mat3 } from '../../@types/math/Mat3';
@@ -44,7 +46,7 @@ export function orientationForBody(
   if (!row) return [...IDENTITY_MAT3] as Mat3;
 
   switch (row.kind) {
-    // The 21 authored rows predate the union and carry no discriminant.
+    // The authored IAU-pole rows predate the union and carry no discriminant.
     case undefined:
     case 'iau-pole': {
       const primeMeridianDeg =
@@ -66,11 +68,28 @@ export function orientationForBody(
       }
       const hostOrientation = orientationForBody(hostId, simDays, positions);
       const hostPoleWorld: Vec3 = [hostOrientation[6], hostOrientation[7], hostOrientation[8]];
+      const groundUpEnu = SITE_GROUND_UPS_ENU[id];
+      if (groundUpEnu === undefined) {
+        throw new Error(`orientationForBody: no baked SITE_GROUND_UPS_ENU entry for '${id}'`);
+      }
       return rotationSurfaceLocked(
         positionOrThrow(positions, id, id),
         positionOrThrow(positions, hostId, id),
         hostPoleWorld,
         row.headingDeg,
+        groundUpEnu,
+      );
+    }
+    case 'tidallyLocked': {
+      const hostId = bodyHostId(id);
+      if (hostId === null) {
+        throw new Error(`orientationForBody: tidally-locked '${id}' hangs off no host`);
+      }
+      return rotationTidallyLocked(
+        positionOrThrow(positions, id, id),
+        positionOrThrow(positions, hostId, id),
+        row.poleRaDeg,
+        row.poleDecDeg,
       );
     }
     default: {

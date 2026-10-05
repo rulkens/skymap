@@ -14,7 +14,7 @@ import type { OrientationFrameId } from '../../../@types/camera/OrientationFrame
 import type { AppDispatch } from '../../../store/types';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 
-export type PlayClipDeps = {
+type PlayClipDeps = {
   store: { dispatch: AppDispatch };
 
   clipPlayer: Pick<ClipPlayer, 'stop' | 'registerEndResolver'>;

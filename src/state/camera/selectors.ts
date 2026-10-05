@@ -13,13 +13,14 @@ import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
 
-// The FRAMED base (spec §9): world-arm readers resolve it through
-// `foldToWorld` / `liveWorldPose` rather than assuming the absolute arm.
-export const selectCameraBase = (state: RootState): FramedCameraPose =>
-  selectCameraIntent(state).base;
-
 export const selectCameraTuning = (state: RootState): CameraTuning =>
   selectCameraIntent(state).tuning;
+
+// The live pose, for readers that need it off Redux rather than from the engine
+// handle's 4 Hz debug snapshot — which carries `distanceMpc` alone and drops
+// target/yaw/pitch, so it cannot serve a pose the caller means to keep.
+export const selectCameraBase = (state: RootState): FramedCameraPose =>
+  selectCameraIntent(state).base;
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;

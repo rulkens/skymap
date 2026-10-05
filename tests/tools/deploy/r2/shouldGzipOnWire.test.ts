@@ -18,11 +18,12 @@ describe('shouldGzipOnWire', () => {
     expect(shouldGzipOnWire('flowfield-large.scfd')).toBe(false);
   });
 
-  it('includes other .bin/.scfd/.ccat/.json data files', () => {
+  it('includes other .bin/.scfd/.ccat/.json/.mesh data files', () => {
     expect(shouldGzipOnWire('sdss-medium.bin')).toBe(true);
     expect(shouldGzipOnWire('mcpm-large.scfd')).toBe(true);
     expect(shouldGzipOnWire('structures.ccat')).toBe(true);
     expect(shouldGzipOnWire('pgc_aliases.json')).toBe(true);
+    expect(shouldGzipOnWire('hubble.b7d09450.mesh')).toBe(true);
   });
 
   it('matches by basename, so a nested epoch-folder path still excludes correctly', () => {

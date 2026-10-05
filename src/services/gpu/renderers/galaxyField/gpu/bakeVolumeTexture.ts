@@ -19,7 +19,7 @@ export type BakeVolumeTextureSpec = {
   readonly workgroupSize: number;
 };
 
-export type BakedVolumeTexture = {
+type BakedVolumeTexture = {
   readonly texture: GPUTexture;
   readonly sampler: GPUSampler;
 };

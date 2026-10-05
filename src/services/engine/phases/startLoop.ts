@@ -8,10 +8,8 @@
 
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
-import { FRAME_ORDER } from '../frame/frameOrder';
-import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
-import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
-import { selectTimeState } from '../../../state/time/selectors';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
+import { CONTROL_SCHEMES } from '../camera/controlSchemes';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -23,12 +21,17 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   }
   const phaseLocals = deps.phaseLocals;
 
-  // Against the ASSEMBLED rows: a freshly derived table would be a second answer.
+  // Against the ASSEMBLED rows: a freshly derived table would be a second
+  // answer. Every rig's program, not just the live `state.viewRig` — a pass
+  // only the dome rig draws must still pass boot before the user ever
+  // switches to it.
   checkFrameOrder(
-    FRAME_ORDER,
+    Object.values(VIEW_RIGS).map((rig) => rig.program),
     state.passes,
+    state.computes,
+    state.planners,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
-    state.gpu.renderTargets!.specs.map((spec) => spec.id),
+    state.gpu.renderTargets!.specs,
   );
 
   // Renderers are absent by design: each `ContentPass.draw` reads its own off
@@ -39,7 +42,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     device: phaseLocals.device,
     context: phaseLocals.context,
     timingService: state.gpu.timingService,
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 
   // The scheduler was wired with `onFrame: () => frameRef.current()`, reading the
@@ -48,14 +51,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     runFrame(state, frameDeps, performance.now());
   };
 
-  // Makes a bare load show the sky RIGHT NOW (the slice seeds at J2000). Guarded
-  // on clock intent: a `#t=` deep link lands manual+paused in the arrival read,
-  // which runs BEFORE this async phase — an unconditional snap clobbers it.
-  if (selectTimeState(deps.cb.store.getState()).mode !== 'manual') {
-    deps.cb.store.dispatch(goLiveNowAction());
-  }
-
-  // Boot ignition, independent of `goLiveNowAction` (that covers the clock, not
-  // frame 1 — D8). After this frame the loop sleeps until a wake.
+  // Boot ignition: the clock went live in `arrivalSaga`, which covers the
+  // clock, not frame 1 (D8). After this frame the loop sleeps until a wake.
   state.subsystems.scheduler.requestRender();
 }

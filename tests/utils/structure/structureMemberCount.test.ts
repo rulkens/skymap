@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../src/utils/structure/structureMemberCount';
 import { Source } from '../../../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
+
+/** A visibility mask covering the two catalogs this file's fixtures populate. */
+const SDSS_AND_TWOMRS_MASK = maskWith(maskWith(0, Source.SDSS), Source.TwoMRS);
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -53,7 +55,7 @@ describe('structureMemberCount', () => {
         [0, 200, 0],
       ]), // 1 inside
     });
-    expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBe(3);
+    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS_MASK)).toBe(3);
   });
 
   it('excludes galaxy catalogs toggled off in the visibility mask', () => {
@@ -78,7 +80,7 @@ describe('structureMemberCount', () => {
         [200, 0, 0],
       ]),
     });
-    expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBe(0);
+    expect(structureMemberCount(cluster, getCloud, SDSS_AND_TWOMRS_MASK)).toBe(0);
   });
 
   it('prefers apparentRadiusMpc over physicalRadiusMpc for the cone', () => {

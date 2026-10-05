@@ -15,7 +15,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../frame/solarSystemLabelMa
 import { BODY_GLINT_MAX_PX } from '../frame/partitionBodiesByPresentation';
 import { regionById } from '../../../utils/regions/regionById';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SGR_A_STAR_ANCHOR } from '../../../data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../data/places/galacticCentre';
 import { MILKY_WAY_RADIUS_MPC } from '../galaxyGenerator/v1/milkyWayCalibration';
 
 // Each near-field extent is read from the region whose content the row gates,
@@ -31,17 +31,17 @@ const FARTHEST_STAR_PC = NEIGHBOURHOOD_EXTENT_MPC / SCALE_UNITS.PC_TO_MPC;
 const CONSTELLATIONS_FULL_AT_KPC = 1;
 const CONSTELLATIONS_GONE_AT_KPC = 10;
 
-// R₀ — the Galactic Centre's distance from the render origin, off the same seed
-// the S-star orbits are scaled by, so the caption band cannot drift from the
-// position it labels.
-const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
+// R₀ — the Galactic Centre's distance from the render origin, off the same
+// place seed the S-star orbits are scaled by, so the caption band cannot drift
+// from the position it labels.
+const SGR_A_STAR_R0_MPC = Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc);
 
 // The shape `starBackdrop` and `bodyGlintBackdrop` share — full at 2× a
 // region's extent, gone by 10× — one home so the two cannot drift apart.
 const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
 const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
 
-export const backdropBand = (regionExtentMpc: number): FadeBand => ({
+const backdropBand = (regionExtentMpc: number): FadeBand => ({
   fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
   goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
 });
@@ -134,6 +134,19 @@ export const SCALE_FADE_BANDS = {
   // LITERAL Mpc values — no `local-group` row exists in BODY_REGIONS to derive
   // them from.
   zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
+
+  // Keyed on: CAMERA distance from the render origin, Mpc — the Sun, and the
+  // Local Bubble shell's own centre. An APPROACH fade: invisible from deep
+  // inside; goneAt sits below the mesh's ~536 pc max radius, so the camera is
+  // still inside the far lobes (the chimney) as it starts to fade in. Full by
+  // 1 kpc (~22° apparent diameter at the ~190 pc mean radius). Eye-tuned.
+  localBubble: { fullAt: 1 * SCALE_UNITS.KPC_TO_MPC, goneAt: 0.4 * SCALE_UNITS.KPC_TO_MPC },
+
+  // Keyed on: the same quantity — composed with `localBubble` into a
+  // visibility WINDOW, the same shape as `zoneOfAvoidance`/`-Recede`: the
+  // shell recedes before the Galaxy becomes the subject. Outer edge matches
+  // `constellations`'s recede band (10 kpc, ~3.4° apparent diameter there).
+  localBubbleRecede: { fullAt: 4 * SCALE_UNITS.KPC_TO_MPC, goneAt: 10 * SCALE_UNITS.KPC_TO_MPC },
 
   // Keyed on: a scene BODY's apparent diameter, px — a recede fade, glint full
   // at/below 1 px. Over the BODY_GLINT_MAX_PX→1 px band the glint fades in

@@ -18,15 +18,28 @@ import sharp from 'sharp';
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
-import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration';
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
+import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
+import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
+import { fillEquirectNodata } from '../utils/image/fillEquirectNodata';
+import { fillBlackWithMeanColour } from '../utils/image/fillBlackWithMeanColour';
+import { flattenUncoveredNormals } from '../utils/image/flattenUncoveredNormals';
+import { placeCubeInGlobe } from '../utils/image/placeCubeInGlobe';
+import { dropSmallRegions } from '../utils/image/dropSmallRegions';
+import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
+import { isisMosaicToGrey } from '../utils/image/isisMosaicToGrey';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
+import { readIsisCube } from '../utils/image/readIsisCube';
+import { rollEquirectHalfTurn } from '../utils/image/rollEquirectHalfTurn';
+import { trueReliefNormalGain } from '../utils/image/trueReliefNormalGain';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
+import { icqPointsToEquirectRadius } from '../utils/shape/icqPointsToEquirectRadius';
+import { readIcqPoints } from '../utils/shape/readIcqPoints';
 import { bakeNormalMap, exaggerationFor } from './bakeNormalMap';
 import { emittedTiersForBody } from './emittedTiersForBody';
 import { tiersFittingSourceWidth } from './tiersFittingSourceWidth';
@@ -36,6 +49,9 @@ import { writeLinearTier } from './writeLinearTier';
 
 /** Output JPEG quality for the spherical body textures (spec §10, ~80). */
 const JPEG_QUALITY = 80;
+
+/** 8-bit channel full scale — `monoTint`'s `lift` is a 0-1 fraction of this. */
+const EIGHT_BIT_FULL_SCALE = 255;
 
 /**
  * Endpoints of the material map's R channel: perceptual roughness in [0,1]
@@ -98,38 +114,101 @@ function firstExisting(paths: readonly string[]): string | null {
   return null;
 }
 
+/** Region-size floor for `isisDem`: a limb-profile arc is a sliver beside the stereo coverage. */
+const MIN_REGION_FRACTION = 0.05;
+
+/** Grid width each non-image source is rasterised at: the shape models' ~0.6 km
+ *  point spacing (~0.17 deg) supports 2k, not 4k; the 200 m Enceladus DEM supports 4k. */
+const GRID_WIDTH = { icq: 2048, floatDem: 4096 } as const;
+
+/** The largest normal-map tier: an `isisDem` grid is rasterised at this width. */
+function normalCeilingPx(bodyId: BodyTextureId): number {
+  return tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+}
+
+/** The one home of a scene body's grey albedo, which the ISIS mosaic scale is pinned to. */
+function sceneAlbedoOf(bodyId: string): number {
+  const body = SCENE_PLANETS.find((p) => p.id === bodyId);
+  if (body === undefined)
+    throw new Error(`buildTextures: no scene body '${bodyId}' for its albedo`);
+  return body.albedo[0];
+}
+
+/** sharp over a source file; an ISIS mosaic is decoded to 8-bit sRGB grey at `albedo` first. */
+function openGreySource(srcPath: string, albedo: number | undefined): ReturnType<typeof sharp> {
+  if (!srcPath.endsWith('.cub')) return sharp(srcPath, { limitInputPixels: false });
+  if (albedo === undefined)
+    throw new Error(`buildTextures: ISIS mosaic ${srcPath} needs an albedo`);
+  const { data, width, height } = isisMosaicToGrey(readIsisCube(srcPath), albedo);
+  return sharp(Buffer.from(data.buffer), { raw: { width, height, channels: 1 } });
+}
+
+/** Max minus min of a filled height grid, in the grid's own unit (km for an ISIS DEM). */
+function heightRangeOf(grid: Float32Array): number {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of grid) {
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+  }
+  return hi - lo;
+}
+
+/** Full-scale-mapped height or radius: min -> 0, max -> 255, unquantised, so 23 km
+ *  of Mimas radius is not terraced into 90 m steps before the Sobel pass. */
+function toByteScale(radius: Float32Array): Float32Array {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of radius) {
+    if (r < lo) lo = r;
+    if (r > hi) hi = r;
+  }
+  return radius.map((r) => ((r - lo) / (hi - lo)) * EIGHT_BIT_FULL_SCALE);
+}
+
 /** Source width in pixels; 0 if sharp can't report it. */
 async function sourceWidth(srcPath: string): Promise<number> {
+  if (srcPath.endsWith('.cub')) return readIsisCube(srcPath).width;
   const meta = await sharp(srcPath, { limitInputPixels: false }).metadata();
   return meta.width ?? 0;
 }
 
 /**
- * Multiply a tint into a mono source and write the JPEG — the path for a body
- * whose only map is panchromatic AND has no colour source to recover hue from
- * (Europa, Callisto, Charon). The tint is a stand-in, not a measurement. A mono
- * body that DOES have a colour source takes `panSharpen` (Pluto) and never
- * reaches here.
+ * Multiply a tint into a source's luminance, add an optional lift, and write
+ * the JPEG — the path for a body with no colour source to recover hue from
+ * (Europa, Callisto, Charon, the Saturn moons). The tint is a stand-in, not a
+ * measurement; `lift` (default 0) restores brightness a stretched mosaic cannot
+ * reach by multiplying alone. A mono body that DOES have a colour source takes
+ * `panSharpen` (Pluto) and never reaches here. `greyscale` is a no-op on the
+ * 1-band USGS mosaics and drops the enhanced IR/UV hue of the CICLOPS maps.
  *
- * TWO sharp passes, not one, because libvips fixes its operation order: within a
- * single pipeline `linear` runs BEFORE the band expansion that
- * `toColourspace('srgb')` implies for a 1-band image, so three coefficients on a
- * still-mono pipeline throw 'Band expansion using linear is unsupported'. Pass 1
- * resizes to tier first: the full Europa source is 19631×9816, ~578 MB raw.
+ * TWO sharp passes, not one: the roll needs the resized pixels in hand, and
+ * resizing first keeps the buffer small (the full Europa source is 19631×9816,
+ * ~578 MB raw). Pass 2 widens the luminance band to three with `joinChannel`, NOT
+ * `toColourspace('srgb')`: libvips runs `linear` before a colourspace band
+ * expansion, so three coefficients on that route throw 'Band expansion using
+ * linear is unsupported'.
  */
 export async function writeTintedMonoTier(
   srcPath: string,
-  tint: Vec3,
+  treatment: Extract<ColourTreatment, { kind: 'monoTint' }>,
   widthPx: number,
   outPath: string,
+  mosaicAlbedo?: number,
 ): Promise<void> {
-  const rgb = await sharp(srcPath, { limitInputPixels: false })
+  const { data, info } = await openGreySource(srcPath, mosaicAlbedo)
     .resize({ width: widthPx })
-    .toColourspace('srgb')
+    .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  await sharp(rgb.data, { raw: rgb.info })
-    .linear([tint[0], tint[1], tint[2]], [0, 0, 0])
+  const luminance = treatment.antimeridianCentred
+    ? rollEquirectHalfTurn(data, info.width, info.height, info.channels)
+    : data;
+  const { tint, lift = 0 } = treatment;
+  const liftedChannel = lift * EIGHT_BIT_FULL_SCALE;
+  await sharp(luminance, { raw: info })
+    .joinChannel([luminance, luminance], { raw: info })
+    .linear([tint[0], tint[1], tint[2]], [liftedChannel, liftedChannel, liftedChannel])
     .jpeg({ quality: JPEG_QUALITY })
     .toFile(outPath);
 }
@@ -173,11 +252,32 @@ export async function writePanSharpenedTier(
 }
 
 /**
+ * sharp over a colour source; a row flagged `fillBlack` has its exact-black nodata painted with the
+ * mean colour at SOURCE resolution, so the resize cannot smear black into the boundary.
+ */
+async function openColourSource(
+  bodyId: BodyTextureId,
+  srcPath: string,
+): Promise<ReturnType<typeof sharp>> {
+  if (!('fillBlack' in SOURCE_TABLE[bodyId].surface!)) {
+    return sharp(srcPath, { limitInputPixels: false });
+  }
+  const { data, info } = await sharp(srcPath, { limitInputPixels: false })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const mean = fillBlackWithMeanColour(data);
+  process.stderr.write(`  nodata ${bodyId}: black filled with mean colour ${mean.join(',')}\n`);
+  return sharp(data, { raw: info });
+}
+
+/**
  * Downsample one body source to a tier and write the JPEG, dispatching on the
  * body's registry colour treatment. Width-only resize: the sources are exactly
  * 2:1, so height follows.
  */
 async function writeBodyTier(
+  bodyId: BodyTextureId,
   srcPath: string,
   treatment: ColourTreatment,
   chromaPath: string | null,
@@ -186,14 +286,15 @@ async function writeBodyTier(
 ): Promise<void> {
   switch (treatment.kind) {
     case 'colour': {
-      await sharp(srcPath, { limitInputPixels: false })
+      await (await openColourSource(bodyId, srcPath))
         .resize({ width: widthPx })
         .jpeg({ quality: JPEG_QUALITY })
         .toFile(outPath);
       return;
     }
     case 'monoTint': {
-      await writeTintedMonoTier(srcPath, treatment.tint, widthPx, outPath);
+      const mosaicAlbedo = srcPath.endsWith('.cub') ? sceneAlbedoOf(bodyId) : undefined;
+      await writeTintedMonoTier(srcPath, treatment, widthPx, outPath, mosaicAlbedo);
       return;
     }
     case 'panSharpen': {
@@ -203,6 +304,20 @@ async function writeBodyTier(
         throw new Error(`buildTextures: panSharpen treatment with no chroma source (${srcPath})`);
       }
       await writePanSharpenedTier(srcPath, chromaPath, treatment.calibration, widthPx, outPath);
+      return;
+    }
+    case 'grade': {
+      // `ensureAlpha` guarantees the stride `gradeRgbaInPlace` assumes even
+      // though the JPEG source and output both carry no real alpha.
+      const { data, info } = await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: widthPx })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      gradeRgbaInPlace(data, treatment.grade);
+      await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+        .jpeg({ quality: JPEG_QUALITY })
+        .toFile(outPath);
       return;
     }
     default: {
@@ -270,8 +385,53 @@ function bakeNormalOnce(
 ): Promise<{ data: Buffer; info: { width: number; height: number; channels: 4 } }> {
   let baked = bakedNormalCache.get(srcPath);
   if (baked === undefined) {
-    const capPx = tierToTexturePx(emittedTiersForBody(bodyId, 'normal').at(-1)!);
+    const capPx = normalCeilingPx(bodyId);
+    const entry = SOURCE_TABLE[bodyId].normal!;
     baked = (async () => {
+      if ('format' in entry) {
+        const width = entry.format === 'isisDem' ? capPx : GRID_WIDTH[entry.format];
+        const height = width / 2;
+        let grid: Float32Array;
+        if (entry.format === 'icq') {
+          grid = icqPointsToEquirectRadius(
+            readIcqPoints(srcPath),
+            width,
+            height,
+            entry.lonOffsetDeg,
+          );
+        } else if (entry.format === 'isisDem') {
+          const cube = readIsisCube(srcPath);
+          dropSmallRegions(cube.data, cube.width, cube.height, MIN_REGION_FRACTION);
+          // A regional cube is first padded to a whole globe; a whole-globe one passes through,
+          // and its column 0 is lon `leftLonDeg`, not 0, so the registration shift absorbs that.
+          const globe = placeCubeInGlobe(cube);
+          grid = binFloatDemToEquirect(
+            globe.data,
+            globe.width,
+            globe.height,
+            width,
+            height,
+            entry.lonOffsetDeg - globe.leftLonDeg,
+          );
+          const covered = Uint8Array.from(grid, (v) => (Number.isNaN(v) ? 0 : 1));
+          fillEquirectNodata(grid, width, height);
+          const gain = trueReliefNormalGain(heightRangeOf(grid), cube.equatorialRadiusM, width);
+          const normals = bakeNormalMap({ data: toByteScale(grid), width, height }, gain);
+          flattenUncoveredNormals(normals.data, covered);
+          process.stderr.write(`  relief ${bodyId}: true-relief normal gain ${gain.toFixed(2)}\n`);
+          return normals;
+        } else {
+          const raw = await sharp(srcPath, { limitInputPixels: false })
+            .toColourspace('b-w') // single-channel raster; without it sharp returns 3 float channels
+            .raw({ depth: 'float' })
+            .toBuffer({ resolveWithObject: true });
+          const { width: sw, height: sh } = raw.info;
+          const src = new Float32Array(raw.data.buffer, raw.data.byteOffset, sw * sh);
+          grid = binFloatDemToEquirect(src, sw, sh, width, height, entry.lonOffsetDeg);
+          fillEquirectNodata(grid, width, height);
+        }
+        return bakeNormalMap({ data: toByteScale(grid), width, height }, exaggerationFor(bodyId));
+      }
       // `.greyscale()` collapses the 16-bit elevation `.tif` to the 8-bit
       // heightfield `bakeNormalMap` expects; the quantization is accepted for v1.
       const grey = await sharp(srcPath, { limitInputPixels: false })
@@ -314,6 +474,7 @@ const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
   colour: '',
   monoTint: '  (tinted)',
   panSharpen: '  (pan-sharpened)',
+  grade: '  (graded)',
 };
 
 /**
@@ -324,6 +485,7 @@ const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
 const SRGB_WRITER: KindWriter = {
   write: (bodyId, kind, srcPath, widthPx, outPath) =>
     writeBodyTier(
+      bodyId,
       srcPath,
       BODY_TEXTURE_REGISTRY[bodyId].treatment,
       chromaPathFor(bodyId, kind),
@@ -409,17 +571,20 @@ export async function buildTextures(outDir: string): Promise<void> {
       process.stderr.write(`  skip ${bodyId}:${kind}: no source on disk\n`);
       continue;
     }
-    const width = await sourceWidth(srcPath);
+    const entry = SOURCE_TABLE[bodyId][kind]!;
+    const width =
+      'format' in entry
+        ? entry.format === 'isisDem'
+          ? normalCeilingPx(bodyId)
+          : GRID_WIDTH[entry.format]
+        : await sourceWidth(srcPath);
     const fitting = tiersFittingSourceWidth(width);
-    const tiers = emittedTiersForBody(bodyId, kind).filter((tier) => fitting.includes(tier));
-    if (tiers.length === 0) {
-      process.stderr.write(
-        `  warn ${bodyId}:${kind}: source ${width}px too small for any tier — skipping\n`,
-      );
-      continue;
-    }
+    const emitted = emittedTiersForBody(bodyId, kind);
+    // A source narrower than `small` still ships that one tier, at its own width: no upscale.
+    const fitted = emitted.filter((tier) => fitting.includes(tier));
+    const tiers = fitted.length > 0 ? fitted : emitted.slice(0, 1);
     for (const tier of tiers) {
-      const px = tierToTexturePx(tier);
+      const px = Math.min(tierToTexturePx(tier), width);
       const filename = bodyTextureFilename(bodyId, kind, tier);
       const note = await writeBodyKindTier(bodyId, kind, srcPath, px, join(outDir, filename));
       process.stderr.write(`  ok   ${filename}${note}\n`);

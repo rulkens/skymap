@@ -110,6 +110,10 @@ function stubAsset(): MeshAsset {
   };
 }
 
+function stubAssetWithContactShadow(): MeshAsset {
+  return { ...stubAsset(), contactShadow: { width: 4, height: 4 } as unknown as ImageBitmap };
+}
+
 function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi.fn> } {
   return {
     setPipeline: vi.fn(),
@@ -121,10 +125,14 @@ function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi
 }
 
 describe('createMeshBodyRenderer', () => {
-  it('mints two bind-group layouts: the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
+  it('mints the body, global and contact layouts; the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     makeRenderer(mockDevice({ bindGroupLayouts }));
-    expect(bindGroupLayouts).toHaveLength(2);
+    expect(bindGroupLayouts.map((l) => l.label)).toEqual([
+      'meshBody-body-bgl',
+      'meshBody-global-bgl',
+      'meshBody-contact-bgl',
+    ]);
 
     // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);
@@ -186,6 +194,24 @@ describe('createMeshBodyRenderer', () => {
     expect(cube.destroy).toHaveBeenCalledTimes(1);
     expect(depth.destroy).toHaveBeenCalledTimes(1);
     expect(renderer.probeOf('a')).toBeNull();
+  });
+
+  it('uploads a contact shadow as r8unorm and frees it on clear', () => {
+    const textures: TextureStub[] = [];
+    const renderer = makeRenderer(mockDevice({ textures }));
+
+    renderer.setMesh('a', stubAsset());
+    expect(textures.some((t) => t.desc.format === 'r8unorm')).toBe(false);
+
+    renderer.setMesh('b', stubAssetWithContactShadow());
+    const shadow = textures.find((t) => t.desc.format === 'r8unorm')!;
+    expect(shadow.desc.size).toEqual([4, 4, 1]);
+    // copyExternalImageToTexture rejects a destination without RENDER_ATTACHMENT,
+    // leaving the mask all zeros — a black patch under the rover.
+    expect(shadow.desc.usage & GPUTextureUsage.RENDER_ATTACHMENT).not.toBe(0);
+
+    renderer.clearMesh('b');
+    expect(shadow.destroy).toHaveBeenCalledTimes(1);
   });
 
   it("draw binds the body's own group at index 0 and the shared group at index 1", () => {

@@ -419,8 +419,8 @@ struct CloudShellUniforms {
 // 'camPosLocal' (the camera in atmosphere-top-radius units, sphere centre at the
 // origin) is the view vector the in-scatter integral needs, which the lit prefix
 // does not carry. 'invMvp' is the CPU-side inverse of 'mvp' (computed in f64,
-// narrowed at the upload boundary like 'mvp' itself) -- read only by the
-// inside-shell fragment entry points to unproject a screen position back into
+// narrowed at the upload boundary like 'mvp' itself) -- read by the froxel bake
+// and its apply to unproject a screen position back into
 // the shell's local frame, substituting for the mesh-interpolated local
 // position the outside path gets from its vertex stage. It is packed for
 // every body regardless of inside/outside: one struct, one packer, no
@@ -436,7 +436,7 @@ struct CloudShellUniforms {
 //   offset  96..99:   exposure       (f32 -- in-scatter intensity scale)
 //   offset 100..103:  ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
 //   offset 104..107:  ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
-//   offset 108..111:  _pad0          (f32 -- rounds the 112-byte prefix to 16-byte)
+//   offset 108..111:  froxelSliceKm  (f32 -- aerial froxel slice depth, km)
 //   offset 112..175:  invMvp         (mat4x4<f32>, column-major, 16-byte aligned)
 //   total: 176 bytes.
 //
@@ -459,7 +459,7 @@ struct AtmosphereUniforms {
   exposure: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
-  _pad0: f32,
+  froxelSliceKm: f32,
   invMvp: mat4x4<f32>,
 };
 

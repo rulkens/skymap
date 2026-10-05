@@ -13,20 +13,22 @@
  *   (periapsis to periapsis; the "anomalistic" period, NOT the sidereal one —
  *   for a fast-precessing moon like Io the two differ by ~0.4%). M always
  *   advances, so `dM/dt = +2π · 36525 / P` per century, always finite and
- *   positive. This reading fits the PLANETARY-SATELLITE rows (Io's listed
- *   1.762732 d is its M-period; its sidereal period is 1.769 d) but NOT the
- *   Moon's row, whose P=27.322 d is the sidereal month — the Moon converts
- *   through `moonRatesFromSiderealPeriods`, which treats 2π/P as the
- *   mean-LONGITUDE rate and derives dM/dt by subtracting both precession
- *   rates. Feeding a sidereal period in HERE double-counts the precessions
+ *   positive. This reading fits the Galilean rows (Io's listed 1.762732 d is
+ *   its M-period; its sidereal period is 1.769 d) but NOT the Moon's or
+ *   Saturn's rows, whose P is a LONGITUDE period (Saturn's 360/P equals the
+ *   IAU spin rate) — those convert through `moonRatesFromSiderealPeriods`,
+ *   which treats 2π/P as the mean-longitude rate and subtracts both precession
+ *   rates. Feeding a longitude period in HERE double-counts the precessions
  *   into longitude (for the Moon: +0.111°/day, 40.6°/yr of phase drift).
  * - `apsidalPrecessionYears` (Papsis): the period of the argument of periapsis
- *   ω. A prograde satellite's apsis ADVANCES, so `dω/dt = +2π · 100 / Papsis`.
- * - `nodalPrecessionYears` (Pnode): the period of the ascending node Ω. A
- *   prograde satellite's node REGRESSES, so `dΩ/dt = −2π · 100 / Pnode`.
- *
- * Every moon in the scene table is prograde, so those two fixed signs (+apsis,
- * −node) hold for all of them; a retrograde moon (none seeded) would flip both.
+ *   ω, SIGNED: positive advances, negative regresses, so
+ *   `dω/dt = sign(Papsis) · 2π · 100 / |Papsis|`. A prograde moon's apsis
+ *   usually advances, but the Laplace resonance drives Io's and Europa's
+ *   backwards, and JPL lists only the magnitude.
+ * - `nodalPrecessionYears` (Pnode): the period of the ascending node Ω, SIGNED
+ *   like the apsis. A prograde satellite's node REGRESSES, so a positive period
+ *   gives `dΩ/dt = −2π · 100 / Pnode`. A retrograde moon's (Triton) node ADVANCES
+ *   and JPL lists only the magnitude, so its row enters Pnode negative.
  *
  * ### The 0-period sentinel (load-bearing — lives here once, not per row)
  *
@@ -37,7 +39,7 @@
  * `Papsis = 0.005 yr`, which taken literally is 72000°/yr — a table artifact of
  * a near-circular orbit whose periapsis direction is numerically meaningless).
  * A tiny period must NOT become a huge (or infinite) rate, so below
- * `MIN_PRECESSION_YEARS` the element is treated as non-precessing (rate 0). The
+ * `MIN_PRECESSION_YEARS` in magnitude the element is treated as non-precessing (rate 0). The
  * error from freezing such a degenerate ω/Ω is bounded by e·a — sub-visual for
  * these near-circular / near-planar orbits. The mean-anomaly period is always
  * well-defined (> 0), so only the two precession terms need the guard.
@@ -61,8 +63,9 @@ export function moonRatesFromPeriods(periods: {
   argPeriapsisRateRadPerCty: number;
   ascendingNodeRateRadPerCty: number;
 } {
+  // A signed period carries its own direction: (sign · 2π·100) / period keeps it.
   const precessionRate = (periodYears: number, sign: 1 | -1): number =>
-    periodYears > MIN_PRECESSION_YEARS
+    Math.abs(periodYears) > MIN_PRECESSION_YEARS
       ? (sign * TWO_PI * YEARS_PER_JULIAN_CENTURY) / periodYears
       : 0;
 

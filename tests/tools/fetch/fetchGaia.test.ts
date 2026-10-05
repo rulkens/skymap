@@ -52,7 +52,7 @@ describe('pageFileName', () => {
 });
 
 describe('buildGaiaPageQuery', () => {
-  it('page query carries half-open slice bounds: {start: 100, endExclusive: 200} → contains \'random_index >= 100\' and \'random_index < 200\'', () => {
+  it("page query carries half-open slice bounds: {start: 100, endExclusive: 200} → contains 'random_index >= 100' and 'random_index < 200'", () => {
     // An off-by-one here duplicates or drops rows at every slice boundary:
     // slices are contiguous half-open ranges, so the low bound must be
     // inclusive (>=) and the high bound exclusive (<) — the load-bearing
@@ -117,8 +117,7 @@ describe('fetchPagedCatalog', () => {
   // A tiny deterministic page body: the pinned header line plus `rows` data
   // lines. countDataRows must return exactly `rows` — the header never counts.
   const pageBody = (rows: number): string => {
-    const header =
-      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const header = 'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
     const lines = [header];
     for (let r = 0; r < rows; r++) {
       lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
@@ -238,8 +237,7 @@ describe('verifyPageRowTotal', () => {
   let dir: string;
 
   const pageBody = (rows: number): string => {
-    const header =
-      'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
+    const header = 'source_id,ra,dec,phot_g_mean_mag,bp_rp,r_med_geo,r_med_photogeo,random_index';
     const lines = [header];
     for (let r = 0; r < rows; r++) lines.push(`${r},10.0,20.0,13.5,0.5,100,101,${r}`);
     return lines.join('\n') + '\n';

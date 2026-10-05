@@ -14,9 +14,11 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { frameUp } from './frameUp';
 import { orbitForwardOf } from './orbitForwardOf';
+import { frustumPerspective } from './frustumPerspective';
 
 // Module-scope scratch reused every frame: the forward view direction, the
 // frame-pole reference up, and the roll-adjusted basis. computeViewProj runs
@@ -47,9 +49,11 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  *   - −Z points *into* the scene (toward `center`).
  *   - +Y aligns with the world-up projected onto the image plane.
  *
- * ### Projection matrix — `mat4.perspective`
+ * ### Projection matrix — `frustumPerspective`
  *
- * wgpu-matrix's `mat4.perspective` maps the view frustum to clip-space depth
+ * Built from the view's tangent-form `frustum`, in `mat4.perspective`'s
+ * convention (a symmetric frustum reproduces it): wgpu-matrix's
+ * `mat4.perspective` maps the view frustum to clip-space depth
  * **[0, 1]** — the WebGPU / Direct3D / Metal convention ("Zero to One") — by
  * default.  That matches WebGPU's NDC depth range directly, so there is no
  * separate "ZO vs NO" choice to make (unlike gl-matrix, which defaulted to the
@@ -69,9 +73,19 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  * clip).  This is the standard MVP formula with M = Identity.
  *
  * @param cam  The orbit camera whose state to snapshot into matrices.
+ * @param frustum  The view's frustum; the camera's own is
+ *                 `symmetricFrustum(cam.fovYRad, cam.aspect)`.
+ * @param viewFromCamEye  A rig view's turn + eye offset (`viewFromCameraEye`);
+ *                 omitted = the camera's own view, with no extra multiply.
+ * @param clipYFlip  A capture view's `ViewSpec.clipYFlip` — see `frustumPerspectiveF64`.
  * @returns A new `Mat4` representing the combined view-projection transform.
  */
-export function computeViewProj(cam: OrbitCamera): Mat4 {
+export function computeViewProj(
+  cam: OrbitCamera,
+  frustum: ViewFrustum,
+  viewFromCamEye?: Float64Array,
+  clipYFlip?: boolean,
+): Mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
   //
   // `lookAt` needs an "up" vector.  By default this is world +Y, which works
@@ -100,7 +114,7 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // wgpu-matrix ops take the destination as an optional LAST argument and
   // return it.  Omitting it allocates a fresh Mat4 (Float32Array) — same
   // allocation behaviour as the previous `mat4.create()` + write-into-dst.
-  const view = mat4.lookAt(
+  const camView = mat4.lookAt(
     cam.position, // eye: where the camera is
     aimScratch, // center: a point along the view direction
     basis.rolledUp, // up: world +Y by default; rotated by roll when non-zero
@@ -109,10 +123,11 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
     // produces a degenerate matrix in that case.  The controls module
     // prevents this by clamping pitch to ±(π/2 − ε).
   );
+  const view = viewFromCamEye === undefined ? camView : mat4.multiply(viewFromCamEye, camView);
 
   // ── Projection matrix ────────────────────────────────────────────────────
-  // mat4.perspective: depth maps to [0, 1] by default — required for WebGPU.
-  const proj = mat4.perspective(cam.fovYRad, cam.aspect, cam.near, cam.far);
+  // Depth maps to [0, 1] — required for WebGPU.
+  const proj = frustumPerspective(frustum, cam.near, cam.far, clipYFlip);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4.multiply(a, b) computes a * b.

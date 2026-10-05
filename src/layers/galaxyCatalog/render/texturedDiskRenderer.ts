@@ -104,6 +104,7 @@ export function createTexturedDiskRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
+    pxPerRad: number,
     camPos: Readonly<Vec3>,
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<DiskInstance>,
@@ -146,9 +147,8 @@ export function createTexturedDiskRenderer(
       instanceBytes: data,
       instanceCount: instances.length,
       camPosWorld: camPos,
+      pxPerRad,
       focusBindGroup,
-      // pxPerRad omitted — the disk geometry sizes itself in world
-      // space, so the trailing uniform slot stays zero-padded.
       viewSlot,
     });
   }

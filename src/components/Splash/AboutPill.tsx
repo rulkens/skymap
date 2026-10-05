@@ -1,4 +1,3 @@
-// src/components/Splash/AboutPill.tsx
 /**
  * AboutPill — top-bar pill that reopens the splash dialog. Thin
  * semantic wrapper over the shared PillButton chrome; owns only

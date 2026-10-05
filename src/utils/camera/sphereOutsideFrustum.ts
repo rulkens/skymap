@@ -62,7 +62,8 @@ export function sphereOutsideFrustum(
 ): boolean {
   const negRadius = -radius;
   for (let base = 0; base < 24; base += 4) {
-    const signed = planes[base]! * x + planes[base + 1]! * y + planes[base + 2]! * z + planes[base + 3]!;
+    const signed =
+      planes[base]! * x + planes[base + 1]! * y + planes[base + 2]! * z + planes[base + 3]!;
     if (signed < negRadius) return true;
   }
   return false;

@@ -345,10 +345,9 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
 
     // Write the pick uniform buffer from the caller-supplied camera.
     // Same 96-byte layout as the visual pipeline's uniformScratch:
-    //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18..19] reserved
-    //   f32[20..22] camPosWorld  f32[23] pxPerRad
-    writeCameraPrefix(pickUniformScratch, viewProj, viewport);
-    pickUniformScratch[18] = 0;
+    //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18] pxPerRad
+    //   f32[19] reserved  f32[20..22] camPosWorld  f32[23] pxPerRad (copy)
+    writeCameraPrefix(pickUniformScratch, viewProj, viewport, pxPerRad);
     pickUniformScratch[19] = 0;
     pickUniformScratch[20] = camPosWorld[0];
     pickUniformScratch[21] = camPosWorld[1];

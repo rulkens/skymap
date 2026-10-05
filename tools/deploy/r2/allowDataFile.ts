@@ -13,10 +13,11 @@ import { basename, dirname } from 'node:path';
 import { logicalDataName } from '../../utils/data/logicalDataName';
 
 // Mesh bake outputs (tools/meshes/buildMeshes.ts) sit flat under meshes/,
-// one .mesh plus three fixed-role PNGs per key — the dir check keeps a
-// same-named stray png elsewhere from matching by basename alone.
+// one .mesh plus fixed-role WebPs per key (`contact` only for seated keys) —
+// the dir check keeps a same-named stray webp elsewhere from matching by
+// basename alone.
 const MESH_FILE = /^[a-z0-9-]+\.mesh$/;
-const MESH_TEXTURE_FILE = /^[a-z0-9-]+_(?:albedo|mr|normal)\.png$/;
+const MESH_TEXTURE_FILE = /^[a-z0-9-]+_(?:albedo|mr|normal|contact)\.webp$/;
 
 export const allowDataFile = (path: string): boolean => {
   const posixPath = path.replace(/\\/g, '/');
@@ -46,11 +47,11 @@ export const allowDataFile = (path: string): boolean => {
     name === 'filaments-small.bin' ||
     name === 'famous_galaxies_meta.json' ||
     name === 'famous_stars_meta.json' ||
-    name === 'cf4_density.scfd' ||
     name === 'flowfield.scfd' ||
     name === 'mcpm-workbench.scfd' ||
     name === 'structures.ccat' ||
     name === 'structures_meta.json' ||
+    name === 'local-bubble.shell' ||
     name === 'constellations.json' ||
     name === 'pgc_aliases.json'
   );

@@ -50,6 +50,7 @@ function baseInput() {
     anchorWorldPos: ANCHOR,
     vp: makeVp(),
     viewportPx: VIEWPORT,
+    pxPerRad: VIEWPORT[1] / (2 * Math.tan(Math.PI / 6)),
     textBbox: null,
     worldEmMpc: 0.001,
     minPixelSize: 13,
@@ -123,6 +124,7 @@ describe('liftedLabelPlacement lineBottomLiftPx', () => {
       anchorWorldPos: anchor,
       vp,
       viewportPx,
+      pxPerRad: viewportPx[1] / (2 * Math.tan(Math.PI / 6)),
       subjectSizePx: 20, // lift = max(28, 1.5·20) = 30 px; padded top = 24 px
       textBbox: null,
       worldEmMpc: 2.25e-14, // a solar radius — clamps to minPixelSize anyway

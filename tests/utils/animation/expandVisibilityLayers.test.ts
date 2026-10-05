@@ -9,8 +9,8 @@ import { expandVisibilityLayers } from '../../../src/utils/animation/expandVisib
 
 describe('expandVisibilityLayers', () => {
   it('expands aggregates inline, preserving order and mixing with atomic keys', () => {
-    expect(expandVisibilityLayers(['volumesMaster', 'labels', 'flow'])).toEqual([
-      'volumesMaster',
+    expect(expandVisibilityLayers(['cosmicWebDensity', 'labels', 'flow'])).toEqual([
+      'cosmicWebDensity',
       'surveyLabel',
       'structureLabel',
       'milkyWayLabel',

@@ -9,6 +9,9 @@
  */
 
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
+import type { HostBody } from '../../../../@types/camera/HostBody';
+import type { RungCtx } from '../../../../@types/camera/RungCtx';
+import type { SurfaceStepCtx } from '../../../../@types/camera/SurfaceStepCtx';
 import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from '../../../camera/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
@@ -18,15 +21,36 @@ import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { frameUp } from '../../../../utils/camera/frameUp';
 import { hostedFocusOverHorizon } from '../../../../utils/camera/hostedFocusOverHorizon';
 import { hostedFocusPivotM } from '../../../../utils/camera/hostedFocusPivotM';
-import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
+import { nudgedSurfacePose } from '../../../../utils/camera/nudgedSurfacePose';
+import { toBodyFixedChannels } from '../toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
 import { bodyStandoffRadii } from '../../../../utils/scene/bodyStandoffRadii';
 import { hOverR } from '../hOverR';
 import { nearestBodyHR } from '../nearestBodyHR';
 import { toBodyArm, toWorldArm } from '../poseFrameConversion';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
+
+function surfaceStepCtxOf(host: HostBody, ctx: RungCtx): SurfaceStepCtx {
+  return {
+    viewportPx: ctx.viewportPx,
+    fovYRad: ctx.fovYRad,
+    bodyRadiusM: host.radiusM,
+    standoffRadii: host.standoffRadii,
+    groundRadiusAtM: host.groundRadiusAtM,
+    innerBoundRadiusM: host.innerBoundRadiusM,
+    outerBoundRadiusM: host.outerBoundRadiusM,
+    // The body rotates under the scene frame, so this is resampled per drain.
+    sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
+    // Derived from the FOCUS every drain, never carried in the pose: a
+    // carried anchor decouples from the rover as soon as a drag turns the arm.
+    focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),
+    tuning: ctx.tuning,
+  };
+}
 
 export const bodyRung: ClimbRow<'body'> = {
   kind: 'body',
@@ -57,6 +81,8 @@ export const bodyRung: ClimbRow<'body'> = {
       state,
       radiusM: body.surface.datumRadiusM,
       groundRadiusAtM: (dir) => body.surface.datumRadiusM + ctx.terrainHeightAt(frame.body, dir),
+      innerBoundRadiusM: innerBoundRadiusM(body.surface),
+      outerBoundRadiusM: outerBoundRadiusM(body.surface),
       standoffRadii: bodyStandoffRadii(body),
     };
   },
@@ -71,21 +97,14 @@ export const bodyRung: ClimbRow<'body'> = {
         tilt,
       };
     }
-    const host = hostOrThrow(framed.frame, ctx);
-    const stepped = surfaceStep(memory, tilt, framed.pose, input, {
-      viewportPx: ctx.viewportPx,
-      fovYRad: ctx.fovYRad,
-      bodyRadiusM: host.radiusM,
-      standoffRadii: host.standoffRadii,
-      groundRadiusAtM: host.groundRadiusAtM,
-      // The body rotates under the scene frame, so this is resampled per drain.
-      sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
-      // Derived from the FOCUS every drain, never carried in the pose: a
-      // carried anchor decouples from the rover as soon as a drag turns the arm.
-      focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),
-      tuning: ctx.tuning,
-    });
+    const surfaceCtx = surfaceStepCtxOf(hostOrThrow(framed.frame, ctx), ctx);
+    const stepped = surfaceStep(memory, tilt, framed.pose, input, surfaceCtx);
     return { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
+  },
+
+  nudge(tilt, framed, delta, ctx) {
+    const surfaceCtx = surfaceStepCtxOf(hostOrThrow(framed.frame, ctx), ctx);
+    return nudgedSurfacePose(framed.pose, tilt, delta, surfaceCtx);
   },
 
   toParent(framed, ctx) {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -21,12 +21,27 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const cam = makeCam();
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
+      cursorTexPx: null,
+      renderedTargets: new Set<string>(),
+    },
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
+    viewKind: 'frame',
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam,
@@ -35,25 +50,12 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    simDays: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersAnimating: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
-  };
+  } as unknown as FrameView;
 }
 
 /** Minimal SlabView matching the ctx above — `vp`/`camPos`/`viewportPx` are
  * what `draw` forwards to the renderer; `slab` is unused by this layer. */
-function makeView(ctx: ReadyFrameContext): SlabView {
+function makeView(ctx: FrameView): SlabView {
   return {
     slab: makeCosmoSlab(),
     vp: ctx.vp as unknown as Float32Array,
@@ -81,7 +83,7 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
-  it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {
+  it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 8th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();
     const state = {
@@ -92,6 +94,6 @@ describe('texturedDisksPass', () => {
     texturedDisksPass(runtime).draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
     expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = texturedDiskRenderer.draw.mock.calls[0]!;
-    expect(call[6]).toBe(3);
+    expect(call[7]).toBe(3);
   });
 });

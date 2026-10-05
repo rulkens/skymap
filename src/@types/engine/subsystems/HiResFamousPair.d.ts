@@ -1,5 +1,5 @@
-import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
-import type { HiResFamousSubsystem } from './HiResFamousSubsystem';
+import type { HiResFamousTexture } from '../../rendering/hiResFamousTexture/HiResFamousTexture';
+import type { HiResFamousSubsystem } from './hiResFamousSubsystem/HiResFamousSubsystem';
 
 /**
  * Allocated together, bound together, destroyed together: the planner subscribes to the

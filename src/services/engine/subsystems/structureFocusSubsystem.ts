@@ -39,7 +39,7 @@ import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniforms
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 /** Focus fade duration in ms. */
-export const FOCUS_FADE_DURATION_MS = 400;
+const FOCUS_FADE_DURATION_MS = 400;
 
 /**
  * At-rest sentinel: blend=0 makes the shader multiplier collapse to 1.0.

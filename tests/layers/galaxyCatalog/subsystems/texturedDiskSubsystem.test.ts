@@ -6,8 +6,7 @@
  *   - schedules a fetch (idempotent on in-flight keys)
  *   - emits a DiskInstance when orientation is finite (px > 24 path)
  *   - emits a ThumbnailInstance when orientation is NaN
- *   - hasInFlightWork() flips with queue activity AND with the load-fade
- *     window
+ *   - hasFadingContent() tracks the load-fade window and NOT outstanding fetches
  *   - the atlas-eviction handler clears bitmapReadyTime
  */
 
@@ -20,13 +19,11 @@ import { runTexturedSolo } from '../../../services/engine/subsystems/diskWalkHar
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type {
-  HiResFamousFrameOutput,
-  HiResFamousPerGalaxyState,
-  HiResFamousSubsystem,
-} from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousSubsystem } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
+import type { HiResFamousFrameOutput } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -165,22 +162,44 @@ describe('createTexturedDiskSubsystem', () => {
     expect(quarterOpacity).toBeCloseTo(fullOpacity * 0.25, 5);
   });
 
-  it('hasInFlightWork is true during fetch and false after it settles', async () => {
+  // The planner's only work vote, so what it EXCLUDES is the point: an
+  // outstanding fetch is not content. A fetch to an unreachable host hangs for
+  // its whole 30 s deadline, and reporting that would both spin the render
+  // loop and re-bake six cubemap faces per frame — see frame.settlingVote.test.ts.
+  it('does not report a merely-outstanding fetch as fading content', () => {
     const pending: Array<(b: ImageBitmap | null) => void> = [];
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({ device, atlas, fetcher });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+
+    runTexturedSolo(walk, sys, makeInput(clouds));
+    expect(pending.length).toBe(1); // the fetch really is outstanding
+    expect(sys.hasFadingContent()).toBe(false);
+  });
+
+  it('reports a landed bitmap as fading content only inside its load-fade window', async () => {
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      fetcher,
+      fetcher: async () => makeFakeBitmap(),
     });
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
-    runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(sys.hasInFlightWork()).toBe(true);
-    pending[0]!(null);
+
+    // Frame 1 (nowMs=0) enqueues; the bitmap lands and stamps its arrival.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0));
     await new Promise((r) => setTimeout(r, 0));
-    expect(sys.hasInFlightWork()).toBe(false);
+
+    // Inside LOAD_FADE_MS (400 ms): content is visibly changing.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 100));
+    expect(sys.hasFadingContent()).toBe(true);
+
+    // Past it: settled, nothing left to track.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 1000));
+    expect(sys.hasFadingContent()).toBe(false);
   });
 
   // ── Hi-res LOD fold-in ──────────────────────────────────────────────

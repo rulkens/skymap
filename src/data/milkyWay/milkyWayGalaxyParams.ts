@@ -15,7 +15,7 @@ import { MILKY_WAY_DISC_RADIUS_KPC } from './galacticCenter';
  * already, implicitly, seed 1 — pinning it makes that explicit rather than
  * changing what gets drawn.
  */
-export const MILKY_WAY_GENERATION_SEED = 1;
+const MILKY_WAY_GENERATION_SEED = 1;
 
 /**
  * Exponential scale length of the disc's LIGHT, kpc (Freudenreich 1998).

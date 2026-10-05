@@ -7,7 +7,6 @@ export const GROUP_ENTRY = {
   id: 'group',
   label: 'Group',
   allSky: true,
-  visible: true,
   bearsLabel: true,
   bearsMarker: true,
   labelLayer: 'structure',

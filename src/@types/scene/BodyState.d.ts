@@ -24,12 +24,16 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { Mat3 } from '../math/Mat3';
+import type { OrbitalElements } from './OrbitalElements';
 
 export type BodyState = {
   /** Absolute heliocentric world position, in Mpc — f64-valued. */
   readonly positionMpc: Vec3;
   /** Local → equatorial-world rotation (identity when no facing is modelled). */
   readonly orientation: Mat3;
-  /** Mean anomaly M at this instant, in radians — the orbit-trail falloff anchor. */
-  readonly meanAnomalyRad: number;
+  /**
+   * The elements `deriveBodyStates` positioned this body with at the instant.
+   * Absent for anchors and surface sites, which have no orbit.
+   */
+  readonly orbit?: OrbitalElements;
 };

@@ -1,6 +1,6 @@
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
-import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
+import type { FrameView } from '../frame/FrameView';
 import type { EngineState } from '../state/EngineState';
 import type { Label2DProducer } from './Label2DProducer';
 
@@ -15,7 +15,7 @@ export type Label2DDirector = {
    * animating) for the caller to fold into `shouldKeepTicking`; the director
    * never wakes the loop itself.
    */
-  runFrame(state: EngineState, ctx: ReadyFrameContext): boolean;
+  runFrame(state: EngineState, ctx: FrameView): boolean;
   /**
    * Tear down the director.  No-op — the director holds renderer refs
    * and a producers list, but the renderers' lifecycle is the engine's

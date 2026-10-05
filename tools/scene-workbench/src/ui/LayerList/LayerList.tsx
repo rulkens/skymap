@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { assetCount } from '../../scene/assetCount';
 import { toggleAssetVisibility } from '../../state/view/viewSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import MeshOutlineControls from '../MeshOutlineControls/MeshOutlineControls';
 import styles from './LayerList.module.css';
 
 function LayerList(): ReactNode {
@@ -42,6 +43,7 @@ function LayerList(): ReactNode {
               </span>
               <span className={styles.status}>{assetStatus[asset.id] ?? 'pending'}</span>
             </div>
+            {asset.kind === 'mesh' && <MeshOutlineControls assetId={asset.id} />}
           </li>
         );
       })}

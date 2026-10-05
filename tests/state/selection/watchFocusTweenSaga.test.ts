@@ -4,6 +4,9 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
+import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import {
   updateSelectionFocus,
   updateSelectionSelect,
@@ -12,39 +15,42 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
-  engineSourceCountReported,
   engineStructureCountsChanged,
 } from '../../../src/state/engine/engineSlice';
-import { Source } from '../../../src/data/sources';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { cameraRoute } from '../../../src/store/constants';
+import { cameraRoute, selectionRoute } from '../../../src/store/constants';
 import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
-import { buildStarOctree } from '../../../tools/stars/buildStarOctree';
-import {
-  encodeStarCatalog,
-  decodeStarCatalog,
-} from '../../../src/data/starCatalog/starCatalogFormat';
-import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveStarRecord';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/present/starCatalogSelectionRow';
+import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { Source } from '../../../src/data/sources';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
-import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import type { StarRowFixture } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
+
+/** The star Layer's row with no survey bin committed — its seeded arm needs none. */
+const NO_SURVEY_STARS = {
+  renderer: { loadedCatalogs: () => [][Symbol.iterator]() },
+} as unknown as StarRowFixture;
+
+const SIRIUS_REF = {
+  type: 'starCatalog' as const,
+  source: Source.FamousStar,
+  index: SCENE_STARS.findIndex((star) => star.id === 'sirius'),
+};
 
 // A live from-pose to seed the tween. The Milky-Way arm preserves yaw/pitch and
 // targets a fixed distance, so the dispatched descriptor is fully determined by
 // (ref type, from-pose) — no engine cloud needed for the milkyWay case.
 const FROM: CameraPose = { target: [1, 1, 1], yaw: 0.5, pitch: -0.2, distance: 9 };
-
-// The live star catalog the resolveDeps stub reads. Null until a test flips it,
-// modelling the Gaia bin landing mid-flight — a star deep link's row is null
-// until this is set. Reset per test in `beforeEach`.
-let starCatalogStub: StarCatalog | null = null;
 
 // The live structure store the resolveDeps stub reads, modelling
 // `wireStructureProjection`'s anchors group landing mid-flight (Bug repro:
@@ -53,8 +59,10 @@ let structureById: Record<string, StructureInfo> = {};
 let structuresLoadedStub = false;
 
 // resolveDeps stub — the milkyWay ref resolves without touching catalogs; the
-// `stars`/`structures` getters read the live stubs above so a test can bring a
-// catalog online between dispatches.
+// `structures` getter reads the live stub above so a test can bring a
+// catalog online between dispatches. No `stars` field: core no longer
+// resolves the star kind at all — the starCatalog Layer's own row, appended
+// below, does, over a survey store that never lands (its seeded arm needs none).
 const resolveDeps = (): ResolveDeps =>
   ({
     structures: {
@@ -62,20 +70,7 @@ const resolveDeps = (): ResolveDeps =>
       byCategory: () => [],
       loaded: () => structuresLoadedStub,
     },
-    stars: { current: () => starCatalogStub },
   }) as unknown as ResolveDeps;
-
-/** A small real star catalog through the octree + encode/decode path. */
-async function makeStarCatalog(): Promise<StarCatalog> {
-  const octree = buildStarOctree(
-    [
-      { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
-      { mortonIndex: 0, offset: [7, 8, 9], absMag: 4, bpRp: 0.5 },
-    ],
-    { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] },
-  );
-  return decodeStarCatalog(await encodeStarCatalog(octree));
-}
 
 describe('watchFocusTweenSaga', () => {
   let store: ReturnType<typeof build>;
@@ -92,16 +87,23 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    mw.run(watchRequestFocusSaga);
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       resolveDeps,
-      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+      selection: composeSelectionRows(
+        () => [
+          ...coreSelectionRows(resolveDeps),
+          milkyWaySelectionRow(),
+          starCatalogSelectionRow(NO_SURVEY_STARS),
+        ],
+        () => ALL_KINDS_ENABLED,
+      ),
       cameraRuntime: () => cameraRuntime(),
     });
     return s;
   }
   beforeEach(() => {
-    starCatalogStub = null;
     structureById = {};
     structuresLoadedStub = false;
     sagaErrors = [];
@@ -117,6 +119,13 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
     expect(tween!.to.yaw).toBe(FROM.yaw);
+  });
+
+  it('a cut focus request sets focus without starting a tween', async () => {
+    store.dispatch(requestFocus({ id: MILKY_WAY_FOCUS_ID, transition: 'cut' }));
+    await flush();
+    expect(store.getState()[selectionRoute].focus).toEqual({ type: 'milkyWay' });
+    expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {
@@ -147,7 +156,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 
@@ -157,41 +166,15 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
   });
 
-  // Regression: the star deep-link second gap. `resolveFocusId` resolves
-  // `star-<n>` statically, so `updateSelectionFocus` fires at bootstrap — but
-  // `extractSelectionRow`'s star arm returns null until the Gaia bin commits, so
-  // the naive `row === null` early return dropped the focus forever. The saga
-  // must instead defer on the per-source count report (dispatched the instant a
-  // catalog commits) and re-extract once the star cloud lands.
-  it('defers a star focus whose catalog has not loaded, then plants it once the bin commits', async () => {
-    store.dispatch(updateSelectionFocus({ type: 'star', index: 1 }));
-    await flush();
-    // No catalog yet → row null → tween must not fire (and must not be dropped).
-    expect(store.getState()[cameraRoute].tween).toBeNull();
-
-    // The Gaia bin lands: the star slot uploads to the renderer, then reports its
-    // count. By then `stars.current()` is non-null, so re-extraction succeeds.
-    const catalog = await makeStarCatalog();
-    starCatalogStub = catalog;
-    store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
-    await flush();
-
-    const tween = store.getState()[cameraRoute].tween;
-    expect(tween).not.toBeNull();
-    expect(tween!.from).toEqual(FROM);
-    // Framed on the resolved star's world position — the descriptor targets it.
-    const record = resolveStarRecord(catalog, 1)!;
-    expect(tween!.to.target).toEqual(record.positionMpc);
-  });
-
-  it('a star focus with a garbage index no-ops once the catalog is present (no infinite wait)', async () => {
-    // A stale/out-of-range star index resolves to null even with the catalog
-    // loaded. The deferral guard checks catalog presence, not row-ness, so this
-    // exits rather than looping forever waiting for a report that never recurs.
-    starCatalogStub = await makeStarCatalog();
-    store.dispatch(updateSelectionFocus({ type: 'star', index: 999_999 }));
+  // A survey star's row needs its bin; with none committed the ref extracts to
+  // nothing, so the tween must not fire (and must not throw on a null row).
+  it('a survey-star focus with no bin loaded → no row, no tween', async () => {
+    store.dispatch(
+      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 1 }),
+    );
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(sagaErrors).toEqual([]);
   });
 
   // Regression: `#focus=cluster-virgo-m87` (a durable structure id) resolves
@@ -262,16 +245,15 @@ describe('watchFocusTweenSaga', () => {
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
-  // Regression: famous stars are scene BODIES (star-body presence) but do not
-  // move, so the follow driver leaves them and they must TWEEN rather than being
-  // swallowed by the body no-op. The saga gates on the follow driver's own
-  // predicate (bodyMovesThisFrame), so a star body falls through to the tween.
-  // The PLANET-body-no-tween half is the 'earth' case above.
-  it('a famous-star body focus DOES plant a tween (falls through the follow-membership gate)', async () => {
-    // 'sirius' is a StarBody in SCENE_BODIES with no ORBITAL_ELEMENTS row, so the
-    // saga builds the tween. Its `to` is framed on the star's fixed world position
-    // (stars don't move → a tween is right).
-    store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
+  // Regression: a famous star carries a driver id (its position comes from the
+  // same table a planet's does) but does not MOVE, so the follow driver leaves it
+  // and it must TWEEN rather than being swallowed by the body no-op. The saga
+  // gates on the follow driver's own predicate (bodyMovesThisFrame), so a star
+  // falls through to the tween. The PLANET half is the 'earth' case above.
+  it('a famous-star focus DOES plant a tween (falls through the follow-membership gate)', async () => {
+    // 'sirius' has no ORBITAL_ELEMENTS row, so the saga builds the tween; its `to`
+    // is framed on the star's fixed world position (stars don't move).
+    store.dispatch(updateSelectionFocus(SIRIUS_REF));
     await flush();
     expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });

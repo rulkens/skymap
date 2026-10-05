@@ -15,7 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { sameRequest } from '../../../../src/utils/loading/sameRequest';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
@@ -93,19 +92,16 @@ describe('ASSET_WIRING membership', () => {
       expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });
+
+  it("clamps a mesh body's tier to its tierCeiling", () => {
+    // Every SCENE_MESH_BODIES entry ships `small` only today, so any app tier
+    // above it must still fetch the `small` files.
+    const row = rowFor(meshBodySlotKey('curiosity'));
+    expect(row.req('large')).toEqual({ meshKey: 'curiosity', tier: 'small' });
+  });
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
-    const cf4 = rowFor('cf4Density');
-    expect(
-      cf4.demand(
-        makeCtx({ settings: { volumes: { items: { 'cf4-density': { enabled: true } } } } }),
-      ),
-    ).toBe(true);
-    expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
     const cluster = rowFor('structureCatalog');
     // Every category's ring + label off — both axes read from the item rows.
@@ -153,24 +149,6 @@ describe('ASSET_WIRING demand predicates', () => {
         }),
       ),
     ).toBe(true);
-  });
-
-  it('gaiaStars demand follows settings.starCatalogs (master gate AND per-item bit)', () => {
-    // The star-catalog cluster mirrors the galaxy-catalog cluster: a coarse
-    // master gate (`starCatalogs.enabled`) AND a per-catalog `items[id].enabled`
-    // bit must BOTH be true for the layer to load — the source-type-cluster
-    // convention. Exercised as a predicate over ctx variations, not a
-    // restatement of the row literal.
-    const gaia = rowFor(Source.GaiaStars);
-    const on = (starCatalogs: unknown) => gaia.demand(makeCtx({ settings: { starCatalogs } }));
-    // Master on + item on ⇒ demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: true } } })).toBe(true);
-    // Master off overrides an enabled item ⇒ not demanded.
-    expect(on({ enabled: false, items: { gaiaStars: { enabled: true } } })).toBe(false);
-    // Item off under an on master ⇒ not demanded.
-    expect(on({ enabled: true, items: { gaiaStars: { enabled: false } } })).toBe(false);
-    // Absent item row (nothing seeded) ⇒ not demanded.
-    expect(on({ enabled: true, items: {} })).toBe(false);
   });
 
   it('body-texture rows encode load/evict hysteresis via demand vs release', () => {
@@ -222,14 +200,5 @@ describe('ASSET_WIRING demand predicates', () => {
     // Same camera, but the gate reading J2000 would place the body a full orbit
     // arc away ⇒ NOT demanded. Passing the live simDays is what makes it fire.
     expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
-  });
-});
-
-describe('ASSET_WIRING req builders', () => {
-  it("the famous-stars-meta row's request is undefined at every tier", () => {
-    const row = rowFor('famousStarsMeta');
-    for (const tier of ['small', 'medium', 'large'] as const) {
-      expect(row.req(tier)).toBeUndefined();
-    }
   });
 });

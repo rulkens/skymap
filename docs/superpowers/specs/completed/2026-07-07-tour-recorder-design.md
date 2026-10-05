@@ -140,7 +140,7 @@ ffprobe verification (geometry, frame count, duration) printed to the console
    run ffprobe on the output and report.
 
 The expected frame count is precomputed from the `tour-length` machinery
-(`clipDurationSec` per beat) plus a margin for `waitUntil` readiness gates;
+(`clipDurationSec` per beat) plus a margin for `waitUntilSaga` readiness gates;
 it is a safety cap and a progress denominator, not the stop condition.
 
 ### App changes (the entire in-repo surface)
@@ -178,7 +178,7 @@ all of them through the browser.
   dissolve at arrival) play at reproducible moments. Consequence to accept:
   where the tour outruns loading, the film shows the dissolve — exactly as a
   fast live viewer would. If a specific beat's dissolve is ugly on film, the
-  fix is authoring (a `waitUntil` gate in that beat), not recorder machinery.
+  fix is authoring (a `waitUntilSaga` gate in that beat), not recorder machinery.
 - One known cosmetic wall-clock read survives on the frame path:
   `milkyWayPickVisible.ts` samples `performance.now()` directly — but that,
   too, is virtualized by CDP, and it only affects the pick-debug overlay,

@@ -5,27 +5,18 @@
  * whole on any state change, so no edge (tier flip while hidden, toggle mid-flight)
  * can be missed. `built: 'external'` rows are minted in `wireSlots` and appear here
  * only for demand + `req(tier)`; their `factory` throws if the construction pass
- * calls it. The DEV synthetic volumes are absent so Vite tree-shakes the generators.
+ * calls it.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
-import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
-import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
-import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
-import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
-import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
-import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
@@ -34,8 +25,6 @@ import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
-import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
@@ -51,47 +40,12 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
  */
 const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['cluster', 'supercluster', 'void'];
 
-/**
- * Read from the registry, not re-spelled, so the demand predicates cannot drift
- * from the strings the renderer and settings key on.
- */
-const CF4_FIELD = SOURCE_REGISTRY[Source.Cf4Density].id;
-const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
-const POLYPHORM_2MRS_FIELD = SOURCE_REGISTRY[Source.Polyphorm2MRS].id;
-const MCPM_WORKBENCH_FIELD = SOURCE_REGISTRY[Source.McpmWorkbench].id;
-
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
   throw new Error(
     'assetWiring: externally-built rows (built: "external" — body textures, mesh bodies) are minted outside this registry; the construction pass must not build them',
   );
 };
-
-/**
- * Star-catalog sources that actually ship an asset. A SEEDED catalog
- * (`binBaseName: null`) is built in code, so including it would have the fetcher
- * request a filename assembled from a null stem. The cast re-narrows `code`.
- */
-const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'starCatalog' && e.binBaseName !== null,
-).map((e) => e.code);
-
-/**
- * One demand+req row for a star catalog. Registry-built, unlike the galaxy
- * `pointRow` family: `createStarCatalogSlot` null-guards the renderer handle at
- * commit time, so the slot needs no external co-minting.
- */
-function starCatalogRow(source: SourceType): AssetWiringRow {
-  const id = SOURCE_REGISTRY[source].id as StarCatalogId;
-  return {
-    key: source,
-    factory: (deps) => createStarCatalogSlot(source, deps.state, deps.cb),
-    req: (tier) => ({ source, tier }),
-    demand: (ctx) =>
-      ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
-    priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
-  };
-}
 
 /**
  * The host body's world position at the frame's LIVE sim instant — every host
@@ -162,7 +116,10 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
     key: meshBodySlotKey(body.id),
     built: 'external',
     factory: externalFactory,
-    req: () => ({ meshKey: body.meshKey }),
+    req: (tier) => ({
+      meshKey: body.meshKey,
+      tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
+    }),
     demand: (ctx) =>
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),
     release: (ctx) =>
@@ -183,89 +140,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: () => true,
     priority: 0,
-  },
-
-  // ── Famous-star meta sidecar ──────────────────────────────────────
-  // Unconditional rather than a companion join: the famous stars are a seeded
-  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off,
-  // and no tier to embed in the request either.
-  {
-    key: 'famousStarsMeta',
-    factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: () => true,
-    priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
-  },
-
-  // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs / mcpmWorkbench ──
-  // All four are load-once and deliberately declare no `release`: adding one
-  // requires an `onRelease` that calls `volumeFieldRenderer.unload(id)`, or the
-  // four GPU resources it frees (volumeFieldRenderer.ts:340-344) leak on evict.
-  // Optional-chained `demand` because `settings.volumes.items` has no entry
-  // for a field until it is seeded.
-
-  // ── MCPM Cosmic Web volume ───────────────────────────────────────
-  {
-    key: 'mcpm',
-    factory: (deps) => createMcpmSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
-    priority: 70, // the largest single boot payload, and it only reads at the widest rung
-  },
-
-  // ── CF-4 DM density volume ───────────────────────────────────────
-  // Void request: the cube is neither tiered nor per-source.
-  {
-    key: 'cf4Density',
-    factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
-    priority: 82, // last of the cosmic-web overlays; default-off, so it rarely competes at boot
-  },
-
-  // ── Polyphorm 2MRS density volume ─────────────────────────────────
-  // Tier-aware like MCPM (same physical quantity, same per-tier `.scfd`
-  // variants), unlike CF-4's void request.
-  {
-    key: 'polyphorm2Mrs',
-    factory: (deps) => createPolyphorm2MrsSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.volumes.items[POLYPHORM_2MRS_FIELD]?.enabled === true,
-    priority: 82, // same rung as cf4Density; default-off, so it rarely competes at boot
-  },
-
-  // ── MCPM workbench promoted-export volume ─────────────────────────
-  // Void request like CF-4: one cube, no tier variants. Hidden
-  // (`visible: false`) pending a promotion decision — no UI toggle exists
-  // yet, so this demand predicate never fires in production, but it exists
-  // so the slot machinery is symmetric with every other shippable volume.
-  {
-    key: 'mcpmWorkbench',
-    factory: (deps) => createMcpmWorkbenchSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.volumes.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
-    priority: 82, // same rung as cf4Density/polyphorm2Mrs; default-off, so it rarely competes at boot
-  },
-
-  // ── CF4++ velocity flow field ────────────────────────────────────
-  // A singleton overlay layer, so its gate lives in `settings.flow.enabled`
-  // alongside filaments/milkyWay rather than on a bespoke DemandCtx surface.
-  {
-    key: 'flow',
-    factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.flow.enabled,
-    priority: 81, // same rung as filaments, behind them by size
-  },
-
-  // ── Constellation stick-figure overlay ───────────────────────────
-  // Master-gate demand, the singleton-overlay convention shared with filaments/flow.
-  {
-    key: 'constellations',
-    factory: (deps) => createConstellationsSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.constellations.enabled,
-    priority: 31, // small JSON on the near-sky rung, right behind the marker catalog
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────
@@ -289,8 +163,4 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
 
   // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
   ...SCENE_MESH_BODIES.map(meshBodyRow),
-
-  // ── Survey star catalogs ─────────────────────────────────────────
-  // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
-  ...STAR_CATALOG_SOURCES.map(starCatalogRow),
 ];

@@ -19,6 +19,7 @@ import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameSte
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -106,11 +107,13 @@ describe('expandFrameOrder', () => {
     expect(namesOf(merged)).toEqual([
       'milky-way-upsample',
       'milky-way',
+      'local-bubble',
       'star-points',
       'star-catalog',
       'star-upsample',
       'constellations',
       'body-glints',
+      'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
     // authors no slot, and the merge keeps the first line's.
@@ -150,7 +153,11 @@ describe('expandFrameOrder', () => {
     const targets = program
       .filter((step) => step.kind === 'render')
       .map((step) => (step.kind === 'render' ? `${step.target}·${step.slab}` : ''));
-    expect(targets.slice(0, 3)).toEqual([`volume·${COSMO}`, `hdr·${COSMO}`, `star-aggregates·0`]);
+    expect(targets.slice(0, 3)).toEqual([
+      `cosmic-web-density·${COSMO}`,
+      `hdr·${COSMO}`,
+      `star-aggregates·0`,
+    ]);
   });
 
   it('resolves a line in its authored order, dropping names no pass owns', () => {
@@ -209,11 +216,14 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [COSMO, 'solarSystem', 1],
       [NEAR0, 'solarSystem', 1],
     ]);
-    // Ahead of every other render step, so a same-frame lensing draw can
-    // sample a cubemap this frame actually wrote.
+    // The captures ride the PRELUDE compute pair, ahead of every other render
+    // step, so a same-frame lensing draw can sample a cubemap this frame
+    // actually wrote. `aerial-perspective` is SCENE's own compute now (a
+    // perView row) and so lands after every PRELUDE step, including these.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toBe(capture[0]);
+    expect(steps[capture.length + 2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
@@ -289,26 +299,80 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   it('expands the foreground chain in painter order', () => {
     // Chain [NEAR0, 3, 2] — an out-of-numeric-order chain, as a painter-order
     // chain legitimately is (index order is assignment order, not draw order):
-    // three consecutive foreground:0 steps in that exact sequence, each
-    // `depth: 'clear'` so a nearer row's depth test starts fresh rather than
-    // fighting a farther row's. The following composite is unmoved.
+    // consecutive foreground:0 steps in that exact sequence, each row opening
+    // with `depth: 'clear'` so a nearer row's depth test starts fresh rather than
+    // fighting a farther row's; a body row then splits around its contact-shadow
+    // depth sample. The following composite is unmoved.
     const steps = program({ foregroundChain: [NEAR0, 3, 2] });
     const first = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'foreground:0',
     );
     expect(
       steps
-        .slice(first, first + 3)
+        .slice(first, first + 7)
         .map((step) => (step.kind === 'render' ? [step.slab, step.depth] : null)),
     ).toEqual([
       [NEAR0, 'clear'],
       [3, 'clear'],
+      [3, { sample: 'foreground:0' }],
+      [3, 'load'],
       [2, 'clear'],
+      [2, { sample: 'foreground:0' }],
+      [2, 'load'],
     ]);
-    expect(steps[first + 3]).toEqual({
+    expect(steps[first + 7]).toEqual({
       kind: 'composite',
       step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
     });
+  });
+
+  /** One foreground line over `chain`, every name a fake pass. */
+  function foreground(
+    chain: readonly number[],
+    bodyPasses: Extract<FrameStepSpec, { kind: 'foreground' }>['bodyPasses'],
+  ): readonly FrameStep[] {
+    const order: FrameStepSpec[] = [
+      { kind: 'foreground', target: 'foreground:0', near0Passes: ['stars'], bodyPasses },
+    ];
+    return expandFrameOrder(order, ['stars', 'a', 'b', 'd'].map(fakePass), {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: chain,
+      captureFaces: new Map(),
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    });
+  }
+
+  it('a depth-sampling marker splits a body row into clear, sample and load', () => {
+    const steps = foreground([3], ['a', { sampleDepth: ['d'] }, 'b']);
+    expect(
+      steps.map((step) =>
+        step.kind === 'render' ? [namesOf(step), step.depth, step.slot, step.slab] : null,
+      ),
+    ).toEqual([
+      [['a'], 'clear', undefined, 3],
+      [['d'], { sample: 'foreground:0' }, 'SAMPLE_DEPTH', 3],
+      [['b'], 'load', 'AFTER_DEPTH', 3],
+    ]);
+  });
+
+  it('the real body roster samples depth after every opaque row and both shells', () => {
+    // The two rows in the marker READ that depth: the contact decals project
+    // onto it, and the atmosphere shell classifies each ray by it. Anything
+    // that stamps depth must therefore be listed before them, and only the
+    // meshes — which want the shell already drawn behind them — after.
+    const steps = program({ foregroundChain: [3] });
+    const first = steps.findIndex(
+      (step) => step.kind === 'render' && step.target === 'foreground:0',
+    );
+    expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
+    expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
+  });
+
+  it('refuses a body roster with a second marker', () => {
+    expect(() =>
+      foreground([3], ['a', { sampleDepth: ['d'] }, 'b', { sampleDepth: ['d'] }]),
+    ).toThrow('at most one sampleDepth marker');
   });
 
   it('emits no foreground chain step for an empty chain, but keeps the composite', () => {
@@ -397,10 +461,11 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const cam = makeCam();
     const slabs = deriveSlabs({
       cam,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       cosmoVp: new Float32Array(16) as unknown as Mat4,
       altitudeMpc: cam.distance,
       pose: () => null,
-      visibleBodies: [],
+      visibleRows: [],
       viewportPx: [1920, 1080],
       starSphereRangeM: null,
     });

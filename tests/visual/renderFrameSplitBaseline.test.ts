@@ -13,8 +13,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../src/layers/galaxyCatalog/state/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
+import { createFramePlannerResultStore } from '../../src/services/engine/frame/createFramePlannerResultStore';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
@@ -27,12 +28,24 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
+import { PRELUDE } from '../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../helpers/frame/stubPlannersFor';
+import type { FrameContentPlanner } from '../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
-import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/filaments/types/FilamentsRuntime';
+import { filamentsPass } from '../../src/layers/cosmicWebFilaments/passes/filamentsPass';
+import { cosmicWebDensityPass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../src/layers/milkyWay/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../src/layers/milkyWay/passes/milkyWayPass';
+import type { CosmicWebDensityRuntime } from '../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
+import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
+import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -150,12 +163,12 @@ function makeLoggingRenderer(records: DrawRecord[], name: string, method = 'draw
 }
 
 function makeRenderTargets(): any {
-  // The offscreen target table — the executor resolves the hdr + volume
+  // The offscreen target table — the executor resolves the hdr + density
   // colour attachments via viewOf(id); the tone-map blit is the FRAME
   // program's `hdr→swap` composite (see makeCompositor).
   const views: Record<string, GPUTextureView> = {
     hdr: { __id: 'hdr-view' } as unknown as GPUTextureView,
-    volume: { __id: 'volume-view' } as unknown as GPUTextureView,
+    'cosmic-web-density': { __id: 'density-view' } as unknown as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   // Clear values match production; `specOf` is what `executeFrame` reads.
@@ -168,7 +181,7 @@ function makeRenderTargets(): any {
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
     {
-      id: 'volume',
+      id: 'cosmic-web-density',
       format: 'rgba16float',
       depth: null,
       scale: 3,
@@ -198,7 +211,7 @@ function makeRenderTargets(): any {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumePass / milkyWayAggregatePass read this for their
+    // the density raymarch / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720 the
     // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
     sizeOf: (id: string) => {
@@ -214,6 +227,10 @@ function makeRenderTargets(): any {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
+    // What a `{ sample }` step reads: no row here clears depth, so every
+    // sampling step gets the far-cleared placeholder — `depthViewOf` is
+    // unreachable here and deliberately absent.
+    farDepthView: () => ({ __id: 'far-depth-view' }) as unknown as GPUTextureView,
     destroy: vi.fn(),
   };
 }
@@ -237,6 +254,17 @@ function makeCompositor(records: DrawRecord[]): any {
 // ── Domain fixture helpers (camera, point cloud) ───────────────────────────
 
 // Fixture camera optics — the ctx built in the test body mirrors these.
+// SCENE's `plan` row names 'structure-markers' by string — a stub with an
+// empty result satisfies `runPlanSteps` without the marker producers' state.
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+  ...stubPlannersFor(PRELUDE),
+];
+
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
 const FIXTURE_CANVAS_HEIGHT_PX = 720;
 
@@ -287,36 +315,47 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    // milkyWayAggregateUpsample is the state.gpu handle milkyWayUpsamplePass.draw
-    // calls directly, the twin of volumeUpsample below — wired with a logging
-    // draw so the snapshot captures the offscreen's merge back into HDR.
-    const milkyWayAggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    // The upsample handle milkyWayUpsamplePass.draw calls through
+    // `runtime.aggregateUpsample`, the twin of the density upsample below —
+    // wired with a logging draw so the snapshot captures the offscreen's
+    // merge back into HDR.
+    const aggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    // The milkyWay Layer's passes close over their own runtime — the same
+    // logging renderers above ride it instead of `state.gpu`.
+    const milkyWayRuntime = {
+      cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
+      cloudRenderer: milkyWayCloudRenderer,
+      aggregateUpsample,
+    } as unknown as MilkyWayRuntime;
     const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
-    const volumeFieldRenderer = {
+    const densityRenderer = {
       hasActiveFields: vi.fn(() => true),
       draw: vi.fn((...args: unknown[]) => {
         records.push({
           kind: 'rendererDraw',
-          renderer: 'scalar-volume',
+          renderer: 'cosmic-web-density',
           argShape: describeArgs(args),
         });
       }),
     };
-    // volumeUpsample is the state.gpu handle that volumeUpsamplePass.draw
-    // calls directly off `state.gpu.*`.  Wire it with a logging draw so
-    // the snapshot captures the upsample step.
-    const volumeUpsample = {
+    // The density Layer's upsample handle, wired with a logging draw so the
+    // snapshot captures the upsample step.
+    const densityUpsample = {
       draw: vi.fn((...args: unknown[]) => {
         records.push({
           kind: 'rendererDraw',
-          renderer: 'volume-upsample',
+          renderer: 'cosmic-web-density-upsample',
           argShape: describeArgs(args),
         });
       }),
     };
+    const densityRuntime = {
+      renderer: densityRenderer,
+      upsample: densityUpsample,
+    } as unknown as CosmicWebDensityRuntime;
     const labelRenderer = {
       glyphCount: vi.fn(() => 12),
       ...makeLoggingRenderer(records, 'labels'),
@@ -365,11 +404,25 @@ describe('renderFrame visual baseline', () => {
       texturedDisks: texturedDisksSubsystem,
     } as unknown as GalaxyCatalogRuntime;
 
+    // Shared by identity with the `renderFrame()` call's own `renderedTargets` below.
+    const renderedTargets = new Set<string>();
     const ctx = {
-      isReady: true as const,
-      layersAnimating: false,
-      // executor populates this as targets render; a later pass reads which rendered this frame.
-      renderedTargets: new Set<string>(),
+      snapshot: {
+        isReady: true as const,
+        plans: createFramePlannerResultStore(),
+        nowMs: 0,
+        // resolveLayerOpacity's recession factor lerps on this; production
+        // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
+        focusBlend: 0,
+        // No body rows in this scene: the two slabs above are cosmological.
+        slabBodyCandidates: [],
+        // The executor resolves hdr/density attachments — and the density
+        // upsample its source texture — via ctx.snapshot.renderTargets.viewOf(id).
+        renderTargets,
+        // Frame-wide: which targets hold this frame's content — the executor
+        // unions into this as it opens each render step; a later pass reads it.
+        renderedTargets,
+      },
       cam,
       vp: viewProj,
       slabs: [cosmoSlab, cosmoSlab],
@@ -378,14 +431,6 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
-      nowMs: 0,
-      // resolveLayerOpacity's recession factor lerps on this; production seeds
-      // it to 0 in frameContext, and an absent one yields NaN alphas here.
-      focusBlend: 0,
-      fovYRad: FIXTURE_FOV_Y_RAD,
-      // The executor resolves hdr/volume attachments — and volumeUpsamplePass
-      // its source texture — via ctx.renderTargets.viewOf(id).
-      renderTargets,
     } as never;
 
     const settings = {
@@ -404,41 +449,34 @@ describe('renderFrame visual baseline', () => {
       milkyWayEnabled: true,
       filamentsEnabled: true,
       filamentIntensity: 1,
-      volumesEnabled: true,
+      cosmicWebDensityEnabled: true,
     };
 
     renderFrame({
-      ctx,
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself.
+      views: [ctx],
       // Engine state with every optional renderer wired in — this is what
       // makes all eight HDR passes fire.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         gpu: {
           labelRenderer,
           markerLineRenderer,
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
-          // Null so the ZoA guide band stays out of the pinned sequence — it
-          // was held out only by the fixture's absent focusBlend before.
-          zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
-          volumeFieldRenderer,
-          // Flow is CONTENT_PASSES row 5 (see passes/index.ts); here it
-          // stays off (null renderer + disabled below) so encodeFlowCompute
-          // is a no-op and the recorded single-vs-split sequence is
-          // unchanged.
-          flowFieldRenderer: null,
-          volumeUpsample,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           structureMarkerRenderer: null,
-          // Near-field handles null → the program's (hdr, NEAR0) star-point
-          // render, foreground:0 render, and NEAR0 caption render all select
+          // Near-field handles null → the program's (hdr, NEAR0) render,
+          // foreground:0 render, and NEAR0 caption render all select
           // nothing, and the foreground:0→swap composite is
           // touched-set-skipped. The recorded draw sequence + pass-boundary
           // counts stay the pure cosmological shape this baseline pins.
           earthRenderer: null,
-          starRenderer: null,
           planetRenderer: null,
           // Near-field handle null → atmosphereShellPass disabled AND the
           // atmosphereSkyView compute step early-outs, so the recorded draw
@@ -446,32 +484,23 @@ describe('renderFrame visual baseline', () => {
           atmosphereShellRenderer: null,
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
-          starPointRenderer: null,
           orbitTrailRenderer: null,
-          starCatalogRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
-          milkyWayCloud: {
-            buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }),
-          },
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `renderFrame` input field duplication;
           // see `RenderFrameInput`'s slimmed shape). The local names below
-          // (`milkyWayCloudRenderer`, `horizonShellRenderer`,
-          // `proceduralDiskRenderer`, `texturedDiskRenderer`) are the same
-          // logging-renderer instances declared above, so their `argShape`
-          // entries land in `records`. A Layer's renderer is not among them:
-          // it reaches its pass through the runtime, not through `state.gpu`.
-          milkyWayCloudRenderer,
-          milkyWayAggregateUpsample,
+          // (`horizonShellRenderer`, `proceduralDiskRenderer`,
+          // `texturedDiskRenderer`) are the same logging-renderer instances
+          // declared above, so their `argShape` entries land in `records`.
+          // The milkyWay Layer's renderers reach their passes through
+          // `milkyWayRuntime` instead, not through `state.gpu`.
           horizonShellRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
-        // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
         // A null slot → slotReady false → not loaded.
         // The encoders read the renderer-toggle override bag off
         // `settings.debug.disabledPasses`; empty so every pass fires.
@@ -488,14 +517,18 @@ describe('renderFrame visual baseline', () => {
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
-          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          cosmicWebFilaments: {
+            enabled: settings.filamentsEnabled,
+            intensity: settings.filamentIntensity,
+          },
           constellations: { enabled: false, intensity: 1 },
-          volumes: { enabled: settings.volumesEnabled, items: {} },
-          flow: { enabled: false },
+          cosmicWebDensity: {
+            ...INITIAL_SETTINGS.cosmicWebDensity,
+            enabled: settings.cosmicWebDensityEnabled,
+          },
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
-        assetSlots: { flow: null },
         // Pick-throttle bag; the content passes don't touch it, but the
         // engine-state shape carries it.
         picking: {
@@ -527,21 +560,32 @@ describe('renderFrame visual baseline', () => {
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
-          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
+          filamentsPass({
+            renderer: filamentRenderer,
+            slot: {},
+          } as unknown as CosmicWebFilamentsRuntime),
+          cosmicWebDensityPass(densityRuntime),
+          cosmicWebDensityUpsamplePass(densityRuntime),
+          milkyWayAggregatePass(milkyWayRuntime),
+          milkyWayUpsamplePass(milkyWayRuntime),
+          milkyWayPass(milkyWayRuntime),
         ],
+        computes: CORE_COMPUTES,
+        planners: STUB_PLANNERS,
       } as never,
       device,
       context,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     });
 
     // The hash payload — only renderer-level draws, with the order they
     // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
     // encoder.finish, and queue.submit are deliberately filtered out, so
     // this test stays stable across encoder-shape changes (e.g. the
-    // `FRAME_ORDER`'s volume render line opening its own pass before the
+    // `FRAME_ORDER`'s density render line opening its own pass before the
     // HDR render step).
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')
@@ -550,8 +594,8 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],function,function",
-          "renderer": "scalar-volume",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function",
+          "renderer": "cosmic-web-density",
         },
         {
           "argShape": "pass,Float32Array[16],Array[2],object",
@@ -562,16 +606,16 @@ describe('renderFrame visual baseline', () => {
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],object,Array[1],undefined",
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3]",
           "renderer": "filaments",
         },
         {
           "argShape": "pass,object",
-          "renderer": "volume-upsample",
+          "renderer": "cosmic-web-density-upsample",
         },
         {
           "argShape": "pass,object",
@@ -590,11 +634,11 @@ describe('renderFrame visual baseline', () => {
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
           "renderer": "marker-lines",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
           "renderer": "labels",
         },
       ]
@@ -602,7 +646,7 @@ describe('renderFrame visual baseline', () => {
 
     // Boundary-event count for the no-timing 'merged' path: SIX begin/end
     // pairs — one per non-empty render step's target group plus the composite.
-    // In FRAME-program order: the volume raymarch pass, the (hdr, COSMO)
+    // In FRAME-program order: the density raymarch pass, the (hdr, COSMO)
     // mega-pass, the (mw-aggregate, NEAR0) pass (the cloud's additive star
     // billboards into their own reduced-resolution offscreen), the
     // (hdr, NEAR0) pass (the cloud's upsample + dust, on their own slab since

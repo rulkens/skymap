@@ -2,12 +2,13 @@
  * SURFACE_TILE_REGISTRY — the closed set of bodies `surfaceTileSubsystem` can
  * page a virtual texture for. Membership IS the predicate (`bodyId in
  * SURFACE_TILE_REGISTRY`) — `runFrame` never names a body literally on the
- * tile-planning path. One row (`earth`) until F4 adds Mars.
+ * tile-planning path.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
+import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { SurfaceTileSpec } from '../../@types/data/SurfaceTileSpec';
 import { EARTH_SURFACE_PARAMS } from './earthSurfaceParams';
+import { MARS_SURFACE_SHADING } from './marsSurfaceParams';
 
 export const SURFACE_TILE_REGISTRY = {
   earth: {
@@ -22,4 +23,5 @@ export const SURFACE_TILE_REGISTRY = {
       sunIrradiance: EARTH_SURFACE_PARAMS.sunIrradiance,
     },
   },
-} as const satisfies Partial<Record<BodyId, SurfaceTileSpec>>;
+  mars: { manifestKey: 'mars-tiles', effects: [], shading: MARS_SURFACE_SHADING },
+} as const satisfies Partial<Record<BodyTextureId, SurfaceTileSpec>>;

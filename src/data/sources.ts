@@ -2,7 +2,7 @@
  * `Source` enum + `SOURCE_REGISTRY`.
  *
  * The registry of every data source skymap loads, keyed by `Source` code;
- * see `SourceEntry.d.ts` for the ten `type` kinds it discriminates over.
+ * see `SourceEntry.d.ts` for the eleven `type` kinds it discriminates over.
  * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`,
  * or under `layers/<name>/sources/` once that family is a formed Layer.
  */
@@ -18,26 +18,17 @@ import { CLUSTER_ENTRY } from './sources/cluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
-import { FILAMENTS_SOURCE_ROWS } from '../layers/filaments/sources/filamentsSourceRows';
-import { CONSTELLATIONS_ENTRY } from './sources/constellations';
-import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
-import { MCPM_ENTRY } from './sources/mcpm';
-import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
-import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
-import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
-import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
-import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
-import { MILKY_WAY_ENTRY } from './sources/milky-way';
-import { FLOW_ENTRY } from './sources/flow';
-import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
+import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
+import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
+import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
+import { MILKY_WAY_SOURCE_ROWS } from '../layers/milkyWay/sources/milkyWaySourceRows';
+import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
-import { SUN_ENTRY } from './sources/sun';
-import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
-import { S_STAR_ENTRY } from './sources/s-star';
 import { MESH_BODY_ENTRY } from './sources/mesh-body';
-import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
-import { ZONE_OF_AVOIDANCE_ENTRY } from './sources/zone-of-avoidance';
+import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
+import { STAR_CATALOG_SOURCE_ROWS } from '../layers/starCatalog/sources/starCatalogSourceRows';
+import { BLACK_HOLE_SOURCE_ROWS } from '../layers/blackHoles/sources/blackHoleSourceRows';
 
 export { Source } from './source';
 
@@ -78,31 +69,22 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.Cf4Density]: CF4_DENSITY_ENTRY,
-  [Source.Mcpm]: MCPM_ENTRY,
-  [Source.DebugGaussian]: DEBUG_GAUSSIAN_ENTRY,
-  [Source.DebugCartesian]: DEBUG_CARTESIAN_ENTRY,
-  [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
-  [Source.MilkyWay]: MILKY_WAY_ENTRY,
-  [Source.Flow]: FLOW_ENTRY,
-  [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
-  [Source.GaiaStars]: GAIA_STARS_ENTRY,
-  [Source.Constellations]: CONSTELLATIONS_ENTRY,
-  [Source.Sun]: SUN_ENTRY,
-  [Source.SgrAStar]: SGR_A_STAR_ENTRY,
-  [Source.SStar]: S_STAR_ENTRY,
-  [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
-  [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
-  [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
 } as const;
 
 export const SOURCE_REGISTRY = {
   ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
+  ...sourceRecordOf(STAR_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
+  ...sourceRecordOf(FLOW_SOURCE_ROWS),
+  ...sourceRecordOf(MILKY_WAY_SOURCE_ROWS),
+  ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),
+  ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
+  ...sourceRecordOf(COSMIC_WEB_DENSITY_SOURCE_ROWS),
+  ...sourceRecordOf(BLACK_HOLE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every

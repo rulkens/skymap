@@ -24,7 +24,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   // 'fullscreenVertex' flips uv.y for texture space; undo it to get clip ndc.
   let ndc = vec2<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0);
-  // The face camera negates clip-Y ('cubemapFaceContext', flipClipY), so a ray
+  // The face camera negates clip-Y ('ViewSpec.clipYFlip', in 'frustumPerspectiveF64'), so a ray
   // derived here must mirror the same axis or the host lights the deck.
   // tan(45 deg) = 1: on the square 90-degree face ndc IS the view-plane offset.
   let viewDir = normalize(vec3<f32>(ndc.x, -ndc.y, -1.0));

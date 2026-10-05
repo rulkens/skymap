@@ -28,6 +28,8 @@ type ResidentLookupResult = {
 
 /** Placeholder until `balanceSurfaceCut` fills the real bits in. */
 const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
+/** No resident height ancestor, or one with no bound: the datum. */
+const DATUM_RANGE_M: readonly [number, number] = [0, 0];
 
 /**
  * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
@@ -40,18 +42,26 @@ export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
    *  units — see `radiusM` below, the walk's new length scale). */
   readonly camPosLocalM: Readonly<Vec3>;
-  /** The body slab's own f64 vp, built about the eye, in metres. Only x/y
-   *  extent is read, so the depth convention doesn't matter here. Stays
-   *  `Float64Array` as a belt-and-braces contract: the `w`-row cancellation
-   *  that forced it under the old Mpc-frame walk (`composeBodyMvp`'s header)
-   *  no longer occurs — metres is already the small, well-conditioned unit
-   *  — but keeping the type honest costs nothing and guards a future caller
-   *  that narrows too early. */
-  readonly viewProjLocal: Float64Array;
-  readonly viewportPx: Readonly<Vec2>;
+  /** Every view's body slab f64 vp, paired with ITS OWN viewport size — an
+   *  XR eye sized differently than the main view must scale its NDC by its
+   *  own target, not a shared one. A node survives if ANY view keeps it, and
+   *  refines to the finest view's footprint. Only x/y extent of `viewProjLocal`
+   *  is read, so the depth convention doesn't matter here. `viewProjLocal`
+   *  stays `Float64Array` as a belt-and-braces contract: the `w`-row
+   *  cancellation that forced it under the old Mpc-frame walk
+   *  (`composeBodyMvp`'s header) no longer occurs — metres is already the
+   *  small, well-conditioned unit — but keeping the type honest costs nothing
+   *  and guards a future caller that narrows too early. */
+  readonly views: readonly {
+    readonly viewProjLocal: Float64Array;
+    readonly viewportPx: Readonly<Vec2>;
+  }[];
   /** The body's equatorial radius in metres — was implicit (unit sphere);
    *  the walk's horizon test now scales against this instead. */
   readonly radiusM: number;
+  /** The body's own height bounds above the datum, metres: every subtree
+   *  range is clipped to them, so a corrupt header cannot unbound the culls. */
+  readonly reliefM: readonly [number, number];
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
   /** The manifest's geographic depth bands for the albedo product; a leaf
@@ -76,9 +86,9 @@ export function cutSurfaceTiles(input: {
 } {
   const {
     camPosLocalM,
-    viewProjLocal,
-    viewportPx,
+    views: viewInputs,
     radiusM,
+    reliefM,
     baseLevel,
     bands,
     tilePx,
@@ -97,7 +107,7 @@ export function cutSurfaceTiles(input: {
   // A camera on/inside the datum (the F2 orbit target sinking to sea level
   // over relief that reaches above it) has no flat-datum distance to take
   // acos of; clamp it to just outside the sphere so capAngle stays finite —
-  // reliefHeadroom's per-node widening in `probe` is what actually admits
+  // the relief headroom's per-node widening in `probe` is what actually admits
   // terrain in that case, not this floor value.
   const capCamLen = Math.max(camLen, radiusM * (1 + 1e-9));
   const capAngle = Math.acos(radiusM / capCamLen);
@@ -106,27 +116,21 @@ export function cutSurfaceTiles(input: {
   let maxTileLevel = baseLevel;
   for (const band of bands) if (band.max > maxTileLevel) maxTileLevel = band.max;
 
-  // Hoisted out of the walk; the z row is never touched.
-  const mx0 = viewProjLocal[0]!;
-  const mx1 = viewProjLocal[4]!;
-  const mx2 = viewProjLocal[8]!;
-  const mx3 = viewProjLocal[12]!;
-  const my0 = viewProjLocal[1]!;
-  const my1 = viewProjLocal[5]!;
-  const my2 = viewProjLocal[9]!;
-  const my3 = viewProjLocal[13]!;
-  const mw0 = viewProjLocal[3]!;
-  const mw1 = viewProjLocal[7]!;
-  const mw2 = viewProjLocal[11]!;
-  const mw3 = viewProjLocal[15]!;
-  // The four side planes of the frustum in the walk's own frame (the rows of
-  // the vp, Gribb–Hartmann): inside is `w ± x >= 0`, `w ± y >= 0`. Normalised
-  // so a signed distance compares against a bounding radius.
-  const planeA = [mw0 + mx0, mw0 - mx0, mw0 + my0, mw0 - my0];
-  const planeB = [mw1 + mx1, mw1 - mx1, mw1 + my1, mw1 - my1];
-  const planeC = [mw2 + mx2, mw2 - mx2, mw2 + my2, mw2 - my2];
-  const planeD = [mw3 + mx3, mw3 - mx3, mw3 + my3, mw3 - my3];
-  const planeInvLen = planeA.map((a, k) => 1 / Math.hypot(a, planeB[k]!, planeC[k]!));
+  // Per view, hoisted out of the walk: the x/y/w rows of the vp (the z row is
+  // never touched) and the four side planes of the frustum in the walk's own
+  // frame (Gribb–Hartmann): inside is `w ± x >= 0`, `w ± y >= 0`. Normalised so
+  // a signed distance compares against a bounding radius.
+  const views = viewInputs.map(({ viewProjLocal: m, viewportPx }) => {
+    const planeA = [m[3]! + m[0]!, m[3]! - m[0]!, m[3]! + m[1]!, m[3]! - m[1]!];
+    const planeB = [m[7]! + m[4]!, m[7]! - m[4]!, m[7]! + m[5]!, m[7]! - m[5]!];
+    const planeC = [m[11]! + m[8]!, m[11]! - m[8]!, m[11]! + m[9]!, m[11]! - m[9]!];
+    const planeD = [m[15]! + m[12]!, m[15]! - m[12]!, m[15]! + m[13]!, m[15]! - m[13]!];
+    const planeInvLen = planeA.map((a, k) => 1 / Math.hypot(a, planeB[k]!, planeC[k]!));
+    return { m, planeA, planeB, planeC, planeD, planeInvLen, viewportPx };
+  });
+
+  // `probe`'s nine lifted sample points, xyz-packed; reused across nodes.
+  const samples = new Float64Array(27);
 
   const requests: SurfaceTileRequest[] = [];
   const cut: SurfaceCutTile[] = [];
@@ -163,15 +167,23 @@ export function cutSurfaceTiles(input: {
       cornerSE[0] * centre[0] + cornerSE[1] * centre[1] + cornerSE[2] * centre[2],
     );
     const patchAngle = Math.acos(Math.min(1, Math.max(-1, minCornerDot)));
-    // Relief this node's subtree can reach, shared by both culls below so the
-    // resident-ancestor walk inside reliefHeadroom() runs once per node.
-    const relief = reliefHeadroom(z, x, y);
+    // Shared by both culls and the footprint below, so the resident-ancestor
+    // walk runs once per node.
+    const rangeM = residentSubtreeRangeM(z, x, y);
+    const loM = Math.min(Math.max(rangeM[0], reliefM[0]), reliefM[1]);
+    const hiM = Math.min(Math.max(rangeM[1], reliefM[0]), reliefM[1]);
+    const relief = Math.max(Math.abs(loM), Math.abs(hiM)) / radiusM;
+    // Footprint sampled at the subtree's LOWEST ground, not the datum (Mars'
+    // sits km under its rover sites): never nearer than the real ground, so
+    // never over-refines or turns a patch into a straddler, and it tightens
+    // monotonically as deeper height tiles land.
+    const lift = 1 + loM / radiusM;
 
     // 1. Horizon, widened by the angle relief lifts a point above the
     // smooth-sphere horizon: a point at radius R+h is visible from a camera
     // at distance d when its angle from the sub-camera point is
     // <= acos(R/d) + acos(R/(R+h)) — the second term is acos(1/(1+relief))
-    // since `relief` is already h/R (reliefHeadroom's own unit).
+    // since `relief` is already h/R.
     const centreAngle = Math.acos(
       Math.min(
         1,
@@ -181,81 +193,114 @@ export function cutSurfaceTiles(input: {
     const horizonCap = relief > 0 ? capAngle + Math.acos(1 / (1 + relief)) : capAngle;
     if (centreAngle - patchAngle > horizonCap) return null;
 
-    // 2. Frustum, conservatively: a sphere about the patch centre, radius to
-    // the farthest corner plus headroom for skirts, plus the relief this
-    // node's subtree can actually reach. The only test a near-plane straddler
-    // gets — its projected bbox below is meaningless — and it also catches
-    // points entirely behind the eye, which fail every plane test at once.
+    // 2. Frustum, conservatively: a sphere about the patch centre lifted to the
+    // subtree's MID height (Mars' ground sits km above its datum, out of reach
+    // of a datum-centred sphere). Any drawn point d·(1+h) lies within
+    // chord·(1+h) + |h − mid| of it; 1.5 chords cover chord·h plus the skirt
+    // (≤ 0.16 chord) for any h under 0.34 radii, and half the spread covers
+    // the rest — unclamped, or deep nodes still on a coarse range go missing.
+    // The only test a near-plane straddler gets, and it also catches points
+    // entirely behind the eye, which fail every plane test at once.
     const cornerChord = Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
-    const boundRadius = 1.5 * cornerChord + Math.min(relief, cornerChord);
-    for (let k = 0; k < 4; k++) {
-      const dist =
-        (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
-        planeInvLen[k]!;
-      if (dist < -boundRadius) return null;
+    const mid = 1 + (loM + hiM) / 2 / radiusM;
+    const boundRadius = 1.5 * cornerChord + (hiM - loM) / 2 / radiusM;
+
+    // The finest view's footprint wins; a node no view keeps is culled. Two
+    // numbers, not a `best` object re-allocated per view: this runs once per
+    // view per node, a hot inner loop.
+    let bestScreenPx = -1;
+    let bestRequired = -1;
+    let sampled = false;
+    for (const { m, planeA, planeB, planeC, planeD, planeInvLen, viewportPx } of views) {
+      let culled = false;
+      for (let k = 0; k < 4; k++) {
+        const dist =
+          (planeA[k]! * centre[0] * mid +
+            planeB[k]! * centre[1] * mid +
+            planeC[k]! * centre[2] * mid +
+            planeD[k]!) *
+          planeInvLen[k]!;
+        if (dist < -boundRadius) culled = true;
+      }
+      if (culled) continue;
+
+      // 3. The projected extent that drives everything else. Corners, edge
+      // midpoints and the centre, lifted — view-independent, so sampled once.
+      if (!sampled) {
+        sampled = true;
+        for (let i = 0; i < 9; i++) {
+          const su = u0 + ((i % 3) / 2) * (u1 - u0);
+          const sv = vNorth + (Math.floor(i / 3) / 2) * (vSouth - vNorth);
+          const p = equirectUvToDirection([su, sv]);
+          samples[i * 3] = p[0] * lift;
+          samples[i * 3 + 1] = p[1] * lift;
+          samples[i * 3 + 2] = p[2] * lift;
+        }
+      }
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      let nInFront = 0;
+      for (let i = 0; i < 9; i++) {
+        const px = samples[i * 3]!;
+        const py = samples[i * 3 + 1]!;
+        const pz = samples[i * 3 + 2]!;
+        const w = m[3]! * px + m[7]! * py + m[11]! * pz + m[15]!;
+        if (w <= 0) continue;
+        nInFront++;
+        const ndcX = (m[0]! * px + m[4]! * py + m[8]! * pz + m[12]!) / w;
+        const ndcY = (m[1]! * px + m[5]! * py + m[9]! * pz + m[13]!) / w;
+        if (ndcX < minX) minX = ndcX;
+        if (ndcX > maxX) maxX = ndcX;
+        if (ndcY < minY) minY = ndcY;
+        if (ndcY > maxY) maxY = ndcY;
+      }
+      if (nInFront === 0) continue;
+      // A sample past the near plane is dropped before it can corrupt the bbox,
+      // but a straddler's bbox stays meaningless regardless (its footprint
+      // sweeps toward infinity as w→0): trust it only when nothing was dropped,
+      // else treat the patch as screen-filling at the deepest level.
+      const straddlesNearPlane = nInFront < 9;
+      if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) continue;
+
+      // NDC spans 2 units, hence the halving. GEOMETRIC MEAN, not max — sizing
+      // a foreshortened sliver by its width alone over-refines it for its area.
+      const screenPx = straddlesNearPlane
+        ? Math.max(viewportPx[0], viewportPx[1])
+        : Math.sqrt(((maxX - minX) / 2) * viewportPx[0] * (((maxY - minY) / 2) * viewportPx[1]));
+      if (!(screenPx > 0)) continue;
+
+      // `lodBias` is subtracted AFTER the ceil, not folded into the log
+      // argument: for an integer bias `ceil(x) - bias === ceil(x - bias)`.
+      const required = straddlesNearPlane
+        ? maxTileLevel
+        : Math.min(
+            maxTileLevel,
+            Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
+          );
+      // Maxed separately: a straddler's `required` is the deepest level
+      // whatever its nominal `screenPx`.
+      if (bestScreenPx < 0) {
+        bestScreenPx = screenPx;
+        bestRequired = required;
+      } else {
+        bestScreenPx = Math.max(bestScreenPx, screenPx);
+        bestRequired = Math.max(bestRequired, required);
+      }
     }
-
-    // 3. The projected extent that drives everything else
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    let nInFront = 0;
-    for (let i = 0; i < 9; i++) {
-      // Corners, edge midpoints and the centre.
-      const su = u0 + ((i % 3) / 2) * (u1 - u0);
-      const sv = vNorth + (Math.floor(i / 3) / 2) * (vSouth - vNorth);
-      const p = equirectUvToDirection([su, sv]);
-      const w = mw0 * p[0] + mw1 * p[1] + mw2 * p[2] + mw3;
-      if (w <= 0) continue;
-      nInFront++;
-      const ndcX = (mx0 * p[0] + mx1 * p[1] + mx2 * p[2] + mx3) / w;
-      const ndcY = (my0 * p[0] + my1 * p[1] + my2 * p[2] + my3) / w;
-      if (ndcX < minX) minX = ndcX;
-      if (ndcX > maxX) maxX = ndcX;
-      if (ndcY < minY) minY = ndcY;
-      if (ndcY > maxY) maxY = ndcY;
-    }
-    if (nInFront === 0) return null;
-    // A sample past the near plane is dropped before it can corrupt the bbox,
-    // but a straddler's bbox stays meaningless regardless (its footprint
-    // sweeps toward infinity as w→0): trust it only when nothing was dropped,
-    // else treat the patch as screen-filling at the deepest level.
-    const straddlesNearPlane = nInFront < 9;
-    if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
-
-    // NDC spans 2 units, hence the halving. GEOMETRIC MEAN, not max — sizing
-    // a foreshortened sliver by its width alone over-refines it for its area.
-    const screenPx = straddlesNearPlane
-      ? Math.max(viewportPx[0], viewportPx[1])
-      : Math.sqrt(((maxX - minX) / 2) * viewportPx[0] * (((maxY - minY) / 2) * viewportPx[1]));
-    if (!(screenPx > 0)) return null;
-
-    // `lodBias` is subtracted AFTER the ceil, not folded into the log
-    // argument: for an integer bias `ceil(x) - bias === ceil(x - bias)`.
-    const required = straddlesNearPlane
-      ? maxTileLevel
-      : Math.min(
-          maxTileLevel,
-          Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
-        );
-    return { screenPx, required };
+    return bestScreenPx < 0 ? null : { screenPx: bestScreenPx, required: bestRequired };
   }
 
-  /** Relief a node's subtree can reach, in the walk's unit-sphere length —
-   *  the deepest resident height ancestor's `subtreeMin/MaxM`, which bounds
-   *  every descendant by construction. 0 when nothing is resident: the datum,
-   *  as F1. A CONSTANT margin instead would inflate every patch near the eye
-   *  plane back into a screen-filling straddler, which is what R14 removed —
-   *  and so does the caller's clamp at the patch's own chord, since before
-   *  deep tiles land the resident ancestor is the base level, whose range is
-   *  the whole body's relief (R15). */
-  function reliefHeadroom(z: number, x: number, y: number): number {
+  /** Relief a node's subtree can reach, in METRES — the deepest resident
+   *  height ancestor's `subtreeMin/MaxM`, which bounds every descendant by
+   *  construction. The datum when nothing is resident, as F1. A CONSTANT
+   *  margin instead would inflate every patch near the eye plane back into a
+   *  screen-filling straddler, which is what R14 removed; a coarse ancestor's
+   *  range still does, until the deeper headers land. */
+  function residentSubtreeRangeM(z: number, x: number, y: number): readonly [number, number] {
     const hit = deepestResidentAncestor({ product: 'height', z, x, y }, baseLevel, residentSlot);
-    if (hit === null) return 0;
-    const range = hit.found.subtreeRangeM;
-    if (range === undefined || range === null) return 0;
-    return Math.max(Math.abs(range[0]), Math.abs(range[1])) / radiusM;
+    return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
   }
 
   /** Both products of one tile — height rides every albedo request (§6.1),

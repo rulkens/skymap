@@ -99,6 +99,35 @@ describe('createTileStreamSubsystem', () => {
     expect(atlas.inFlightCount()).toBe(1);
   });
 
+  // This wake is the ONLY thing that makes an arrival visible: no consumer
+  // votes an outstanding fetch into the render-on-demand predicate any more
+  // (see galaxyCatalog/frame.ts), precisely so a thumbnail host that hangs for
+  // 30 s costs no frames. Drop either call and thumbnails stop appearing until
+  // something unrelated happens to wake the loop — a silent, camera-dependent
+  // failure no other test would catch.
+  it('wakes the render loop on every settle, arrival and failure alike', async () => {
+    for (const payload of [makeFakeBitmap(), null]) {
+      const requestRender = vi.fn();
+      const atlas = createTileStreamSubsystem<ImageBitmap>({
+        device,
+        requestRender,
+        ...TEST_ATLAS_CONFIG,
+        ...makeBitmapDeps(),
+      });
+      atlas.allocate('k', 1);
+      atlas.enqueueFetch({
+        key: 'k',
+        priority: 1,
+        fetcher: async () => payload,
+        onResult: () => {},
+      });
+      expect(requestRender).not.toHaveBeenCalled();
+
+      await new Promise((r) => setTimeout(r, 0));
+      expect(requestRender).toHaveBeenCalled();
+    }
+  });
+
   it('honours the caller-supplied concurrency limit', () => {
     // The tile stream and the thumbnail stream fetch different shapes of thing
     // against the same ~6-connection browser cap, so each supplies its own

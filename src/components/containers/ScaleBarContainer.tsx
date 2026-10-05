@@ -1,4 +1,3 @@
-// src/components/containers/ScaleBarContainer.tsx
 /**
  * ScaleBarContainer — store boundary for the field-of-view scale readout.
  *

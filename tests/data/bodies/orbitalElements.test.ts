@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../src/data/bodies/orbitalElements';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
+import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { propagateElements } from '../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../src/utils/orbit/keplerianPositionMpc';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -18,13 +19,14 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('resolves every focusId to a real body', () => {
-    // A focus is either another orbit in this table, the Sun (a seeded scene
-    // body), or another seeded scene body (the Moon orbits Earth). A dangling
-    // focusId would leave a trail orbiting nothing.
+  it('resolves every focusId to a real body or place', () => {
+    // A focus is either another orbit in this table, a seeded scene body (the
+    // Moon orbits Earth), or an anchor (the Sun, the Galactic Centre the S-stars
+    // orbit). A dangling focusId would leave a trail orbiting nothing.
     const known = new Set<string>([
       ...ORBITAL_ELEMENTS.map((e) => e.id),
       ...SCENE_BODIES.map((b) => b.id),
+      ...SCENE_ANCHORS.map((a) => a.id),
     ]);
     for (const e of ORBITAL_ELEMENTS) {
       expect(known.has(e.focusId)).toBe(true);

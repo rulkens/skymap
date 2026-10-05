@@ -22,14 +22,13 @@
  *     is a galaxy idiom, so a flyPath flies INTO a cluster, never past it.
  *   - milkyWay: fixed world-space centre at a calibrated view distance — we are
  *     inside the galaxy, so no radius or FOV computation makes sense; `radius` 0.
- *   - body / star: both are discrete near-field objects framed on a physical
- *     radius through the FOV, so they share `bodyLikeFraming` — unclamped pure
- *     math, because at ~2e-16 Mpc (Earth) any Mpc-scale floor would swallow the
- *     framing. `radius` is the physical radius, a real pass-by extent. Their row
- *     shapes differ (body: id/label; star: index/photometry + a nominal solar
- *     radius, the bin having no per-star size), so the cases stay separate. A
- *     body row's optional `focusDistanceRadii` (e.g. Sgr A*'s ~30.4 r_s)
- *     overrides the screen-fill distance with a fixed radius multiple.
+ *   - body / starCatalog / blackHole: discrete near-field objects framed on their
+ *     row's driver geometry through the FOV, so they share one case and
+ *     `bodyLikeFraming` — unclamped pure math, because at ~2e-16 Mpc (Earth) any
+ *     Mpc-scale floor would swallow the framing. `radius` is the physical
+ *     radius, a real pass-by extent. A driver's optional `focusDistanceRadii`
+ *     (e.g. Sgr A*'s ~30.4 r_s) overrides the screen-fill distance with a fixed
+ *     radius multiple.
  *
  * The return type is `Pick<CameraPose, 'target' | 'distance'>` plus the subject's
  * pass-by `radius` (Mpc) — the position-and-depth slice, with the extent a fly-past
@@ -41,9 +40,6 @@
 import { galaxyFocusDistance } from './galaxyFocusDistance';
 import { structureFocusDistance } from './structureFocusDistance';
 import { bodyLikeFraming } from './bodyLikeFraming';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -104,22 +100,15 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
         // We are inside the galaxy; there is no meaningful fly-past radius.
         radius: 0,
       };
-    // A seeded body and a survey star differ in row shape but frame identically:
-    // a discrete near-field object sized on its physical radius. Both delegate
-    // to the shared bodyLikeFraming; the star's radius is the extractor-stamped
-    // nominal solar radius (the bin has no per-star size).
-    case 'body': {
-      // The row carries identity only; the size it frames on comes from the seed.
-      const body = findByIdOrThrow(SCENE_BODIES, row.id, 'focusFraming');
+    case 'body':
+    case 'starCatalog':
+    case 'blackHole':
       return bodyLikeFraming(
         row.positionMpc,
-        bodyFootprintRadiusM(body),
+        row.driver.footprintRadiusM,
         fovYRad,
-        'focusDistanceRadii' in body ? body.focusDistanceRadii : undefined,
+        row.driver.focusDistanceRadii,
       );
-    }
-    case 'star':
-      return bodyLikeFraming(row.positionMpc, row.radiusM, fovYRad);
     // The band carries no x/y/z (a line-of-sight effect, not a point), so it
     // has no pose to fabricate. UNREACHABLE BY CONSTRUCTION: every
     // `updateSelectionFocus` dispatch — InfoCard, double-click, keyboard

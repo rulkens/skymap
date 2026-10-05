@@ -47,9 +47,9 @@ describe('orbit plane frames', () => {
 
   it('tilts the ecliptic normal from frame +z by the obliquity', () => {
     // Both are unit vectors, so the dot product is cos(angle) directly. The
-    // expected obliquity is written as the literal 23.44° in radians rather than
+    // expected obliquity is written as the literal 23.4392911° in radians rather than
     // through degToRad, so a broken conversion would not hide behind a mirror.
     const cosAngle = dot(ECLIPTIC_FRAME.normal, [0, 0, 1]);
-    expect(Math.acos(cosAngle)).toBeCloseTo((23.44 * Math.PI) / 180, 12);
+    expect(Math.acos(cosAngle)).toBeCloseTo((23.4392911 * Math.PI) / 180, 12);
   });
 });

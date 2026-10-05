@@ -1,13 +1,18 @@
 /**
- * scenePlanets — planet + moon seeds at their real J2000 mean positions, DERIVED
- * from `ORBITAL_ELEMENTS` via `keplerianPositionMpc`, so a body sits exactly on the
- * ellipse its trail draws. `datumRadiusM` is authored in SI metres and resolved
+ * scenePlanets — planet + moon identity rows; positions are not baked here but
+ * derived per instant by `deriveBodyStates`, and each trail anchors on that snapshot
+ * position. `datumRadiusM` is authored in SI metres and resolved
  * into a draw-space sphere at render time. Albedos are plausible
  * flat linear-RGB colours, inline rather than in `palette.ts` because each is
  * per-body data read once at its seed site.
  */
 
 import { heliocentricPlanet } from './makers/heliocentricPlanet';
+import {
+  MARS_AREOID_RELIEF_M,
+  MARS_DATUM_OFFSET_M,
+  MARS_DATUM_RADIUS_M,
+} from './marsSurfaceParams';
 import { satelliteBody } from './makers/satelliteBody';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
 
@@ -27,8 +32,12 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   heliocentricPlanet({
     id: 'mars',
     label: 'Mars',
-    datumRadiusM: 3390000,
+    datumRadiusM: MARS_DATUM_RADIUS_M,
     albedo: [0.6, 0.32, 0.23],
+    reliefM: [
+      MARS_AREOID_RELIEF_M[0] + MARS_DATUM_OFFSET_M,
+      MARS_AREOID_RELIEF_M[1] + MARS_DATUM_OFFSET_M,
+    ],
   }),
   heliocentricPlanet({
     id: 'jupiter',
@@ -112,5 +121,62 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
     label: 'Charon',
     datumRadiusM: 606000, // WGCCRE 2015 (Archinal+18), superseding the 2009 report's 605 km.
     albedo: [0.4, 0.39, 0.38],
+  }),
+  // Uranian moon albedos are geometric albedos (NSSDC Uranian Satellite Fact Sheet); the
+  // texture build reads them back as the mean of each Schenk mosaic's brightness.
+  satelliteBody({
+    id: 'miranda',
+    label: 'Miranda',
+    datumRadiusM: 235800,
+    albedo: [0.32, 0.32, 0.32],
+  }),
+  satelliteBody({
+    id: 'ariel',
+    label: 'Ariel',
+    datumRadiusM: 578900,
+    albedo: [0.39, 0.39, 0.39],
+  }),
+  satelliteBody({
+    id: 'umbriel',
+    label: 'Umbriel',
+    datumRadiusM: 584700,
+    albedo: [0.21, 0.21, 0.21],
+  }),
+  satelliteBody({
+    id: 'titania',
+    label: 'Titania',
+    datumRadiusM: 788900,
+    albedo: [0.27, 0.27, 0.27],
+  }),
+  satelliteBody({
+    id: 'oberon',
+    label: 'Oberon',
+    datumRadiusM: 761400,
+    albedo: [0.23, 0.23, 0.23],
+  }),
+  satelliteBody({
+    id: 'puck',
+    label: 'Puck',
+    datumRadiusM: 81000,
+    albedo: [0.11, 0.11, 0.11],
+  }),
+  // Neptunian moon albedos are geometric albedos (NSSDC Neptunian Satellite Fact Sheet).
+  satelliteBody({
+    id: 'triton',
+    label: 'Triton',
+    datumRadiusM: 1353400,
+    albedo: [0.719, 0.719, 0.719],
+  }),
+  satelliteBody({
+    id: 'proteus',
+    label: 'Proteus',
+    datumRadiusM: 210000,
+    albedo: [0.096, 0.096, 0.096],
+  }),
+  satelliteBody({
+    id: 'nereid',
+    label: 'Nereid',
+    datumRadiusM: 170000,
+    albedo: [0.155, 0.155, 0.155],
   }),
 ];

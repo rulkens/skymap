@@ -50,6 +50,23 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+/* Self-hosted (no Google Fonts request): subset to Latin + general
+ * punctuation, matching the glyphs the DOM actually sets in this face. */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/CormorantGaramond-SemiBold.woff2') format('woff2');
+}
+
+/* ExhibitOverlay's body voice, self-hosted on the same terms as Cormorant. */
+@font-face {
+  font-family: 'Sora';
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/Sora-Thin.woff2') format('woff2');
+}
+
 :root {
   /* ── Color palette ──────────────────────────────────────────────────────
    *
@@ -212,8 +229,8 @@
    * into the MSDF label atlas (see src/data/fonts.ts).  Reserved for
    * marquee text that should echo the in-scene labels (splash title,
    * onboarding headlines).  Falls back to the mono stack while the
-   * Google-hosted webfont is in flight so first paint never shows a
-   * generic browser serif.
+   * self-hosted webfont (@font-face above) is in flight so first paint
+   * never shows a generic browser serif.
    */
   --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
 
@@ -341,8 +358,7 @@
    * Promoting it here means a future card variant gets the same
    * "floating sheet of cosmic glass" identity for free.
    */
-  --shadow-card:
-    0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
+  --shadow-card: 0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -387,4 +403,13 @@ body {
   width: 100vw;
   height: 100vh;
   touch-action: none;
+}
+
+/* Dome rig draws a fisheye disc, which only reads correctly on a square
+   backing store — `resizeCanvasToDisplay` follows this box, not the 100vw
+   above. */
+#c[data-view-rig='dome'] {
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  margin-inline: auto;
 }

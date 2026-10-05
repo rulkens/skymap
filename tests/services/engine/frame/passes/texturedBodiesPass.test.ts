@@ -27,11 +27,12 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { LIMB_DARKENING_PARAMS } from '../../../../../src/data/bodies/limbDarkeningParams';
 import { sunDirLocal } from '../../../../../src/utils/camera/sunDirLocal';
 import { bodySlabCamAltitudeSq } from '../../../../../src/utils/camera/bodySlabCamAltitudeSq';
+import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -57,7 +58,7 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
     }
     return m;
   }),
@@ -69,17 +70,24 @@ const camLocalMock = bodySlabCamLocal as unknown as ReturnType<typeof vi.fn>;
 const IDENTITY_MAT3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyState['orientation'];
 
 /** A body sitting `radiusM·5` down +x — firmly resolved on the fixture viewport. */
-function bodyAt(id: string, radiusM: number): SeededPlanet {
+function bodyAt(
+  id: string,
+  radiusM: number,
+  reliefM: readonly [number, number] = [0, 0],
+): SeededPlanet {
   const distanceM = radiusM * 5;
   return {
     id,
     label: id,
-    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
+    surface: { datumRadiusM: radiusM, reliefM },
     albedo: [0.5, 0.5, 0.5],
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
     orientation: IDENTITY_MAT3,
   };
 }
+
+/** Non-zero below-datum relief, so a datum-radius draw fails the radius checks. */
+const MARS_RELIEF_M = [-2000, 27000] as const;
 
 const STUB_POSE: BodyRelativePose = { eyeRelBodyM: [1, 2, 3], basisM: IDENTITY_MAT3 };
 
@@ -91,22 +99,24 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
-  } as unknown as ReadyFrameContext;
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 
@@ -170,7 +180,7 @@ describe('texturedBodiesPass.draw', () => {
   it('composes the MVP from view.slab.vp (never view.vp) and the pose off ctx.bodyPose', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
-    const mars = bodyAt('mars', 3390000);
+    const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
     const state = makeState(makeRendererSpy(['mars']), [mars]);
     const ctx = makeCtx();
     const view = makeBodyView('mars' as BodyId);
@@ -182,13 +192,14 @@ describe('texturedBodiesPass.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
-    expect(call[2]).toBe(mars.surface.datumRadiusM);
+    // The INNER bound, so the globe sits under every terrain tile.
+    expect(call[2]).toBe(innerBoundRadiusM(mars.surface));
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     // camPosLocal uses the SAME radius the mvp did (the Minnaert view-cosine
     // frame must match the frame the vertices were transformed into).
-    expect(camLocalMock.mock.calls[0]![1]).toBe(mars.surface.datumRadiusM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(innerBoundRadiusM(mars.surface));
   });
 
   it('draws only the row matching its own body, never a neighbour`s', () => {
@@ -208,7 +219,8 @@ describe('texturedBodiesPass.draw', () => {
   });
 
   it('packs a length-44 uniform record with sunDirLocal@16..18 and Minnaert params@22..23', () => {
-    const mars = bodyAt('mars', 3390000);
+    const mars = bodyAt('mars', 3390000, MARS_RELIEF_M);
+    const marsRadiusM = innerBoundRadiusM(mars.surface);
     const jupiter = bodyAt('jupiter', 69911000); // has a LIMB_DARKENING_PARAMS row
     const renderer = makeRendererSpy(['mars', 'jupiter']);
     const state = makeState(renderer, [mars, jupiter]);
@@ -241,11 +253,9 @@ describe('texturedBodiesPass.draw', () => {
     // ARGUMENTS: the altitude term reads the pose's eyeRelBodyM at the body's
     // own radius, and the eye-relative vp is `view.slab.vp` (the f64 one —
     // `view.vp` is all zeros here) scaled by that radius, translation untouched.
-    expect(u0[27]).toBe(
-      Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, mars.surface.datumRadiusM)),
-    );
-    expect(u0[28]).toBe(Math.fround(0.5 * mars.surface.datumRadiusM));
-    expect(u0[31]).toBe(Math.fround(3.5 * mars.surface.datumRadiusM));
+    expect(u0[27]).toBe(Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, marsRadiusM)));
+    expect(u0[28]).toBe(Math.fround(0.5 * marsRadiusM));
+    expect(u0[31]).toBe(Math.fround(3.5 * marsRadiusM));
     expect([u0[40], u0[41], u0[42], u0[43]]).toEqual([12.5, 13.5, 14.5, 15.5]);
   });
 

@@ -43,14 +43,14 @@ function makeClipPlayer(factor: number): ClipPlayer {
 
 describe('focusRecession', () => {
   it('returns the exact target for a tagged handle at blend 1', () => {
-    expect(focusRecession({ kind: 'filament' }, 1)).toBe(FILAMENT_RECESSION);
+    expect(focusRecession({ kind: 'cosmicWebFilaments' }, 1)).toBe(FILAMENT_RECESSION);
   });
 });
 
 describe('resolveLayerOpacity', () => {
   it('multiplies opacityOf by focusRecession', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     // Register at 0 then snap to a known toggle opacity at now=0. fadeTo with
     // duration 0 lands the controller exactly on the target immediately.
     fades.register(handle, 0);
@@ -58,33 +58,39 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(1));
     // toggle 0.5 × recession (full focus → FILAMENT_RECESSION) × clip 1.
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(
-      0.5 * FILAMENT_RECESSION,
-    );
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0.5 * FILAMENT_RECESSION);
   });
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     fades.register(handle, 0); // toggle opacity 0
 
     const state = makeState(fades, makeClipPlayer(1));
     // 0 × anything = 0, at any blend.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0);
   });
 
   // ── Clip factor tests (Task 12) ─────────────────────────────────────────
 
   it('multiplies the clip factor for a mapped id', () => {
     const fades = makeRegistry();
-    const handle = { kind: 'filament' } as const;
+    const handle = { kind: 'cosmicWebFilaments' } as const;
     fades.register(handle, 0);
     fades.fadeTo(handle, 0.8, 0, 0); // toggle = 0.8
 
     const state = makeState(fades, makeClipPlayer(0.5));
     // Hand-computed: toggle 0.8 × recession(filament, blend 0) 1 × clip 0.5 = 0.4.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.4);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0.4);
   });
 
   it('returns the bare toggle opacity for an unmapped (overlay) id', () => {
@@ -98,6 +104,8 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(0.3));
     // Hand-computed: toggle 0.7 × recession 1 × clip 1 (unmapped) = 0.7.
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0.7);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0.7);
   });
 });

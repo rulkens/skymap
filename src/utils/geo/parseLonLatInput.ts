@@ -10,7 +10,10 @@ import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
  * than surface a validation error for a debug-only text box.
  */
 export function parseLonLatInput(text: string): LonLatDeg | null {
-  const parts = text.trim().split(/[\s,]+/).filter(Boolean);
+  const parts = text
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean);
   if (parts.length !== 2) return null;
 
   const lonDeg = parseCoord(parts[0]!, 'E', 'W');

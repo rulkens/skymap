@@ -1,20 +1,20 @@
 /**
  * orbitalElements — the J2000 Keplerian table, single source of truth for BOTH body
- * positions (`keplerianPositionMpc`) and their trails (`keplerianEllipse`), so a body sitting
- * on its own trail is structural rather than an invariant to remember. Per row: `focusId` (the
- * Sun for planets, the parent planet for a moon) and `plane` (omitted = ecliptic, which is how
- * JPL publishes the planets and the Moon; a planet's own moons ride their OWN Laplace pole —
- * see `orbitPlaneFrames.ts`). No buried Mpc/radian literals, and JPL's `L`/`ϖ` columns are
- * converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription stays
- * checkable against the source: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons).
+ * positions (`keplerianPositionMpc`) and their trails (`keplerianEllipse`); the trail pass
+ * anchors each trail on the snapshot body position, so a body sits on its own trail by
+ * construction. Per row: `focusId` (the Sun for planets, the parent planet for a moon) and
+ * `plane` (omitted = ecliptic, which is how JPL publishes the planets and the Moon; a planet's
+ * own moons ride their OWN Laplace pole — see `orbitPlaneFrames.ts`). No buried Mpc/radian
+ * literals, and JPL's `L`/`ϖ` columns are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`,
+ * likewise the rates) so every transcription stays checkable against the source: JPL SSD
+ * approx_pos.html Table 1 (planets), sats/elem (moons).
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
 import { orbiter } from './makers/orbiter';
 import { probe } from './makers/probe';
 import { satellite } from './makers/satellite';
-import { sStar } from './makers/sStar';
-import { S_STAR_SEEDS } from './sStarElements';
+import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
 import { SCENE_EARTH } from './sceneEarth';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
@@ -334,6 +334,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 216.3,
     meanAnomalyDeg: 189.7,
     periodDays: 0.3187,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 1.1,
     nodalPrecessionYears: 2.3,
     poleRaDeg: 317.7,
@@ -353,6 +354,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0.0,
     meanAnomalyDeg: 205.0,
     periodDays: 1.2625,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0.0,
     nodalPrecessionYears: 56.2,
     poleRaDeg: 316.6,
@@ -363,7 +365,9 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // Jupiter's Galilean moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5
   // TDB, JUP365). Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr)
   // Pnode(yr), pole RA/Dec. P is the anomalistic mean-motion period — for the
-  // fast-precessing inner pair it is ~0.4% shorter than the sidereal period.
+  // fast-precessing inner pair it is ~0.4% shorter than the sidereal period. JPL lists Papsis
+  // unsigned; Io's and Europa's apsides regress (Laplace resonance), so their rows carry it
+  // negative — read +, their longitude runs ~0.74°/day fast.
   satellite({
     // Io: a=421800 e=0.004 ω=49.1 M=330.9 i=0.0 node=0.0 P=1.762732
     // Papsis=1.333 Pnode=0.000; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
@@ -377,7 +381,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 49.1,
     meanAnomalyDeg: 330.9,
     periodDays: 1.762732,
-    apsidalPrecessionYears: 1.333,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: -1.333,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 268.1,
     poleDecDeg: 64.5,
@@ -395,7 +400,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 45.0,
     meanAnomalyDeg: 345.4,
     periodDays: 3.525463,
-    apsidalPrecessionYears: 1.394,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: -1.394,
     nodalPrecessionYears: 30.202,
     poleRaDeg: 268.1,
     poleDecDeg: 64.5,
@@ -413,6 +419,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 198.3,
     meanAnomalyDeg: 324.8,
     periodDays: 7.155588,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 68.301,
     nodalPrecessionYears: 137.812,
     poleRaDeg: 268.2,
@@ -431,6 +438,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 43.8,
     meanAnomalyDeg: 87.4,
     periodDays: 16.69044,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 277.921,
     nodalPrecessionYears: 577.264,
     poleRaDeg: 268.7,
@@ -441,7 +449,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // Saturn's major moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB, SAT441).
   // Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr), pole RA/Dec. The inner
   // moons share Saturn's pole (RA≈40.6 Dec≈83.5); Iapetus sits far enough out that its Laplace
-  // plane tilts 14.8° off the equator, which its own pole and i=7.6° carry truthfully.
+  // plane tilts 14.8° off the equator, which its own pole and i=7.6° carry truthfully. P is a
+  // LONGITUDE period here (360/P equals the IAU spin rate), hence `periodKind: 'longitude'`.
   satellite({
     // Mimas: a=186000 e=0.020 ω=160.4 M=275.3 i=1.6 node=66.2 P=0.942422
     // Papsis=0.493 Pnode=0.986; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
@@ -454,6 +463,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 160.4,
     meanAnomalyDeg: 275.3,
     periodDays: 0.942422,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 0.493,
     nodalPrecessionYears: 0.986,
     poleRaDeg: 40.6,
@@ -473,6 +483,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 119.5,
     meanAnomalyDeg: 57.0,
     periodDays: 1.370218,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 2.916,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 40.6,
@@ -493,6 +504,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 335.3,
     meanAnomalyDeg: 0.0,
     periodDays: 1.887802,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 0.005,
     nodalPrecessionYears: 4.982,
     poleRaDeg: 40.6,
@@ -512,6 +524,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 116.0,
     meanAnomalyDeg: 212.0,
     periodDays: 2.736916,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 11.698,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 40.6,
@@ -530,6 +543,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 44.3,
     meanAnomalyDeg: 31.5,
     periodDays: 4.517503,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 33.939,
     nodalPrecessionYears: 35.775,
     poleRaDeg: 40.6,
@@ -548,6 +562,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 78.3,
     meanAnomalyDeg: 11.7,
     periodDays: 15.945448,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 346.68,
     nodalPrecessionYears: 687.37,
     poleRaDeg: 36.4,
@@ -567,10 +582,197 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 254.5,
     meanAnomalyDeg: 74.8,
     periodDays: 79.331002,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 1662.9,
     nodalPrecessionYears: 3130.302,
     poleRaDeg: 288.7,
     poleDecDeg: 78.9,
+    color: SAT_ROCK,
+  }),
+
+  // Uranus's moons. JPL sats/elem (Uranus-equatorial frame, epoch 2000-01-01.5 TDB, URA182), which
+  // tabulates no pole. The pole below is Uranus's ANGULAR-MOMENTUM pole (RA 77.311, Dec +15.175),
+  // the antipode of its IAU north pole: Uranus spins retrograde about that pole and the moons orbit
+  // with the spin, so the IAU pole here would run every orbit backwards.
+  // P is a LONGITUDE period, as for Saturn: 360/P matches the IAU (WGCCRE 2009) spin rates.
+  satellite({
+    // Miranda: a=129846 e=0.001 ω=154.8 M=73.0 i=4.4 node=100.9 P=1.413479
+    // Papsis=8.939 Pnode=17.787. Prograde.
+    id: 'miranda',
+    focusId: 'uranus',
+    semiMajorKm: 129846,
+    eccentricity: 0.001,
+    inclinationDeg: 4.4,
+    ascendingNodeDeg: 100.9,
+    argPeriapsisDeg: 154.8,
+    meanAnomalyDeg: 73.0,
+    periodDays: 1.413479,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 8.939,
+    nodalPrecessionYears: 17.787,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Ariel: a=190929 e=0.001 ω=9.6 M=193.5 i=0.0 node=0.0 P=2.520379
+    // Papsis=28.901 Pnode=0.000. Prograde.
+    id: 'ariel',
+    focusId: 'uranus',
+    semiMajorKm: 190929,
+    eccentricity: 0.001,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 9.6,
+    meanAnomalyDeg: 193.5,
+    periodDays: 2.520379,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 28.901,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Umbriel: a=265986 e=0.004 ω=183.4 M=253.0 i=0.1 node=174.8 P=4.144177
+    // Papsis=64.126 Pnode=129.745. Prograde.
+    id: 'umbriel',
+    focusId: 'uranus',
+    semiMajorKm: 265986,
+    eccentricity: 0.004,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 174.8,
+    argPeriapsisDeg: 183.4,
+    meanAnomalyDeg: 253.0,
+    periodDays: 4.144177,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 64.126,
+    nodalPrecessionYears: 129.745,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Titania: a=436298 e=0.002 ω=184.0 M=68.1 i=0.1 node=29.5 P=8.705869
+    // Papsis=579.928 Pnode=1644.649. Prograde.
+    id: 'titania',
+    focusId: 'uranus',
+    semiMajorKm: 436298,
+    eccentricity: 0.002,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 29.5,
+    argPeriapsisDeg: 184.0,
+    meanAnomalyDeg: 68.1,
+    periodDays: 8.705869,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 579.928,
+    nodalPrecessionYears: 1644.649,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Oberon: a=583511 e=0.002 ω=132.2 M=143.6 i=0.1 node=76.8 P=13.463237
+    // Papsis=158.604 Pnode=192.798. Prograde.
+    id: 'oberon',
+    focusId: 'uranus',
+    semiMajorKm: 583511,
+    eccentricity: 0.002,
+    inclinationDeg: 0.1,
+    ascendingNodeDeg: 76.8,
+    argPeriapsisDeg: 132.2,
+    meanAnomalyDeg: 143.6,
+    periodDays: 13.463237,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 158.604,
+    nodalPrecessionYears: 192.798,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Puck: a=86004 e=0.000 ω=0.0 M=50.1 i=0.3 node=216.1 P=0.761833
+    // Papsis=2.226 Pnode=4.454. Prograde.
+    id: 'puck',
+    focusId: 'uranus',
+    semiMajorKm: 86004,
+    eccentricity: 0.0,
+    inclinationDeg: 0.3,
+    ascendingNodeDeg: 216.1,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 50.1,
+    periodDays: 0.761833,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 2.226,
+    nodalPrecessionYears: 4.454,
+    poleRaDeg: 77.311,
+    poleDecDeg: 15.175,
+    color: SAT_ICE,
+  }),
+
+  // Neptune's moons. JPL sats/elem (epoch 2000-01-01.5 TDB, NEP097) for Triton and Proteus, each
+  // on its own Laplace plane; Nereid (NEP105) is on the ecliptic at 2020-01-01.0 and is moved back
+  // to J2000 by hand below, because `satellite()` assumes J2000.
+  satellite({
+    // Triton: JPL NEP097 prints a=354800 e=0 M=63.0 i=157.3 node=178.1 P=5.876994 Pnode=340.379.
+    // Retrograde (i > 90): the node advances, so Pnode is entered negative (signed period).
+    // P is read as the mean-anomaly period: it leaves less drift for the correction than the
+    // longitude reading (1.6 against 2.6 deg/yr).
+    id: 'triton',
+    focusId: 'neptune',
+    semiMajorKm: 354800,
+    eccentricity: 0.0,
+    inclinationDeg: 157.3,
+    ascendingNodeDeg: 178.1,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 63.0,
+    periodDays: 5.876994,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: -340.379,
+    poleRaDeg: 299.8,
+    poleDecDeg: 43.1,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Proteus: a=117600 e=0.000 ω=0.0 M=276.8 i=0.0 node=0.0 P=1.122315
+    // Papsis=0.000 Pnode=0.000; pole RA=299.8 Dec=42.6. Prograde. 360/P is the IAU spin rate to 4 decimals.
+    id: 'proteus',
+    focusId: 'neptune',
+    semiMajorKm: 117600,
+    eccentricity: 0.0,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 276.8,
+    periodDays: 1.122315,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 299.8,
+    poleDecDeg: 42.6,
+    color: SAT_ROCK,
+  }),
+  satellite({
+    // Nereid (NEP105), JPL ecliptic frame, epoch 2020-01-01.0: a=5513900 e=0.751 ω=296.8 M=318.5
+    // i=5.1 node=319.5 P=360.133039 Papsis=7990.433 Pnode=9426.334. Moved back 7304.5 d
+    // (19.9986 yr) to J2000: M 318.5 - 0.99963058 deg/d * 7304.5 = 216.698; ω 296.8 - 0.901 =
+    // 295.899; node 319.5 + 0.764 = 320.264 (node regresses). The ecliptic is the plane of the
+    // ecliptic pole (RA 270, Dec 66.5607), whose node reference is the vernal equinox.
+    id: 'nereid',
+    focusId: 'neptune',
+    semiMajorKm: 5513900,
+    eccentricity: 0.751,
+    inclinationDeg: 5.1,
+    ascendingNodeDeg: 320.264,
+    argPeriapsisDeg: 295.899,
+    meanAnomalyDeg: 216.698,
+    periodDays: 360.133039,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: 7990.433,
+    nodalPrecessionYears: 9426.334,
+    poleRaDeg: 270,
+    poleDecDeg: 66.5607,
     color: SAT_ROCK,
   }),
 
@@ -597,6 +799,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0.0,
     meanAnomalyDeg: 304.1,
     periodDays: 6.387222,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0.0,
     nodalPrecessionYears: 0.0,
     // Pluto's IAU pole (WGCCRE 2015), not a Charon one: the pair is mutually tidally locked,
@@ -628,6 +831,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0,
     meanAnomalyDeg: 0,
     periodDays: MESH_BODY_PERIOD_DAYS,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0,
     nodalPrecessionYears: 0,
     poleRaDeg: 0.0,
@@ -646,6 +850,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0,
     meanAnomalyDeg: -PETUNIA_TRAIL_OFFSET_DEG,
     periodDays: MESH_BODY_PERIOD_DAYS,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0,
     nodalPrecessionYears: 0,
     poleRaDeg: 0.0,
@@ -706,8 +911,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: HUBBLE_SILVER,
   }),
 
-  // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in
-  // `sStarElements.ts` beside the verbatim Gillessen lines. Their focus is `sgr-a-star`, so
-  // they join the `galactic-centre` region by existing.
-  ...S_STAR_SEEDS.map(sStar),
+  // The 39 bound S-stars: their per-row facts live in `sStarElements.ts` beside the verbatim
+  // Gillessen lines, converted once in `sStarOrbitalElements.ts` (also the star Layer's trail
+  // roster). Their focus is the `galactic-centre` place, so they join the `galactic-centre` region by existing.
+  ...S_STAR_ORBITAL_ELEMENTS,
 ];

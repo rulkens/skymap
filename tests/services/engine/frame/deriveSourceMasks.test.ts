@@ -6,8 +6,7 @@
  * keeps its DRAW bit (smooth ramp-down) while losing its PICK bit (intent-
  * only, unclickable instantly); and a fully-faded disabled galaxy catalog loses both.
  * The all-enabled case pins that enabling every catalog lights every
- * galaxy-catalog bit — which is `ALL_VISIBLE_MASK` (the default-visible set)
- * plus the opt-in DesiDeep bit that ships off.
+ * galaxy-catalog bit, DesiDeep included.
  *
  * `deriveSourceMasks` is a PURE projection: it RETURNS `{ draw, pick }` and
  * writes nothing. The fixture is therefore just its two inputs — a settings stub
@@ -22,7 +21,6 @@ import { createFadeRegistry } from '../../../../src/services/animation/fadeRegis
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { maskHas } from '../../../../src/utils/maskHas';
-import { ALL_VISIBLE_MASK } from '../../../../src/utils/allVisibleMask';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { FadeId } from '../../../../src/@types/animation/FadeId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

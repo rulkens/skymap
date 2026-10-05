@@ -52,13 +52,17 @@ const cameraSlice = createSlice({
       camera.dragging = false;
     },
 
-    // INVARIANT (R12b-3): every committed ABSOLUTE pose is centre-looking. The
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are
+    // centre-looking; `lookOffset` turns only the view. The
     // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
     // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
     // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
     // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
     // folds (replayInput), and the fold's disengage retarget — never by a bake
     // here. Break any of them and the teleport re-enters through this reducer.
+    // `stepCameraRuntime` treats `base` reference inequality as an outside
+    // commit and relies on `cameraReducer` being the store's reducer; a
+    // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },

@@ -12,6 +12,7 @@ import { pivotRadiusMpc } from '../../../../src/services/engine/camera/pivotRadi
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { earthArm } from '../../../fixtures/earthArm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 
@@ -20,6 +21,7 @@ const EARTH_FOCUS: SelectionRow = {
   id: 'earth',
   label: 'Earth',
   positionMpc: [0, 0, 0],
+  driver: bodyDriverGeometry('earth'),
 };
 
 const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };

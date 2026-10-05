@@ -11,6 +11,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchGalaxyBitmap } from '../../../src/utils/network/fetchGalaxyBitmap';
+import { createDeadHostSet } from '../../../src/utils/network/createDeadHostSet';
+import { sdssThumbnailUrl, dssThumbnailUrl } from '../../../src/utils/math';
 
 // Capture originals so we can restore them and not leak across tests
 // (vitest workers are reused across files — see tests/setup/fetchMock.ts
@@ -107,6 +109,64 @@ describe('fetchGalaxyBitmap — fetchHiRes branch', () => {
     const calledUrl = String((fetchSpy.mock.calls[0] as unknown[])[0]);
     expect(calledUrl).toContain('/data/images/famous-hires/');
     expect(bitmapSpy).not.toHaveBeenCalled();
+  });
+
+  // ── Dead-host skipping ──────────────────────────────────────────────────
+  //
+  // Measured at boot: alasky hips2fits connects and then sends nothing, so
+  // every non-SDSS galaxy burned the full 30 s FETCH_DEADLINE_MS against it.
+  // With MAX_CONCURRENT_FETCHES at 4 that starves the whole thumbnail queue,
+  // healthy SDSS requests included.
+  it('skips a retired host outright instead of waiting out its deadline', async () => {
+    const dead = createDeadHostSet();
+    const alasky = dssThumbnailUrl(10, 20, 2);
+    for (let i = 0; i < 3; i += 1) dead.note(alasky, false);
+
+    // SDSS answers 404 (outside the footprint) — the normal reason to fall
+    // through to DSS. DSS must then be skipped, not attempted.
+    const fetchSpy = vi.fn(async () => new Response('not found', { status: 404 }));
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    const result = await fetchGalaxyBitmap({ ra: 10, dec: 20, deadHosts: dead });
+
+    expect(result).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1); // SDSS only
+    expect(String((fetchSpy.mock.calls[0] as unknown[])[0])).not.toContain('alasky');
+  });
+
+  // The trap: `tryFetch` collapsed 404 and timeout into the same `undefined`.
+  // Counting a 404 as a failure would retire SDSS after three 2MRS/GLADE
+  // galaxies outside its footprint — the common case the fallback exists for.
+  it('does not count an HTTP answer against a host, only a dead connection', async () => {
+    const dead = createDeadHostSet();
+    const fetchSpy = vi.fn(async () => new Response('not found', { status: 404 }));
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    for (let i = 0; i < 4; i += 1) {
+      await fetchGalaxyBitmap({ ra: 10 + i, dec: 20, deadHosts: dead });
+    }
+
+    expect(dead.isDead(sdssThumbnailUrl(10, 20, 128))).toBe(false);
+    expect(dead.isDead(dssThumbnailUrl(10, 20, 2))).toBe(false);
+  });
+
+  it('retires a host after its requests repeatedly fail to connect', async () => {
+    const dead = createDeadHostSet();
+    const fetchSpy = vi.fn(async () => {
+      throw new DOMException('timed out', 'TimeoutError');
+    });
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    for (let i = 0; i < 3; i += 1) {
+      await fetchGalaxyBitmap({ ra: 10, dec: 20, deadHosts: dead });
+    }
+
+    expect(dead.isDead(sdssThumbnailUrl(10, 20, 128))).toBe(true);
+    expect(dead.isDead(dssThumbnailUrl(10, 20, 2))).toBe(true);
+    // Both hosts retired ⇒ a further call attempts nothing at all.
+    fetchSpy.mockClear();
+    await fetchGalaxyBitmap({ ra: 10, dec: 20, deadHosts: dead });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('returns null on non-image content-type without falling back', async () => {

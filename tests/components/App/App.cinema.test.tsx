@@ -28,6 +28,7 @@ import { Provider } from 'react-redux';
 import { App } from '../../../src/components/App/App';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { tourStarted, dwellStarted } from '../../../src/state/tour/tourSlice';
+import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { UseEngineReturn } from '../../../src/@types/engine/UseEngineReturn';
 
@@ -70,6 +71,7 @@ function makeStore(): Store {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: 1 },
     },
   }).store;
@@ -119,9 +121,13 @@ describe('App cinema mode', () => {
     vi.mocked(isCinemaMode).mockReturnValue(true);
     const store = makeStore();
     // `webShowcase` is a real registry tour — same seed as the
-    // TourOverlayContainer suite. The dwell landing (nonce bump) is what
-    // reveals the caption; mid-fly it is hidden by design.
-    store.dispatch(tourStarted({ tourId: 'webShowcase' }));
+    // TourOverlayContainer suite. `tourStarted` seeds the beat/caption
+    // bookkeeping; `takeoverStarted` is what `selectTourActive` (App's mount
+    // gate) actually reads now — both are `runTakeoverSaga`/`tourBodySaga` writes,
+    // driven directly here rather than through the saga. The dwell landing
+    // (nonce bump) is what reveals the caption; mid-fly it is hidden by design.
+    store.dispatch(tourStarted());
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'webShowcase' }));
     store.dispatch(dwellStarted({ dwellSec: 8 }));
     const { container, getByText, queryByText } = renderApp(store);
 

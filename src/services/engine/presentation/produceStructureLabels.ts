@@ -47,7 +47,7 @@
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
@@ -59,10 +59,7 @@ import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 
-export function produceStructureLabels(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): Label2DProducerOutput {
+export function produceStructureLabels(state: EngineState, ctx: FrameView): Label2DProducerOutput {
   const labels: Label2D[] = [];
 
   const pxPerRad = ctx.drawPxPerRad;
@@ -82,7 +79,7 @@ export function produceStructureLabels(
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
-  const now = ctx.nowMs;
+  const now = ctx.snapshot.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
@@ -190,7 +187,7 @@ export function produceStructureLabels(
         ? 1
         : focusRecession(
             { kind: 'labelLayer', layer: 'structure', item: p.category },
-            ctx.focusBlend,
+            ctx.snapshot.focusBlend,
           );
     fadeAlpha *= catOpacity * recession * clipFactor * surveyFade;
 

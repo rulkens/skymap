@@ -2,7 +2,7 @@
  * clipFrameCap — the frame budget the recorder allocates for a whole clip
  * take, in virtual frames at the take's fps.
  *
- * Exists so a clip take stuck on `watchClipSaga`'s
+ * Exists so a clip take stuck on `clipBodySaga`'s
  * `waitUntil(clipFociReady && cameraRuntime)` fails loudly instead of
  * spinning forever. Margin rationale lives at `frameCapFor`.
  */

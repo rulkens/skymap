@@ -1,4 +1,3 @@
-// tests/services/loading/retryPolicy.test.ts
 import { describe, expect, it } from 'vitest';
 import { defaultRetryPolicy } from '../../../src/services/loading/retryPolicy';
 import { HttpError } from '../../../src/services/loading/fetchWithProgress';

@@ -4,8 +4,8 @@ import {
   parseStructureMeta,
 } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { encodeStructureCatalog } from '../../../../src/data/structure/structureCatalogFormat';
-import type { StructureCatalog } from '../../../../src/@types/data/structure/StructureCatalog';
-import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
+import type { StructureCatalog } from '../../../../src/@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureMetaEntry } from '../../../../src/@types/loading/structureCatalogPayload/StructureMetaEntry';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 /** Build a tiny well-formed catalog of `count` records for fixtures. */

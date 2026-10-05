@@ -21,4 +21,16 @@ export type BodyTextureId =
   | 'ganymede'
   | 'callisto'
   | 'pluto'
-  | 'charon';
+  | 'charon'
+  | 'enceladus'
+  | 'mimas'
+  | 'tethys'
+  | 'dione'
+  | 'rhea'
+  | 'iapetus'
+  | 'miranda'
+  | 'ariel'
+  | 'umbriel'
+  | 'titania'
+  | 'oberon'
+  | 'triton';

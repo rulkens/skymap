@@ -1,4 +1,3 @@
-// src/components/common/Button/Button.tsx
 /**
  * Button — the HUD's single push-button primitive.
  *
@@ -30,7 +29,7 @@ import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import cx from 'classnames';
 import styles from './Button.module.css';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 export type ButtonProps = {
   readonly variant?: ButtonVariant;

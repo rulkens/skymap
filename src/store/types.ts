@@ -61,6 +61,7 @@ import type { Mat3 } from '../@types/math/Mat3';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
+import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
@@ -88,8 +89,17 @@ export type RunSaga = (saga: SagaFactory) => Task;
  * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
  * continuously instead of snapping the pole back to the committed frame. The
  * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
+ *
+ * `aspect` rides beside `fovYRad` for `sphereFitDistance` — a view's fit-to-
+ * radius pose needs both to resolve the limiting (horizontal vs vertical) FOV
+ * at the live viewport shape, not just the vertical lens angle.
  */
-export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; upBasisQuat: Vec4 };
+export type LiveCameraRuntime = {
+  from: CameraPose;
+  fovYRad: number;
+  aspect: number;
+  upBasisQuat: Vec4;
+};
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the
@@ -136,6 +146,8 @@ export type ClipPathInspectSeam = {
   pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
+  /** Resolves after the next frame callback returns; stays pending if no frame ever comes. */
+  readonly nextFrame: () => Promise<void>;
   reconcile: ReconcileEffects; // provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
@@ -171,5 +183,7 @@ export type SagaContext = {
    * rather than omitting it.
    */
   clipPathInspect: ClipPathInspectSeam;
+  /** The composition's home — what a bare link arrives on (`navigateSaga`). */
+  home: EngineHomeConfig;
 };
 export type SetSagaContext = (ctx: SagaContext) => void;

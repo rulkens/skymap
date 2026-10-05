@@ -44,7 +44,7 @@ import type { StructureInfo } from '../../../@types/data/structure/StructureInfo
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
-export type PickStructureInput = {
+type PickStructureInput = {
   readonly category: StructureId;
   readonly structureIndex: number;
 };

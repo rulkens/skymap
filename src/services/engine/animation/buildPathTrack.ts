@@ -61,7 +61,7 @@
  */
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { PathTrack, PathSample } from '../../../@types/animation/CompiledClip';
+import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -86,6 +86,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from './pathDefaults';
 import { EASE } from './ease';
+import type { PathSample } from '../../../@types/animation/compiledClip/PathSample';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
 type AtWaypoint = {

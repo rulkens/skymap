@@ -19,7 +19,12 @@ import {
 } from '../../render/renderResources';
 import { createSceneCameraUniform, type SceneCameraUniform } from '../../render/sceneCameraUniform';
 import { sceneCameraView } from '../../render/sceneCameraView';
+import {
+  createOutlineOverlayRenderer,
+  type OutlineOverlayRenderer,
+} from '../../render/outlineOverlayRenderer';
 import { createSceneRenderers, type SceneRenderers } from '../../render/sceneRenderers';
+import { selectDraftRingGroupM } from '../../state/outline/selectDraftRingGroupM';
 import { deviceLost } from '../../state/view/viewSlice';
 import type { RegisterSagaContext, SceneStore } from '../../store/types';
 import styles from './Viewport.module.css';
@@ -65,6 +70,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
     const resources = createRenderResources();
     let cameraUniform: SceneCameraUniform | null = null;
     let renderers: SceneRenderers | null = null;
+    let outlineOverlay: OutlineOverlayRenderer | null = null;
     let disposed = false;
     let rafHandle = 0;
     // Starts true so the first frame after the device lands always draws.
@@ -84,7 +90,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       if (state.view.deviceLost) return; // stop for good — the device is gone
       rafHandle = requestAnimationFrame(frame);
       const { gpu } = resources;
-      if (!gpu || !cameraUniform || !renderers) return;
+      if (!gpu || !cameraUniform || !renderers || !outlineOverlay) return;
 
       // Ahead of the dirty gate: draining is what turns a gesture into one.
       input.drain();
@@ -121,7 +127,18 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         },
       });
       pass.setBindGroup(0, cameraUniform.bindGroup);
-      renderers.draw(pass, resources, state.view.hiddenAssetIds, state.view.display);
+      renderers.draw(
+        pass,
+        resources,
+        state.view.hiddenAssetIds,
+        state.view.display,
+        view.projection.kind,
+      );
+      const draftRing = selectDraftRingGroupM(state);
+      if (draftRing) {
+        const devicePxPerCssPx = canvas.width / Math.max(canvas.clientWidth, 1);
+        outlineOverlay.draw(pass, draftRing.ringGroupM, draftRing.closed, devicePxPerCssPx);
+      }
       pass.end();
       gpu.device.queue.submit([encoder.finish()]);
     };
@@ -143,6 +160,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         resources.gpu = gpu;
         cameraUniform = createSceneCameraUniform(gpu.device);
         renderers = createSceneRenderers(gpu, gpu.format, cameraUniform.layout);
+        outlineOverlay = createOutlineOverlayRenderer(gpu, gpu.format, cameraUniform.layout);
         void gpu.device.lost.then((info) => {
           // 'destroyed' is our own teardown, not a failure.
           if (disposed || info.reason === 'destroyed') return;
@@ -162,6 +180,7 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
       unsubscribe();
       input.destroy();
       cameraUniform?.dispose();
+      outlineOverlay?.dispose();
       disposeScene(resources);
     };
   }, [store, registerSagaContext]);

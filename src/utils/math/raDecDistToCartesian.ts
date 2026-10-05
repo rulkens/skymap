@@ -27,11 +27,7 @@
  */
 import type { Vec3 } from '../../@types/math/Vec3';
 
-export function raDecDistToCartesian(
-  raDeg: number,
-  decDeg: number,
-  distMpc: number,
-): Vec3 {
+export function raDecDistToCartesian(raDeg: number, decDeg: number, distMpc: number): Vec3 {
   const ra = (raDeg * Math.PI) / 180;
   const dec = (decDeg * Math.PI) / 180;
   const cosDec = Math.cos(dec);

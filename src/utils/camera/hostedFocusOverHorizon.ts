@@ -1,9 +1,14 @@
 /**
  * Has a focus hosted on this body sunk below the eye's horizon? `dot(E − P, P)`
  * in body-fixed metres, `P` the focus's site point — negative once the tangent
- * plane at `P` has the eye behind it. `E` is lifted to the descent floor first
- * (`flooredBodyPose`'s radial push): a follow approach parks the eye metres
- * UNDER the datum, and a horizon judged from underground refuses everything.
+ * plane at `P` has the eye behind it. `E` is lifted to the local ground first
+ * (`flooredBodyPose`'s radial push undershoots it by a few metres): a follow
+ * approach parks the eye slightly UNDER ground, and a horizon judged from
+ * underground refuses everything. That local ground is at least `P`'s own
+ * magnitude, not just the generic descent floor: a site's baked ground can
+ * sit well above the bare datum the floor is rated against, and an eye a
+ * few metres under the SITE's altitude is not "underground" by the floor's
+ * lower standard — only by the site's own.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
@@ -20,7 +25,10 @@ export function hostedFocusOverHorizon(
   const p = hostedFocusPivotM(focusBodyId, host.id, host.radiusM);
   if (p === null) return false;
   const magM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
-  const floorM = surfaceFloorM(host.groundRadiusAtM(eyeM), host.standoffRadii);
+  const floorM = Math.max(
+    surfaceFloorM(host.groundRadiusAtM(eyeM), host.standoffRadii),
+    surfaceFloorM(Math.hypot(p[0], p[1], p[2]), host.standoffRadii),
+  );
   const lift = magM >= floorM || magM === 0 ? 1 : floorM / magM;
   return (
     (eyeM[0] * lift - p[0]) * p[0] +

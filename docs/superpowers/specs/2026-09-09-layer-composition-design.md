@@ -978,7 +978,7 @@ from, which still carried a `handle?(runtime)` hook.
 
 7. **D6'1 — readiness is not a row member.** Star focus ids resolve like galaxy ids: the star row's
    `focusId.decode` returns null until the star bin has committed, so every deferral lives at the
-   ref stage in `resolveFocusRefDeferring`. That deletes the `resolveDeps().stars.current() === null`
+   ref stage in `resolveFocusRefDeferringSaga`. That deletes the `resolveDeps().stars.current() === null`
    probe at `watchFocusTweenSaga.ts:89-93` and the star-specific select-now-tween-later path, and it
    repairs the latent `clipFociReady` / `resolveClipFoci` mismatch, where a star id passes the gate
    and then throws in the resolver. The behaviour change — a star deep link selects when the bin
@@ -996,9 +996,11 @@ from, which still carried a `handle?(runtime)` hook.
    id collides with the static body set. The prefix drop rides the body Layer in (f).
 
 9. **D6'3 — a pick source is decoded by the Layer that owns the object's identity,** not by the one
-   that draws it, and a row returns only its own ref type. The body row therefore lists `famousStar`
-   in its `pickSources` and resolves it by static-table lookup to a body ref, while the star row
-   lists only `gaiaStars`. This lands in (e)/(f); in (d) all nine galaxy sources belong to the galaxy
+   that draws it, and a row returns only its own ref type. **Reversed for the seeded stars once (e)
+   landed:** the user ruled that identity follows the physics, so a seeded star's identity IS star
+   identity and the star row lists all four star sources (`gaiaStars`, `famousStar`, `sun`, `sStar`)
+   — the principle stands, only this example was wrong; see the star spec's §7
+   (`2026-09-21-star-catalog-layer-design.md`). In (d) all nine galaxy sources belong to the galaxy
    row and nothing is split.
 
 10. **D6'4 — the structure search list becomes a fact in (d).** `wireStructureProjection` publishes
@@ -1266,6 +1268,26 @@ detail file; `2026-09-11-layer-settings-tuple-seam.md` (D) with PR-B; the galaxy
 twin. `2026-06-29-source-registry-factory.md` (A) is half-consumed: PR-C closes it for the galaxy
 family, and its detail file is rewritten down to the star and volume remainder rather than deleted.
 
+### (e) 05c `zoneOfAvoidance`: contract prep (ratified 2026-09-19)
+
+ZoA is the first Layer that owns a render target, a world-space label and a row in a shared
+settings section. Three touchpoints were bolt-ons against the contract as it stood; a separate prep
+PR creates the joints, sequenced P0 → P3, before the Layer PR.
+
+| Touchpoint | Blocker | Joint |
+|---|---|---|
+| `zoa` target | `createRenderTargets` allocates only core's `renderTargetRows`, inside a GPU-handle row whose construct deps cannot see the composition | P3: the allocator takes core rows + every Layer's static `targets`, merged in `initGpu`; `Layer.targets` stops being declared-only |
+| curved lettering | `Layer.labels` carries screen-space producers only; `LABEL_3D_PRODUCERS` is a core list | P2: `labels?(runtime): { screen?: Label2DProducer[]; world?: Label3DProducer[] }` |
+| toggle in "Labels & guides" | `LayerUi` can only add whole sections | P1: `ui?: readonly LayerUiEntry[]`, `{ slot, content }` typed by one `LayerUiSlots` map (`main`, `debug`, `labelsAndGuides`); a shared-section row is DATA (`id`, `label`, `select`, `set`) so the section still derives its master tri-state. `LayerUi { settings, debug }` dissolves |
+| duplicate-name guards | hand-written four times (`createLayers` ×3, `composeSelectionRows`); P3 would add a fifth | P0: one merge helper that throws on a duplicate key, naming table and key |
+
+Everything else ZoA holds is growth at existing members (Runtime handles, `passes` incl. the
+upsample pass built by core's `createUpsamplePass`, `fades`, `selection`). It has no `frame` vote.
+InfoCard, focus, halo and URL-hash tables stay core: they are keyed by the shared `SelectionRef`
+union and still carry a `galaxyCatalog` arm too. A greenfield cross-check derived the same three
+shapes; it diverged only on grouping the UI by slot (the entry list was ruled) and on an explicit
+walk `order` for 3D producers (not needed with one producer).
+
 ## 10. Migration sequence
 
 Each item is one PR unless stated. (a)-(c) are §9's prep.
@@ -1291,11 +1313,14 @@ Each item is one PR unless stated. (a)-(c) are §9's prep.
   PR-D forms a Layer.
 
 - **(e) One Layer per PR**, in this order and for these reasons: `starCatalog` (carries the
-  god-layer split, §6.4), then `milkyWay` (depends on §6.3's band having moved), then
+  god-layer split, §6.4) — **done, `2026-09-21-star-catalog-layer-design.md`** — then `milkyWay`
+  (depends on §6.3's band having moved), then
   `structure` (mints the focus producer seam, §6.1), then `volume` (the family with no
   family-level asset row, review finding 6, so its move collapses the four literal blocks at
-  `assetWiring.ts:248-289` into rows), then `body` (the largest `Runtime`: fourteen renderers
-  plus `earthTiles`), then the five singletons, which may share one PR.
+  `assetWiring.ts:248-289` into rows) — **done, split into `cosmicWebDensity` and
+  `cosmicWebFilaments`, `docs/grill-sessions/cosmic-web-density-layer-2026-09-22.md`** — then
+  `body` (the largest `Runtime`: fourteen renderers plus `earthTiles`), then the five singletons,
+  which may share one PR.
 - **(f) Edenhofer dust as the greenfield proof.** A new `src/layers/edenhoferDust/` built
   entirely from the Layer contract whose only edit outside its own directory is one
   `FRAME_ORDER` line. If that claim fails, the contract is wrong, and this is where we find out,
@@ -1320,7 +1345,7 @@ item is rewritten down to its remainder rather than deleted.
 | `2026-08-20-point-source-double-registration.md` "De-duplicate point-source registration between `GALAXY_CATALOG_SOURCE_REGISTRY` and `ASSET_WIRING`" | (d) PR-C                                                                                  |
 | `2026-07-24-companion-asset-relation-three-homes.md` "The companion-asset relation has three homes"                                                   | (d) PR-C, as `companionOf` on the companion's row (§4.7)                                  |
 | `2026-09-11-layer-settings-tuple-seam.md` "`Layer.settings` erases the keys the composed settings type needs"                                         | (d) PR-B, by the const `Settings` type parameter (§13 A8)                                 |
-| `2026-07-30-meta-getters-belong-on-the-data-stores.md` "Sidecar-meta getters sit on `EngineState`, not on the data stores"                            | (d) PR-C, galaxy half; the item survives for its star twin, (e)                           |
+| `2026-07-30-meta-getters-belong-on-the-data-stores.md` "Sidecar-meta getters sit on `EngineState`, not on the data stores"                            | (d) PR-C, galaxy half; (e) `starCatalog` PR 2, star half — item deleted in full           |
 | `2026-08-20-star-catalog-layer-god-layer-split.md` "`starCatalogLayer` god-layer split (three owned concerns, layer-imports-layer)"                   | (e), `starCatalog`                                                                        |
 | `BACKLOG.md:48` "Derive `BULK_CATALOG_CATEGORIES` from a registry flag"                                                                               | (e), `structure`                                                                          |
 | `BACKLOG.md:54` "`LAYER_GROUPS.labels` totality is unchecked"                                                                                         | (c); label-group membership derives from present Layers' `labels()`                       |

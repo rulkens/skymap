@@ -24,7 +24,8 @@
  * long each frame takes to render or encode. That loop needs a CDP session,
  * a spawned ffmpeg, and the host filesystem, none of which can live in the
  * app; the app's entire contribution is the `window.__skymapRecorder` seam
- * (installed only under `?cinema`) that this harness drives through
+ * (installed only under `?cinema`; boot and `ready` go through `window.__skymap`)
+ * that this harness drives through
  * `page.evaluate`.
  *
  * ### The three launch-pattern findings (plan Ledger, Task 1 — mandatory)
@@ -68,8 +69,8 @@
  *
  * ### Startup choreography (order matters)
  *
- * Boot runs in REAL time: `?cinema` skips the splash, and the hook's `ready`
- * promise already debounces "engine ready + loads settled" over a ~1 s
+ * Boot runs in REAL time: `?cinema` skips the splash, and `window.__skymap.ready`
+ * already debounces "engine ready + loads settled" over a ~1 s
  * stability window, so the harness just awaits it. Virtual time is paused
  * BEFORE the take is kicked, so its very first frame runs under the virtual
  * clock — kicking first would let a nondeterministic sliver of real time leak
@@ -80,18 +81,10 @@
  * 'chromium' channel installed.
  */
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readlinkSync,
-  rmSync,
-  symlinkSync,
-  unlinkSync,
-} from 'node:fs';
-import { dirname, resolve as resolvePath } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
 import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
@@ -103,9 +96,10 @@ import type { Clip } from '../../src/@types/animation/Clip';
 import type { ClipId } from '../../src/@types/animation/ClipId';
 import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
 import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
+import { launchChromium } from '../utils/browser/launchChromium';
+import { bootHookedPage } from '../utils/browser/bootHookedPage';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
-import { parsePreviewUrl } from '../utils/record/parsePreviewUrl';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
 import { buildCaptureUrl } from '../utils/record/buildCaptureUrl';
 import { defaultOutName } from '../utils/record/defaultOutName';
@@ -113,32 +107,29 @@ import { tourFrameCap } from '../utils/record/tourFrameCap';
 import { clipFrameCap } from '../utils/record/clipFrameCap';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
+import type { ViteServerHandle } from '../@types/serve/ViteServerHandle';
+import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
+import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
+import { spawnViteServer } from '../utils/serve/spawnViteServer';
 
-// How long to wait for window.__skymapRecorder to appear after load — it is
-// installed synchronously during app bootstrap, so a miss means the wrong
-// page, not a slow one.
-const HOOK_TIMEOUT_MS = 15_000;
-// How many mid-boot navigations to absorb before giving up. One is expected
-// on a cold cache (Vite's dependency-optimization reload, see
-// awaitCaptureReady); more than a couple means the page is reload-looping,
-// not optimizing.
-const MAX_BOOT_NAVIGATIONS = 2;
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
 const FFMPEG_STDERR_TAIL_LINES = 40;
-// vite build's own console noise; same tail-keeping rationale as ffmpeg's.
-const BUILD_LOG_TAIL_LINES = 40;
 
-// --serve: a recorder-owned build directory, never `dist/` (that one belongs
-// to deploys — see the module doc for --serve). Reused across takes unless
-// --rebuild forces a fresh build.
+// --serve records against a production build behind `vite preview`: it ships
+// no HMR client, so a dev-server reload can never interrupt a long take.
+// The build lives in a recorder-owned directory, never `dist/` (that one
+// belongs to deploys), and is reused across takes unless --rebuild forces one.
 const SERVE_BUILD_DIR = 'tools/record/.build';
 // Arbitrary and quiet; strictPort is left off (vite's default) so a busy
-// port just bumps instead of failing — see spawnPreviewServer, which reads
+// port just bumps instead of failing — see spawnViteServer, which reads
 // the actual bound port back off stdout rather than assuming this one held.
 const SERVE_PORT = 4517;
-const PREVIEW_READY_TIMEOUT_MS = 30_000;
+
+// Frame rates the Wisdome dome plays back; the first is the default. Both
+// fit H.264 level 6.1 at 4096x4096 (see buildFfmpegArgs).
+const DOME_FPS: readonly [number, ...number[]] = [30, 60];
 
 type RecordOptions = {
   tourId: string;
@@ -159,6 +150,10 @@ type RecordOptions = {
   serve: boolean;
   /** --rebuild: force a fresh --serve build even if SERVE_BUILD_DIR already has one. */
   rebuild: boolean;
+  /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
+  dome: boolean;
+  /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
+  frames: number | undefined;
 };
 
 type Take =
@@ -203,10 +198,18 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     simTime: undefined,
     serve: false,
     rebuild: false,
+    dome: false,
+    frames: undefined,
   };
   // Tracked separately from options.url: the default url must not trip the
   // --serve/--url conflict check below, only an explicit --url may.
   let urlExplicit = false;
+  // Tracked so --dome's size/dpr/fps defaults only apply where the operator
+  // didn't already say something — --dome can appear before OR after these
+  // flags in argv, so the loop can't decide this inline.
+  let sizeExplicit = false;
+  let dprExplicit = false;
+  let fpsExplicit = false;
   let positionalSeen = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -219,6 +222,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       options.rebuild = true;
       continue;
     }
+    if (arg === '--dome') {
+      options.dome = true;
+      continue;
+    }
     if (
       arg === '--beats' ||
       arg === '--clip' ||
@@ -227,7 +234,8 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       arg === '--size' ||
       arg === '--dpr' ||
       arg === '--out' ||
-      arg === '--url'
+      arg === '--url' ||
+      arg === '--frames'
     ) {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
@@ -248,8 +256,12 @@ function parseArgs(argv: readonly string[]): RecordOptions {
         if (!Number.isInteger(options.fps) || options.fps < 1) {
           throw new Error(`--fps must be a positive integer, got '${value}'`);
         }
+        fpsExplicit = true;
       }
-      if (arg === '--size') options.size = parseSize(value);
+      if (arg === '--size') {
+        options.size = parseSize(value);
+        sizeExplicit = true;
+      }
       if (arg === '--dpr') {
         // Only 1 or 2: the app clamps devicePixelRatio to 2 when sizing the
         // canvas backing store (src/services/gpu/device.ts), so a higher dpr
@@ -258,17 +270,25 @@ function parseArgs(argv: readonly string[]): RecordOptions {
           throw new Error(`--dpr must be 1 or 2, got '${value}'`);
         }
         options.dpr = Number(value);
+        dprExplicit = true;
       }
       if (arg === '--out') options.out = value;
       if (arg === '--url') {
         options.url = value.replace(/\/$/, '');
         urlExplicit = true;
       }
+      if (arg === '--frames') {
+        const parsed = Number(value);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+          throw new Error(`--frames must be a positive integer, got '${value}'`);
+        }
+        options.frames = parsed;
+      }
     } else if (arg.startsWith('--')) {
       throw new Error(
         `unknown flag '${arg}' ` +
           '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
-          '--serve, --rebuild; positional: tour id)',
+          '--serve, --rebuild, --dome, --frames; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -292,6 +312,33 @@ function parseArgs(argv: readonly string[]): RecordOptions {
         'when pointing at a server that is already running, not together with --serve',
     );
   }
+  if (options.dome) {
+    // An explicit --size may still override, but only as a square — that's
+    // what lets a fast pipeline check run at e.g. 1024x1024 instead of the
+    // full 4096x4096 delivery frame.
+    if (sizeExplicit) {
+      if (options.size.width !== options.size.height) {
+        throw new Error(
+          `--dome requires a square --size (WxW) for the fisheye faces, got ` +
+            `${options.size.width}x${options.size.height}`,
+        );
+      }
+    } else {
+      options.size = parseSize('4096x4096');
+    }
+    if (dprExplicit && options.dpr !== 1) {
+      throw new Error(`--dome requires --dpr 1 (or omit it), got ${options.dpr}`);
+    }
+    if (fpsExplicit) {
+      if (!DOME_FPS.includes(options.fps)) {
+        throw new Error(
+          `--dome requires --fps ${DOME_FPS.join(' or ')} (or omit it), got ${options.fps}`,
+        );
+      }
+    } else {
+      options.fps = DOME_FPS[0];
+    }
+  }
   // The viewport is size/dpr in CSS pixels, and Playwright viewports are
   // integral — a 4K output divides cleanly by 2, but an odd custom size
   // would silently round and ship a film at the wrong resolution.
@@ -303,28 +350,6 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     );
   }
   return options;
-}
-
-/**
- * Launch pattern per the Task 1 ledger: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed. The fallback prints a
- * warning rather than failing outright so a machine without the channel can
- * still record, but the fix worth making is 'npx playwright install chromium'.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
 }
 
 // Virtual-time stepping: grantAndAwaitExpiry.ts carries the CDP invariants.
@@ -343,10 +368,10 @@ type FfmpegHandle = {
  * async 'error' event (ENOENT), not a spawn() throw, so this awaits the
  * spawn/error race explicitly to turn it into a clear install hint.
  */
-async function spawnFfmpeg(fps: number, out: string): Promise<FfmpegHandle> {
+async function spawnFfmpeg(fps: number, out: string, dome: boolean): Promise<FfmpegHandle> {
   // ffmpeg does not create directories; the default out lands in recordings/.
   mkdirSync(dirname(out), { recursive: true });
-  const proc = spawn('ffmpeg', buildFfmpegArgs({ fps, out }), {
+  const proc = spawn('ffmpeg', buildFfmpegArgs({ fps, out, dome }), {
     stdio: ['pipe', 'ignore', 'pipe'],
   });
   await new Promise<void>((resolve, reject) => {
@@ -396,207 +421,6 @@ async function spawnFfmpeg(fps: number, out: string): Promise<FfmpegHandle> {
 function writeFrame(stdin: Writable, png: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
     stdin.write(png, (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-/**
- * --serve support: build a production bundle, serve it with `vite preview`,
- * and record against THAT instead of the dev server. The dev client's HMR
- * websocket is the root cause behind two reload-mid-take bugs this branch
- * fixed (see the addInitScript comment in captureTake) — a production build
- * ships no HMR client at all, so this mode is immune by construction rather
- * than patched around a third variant of the same failure. Recommended for
- * any take long enough to outlast the dev client's patience (module doc:
- * hours for a full 4K tour).
- */
-
-/**
- * Build (or reuse) the --serve bundle. `dataUrl()` reads `VITE_DATA_BASE_URL`
- * at build time to decide between the R2 host and a relative `/data/` path
- * (see cloudLoader.ts); blanking it here — in the CHILD's env only, never
- * process.env — makes the served build fetch the catalog from the symlink
- * ensureDataSymlink sets up, exactly like `npm run dev` does. Blanking
- * VITE_COUNTERSCALE_URL likewise skips injecting the analytics tracker into
- * a take that only ever plays on this machine.
- */
-async function ensureServeBuild(dir: string, rebuild: boolean): Promise<void> {
-  if (!rebuild && existsSync(`${dir}/index.html`)) {
-    console.log(`  reusing existing --serve build at ${dir} (pass --rebuild to force a fresh one)`);
-    return;
-  }
-  console.log(
-    `  building --serve bundle into ${dir} ` +
-      (rebuild ? '(--rebuild forced) ...' : '(none found yet) ...'),
-  );
-  const proc = spawn('npx', ['vite', 'build', '--outDir', dir], {
-    env: { ...process.env, VITE_DATA_BASE_URL: '', VITE_COUNTERSCALE_URL: '' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const tailLines: string[] = [];
-  const collect = (chunk: Buffer): void => {
-    for (const line of chunk.toString().split('\n')) {
-      if (line.trim() !== '') tailLines.push(line);
-    }
-    if (tailLines.length > BUILD_LOG_TAIL_LINES) {
-      tailLines.splice(0, tailLines.length - BUILD_LOG_TAIL_LINES);
-    }
-  };
-  proc.stdout?.on('data', collect);
-  proc.stderr?.on('data', collect);
-  const code = await new Promise<number | null>((resolve, reject) => {
-    proc.once('error', (err: NodeJS.ErrnoException) => {
-      reject(
-        err.code === 'ENOENT'
-          ? new Error("'npx' not found on PATH — the --serve build shells out to it")
-          : err,
-      );
-    });
-    proc.once('close', resolve);
-  });
-  if (code !== 0) {
-    throw new Error(`vite build exited with code ${String(code)} — tail:\n${tailLines.join('\n')}`);
-  }
-}
-
-/**
- * Vite's default `copyPublicDir` copies the whole `public/` tree — including
- * `data/`, ~100 MB of catalog `.bin` files, when this worktree has them on
- * disk — into the outDir verbatim on every build. --serve replaces that
- * one-time snapshot with a symlink back at this worktree's public/data/ so
- * a reused build (no --rebuild) still serves whatever the catalog currently
- * is, and so a build doesn't silently double disk usage. Repairs whatever it
- * finds at the link path — a stale symlink (wrong target, or dangling
- * because public/data/ moved), or vite's own copied directory — rather than
- * trusting it.
- */
-function ensureDataSymlink(dir: string): void {
-  const linkPath = resolvePath(dir, 'data');
-  const target = resolvePath('public/data');
-  let stat: ReturnType<typeof lstatSync> | undefined;
-  try {
-    stat = lstatSync(linkPath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-  }
-  if (stat !== undefined) {
-    if (stat.isSymbolicLink()) {
-      const resolvedExisting = resolvePath(dirname(linkPath), readlinkSync(linkPath));
-      if (resolvedExisting === target && existsSync(linkPath)) return; // correct and not dangling
-      console.log(`  repairing stale --serve data symlink at ${linkPath}`);
-      unlinkSync(linkPath);
-    } else {
-      console.log(`  replacing vite's copied ${linkPath} with a symlink to keep data current`);
-      rmSync(linkPath, { recursive: true, force: true });
-    }
-  }
-  symlinkSync(target, linkPath, 'dir');
-  console.log(`  linked ${linkPath} -> ${target}`);
-}
-
-type PreviewHandle = {
-  proc: ChildProcess;
-  /** The URL vite actually bound — see parsePreviewUrl for why this can't be assumed. */
-  url: string;
-};
-
-/**
- * Spawn `vite preview` over the --serve build and read back the URL it
- * actually bound (strictPort is left off, so a busy SERVE_PORT just bumps —
- * assuming the requested port held would silently record against nothing).
- * Mirrors spawnFfmpeg's spawn/error race for the ENOENT case; the ready wait
- * adds a timeout because there is no bounded "it will definitely print a URL
- * eventually" guarantee the way ffmpeg's close event gives one.
- */
-async function spawnPreviewServer(dir: string, port: number): Promise<PreviewHandle> {
-  const proc = spawn('npx', ['vite', 'preview', '--outDir', dir, '--port', String(port)], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  await new Promise<void>((resolve, reject) => {
-    proc.once('spawn', () => resolve());
-    proc.once('error', (err: NodeJS.ErrnoException) => {
-      reject(
-        err.code === 'ENOENT'
-          ? new Error("'npx' not found on PATH — the --serve preview shells out to it")
-          : err,
-      );
-    });
-  });
-  const url = await new Promise<string>((resolve, reject) => {
-    const onData = (chunk: Buffer): void => {
-      const found = parsePreviewUrl(chunk.toString());
-      if (found !== undefined) {
-        clearTimeout(timer);
-        proc.stdout?.off('data', onData);
-        proc.off('close', onClose);
-        resolve(found);
-      }
-    };
-    const onClose = (code: number | null): void => {
-      clearTimeout(timer);
-      reject(
-        new Error(`vite preview exited with code ${String(code)} before printing a 'Local:' URL`),
-      );
-    };
-    const timer = setTimeout(() => {
-      proc.stdout?.off('data', onData);
-      proc.off('close', onClose);
-      reject(new Error(`vite preview gave no 'Local:' URL within ${PREVIEW_READY_TIMEOUT_MS} ms`));
-    }, PREVIEW_READY_TIMEOUT_MS);
-    proc.stdout?.on('data', onData);
-    proc.once('close', onClose);
-  });
-  return { proc, url };
-}
-
-/**
- * Did an evaluate/wait die because the page navigated out from under it?
- * Playwright reports that as 'Execution context was destroyed, most likely
- * because of a navigation' (waitForFunction variants mention the navigation
- * too). Only the boot phase treats this as retryable — see awaitCaptureReady.
- */
-function isNavigationInterruption(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    /execution context was destroyed|because of a navigation/i.test(err.message)
-  );
-}
-
-/**
- * One attempt at the real-time boot wait: the recorder hook appears, then its
- * `ready` promise resolves. `ready` already debounces "engine ready + loads
- * settled" over a ~1 s stability window, and a cold catalog fetch can
- * legitimately take tens of seconds, so the ready evaluate carries no
- * harness-side timeout.
- *
- * The whole wait is retryable by the caller because it runs BEFORE virtual
- * time is paused: a navigation here just means booting again in real time.
- * The known trigger is Vite's one-time dependency optimization — the first
- * ever page load against a fresh worktree/cold cache discovers new deps,
- * re-bundles them, and force-reloads the page mid-boot, destroying the
- * execution context these waits live in. A navigation error must reach the
- * caller unwrapped (the hook-timeout rewrite below is only for genuine
- * timeouts) so the retry loop can recognize it.
- */
-async function awaitCaptureReady(page: Page, captureUrl: string): Promise<void> {
-  try {
-    await page.waitForFunction(
-      () => (window as unknown as RecorderWindow).__skymapRecorder !== undefined,
-      undefined,
-      { timeout: HOOK_TIMEOUT_MS, polling: 100 },
-    );
-  } catch (err) {
-    if (isNavigationInterruption(err)) throw err;
-    throw new Error(
-      `window.__skymapRecorder never appeared within ${HOOK_TIMEOUT_MS} ms at ` +
-        `${captureUrl} — the hook installs only in cinema mode, on a build that ` +
-        'includes installRecorderHook. Is the dev server running this branch?',
-    );
-  }
-  console.log('waiting for capture-ready (engine ready + loads settled, real time) ...');
-  await page.evaluate(() => {
-    const hook = (window as unknown as RecorderWindow).__skymapRecorder;
-    if (hook === undefined) throw new Error('__skymapRecorder missing');
-    return hook.ready;
   });
 }
 
@@ -667,7 +491,7 @@ async function captureTake(
   // needs exactly that path during boot. A forced repro (touching
   // tsconfig.json mid-take pushes `full-reload`) shows the SAME message,
   // arriving mid-take instead of at boot, produces the exact vanish. Below, a
-  // page-side flag armed only AFTER `awaitCaptureReady` (never during boot)
+  // page-side flag armed only AFTER `bootHookedPage` resolves (never during boot)
   // drops `full-reload` payloads specifically — every other message type,
   // and the boot-time path before the flag is armed, is untouched.
   await context.addInitScript(() => {
@@ -759,27 +583,15 @@ async function captureTake(
   });
 
   console.log(`loading ${captureUrl} ...`);
-  await page.goto(captureUrl, { waitUntil: 'load' });
-
-  // Bounded retry around the boot wait: safe ONLY here, in real time before
+  // bootHookedPage's retry tolerance is safe ONLY here, in real time before
   // the pause — the reloaded page reinstalls the hook and boots again, and no
   // virtual-time or take state exists yet to lose. Once virtual time is
   // paused (below), a navigation destroys the virtual clock and the running
   // take with it, so the capture loop deliberately has no such tolerance.
-  // The suppression flag below is NOT armed yet during this loop — cold-start
+  // The suppression flag below is NOT armed yet during this wait — cold-start
   // full-reload recovery must keep working here.
-  for (let navigations = 0; ; navigations++) {
-    try {
-      await awaitCaptureReady(page, captureUrl);
-      break;
-    } catch (err) {
-      if (!isNavigationInterruption(err) || navigations >= MAX_BOOT_NAVIGATIONS) throw err;
-      console.warn(
-        '[boot] page navigated during the ready wait (expected once on a cold cache: ' +
-          "Vite's dependency-optimization reload) — retrying the wait",
-      );
-    }
-  }
+  await bootHookedPage(page, captureUrl);
+  console.log('capture-ready (engine ready + loads settled, real time)');
 
   // Arm the mid-take full-reload suppression only now that boot has settled —
   // see the addInitScript comment above for why this can't be armed earlier.
@@ -845,12 +657,19 @@ async function captureTake(
   console.log(
     `stepping at ${(1000 / options.fps).toFixed(2)} ms per frame ` +
       (loopFrames !== undefined
-        ? `(looping clip — recording exactly ${loopFrames} frames, one cycle) ...`
-        : `(cap ${frameCap} captured frames) ...`),
+        ? `(looping clip — recording exactly ${loopFrames} frames, one cycle)`
+        : `(cap ${frameCap} captured frames)`) +
+      (options.frames !== undefined ? `, stopping early at --frames ${options.frames}` : '') +
+      ' ...',
   );
   let frame = 0;
   while (true) {
     framesSoFar = frame; // keeps the diagnostics above frame-accurate
+    // --frames is a third bound alongside loopFrames/frameCap below — the
+    // take ends at min(natural end, loopFrames, --frames) — and, unlike
+    // frameCap, hitting it is a clean stop, not an abort: an operator's
+    // --frames 150 smoke take is EXPECTED to end early.
+    if (options.frames !== undefined && frame >= options.frames) break;
     // Poll the bridge at the frame boundary (module header: deterministic
     // stop frame). Checked BEFORE granting so a take that ends inside grant N
     // yields exactly N captured frames, the last one showing the final pose.
@@ -901,7 +720,8 @@ async function captureTake(
     await writeFrame(Buffer.from(shot.data, 'base64'));
     frame++;
     if (frame % PROGRESS_EVERY_FRAMES === 0) {
-      console.log(`  frame ${frame} / ${loopFrames ?? frameCap}`);
+      const denom = Math.min(loopFrames ?? frameCap, options.frames ?? Infinity);
+      console.log(`  frame ${frame} / ${denom}`);
     }
   }
 
@@ -917,9 +737,15 @@ async function captureTake(
  * disk — the smoke check is "does the container say the size and frame count
  * we intended", not "did ffmpeg exit 0" alone.
  */
-async function ffprobeReport(
-  out: string,
-): Promise<{ width: number; height: number; nbFrames: string }> {
+async function ffprobeReport(out: string): Promise<{
+  width: number;
+  height: number;
+  nbFrames: string;
+  profile: string;
+  level: string;
+  pixFmt: string;
+  rFrameRate: string;
+}> {
   const proc = spawn(
     'ffprobe',
     ['-v', 'error', '-select_streams', 'v:0', '-show_streams', '-of', 'json', out],
@@ -941,7 +767,15 @@ async function ffprobeReport(
   });
   if (code !== 0) throw new Error(`ffprobe exited with code ${String(code)}: ${stderr.trim()}`);
   const parsed = JSON.parse(stdout) as {
-    streams?: { width?: number; height?: number; nb_frames?: string }[];
+    streams?: {
+      width?: number;
+      height?: number;
+      nb_frames?: string;
+      profile?: string;
+      level?: number;
+      pix_fmt?: string;
+      r_frame_rate?: string;
+    }[];
   };
   const stream = parsed.streams?.[0];
   if (stream?.width === undefined || stream.height === undefined) {
@@ -951,6 +785,10 @@ async function ffprobeReport(
     width: stream.width,
     height: stream.height,
     nbFrames: stream.nb_frames ?? '(not reported)',
+    profile: stream.profile ?? '(not reported)',
+    level: stream.level !== undefined ? String(stream.level) : '(not reported)',
+    pixFmt: stream.pix_fmt ?? '(not reported)',
+    rFrameRate: stream.r_frame_rate ?? '(not reported)',
   };
 }
 
@@ -962,12 +800,15 @@ async function main(): Promise<void> {
   // a try/finally purely to guarantee this child is killed on every path out
   // of main, success or failure, without duplicating a kill call at each of
   // the several places the ffmpeg block below already handles its own child.
-  let preview: PreviewHandle | undefined;
+  let preview: ViteServerHandle | undefined;
   if (options.serve) {
     console.log('record — --serve: self-hosting a production build for this take');
     await ensureServeBuild(SERVE_BUILD_DIR, options.rebuild);
     ensureDataSymlink(SERVE_BUILD_DIR);
-    preview = await spawnPreviewServer(SERVE_BUILD_DIR, SERVE_PORT);
+    preview = await spawnViteServer(
+      ['preview', '--outDir', SERVE_BUILD_DIR, '--port', String(SERVE_PORT)],
+      'vite preview',
+    );
     options.url = preview.url;
     console.log(`  serving at ${preview.url} (no dev-client HMR — immune to reload-mid-take)`);
   }
@@ -975,7 +816,7 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime });
+    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;
@@ -1068,7 +909,7 @@ async function main(): Promise<void> {
 
     // ffmpeg first: a missing binary should fail in milliseconds, not after a
     // browser launch and a full app boot.
-    const ffmpeg = await spawnFfmpeg(options.fps, out);
+    const ffmpeg = await spawnFfmpeg(options.fps, out, options.dome);
     let frames: number;
     try {
       const browser = await launchChromium();
@@ -1102,6 +943,10 @@ async function main(): Promise<void> {
           : `(cap was ${frameCap})`),
     );
     console.log(`  ffprobe: ${probe.width}x${probe.height}, nb_frames ${probe.nbFrames}`);
+    console.log(
+      `  ffprobe: profile ${probe.profile}, level ${probe.level}, pix_fmt ${probe.pixFmt}, ` +
+        `r_frame_rate ${probe.rFrameRate}`,
+    );
   } finally {
     if (preview !== undefined && preview.proc.exitCode === null) preview.proc.kill('SIGTERM');
   }

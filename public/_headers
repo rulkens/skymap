@@ -22,6 +22,12 @@
 /images/famous/*.webp
   Cache-Control: public, max-age=86400
 
+# Self-hosted webfont. Stable filename, not content-hashed, so a day, not
+# immutable — and scoped to the woff2: the MSDF atlas beside it is re-baked
+# in place by build-fonts.
+/fonts/*.woff2
+  Cache-Control: public, max-age=86400
+
 # Belt-and-braces only: `npm run build` ends in `rm -rf dist/data`, so in
 # production every data byte is served from R2 under the buildGroups()
 # policy in tools/deploy/syncR2.ts — that group cacheControl is the

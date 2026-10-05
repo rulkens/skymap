@@ -42,7 +42,7 @@
  * silently producing a malformed clip that produces visual glitches at playback.
  */
 
-import type { BaseSegment } from '../../../@types/animation/CompiledClip';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../@types/animation/Channel';
 
 /**
@@ -59,9 +59,7 @@ import type { Channel } from '../../../@types/animation/Channel';
  *                    when a clash is detected.
  */
 export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>): void {
-  const channels: Channel[] = ['distance', 'yaw', 'pitch', 'target'];
-
-  for (const ch of channels) {
+  for (const ch of Object.keys(baseTracks) as Channel[]) {
     const segs = baseTracks[ch];
     // Segments are pre-sorted by startSec ascending (compileClip guarantees
     // this). Consecutive-pair scan is sufficient by contrapositive: if segment i

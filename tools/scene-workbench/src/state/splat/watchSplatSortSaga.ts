@@ -4,7 +4,9 @@
  * and whenever the clip box moves (the sort is what applies it).
  * No staleness guard: the sort is synchronous, so nothing can run between
  * reading `positionsM` and its `writeBuffer`. An asset a group switch disposed
- * is simply absent from `gpuAssets` by the time this reads the map.
+ * is simply absent from `gpuAssets` by the time this reads the map. Orthographic
+ * views skip the sort (splats are not drawn there) and forget the direction, so
+ * the commit back to perspective always re-sorts.
  */
 import { getContext, put, select, takeLatest } from 'typed-redux-saga';
 
@@ -55,6 +57,10 @@ function* sortSplatsWorker(
 
   const clipBoxM = yield* select((state: RootState) => state.view.display.gaussianSplat.clipBoxM);
   const camera = yield* select((state: RootState) => state.view.camera);
+  if (camera.projection === 'orthographic') {
+    memo.forwardM = null;
+    return;
+  }
   const { eyeM, targetM } = sceneCameraView(camera, ANY_VIEWPORT_PX);
   const forwardM = normalize3([targetM[0] - eyeM[0], targetM[1] - eyeM[1], targetM[2] - eyeM[2]]);
 

@@ -12,6 +12,7 @@
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { DriverActivity } from '../../../@types/engine/camera/DriverActivity';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
@@ -19,7 +20,9 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
@@ -28,33 +31,28 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { bodyFocusDistance } from './bodyFocusDistance';
+import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
-import { wrapRad } from '../../../utils/math/wrapRad';
-import { EASE } from '../animation/ease';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { selectionDriver } from '../../../utils/selection/selectionDriver';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
   drivers: readonly CameraDriver[],
   s: RootState,
-  approachDone = false,
+  activity: DriverActivity,
 ): CameraDriver {
   let winner: CameraDriver | null = null;
   for (const d of drivers) {
-    if (!d.isActive(s, approachDone)) continue;
+    if (!d.isActive(s, activity)) continue;
     if (winner === null || d.priority > winner.priority) winner = d;
   }
   // Only an empty table reaches the fallback; `resting` is always active.
@@ -82,7 +80,7 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
  * exists — a pan strafe and a committed zoom are the focus row's, not the
  * delivering driver's — and a fresh memory carries none, so the first produce
  * reads the delivered pose itself. */
-function settledMemory(mem: FollowMemory | null): FollowMemory {
+export function settledMemory(mem: FollowMemory | null): FollowMemory {
   return { ...(mem ?? NO_FOLLOW_MEMORY), saturated: true };
 }
 
@@ -107,8 +105,9 @@ function followPose(
   const s = ctx.state;
   const focus = s.selectionRows.focus;
   const livePos = liveBodyPosition(focus, ctx.bodies);
+  const driver = selectionDriver(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
-  if (focus === null || focus.type !== 'body' || livePos === null) {
+  if (focus === null || driver === null || driver.poseId === null || livePos === null) {
     return { pose: s.camera.base, memory: mem };
   }
   // The pose eased TOWARD, in world terms whatever arm the regime is in — by
@@ -141,12 +140,13 @@ function followPose(
       pitch: ang.pitch,
       distance: Math.hypot(rel[0], rel[1], rel[2]),
       roll: cur.roll,
+      lookOffset: cur.lookOffset,
     };
   }
 
   // Distance target, two sources (see FollowMemory): a fresh focus seeds
-  // the framing distance — `bodyFocusDistance` directly, allocation-free,
-  // only on this branch; follow re-winning after a drag committed a zoom
+  // the framing distance — `framingPose`'s, the one every arrival lands on,
+  // so the approach never glides off it; follow re-winning after a drag committed a zoom
   // (last frame's winner was some OTHER row, same focus ref) re-captures
   // `base.distance` so the zoom sticks.
   // A third source is the wheel: `base` is invisible while a follow row wins
@@ -160,11 +160,7 @@ function followPose(
     // only an owed one seeds the framing distance.
     distanceTarget = memory.saturated
       ? committed.distance
-      : bodyFocusDistance(
-          bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focus.id, 'cameraDrivers')) *
-            SCALE_UNITS.M_TO_MPC,
-          ctx.projection.fovYRad,
-        );
+      : framingPose(focus, ctx.projection.fovYRad, from).distance;
   } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {
@@ -185,9 +181,18 @@ function followPose(
       // lands per wheel notch, and dropping it pinned a followed approach
       // to scene-frame up until the engage edge.
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
+      lookOffset: easedLookOffset(from, committed, t),
     }),
     memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
   };
+}
+
+/** Absent on both ends stays absent, so a pose without an offset keeps its shape. */
+function easedLookOffset(from: CameraPose, to: CameraPose, t: number): Vec2 | undefined {
+  if (from.lookOffset === undefined && to.lookOffset === undefined) return undefined;
+  const [fy, fp] = from.lookOffset ?? [0, 0];
+  const [ty, tp] = to.lookOffset ?? [0, 0];
+  return [lerp(fy, ty, t), lerp(fp, tp, t)];
 }
 
 /**
@@ -279,7 +284,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // focus's framing pose — is stated in world terms and the fold refolds it
     // into whatever arm geometry picks, so an approach owed from inside an arm
     // the focus HOSTS (standing at a rover, focusing its planet) can fly.
-    isActive: (s, approachDone = false) => followsFocus(s) && !approachDone,
+    isActive: (s, activity) => followsFocus(s) && !activity.approachDone,
     pose: followPose,
   },
   {
@@ -318,14 +323,16 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         bodies: ctx.bodies,
         playback: tween,
       });
-      const arm = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
-      // Roll is no clip channel, so it eases here, the short way round: a tween
-      // whose `to` carries a heading (flyToLonLat) must land with it.
-      const fromRoll = tween.from.roll ?? 0;
-      const t = EASE[tween.easing](ctx.elapsedMs / tween.durationMs);
-      const roll = lerp(fromRoll, fromRoll + wrapRad((tween.to.roll ?? 0) - fromRoll), t);
+      const framed = framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies);
+      const offset = tween.from.lookOffset;
+      if (offset === undefined || !isWorldArm(framed))
+        return { pose: framed, memory: settledMemory(mem) };
+      // Clips author no offset channel, so the start pose's eases out here, on
+      // the same easeOutCubic `tweenToClip` gives every other term.
+      const keep = 1 - easeOutCubic(ctx.elapsedMs / tween.durationMs);
+      const lookOffset: Vec2 = [offset[0] * keep, offset[1] * keep];
       return {
-        pose: isWorldArm(arm) ? absoluteArm({ ...arm.pose, roll }) : arm,
+        pose: absoluteArm({ ...framed.pose, lookOffset }),
         memory: settledMemory(mem),
       };
     },

@@ -1,6 +1,6 @@
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
-import type { TileIndexRect } from './TileIndexRect';
+import type { TileIndexRect } from '../../@types/scene/TileIndexRect';
 
 /**
  * surfaceTileIndicesForBounds — which tile `(x, y)` cells at level `z` a

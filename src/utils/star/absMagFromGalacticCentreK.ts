@@ -14,7 +14,7 @@ const GALACTIC_CENTRE_DISTANCE_PC = 8178;
 // A_Ks ≈ 2.5 mag toward the Galactic Centre (Fritz+ 2011, ApJ 737, 73). A
 // MODELLING choice shared by all 39 stars, not a per-star measurement — kept
 // its own constant rather than folded into the seed table.
-export const A_KS_GALACTIC_CENTRE = 2.5;
+const A_KS_GALACTIC_CENTRE = 2.5;
 
 export function absMagFromGalacticCentreK(kMag: number): number {
   const distanceMpc = GALACTIC_CENTRE_DISTANCE_PC * SCALE_UNITS.PC_TO_MPC;

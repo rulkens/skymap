@@ -10,13 +10,15 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
+import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
+import { starRowDriver } from '../../../fixtures/starRowDriver';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { makeGalaxyRow } from '../../../fixtures/makeGalaxyRow';
 
 // A minimal GalaxyRow with x/y/z and a measured diameter.
-function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
+function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return makeGalaxyRow({
     source: Source.Glade,
     z: 100,
@@ -55,6 +57,7 @@ describe('selectionHalo', () => {
       id: 'earth',
       label: 'Earth',
       positionMpc: [4.8481e-12, 0, 0],
+      driver: bodyDriverGeometry('earth'),
     };
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();
@@ -80,15 +83,17 @@ describe('selectionHalo', () => {
   // the writeBuffer/submit race with no compiler or other test to catch it.
   it('tags Mpc-scale kinds (galaxy, Milky Way) COSMO and a survey star NEAR0', () => {
     const star: SelectionRow = {
-      type: 'star',
+      type: 'starCatalog',
+      source: Source.GaiaStars,
       index: 3,
+      id: null,
+      label: 'Field star',
       positionMpc: [0.001, -0.002, 0.0005],
-      absMag: 4.8,
-      bpRp: 0.65,
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+      driver: starRowDriver(null, SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M),
     };
     expect(selectionHalo(galaxyRow())!.slab).toBe(COSMO);
-    expect(selectionHalo({ type: 'milkyWay' } as SelectionRow)!.slab).toBe(COSMO);
+    expect(selectionHalo({ type: 'milkyWay' })!.slab).toBe(COSMO);
     const starHalo = selectionHalo(star)!;
     expect(starHalo.slab).toBe(NEAR0);
     // The star arm must ride its REAL physical radius (radiusM → Mpc), not the

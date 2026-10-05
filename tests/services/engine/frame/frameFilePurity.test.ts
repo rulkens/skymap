@@ -34,17 +34,15 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYE
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
 // piece of work, not a stray-helper row to trim in passing. `orbitTrailsPass`'s
-// row is its cross-frame `staging` scratch — sized from the elements table,
-// owned by that pass alone, so it has nowhere else to live.
+// row is its cross-frame `staging` scratch — grown on demand from the roster
+// length, owned by that pass alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,
-  'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
-  'frame/executeFrame': 6,
-  'frame/expandFrameOrder': 6,
+  'frame/executeFrame': 5,
+  'frame/expandFrameOrder': 5,
   'frame/foregroundMaxDistance': 1,
-  'frame/milkyWayCloudLiveness': 1,
   'frame/near0LabelProjection': 1,
   'frame/partitionBodiesByPresentation': 1,
   'frame/partitionStarsByResolution': 1,
@@ -54,23 +52,19 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/runFrame': 3,
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
-  'frame/visibleSlabBodies': 3,
-  'frame/visibleStars': 1,
-  'frame/passes/bodyGlintsPass': 8,
+  'frame/visibleSlabBodies': 2,
+  'frame/visibleStars': 0,
+  'frame/passes/bodyGlintsPass': 3,
   'frame/passes/cloudShellPass': 1,
-  'frame/passes/constellationsPass': 2,
   'frame/passes/earthPass': 4,
-  'frame/passes/fieldStarSpherePass': 6,
-  'frame/passes/horizonShellPass': 1,
-  'frame/passes/milkyWayPass': 1,
+  'frame/passes/horizonShellPass': 0,
   'frame/passes/orbitTrailsPass': 1,
   'frame/passes/planetsPass': 1,
   'frame/passes/ringsPass': 1,
-  'frame/passes/sgrAStarLensingPass': 3,
-  'frame/passes/starCatalogPass': 26,
-  'frame/passes/starPointsPass': 3,
   'frame/passes/texturedBodiesPass': 2,
-  'frame/passes/zoneOfAvoidancePass': 4,
+  'layers/milkyWay/passes/milkyWayPass': 1,
+  'layers/starCatalog/passes/fieldStarSpherePass': 6,
+  'layers/starCatalog/passes/starPointsPass': 2,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };
@@ -104,7 +98,7 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
   return [{ name: stmt.getKindName(), exported: false }];
 }
 
-// `bodySlabCapacity.ts` exports `BODY_SLAB_CAPACITY`: a SCREAMING constant's
+// `slabRowCeiling.ts` exports `SLAB_ROW_CEILING`: a SCREAMING constant's
 // file is its camelCase spelling, so filename↔symbol matching ignores case and
 // underscores.
 const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase();
@@ -127,12 +121,20 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
+  ['frame/computes', FRAME_DIR + 'computes/'] as const,
+  ['frame/planners', FRAME_DIR + 'planners/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` is the registry barrel, not a pass; the other dirs have
-  // no barrel and CLAUDE.md forbids adding one.
+  // `passes/index.ts`, `computes/index.ts` and `planners/index.ts` are
+  // registry barrels, not rows; the other dirs have no barrel and CLAUDE.md
+  // forbids adding one.
   const files = readdirSync(dir).filter(
-    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
+    (f) =>
+      f.endsWith('.ts') &&
+      !(
+        (label === 'frame/passes' || label === 'frame/computes' || label === 'frame/planners') &&
+        f === 'index.ts'
+      ),
   );
   expect(files.length).toBeGreaterThan(0);
 

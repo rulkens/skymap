@@ -9,9 +9,9 @@
  *   the silhouette a viewer sees, so the counts here are that renderer's drawn
  *   error. It is the last mesh-silhouette body path, and nothing it draws is
  *   drawn by anything else: the star and planet tables are disjoint collections
- *   (`createEngineData` seeds `SCENE_STARS ∪ SCENE_S_STARS` into `bodies.stars`
- *   and `SCENE_PLANETS` into `bodies.planets`), so no body ever crosses between
- *   two body renderers and there is no cross-renderer shape agreement to keep.
+ *   (`SEEDED_STAR_CATALOGS` holds the stars, `bodies.planets` the planets), so no
+ *   body ever crosses between two body renderers and there is no cross-renderer
+ *   shape agreement to keep.
  * - `planetRenderer`, `texturedBodyRenderer` and `bodyPickRenderer` ray-trace an
  *   analytic sphere and consume the mesh only as PROXY geometry — an invisible
  *   shell, inflated by `PROXY_SCALE` (`shaders/lib/analyticSphere.wesl`), whose

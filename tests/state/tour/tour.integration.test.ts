@@ -18,10 +18,10 @@ import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpoc
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { resolveLayerOpacity } from '../../../src/services/engine/presentation/focusRecession';
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
-import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
+import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
 
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
@@ -29,7 +29,7 @@ import type { VisibilityLayerKey } from '../../../src/@types/animation/Visibilit
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { FadeId } from '../../../src/@types/animation/FadeId';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 
@@ -74,7 +74,6 @@ function makeEngineState(settings: EngineSettingsState): EngineState {
       },
       scheduler: { requestRender: vi.fn<() => void>() },
     },
-    gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
     fadeRows: FADE_LAYERS,
   } as unknown as EngineState;
@@ -89,7 +88,9 @@ describe('three-way opacity product: intent × focus × clip', () => {
     const clipAtZero = makeClipStub(0);
     const stateAtZero = makeResolveOpacityState(fades, clipAtZero);
     // 1 (intent) × 1 (no focus recession for flow) × 0 (clip) = 0
-    expect(resolveLayerOpacity(stateAtZero, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
+    expect(
+      resolveLayerOpacity(stateAtZero, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0);
   });
 
   it('a clip factor of 1 is neutral — composed alpha is the bare intent × recession product', () => {
@@ -101,7 +102,9 @@ describe('three-way opacity product: intent × focus × clip', () => {
     const clipAtOne = makeClipStub(1);
     const state = makeResolveOpacityState(fades, clipAtOne);
     // Hand-computed: intent 0.8 × recession 1 (galaxyCatalog never recedes) × clip 1 = 0.8.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.8);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0.8);
   });
 });
 
@@ -167,15 +170,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const surveyClipFactor = clipPlayer.clipOpacityOf('survey', 7_000);
     expect(surveyClipFactor).toBe(0);
 
-    // "Untouched" is the registry entry per id, NOT a blanket `true`:
-    // INITIAL_SETTINGS takes each catalog's gate from SOURCE_REGISTRY's `visible`,
+    // "Untouched" is the boot value per id, NOT a blanket `true`: the
+    // galaxy catalog cluster boots each catalog from its own Layer literal,
     // and DesiDeep boots false.
     const settings = store.getState().settings;
     const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
+    const bootItems = INITIAL_SETTINGS.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
     for (const [id, item] of Object.entries(catalogItems)) {
-      const entry = SOURCE_ENTRIES.find((e) => e.id === id);
-      expect(entry).toBeDefined();
-      expect(item.enabled).toBe(entry!.visible);
+      expect(item.enabled).toBe(bootItems[id]?.enabled);
     }
 
     clipPlayer.destroy();
@@ -206,7 +208,11 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
 
     const clipAtOne = makeClipStub(1); // factor 1 = clip is gone
     const state = makeResolveOpacityState(fades, clipAtOne);
-    const composed = resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, flowHandle);
+    const composed = resolveLayerOpacity(
+      state,
+      { snapshot: { focusBlend: 0, nowMs: 0 } } as never,
+      flowHandle,
+    );
     // 1 (intent) × 1 (no recession for flow) × 1 (clip gone) = 1
     expect(composed).toBe(1);
 
@@ -228,19 +234,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   const CANVAS = { width: 1280, height: 720 };
 
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
-  function makeDrawCtx(
-    nowMs: number,
-    camPos: Readonly<[number, number, number]>,
-  ): ReadyFrameContext {
+  function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      nowMs,
-      focusBlend: 0,
+      snapshot: { nowMs, focusBlend: 0, visibleSourceMask: 0xffffffff },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
       drawPxPerRad: CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2)),
-      visibleSourceMask: 0xffffffff,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   function makeDrawState(

@@ -22,6 +22,8 @@ export type RawDataEntry = {
   readonly upstream?: string;
   readonly fetcher?: string;
   readonly readme?: string;
+  /** `upstream` is a catalogue page that blocks scripted downloads; `fetchTextures` skips it. */
+  readonly manualDownload?: true;
 };
 
 export const RAW_DATA = {
@@ -153,7 +155,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, Proxima, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
+  'sun.seed': {
+    path: 'data/seeds/sun.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'The Sun, in the same schema as the famous-stars seed: its own catalog, so "famous stars off" cannot take the descent\'s aim point with it. Drives the same build (generated render table + the shared meta sidecar).',
   },
   'planet-facts.seed': {
     path: 'data/seeds/planet_facts.seed.json',
@@ -192,7 +201,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded by build-cf4-density.',
+      'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded when build-flow-field needs it.',
     upstream: 'https://edd.ifa.hawaii.edu/CF4calculator/',
   },
   'cf4.vfield-mean': {
@@ -209,11 +218,11 @@ export const RAW_DATA = {
     upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
   },
   'cf4.vfield-npz': {
-    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from —
-    // one file, two consumers. The density pipeline slices d_mean_CF4pp; the
-    // flow build slices v_mean_CF4pp + d_mean_CF4pp. Registering it once here
-    // (rather than under a parallel cf4pp/ dir) keeps a single source of truth
-    // for the npz. Maintainer-only: never committed, never synced to R2.
+    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from.
+    // The flow build slices v_mean_CF4pp + d_mean_CF4pp out of it. Registering
+    // it once here (rather than under a parallel cf4pp/ dir) keeps a single
+    // source of truth for the npz. Maintainer-only: never committed, never
+    // synced to R2.
     path: 'data/raw/cf4/CF4pp_mean_std_grids.npz',
     kind: 'file',
     source: 'gitignored',
@@ -281,6 +290,26 @@ export const RAW_DATA = {
     source: 'gitignored',
     description:
       'Per-tier mean/std .npy cubes produced by tools/volumes/extractDustCube.py (edenhofer_{mean,std}_{128,256,384}.npy), consumed by tools/volumes/buildDustVolume.ts.',
+  },
+
+  // ─── Local Bubble shell surface (O'Neill+ 2024) ───────────────────────
+
+  'localbubble.shell': {
+    path: 'data/raw/localbubble/ONeill2024_LocalBubble_ShellProperties_A0.5.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "O'Neill+ 2024 Local Bubble shell surface at the fiducial A_0.5' edge threshold — one BINTABLE row per HEALPix Nside=256 direction (786,432 rows × 216 B), carrying the shell's radius, inner/outer walls, thickness and normal along that sight line. The surface is star-shaped (one radius per direction).",
+    upstream: 'https://doi.org/10.7910/DVN/INB1RB',
+    fetcher: 'tools/fetch/fetchLocalBubble.ts',
+    readme: 'localbubble.readme',
+  },
+  'localbubble.readme': {
+    path: 'data/raw/localbubble/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Local Bubble shell table — upstream DOI, licence, column layout and the frame its angles are in.',
   },
 
   // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
@@ -782,6 +811,39 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.gaskellMimasShape': {
+    path: 'data/raw/textures/mimas_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Mimas shape model (PDS SBN, CO-SA-ISSNA-5-MIMASSHAPE-V2.0, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 187.6-210.8 km; build-only bake input for Mimas's normal map. Its frame uses prime-meridian W0 = 337.46 deg vs the texture's 333.46, so texture lon L reads shape lon L + 4 (measured by cross-correlation); ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.gaskellTethysShape': {
+    path: 'data/raw/textures/tethys_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.1 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.tethys.shape-model/data/tethys_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.gaskellDioneShape': {
+    path: 'data/raw/textures/dione_quad512q.tab',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Gaskell Dione shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 554.2-566.1 km; build-only bake input for Dione's normal map. Texture lon L reads shape lon L - 0.6 (measured by cross-correlation; agrees with the prime-meridian constants). ~60 MB.",
+    upstream:
+      'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.dione.shape-model/data/dione_quad512q.tab',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   'textures.earthClouds': {
     path: 'data/raw/textures/cloud_combined_8192.tif',
     kind: 'file',
@@ -856,6 +918,183 @@ export const RAW_DATA = {
       'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.schenkEnceladusDem': {
+    path: 'data/raw/textures/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "Schenk & McKinnon 2024 Enceladus Cassini global DEM, 200 m/px, 8049x4025 single-band Float32 GeoTIFF, heights in km, nodata ~ -3.4e38 (0.04% of cells), equirect with longitude 0 at the LEFT edge (PDS release 2024-08-12, use constraint: cite authors, doi:10.1016/j.icarus.2023.115827); build-only bake input for Enceladus's normal map. Its content sits 0.35 deg east of the mosaic texture, so texture lon L reads DEM lon L + 0.35 (measured by cross-correlation); ~124 MB.",
+    upstream:
+      'https://asc-astropedia.s3.us-west-2.amazonaws.com/Enceladus/Cassini/Enceladus_Cassini_DEM_global_200m_schenk2024.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsEnceladus': {
+    path: 'data/raw/textures/Enceladus_Cassini_mosaic_global_110m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Enceladus Cassini global mosaic, 110 m/px, 14401x7201, single-band 8-bit GeoTIFF (public domain, credit NASA/JPL/Space Science Institute, publisher USGS Astrogeology). Grayscale relief mosaic — build-tinted and lifted; ~104 MB.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Enceladus_Cassini_mosaic_global_110m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.usgsTriton': {
+    path: 'data/raw/textures/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Triton Voyager 2 global colour mosaic with global fill, 600 m/px, 14138x7069, 8-bit RGB equirectangular GeoTIFF (Paul Schenk 2014, PIA18668, Lunar and Planetary Institute; NASA/JPL Voyager 2; publisher USGS Astrogeology — see ATTRIBUTIONS.md). The northern ~39% was in polar night and is pure black, painted with the mean colour at build time; ~300 MB.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  // ─── Uranian satellites — Schenk 2020 ISIS3 cubes (manual browser download) ──
+  'textures.schenkMirandaMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/mumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Miranda mosaic, 6294x3147, 240 m/px (Voyager 2): ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkArielMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/aumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Ariel mosaic, 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkUmbrielMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/uumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Umbriel mosaic, 919x460: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkTitaniaMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/tumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Titania mosaic, 1722x861: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~6 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkOberonMosaic': {
+    path: 'data/raw/textures/schenk-uranian-satellites/oumap-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Oberon mosaic, 957x479: ISIS3 tiled cube, SimpleCylindrical, Float32 I/F-like values, Voyager 2 only (about half the sphere is NULL); scaled to the geometric albedo, nodata filled with the albedo; ~2 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkMirandaDem': {
+    path: 'data/raw/textures/schenk-uranian-satellites/mudem-ZT-cyl.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Miranda merged photoclinometric+stereo DEM, 6294x3147, left edge at lon 0: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkTritonDem': {
+    path: 'data/raw/textures/schenk-neptunian-satellites/tndem-Thr-cyl_TA_Tds91.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2021 Triton shape-from-shading topographic map, 6493x2636, 600 m/px, a REGIONAL map (lon -70..95, lat -21..46; half the pixels are NULL): ISIS3 tiled cube, SimpleCylindrical, Float32 km; build-only bake input for the normal map; ~70 MB. Cite Schenk et al. (2021), Remote Sensing 13, 3476; no licence stated. Browser download only (the USRA repository sits behind a browser check).',
+    upstream: 'https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkArielDem': {
+    path: 'data/raw/textures/schenk-uranian-satellites/audem-ZTL-cyl-180180.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2020 Ariel DEM (stereo+photoclinometry+digitised limb arcs), 3652x1826: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~27 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
+    upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+
+  // ─── Saturn mid-sized moons — CICLOPS 2014 global colour maps ─────────
+  //
+  // Paul Schenk's (LPI) photometrically corrected Cassini ISS mosaics, chosen
+  // over the USGS Cassini mosaics because those are brightness-normalised relief
+  // shading: Iapetus loses its dark leading hemisphere entirely. Colour is
+  // enhanced into the UV/IR, so the build keeps luminance only (`monoTint`). The
+  // CENTRE column is longitude 180°: each cross-correlates against its USGS
+  // counterpart at exactly a half-turn shift, unmirrored (Mimas, whose USGS
+  // map is too smooth to correlate, by Herschel's position instead).
+  'textures.nasaMimas': {
+    path: 'data/raw/textures/PIA18437.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Mimas - 2014" (PIA18437), 6356x3178, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~61 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18437/PIA18437.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaTethys': {
+    path: 'data/raw/textures/PIA18439.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Tethys - 2014" (PIA18439), 13467x6734, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~272 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18439/PIA18439.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaDione': {
+    path: 'data/raw/textures/PIA18434.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Dione - 2014" (PIA18434), 14134x7067, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~300 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18434/PIA18434.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaRhea': {
+    path: 'data/raw/textures/PIA18438.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Rhea - 2014" (PIA18438), 12015x6008, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~217 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18438/PIA18438.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.nasaIapetus': {
+    path: 'data/raw/textures/PIA18436.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Iapetus - 2014" (PIA18436), 11741x5871, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~207 MB.',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18436/PIA18436.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -994,6 +1233,143 @@ export const RAW_DATA = {
       'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
   },
 
+  // ─── Mars surface sources — fetched by hand, no fetchers ───────────────
+  // Strip-layout upstream files are read through tiled COG copies (README
+  // records the gdal_translate line); worktrees reach them via leaf symlinks.
+
+  'mola.dem463': {
+    path: 'data/raw/mola/Mars_MGS_MOLA_DEM_mosaic_global_463m_f32_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MOLA 463 m global DEM, Float32 tiled COG of the Int16 USGS mosaic (sharp cannot read signed 16-bit): 46080x23040 metres above the areoid, NoData -32768, equirectangular on the 3,396,190 m sphere, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif',
+    readme: 'mola.readme',
+  },
+  'mola.readme': {
+    path: 'data/raw/mola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the MOLA DEM — upstream, grid, vertical reference, COG conversion.',
+  },
+  'viking.mdim21': {
+    path: 'data/raw/viking/Mars_Viking_MDIM21_ClrMosaic_global_232m_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Viking MDIM 2.1 colour mosaic, JPEG COG of the USGS 232 m mosaic: 92160x46080 RGB Byte, NoData 0, equirectangular on the 3,396,190 m sphere, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif',
+    readme: 'viking.readme',
+  },
+  'viking.readme': {
+    path: 'data/raw/viking/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
+  },
+  'hirise.gale.dtm': {
+    path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MSL Gale merged 1 m DEM, tiled COG: Float32 metres above the areoid, NoData -32767, 137.124-137.681 E, -5.099 to -4.130.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif',
+    readme: 'hirise.gale.readme',
+  },
+  'hirise.gale.ortho': {
+    path: 'data/raw/hirise/gale/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE 78-quad colour basemap of Gale, 0.25 m RGB JPEG COG with a per-dataset mask, 137.327-137.479 E, -4.876 to -4.555.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Mars/MSL/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif',
+    readme: 'hirise.gale.readme',
+  },
+  'hirise.gale.readme': {
+    path: 'data/raw/hirise/gale/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Gale DTM and colour ortho.',
+  },
+  'hirise.gusev.dtm': {
+    path: 'data/raw/hirise/gusev/DTEEC_001513_1655_001777_1650_U01.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE controlled stereo DTM of the Columbia Hills, 1 m Float32 COG above the areoid, NoData -3.4e38.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_001513_1655_PSP_001777_1650/DTEEC_001513_1655_001777_1650_U01.tif',
+    readme: 'hirise.gusev.readme',
+  },
+  'hirise.gusev.ortho': {
+    path: 'data/raw/hirise/gusev/PSP_001513_1655_RED_A_01_ORTHO.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE RED ortho over the Gusev DTM, 0.25 m UInt16 grey COG, NoData 0, same footprint.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_001513_1655_PSP_001777_1650/PSP_001513_1655_RED_A_01_ORTHO.tif',
+    readme: 'hirise.gusev.readme',
+  },
+  'hirise.gusev.readme': {
+    path: 'data/raw/hirise/gusev/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Gusev DTM and RED ortho.',
+  },
+  'hirise.endeavour.dtm': {
+    path: 'data/raw/hirise/meridiani-endeavour/DTEEC_018701_1775_018846_1775_U01.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE controlled stereo DTM of the Endeavour crater rim, 1 m Float32 COG above the areoid, NoData -3.4e38.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_018701_1775_ESP_018846_1775/DTEEC_018701_1775_018846_1775_U01.tif',
+    readme: 'hirise.endeavour.readme',
+  },
+  'hirise.endeavour.ortho': {
+    path: 'data/raw/hirise/meridiani-endeavour/ESP_018701_1775_RED_A_01_ORTHO.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE RED ortho over the Endeavour DTM, 0.25 m UInt16 grey COG, NoData 0, same footprint.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_018701_1775_ESP_018846_1775/ESP_018701_1775_RED_A_01_ORTHO.tif',
+    readme: 'hirise.endeavour.readme',
+  },
+  'hirise.endeavour.readme': {
+    path: 'data/raw/hirise/meridiani-endeavour/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Endeavour DTM and RED ortho.',
+  },
+  'hirise.jezero.dtm': {
+    path: 'data/raw/hirise/jezero/MSR_hirise_soc_003_DTM_MOLATopography_DeltaGeoid_1m_Eqc_latTs0_lon0_Blend40.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS MSR HiRISE DTM mosaic of Jezero, 1 m Float32 above the areoid, NoData -32767, 77.058-77.381 E, 18.136-18.588 N; extracted from the release zip.',
+    upstream: 'https://doi.org/10.5066/P13CPYYU',
+    readme: 'hirise.jezero.readme',
+  },
+  'hirise.jezero.ortho': {
+    path: 'data/raw/hirise/jezero/MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS MSR HiRISE orthomosaic of Jezero, 0.25 m Byte grey, NoData 0, same footprint as the DTM; extracted from the release zip.',
+    upstream: 'https://doi.org/10.5066/P13CPYYU',
+    readme: 'hirise.jezero.readme',
+  },
+  'hirise.jezero.readme': {
+    path: 'data/raw/hirise/jezero/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'USGS archive README for the Jezero mosaics, plus the files skymap bakes.',
+  },
+
   'skadi.dir': {
     path: 'data/raw/skadi',
     kind: 'directory',
@@ -1116,17 +1492,27 @@ export const RAW_DATA = {
     upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
     readme: 'meshes.petunias.readme',
   },
+  'meshes.petuniasBlend': {
+    path: 'data/raw/meshes/petunias/petunias.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'petunias.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- petunias`; older Blender versions cannot open it.',
+    upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.petunias.readme',
+  },
   'meshes.petunias': {
     path: 'data/raw/meshes/petunias/petunias.prebaked.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'The petunia model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.petunias actually points at. Regenerate with `npm run prebake-petunias` (Blender, not CI), never by hand.',
+      'The petunia model flattened to one material over its baked atlases — what MESH_SOURCES.petunias actually points at. Baked from `petunias.blend`; regenerate with `npm run prebake-mesh -- petunias` (Blender, not CI), never by hand.',
     // `upstream` is the model this file DERIVES from, not a download URL: it is
     // what buildMeshes copies onto the generated row's `source`, and a local
     // path there would credit nothing.
     upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
-    fetcher: 'tools/meshes/prebake/petuniasPrebake.py',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.petunias.readme',
   },
   'meshes.petunias.readme': {
@@ -1331,6 +1717,22 @@ export const RAW_DATA = {
     description:
       'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
   },
+  'meshes.soendermarken': {
+    path: 'data/raw/meshes/soendermarken/mesh.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The scene-workbench crop of the 2019 leaf-on Søndermarken photogrammetry (group soendermarken-crop-2019, asset mesh-cropped) — 470,046 tris, one material, ENU metres. Copied from the workbench output rather than fetched; buildMeshes reads it directly, no pre-bake.',
+    upstream: 'https://dataforsyningen.dk/ (Skråfotos 2019, via the scene-workbench bake)',
+    readme: 'meshes.soendermarken.readme',
+  },
+  'meshes.soendermarken.readme': {
+    path: 'data/raw/meshes/soendermarken/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Søndermarken scan — workbench group, crop outline, ENU frame and anchor, licence, checksum.',
+  },
   'meshes.sha256': {
     path: 'data/raw/meshes/meshes.sha256',
     kind: 'file',
@@ -1343,6 +1745,25 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description: 'What `meshes.sha256` pins, the R2 backup, and the restore command.',
+  },
+
+  // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
+
+  horizons: {
+    path: 'data/raw/horizons',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
+    upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
+    fetcher: 'tools/fetch/fetchHorizons.ts',
+    readme: 'horizons.readme',
+  },
+  'horizons.readme': {
+    path: 'data/raw/horizons/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Horizons vectors — the exact query, body table and span.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

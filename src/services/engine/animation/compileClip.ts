@@ -59,14 +59,7 @@
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type {
-  CompiledClip,
-  BaseSegment,
-  VelRamp,
-  OscTrack,
-  SceneCue,
-  PathTrack,
-} from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -74,6 +67,11 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
+import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by
@@ -82,8 +80,8 @@ import { buildPathTrack } from './buildPathTrack';
 
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
 
-// All four channels, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'target'];
+// Every channel, used to build the initial baseTracks record.
+const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.
@@ -372,7 +370,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
 
 /**
  * validatePathExclusivity — a `flyPath` is a COMPOSITE base writer: it drives
- * all four camera channels over its window. So just like two `set`s on the same
+ * every camera channel over its window (roll it only holds). So just like two `set`s on the same
  * channel clash, a base segment that overlaps a path window is a clash too — the
  * evaluator would let the path silently win, which is a footgun, not a feature.
  * Catch it at registration time with the same loud-throw discipline as

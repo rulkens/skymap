@@ -1,0 +1,4 @@
+.readout {
+  composes: readout from './debugSection.module.css';
+  font-variant-numeric: tabular-nums;
+}

@@ -1,11 +1,10 @@
-import type { StarBody } from '../../scene/StarBody';
 import type { PlanetBody } from '../../scene/PlanetBody';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { EarthBody } from '../../scene/EarthBody';
 
 /**
  * BodyStore — the authoritative app-side home for the scene's true-scale
- * foreground bodies (stars, planets, and the special-cased Earth).
+ * foreground bodies (planets, mesh bodies, and the special-cased Earth).
  *
  * Sibling of `StructureStore`: the same factory-plus-closure
  * shape and the same discipline — READ-ONLY views out (`readonly[]` for the
@@ -14,10 +13,9 @@ import type { EarthBody } from '../../scene/EarthBody';
  * (`sceneBodies.ts`), not per-frame state, so the store simply holds whatever
  * the seed installed and hands live views back without defensive copies.
  *
- * The full surface is defined now even though only Earth is seeded in this
- * phase: stars and planets get their seeds in a later phase, and pinning the
- * type here means that seed slots into an already-agreed shape rather than
- * reshaping the store. Earth is a distinct getter (not folded into `planets`)
+ * The seeded STARS are not here: they are their own star catalogs, walked from
+ * `SEEDED_STAR_CATALOGS` by `visibleStars`, which is the only reader a drawn
+ * star ever had. Earth is a distinct getter (not folded into `planets`)
  * because it is the descent's landing target and carries its own textured
  * `EarthBody` form; it is `null` until seeded.
  *
@@ -26,16 +24,12 @@ import type { EarthBody } from '../../scene/EarthBody';
  * engine Redux slice instead.
  */
 export type BodyStore = {
-  /** Seeded stars (chiefly the Sun); empty until the star seed lands. */
-  readonly stars: readonly StarBody[];
   /** Seeded planets; empty until the planet seed lands. */
   readonly planets: readonly PlanetBody[];
   /** Seeded mesh bodies; empty until the mesh seed lands. */
   readonly meshBodies: readonly MeshBody[];
   /** The descent's landing target; `null` until seeded. */
   readonly earth: EarthBody | null;
-  /** Replace the star list wholesale. */
-  setStars(s: readonly StarBody[]): void;
   /** Replace the planet list wholesale. */
   setPlanets(p: readonly PlanetBody[]): void;
   /** Replace the mesh-body list wholesale. */

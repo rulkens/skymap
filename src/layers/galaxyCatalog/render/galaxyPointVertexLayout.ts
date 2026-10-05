@@ -153,8 +153,8 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *
  *   bytes  0..63  : cam.viewProj      mat4x4<f32>  (16 floats = 64 bytes)  } CameraUniforms
  *   bytes 64..71  : cam.viewportPx    vec2<f32>    (2 floats)              } prefix from
- *   bytes 72..75  : cam._pad0         f32          (alignment slack)       } lib/camera.wesl
- *   bytes 76..79  : cam._pad1         f32          (alignment slack)       } (80 B total)
+ *   bytes 72..75  : cam.pxPerRad      f32          (focal term)            } lib/camera.wesl
+ *   bytes 76..79  : cam._pad0          f32          (alignment slack)       } (80 B total)
  *   bytes 80..83  : selectedPacked    u32          ← (selectedSource << 26) | selectedLocalIdx, or 0xFFFFFFFF
  *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (6 bits used)
  *   bytes 88..91  : pointSizePx       f32

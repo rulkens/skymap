@@ -24,15 +24,13 @@
  * toggling `milkyWay` flips `selectMilkyWayLabelEnabled`; toggling
  * `famousGalaxy` flips the galaxy catalog item's `labelEnabled` flag.
  *
- * The master tri-state folds TWO non-category rows (constellations, orbit
- * trails) on top of the label categories the registry derives — star names
- * and body names are registry-derived categories themselves now, not
- * hand-authored rows, so only the two flat singleton guides sit outside that
- * derivation. `constellations` defaults off and every other row defaults on,
- * so the default-state master stays indeterminate whether the row count is
- * one or two; that scenario alone wouldn't catch a miscounted row.
- * `orbitTrailsEnabled` defaults on, so a store-seeded off is what actually
- * pins the second row into the tri-state arithmetic.
+ * The master tri-state folds the hand-authored orbit-trails row and every
+ * `layerRows` entry on top of the label categories the registry derives —
+ * star names and body names are registry-derived categories themselves now,
+ * not hand-authored rows. `orbitTrailsEnabled` defaults on; the constellations
+ * Layer row (passed in via `layerRows`, like the ZoA row below) defaults off,
+ * so together they pin the default-state master into the indeterminate case —
+ * catching a miscounted row that a single off row alone wouldn't.
  *
  * Tests assert on `store.getState()` via selectors — RTK dispatch is
  * synchronous so the store reflects the new value immediately after the
@@ -50,12 +48,13 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import LabelsAndGuidesSectionContainer from '../../../src/components/containers/LabelsAndGuidesSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import {
-  selectStructureItems,
-  selectGalaxyCatalogItems,
-  selectMilkyWayLabelEnabled,
-  selectOrbitTrailsEnabled,
-} from '../../../src/state/settings/selectors';
+import { selectStructureItems } from '../../../src/layers/structure/state/structures/selectors';
+import { selectGalaxyCatalogItems } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { selectMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/milkyWay/selectors';
+import { selectOrbitTrailsEnabled } from '../../../src/state/settings/core/orbitTrails/selectors';
+import { selectZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/selectors';
+import { zoneOfAvoidanceSettingsRow } from '../../../src/layers/zoneOfAvoidance/ui/zoneOfAvoidanceSettingsRow';
+import { constellationsSettingsRow } from '../../../src/layers/constellations/ui/constellationsSettingsRow';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -65,9 +64,12 @@ function makeWrapper(store: AppStore) {
 describe('LabelsAndGuidesSectionContainer', () => {
   it('renders with default store state: constellations off, rest on → master indeterminate', () => {
     const { store } = createAppStore();
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [constellationsSettingsRow] }),
+      {
+        wrapper: makeWrapper(store),
+      },
+    );
 
     // Master checkbox (in the header) should be indeterminate — the constellations
     // overlay defaults off while every other label row (orbit trails included)
@@ -84,9 +86,12 @@ describe('LabelsAndGuidesSectionContainer', () => {
     // Confirm initial state: cluster.labelEnabled is true.
     expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(true);
 
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
+      {
+        wrapper: makeWrapper(store),
+      },
+    );
 
     // Expand to reach per-category body controls.
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
@@ -106,9 +111,12 @@ describe('LabelsAndGuidesSectionContainer', () => {
     // Confirm initial state: milkyWay label is enabled.
     expect(selectMilkyWayLabelEnabled(store.getState())).toBe(true);
 
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
+      {
+        wrapper: makeWrapper(store),
+      },
+    );
 
     // Expand to reach per-category body controls.
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
@@ -128,9 +136,12 @@ describe('LabelsAndGuidesSectionContainer', () => {
     // Confirm initial state: famousGalaxy.labelEnabled is true.
     expect(selectGalaxyCatalogItems(store.getState())['famousGalaxy'].labelEnabled).toBe(true);
 
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
+      {
+        wrapper: makeWrapper(store),
+      },
+    );
 
     // Expand to reach per-category body controls.
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
@@ -149,9 +160,12 @@ describe('LabelsAndGuidesSectionContainer', () => {
     const { store } = createAppStore();
     expect(selectOrbitTrailsEnabled(store.getState())).toBe(true);
 
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
+      {
+        wrapper: makeWrapper(store),
+      },
+    );
 
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
     fireEvent.click(expandButton);
@@ -162,5 +176,46 @@ describe('LabelsAndGuidesSectionContainer', () => {
     fireEvent.click(orbitTrailsCheckbox);
 
     expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
+  });
+
+  // ── layerRows ──────────────────────────────────────────────────────────────────
+
+  it('appends the ZoA Layer row after the core guide rows', () => {
+    const { store } = createAppStore();
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [zoneOfAvoidanceSettingsRow] }),
+      { wrapper: makeWrapper(store) },
+    );
+
+    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+    fireEvent.click(expandButton);
+
+    const orbitTrailsCheckbox = container.querySelector<HTMLInputElement>('#toggle-orbit-trails')!;
+    const zoaCheckbox = container.querySelector<HTMLInputElement>('#toggle-zone-of-avoidance')!;
+    expect(orbitTrailsCheckbox).not.toBeNull();
+    expect(zoaCheckbox).not.toBeNull();
+    expect(
+      orbitTrailsCheckbox.compareDocumentPosition(zoaCheckbox) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('the ZoA Layer row reads the store and dispatches its own action', () => {
+    const { store } = createAppStore();
+    expect(selectZoneOfAvoidanceEnabled(store.getState())).toBe(true);
+
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [zoneOfAvoidanceSettingsRow] }),
+      { wrapper: makeWrapper(store) },
+    );
+
+    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+    fireEvent.click(expandButton);
+
+    const zoaCheckbox = container.querySelector<HTMLInputElement>('#toggle-zone-of-avoidance')!;
+    expect(zoaCheckbox.checked).toBe(true);
+    fireEvent.click(zoaCheckbox);
+
+    expect(selectZoneOfAvoidanceEnabled(store.getState())).toBe(false);
+    expect(zoaCheckbox.checked).toBe(false);
   });
 });

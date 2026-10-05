@@ -1,4 +1,3 @@
-// src/components/HomeButton/HomeButton.tsx
 /**
  * HomeButton — top-bar pill that frames Earth (the viewer's starting point
  * is "home"). Thin semantic wrapper over the shared PillButton chrome; owns

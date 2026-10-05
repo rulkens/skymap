@@ -2,13 +2,17 @@
  * HASH_PARAM_SOURCES — the ordered table of `window.location.hash` params. One
  * row per param, owning everything about it: its key, whether its presence
  * counts as a deep link, which dispatched actions can change its serialized
- * value, how to write that value out of the store, and how to read a present or
- * absent value back into actions.
+ * value, how to write that value out of the store, how to read a present value
+ * into its contribution to a `LinkIntent`, and what actions an absent one
+ * restores.
  *
- * Table order fixes the on-URL layout — the body is composed in this order — so
- * two identical states always produce byte-identical hashes, and the table is
- * APPEND-ONLY: a new row goes at the end so links already in the wild keep
- * parsing to the same bytes they were shared as.
+ * Table order fixes the on-URL layout — the body is composed in this order —
+ * so two identical states always produce byte-identical hashes. That binds
+ * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
+ * already in the wild keep parsing to the same bytes they were shared as. A
+ * read-only row (`write: () => null`: `pose`) composes nothing into the body,
+ * so this rule says nothing about its position. Read order is not a table
+ * fact at all: `linkIntentFrom` merges the rows' contributions.
  *
  * ### The `writesOn` completeness contract
  *
@@ -74,20 +78,22 @@ import type { Action } from '@reduxjs/toolkit';
 import type { HashParamSource } from '../../@types/state/url/HashParamSource';
 import { URL_HASH_FOR } from '../../services/url/urlHashFor';
 import { requestFocus } from '../selection/requestFocus';
-import { requestSelect } from '../selection/requestSelect';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
-import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
+import { selectTakeoverSource } from '../takeover/selectors';
+import { takeoverEnded, takeoverStarted } from '../takeover/takeoverActions';
+import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
+import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -101,9 +107,8 @@ const isFocusSlotRow = (action: Action): boolean =>
 
 /**
  * `focus` — the selected/framed target. The write reuses `URL_HASH_FOR` (the
- * FocusableTarget → id-segment codec); the read makes a URL arrival look like a
- * scene click plus a fly, which is why it returns TWO actions:
- * `requestSelect(id)` pins the InfoCard and `requestFocus(id)` flies the camera.
+ * FocusableTarget → id-segment codec); the read names the subject, which
+ * `navigateSaga` turns into a scene click plus a focus.
  *
  * Absence clears the selection — but only on a hashchange, which the reading
  * pass enforces by never calling `readAbsent` on the boot read. A plain load
@@ -116,7 +121,7 @@ const focusSource: HashParamSource = {
   write: (state) => {
     // An in-flight request outranks the resolved slot — precedence, not
     // fallback. `requestFocus` for a galaxy or star parks inside
-    // `resolveFocusRefDeferring` until its catalog pulses, and the resolved slot
+    // `resolveFocusRefDeferringSaga` until its catalog pulses, and the resolved slot
     // stays null for that whole window; a write landing there would compose a
     // body with no `focus` at all and push the deep link away. The pending id is
     // the very string the read handed to `requestFocus`, so republishing it is
@@ -158,7 +163,7 @@ const focusSource: HashParamSource = {
     // empty id (non-encodable row) contributes no param, same as null.
     return URL_HASH_FOR[focused.type](focused) || null;
   },
-  read: (value) => [requestSelect(value), requestFocus(value)],
+  read: (value) => ({ view: { kind: 'focus', id: value } }),
   readAbsent: () => [clearSelection()],
 };
 
@@ -177,12 +182,10 @@ const focusSource: HashParamSource = {
  * share" freezes exactly the moment on screen.
  *
  * ── read ──
- * A parseable ISO string restores manual + paused at that instant via
- * `manualPausedAtActions` — the same shared operation the date-entry popover
- * commits through, so the shared-`nowMs` invariant that holds the instant
- * exactly is stated once, where it is sampled. An unparseable value yields no
- * actions: the hash is external input and a hand-typed timestamp is not a reason
- * to move the clock somewhere arbitrary.
+ * A parseable ISO string contributes its Unix instant, which `navigateSaga`
+ * lands as manual + paused. An unparseable value contributes nothing: the hash
+ * is external input and a hand-typed timestamp is not a reason to move the
+ * clock somewhere arbitrary.
  *
  * ── readAbsent ──
  * No `t` on the URL means live-at-now, so a back/forward navigation away from a
@@ -200,8 +203,7 @@ const timeSource: HashParamSource = {
   },
   read: (value) => {
     const unixMs = Date.parse(value);
-    if (Number.isNaN(unixMs)) return [];
-    return manualPausedAtActions(new Date(unixMs));
+    return Number.isNaN(unixMs) ? {} : { t: unixMs };
   },
   readAbsent: () => [goLiveNowAction()],
 };
@@ -221,8 +223,8 @@ const timeSource: HashParamSource = {
  * ── read ──
  * The value is routed through `isOrientationFrameId` first — the hash is
  * external input and could carry a hand-typed junk frame. A recognised frame
- * SNAPS via `setOrientation`; it deliberately does NOT start a frame tween, so a
- * shared link reproduces the composition instantly with no slerp on arrival.
+ * SNAPS; it deliberately does NOT start a frame tween, so a shared link
+ * reproduces the composition instantly with no slerp on arrival.
  */
 const orientationSource: HashParamSource = {
   key: 'orientation',
@@ -230,22 +232,76 @@ const orientationSource: HashParamSource = {
   // `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (see that
   // type's header), so the bulk settings restore (`mergeSnapshot`) provably
   // cannot move it — a raw settings patch of that shape has no `orientation`
-  // key to carry. The tour's own restore (`restoreSceneSaga`) and its
-  // beat-boundary reconstruction (`guidedTourSaga`) both go through
-  // `requestOrientationChange` → `setOrientation` instead, which IS covered
-  // below. If `orientation` ever moves back onto `SettingsSnapshot`, this
-  // list must grow to include `mergeSnapshot`.
+  // key to carry. `computeSceneEntering`'s beat-boundary fold excludes
+  // `frameTo` for the same reason (see its header): orientation carries
+  // forward live instead. The tour's own restore (`restoreSceneSaga`, via
+  // `requestOrientationChange`) and a beat's live `frameTo` cue (dispatched
+  // directly by `applySceneEffect` as the clip plays) both reach
+  // `setOrientation` by those other paths, covered below. If `orientation`
+  // ever moves back onto `SettingsSnapshot`, this list must grow to include
+  // `mergeSnapshot`.
   writesOn: [setOrientation.match],
   write: (state) => {
     const orientation = selectOrientation(state);
     return orientation === DEFAULT_ORIENTATION ? null : orientation;
   },
-  read: (value) => (isOrientationFrameId(value) ? [setOrientation(value)] : []),
+  read: (value) => (isOrientationFrameId(value) ? { orientation: value } : {}),
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
+/**
+ * `pose` — the `l`-key share URL's exact camera, read-only. It writes nothing
+ * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
+ * `commitCameraPose` every frame of a drag, and a row that tried to keep up
+ * would fight `watchHashWriteSaga`'s own coalescing for no reader anyone
+ * shares. Absence means "leave the camera alone", boot and navigation alike.
+ *
+ * A pose beside a `focus` is that focus's arrival pose (`combineLinkViews`).
+ */
+const poseSource: HashParamSource = {
+  key: 'pose',
+  deepLink: true,
+  writesOn: [],
+  write: () => null,
+  read: (value) => {
+    const framed = decodeFramedPose(value);
+    if (framed === null) {
+      console.warn(`hashParamSources: malformed pose param, ignoring: ${value}`);
+      return {};
+    }
+    return { view: { kind: 'pose', pose: framed } };
+  },
+  readAbsent: () => [],
+};
+
+/**
+ * `exhibit` / `tour` / `clip` — a takeover link. The read names the subject and
+ * `navigateSaga` validates the id against its registry. The write mirrors what
+ * is running, however it started, so a reload or a shared copy reopens it.
+ * Absence restores nothing here: leaving the running takeover is
+ * `applyNavigation`'s, which knows what runs and what the entry names.
+ */
+const isTakeoverChange = (action: Action): boolean =>
+  takeoverStarted.match(action) || takeoverEnded.match(action);
+
+const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
+  key,
+  deepLink: true,
+  writesOn: [isTakeoverChange],
+  write: (state) => {
+    const source = selectTakeoverSource(state);
+    return source?.kind === key ? source.id : null;
+  },
+  read: (value) => ({ view: { kind: key, id: value } }),
+  readAbsent: () => [],
+});
+
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
+  poseSource,
   focusSource,
   timeSource,
   orientationSource,
+  takeoverSource('exhibit'),
+  takeoverSource('tour'),
+  takeoverSource('clip'),
 ];

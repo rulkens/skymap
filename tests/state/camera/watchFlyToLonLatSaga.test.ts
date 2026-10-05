@@ -50,7 +50,7 @@ function run(payload: FlyToLonLatPayload, runtime: LiveCameraRuntime | null = li
 }
 
 function liveRuntime(): LiveCameraRuntime {
-  return { from: FROM, fovYRad: Math.PI / 3, upBasisQuat: [0, 0, 0, 1] };
+  return { from: FROM, fovYRad: Math.PI / 3, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] };
 }
 
 function tweenOf(a: UnknownAction | undefined): CameraTweenDescriptor {

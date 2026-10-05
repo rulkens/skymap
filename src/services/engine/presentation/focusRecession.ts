@@ -12,7 +12,7 @@
 import type { FadeId } from '../../../@types/animation/FadeId';
 import type { LabelLayerId } from '../../../@types/animation/LabelLayerId';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
@@ -20,7 +20,7 @@ import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 // The opacity each tagged layer settles to at full focus (blend = 1): markers and
 // labels dim moderately, the large diffuse fields recede harder. Eye-tuned.
 export const FILAMENT_RECESSION = 0.15;
-export const VOLUME_RECESSION = 0.15;
+const VOLUME_RECESSION = 0.15;
 export const MARKER_RECESSION = 0.25;
 export const LABEL_RECESSION = 0.25;
 
@@ -46,14 +46,16 @@ const RECESSION_BY_LABEL_LAYER = {
   // declutters by its own mechanism.
   starCatalog: undefined,
   body: undefined,
+  blackHoles: undefined,
 } satisfies Record<LabelLayerId, number | undefined>;
 
 const RECESSION_BY_KIND = {
-  filament: FILAMENT_RECESSION,
-  volumesMaster: VOLUME_RECESSION,
+  cosmicWebFilaments: FILAMENT_RECESSION,
+  localBubble: FILAMENT_RECESSION,
+  cosmicWebDensity: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,
-  volumeField: undefined,
+  cosmicWebDensityField: undefined,
   milkyWay: undefined, // the MW disk does not recede on focus
   flow: undefined,
   constellations: undefined,
@@ -62,7 +64,7 @@ const RECESSION_BY_KIND = {
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
 
-export function recessionTargetFor(h: FadeId): number | undefined {
+function recessionTargetFor(h: FadeId): number | undefined {
   return h.kind === 'labelLayer' ? RECESSION_BY_LABEL_LAYER[h.layer] : RECESSION_BY_KIND[h.kind];
 }
 
@@ -84,13 +86,12 @@ function clipFactorFor(clip: ClipPlayer, h: FadeId, now: number): number {
  */
 export function resolveLayerOpacity(
   state: Pick<EngineState, 'subsystems'>,
-  ctx: Pick<ReadyFrameContext, 'focusBlend' | 'nowMs'>,
+  ctx: FrameView,
   h: FadeId,
 ): number {
   const { fades, clipPlayer } = state.subsystems;
+  const { nowMs, focusBlend } = ctx.snapshot;
   return (
-    fades.opacityOf(h, ctx.nowMs) *
-    focusRecession(h, ctx.focusBlend) *
-    clipFactorFor(clipPlayer, h, ctx.nowMs)
+    fades.opacityOf(h, nowMs) * focusRecession(h, focusBlend) * clipFactorFor(clipPlayer, h, nowMs)
   );
 }

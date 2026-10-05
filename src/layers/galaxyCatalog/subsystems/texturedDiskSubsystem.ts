@@ -23,15 +23,12 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
 import type { TexturedDiskDeps } from '../../../@types/engine/subsystems/TexturedDiskDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type {
-  TexturedDiskFrameInput,
-  TexturedDiskFrameOutput,
-  TexturedDiskSubsystemWithTestSeam,
-} from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
+import type { TexturedDiskSubsystemWithTestSeam } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystemWithTestSeam';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
+import { createDeadHostSet } from '../../../utils/network/createDeadHostSet';
 import { cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
 import { loadFadeAlpha } from '../../../utils/render/disk/loadFadeAlpha';
@@ -45,6 +42,8 @@ import {
   FADE_BAND_PX,
   DISK_THRESHOLD_PX,
 } from '../../../data/galaxyLodBands';
+import type { TexturedDiskFrameInput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
 
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
@@ -69,6 +68,10 @@ export function createTexturedDiskSubsystem(
   // arrivals wake the loop via the atlas subsystem's onResult.
   const { atlas } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
+  // Per-subsystem, not per-process: this is the only consumer whose fetches
+  // reach SDSS/DSS (the hi-res planner only ever hits our own origin), so the
+  // set has exactly one writer and needs no global to be shared through.
+  const deadHosts = createDeadHostSet();
   // Mutable binding rather than `const` so `setHiResFamous(...)` can
   // swap the planner reference on tier change without rebuilding the
   // whole subsystem (which would discard per-key load-fade timestamps
@@ -91,7 +94,7 @@ export function createTexturedDiskSubsystem(
   let destroyed = false;
 
   // The last frame's stamped clock, held so code that runs OUTSIDE a frame
-  // (the async bitmap-arrival callback, hasInFlightWork) reads the frame
+  // (the async bitmap-arrival callback, hasFadingContent) reads the frame
   // clock instead of sampling performance.now(). At most one frame stale —
   // irrelevant to a 400 ms load-fade — and deterministic under a stepped
   // recorder clock.
@@ -183,7 +186,7 @@ export function createTexturedDiskSubsystem(
           atlas.enqueueFetch({
             key,
             priority: px,
-            fetcher: () => fetcher({ ra, dec, famousId }),
+            fetcher: () => fetcher({ ra, dec, famousId, deadHosts }),
             onResult: (bitmap) => {
               if (destroyed) {
                 bitmap?.close();
@@ -263,9 +266,7 @@ export function createTexturedDiskSubsystem(
     return visitor;
   }
 
-  function hasInFlightWork(): boolean {
-    if (atlas.inFlightCount() > 0) return true;
-    if (bitmapReadyTime.size === 0) return false;
+  function hasFadingContent(): boolean {
     // Read at the last frame's stamped clock: this predicate is consumed by
     // the same frame loop that stamps it, so "one frame stale" just extends
     // a 400 ms fade window by one frame — a no-op visually, and it keeps
@@ -293,7 +294,7 @@ export function createTexturedDiskSubsystem(
     get lastOutput() {
       return lastOutput;
     },
-    hasInFlightWork,
+    hasFadingContent,
     setHiResFamous,
     destroy,
     __testGetState() {

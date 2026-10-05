@@ -2,21 +2,18 @@
  * SettingsPanel — presentational shell for the renderer settings HUD panel.
  *
  * Renders the composed Layers' own `ui` sections (in composition order, D13),
- * then the seven core section containers, wrapped in the shared Panel chrome.
+ * then the five core section containers, wrapped in the shared Panel chrome.
  * Zero store reach lives here — every selector and dispatch call belongs to
  * the containers/Layers this shell renders. `defaultOpen` is the one prop
  * beyond the Redux store's reach (false on mobile viewports).
  */
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
-import type { Layer } from '../../@types/engine/layer/Layer';
+import { layerUiContents } from '../../utils/layer/layerUiContents';
 import TierChipContainer from '../containers/TierChipContainer';
-import StarsSectionContainer from '../containers/StarsSectionContainer';
-import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
-import FlowSectionContainer from '../containers/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
@@ -34,6 +31,11 @@ type SettingsPanelProps = {
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
 }: SettingsPanelProps): ReactNode {
+  const mainSections = useMemo(() => layerUiContents(APP_COMPOSITION.layers, 'main'), []);
+  const labelsAndGuidesRows = useMemo(
+    () => layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides'),
+    [],
+  );
   return (
     <Panel
       title="Settings"
@@ -41,14 +43,11 @@ export const SettingsPanel = memo(function SettingsPanel({
       defaultOpen={defaultOpen}
       headerExtra={<TierChipContainer />}
     >
-      {APP_COMPOSITION.layers.map((layer: Layer<string, unknown>) =>
-        layer.ui ? <layer.ui key={layer.name} /> : null,
-      )}
-      <StarsSectionContainer />
-      <CosmicWebSectionContainer />
-      <FlowSectionContainer />
+      {mainSections.map((Section, index) => (
+        <Section key={index} />
+      ))}
       <StructuresSectionContainer />
-      <LabelsAndGuidesSectionContainer />
+      <LabelsAndGuidesSectionContainer layerRows={labelsAndGuidesRows} />
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>

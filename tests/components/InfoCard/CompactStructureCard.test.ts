@@ -28,7 +28,7 @@ const virgo: StructureInfo = {
 
 describe('CompactStructureCard', () => {
   it('renders a distance row derived from |worldPos|', () => {
-    render(createElement(CompactStructureCard, { structure: virgo }));
+    render(createElement(CompactStructureCard, { target: virgo }));
     // |[10, 0, 0]| = 10 Mpc.  formatDistance renders "10.0 Mpc / 32.6 Mly"
     // (formatScalar uses one decimal between 10 and 100); assert on the
     // "Mpc" unit token so the test survives a future tweak to the
@@ -37,7 +37,7 @@ describe('CompactStructureCard', () => {
   });
 
   it('renders the physical radius when present', () => {
-    render(createElement(CompactStructureCard, { structure: virgo }));
+    render(createElement(CompactStructureCard, { target: virgo }));
     // formatDistance(2.2) → "2.20 Mpc / 7.18 Mly".  Match on the leading
     // "2.2" digits regardless of surrounding decimals so a future
     // formatScalar adjustment doesn't break the assertion.

@@ -31,6 +31,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { UiState } from '../../@types/ui/UiState';
+import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
 import { buildInitialUiState } from './buildInitialUiState';
 
 const initialState: UiState = buildInitialUiState();
@@ -42,6 +43,9 @@ const uiSlice = createSlice({
     // ── palette ─────────────────────────────────────────────────────────────
     setPaletteOpen: (state, action: PayloadAction<boolean>) => {
       state.paletteOpen = action.payload;
+    },
+    setPaletteTab: (state, action: PayloadAction<PaletteTabId>) => {
+      state.paletteTab = action.payload;
     },
 
     // ── ui visibility ────────────────────────────────────────────────────────
@@ -77,6 +81,7 @@ const uiSlice = createSlice({
 
 export const {
   setPaletteOpen,
+  setPaletteTab,
   setUiHidden,
   toggleUiHidden,
   setDebugPanelOpen,

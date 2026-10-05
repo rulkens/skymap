@@ -306,6 +306,119 @@
     "description": "One side of Iapetus is dark as coal while the other gleams like fresh snow, a split so sharp it can be seen from Earth through a small telescope. A ridge of mountains runs along its equator, giving this moon of Saturn the outline of a walnut."
   },
   {
+    "id": "miranda",
+    "mass": "6.59 × 10¹⁹ kg",
+    "gravity": "0.008 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "1.4 Earth days",
+    "distance": "129,900 km",
+    "parent": "Uranus",
+    "meanTemp": "−214 °C",
+    "atmosphere": "None",
+    "wikiTitle": "Miranda_(moon)",
+    "description": "Miranda is the smallest and innermost of the five large moons of Uranus. Its surface is a patchwork of ancient cratered plains, grooved terrain and cliffs up to 20 kilometres high, as if the moon had been broken apart and reassembled."
+  },
+  {
+    "id": "ariel",
+    "mass": "1.25 × 10²¹ kg",
+    "gravity": "0.027 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "2.5 Earth days",
+    "distance": "190,900 km",
+    "parent": "Uranus",
+    "meanTemp": "−213 °C",
+    "atmosphere": "None",
+    "wikiTitle": "Ariel_(moon)",
+    "description": "Ariel is the brightest of the large moons of Uranus. Its icy surface is crossed by long canyons and fault valleys, and smooth plains on the valley floors suggest that icy material once flowed up from the interior."
+  },
+  {
+    "id": "umbriel",
+    "mass": "1.28 × 10²¹ kg",
+    "gravity": "0.020 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "4.1 Earth days",
+    "distance": "266,000 km",
+    "parent": "Uranus",
+    "meanTemp": "−198 °C",
+    "atmosphere": "None",
+    "wikiTitle": "Umbriel_(moon)",
+    "description": "Umbriel is the darkest of the five large moons of Uranus, with an old surface of heavily cratered ice. Its most striking mark is Wunda, a bright ring on the floor of a crater near the equator."
+  },
+  {
+    "id": "titania",
+    "mass": "3.40 × 10²¹ kg",
+    "gravity": "0.038 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "8.7 Earth days",
+    "distance": "436,300 km",
+    "parent": "Uranus",
+    "meanTemp": "−203 °C",
+    "atmosphere": "None",
+    "wikiTitle": "Titania_(moon)",
+    "description": "Titania is the largest moon of Uranus, a mix of ice and rock with a surface of craters and long fault canyons. Messina Chasmata, the largest of these, stretches for about 1,500 kilometres."
+  },
+  {
+    "id": "oberon",
+    "mass": "3.08 × 10²¹ kg",
+    "gravity": "0.035 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "13.5 Earth days",
+    "distance": "583,500 km",
+    "parent": "Uranus",
+    "meanTemp": "−198 °C",
+    "atmosphere": "None",
+    "wikiTitle": "Oberon_(moon)",
+    "description": "Oberon is the outermost of the large moons of Uranus and the second largest. Its ancient surface is covered in craters, many with dark floors, and one mountain on its limb rises about 11 kilometres."
+  },
+  {
+    "id": "puck",
+    "mass": "2.9 × 10¹⁸ kg",
+    "gravity": "0.003 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "0.8 Earth days",
+    "distance": "86,000 km",
+    "parent": "Uranus",
+    "atmosphere": "None",
+    "wikiTitle": "Puck_(moon)",
+    "description": "Puck is a small, dark, heavily cratered moon of Uranus that circles just outside the planet's rings. It was found in Voyager 2 images in 1985, and is the largest of the inner moons."
+  },
+  {
+    "id": "triton",
+    "mass": "2.14 × 10²² kg",
+    "gravity": "0.08 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "5.9 Earth days (retrograde)",
+    "distance": "354,800 km",
+    "parent": "Neptune",
+    "atmosphere": "Very thin nitrogen",
+    "wikiTitle": "Triton_(moon)",
+    "description": "William Lassell found Triton on 10 October 1846, seventeen days after Neptune itself was discovered. It is the only large moon that circles its planet backwards, which suggests Neptune captured it from the Kuiper belt. With a surface near 38 kelvin it is one of the coldest places Voyager 2 visited, and in 1989 the probe saw dark plumes rising from its bright southern ice cap."
+  },
+  {
+    "id": "proteus",
+    "mass": "5.0 × 10¹⁹ kg",
+    "gravity": "0.008 g",
+    "dayLength": "Tidally locked",
+    "yearLength": "1.1 Earth days",
+    "distance": "117,600 km",
+    "parent": "Neptune",
+    "atmosphere": "None",
+    "wikiTitle": "Proteus_(moon)",
+    "description": "Proteus is the second-largest moon of Neptune, about 420 kilometres across, and was first seen in Voyager 2 images in 1989. It is one of the darkest bodies in the Solar System, reflecting only about ten percent of the light that falls on it, and it is about as large as an irregular lump of rock and ice can be before its own gravity would pull it round."
+  },
+  {
+    "id": "nereid",
+    "mass": "3.0 × 10¹⁹ kg",
+    "gravity": "0.007 g",
+    "dayLength": "About 11.6 hours",
+    "yearLength": "360 Earth days",
+    "distance": "5.5 million km",
+    "parent": "Neptune",
+    "atmosphere": "None",
+    "wikiTitle": "Nereid_(moon)",
+    "description": "Gerard Kuiper discovered Nereid in 1949. It is about 340 kilometres across and follows one of the most eccentric orbits of any moon in the Solar System, swinging from about 1.4 million kilometres from Neptune out to nearly 10 million kilometres once every 360 days. That orbit suggests it was flung outward when Triton was captured."
+  },
+  {
     "id": "charon",
     "mass": "1.59 × 10²¹ kg",
     "gravity": "0.029 g",
@@ -352,24 +465,30 @@
     "id": "curiosity",
     "dayLength": "24 h 39 m 35 s (1 sol)",
     "wikiTitle": "Curiosity_(rover)",
-    "description": "Curiosity landed at Bradbury Landing in Gale crater (4.59°S 137.44°E) on 6 August 2012, and its work on ancient lakebed mudstone showed the crater once held a lake that could have supported life. The marker shows the landing site, not the rover: Curiosity is still operating, tens of kilometres on from here, climbing Mount Sharp."
+    "description": "Curiosity landed at Bradbury Landing in Gale crater (4.59°S 137.44°E) on 6 August 2012, and its work on ancient lakebed mudstone showed the crater once held a lake that could have supported life. The marker shows the rover where it stood on sol 5016 (September 2026), about 14 km south of the landing site on the slopes of Mount Sharp; Curiosity is still driving, so it has moved on since."
   },
   {
     "id": "perseverance",
     "dayLength": "24 h 39 m 35 s (1 sol)",
     "wikiTitle": "Perseverance_(rover)",
-    "description": "Perseverance landed at Octavia E. Butler Landing in Jezero crater (18.44°N 77.45°E) on 18 February 2021 to search an ancient river delta for traces of microbial life, sealing rock cores for a possible return to Earth. The marker shows the landing site, not the rover: Perseverance is still operating and has driven tens of kilometres beyond it."
+    "description": "Perseverance landed at Octavia E. Butler Landing in Jezero crater (18.44°N 77.45°E) on 18 February 2021 to search an ancient river delta for traces of microbial life, sealing rock cores for a possible return to Earth. The marker shows the rover where it stood on sol 1980 (September 2026), about 12 km west of the landing site; Perseverance is still driving, so it has moved on since."
   },
   {
     "id": "spirit",
     "dayLength": "24 h 39 m 35 s (1 sol)",
     "wikiTitle": "Spirit_(rover)",
-    "description": "Spirit landed at Columbia Memorial Station in Gusev crater (14.57°S 175.47°E) on 4 January 2004 for a mission planned to last 90 sols, and kept working for six years before its wheels sank into soft soil. The marker shows the landing site, not the rover, which sent its last signal in 2010 from several kilometres away."
+    "description": "Spirit landed at Columbia Memorial Station in Gusev crater (14.57°S 175.47°E) on 4 January 2004 for a mission planned to last 90 sols, and kept working for six years before its wheels sank into soft soil. It sent its last signal in 2010 from a sand trap called Troy beside Home Plate, and the marker stands there, about 3.6 km east-southeast of the landing site."
   },
   {
     "id": "opportunity",
     "dayLength": "24 h 39 m 35 s (1 sol)",
     "wikiTitle": "Opportunity_(rover)",
-    "description": "Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. The marker shows the landing site, not the rover, which fell silent in a planet-wide dust storm in 2018 at Perseverance Valley, on the rim of Endeavour crater."
+    "description": "Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. It fell silent in a planet-wide dust storm in 2018 in Perseverance Valley, on the rim of Endeavour crater, and the marker stands there, about 25 km from the landing site."
+  },
+  {
+    "id": "sgr-a-star",
+    "mass": "4.3 million M☉",
+    "wikiTitle": "Sagittarius_A*",
+    "description": "The supermassive black hole at the centre of the Milky Way, about 26,700 light-years from the Sun, with the mass of about four million Suns inside a region smaller than Mercury's orbit. Its mass comes from tracking the S-stars in orbit around it. S2 passes within 120 AU at more than 7,000 km/s, and that work shared the 2020 Nobel Prize in Physics. The radius shown is the event horizon."
   }
 ]

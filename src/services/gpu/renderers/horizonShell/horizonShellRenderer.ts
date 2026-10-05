@@ -35,15 +35,17 @@
  *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
 
-import { vec3 } from 'wgpu-matrix';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitForwardOf';
 import vsCode from '../../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { HORIZON_RADIUS_GPC } from '../../../../data/rendering/horizonRadiusGpc';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../../@types/rendering/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
@@ -60,19 +62,7 @@ type Init = {
 };
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
-export const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
-
-/**
- * Comoving radius to the cosmic particle horizon, in GIGAPARSECS.
- *
- * Standard flat-ΛCDM Planck-2018 cosmology gives ~14.3 Gpc for the
- * limit of light propagation since the Big Bang — also roughly where
- * the CMB last-scattering surface sits (z ≈ 1100, ~14.0 Gpc).
- */
-export const HORIZON_RADIUS_GPC = 14.3;
-
-/** Mpc → Gpc scale. */
-const MPC_PER_GPC = 1000;
+const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   const { device, targetFormat } = init;
@@ -128,9 +118,8 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   // Per-frame scratch, allocated once to avoid GC churn.
   const uniforms = new ArrayBuffer(HORIZON_SHELL_UNIFORM_BUFFER_SIZE);
   const f32 = new Float32Array(uniforms);
-  // Plain Vec3 tuples (not vec3.create's Float32Array) so the per-component
-  // reads below index cleanly under noUncheckedIndexedAccess.  wgpu-matrix
-  // writes into them in place via the `dst` arg just the same.
+  // Plain Vec3 tuples so the per-component reads below index cleanly under
+  // noUncheckedIndexedAccess; `orbitForwardOf` writes into them in place.
   const fwd: Vec3 = [0, 0, 0];
   // Frame-pole reference up, allocated once and rewritten in place each frame.
   const upRefScratch: Vec3 = [0, 0, 0];
@@ -146,7 +135,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
     //
-    //   forward = normalize(target - position)
+    //   forward = orbitForwardOf(cam)   (decoded, so a lookOffset turns it)
     //   right   = normalize(forward × rolledUp)
     //   up      = normalize(right × forward)
     //
@@ -156,8 +145,7 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     // `imagePlaneBasis`, which rolls the frame pole (`frameUp(cam.upBasis)`;
     // world +Y absent a basis) about the view direction — so the shell rolls in
     // lockstep with `computeViewProj` (both read the same draw-time `upBasis`).
-    vec3.subtract(cam.target, cam.position, fwd);
-    vec3.normalize(fwd, fwd);
+    orbitForwardOf(cam, fwd);
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRefScratch), basis);
     const right = basis.right;
     const up = basis.up;
@@ -181,9 +169,9 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     f32[10] = up[2];
     f32[11] = HORIZON_RADIUS_GPC;
     // cameraPosGpc (floats 12..14) + fadeAlpha (float 15).
-    f32[12] = cam.position[0]! / MPC_PER_GPC;
-    f32[13] = cam.position[1]! / MPC_PER_GPC;
-    f32[14] = cam.position[2]! / MPC_PER_GPC;
+    f32[12] = cam.position[0]! / SCALE_UNITS.GPC_TO_MPC;
+    f32[13] = cam.position[1]! / SCALE_UNITS.GPC_TO_MPC;
+    f32[14] = cam.position[2]! / SCALE_UNITS.GPC_TO_MPC;
     f32[15] = fadeAlpha;
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 

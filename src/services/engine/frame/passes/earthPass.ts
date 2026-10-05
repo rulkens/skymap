@@ -3,7 +3,7 @@
  * `foreground:0`. The detail patches over it are `surfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
- * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
+ * sub-pixel), so `enabled` mainly checks `view.slab.frame.hostId === 'earth'`;
  * the foreground-distance check below is the one gate this layer still owns,
  * shared with `planetsPass`.
  *
@@ -15,12 +15,13 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 import type { CelestialBody } from '../../../../@types/scene/CelestialBody';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { SlabHostId } from '../../../../@types/engine/frame/SlabHostId';
 import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRelativePose';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -46,25 +47,23 @@ import { sceneBodyStates } from '../sceneBodyStates';
  * layers can seed a row from. Mirrors `sceneBodyStates`' own null-safety
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
-function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null {
-  const { earth, planets, stars } = state.data.bodies;
+function sceneBodyForId(state: PassState, bodyId: SlabHostId): CelestialBody | null {
+  const { earth, planets } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
-  const planet = planets.find((p) => p.id === bodyId);
-  if (planet !== undefined) return planet;
-  return stars.find((s) => s.id === bodyId) ?? null;
+  return planets.find((p) => p.id === bodyId) ?? null;
 }
 
 /**
  * One body-slab-row derivation, shared by `draw`, `drawPick`, and
  * `runFrame`'s tile planner — the three sites that each used to
  * independently look up the body's state and recompute the same body-local
- * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `prepareStarCut` in
- * `starCatalogPass.ts`), so whichever call site reaches it first in a frame
+ * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `readStarCut` in
+ * `layers/starCatalog/render/cut/readStarCut.ts`), so whichever call site reaches it first in a frame
  * does the work and the rest read the cache — keyed on `bodyId`, not just
  * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
  * memo would return Earth's frame for any other body sharing the same frame.
  */
-export type PreparedBodySurfaceFrame = {
+type PreparedBodySurfaceFrame = {
   readonly body: CelestialBody;
   readonly bodyState: BodyState;
   readonly pose: BodyRelativePose;
@@ -75,18 +74,15 @@ export type PreparedBodySurfaceFrame = {
   readonly camLocal: Vec3;
 };
 
-const preparedByCtx = new WeakMap<
-  ReadyFrameContext,
-  Map<BodyId, PreparedBodySurfaceFrame | null>
->();
+const preparedByCtx = new WeakMap<FrameView, Map<SlabHostId, PreparedBodySurfaceFrame | null>>();
 
 export function prepareBodySurfaceFrame(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   view: SlabView,
 ): PreparedBodySurfaceFrame | null {
   if (view.slab.frame.kind !== 'body-m') return null;
-  const bodyId = view.slab.frame.bodyId;
+  const bodyId = view.slab.frame.hostId;
 
   let byBody = preparedByCtx.get(ctx);
   if (byBody === undefined) {
@@ -102,16 +98,16 @@ export function prepareBodySurfaceFrame(
 
 function computeBodySurfaceFrame(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   view: SlabView,
-  bodyId: BodyId,
+  bodyId: SlabHostId,
 ): PreparedBodySurfaceFrame | null {
   const body = sceneBodyForId(state, bodyId);
   if (body === null) return null;
   const bodyState = sceneBodyStates(state, ctx).get(bodyId);
   if (bodyState === undefined) return null;
   // The SAME pose-provider closure `deriveSlabs` was fed to build this
-  // body's slab row (see ReadyFrameContext.bodyPose's doc) — reading it here
+  // body's slab row (see FrameView.bodyPose's doc) — reading it here
   // instead of re-deriving the pose is what keeps this layer's eyeRelBodyM
   // from ever drifting off the basis `view.slab.vp` was actually built from.
   const pose = ctx.bodyPose(bodyId);
@@ -132,7 +128,7 @@ export const earthPass: ContentPass = {
   name: 'earth',
 
   enabled(state, ctx, view) {
-    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.bodyId !== 'earth') return false;
+    if (view.slab.frame.kind !== 'body-m' || view.slab.frame.hostId !== 'earth') return false;
     if (state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     return state.data.bodies.earth !== null;

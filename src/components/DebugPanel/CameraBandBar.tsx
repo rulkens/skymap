@@ -11,7 +11,7 @@
 import type { ReactElement } from 'react';
 import styles from './CameraBandBar.module.css';
 
-export type BandTick = {
+type BandTick = {
   readonly label: string;
   readonly hOverR: number;
 };

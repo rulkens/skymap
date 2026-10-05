@@ -171,7 +171,7 @@ the path the spike used and the suspend guard's doc already describes.
 The beat now carries its clip, so the saga no longer resolves focus or builds a
 fly clip. It becomes:
 
-1. `waitUntil` the clip's referenced focus-ids resolve (the readiness gate now
+1. `waitUntilSaga` the clip's referenced focus-ids resolve (the readiness gate now
    polls the resolve pass, not `focusReady(beat.focus)`).
 2. `playClip(beat.clip)` — awaited, so a mid-flight `advanceTour` doesn't cut it.
 3. Show caption.

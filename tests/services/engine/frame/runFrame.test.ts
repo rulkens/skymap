@@ -84,7 +84,9 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
+import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -113,10 +115,10 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
-import type { LayerInstance } from '../../../../src/@types/engine/layer/LayerInstance';
-import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
@@ -129,6 +131,7 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -173,13 +176,11 @@ function makeState(): EngineState {
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
       // aggregateDivisor is what the `mw-aggregate` row's `scale` function
-      // resolves on every reconcile, and starCount is read every frame by the
-      // cloud-regenerate branch (whenever milkyWayCloud is non-null), so the
-      // fixture carries both boot values rather than leaving either reader to
-      // resolve undefined.
-      milkyWay: { enabled: false, aggregateDivisor: 2, starCount: 150000 },
-      filaments: { enabled: false, intensity: 1 },
-      volumes: { enabled: false },
+      // resolves on every reconcile, so the fixture carries its boot value
+      // rather than leaving that reader to resolve undefined.
+      milkyWay: { enabled: false, aggregateDivisor: 2 },
+      cosmicWebFilaments: { enabled: false, intensity: 1 },
+      cosmicWebDensity: { enabled: false },
     },
     picking: {
       pickInFlight: false,
@@ -230,6 +231,8 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
+    // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
+    viewRig: 'mono',
     assetSlots: {
       points: new Map(),
       filaments: null,
@@ -243,6 +246,9 @@ function makeState(): EngineState {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         winner: 'resting',
       },
+      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
+      // Must match the store's orientation, or frame one reads a phantom switch.
+      orientation: DEFAULT_ORIENTATION,
       epochs: UNSTARTED_EPOCHS,
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
@@ -255,13 +261,19 @@ function makeState(): EngineState {
         projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
       },
     },
+    // The ready-frame fixtures below (makeReadyState, makeLayerState) reach
+    // `runLabel3DProducers`, which iterates this — empty is the boot value.
+    label3DProducers: [],
+    // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
+    // ready gate.
+    selectionRows: { focus: null },
   } as unknown as EngineState;
 }
 
 /**
  * Build a `RunFrameDeps` of no-op stubs.  Every dep is inert because the
  * renderer-null bail-out inside `runFrame` short-circuits before any of
- * them are touched; the camera-driver fixtures override `drivers` + `canvas`
+ * them are touched; the camera-driver fixtures override `controlSchemes` + `canvas`
  * + `cb.store` via `makeCamDeps`.
  */
 function makeDeps(store = makeStore()): RunFrameDeps {
@@ -277,7 +289,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     context: {} as unknown as GPUCanvasContext,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 }
 
@@ -314,7 +326,7 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
       clientWidth: 100,
       clientHeight: 100,
     } as unknown as HTMLCanvasElement,
-    drivers: CAMERA_DRIVERS,
+    controlSchemes: CONTROL_SCHEMES,
   };
 }
 
@@ -679,7 +691,7 @@ describe('runFrame — orientation-frame roll', () => {
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
       // NaN; assert every entry is finite.
-      const vp = computeViewProj(cam);
+      const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
       for (const m of vp) expect(Number.isFinite(m)).toBe(true);
     }
   });
@@ -791,7 +803,10 @@ describe('runFrame — sim clock (Task 8)', () => {
         };
       },
     };
-    const deps: RunFrameDeps = { ...makeCamDeps(state, store), drivers: [stub] };
+    const deps: RunFrameDeps = {
+      ...makeCamDeps(state, store),
+      controlSchemes: { skymap: { drivers: [stub] } },
+    };
 
     runFrame(state, deps, NOW);
 
@@ -856,75 +871,6 @@ describe('runFrame — render-target reconcile', () => {
 
     expect(reconcile).toHaveBeenCalledTimes(1);
     expect(reconcile).toHaveBeenCalledWith(state, { width: 800, height: 600 });
-  });
-});
-
-describe('runFrame — milky-way star count', () => {
-  it('regenerates the cloud when starCount moves, and leaves it alone when it does not', () => {
-    // starCount feeds generation, not a uniform or a render target — a
-    // texture-rebuild-shaped fix doesn't apply here, so the only way a drag
-    // reaches the screen is runFrame's per-frame `reconcile` call: the cloud
-    // notices the setting has outrun the buffers and calls regenerate. A knob
-    // with no branch wired to it would silently do nothing, which is the failure
-    // this test exists to catch. The steady-state half matters just as much as
-    // the mw-aggregate divisor test's: comparing against `cloud.starCount()`
-    // (what the CURRENT buffers were generated with) has to settle once the
-    // regenerate lands, or every frame after a drag would regenerate again.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(store);
-
-    let currentCount = 150000;
-    const regenerate = vi.fn((count: number) => {
-      currentCount = count;
-    });
-    state.gpu.milkyWayCloud = {
-      buffers: vi.fn(),
-      starCount: () => currentCount,
-      regenerate,
-      reconcile: (wantedCount: number) => {
-        if (currentCount !== wantedCount) {
-          regenerate(wantedCount);
-        }
-      },
-      destroy: vi.fn(),
-    } as unknown as EngineState['gpu']['milkyWayCloud'];
-
-    state.settings.milkyWay.starCount = 40000;
-    runFrame(state, deps, 0);
-
-    expect(regenerate).toHaveBeenCalledTimes(1);
-    expect(regenerate).toHaveBeenCalledWith(40000);
-    expect(currentCount).toBe(40000);
-
-    // A frame with the setting unchanged must not regenerate again.
-    runFrame(state, deps, 16);
-    expect(regenerate).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('runFrame — flow field reconcile', () => {
-  it('calls flowFieldRenderer.reconcile with the live flow settings, every frame', () => {
-    // The flow field's own reseed-on-switch is a value compare (Task 6); this
-    // only pins that runFrame feeds it the settings every frame, the way
-    // milkyWayCloud.reconcile is fed starCount every frame above.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(store);
-
-    const reconcile = vi.fn<(seed: { mode: string; count: number }) => void>();
-    state.gpu.flowFieldRenderer = {
-      reconcile,
-    } as unknown as EngineState['gpu']['flowFieldRenderer'];
-    (state.settings as unknown as { flow: { mode: string; count: number } }).flow = {
-      mode: 'advect',
-      count: 40000,
-    };
-
-    runFrame(state, deps, 0);
-
-    expect(reconcile).toHaveBeenCalledTimes(1);
-    expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
   });
 });
 
@@ -1058,6 +1004,7 @@ describe('runFrame — the label-director wake fold', () => {
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
+      slabRows: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
       // Empty over the empty composition — runFrame's Layer-hook loop
@@ -1110,22 +1057,16 @@ describe('runFrame — the label-director wake fold', () => {
   });
 });
 
-describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
+describe('runFrame — the planner keep-ticking fold', () => {
   /**
-   * A fully READY fixture, mirroring the label-director block's shape, plus
-   * a spy'd `structureFocus` whose `produceFocusUniforms` returns a distinct
-   * sentinel object — so a hook's captured `ctx.focus` can be checked for
-   * reference equality against it, proving the hook runs AFTER the
-   * `ctx.focus = focusUniforms` assignment, not before.
+   * A fully READY fixture, mirroring the label-director block's shape.
+   * `renderFrame` is mocked at module scope; a test that needs a planner to
+   * have voted `awake`/`settling` mutates `input.canvas.snapshot.plans`
+   * from inside that mock, the way the real `renderFrame` would via
+   * `runPlanSteps` — `runFrame` itself no longer runs any planner, only
+   * folds the result afterward (`snapshot.plans.awake`).
    */
-  const SENTINEL_FOCUS: FocusUniformsValue = {
-    center: [1, 2, 3],
-    apparentRadiusMpc: 1,
-    physicalRadiusMpc: 1,
-    blend: 0.5,
-  };
-
-  function makeLayerState(layers: readonly LayerInstance[]): EngineState {
+  function makeReadyState(): EngineState {
     const base = makeCamState();
     return {
       ...base,
@@ -1135,9 +1076,10 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
         starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
         bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
       },
+      slabRows: [],
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
-      layers,
+      layers: [],
       cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
         ...base.gpu,
@@ -1152,8 +1094,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
       subsystems: {
         ...base.subsystems,
         // At rest, keepTicking is false and the still-live sim clock falls
-        // through to the idle-tick arm — the label-director block's fixture
-        // never reaches it (one of its two tests always votes true).
+        // through to the idle-tick arm.
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
         texturedDisks: { hasInFlightWork: () => false },
         proceduralDisks: null,
@@ -1162,7 +1103,12 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
         earthTiles: null,
         structureFocus: {
           update: vi.fn(),
-          produceFocusUniforms: vi.fn(() => SENTINEL_FOCUS),
+          produceFocusUniforms: vi.fn(() => ({
+            center: [1, 2, 3],
+            apparentRadiusMpc: 1,
+            physicalRadiusMpc: 1,
+            blend: 0.5,
+          })),
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
@@ -1172,63 +1118,30 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     } as unknown as EngineState;
   }
 
-  function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
-    return {
-      name,
-      passes: [],
-      assets: [],
-      fades: [],
-      labels: [],
-      selection: [],
-      frame,
-      destroy: () => {},
+  it('a frame otherwise at rest, with no planner voting awake, does not keep the loop ticking', () => {
+    const state = makeReadyState();
+    runFrame(state, makeCamDeps(state), 0);
+    expect(state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
+  });
+
+  it('keeps the loop ticking off `snapshot.plans.awake`, read AFTER renderFrame ran', () => {
+    const state = makeReadyState();
+    const wakingPlanner: FrameContentPlanner<void> = {
+      name: 'test-awake',
+      scope: 'once',
+      plan: () => ({ value: undefined, awake: true, settling: false }),
     };
-  }
-
-  it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {
-    const order: string[] = [];
-    const focusSeenByA: { current: unknown } = { current: undefined };
-    const layerA = makeLayer('a', (ctx) => {
-      order.push('a');
-      focusSeenByA.current = ctx.focus;
-      return false;
+    vi.mocked(renderFrame).mockImplementationOnce((input) => {
+      input.canvas.snapshot.plans.put(wakingPlanner, undefined, {
+        value: undefined,
+        awake: true,
+        settling: false,
+      });
     });
-    const layerB = makeLayer('b', () => {
-      order.push('b');
-      return false;
-    });
-    const state = makeLayerState([layerA, layerB]);
-    const deps = makeCamDeps(state);
-
-    runFrame(state, deps, 0);
-
-    expect(order).toEqual(['a', 'b']);
-    expect(focusSeenByA.current).toBe(SENTINEL_FOCUS);
-  });
-
-  it('a hook returning true keeps the loop ticking; a Layer-free frame with everything else at rest does not', () => {
-    const stillState = makeLayerState([]);
-    runFrame(stillState, makeCamDeps(stillState), 0);
-    expect(stillState.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
-
-    const wakingLayer = makeLayer('wakes', () => true);
-    const wakingState = makeLayerState([wakingLayer]);
-    runFrame(wakingState, makeCamDeps(wakingState), 0);
-    expect(wakingState.subsystems.scheduler.requestRender).toHaveBeenCalled();
-  });
-
-  it('a second hook still runs when the first returned true — no short-circuit', () => {
-    const secondCalled = { value: false };
-    const layerA = makeLayer('a', () => true);
-    const layerB = makeLayer('b', () => {
-      secondCalled.value = true;
-      return false;
-    });
-    const state = makeLayerState([layerA, layerB]);
 
     runFrame(state, makeCamDeps(state), 0);
 
-    expect(secondCalled.value).toBe(true);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 });
 
@@ -1263,7 +1176,7 @@ describe('runFrame — effective intent', () => {
         return { pose: ctx.register, memory: mem };
       },
     };
-    const deps = { ...h.deps, drivers: [probe, ...CAMERA_DRIVERS] };
+    const deps = { ...h.deps, controlSchemes: { skymap: { drivers: [probe, ...CAMERA_DRIVERS] } } };
 
     const before = h.store.getState();
     runFrame(h.state, deps, 16);

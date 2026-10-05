@@ -1,15 +1,14 @@
-// src/components/containers/TourOverlayContainer.tsx
 /**
  * TourOverlayContainer — store boundary for the guided-tour overlay.
  *
  * Resolves the active beat's caption + readout + dwell state from the `tour`
- * slice (all of it derived from the runtime `tourId` + `beatIndex` via the tour
+ * slice (all of it derived from the takeover's tour id + `beatIndex` via the tour
  * selectors) and turns the four nav controls into Intent dispatches. The
  * presentational `TourOverlay` imports nothing from `store/` or `state/`.
  *
  * The four controls converge on the SAME tour signals the keyboard will dispatch
- * (`prevBeat` / `advanceTour` / `togglePause` / `exitTour`) — `pausableDwellSaga`
- * and `guidedTourSaga` are the single home that acts on them, so the button and
+ * (`prevBeat` / `advanceTour` / `togglePause` / `exitTakeover`) — `pausableDwellSaga`
+ * and `tourBodySaga` are the single home that acts on them, so the button and
  * keyboard surfaces share one behaviour with no duplicated logic.
  *
  * App mounts this only while `selectTourActive` is true, so the container does
@@ -37,7 +36,8 @@ import {
   selectTourDwellNonce,
   selectTourCanPrev,
 } from '../../state/tour/selectors';
-import { prevBeat, advanceTour, togglePause, exitTour } from '../../state/tour/tourActions';
+import { prevBeat, advanceTour, togglePause } from '../../state/tour/tourActions';
+import { exitTakeover } from '../../state/takeover/takeoverActions';
 
 function TourOverlayContainer(): React.ReactElement {
   const caption = useAppSelector(selectTourCaption);
@@ -54,11 +54,11 @@ function TourOverlayContainer(): React.ReactElement {
   const onPrev = useCallback(() => dispatch(prevBeat()), [dispatch]);
   const onNext = useCallback(() => dispatch(advanceTour()), [dispatch]);
   const onTogglePause = useCallback(() => dispatch(togglePause()), [dispatch]);
-  const onExit = useCallback(() => dispatch(exitTour()), [dispatch]);
+  const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
 
   return (
     <TourOverlay
-      chrome={!isCinemaMode()}
+      hasChrome={!isCinemaMode()}
       caption={caption}
       label={label}
       index={index}

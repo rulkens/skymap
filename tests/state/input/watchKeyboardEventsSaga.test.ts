@@ -40,8 +40,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchKeyboardEventsSaga } from '../../../src/state/input/watchKeyboardEventsSaga';
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
-import { exitTour } from '../../../src/state/tour/tourActions';
-import { stopClip } from '../../../src/state/camera/clipActions';
+import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -108,6 +107,6 @@ describe('watchKeyboardEventsSaga', () => {
     await flush();
 
     const after = recorded.slice(before);
-    expect(after).toEqual([clearSelection(), exitTour(), stopClip()]);
+    expect(after).toEqual([clearSelection(), exitTakeover()]);
   });
 });

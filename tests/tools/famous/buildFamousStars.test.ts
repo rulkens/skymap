@@ -9,12 +9,17 @@
  * gaiaDr3 and an omitted `massSolar` (the optional-field discipline the runtime
  * relies on — an absent value must be an absent key, never `null`/`0`).
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parseFamousStarsSeed } from '../../../tools/parsers/famousStarsSeed';
 import type { FamousStarEntry } from '../../../tools/parsers/famousStarsSeed';
+import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
 import {
+  STAR_SEEDS,
   seedToGeneratedRows,
   seedToMetaEntries,
   seedToRustConst,
+  serializeGeneratedTable,
 } from '../../../tools/famous/buildFamousStars';
 
 const FIXTURE: FamousStarEntry[] = [
@@ -127,6 +132,42 @@ describe('seedToMetaEntries', () => {
 
     // Structured variability round-trips intact.
     expect(achernar!.variable).toEqual({ type: 'Be', magRange: [0.4, 0.6] });
+  });
+});
+
+describe('serializeGeneratedTable', () => {
+  it("names the seed's own export and source of truth in the module it emits", () => {
+    // The banner and the export name are per-seed, not the famous table's: a
+    // second seed emitting `FAMOUS_STARS_GENERATED` would silently shadow the
+    // first at every import site.
+    const text = serializeGeneratedTable(seedToGeneratedRows(FIXTURE), {
+      seedKey: 'sun.seed',
+      generatedPath: 'src/data/bodies/sun.generated.ts',
+      exportName: 'SUN_GENERATED',
+    });
+
+    expect(text).toContain('// src/data/bodies/sun.generated.ts');
+    expect(text).toContain('// Source of truth:  data/seeds/sun.seed.json');
+    expect(text).toContain('export const SUN_GENERATED: readonly FamousStarRow[] = [');
+  });
+});
+
+/**
+ * The one disk-reading case in this file: the sidecar is built over EVERY seed
+ * in the registry, so a star that leaves the famous table for its own seed (the
+ * Sun) keeps its curated card. A per-seed sidecar, or a build that forgot a
+ * seed, drops that card back to `detail.kind: 'none'`.
+ */
+describe('the meta sidecar over the real seeds', () => {
+  it('carries every seed-backed star, the Sun included', () => {
+    const perSeed = STAR_SEEDS.map((seed) =>
+      parseFamousStarsSeed(readFileSync(rawDataPath(seed.seedKey), 'utf8')),
+    );
+    const entries = seedToMetaEntries(perSeed.flat());
+
+    expect(entries).toHaveLength(perSeed.reduce((n, rows) => n + rows.length, 0));
+    expect(entries.map((e) => e.id)).toContain('sun');
+    expect(entries.map((e) => e.id)).toContain('sirius');
   });
 });
 

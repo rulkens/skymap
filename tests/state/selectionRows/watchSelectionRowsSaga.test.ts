@@ -27,6 +27,7 @@ import {
 import {
   engineSourceCountReported,
   engineStructureCountsChanged,
+  engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
@@ -45,7 +46,7 @@ import {
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture, StarRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -106,12 +107,21 @@ describe('watchSelectionRowsSaga', () => {
     } as unknown as GalaxyRowFixture;
     const deps: ResolveDeps = {
       structures: { byId: () => structure, byCategory: () => [] },
-      stars: { current: () => starCatalog },
     };
+    // The starCatalog Layer's slice of the composed resolver, read LIVE like
+    // `galaxies` above so the deferral case can land the bin mid-test.
+    const stars = {
+      renderer: {
+        loadedCatalogs: () =>
+          (starCatalog ? [{ source: Source.GaiaStars, catalog: starCatalog }] : [])[
+            Symbol.iterator
+          ](),
+      },
+    } as unknown as StarRowFixture;
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({
       resolveDeps: () => deps,
-      selection: selectionResolverOver(deps, galaxies),
+      selection: selectionResolverOver(deps, galaxies, stars),
     });
     return s;
   }
@@ -174,7 +184,9 @@ describe('watchSelectionRowsSaga', () => {
     // that pulse or the star focus row stays null forever (the camera arrives
     // via watchFocusTweenSaga, but no InfoCard/body).
     starCatalog = null;
-    store.dispatch(updateSelectionFocus({ type: 'star', index: 0 }));
+    store.dispatch(
+      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }),
+    );
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
@@ -182,7 +194,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
-      type: 'star',
+      type: 'starCatalog',
       index: 0,
     });
   });
@@ -197,6 +209,35 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(engineStructureCountsChanged({ cluster: 1 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
+  });
+
+  it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {
+    // A Layer-kind ref (milkyWay) is unresolvable until createLayers appends
+    // its row — this flag stands in for that, flipped once "createLayers" has
+    // run. `wireSlots` dispatches 'loading' synchronously right after, with
+    // no catalog pulse involved, so this gap-fill's own wake needs its own
+    // resolver stub rather than riding the shared `build()` fixture.
+    let layerRowsLanded = false;
+    const sagaMiddleware = createSagaMiddleware();
+    const layerStore = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(sagaMiddleware),
+    });
+    sagaMiddleware.run(watchSelectionRowsSaga);
+    sagaMiddleware.setContext({
+      selection: {
+        extractRow: () => (layerRowsLanded ? { type: 'milkyWay' } : null),
+      },
+    });
+
+    layerStore.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(layerStore.getState()[selectionRowsRoute].focus).toBeNull();
+
+    layerRowsLanded = true;
+    layerStore.dispatch(engineStatusChanged({ kind: 'loading' }));
+    await flush();
+    expect(layerStore.getState()[selectionRowsRoute].focus).toMatchObject({ type: 'milkyWay' });
   });
 
   it('a body ref resolves its position at the LIVE sim instant, not a fixed epoch', async () => {

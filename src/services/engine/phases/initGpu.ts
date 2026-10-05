@@ -10,6 +10,7 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from '../../gpu/device';
+import { trackGpuMemory } from '../../gpu/memory/trackGpuMemory';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
@@ -44,6 +45,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   resizeCanvasToDisplay(canvas);
 
   const { device, context, format, hdrCapable } = await gpuInitGpu(canvas);
+  state.gpu.memory = trackGpuMemory(device);
 
   // Assigned now, not at the end of this throw-capable phase, so a later
   // throw still lets `destroy()` remove the HDR listener rather than leak it.

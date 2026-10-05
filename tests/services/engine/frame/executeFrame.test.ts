@@ -3,10 +3,11 @@
  *
  * The executor walks a `FrameStep[]` program into one command encoder, drawing
  * each render step's own pass list behind that pass's gate, dispatching
- * composites through the Compositor, and running compute steps through the
- * module-internal COMPUTE table. We mock the encoder, the render passes, the
- * compositor, and the content passes (object literals with spy `enabled`/`draw`),
- * so the whole thing runs without a real WebGPU device.
+ * composites through the Compositor, and resolving compute steps against the
+ * composed `state.computes` list (covered in `executeFrame.computes.test.ts`).
+ * We mock the encoder, the render passes, the compositor, and the content
+ * passes (object literals with spy `enabled`/`draw`), so the whole thing runs
+ * without a real WebGPU device.
  *
  * The behaviour-neutrality contract these tests pin (program order, one-pass-
  * per-non-empty-group under 'merged', per-layer timed passes under
@@ -24,7 +25,7 @@ import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/Execu
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../../src/@types/engine/frame/RenderStrategy';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
@@ -116,7 +117,7 @@ function makeContentPass(init: {
   name: string;
   enabled?: boolean;
   // Per-row gate for a body-roster pass: reads the resolved view (e.g. its
-  // `slab.frame.bodyId`) instead of the constant `enabled` flag above.
+  // `slab.frame.hostId`) instead of the constant `enabled` flag above.
   enabledFor?: (view: SlabView) => boolean;
   log?: string[];
 }): SpyPass {
@@ -134,9 +135,10 @@ function makeContentPass(init: {
 // ── Fake ctx / state ─────────────────────────────────────────────────────────
 
 const HDR_VIEW = { __id: 'hdr-view' } as unknown as GPUTextureView;
-const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
+const DENSITY_VIEW = { __id: 'density-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
+const FAR_VIEW = { __id: 'far-depth-placeholder-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
 const SKY_CUBEMAP_VIEW = { __id: 'sky-cubemap-view' } as unknown as GPUTextureView;
 // One distinct view per capture face — proves `layerViewOf` (not the shared
@@ -155,7 +157,7 @@ const EXEC_SPECS = [
     clearValue: { r: 0, g: 0, b: 0, a: 1 },
   },
   {
-    id: 'volume',
+    id: 'cosmic-web-density',
     format: 'rgba16float' as const,
     depth: null,
     scale: 3,
@@ -185,49 +187,58 @@ const EXEC_SPECS = [
   },
 ];
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const slab: Slab = makeCosmoSlab();
+  // Offscreen view resolution goes through the target table's viewOf —
+  // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
+  // + `depthViewOf` let the executor discover which target rows declare a
+  // depth attachment (only `foreground:0` here). `specOf` is what
+  // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
+  // clear values here match production (`hdr`/`swap` at a=1, the rest
+  // a=0) so a clear-value regression would show up in the clear/load
+  // assertions below. Frame-owned (`ReadyFrameContext.renderTargets`), so it
+  // nests under `snapshot` — `executeFrame` reads it as `ctx.snapshot.renderTargets`.
+  const renderTargets = {
+    specs: EXEC_SPECS,
+    specOf: (id: string) => {
+      const spec = EXEC_SPECS.find((s) => s.id === id);
+      if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    viewOf: (id: string) => {
+      if (id === 'hdr') return HDR_VIEW;
+      if (id === 'cosmic-web-density') return DENSITY_VIEW;
+      if (id === 'foreground:0') return FG_VIEW;
+      if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
+      throw new Error(`mock renderTargets: no view for '${id}'`);
+    },
+    layerViewOf: (id: string, face: number) => {
+      const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+      if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
+      return view;
+    },
+    depthViewOf: (id: string) => {
+      if (id === 'foreground:0') return FG_DEPTH_VIEW;
+      throw new Error(`mock renderTargets: no depth view for '${id}'`);
+    },
+    // Fallback for a sampling step whose source row nothing has cleared yet —
+    // the 1×1 far-cleared placeholder `SampledDepth.view` carries with `row: null`.
+    farDepthView: vi.fn(() => FAR_VIEW),
+  };
   return {
+    id: 'canvas',
+    snapshot: {
+      renderTargets,
+      // Frame-wide: which targets hold this frame's content, unioned into by
+      // `executeFrame` as it opens each ordinary render step — a fresh empty
+      // Set per frame, mirroring `frameContext.ts`. Distinct from the
+      // executor's own per-call `touched`, which this fixture never sees.
+      renderedTargets: new Set<string>(),
+    } as unknown as FrameView['snapshot'],
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
-    // The executor uses this as its first-touch `touched` set (the same object
-    // it exposes to layers as `renderedTargets`): a fresh empty Set per frame,
-    // populated as passes open. Mirrors `deriveFrameContext`.
-    renderedTargets: new Set<string>(),
-    // Offscreen view resolution goes through the target table's viewOf —
-    // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
-    // + `depthViewOf` let the executor discover which target rows declare a
-    // depth attachment (only `foreground:0` here). `specOf` is what
-    // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
-    // clear values here match production (`hdr`/`swap` at a=1, the rest
-    // a=0) so a clear-value regression would show up in the clear/load
-    // assertions below.
-    renderTargets: {
-      specs: EXEC_SPECS,
-      specOf: (id: string) => {
-        const spec = EXEC_SPECS.find((s) => s.id === id);
-        if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
-        return spec;
-      },
-      viewOf: (id: string) => {
-        if (id === 'hdr') return HDR_VIEW;
-        if (id === 'volume') return VOLUME_VIEW;
-        if (id === 'foreground:0') return FG_VIEW;
-        if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
-        throw new Error(`mock renderTargets: no view for '${id}'`);
-      },
-      layerViewOf: (id: string, face: number) => {
-        const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
-        if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
-        return view;
-      },
-      depthViewOf: (id: string) => {
-        if (id === 'foreground:0') return FG_DEPTH_VIEW;
-        throw new Error(`mock renderTargets: no depth view for '${id}'`);
-      },
-    },
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -236,10 +247,10 @@ function makeCtx(): ReadyFrameContext {
  * `makeSlab` overrides per the fixture convention, rather than a hand
  * literal, so a future `Slab` field addition is one edit in the fixture.
  */
-function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodyId } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }
@@ -247,9 +258,6 @@ function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
 type StateInit = {
   disabledPasses?: Record<string, boolean>;
   compositor?: { draw: ReturnType<typeof vi.fn> };
-  flowFieldRenderer?: unknown;
-  flowEnabled?: boolean;
-  flowSlot?: unknown;
   /** The probe row's subject this frame, and the renderer holding its probe. */
   probe?: { subject: string; probeOf: (id: string) => unknown };
 };
@@ -258,14 +266,12 @@ function makeState(init: StateInit = {}): EngineState {
   return {
     settings: {
       debug: { disabledPasses: init.disabledPasses ?? {} },
-      flow: { enabled: init.flowEnabled ?? false },
     },
     gpu: {
       compositor: init.compositor ?? { draw: vi.fn() },
-      flowFieldRenderer: init.flowFieldRenderer ?? null,
       meshBodyRenderer: init.probe ? { probeOf: init.probe.probeOf } : null,
     },
-    assetSlots: { flow: init.flowSlot ?? null },
+    computes: [],
     cubemapCaptures: { probe: { subject: init.probe?.subject ?? null } },
   } as unknown as EngineState;
 }
@@ -278,21 +284,27 @@ function makeArgs(over: {
   timing?: GpuTimingService;
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
-  ctx?: ReadyFrameContext;
+  ctx?: FrameView;
   /** The `sgrAStar` row's faces, body-less — wrapped into the keyed `captureContexts`. */
-  faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  faceContexts?: ReadonlyMap<CubeFace, FrameView>;
   /** The whole keyed map, for a row whose faces draw body rows. */
   captureContexts?: CaptureFaceContexts;
-}): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
+}): {
+  args: ExecuteFrameArgs;
+  env: ReturnType<typeof makeEncoderEnv>;
+  renderTargets: FrameView['snapshot']['renderTargets'];
+} {
   const env = over.env ?? makeEncoderEnv();
+  const ctx = over.ctx ?? makeCtx();
   const args: ExecuteFrameArgs = {
     encoder: env.encoder,
-    ctx: over.ctx ?? makeCtx(),
+    ctx,
     state: over.state ?? makeState(),
     program: over.program,
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
+    renderedTargets: new Set<string>(),
     captureContexts:
       over.captureContexts ??
       (over.faceContexts &&
@@ -303,7 +315,7 @@ function makeArgs(over: {
           ],
         ])),
   };
-  return { args, env };
+  return { args, env, renderTargets: ctx.snapshot.renderTargets };
 }
 
 /** The recorded attachment of the pass a given layer.draw spy's `callIndex` call drew into. */
@@ -358,14 +370,14 @@ describe('executeFrame', () => {
 
   it('clears a target on its first pass of the frame and loads on later passes', () => {
     // Two hdr render steps against the same target: first clears (a=1), the
-    // second — target already touched — loads. A volume layer proves the
+    // second — target already touched — loads. A density layer proves the
     // per-target clear value (a=0).
     const env = makeEncoderEnv();
     const first = makeContentPass({ name: 'first' });
     const second = makeContentPass({ name: 'second' });
     const vol = makeContentPass({ name: 'vol' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'volume', slab: COSMO, passes: [vol] },
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: [vol] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
       { kind: 'render', target: 'hdr', slab: COSMO, passes: [first, second] },
     ];
@@ -374,11 +386,11 @@ describe('executeFrame', () => {
     // already touched) loads.
     const { args } = makeArgs({ program, env });
     executeFrame(args);
-    // volume first pass → clear, a=0
+    // density first pass → clear, a=0
     const volAtt = attachmentOfDraw(env, vol);
     expect(volAtt.loadOp).toBe('clear');
     expect(volAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
-    expect(volAtt.view).toBe(VOLUME_VIEW);
+    expect(volAtt.view).toBe(DENSITY_VIEW);
     // hdr first step (merged group of first+second) → clear, a=1
     const firstAtt = attachmentOfDraw(env, first);
     expect(firstAtt.loadOp).toBe('clear');
@@ -450,6 +462,57 @@ describe('executeFrame', () => {
     executeFrame(args);
     expect(draw).toHaveBeenCalledTimes(1);
     expect(draw.mock.calls[0]![4]).toBe('rgba16float');
+  });
+
+  it('copy step draws its source into ctx.output with replace and no tone', () => {
+    const env = makeEncoderEnv();
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view' } as unknown as GPUTextureView;
+    const hdr = makeContentPass({ name: 'hdr' });
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    const { args } = makeArgs({ program, env, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+
+    expect(draw).toHaveBeenCalledTimes(1);
+    // draw(pass, viewFor(source)=HDR_VIEW, 'replace', null, specOf(source).format)
+    expect(draw.mock.calls[0]![1]).toBe(HDR_VIEW);
+    expect(draw.mock.calls[0]![2]).toBe('replace');
+    expect(draw.mock.calls[0]![3]).toBe(null);
+    expect(draw.mock.calls[0]![4]).toBe('rgba16float');
+
+    // The copy pass's own attachment is ctx.output, cleared opaque black.
+    const copyPassDesc = env.beginRenderPass.mock.calls.at(-1)![0] as GPURenderPassDescriptor;
+    const attachment = Array.from(
+      copyPassDesc.colorAttachments as Iterable<GPURenderPassColorAttachment>,
+    )[0]!;
+    expect(attachment.view).toBe(outputView);
+    expect(attachment.loadOp).toBe('clear');
+    expect(attachment.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it('copy step without a view output throws', () => {
+    const hdr = makeContentPass({ name: 'hdr' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'hdr', slab: COSMO, passes: [hdr] },
+      { kind: 'copy', source: 'hdr' },
+    ];
+    // Default makeCtx() carries no `output` — the mono/canvas-view case.
+    const { args } = makeArgs({ program });
+    expect(() => executeFrame(args)).toThrow(/copy step has no view output/);
+  });
+
+  it('skips a copy step whose source was never touched', () => {
+    const draw = vi.fn();
+    const outputView = { __id: 'dome-face-output-view-2' } as unknown as GPUTextureView;
+    const ctx = { ...makeCtx(), output: outputView };
+    const program: FrameStep[] = [{ kind: 'copy', source: 'hdr' }];
+    const { args } = makeArgs({ program, ctx, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+    expect(draw).not.toHaveBeenCalled();
   });
 
   it('merged strategy opens exactly one pass per non-empty render step', () => {
@@ -554,63 +617,6 @@ describe('executeFrame', () => {
     expect(shownAbsent.draw).toHaveBeenCalledTimes(1);
   });
 
-  it('compute steps dispatch through the COMPUTE table (flow → flowFieldRenderer.encodeCompute)', () => {
-    const encodeCompute = vi.fn();
-    const flowFieldRenderer = {
-      label: 'flowFieldRenderer',
-      encodeCompute,
-    };
-    const flowSlot = {
-      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-    };
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    const { args } = makeArgs({
-      program,
-      state: makeState({ flowFieldRenderer, flowEnabled: true, flowSlot }),
-    });
-    executeFrame(args);
-    expect(encodeCompute).toHaveBeenCalledTimes(1);
-    expect(encodeCompute.mock.calls[0]![0]).toBe(args.encoder);
-  });
-
-  // A compute step's prelude dispatch is GPU work no render toggle can reach, so
-  // it gets its own — keyed on the SUFFIXED slot name, because the bare 'flow'
-  // is the ribbon pass's toggle and one checkbox must not disable both.
-  it('a compute step toggles under its own suffixed name, not the bare step name', () => {
-    const flowSlot = {
-      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-    };
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    const run = (disabledPasses: Record<string, boolean>): ReturnType<typeof vi.fn> => {
-      const encodeCompute = vi.fn();
-      const { args } = makeArgs({
-        program,
-        state: makeState({
-          flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute },
-          flowEnabled: true,
-          flowSlot,
-          disabledPasses,
-        }),
-      });
-      executeFrame(args);
-      return encodeCompute;
-    };
-    expect(run({ 'flow-compute': true })).not.toHaveBeenCalled();
-    expect(run({ flow: true })).toHaveBeenCalledTimes(1);
-  });
-
-  // `descriptorFor` marks a slot live for the frame, and the query set keeps its
-  // last write — so claiming for a step that then dispatches nothing would make
-  // the panel report stale ticks as a live reading.
-  it('claims a compute step’s timing slot only when the row actually dispatches', () => {
-    const descriptorFor = vi.fn(() => undefined);
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    // flow off ⇒ encodeFlowCompute returns before the renderer opens a pass.
-    const { args } = makeArgs({ program, state: makeState({ flowEnabled: false }) });
-    executeFrame({ ...args, timing: { ...args.timing, descriptorFor } });
-    expect(descriptorFor).not.toHaveBeenCalled();
-  });
-
   it("attaches a clearing depth attachment on a depth target's first pass and loads on later passes", () => {
     // Two render steps against foreground:0 (the one depth-declaring row).
     // The first pass clears depth to the far plane (1.0); the second — target
@@ -649,28 +655,103 @@ describe('executeFrame', () => {
     expect(secondDepth?.depthLoadOp).toBe('load');
   });
 
-  it("a step's explicit depth overrides the first-touch rule in both directions", () => {
-    // Same two-step shape as above, but each step names its own depth op: the
-    // first loads where the rule would clear, the second clears where the rule
-    // would load (the restart a back-to-front slab run needs mid-frame).
+  /** The depth load-op of the pass a spy's `call`th draw landed in. */
+  const depthOpOf = (
+    env: ReturnType<typeof makeEncoderEnv>,
+    spy: SpyPass,
+    call = 0,
+  ): string | undefined =>
+    (
+      env.passes.find((p) => p.pass === spy.draw.mock.calls[call]![0])!.desc as {
+        depthStencilAttachment?: { depthLoadOp: string };
+      }
+    ).depthStencilAttachment?.depthLoadOp;
+
+  it("a step's explicit 'clear' restarts depth on an already-touched target", () => {
     const env = makeEncoderEnv();
     const a = makeContentPass({ name: 'a' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'load', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [a] },
       { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'clear', passes: [a] },
     ];
     const { args } = makeArgs({ program, env });
     executeFrame(args);
+    expect(depthOpOf(env, a, 1)).toBe('clear');
+  });
 
-    const depthOpOf = (pass: GPURenderPassEncoder): string | undefined =>
-      (
-        env.passes.find((p) => p.pass === pass)!.desc as {
-          depthStencilAttachment?: { depthLoadOp: string };
-        }
-      ).depthStencilAttachment?.depthLoadOp;
+  it("a 'load' step clears when its row's clearing step drew nothing", () => {
+    // Venus's row splits around a depth sampler but its first segment is gated
+    // off (no terrain) — loading would inherit Mars's depth.
+    const env = makeEncoderEnv();
+    const mars = makeContentPass({ name: 'mars' });
+    const off = makeContentPass({ name: 'off', enabled: false });
+    const after = makeContentPass({ name: 'after' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2, depth: 'clear', passes: [mars] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'clear', passes: [off] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'load', passes: [after] },
+    ];
+    const { args } = makeArgs({ program, env, ctx: makeBodyCtx(['mars', 'venus']) });
+    executeFrame(args);
+    expect(depthOpOf(env, after)).toBe('clear');
+  });
 
-    expect(depthOpOf(a.draw.mock.calls[0]![0] as GPURenderPassEncoder)).toBe('load');
-    expect(depthOpOf(a.draw.mock.calls[1]![0] as GPURenderPassEncoder)).toBe('clear');
+  it('hands a sampling step the far placeholder and row null when nothing cleared its source', () => {
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      {
+        kind: 'render',
+        target: 'hdr',
+        slab: NEAR0,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
+    ];
+    const { args, renderTargets } = makeArgs({ program });
+    executeFrame(args);
+    const view = sampler.draw.mock.calls[0]![1] as SlabView;
+    expect(view.sampledDepth).toEqual({ view: renderTargets.farDepthView(), row: null });
+  });
+
+  it("hands a sampling step the source's depth and the row that last cleared it", () => {
+    const mars = makeContentPass({ name: 'mars' });
+    const off = makeContentPass({ name: 'off', enabled: false });
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2, depth: 'clear', passes: [mars] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'clear', passes: [off] },
+      {
+        kind: 'render',
+        target: 'foreground:0',
+        slab: 3,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
+    ];
+    const ctx = makeBodyCtx(['mars', 'venus']);
+    const { args, renderTargets } = makeArgs({ program, ctx });
+    executeFrame(args);
+    const view = sampler.draw.mock.calls[0]![1] as SlabView;
+    expect(view.sampledDepth!.view).toBe(renderTargets.depthViewOf('foreground:0'));
+    expect(view.sampledDepth!.row).toBe(ctx.slabs[2]); // Mars's row, not the sampler's own
+  });
+
+  it('opens a sampling step with no depth attachment even on a depth-bearing target', () => {
+    const env = makeEncoderEnv();
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [sampler] },
+      {
+        kind: 'render',
+        target: 'foreground:0',
+        slab: COSMO,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
+    ];
+    const { args } = makeArgs({ program, env });
+    executeFrame(args);
+    expect('depthStencilAttachment' in env.passes[1]!.desc).toBe(false);
   });
 
   it('opens no depthStencilAttachment for depthless targets', () => {
@@ -706,8 +787,8 @@ describe('executeFrame', () => {
     expect(contentPass.draw).toHaveBeenCalledTimes(2);
     const bodyIdOf = (call: number): string => {
       const view = contentPass.draw.mock.calls[call]![1] as SlabView;
-      const frame = view.slab.frame as { kind: 'body-m'; bodyId: string };
-      return frame.bodyId;
+      const frame = view.slab.frame as { kind: 'body-m'; hostId: string };
+      return frame.hostId;
     };
     expect(bodyIdOf(0)).toBe('mars');
     expect(bodyIdOf(1)).toBe('venus');
@@ -717,7 +798,7 @@ describe('executeFrame', () => {
     const contentPass = makeContentPass({
       name: 'body-layer',
       enabledFor: (view) =>
-        (view.slab.frame as { kind: 'body-m'; bodyId: string }).bodyId === 'mars',
+        (view.slab.frame as { kind: 'body-m'; hostId: string }).hostId === 'mars',
     });
     const ctx = makeBodyCtx(['mars', 'venus']);
     const program: FrameStep[] = [
@@ -747,7 +828,7 @@ describe('executeFrame', () => {
   describe('sky-cubemap capture hand-off (Task 12)', () => {
     // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
     // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
-    // derives per scheduled face via `cubemapFaceContext` and threads in as
+    // derives per scheduled face via `deriveView(faceViewSpec(...))` and threads in as
     // `faceContexts`. Two distinct fixture contexts stand in for two
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
@@ -769,7 +850,7 @@ describe('executeFrame', () => {
           passes: [contentPass],
         },
       ];
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, FrameView>([
         [0, face0Ctx],
         [1, face1Ctx],
       ]);
@@ -788,7 +869,31 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[1]![2]).not.toBe(args.ctx);
     });
 
-    it('skips a capture step cleanly when its face has no context (cubemapFaceContext returned null)', () => {
+    it.each(['merged', 'perLayerTimed'] as const)(
+      "%s: every pass of every face claims the capture's ONE slot",
+      (strategy) => {
+        const { svc, descriptorFor } = makeTimingService();
+        const a = makeContentPass({ name: 'a' });
+        const b = makeContentPass({ name: 'b' });
+        const program: FrameStep[] = [0, 1].map((face) => ({
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: face as CubeFace },
+          passes: [a, b],
+        }));
+        const faceContexts = new Map<CubeFace, FrameView>([
+          [0, makeCtx()],
+          [1, makeCtx()],
+        ]);
+        executeFrame(makeArgs({ program, strategy, timing: svc, faceContexts }).args);
+
+        const claimed = descriptorFor.mock.calls.map(([slot]) => slot);
+        expect(claimed.length).toBeGreaterThan(0);
+        expect(new Set(claimed)).toEqual(new Set(['sgrAStar·capture']));
+      },
+    );
+
+    it('skips a capture step cleanly when its face has no context (the row was not ready to bake)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
         {
@@ -799,7 +904,7 @@ describe('executeFrame', () => {
         },
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
-      // cubemapFaceContext call returned null (pre-bootstrap frame).
+      // the row's bake was skipped (pre-bootstrap frame).
       const { args } = makeArgs({ program, faceContexts: new Map() });
       expect(() => executeFrame(args)).not.toThrow();
       expect(contentPass.enabled).not.toHaveBeenCalled();
@@ -831,7 +936,7 @@ describe('executeFrame', () => {
         }),
       );
       const faceCtx = makeCtx();
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>(
+      const faceContexts = new Map<CubeFace, FrameView>(
         [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
       );
       const { args, env } = makeArgs({ program, faceContexts });
@@ -903,7 +1008,7 @@ describe('executeFrame', () => {
         },
       ];
       const faceCtx = makeCtx();
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, FrameView>([
         [0, faceCtx],
         [1, faceCtx],
       ]);

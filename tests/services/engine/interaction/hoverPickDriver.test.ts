@@ -89,7 +89,6 @@ function makeFakePicker(): {
 // all these scheduling tests need: (e) only checks the null-decode dispatch.
 const emptyResolver = selectionResolverOver({
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 });
 
 // Pointer positions for tests.
@@ -103,6 +102,7 @@ const posB: CssPx = { x: 150, y: 250 };
 let picker: ReturnType<typeof makeFakePicker>;
 let pickingState: {
   pickInFlight: boolean;
+  cursorTexPx: null;
   pointerDown: boolean;
 };
 let dispatchSpy: ReturnType<typeof vi.fn<(action: unknown) => void>>;
@@ -113,6 +113,7 @@ beforeEach(() => {
 
   pickingState = {
     pickInFlight: false,
+    cursorTexPx: null,
     pointerDown: false,
   };
 

@@ -13,9 +13,11 @@ import { positionDriverById } from '../../../../data/bodies/positionDrivers';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
+import { siteGroundRadiusM } from '../../../../utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
+import { nudgedSitePose } from '../../../../utils/camera/nudgedSitePose';
 import { steppedSitePose } from '../../../../utils/camera/steppedSitePose';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
@@ -92,22 +94,37 @@ export const siteRung: ClimbRow<'site'> = {
     };
   },
 
+  nudge(tilt, framed, delta, ctx) {
+    return {
+      pose: nudgedSitePose(
+        framed.pose,
+        delta,
+        meshBodyOf(framed.frame.site),
+        ctx.viewportPx,
+        ctx.fovYRad,
+      ),
+      tilt,
+    };
+  },
+
   toParent(framed, ctx) {
     const host = hostOrThrow(framed.frame, ctx);
+    const site = siteRowOrThrow(framed.frame.site);
     return {
       frame: { body: host.id },
-      pose: sitePoseToBodyArm(framed.pose, siteRowOrThrow(framed.frame.site), host.radiusM),
+      pose: sitePoseToBodyArm(framed.pose, site, siteGroundRadiusM(site, host.radiusM)),
     };
   },
 
   fromParent(parent, frame, ctx) {
     const host = hostOrThrow(frame, ctx);
+    const site = siteRowOrThrow(frame.site);
     return {
       frame,
       pose: sitePoseFromBodyArm(
         parent.pose,
-        siteRowOrThrow(frame.site),
-        host.radiusM,
+        site,
+        siteGroundRadiusM(site, host.radiusM),
         meshBodyOf(frame.site),
       ),
     };
@@ -121,7 +138,7 @@ export const siteRung: ClimbRow<'site'> = {
     // never engage — the non-goal, enforced by the driver kind, not by a list.
     if (site === null || site.hostId !== parent.frame.body) return null;
     const host = hostOrThrow(parent.frame, ctx);
-    const p = sitePointBodyFixed(site, host.radiusM);
+    const p = sitePointBodyFixed(site, siteGroundRadiusM(site, host.radiusM));
     const eye = bodyFixedEyeM(parent.pose);
     const rangeM = Math.hypot(eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]);
     return rangeM / meshBodyOf(focusId).boundingRadiusM < ctx.tuning.siteEngageR

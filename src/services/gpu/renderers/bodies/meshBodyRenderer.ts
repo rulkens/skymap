@@ -21,8 +21,15 @@ import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { ContactShadowResources } from '../../../../@types/rendering/ContactShadowResources';
+import { CONTACT_SHADOW_UNIFORM_BYTES } from '../../../../data/mesh/contactShadowUniformLayout';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
+import contactVsCode from '../../shaders/bodies/contactShadow/vertex.wesl?static';
+import contactFsCode from '../../shaders/bodies/contactShadow/fragment.wesl?static';
+
+// The unit cube as 12 non-indexed triangles, generated in the vertex stage.
+const CUBE_VERTEX_COUNT = 36;
 
 // The body's reflection probe, after the material maps; the fragment's
 // `@group(0) @binding(5)` decoration mirrors this by hand.
@@ -149,6 +156,49 @@ export function createMeshBodyRenderer(init: {
     },
   });
 
+  const contactBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-contact-bgl',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform', minBindingSize: CONTACT_SHADOW_UNIFORM_BYTES },
+      },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+    ],
+  });
+
+  const contactPipeline = device.createRenderPipeline({
+    label: 'meshBody-contact-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'meshBody-contact-pipeline-layout',
+      bindGroupLayouts: [contactBindGroupLayout],
+    }),
+    vertex: {
+      module: createShaderModuleWithDevLog(device, contactVsCode, 'contactShadow.vertex'),
+      entryPoint: 'vs',
+    },
+    fragment: {
+      module: createShaderModuleWithDevLog(device, contactFsCode, 'contactShadow.fragment'),
+      entryPoint: 'fs',
+      targets: [
+        {
+          format: targetFormat,
+          // colour × shade. Alpha is the overlays' transmittance and stays put.
+          blend: {
+            color: { srcFactor: 'dst', dstFactor: 'zero' },
+            alpha: { srcFactor: 'zero', dstFactor: 'one' },
+          },
+        },
+      ],
+    },
+    // Back faces only, so the box still rasterises with the eye inside it. No
+    // depthStencil: this draws in a 'sample' step, which attaches no depth.
+    primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
+  });
+
   const meshes = new Map<string, MeshResources>();
 
   function releaseResources(res: MeshResources): void {
@@ -158,6 +208,8 @@ export function createMeshBodyRenderer(init: {
     res.probe.cube.destroy();
     res.probe.depth.destroy();
     res.uniformBuffer.destroy();
+    res.contactShadow?.texture.destroy();
+    res.contactShadow?.uniformBuffer.destroy();
   }
 
   // The capture writes the cube's mip 0 face by face and `prefilterCubeGgx`
@@ -210,6 +262,32 @@ export function createMeshBodyRenderer(init: {
     return texture;
   }
 
+  // No mip chain: the contact-shadows pass samples mip 0 only. RENDER_ATTACHMENT
+  // is still required — copyExternalImageToTexture rejects a destination
+  // without it, which silently leaves the mask all zeros.
+  function uploadContactShadow(id: string, src: ImageBitmap): ContactShadowResources {
+    const texture = device.createTexture({
+      label: `meshBody-contact-${id}`,
+      size: [src.width, src.height, 1],
+      format: 'r8unorm',
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture({ source: src }, { texture }, [
+      src.width,
+      src.height,
+      1,
+    ]);
+    const uniformBuffer = device.createBuffer({
+      label: `meshBody-contact-uniform-${id}`,
+      size: CONTACT_SHADOW_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    return { texture, uniformBuffer, bindGroup: null, depthView: null };
+  }
+
   function setMesh(id: string, asset: MeshAsset): void {
     const existing = meshes.get(id);
     if (existing !== undefined) {
@@ -242,6 +320,7 @@ export function createMeshBodyRenderer(init: {
     );
 
     const probe = mintProbe(id);
+    const contactShadow = asset.contactShadow && uploadContactShadow(id, asset.contactShadow);
 
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
@@ -256,6 +335,7 @@ export function createMeshBodyRenderer(init: {
       textures,
       probe,
       uniformBuffer,
+      contactShadow,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
         layout: bodyBindGroupLayout,
@@ -309,6 +389,35 @@ export function createMeshBodyRenderer(init: {
     pass.drawIndexed(res.indexCount);
   }
 
+  function drawContactShadow(
+    pass: GPURenderPassEncoder,
+    id: string,
+    uniforms: Float32Array,
+    depthView: GPUTextureView,
+  ): void {
+    const contact = meshes.get(id)?.contactShadow;
+    if (contact === undefined) return;
+    if (contact.depthView !== depthView) {
+      contact.depthView = depthView;
+      contact.bindGroup = device.createBindGroup({
+        label: `meshBody-contact-bg-${id}`,
+        layout: contactBindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: contact.uniformBuffer } },
+          { binding: 1, resource: contact.texture.createView() },
+          // The LUT's sampler is exactly the mask's: linear, clamp-to-edge.
+          { binding: 2, resource: lutSampler },
+          { binding: 3, resource: depthView },
+        ],
+      });
+    }
+    // Own buffer per body, written right before its draw — the `draw` rule above.
+    device.queue.writeBuffer(contact.uniformBuffer, 0, uniforms);
+    pass.setPipeline(contactPipeline);
+    pass.setBindGroup(0, contact.bindGroup);
+    pass.draw(CUBE_VERTEX_COUNT);
+  }
+
   function destroy(): void {
     for (const res of meshes.values()) releaseResources(res);
     meshes.clear();
@@ -321,6 +430,7 @@ export function createMeshBodyRenderer(init: {
     hasMesh,
     probeOf,
     draw,
+    drawContactShadow,
     destroy,
   };
   renderer satisfies Renderer;

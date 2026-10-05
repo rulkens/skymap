@@ -82,6 +82,14 @@ export type RenderTargets = {
    */
   depthViewOf(id: string): GPUTextureView;
   /**
+   * A 1×1 `FOREGROUND_DEPTH_FORMAT` texture cleared ONCE at construction to
+   * the reversed-Z far value (`depthClearValueFor(true)`), for a `{ sample }`
+   * step whose source no row has cleared this frame: every texel reads
+   * "nothing in front". Stable for the owner's lifetime — never reallocated
+   * by `reconcile`.
+   */
+  farDepthView(): GPUTextureView;
+  /**
    * Bring every offscreen row up to date with `size` and the live `state`:
    * resolve each row's desired `floor(size / scale)` per axis (min 1 px) and
    * reallocate only the rows whose allocated size no longer matches (a

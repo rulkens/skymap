@@ -11,19 +11,44 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
+import { deriveView } from '../../../../src/services/engine/frame/deriveView';
+import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
+import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { PRELUDE } from '../../../../src/data/rendering/frameSections';
+import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
+import { foregroundChainOrder } from '../../../../src/services/engine/frame/slabs';
+import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import { cosmicWebDensityPass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityPass';
+import { cosmicWebDensityUpsamplePass } from '../../../../src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass';
+import { milkyWayAggregatePass } from '../../../../src/layers/milkyWay/passes/milkyWayAggregatePass';
+import { milkyWayUpsamplePass } from '../../../../src/layers/milkyWay/passes/milkyWayUpsamplePass';
+import { milkyWayPass } from '../../../../src/layers/milkyWay/passes/milkyWayPass';
+import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { MilkyWayRuntime } from '../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
 } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -111,6 +136,9 @@ function makeFakeHdrView(): GPUTextureView {
   return { __id: 'hdr-view' } as unknown as GPUTextureView;
 }
 
+/** The 1×1 far-cleared depth every `{ sample }` step falls back to here. */
+const FAR_DEPTH_VIEW = { __id: 'far-depth-view' } as unknown as GPUTextureView;
+
 /**
  * Mock the offscreen render-target table. Executor + layers resolve views
  * via `viewOf(id)`; the backing `views` record is handed in by reference so
@@ -130,22 +158,10 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     },
     {
-      id: 'volume',
+      id: 'cosmic-web-density',
       format: 'rgba16float',
       depth: null,
       scale: 3,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
-    // zoneOfAvoidancePass.draw reads this row's `scale` to size the
-    // downscaled viewport it hands the band raymarch. The default fixture
-    // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
-    // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
-    // gate) — the row still has to exist for the spec lookup, though.
-    {
-      id: 'zoa',
-      format: 'rgba16float',
-      depth: null,
-      scale: 5,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
     // milkyWayAggregatePass.draw reads this row's `scale` to size the
@@ -173,7 +189,7 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
       return spec;
     },
-    // scalarVolumePass / milkyWayAggregatePass read this for their
+    // the density raymarch / milkyWayAggregatePass read this for their
     // downscaled viewport; the fixture canvas is the fixed 1280x720 the
     // `ctx` built below uses (`canvasWidth`/`FIXTURE_CANVAS_HEIGHT_PX`).
     sizeOf: (id: string) => {
@@ -189,6 +205,10 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
+    // What a `{ sample }` step reads: no row in this fixture clears depth, so
+    // every sampling step gets the far-cleared placeholder — `depthViewOf`
+    // is unreachable here and deliberately absent.
+    farDepthView: () => FAR_DEPTH_VIEW,
     destroy: vi.fn(),
   } as any;
 }
@@ -235,8 +255,8 @@ function makeMockMilkyWayCloudRenderer(callLog: CallLog) {
 }
 
 /**
- * Stub the generated-cloud handle the milky-way pass reads off
- * `state.gpu.milkyWayCloud`. `buffers()` returns an inert snapshot — the
+ * Stub the generated-cloud handle the milky-way passes read off
+ * `MilkyWayRuntime.cloud`. `buffers()` returns an inert snapshot — the
  * renderer mock never touches its contents.
  */
 function makeMockMilkyWayCloud() {
@@ -317,6 +337,19 @@ function makeCam(): OrbitCamera {
 }
 
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
+// SCENE's `plan` row names 'structure-markers' by string, not by object
+// identity (`FramePlannerResultStore` keys on `planner.name`) — a stub with an empty result is
+// enough to satisfy `runPlanSteps`'s "every plan row names a registered
+// planner" check without dragging in `produceStructureMarkers`'s own state.
+const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+  ...stubPlannersFor(PRELUDE),
+];
+
 function makeInput(
   overrides: { settings?: Partial<any>; disabledPasses?: Record<string, boolean> } = {},
 ) {
@@ -336,20 +369,35 @@ function makeInput(
     proceduralDisks: { lastOutput: { instances: [] } },
     texturedDisks: { lastOutput: { disks: [] } },
   } as unknown as GalaxyCatalogRuntime;
+  // No active field ⇒ the density passes' shared liveness is null, keeping
+  // these fixtures off the density raymarch; the ordering test swaps in a live
+  // renderer and the gate test an upsample spy.
+  const densityRuntime = {
+    renderer: { draw: vi.fn(), hasActiveFields: () => false, listIds: () => [] },
+    upsample: { draw: vi.fn(), destroy: vi.fn() },
+  } as unknown as CosmicWebDensityRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
+  // The milkyWay Layer's passes close over their own runtime, mirroring
+  // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
+  // fixtures free of an upsample blit they don't assert on (the layer's guard
+  // is `=== null`, which `undefined` would slip past).
+  const milkyWayRuntime = {
+    cloud: milkyWayCloud,
+    cloudRenderer: milkyWayCloudRenderer,
+    aggregateUpsample: null,
+  } as unknown as MilkyWayRuntime;
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const compositor = makeMockCompositor(callLog);
-  // The render-target table backing views. The volume row's default view is
-  // an inert stub — renderFrame's baseline tests don't exercise the volume
-  // pass (volumesEnabled is false by default); the volume-ordering test
+  // The render-target table backing views. The density row's default view is
+  // an inert stub — renderFrame's baseline tests don't exercise the density
+  // pass (no active field by default); the density-ordering test
   // swaps in its own half-res view via this record. The mw-aggregate row DOES
   // get touched every frame here: the fixture camera keeps the Milky-Way cloud
   // alive, so its star pass opens a real pass against this view.
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: hdrTargetView,
-    volume: {} as GPUTextureView,
-    zoa: { __id: 'zoa-view' } as unknown as GPUTextureView,
+    'cosmic-web-density': {} as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeMockRenderTargets(renderTargetViews);
@@ -386,16 +434,17 @@ function makeInput(
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
-    volumesEnabled: false,
+    cosmicWebDensityEnabled: false,
     bloomEnabled: false,
     ...(overrides.settings ?? {}),
   };
 
-  // Per-frame derived snapshot under `input.ctx` (a `ReadyFrameContext`):
-  // `runFrame` derives these once via `deriveFrameContext()` and forwards
-  // a single struct. The test mirrors that wiring.
+  // Per-frame derived snapshot under `input.canvas` (a `FrameView`):
+  // `runFrame` derives it via `deriveFrameContext()` + `deriveView()` and
+  // forwards a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
+  const frustum = symmetricFrustum(FIXTURE_FOV_Y_RAD, canvasWidth / canvasHeight);
   const viewProj = new Float32Array(16) as unknown as Mat4;
   // The HDR encoders resolve one SlabView (COSMO) before the layer loop
   // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
@@ -403,25 +452,31 @@ function makeInput(
   const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
-  const ctx = {
+  // Shared by identity with `input.renderedTargets` below — the same object
+  // `executeFrame` unions into and the five overlay passes read back off
+  // `ctx.snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
+  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
+  // `ContentPass` in this file reads `ctx.snapshot.x`.
+  const snapshotFields = {
     isReady: true as const,
-    // `runFrame` stamps this after every Layer's frame hook has voted.
-    layersAnimating: false,
-    viewSlot: 0,
-    renderedTargets: new Set<string>(),
-    // Nothing in this file reads bodyPose.
-    bodyPose: () => null,
     cam,
-    vp: viewProj,
-    slabs: [cosmoSlab, cosmoSlab],
-    canvasSize: { width: canvasWidth, height: canvasHeight },
-    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
-      [number, number, number]
-    >,
-    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    arm: null as unknown as never,
+    // Only `deriveView`'s basis product reads this; a real identity keeps
+    // that call well-defined for the view-rig test below.
+    camBasisWorld: [...IDENTITY_MAT3] as Mat3,
+    bodyStates: new Map(),
+    // Nothing in this file reads bodyPose (frame or view level).
+    bodyPose: () => null,
+    slabBodyCandidates: [] as never[],
+    meshBodies: [] as never[],
+    positionedStars: [] as never[],
+    // `runFrame` stamps this after every Layer's frame hook has voted.
+    plans: createFramePlannerResultStore(),
+    cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
-    fovYRad: FIXTURE_FOV_Y_RAD,
+    altitudeMpc: 0,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -431,6 +486,26 @@ function makeInput(
       blend: 0,
     },
     renderTargets,
+    // Frame-wide: which targets hold this frame's content, unioned into by
+    // `executeFrame` as it opens each pass — see `ReadyFrameContext`'s doc.
+    renderedTargets,
+  };
+  const ctx = {
+    id: 'canvas',
+    snapshot: snapshotFields,
+    viewSlot: 0,
+    viewKind: 'frame' as const,
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
+    cam,
+    vp: viewProj,
+    slabs: [cosmoSlab, cosmoSlab],
+    canvasSize: { width: canvasWidth, height: canvasHeight },
+    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
+      [number, number, number]
+    >,
+    frustum,
+    drawPxPerRad: canvasHeight / (frustum.tanUp - frustum.tanDown),
   };
 
   return {
@@ -444,6 +519,7 @@ function makeInput(
     renderTargets,
     compositor,
     galaxyPointRenderer,
+    densityRuntime,
     milkyWayCloudRenderer,
     milkyWayCloud,
     horizonShellRenderer,
@@ -453,7 +529,7 @@ function makeInput(
     proceduralDiskRenderer,
     cam,
     // Mirror these on the fixture root so tests read them directly
-    // instead of reaching into `input.ctx.*` for every assertion.
+    // instead of reaching into `input.canvas.*` for every assertion.
     canvasWidth,
     canvasHeight,
     viewProj,
@@ -462,12 +538,18 @@ function makeInput(
     // field of its own.
     settings,
     input: {
-      ctx,
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself
+      // (`VIEW_RIGS.mono.views`), which `renderFrame` would otherwise compute
+      // via `state.viewRig` — this fixture hands it straight in.
+      views: [ctx],
       // ContentPasses read engine state via `input.state`. The label +
       // marker-line layers read `state.gpu.*` in their `enabled()` gates;
       // nulling those handles makes the layers skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         // focusUniform: renderFrame writes it once per frame and
         // galaxyPointSpritesPass binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
@@ -477,18 +559,14 @@ function makeInput(
           // clipPathDebugPass.enabled short-circuits on a null renderer.
           debugLineRenderer: null,
           selectionRingRenderer: null,
-          volumeFieldRenderer: null,
-          flowFieldRenderer: null,
           structureMarkerRenderer: null,
-          // Near-field handles null → the body layers, star-points,
-          // star-catalog, and foregroundLabelsPass all report enabled=false,
-          // so the program's
+          // Near-field handles null → the body layers and
+          // foregroundLabelsPass all report enabled=false, so the program's
           // (hdr, NEAR0) render and foreground:0 render select nothing and
           // the foreground:0→swap composite is touched-set-skipped. These
           // fixtures stay a pure cosmological-frame trace (see the
           // null-handle skip test below).
           earthRenderer: null,
-          starRenderer: null,
           planetRenderer: null,
           // No mesh renderer → the probe scheduler idles before reading `data`.
           meshBodyRenderer: null,
@@ -496,46 +574,23 @@ function makeInput(
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
           atmosphereShellRenderer: null,
-          starPointRenderer: null,
           orbitTrailRenderer: null,
-          starCatalogRenderer: null,
           foregroundLabelRenderer: null,
-          // milkyWayPass.draw reads the generated cloud buffers off this handle.
-          milkyWayCloud,
-          // milkyWayUpsamplePass shares the cloud's liveness gate, so it is
-          // enabled here; a null handle makes its `draw` self-guard and issue
-          // nothing, keeping these fixtures free of an upsample blit they
-          // don't assert on. The key must EXIST — the layer's guard is
-          // `=== null`, which `undefined` would slip past.
-          milkyWayAggregateUpsample: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
-          // `RenderFrameInput`'s slimmed shape).
+          // `RenderFrameInput`'s slimmed shape). The milkyWay Layer's passes
+          // close over `milkyWayRuntime` instead — see the `passes` array below.
           galaxyPointRenderer,
-          milkyWayCloudRenderer,
           horizonShellRenderer,
           texturedDiskRenderer,
           proceduralDiskRenderer,
-          // zoneOfAvoidancePass.draw (the band) and zoneOfAvoidanceUpsamplePass.draw
-          // (the lettering) both read this off state.gpu.* directly, behind a
-          // `=== null` early-return guard; the key must EXIST
-          // (undefined would slip past `=== null`) — see the
-          // milkyWayAggregateUpsample comment above for the same landmine.
-          zoneOfAvoidanceRenderer: null,
-          // zoneOfAvoidanceUpsamplePass's offscreen blit shares the same
-          // key-must-exist landmine as milkyWayAggregateUpsample above — the
-          // fixture camera sits inside the band's visibility window, so this
-          // layer's `enabled` is true and `draw` runs every frame here.
-          zoneOfAvoidanceUpsample: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
-        // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
-        // gate early-returns once the renderer is null.  A null slot →
-        // slotReady false → not loaded.  The encoders read the DebugPanel
-        // renderer-toggle override bag off `settings.debug.disabledPasses`:
+        // The encoders read the DebugPanel renderer-toggle override bag off
+        // `settings.debug.disabledPasses`:
         // most tests pass no overrides so the default is an empty record (matches
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
@@ -560,14 +615,18 @@ function makeInput(
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
-          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          cosmicWebFilaments: {
+            enabled: settings.filamentsEnabled,
+            intensity: settings.filamentIntensity,
+          },
           constellations: { enabled: false, intensity: 1 },
-          volumes: { enabled: settings.volumesEnabled, items: {} },
-          flow: { enabled: false },
+          cosmicWebDensity: {
+            ...INITIAL_SETTINGS.cosmicWebDensity,
+            enabled: settings.cosmicWebDensityEnabled,
+          },
           debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
-        assetSlots: { flow: null },
         // Pick-throttle bag; the content passes don't touch it, but the
         // engine-state shape carries it — fields sit at their default
         // 'nothing in flight' values.
@@ -594,14 +653,22 @@ function makeInput(
         // `scheduleCubemapCaptures`.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
         // `renderFrame` expands FRAME_ORDER over the COMPOSED pass list:
-        // core's registry plus the galaxyCatalog Layer's, which is what
-        // `createLayers` writes and what these ordering assertions exercise.
+        // core's registry plus the galaxyCatalog and cosmicWebDensity Layers',
+        // which is what `createLayers` writes and what these ordering
+        // assertions exercise.
         passes: [
           ...CONTENT_PASSES,
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
+          cosmicWebDensityPass(densityRuntime),
+          cosmicWebDensityUpsamplePass(densityRuntime),
+          milkyWayAggregatePass(milkyWayRuntime),
+          milkyWayUpsamplePass(milkyWayRuntime),
+          milkyWayPass(milkyWayRuntime),
         ],
+        computes: CORE_COMPUTES,
+        planners: STUB_PLANNERS,
       } as never,
       device,
       context,
@@ -609,6 +676,7 @@ function makeInput(
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     },
   };
 }
@@ -623,6 +691,9 @@ describe('renderFrame', () => {
   });
 
   it('creates exactly one command encoder on a frame with no capture faces', () => {
+    // Mono's rig hands every section the same view (`ctx` itself), so
+    // PRELUDE/SCENE/POST/OVERLAYS all accumulate into the one running batch —
+    // one encoder for the whole frame.
     renderFrame(fx.input);
     expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
@@ -639,9 +710,8 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: zoneOfAvoidanceRenderer is null in
-    // this fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO)
-    // step off entirely — the (hdr, COSMO) render step opens the FIRST
+    // No-timing path → 'merged' strategy: the (hdr, COSMO) render step opens
+    // the FIRST
     // `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr draws,
     // the (mw-aggregate, NEAR0) step opens a SECOND pass against the cloud's
     // own offscreen for its star billboards, the (hdr, NEAR0) step opens a
@@ -787,9 +857,7 @@ describe('renderFrame', () => {
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
-    // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
-    // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
-    // off entirely — no pass opens for it. The (hdr, COSMO) render step
+    // No-timing 'merged' path: the (hdr, COSMO) render step
     // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
     // the impostor subsystems are nulled out), closes it; the
     // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
@@ -839,9 +907,8 @@ describe('renderFrame', () => {
     // cloud's own offscreen pass; the foreground:0 render selects nothing, so
     // foreground:0 is never touched and the foreground:0→swap composite is
     // touched-set-skipped. Net: exactly four passes (hdr COSMO + mw-aggregate
-    // + hdr NEAR0 + hdr→swap — zoneOfAvoidanceRenderer is null so the zoa
-    // step stays gated off) and one compositor draw — no foreground:0
-    // anywhere.
+    // + hdr NEAR0 + hdr→swap) and one compositor draw — no
+    // foreground:0 anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     expect(calls).toHaveLength(4);
@@ -856,34 +923,29 @@ describe('renderFrame', () => {
     expect((fx.compositor.draw as ReturnType<typeof vi.fn>).mock.calls[0]![2]).toBe('replace');
   });
 
-  it('opens the volume pass before the hdr pass when the scalar-volume layer is enabled', () => {
-    // The FRAME program's volume render step precedes the hdr render step, so
-    // when `deriveVolumeLiveness` is non-null the volume offscreen pass is the
-    // FIRST beginRenderPass. The gate is the shared liveness — a
-    // volumeFieldRenderer with active fields + volumes.enabled true drives it.
-    const fx2 = makeInput({ settings: { volumesEnabled: true } });
+  it('opens the density pass before the hdr pass when the density layer is live', () => {
+    // The FRAME program's density render step precedes the hdr render step, so
+    // when the density liveness is non-null the density offscreen pass is the
+    // FIRST beginRenderPass. The gate is the shared liveness — a renderer with
+    // active fields + the master enabled drives it.
+    const fx2 = makeInput({ settings: { cosmicWebDensityEnabled: true } });
     const drawSpy = vi.fn();
-    (fx2.input.state as any).gpu.volumeFieldRenderer = {
-      draw: drawSpy,
-      hasActiveFields: () => true,
-      listIds: () => [],
-    };
-    // volumeUpsamplePass.draw self-guards on a null volumeUpsample — keep it
-    // null so the upsample layer draws nothing; this test pins the volume pass
+    // Mutated in place: the raymarch row captured this renderer at construction.
+    Object.assign(fx2.densityRuntime.renderer, { draw: drawSpy, hasActiveFields: () => true });
+    // A null upsample handle draws nothing; this test pins the density pass
     // ordering. Its enabled() still tracks the SAME liveness (no desync).
-    (fx2.input.state as any).gpu.volumeUpsample = null;
-    // The volume offscreen view comes off ctx.renderTargets.viewOf('volume');
-    // swap the backing record's row so the mock table serves it.
-    const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
-    fx2.renderTargetViews.volume = halfResView;
+    // The density offscreen view comes off ctx.renderTargets.viewOf; swap the
+    // backing record's row so the mock table serves it.
+    const reducedResView = { __id: 'reduced-res' } as unknown as GPUTextureView;
+    fx2.renderTargetViews['cosmic-web-density'] = reducedResView;
 
     renderFrame(fx2.input);
 
-    // First beginRenderPass = the volume pass (clear a=0), before the hdr pass.
+    // First beginRenderPass = the density pass (clear a=0), before the hdr pass.
     const calls = (fx2.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
-    expect(calls.length).toBeGreaterThanOrEqual(4); // volume + hdr + mw-aggregate + composite
+    expect(calls.length).toBeGreaterThanOrEqual(4); // density + hdr + mw-aggregate + composite
     const firstAtt = Array.from(calls[0]![0].colorAttachments as any)[0] as any;
-    expect(firstAtt.view).toBe(halfResView);
+    expect(firstAtt.view).toBe(reducedResView);
     expect(firstAtt.loadOp).toBe('clear');
     expect(firstAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
 
@@ -891,18 +953,17 @@ describe('renderFrame', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('skips the volume pass and hides the volume-upsample layer when volumes are off', () => {
-    // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
-    // BOTH the scalar-volume producer and the volume-upsample consumer gate
-    // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the hdr + composite passes open
-    // — zoneOfAvoidanceRenderer is null too, so the zoa step stays gated off.
+  it('skips the density pass and hides its upsample when no field is live', () => {
+    // Default fixture: no active field → liveness null → BOTH the density
+    // producer and the upsample consumer gate off the same fact, so they
+    // cannot disagree. Wire an upsample spy to prove the consumer is also
+    // hidden. Only the hdr + composite passes open.
     const upsampleDraw = vi.fn();
-    (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
+    (fx.densityRuntime as any).upsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
-    // composite, no volume pass, no zoa pass.
+    // composite, no density pass.
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
@@ -927,5 +988,154 @@ describe('renderFrame', () => {
     const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
     renderFrame(fx2.input);
     expect(fx2.galaxyPointRenderer.draw).toHaveBeenCalledTimes(1);
+  });
+
+  // ── View rig walking ───────────────────────────────────────────────────
+
+  it('mono rig submits the same step list as FRAME_ORDER', () => {
+    // The rig split must expand to exactly the same steps whether walked as
+    // one flat list or as four sections concatenated — and VIEW_RIGS.mono IS
+    // those four sections, against the main ctx alone.
+    const options = {
+      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
+      bloomEnabled: false,
+      foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
+      captureFaces: new Map(),
+      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.canvas),
+    };
+    const passes = (fx.input.state as any).passes;
+    const whole = expandFrameOrder(FRAME_ORDER, passes, options);
+    const bySections = VIEW_RIGS.mono.program.flatMap((section) =>
+      expandFrameOrder(section.steps, passes, options),
+    );
+    expect(bySections).toEqual(whole);
+    // mono returns null, never its own spec — see `ViewRig.views`'s doc: a
+    // spec would derive the canvas view a second time and split the submit.
+    expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toBeNull();
+  });
+
+  it('a registered rig returning two specs yields two views sharing the frame snapshot', () => {
+    // The shared-snapshot invariant is structural: `ViewSpec`s carry no
+    // snapshot of their own, so a rig's specs, derived exactly as `runFrame`
+    // derives them (`rig.views(canvas, state)` → `deriveView` per spec), can
+    // only ever produce views of THIS canvas's snapshot.
+    (VIEW_RIGS as any).__snapshotIdentityTest = {
+      views: () => [faceViewSpec('probe', 0, 64, 0), faceViewSpec('probe', 1, 64, 1)],
+      program: [],
+    };
+    (fx.input.state as any).viewRig = '__snapshotIdentityTest';
+    try {
+      const specs = (VIEW_RIGS as any).__snapshotIdentityTest.views(
+        fx.input.canvas,
+        fx.input.state,
+      );
+      const views = specs.map((spec: any) => deriveView(fx.input.canvas.snapshot, fx.cam, spec));
+      renderFrame({ ...fx.input, views } as any);
+      expect(views[0].snapshot).toBe(fx.input.canvas.snapshot);
+      expect(views[1].snapshot).toBe(fx.input.canvas.snapshot);
+    } finally {
+      delete (VIEW_RIGS as any).__snapshotIdentityTest;
+    }
+  });
+
+  it('a perView section with two views submits twice, each expanded from its own view', () => {
+    const stubPass = { name: 'stub-foreground', enabled: () => true, draw: vi.fn() };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
+
+    // view1's chain is NEAR0 alone (one foreground step); view2 adds a
+    // body-m row (a second, distinct-slab step) — the counts must track
+    // each view's OWN slabs, not the main ctx's.
+    const near0Slab = makeSlab();
+    const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'earth' as any } });
+    const view1 = { ...fx.input.canvas, slabs: [near0Slab] };
+    const view2 = { ...fx.input.canvas, slabs: [near0Slab, makeCosmoSlab(), bodySlab] };
+
+    (VIEW_RIGS as any).__twoViewsTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [
+            {
+              kind: 'foreground',
+              target: 'hdr',
+              near0Passes: ['stub-foreground'],
+              bodyPasses: ['stub-foreground'],
+            },
+          ],
+        },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__twoViewsTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [view1, view2] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__twoViewsTest;
+    }
+
+    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
+    expect(submit).toHaveBeenCalledTimes(2);
+    const beginCalls = (fx.env.beginRenderPass as any).mock.calls as Array<
+      [GPURenderPassDescriptor]
+    >;
+    // view1's one-entry chain opens one pass, view2's two-entry chain two —
+    // 3 total, each view's own submit carrying only its own passes.
+    expect(beginCalls.length).toBe(3);
+  });
+
+  it('a once section sees the frame-wide content fact across views, while each view still clears its own first touch (radar K4)', () => {
+    // A `once` section against `canvas` sees what a DIFFERENT view's
+    // `perView` section drew: the content question is frame-wide
+    // (`ctx.snapshot.renderedTargets`), read here through a stub overlay
+    // pass, while the executor's per-call `touched` set — which decides
+    // clear-vs-load — stays private: view B's own first touch of `hdr`
+    // still CLEARS, even though view A already drew into it moments
+    // earlier in the same frame.
+    const stubHdrPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
+    const seenContentFact: boolean[] = [];
+    const overlayPass = {
+      name: 'stub-overlay',
+      enabled: () => true,
+      draw: vi.fn((_pass: unknown, _view: unknown, ctx: FrameView) => {
+        seenContentFact.push(ctx.snapshot.renderedTargets.has('hdr'));
+      }),
+    };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubHdrPass, overlayPass];
+
+    // Neither view is `canvas` — the fact must be visible to canvas's `once`
+    // section without being tied to `canvas === views[0]`.
+    const viewA = { ...fx.input.canvas, viewSlot: 1, slabs: [makeSlab()] };
+    const viewB = { ...fx.input.canvas, viewSlot: 2, slabs: [makeSlab()] };
+
+    (VIEW_RIGS as any).__foldTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [{ kind: 'render', target: 'hdr', slab: 0, passes: ['stub-hdr'] }],
+        },
+        {
+          scope: 'once',
+          steps: [{ kind: 'render', target: 'swap', slab: 0, passes: ['stub-overlay'] }],
+        },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__foldTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [viewA, viewB] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__foldTest;
+    }
+
+    expect(seenContentFact).toEqual([true]);
+
+    const hdrCalls = (fx.env.beginRenderPass as any).mock.calls.filter(
+      ([desc]: [any]) => desc.colorAttachments[0].view === fx.hdrTargetView,
+    );
+    expect(hdrCalls).toHaveLength(2);
+    expect(hdrCalls[0]![0].colorAttachments[0].loadOp).toBe('clear');
+    expect(hdrCalls[1]![0].colorAttachments[0].loadOp).toBe('clear');
   });
 });

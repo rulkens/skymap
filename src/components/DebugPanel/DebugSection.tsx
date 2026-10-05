@@ -1,4 +1,3 @@
-// src/components/DebugPanel/DebugSection.tsx
 /**
  * DebugSection — shared collapsible chrome for a DebugPanel section.
  *

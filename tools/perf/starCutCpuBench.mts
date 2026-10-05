@@ -36,28 +36,28 @@ import { performance } from 'node:perf_hooks';
 import { mat4 } from 'wgpu-matrix';
 
 import { decodeStarCatalog } from '../../src/data/starCatalog/starCatalogFormat';
-import {
-  walkStarOctreeCut,
-  type StarCutFrustum,
-  type StarCutSnapshot,
-} from '../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import { starOctreeIndex } from '../../src/services/gpu/renderers/starCatalog/starOctreeIndex';
+import { walkStarOctreeCut } from '../../src/utils/star/walkStarOctreeCut';
+import type { StarCutFrustum } from '../../src/layers/starCatalog/@types/StarCutFrustum';
+import type { StarCutSnapshot } from '../../src/layers/starCatalog/@types/StarCutSnapshot';
+import { starOctreeIndex } from '../../src/utils/star/starOctreeIndex';
 import { frustumPlanesFromViewProj } from '../../src/utils/camera/frustumPlanesFromViewProj';
 import { sphereOutsideFrustum } from '../../src/utils/camera/sphereOutsideFrustum';
 import {
   writeStarNodeParams,
   NODE_PARAMS_BYTES,
-} from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
+} from '../../src/layers/starCatalog/render/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
+import { initialState as STAR_CATALOGS } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
+import { STAR_SIZE_REF_PX } from '../../src/data/starCullSlack';
+import { starCullMargins } from '../../src/utils/star/starCullMargins';
+import { NODE_FADE_MS } from '../../src/data/starNodeFade';
 import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 // The Gaia row's shipped budget + default Detail knob (see data/sources/gaia-stars.ts).
 const BUDGET = { typical: 1_500_000, hardCap: 2_500_000 };
-const REFINE_THRESHOLD = 0.16;
-const NODE_FADE_MS = 250;
-const DEFAULT_STAR_SIZE_PX = 2.6;
-const SIZE_PX = 2.6;
+const SIZE_PX = STAR_CATALOGS.sizePx;
+const REFINE_THRESHOLD = STAR_CATALOGS.refineThreshold;
 const GLOW_OVERLAP = 4.0;
 const VIEWPORT_H = 1440;
 const FOV_Y = (45 * Math.PI) / 180;
@@ -97,11 +97,14 @@ function frustumFor(camPosPc: readonly [number, number, number]): StarCutFrustum
   const proj = mat4.perspective(FOV_Y, 16 / 9, 1e-3, 1e7);
   const vp = mat4.multiply(proj, view) as Float32Array;
   const planesPc = Float64Array.from(frustumPlanesFromViewProj(vp));
-  const sizeScale = SIZE_PX / DEFAULT_STAR_SIZE_PX;
-  const radiansPerPx = FOV_Y / VIEWPORT_H;
-  // Pick-covering leaf slack (3.5px floor) + aggregate glow spread — mirrors the
-  // layer's buildCutFrustum, so the harness prunes exactly what the app prunes.
-  const angularMarginRad = Math.max(1.5 * sizeScale, 3.5) * radiansPerPx;
+  const sizeScale = SIZE_PX / STAR_SIZE_REF_PX;
+  // Tangent-exact — this bench's camera is always symmetric, so this is the
+  // one legitimate site left computing pxPerRad from a bare fovY.
+  const pxPerRad = VIEWPORT_H / (2 * Math.tan(FOV_Y / 2));
+  // Pick-covering leaf slack (3.5px floor) + aggregate glow spread — calls the
+  // SAME layer helper the app uses, so the harness prunes exactly what the
+  // app prunes.
+  const angularMarginRad = starCullMargins(SIZE_PX, pxPerRad).pick;
   const worldSpread = Math.max(1, sizeScale * GLOW_OVERLAP);
   return { planesPc, angularMarginRad, worldSpread };
 }
@@ -226,7 +229,7 @@ async function main(): Promise<void> {
       const baseRadius = edge * 0.8660254;
       let cullRadius: number;
       if (s.isAggregate[i]! !== 0) {
-        const spread = (SIZE_PX / DEFAULT_STAR_SIZE_PX) * GLOW_OVERLAP;
+        const spread = (SIZE_PX / STAR_SIZE_REF_PX) * GLOW_OVERLAP;
         cullRadius = baseRadius * (spread > 1 ? spread : 1);
       } else {
         cullRadius = baseRadius + Math.sqrt(cx * cx + cy * cy + cz * cz) * angularMarginRad;

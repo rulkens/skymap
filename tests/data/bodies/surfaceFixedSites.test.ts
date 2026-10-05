@@ -7,6 +7,7 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 
 const marsRow = rotationRowById('mars');
@@ -46,29 +47,31 @@ describe('the Mars rover landing sites', () => {
 
     // A quarter turn is NOT 90° of arc: the site rides a cone about the pole at
     // colatitude 90° − lat, and two of its generators 90° of longitude apart
-    // subtend acos(cos²(colatitude)) — 89.633° at Curiosity's −4.5895°.
+    // subtend acos(cos²(colatitude)) — about 89.6° at Curiosity's latitude.
     // Asserting a flat 90° would be asserting the equator.
-    const colatitudeRad = ((90 + 4.5895) * Math.PI) / 180;
+    const { latDeg } = findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'surfaceFixedSites.test');
+    const colatitudeRad = ((90 - latDeg) * Math.PI) / 180;
     const expectedDeg = (Math.acos(Math.cos(colatitudeRad) ** 2) * 180) / Math.PI;
     expect(angleDeg(at, afterQuarterTurn)).toBeCloseTo(expectedDeg, 2);
   });
 
-  it('a rover stands on the surface', () => {
-    // A 3390 km offset recovered by differencing two ~1.5 au doubles: one ulp
+  it('a rover stands on its baked ground height, not the bare datum', () => {
+    // A 3390+ km offset recovered by differencing two ~1.5 au doubles: one ulp
     // at that magnitude is ~50 µm, and the residual lands at ~5 µm. Hence 50 µm
     // rather than the nanometres the metre-space arithmetic would deserve.
     const site = findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'surfaceFixedSites.test');
     const distanceM =
       Math.hypot(...(offsetFromMarsMpc(CONST_J2000) as number[])) / SCALE_UNITS.M_TO_MPC;
 
-    expect(distanceM).toBeCloseTo(MARS_RADIUS_M + site.altitudeM, 4);
+    expect(distanceM).toBeCloseTo(siteGroundRadiusM(site, MARS_RADIUS_M) + site.altitudeM, 4);
   });
 
-  it('every surface-fixed site is lifted by its asset’s ground offset', () => {
+  it('every resting site is lifted by its asset’s ground offset', () => {
     // An invariant across two independently-edited files: the bake decides where
     // a mesh's origin sits, so a re-bake that moves it must move the site with
-    // it. Eyeballing the altitude back would bury a rover or float it.
-    for (const site of SURFACE_FIXED_SITES) {
+    // it. Eyeballing the altitude back would bury a rover or float it. An
+    // `anchored` site has no ground-fit, so its lift is hand-tuned instead.
+    for (const site of SURFACE_FIXED_SITES.filter((s) => s.seat === 'resting')) {
       const body = findByIdOrThrow(SCENE_MESH_BODIES, site.id, 'surfaceFixedSites.test');
       expect(site.altitudeM, site.id).toBe(MESH_ASSETS[body.meshKey]!.groundOffsetM);
     }

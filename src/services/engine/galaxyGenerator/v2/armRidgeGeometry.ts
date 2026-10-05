@@ -87,7 +87,7 @@ function armCurvePos(radius: number, geometry: GalaxyDescription, arm: GalaxyFie
   return armRidgeCurvePoint(Math.log(radius / geometry.armStartRadius), geometry, arm);
 }
 
-export type ArmRidgeFrame = { readonly point: Vec3 } & {
+type ArmRidgeFrame = { readonly point: Vec3 } & {
   readonly along: Vec3;
   readonly across: Vec3;
   readonly pole: Vec3;

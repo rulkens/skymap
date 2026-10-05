@@ -1,6 +1,7 @@
 /**
  * HOSTLESS_MESH_BODIES — the mesh bodies that own a `body-m` row rather than
- * riding a host's, and so count towards `BODY_SLAB_CAPACITY`. Derived from
+ * riding a host's, and so count towards `SLAB_ROW_CEILING`
+ * (`frame/timing/slabRowCeiling.ts`). Derived from
  * `meshBodySlabHostId`, never authored, so a new seed lands its row by existing.
  */
 

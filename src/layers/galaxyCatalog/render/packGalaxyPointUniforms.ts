@@ -25,6 +25,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyPointDrawSettings } from '../../../@types/rendering/GalaxyPointDrawSettings';
 import { PROVENANCE_FILTER_CODE } from '../../../data/provenanceFilter';
+import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.  The single
@@ -89,11 +90,7 @@ export function packGalaxyPointUniforms(
   const f32 = new Float32Array(buf);
   const u32 = new Uint32Array(buf);
 
-  // CameraUniforms prefix (bytes 0..79).
-  f32.set(viewProj, 0);
-  f32[16] = viewportPx[0]; // viewportPx.x  byte 64
-  f32[17] = viewportPx[1]; // viewportPx.y  byte 68
-  // f32[18..19] cam._pad0/1 stay zero.
+  writeCameraPrefix(f32, viewProj, viewportPx, pxPerRad); // bytes 0..79
 
   u32[20] = selectedPacked >>> 0; // byte 80  selectedPacked (u32)
   // u32[21] (byte 84) sourceCode — written per-source in the draw loop, not here.

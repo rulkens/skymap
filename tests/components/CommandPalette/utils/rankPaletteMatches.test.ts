@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { blackHoleSearch } from '../../../../src/layers/blackHoles/present/blackHoleSearch';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
-import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
+import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
+import type { LayerSearchEntry } from '../../../../src/@types/engine/layer/LayerSearchEntry';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -31,19 +33,16 @@ function structure(name: string, abell: string | null, idx: number): StructureSe
 }
 
 describe('rankPaletteMatches', () => {
-  it('empty query → Milky Way heads the list, then all famous, no alias/structure rows', () => {
-    const rows = rankPaletteMatches([M31], [alias(['NGC 4565'], 1)], [COMA], '');
-    expect(rows[0]?.kind).toBe('milkyWay');
-    expect(rows.filter((r) => r.kind === 'famous')).toHaveLength(1);
-    expect(rows.some((r) => r.kind === 'alias')).toBe(false);
-    expect(rows.some((r) => r.kind === 'structure')).toBe(false);
+  it('empty query yields no rows — the featured grid owns browsing', () => {
+    const rows = rankPaletteMatches([M31], [alias(['NGC 4565'], 1)], [COMA], [], '');
+    expect(rows).toEqual([]);
   });
 
   it('ranks an equally-matching famous row above an alias row (famous tiebreak)', () => {
     // Both the famous name and the alias name are exactly "Foo", so without
     // the tiebreak they would tie on raw score.
     const famous: FamousGalaxyMetaEntry = { id: 'foo', names: ['Foo'], description: '', type: '' };
-    const rows = rankPaletteMatches([famous], [alias(['Foo'], 7)], [], 'foo');
+    const rows = rankPaletteMatches([famous], [alias(['Foo'], 7)], [], [], 'foo');
     const famousIdx = rows.findIndex((r) => r.kind === 'famous');
     const aliasIdx = rows.findIndex((r) => r.kind === 'alias');
     expect(famousIdx).toBeGreaterThanOrEqual(0);
@@ -53,40 +52,40 @@ describe('rankPaletteMatches', () => {
 
   it('caps alias rows at 50', () => {
     const many = Array.from({ length: 60 }, (_, i) => alias(['MCGtest'], i));
-    const rows = rankPaletteMatches([], many, [], 'mcgtest');
+    const rows = rankPaletteMatches([], many, [], [], 'mcgtest');
     expect(rows.filter((r) => r.kind === 'alias')).toHaveLength(50);
   });
 
   it('surfaces a structure by primary name', () => {
-    const rows = rankPaletteMatches([M31], [], [COMA], 'coma');
+    const rows = rankPaletteMatches([M31], [], [COMA], [], 'coma');
     const hit = rows.find((r) => r.kind === 'structure');
     expect(hit?.kind === 'structure' && hit.entry.id).toBe('cluster-coma');
   });
 
   it('surfaces a structure by its Abell number', () => {
-    const rows = rankPaletteMatches([], [], [COMA], 'a1656');
+    const rows = rankPaletteMatches([], [], [COMA], [], 'a1656');
     expect(rows.some((r) => r.kind === 'structure' && r.entry.id === 'cluster-coma')).toBe(true);
   });
 
   it('tolerates an undefined structure index', () => {
-    const rows = rankPaletteMatches([M31], [], undefined, 'm31');
+    const rows = rankPaletteMatches([M31], [], undefined, [], 'm31');
     expect(rows.some((r) => r.kind === 'famous')).toBe(true);
   });
 
   it('surfaces a Milky Way row for the query "milky way"', () => {
-    const rows = rankPaletteMatches([M31], [], [], 'milky way');
+    const rows = rankPaletteMatches([M31], [], [], [], 'milky way');
     expect(rows.some((r) => r.kind === 'milkyWay')).toBe(true);
   });
 
   it('yields no Milky Way row for a query that matches nothing', () => {
-    const rows = rankPaletteMatches([M31], [], [], 'zzznotathing');
+    const rows = rankPaletteMatches([M31], [], [], [], 'zzznotathing');
     expect(rows.some((r) => r.kind === 'milkyWay')).toBe(false);
   });
 });
 
 describe('rankPaletteMatches — scene-body rows', () => {
   it("surfaces Earth for the query 'earth'", () => {
-    const rows = rankPaletteMatches([M31], [], [], 'earth');
+    const rows = rankPaletteMatches([M31], [], [], [], 'earth');
     const hit = rows.find((r) => r.kind === 'body');
     expect(hit?.kind === 'body' && hit.body.id).toBe('earth');
     expect(hit?.kind === 'body' && hit.body).toBe(SCENE_EARTH);
@@ -103,7 +102,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
       description: 'A galaxy visible from Earth on a clear night.',
       type: 'Sc',
     };
-    const rows = rankPaletteMatches([earthlyFamous], [], [], 'earth');
+    const rows = rankPaletteMatches([earthlyFamous], [], [], [], 'earth');
     const bodyIdx = rows.findIndex((r) => r.kind === 'body' && r.body.id === 'earth');
     const famousIdx = rows.findIndex((r) => r.kind === 'famous');
     expect(bodyIdx).toBeGreaterThanOrEqual(0);
@@ -111,20 +110,76 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
-  it('a star is findable by its Bayer alias without the deepZoom gate', () => {
-    // No deepZoom URL gate is set, yet a query for Sirius's Bayer designation
-    // (not its common name) surfaces the Sirius body row — pins both the ungate
-    // and the alias scoring over the star's full names[].
-    const rows = rankPaletteMatches([M31], [], [], 'Alpha Canis Majoris');
-    const hit = rows.find((r) => r.kind === 'body');
-    expect(hit?.kind === 'body' && hit.body.id).toBe('sirius');
+  it('a star is findable by its Bayer alias, on a star row', () => {
+    // A query for Sirius's Bayer designation (not its common name) surfaces the
+    // Sirius STAR row — pins the alias scoring over the star's full names[] and
+    // that a star ranks as a star, not as a body (spec §7).
+    const rows = rankPaletteMatches([M31], [], [], [], 'Alpha Canis Majoris');
+    const hit = rows.find((r) => r.kind === 'starCatalog');
+    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sirius');
+    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sirius')).toBe(false);
   });
 
-  it('finds Sgr A* by its Sagittarius alias', () => {
-    // Sgr A* has no famous-star row, so before the alias lookup widened it was
-    // scored on its label 'Sgr A*' alone and this query matched nothing — its id
-    // ('sgr-a-star') does not contain 'sagittarius' either.
-    const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
-    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
+  it('finds the Sun by its authored alias, and never as a body row', () => {
+    // The Sun is its own seeded catalog with no famous-star seed row, so its
+    // aliases live in the authored half of BODY_SEARCH_NAMES; scoring stars off
+    // that same map is what keeps 'Sol' finding it.
+    const rows = rankPaletteMatches([M31], [], [], [], 'Sol');
+    const hit = rows.find((r) => r.kind === 'starCatalog');
+    expect(hit?.kind === 'starCatalog' && hit.star.id).toBe('sun');
+    expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sun')).toBe(false);
+  });
+
+  it('finds Sgr A* by its Sagittarius alias, through its Layer row', async () => {
+    // Its label is the place name and its id ('blackhole-sgr-a-star') does not
+    // contain 'sagittarius', so only the Layer row's names can score this query.
+    const layerRows = [];
+    for await (const rows of blackHoleSearch()) layerRows.push(...rows);
+    const rows = rankPaletteMatches([M31], [], [], layerRows, 'sagittarius');
+    expect(rows.some((r) => r.kind === 'layer' && r.entry.id === 'blackhole-sgr-a-star')).toBe(
+      true,
+    );
+  });
+
+  it('keeps dev tours out of search while user-facing ones rank', () => {
+    // `demoTour` is a harness for the tour machinery and carries `dev: true`.
+    // Nothing else hides it: it is a full `tourRegistry` row, so its label
+    // scores like any other and only the flag keeps it out of a user's results.
+    expect(rankPaletteMatches([M31], [], [], [], 'demo tour')).toEqual([]);
+    const rows = rankPaletteMatches([M31], [], [], [], 'named cosmic web');
+    expect(rows.some((r) => r.kind === 'tour' && r.tour.id === 'webShowcase')).toBe(true);
+  });
+});
+
+describe('rankPaletteMatches — Layer-published rows', () => {
+  function layerRow(id: string, cls: 'primary' | 'catalog'): LayerSearchEntry {
+    return { id, names: ['Zztest'], class: cls };
+  }
+
+  it('a primary layer row outranks a capped catalog row', () => {
+    // Same name on every row, so only `class` can order them: the primary row
+    // joins the uncapped primary list, the 60 catalog rows compete for the
+    // 50-row alias budget.
+    const published = [
+      ...Array.from({ length: 60 }, (_, i) => layerRow(`catalog-${i}`, 'catalog')),
+      layerRow('primary', 'primary'),
+    ];
+    const rows = rankPaletteMatches([], [], [], published, 'zztest').filter(
+      (r) => r.kind === 'layer',
+    );
+    expect(rows[0]).toMatchObject({ entry: { id: 'primary' } });
+    expect(rows).toHaveLength(51);
+  });
+});
+
+describe('rankPaletteMatches — Earth place rows', () => {
+  it("surfaces Paris for the query 'paris'", () => {
+    const rows = rankPaletteMatches([], [], [], [], 'paris');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'paris')).toBe(true);
+  });
+
+  it("surfaces Søndermarken for the query 'sondermarken' (no diacritic)", () => {
+    const rows = rankPaletteMatches([], [], [], [], 'sondermarken');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'sondermarken')).toBe(true);
   });
 });

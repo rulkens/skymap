@@ -1,4 +1,3 @@
-// src/layers/galaxyCatalog/ui/GalaxiesSectionContainer.tsx
 /**
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section:
  * reads five settings selectors plus `selectSourceCounts`, wraps five dispatch
@@ -14,12 +13,11 @@ import {
   selectVisibleSourceMask,
   selectGalaxyCatalogSize,
   selectDepthFade,
-  selectBiasMode,
-  selectAbsMagLimit,
   selectGalaxySbScale,
   selectGalaxySbMax,
   selectGalaxyFalloffStrength,
-} from '../../../state/settings/selectors';
+} from '../state/galaxyCatalogs/selectors';
+import { selectBiasMode, selectAbsMagLimit } from '../state/bias/selectors';
 import { selectSourceCounts } from '../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
@@ -28,8 +26,8 @@ import {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
-} from '../settings/galaxyCatalogsSlice';
-import { setBiasMode, setAbsMagLimit } from '../settings/biasSlice';
+} from '../state/galaxyCatalogs/slice';
+import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';

@@ -26,10 +26,14 @@ export const tierRoute = 'tier' as const;
 export const cameraRoute = 'camera' as const;
 export const selectionRoute = 'selection' as const;
 export const selectionRowsRoute = 'selectionRows' as const;
-// `tourRoute` is the guided-tour runtime slice (active / tourId / beatIndex /
-// paused / dwellNonce) — the single-writer state the tour sagas drive and the
+// `tourRoute` is the guided-tour runtime slice (beatIndex / paused /
+// dwellNonce) — the single-writer state the tour sagas drive and the
 // TourOverlay reads; everything else it shows derives from the registry.
+// Which tour runs, if any, lives on `takeoverRoute`.
 export const tourRoute = 'tour' as const;
+// `takeoverRoute` is the mutual-exclusion slice `runTakeoverSaga` writes: what
+// runs (a tour, an exhibit or a registry clip), if anything.
+export const takeoverRoute = 'takeover' as const;
 // `engineRoute` is the engine runtime slice — lifecycle status, per-source and
 // per-structure counts, load progress, and the scale-bar descriptor. Written
 // by the engine via action dispatches; read by React UI components.
@@ -38,3 +42,5 @@ export const engineRoute = 'engine' as const;
 // (simDays, realMs) anchor, rate-ladder index, direction, and pause. No
 // wall-clock tick lives here; the current instant is derived on demand.
 export const timeRoute = 'time' as const;
+// `arrivalRoute` is the boot link's arrival status — what the veil and `ready` wait on.
+export const arrivalRoute = 'arrival' as const;

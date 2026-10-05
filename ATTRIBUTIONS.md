@@ -433,6 +433,69 @@ All public domain; NASA asks that credit go to the named observatory / program.
   <https://planetarymaps.usgs.gov/>.
 - **Licence:** Public domain. Credit: "NASA / USGS".
 
+#### USGS Astrogeology — Enceladus mosaic (Cassini)
+
+- **Use:** Global surface mosaic for Enceladus (Cassini), 110 m/px. It ships
+  single-channel and is a relief-shading mosaic rather than an albedo map, so
+  the build applies both the `monoTint` hue and an additive brightness `lift`
+  (Enceladus is near-uniform bright ice).
+- **Source:** USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/>.
+- **Licence:** Public domain. Credit: "NASA/JPL/Space Science Institute",
+  publisher USGS Astrogeology.
+
+#### NASA Photojournal — Saturn moon colour maps (Cassini, 2014)
+
+- **Use:** Global surface maps for Mimas, Tethys, Dione, Rhea and Iapetus
+  (PIA18437, PIA18439, PIA18434, PIA18438, PIA18436). Their colour is enhanced
+  into the UV and IR, so the build keeps luminance only and applies a
+  `monoTint` hue and `lift`; each map is re-centred from 180° to the prime
+  meridian.
+- **Source:** NASA Photojournal, <https://photojournal.jpl.nasa.gov/>; mosaics
+  assembled by Paul Schenk (Lunar and Planetary Institute).
+- **Licence:** Public domain. Credit: "NASA/JPL-Caltech/Space Science
+  Institute/Lunar and Planetary Institute".
+
+#### NASA PDS Small Bodies Node — Gaskell shape models (Mimas, Tethys, Dione)
+
+- **Use:** Each moon's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Gaskell Mimas / Tethys / Dione Shape Model",
+  <https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/>
+  (and `gaskell.tethys.shape-model`, `gaskell.dione.shape-model`).
+- **Licence:** Public domain. Credit: "Robert Gaskell / NASA PDS Small Bodies
+  Node".
+
+#### NASA PDS / Paul Schenk (LPI) — Enceladus global DEM (Cassini)
+
+- **Use:** Enceladus's relief, baked into its normal map (a build input, never
+  shipped as runtime pixels).
+- **Source:** "Enceladus Cassini Global DEM 200m Schenk" (Lunar and Planetary
+  Institute/USRA; published by the Planetary Data System 2024-08-12,
+  distributed by USGS Astrogeology),
+  <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>.
+- **Licence:** No access constraints; use constraint "Please cite authors".
+  Citation: Schenk, P. M. & McKinnon, W. B. (2024), "New global topography of
+  Enceladus: Hypsometry, basins, spherical harmonics, shell thickness, and true
+  polar wander revisited", _Icarus_ 408,
+  <https://doi.org/10.1016/j.icarus.2023.115827>.
+
+#### Paul Schenk (LPI): Uranian satellite mosaics and DEMs (Voyager 2)
+
+- **Use:** Global surface mosaics for Miranda, Ariel, Umbriel, Titania and
+  Oberon (shipped as greyscale body textures, unseen areas filled flat grey),
+  and the Miranda and Ariel DEMs, baked into their normal maps (the
+  DEMs are a build input, never shipped as runtime pixels). Based on Voyager 2
+  images (NASA/JPL).
+- **Source:** "Uranian Satellite Global Mosaics and Digital Elevation Models",
+  Paul Schenk, 2020, USRA Houston Repository, hdl:20.500.11753/1687,
+  <https://repository.hou.usra.edu/handle/20.500.11753/1687>.
+- **Licence:** Not public domain. The repository readme states no licence; it
+  asks users to cite and to contact the author. Citation: Schenk, P., and J.
+  Moore (2020), "Topography and Geology of Uranian Mid-sized Icy Satellites in
+  Comparison with Saturnian and Plutonian Satellites", _Phil. Trans. R. Soc. A_
+  378, 20200102.
+
 #### USGS Astrogeology — Pluto/Charon mosaics (New Horizons)
 
 - **Use:** Global surface mosaics for Pluto and Charon (LORRI + MVIC), 300 m/px
@@ -447,6 +510,29 @@ All public domain; NASA asks that credit go to the named observatory / program.
   Credit per the Astropedia record: "New Horizons Team" (primary author), originators "NASA,
   Johns Hopkins University Applied Physics Laboratory, Southwest Research Institute, Lunar and
   Planetary Institute", published by USGS Astrogeology Science Center, 2017.
+
+#### USGS Astrogeology — Triton Voyager 2 colour mosaic (Paul Schenk)
+
+- **Use:** Global surface texture for Triton, 600 m/px, shipped with its colours
+  as published. The northern hemisphere, unlit when Voyager 2 flew by, is
+  filled with the mean colour of the rest of the map.
+- **Source:** "Triton Voyager 2 Color Mosaic, Global Fill, 600 m", Paul Schenk
+  (Lunar and Planetary Institute, 2014; NASA PIA18668), from Voyager 2 images
+  (NASA/JPL); published by USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/mosaic/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif>.
+- **Licence:** Public domain (NASA imagery); credit NASA/JPL/Lunar and Planetary
+  Institute and Paul Schenk.
+
+#### Paul Schenk (LPI): Triton topographic map (Voyager 2)
+
+- **Use:** The shape-from-shading height map of Triton (lon -70 to 95, lat -21 to
+  46), baked into its normal map; a build input, never shipped as runtime pixels.
+- **Source:** "Topographic map of Triton from shape-from-shading information",
+  USRA Houston Repository,
+  <https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94>.
+- **Licence:** Not public domain; no licence is stated. Citation: Schenk, P., et al.
+  (2021), "Triton: Topography and Geology of a Probable Ocean World with Comparison
+  to Pluto and Charon", _Remote Sensing_ 13, 3476.
 
 #### NASA — Pluto derived colour (New Horizons MVIC)
 
@@ -495,8 +581,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
 ### "Flowers Petunia White" — Marianne Goudriaan
 
 - **Use:** The bowl of petunias trailing the whale. Shipped as a derivative:
-  a headless Blender pre-bake (`npm run prebake-petunias`) decimates the mesh
-  and bakes the author's six textures into one albedo atlas, which
+  a headless Blender import (`npm run import-mesh -- petunias`) and pre-bake
+  (`npm run prebake-mesh -- petunias`) bake the author's six textures into one
+  set of PBR atlases, which
   `npm run build-meshes` then bakes to `public/data/meshes/petunias.*`. The raw
   GLB and the pre-bake output are gitignored; provenance lives in
   `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/petunias/README.md`.
@@ -581,8 +668,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
   places — `data/raw/fonts/` (baked into the MSDF label atlas by
   `tools/fonts/buildFontAtlas.ts`) and `tools/site/fonts/` (rasterised into
   `public/og-image.jpg` by `tools/site/makeOgImage.ts`) — and additionally
-  loaded live from Google Fonts by `index.html` for the 2D UI chrome
-  (`--font-family-display` in `src/styles/global.css`).
+  self-hosted as a subsetted `public/fonts/CormorantGaramond-SemiBold.woff2`
+  (`@font-face` in `src/styles/global.css`) for the 2D UI chrome
+  (`--font-family-display`), rather than loaded from Google Fonts.
 - **Designer:** Christian Thalmann (Catharsis Fonts).
 - **Source:** <https://fonts.google.com/specimen/Cormorant+Garamond>.
 - **Licence:** SIL Open Font License 1.1.

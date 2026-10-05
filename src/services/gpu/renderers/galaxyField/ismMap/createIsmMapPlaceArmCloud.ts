@@ -13,10 +13,7 @@ import {
   packPlaceArmCloudParams,
   PLACE_ARM_CLOUD_PARAMS_BUFFER_SIZE,
 } from './packPlaceArmCloudParams';
-import {
-  ARM_CLOUD_ARM_RECORD_FLOATS,
-  packArmCloudArmRecords,
-} from './packArmCloudArmRecords';
+import { ARM_CLOUD_ARM_RECORD_FLOATS, packArmCloudArmRecords } from './packArmCloudArmRecords';
 import { createGrowOnlyRecordBuffer } from '../gpu/createGrowOnlyRecordBuffer';
 import { discLightScaleLength } from '../../../../../utils/galaxy/discLightScaleLength';
 import { armCrossSigma } from '../../../../engine/galaxyGenerator/v2/armRidgeGeometry';
@@ -31,54 +28,10 @@ import {
   DISC_SURFACE_WEIGHTS,
 } from '../../../../engine/galaxyGenerator/v2/discSurfaceFit';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';
-import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldTuning } from '../../../../../@types/galaxy/GalaxyFieldTuning';
+import type { PlaceArmCloudDispatchInput } from '../../../../../@types/galaxy/PlaceArmCloudDispatchInput';
+import type { IsmMapPlaceArmCloud } from '../../../../../@types/galaxy/IsmMapPlaceArmCloud';
 
 const PLACE_ARM_CLOUD_WORKGROUP_SIZE = 256;
-
-export type PlaceArmCloudDispatchInput = {
-  readonly seed: number;
-  /** This galaxy's own absolute `fieldComps` slot offset — `GalaxyFieldMixtureResult.armCloudReservation.offset`, central-galaxy-only today. */
-  readonly offset: number;
-  readonly count: number;
-  readonly flux: number;
-  readonly geometry: GalaxyDescription;
-  readonly tuning: GalaxyFieldTuning;
-  /**
-   * Dead pass-through for `buildClusteredDiscPlacementChild`'s mode 0u/1u
-   * `orientationTex` parameter — this shader always dispatches mode 2u,
-   * which never samples it (see `placeArmCloud.wesl`'s own doc). Reusing the
-   * engine's EXISTING orientation texture costs nothing extra to bind.
-   */
-  readonly orientationTexture: GPUTexture;
-  readonly fieldCompsBuffer: GPUBuffer;
-};
-
-export type IsmMapPlaceArmCloud = {
-  /** Encode into the CALLER's encoder/pass — no submit here (one-encoder-one-submit discipline). */
-  dispatchPlaceArmCloud(enc: GPUCommandEncoder, input: PlaceArmCloudDispatchInput): void;
-  /**
-   * Debug-only: dispatch in its own encoder/submit and map the reservation's
-   * slot range straight back — the probe's determinism/budget/liveness
-   * exception, no production caller. `fluxWeight` is `fluxWeightBuffer`'s own
-   * `[0, count)` slice, read back alongside `records` so the probe can
-   * independently recompute `weightSum` off the SAME dispatch rather than a
-   * second, potentially different one.
-   */
-  dispatchAndReadbackArmCloud(
-    input: PlaceArmCloudDispatchInput,
-  ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }>;
-  /**
-   * `fluxWeightOut` (placeArmCloud.wesl binding 5) — ARM_CLOUD_MAX_COUNT
-   * floats, one per particle slot. Exposed so `ringReduce.wesl`'s
-   * csArmCloudFluxWeightSum kernel (dispatched separately, off
-   * `createGalaxyFieldRenderer.ts`'s own `ringReduce` instance) can bind the SAME
-   * buffer this dispatch just filled — `IsmMapPlaceDust.massBuffer`'s own
-   * producer-owns-the-buffer precedent.
-   */
-  readonly fluxWeightBuffer: GPUBuffer;
-  dispose(): void;
-};
 
 export function createIsmMapPlaceArmCloud(
   device: GPUDevice,

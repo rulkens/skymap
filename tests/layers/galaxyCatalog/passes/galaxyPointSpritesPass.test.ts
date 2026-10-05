@@ -10,12 +10,12 @@ import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../src/data/sources';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -41,37 +41,46 @@ function makeCam(): OrbitCamera {
  * perform once per frame — works against these fixtures without a bespoke
  * double.
  */
-function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+/**
+ * `visibleSourceMask` (frame-owned) nests under `snapshot`; every other
+ * override (`drawCamPos`) is a view field, spread at the top level.
+ */
+function makeCtx(
+  overrides: { drawCamPos?: Readonly<[number, number, number]>; visibleSourceMask?: number } = {},
+): FrameView {
+  const { visibleSourceMask, ...viewOverrides } = overrides;
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      visibleSourceMask: visibleSourceMask ?? 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
+      cursorTexPx: null,
+      renderedTargets: new Set<string>(),
+    },
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
+    viewKind: 'frame',
     cam,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    simDays: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersAnimating: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     // Nothing here reads bodyPose.
     bodyPose: () => null,
-    ...overrides,
-  };
+    ...viewOverrides,
+  } as unknown as FrameView;
 }
 
 // The pass reads `state.subsystems.fades.opacityOf` for per-source fade

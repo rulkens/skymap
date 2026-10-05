@@ -1,28 +1,15 @@
 /*
- * FeaturedCardTip — the InfoTip body that hovers a featured-grid card.  Three
- * optional sections stacked with progressively muted typography so the eye sees
- * them in order: morphological type chip first (compact identifier), aliases
- * line (designations comma-separated), then the curated paragraph.  All atoms
+ * FeaturedCardTip — the InfoTip body that hovers a featured-grid card. Two
+ * optional sections stacked with progressively muted typography: an aliases
+ * line (designations, dot-separated) then the curated blurb. All atoms
  * reference tokens from `src/styles/global.css`.
  */
 
 /* The tip body is injected into InfoTip's container; .root just groups the
- * three sections (which carry their own spacing) so the component keeps the
+ * sections (which carry their own spacing) so the component keeps the
  * conventional single root element. */
 .root {
   display: contents;
-}
-
-.type {
-  display: inline-block;
-  margin-bottom: var(--space-2);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--surface-badge);
-  color: var(--color-fg-base);
-  font-size: var(--font-size-xs);
-  letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
 }
 
 .aliases {
@@ -44,13 +31,12 @@
   font-size: var(--font-size-xs);
 }
 
-.description {
+.blurb {
   /*
    * Comfortable reading width for the curated paragraph.  No max-
    * height clamp here — InfoTip's max-width: 320px paired with
    * normal whitespace already keeps the panel reasonable; truncating
-   * mid-sentence would hide the most interesting part of a galaxy's
-   * story.
+   * mid-sentence would hide the most interesting part of the blurb.
    */
   font-size: var(--font-size-md);
   line-height: var(--line-height-relaxed);

@@ -210,14 +210,6 @@ const STAR_COLORIDX_STEP: f32 = 0.078125;
 // In-cell 10-bit offset unit: reciprocal of 1024 (offset 0..1023 spans one box).
 const OFFSET_SCALE: f32 = 0.0009765625; // 1.0 / 1024.0
 
-// Visual-pass depth epsilon: pull the clamped clip-z this far inside the far
-// plane so a point sitting exactly ON it still passes the clip test. Only the
-// VISUAL pass uses this min-clamp — that pass is depthless additive and needs
-// only the clip-survival property. The PICK pass instead FORCES the survey
-// depth band (PICK_BAND_SURVEY_STAR_EPS, imported) so survey stars rank by
-// importance, not distance — see the depth write at the end of 'vs'.
-const CLIP_Z_EPS: f32 = 1e-4;
-
 // Pick-pass clickable-footprint floor in px. A star sized honestly by the
 // flux-glow math (STAR_GLOW_MIN_PX = 1.5, before the user's sizeScale) can land
 // sub-pixel at deep zoom, so the visual dot may cover no pixel centre and the
@@ -250,6 +242,16 @@ const STAR_PICK_MIN_RADIUS_PX: f32 = 3.5; // 7 px diameter
 //                            (services/engine/frame/partitionStarsByResolution.ts)
 const SOLAR_RADIUS_MPC: f32 = 2.25668425e-14;
 const STAR_SPHERE_RESOLVE_PX: f32 = 4.0;
+// The threshold in the SHADER's scale. 'worldLenToPx' now reports the TRUE
+// apparent size (lib/camera.wesl's pxPerRad), where it used to under-report
+// it by tan(fovY/2); folding 1/tan(30 degrees) in keeps the hand-off at the
+// distance it had before pxPerRad, at the app's 60 degree fov. The TS twin
+// above stays the bare resolve threshold, unscaled.
+const STAR_SPHERE_FADE_START_PX: f32 = STAR_SPHERE_RESOLVE_PX * 1.73205;
+// Aggregate glow radius per unit of box footprint: 0.5 turns the box edge's
+// full on-screen span into a dot RADIUS, and tan(30 degrees) preserves the
+// pre-pxPerRad glow size at the app's 60 degree fov.
+const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // Fade width: the sprite starts dissolving when the estimated sphere size
 // crosses the resolve threshold and is fully gone at 4x it. Wide enough that
 // the dissolve spans many frames of a focus descent (no visible pop), narrow
@@ -327,15 +329,15 @@ fn vs(
   // Radius (px). A leaf is a POINT source -> the legibility floor. An aggregate
   // is an EXTENDED source -> its glow fills the box's on-screen footprint so
   // neighbouring far aggregates blend into a continuous field, not a lattice.
-  // 'worldLenToPx' of the box edge gives its full on-screen span; half of that
-  // is the dot radius (diameter == box edge), and the Gaussian's soft tail
-  // spills a little past the box so adjacent glows overlap. 'select' picks the
+  // 'worldLenToPx' of the box edge gives its full on-screen span;
+  // AGGREGATE_BOX_RADIUS_FACTOR turns that into the dot radius, and the
+  // Gaussian's soft tail spills a little past the box so adjacent glows overlap. 'select' picks the
   // box extent only for aggregates ('node.isAggregate' != 0); a leaf gets
   // extent 0 -> floor. All scaled by the user's size slider (spread control;
   // luminance is invariant to radius -- header fact 2).
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
   let extentMpc = select(0.0, node.cellScaleMpc, node.isAggregate != 0u);
-  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * 0.5;
+  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
   // Glow overlap spreads AGGREGATE glows past their box footprint so the lattice
   // dissolves; leaves (point sources) select 1.0 and are untouched. Folded into
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
@@ -368,7 +370,7 @@ fn vs(
   // identity -- see the header). 'fluxApp' is the inverse-square-dimmed
   // apparent flux (header 'Apparent flux'). The peak-from-flux relation is
   // shared with the famous / scene star stage (lib/starPhotometry.wesl).
-  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.cam.viewportPx.y));
+  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.pxPerRad));
 
   // Aggregate surface-brightness cap -- the user's live 'Fog cap' setting
   // ('u.aggregateIntensityCap', settings.starCatalogs.aggregateIntensityCap). A
@@ -399,13 +401,13 @@ fn vs(
   // no sphere to replace it -- AU-proximity is reached essentially only by
   // focus-framing, so the transient gap is unobtrusive.
   //
-  // 'worldLenToPx' under-reports the true apparent size by tan(fovY/2) (it has
-  // no access to the fov, only clip.w + viewport; at the app's fixed 60-degree
-  // fov that is x0.58), so the fade begins only once the TRUE sphere size is
+  // 'sphereDiamPx' is now the TRUE apparent diameter (lib/camera.wesl's
+  // pxPerRad), so the band is keyed on STAR_SPHERE_FADE_START_PX, which folds
+  // the old fov-blind scale back in: the fade still begins once the sphere is
   // ~1.7x the resolve threshold -- the sphere is always resolved BEFORE the
-  // sprite starts dissolving (the safe direction for any fov below 90 degrees).
-  // At a 1080 px viewport the band runs from ~1.3 AU (fade start) to ~0.3 AU
-  // (sprite gone), well outside the ~0.02 AU focus-framing distance.
+  // sprite starts dissolving (the safe direction). At a 1080 px viewport the
+  // band runs from ~1.3 AU (fade start) to ~0.3 AU (sprite gone), well outside
+  // the ~0.02 AU focus-framing distance.
   //
   // The peak intensity above stays on the UNFADED 'rPx': deposited light then
   // falls as spriteFade^2 (fixed peak, shrinking area) -- a smooth dim-out.
@@ -416,8 +418,8 @@ fn vs(
   // unconditionally, so a near star stays clickable at close range.
   let sphereDiamPx = worldLenToPx(u.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
   let fadeIn = smoothstep(
-    STAR_SPHERE_RESOLVE_PX,
-    STAR_SPHERE_RESOLVE_PX * STAR_SPRITE_FADE_END_RATIO,
+    STAR_SPHERE_FADE_START_PX,
+    STAR_SPHERE_FADE_START_PX * STAR_SPRITE_FADE_END_RATIO,
     sphereDiamPx
   );
   let spriteFade = select(1.0 - fadeIn, 1.0, u.pickPass == 1u);
@@ -439,10 +441,8 @@ fn vs(
 
   // Depth write — the two passes diverge here (header 'lib/pickDepthBands').
   //
-  // VISUAL pass: survive the adaptive foreground far plane on a deep descent by
-  // pulling clip-z just inside it. That pass is depthless additive (no depth
-  // test/write), so this min-clamp perturbs no depth compare; it only keeps a
-  // beyond-far sprite from being clipped away.
+  // VISUAL pass: writes the true clip-z untouched (depthless additive; reversed-Z
+  // infinite-far slab, no far plane to survive).
   //
   // PICK pass: this stage IS depth tested, and the user wants IMPORTANCE order,
   // not distance order — a Gaia field star a parsec in front of a famous star
@@ -455,11 +455,7 @@ fn vs(
   // order decides between them — acceptable because 'nearest of two overlapping
   // dots in a dense 7 px field' carries no user meaning, whereas 'famous star
   // beats the field behind it' does.
-  out.clip.z = select(
-    min(out.clip.z, out.clip.w * (1.0 - CLIP_Z_EPS)),
-    out.clip.w * PICK_BAND_SURVEY_STAR_EPS,
-    u.pickPass == 1u
-  );
+  out.clip.z = select(out.clip.z, out.clip.w * PICK_BAND_SURVEY_STAR_EPS, u.pickPass == 1u);
 
   out.uv = corner;
 

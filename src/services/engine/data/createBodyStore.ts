@@ -1,5 +1,4 @@
 import type { BodyStore } from '../../../@types/engine/data/BodyStore';
-import type { StarBody } from '../../../@types/scene/StarBody';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { EarthBody } from '../../../@types/scene/EarthBody';
@@ -10,7 +9,7 @@ import type { EarthBody } from '../../../@types/scene/EarthBody';
  * Same factory-plus-closure shape as `createStructureStore`:
  * a plain factory closing over private mutable state rather than a class, since
  * the engine is a singleton and a class would only add a `this.` access pattern.
- * The closure holds the star/planet arrays and the nullable Earth record; the
+ * The closure holds the planet/mesh arrays and the nullable Earth record; the
  * frozen object exposes read-only getters over the live state and mutates only
  * through the setters, which the slot commits own.
  *
@@ -20,15 +19,11 @@ import type { EarthBody } from '../../../@types/scene/EarthBody';
  * of what the scene contains.
  */
 export function createBodyStore(): BodyStore {
-  let stars: readonly StarBody[] = [];
   let planets: readonly PlanetBody[] = [];
   let meshBodies: readonly MeshBody[] = [];
   let earth: EarthBody | null = null;
 
   return Object.freeze({
-    get stars(): readonly StarBody[] {
-      return stars;
-    },
     get planets(): readonly PlanetBody[] {
       return planets;
     },
@@ -37,9 +32,6 @@ export function createBodyStore(): BodyStore {
     },
     get earth(): EarthBody | null {
       return earth;
-    },
-    setStars(s: readonly StarBody[]): void {
-      stars = s;
     },
     setPlanets(p: readonly PlanetBody[]): void {
       planets = p;

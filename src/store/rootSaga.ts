@@ -21,14 +21,14 @@ import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSag
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchFlyToLonLatSaga } from '../state/camera/watchFlyToLonLatSaga';
-import { watchTourSaga } from '../state/tour/watchTourSaga';
+import { watchTakeoverSaga } from '../state/takeover/watchTakeoverSaga';
 import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga';
-import { watchClipSaga } from '../state/camera/watchClipSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
 import { watchGoHomeSaga } from '../state/selection/watchGoHomeSaga';
 import { watchHashSaga } from '../state/url/watchHashSaga';
+import { arrivalSaga } from '../state/arrival/arrivalSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -43,13 +43,13 @@ export function* mainSaga() {
     watchFocusTweenSaga(),
     watchOrientationChangeSaga(),
     watchFlyToLonLatSaga(),
-    watchTourSaga(),
+    watchTakeoverSaga(),
     watchKeyboardEventsSaga(),
     watchLogCameraStateSaga(),
-    watchClipSaga(),
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),
     watchGoHomeSaga(),
     watchHashSaga(),
+    arrivalSaga(),
   ]);
 }

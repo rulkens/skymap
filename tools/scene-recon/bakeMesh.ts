@@ -273,7 +273,7 @@ export async function bakeMesh(
   const asset: TexturedMeshAsset = {
     kind: 'mesh',
     id: ASSET_ID,
-    label: `${group.name} — skråfoto MVS mesh`,
+    label: 'skråfoto MVS mesh',
     transform: { translationM: [0, 0, 0], rotation: [0, 0, 0, 1], scale: 1 },
     provenance: {
       source: 'nationalGeodataApi',

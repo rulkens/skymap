@@ -35,7 +35,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -61,7 +61,6 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
         orientation: earth.orientation,
-        meanAnomalyRad: 0,
       });
     return m;
   }),
@@ -98,7 +97,7 @@ const PASS_STUB = {
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 
@@ -107,16 +106,18 @@ function makeBodyView(bodyId: BodyId): SlabView {
  * the shared foreground gate and comfortably resolved (not sub-pixel) — so
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
-function ctxAtAltitude(altitudeRadii: number): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+
+function ctxAtAltitude(altitudeRadii: number): FrameView {
   const radiusMpc = EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
     drawCamPos: [EARTH.positionMpc[0] - distanceMpc, EARTH.positionMpc[1], EARTH.positionMpc[2]],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
-  } as unknown as ReadyFrameContext;
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 /** State with a `cloudShellRenderer` handle, the seeded Earth, and clouds residency. */

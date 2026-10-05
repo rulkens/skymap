@@ -9,6 +9,7 @@
 
 import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
+import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -21,17 +22,25 @@ import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { LayerInstance } from '../layer/LayerInstance';
 import type { ContentPass } from '../frame/ContentPass';
+import type { ContentCompute } from '../frame/ContentCompute';
+import type { FrameContentPlanner } from '../frame/FrameContentPlanner';
 import type { AssetKey } from '../../loading/AssetKey';
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { SlabRow } from '../frame/SlabRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { OrbitalElements } from '../../scene/OrbitalElements';
+import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
   settings: EngineSettingsState;
   /** A getter onto `store.getState().tier` — no engine-side mirror to drift. */
   tier: Tier;
+  /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
+  viewRig: ViewRigKey;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
@@ -46,6 +55,8 @@ export type EngineState = {
   /** True once `wireInput` seeded the first real camera pose. The gate every
    * pre-bootstrap bail reads; there is no boot camera object to read from. */
   booted: boolean;
+  /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
+  fadesAnimating: boolean;
   /**
    * Live camera Resources, seeded with placeholders in `engine.ts` and filled
    * by `wireInput`'s bootstrap seed once the initial camera exists.
@@ -82,15 +93,33 @@ export type EngineState = {
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks
-   * these rather than `CONTENT_PASSES` / `ASSET_WIRING` / `FADE_LAYERS`, which
-   * are core's authored halves only. `assetRows` is the COMPANION-EXPANDED
-   * fold over both halves; `layerSlots` holds the slot each Layer asset row's
-   * factory minted, consulted by `slotFor` ahead of core's own homes.
+   * these rather than `CONTENT_PASSES` / `CORE_COMPUTES` / `ASSET_WIRING` /
+   * `FADE_LAYERS`, which are core's authored halves only. `assetRows` is the
+   * COMPANION-EXPANDED fold over both halves; `layerSlots` holds the slot each
+   * Layer asset row's factory minted, consulted by `slotFor` ahead of core's
+   * own homes.
    */
   passes: readonly ContentPass[];
+  /** `executeFrame` resolves a `'compute'` step's name against this; an absent
+   * name drops rather than throws, mirroring a `FRAME_ORDER` name no present
+   * Layer owns. */
+  computes: readonly ContentCompute[];
+  /** `runPlanSteps` resolves a `'plan'` step's name against this; `checkFrameOrder`
+   * asserts every row here is named on exactly one `plan` line, in a section
+   * of the same scope — unlike `computes`, a `plan` line naming nothing here throws. */
+  planners: readonly FrameContentPlanner<unknown>[];
   assetRows: readonly AssetWiringRow[];
+  /** Every Layer's `slabs`, composed once by `createLayers`;
+   * `deriveFrameContext` folds the band-open ones in beside the store's own rows. */
+  slabRows: readonly SlabRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
+  /** Every Layer's `worldLabels`, in composition order, composed once by
+   * `createLayers`; `runLabel3DProducers` walks this. */
+  label3DProducers: readonly Label3DProducer[];
+  /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
+   * `createLayers`; `orbitTrailsPass` walks this. */
+  orbitTrailRows: readonly OrbitalElements[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,
@@ -100,4 +129,7 @@ export type EngineState = {
    * resolver's dispatch table.
    */
   selectionKindRows: readonly SelectionKindRow[];
+  /** Every Layer's static `targets`, in tuple order — seeded by `createEngine`, read by the
+   * `renderTargets` GPU-handle row, which runs before `createLayers`. */
+  readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

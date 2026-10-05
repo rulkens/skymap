@@ -26,10 +26,9 @@
  */
 import type { LoadState } from '../../@types/loading/LoadState';
 
-export function consoleAdapterFor(name: string): (
-  prev: LoadState<unknown>,
-  next: LoadState<unknown>,
-) => void {
+export function consoleAdapterFor(
+  name: string,
+): (prev: LoadState<unknown>, next: LoadState<unknown>) => void {
   const dev = !!import.meta.env.DEV;
 
   return (prev, next) => {

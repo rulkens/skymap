@@ -7,8 +7,8 @@
  * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
  * ranking pipeline can import the row vocabulary without pulling in React +
  * the CSS module.  A new row kind is one entry here, not a new render branch.
- * Selection routing is NOT here — every row maps to a durable focus id via
- * `utils/focusIdForRow` and fires the single `requestFocus` command.
+ * Selection routing is NOT here — every row maps to a `PaletteAction` via
+ * `utils/actionForRow`, and the container dispatches on `action.kind`.
  *
  * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
  * composes ResultsList's module rather than carrying its own — the row styles
@@ -18,13 +18,33 @@ import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
+import { cardShotUrl } from '../../utils/palette/cardShotUrl';
+import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
+import { actionForRow } from './utils/actionForRow';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
+/**
+ * A milkyWay/body/star/structure row's leading visual: the captured card shot
+ * of the featured card that names the same focus id `actionForRow` resolves to
+ * (the id grammar the URL deep-link layer uses), else today's letter glyph.
+ */
+function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
+  const action = actionForRow(row);
+  if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
+    return <img className={styles.thumb} src={cardShotUrl(action.focusId)} alt="" loading="lazy" />;
+  }
+  return (
+    <span className={styles.glyph} aria-hidden="true">
+      {label[0] ?? '·'}
+    </span>
+  );
+}
+
 /** What InfoCard's row renderer needs, computed per row kind. */
-export type RowView = {
+type RowView = {
   readonly key: string;
   readonly testid?: string;
   readonly leading: ReactNode;
@@ -33,6 +53,68 @@ export type RowView = {
 };
 
 const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
+
+/**
+ * Shared render for the `body` and `starCatalog` arms below — they differ
+ * only in which `ScoredRow` field they read the id/label from, everything
+ * else (aliases, constellation/scale chip, captured-shot leading visual) is
+ * identical, so one row shape serves both kinds.
+ */
+function namedRowView(
+  m: ScoredRow,
+  keyPrefix: string,
+  testidPrefix: string,
+  id: string,
+  label: string,
+): RowView {
+  const aliases = (BODY_SEARCH_NAMES.get(id) ?? []).slice(1);
+  const chip = bodyRowChip(id);
+  return {
+    key: `${keyPrefix}:${id}`,
+    testid: `${testidPrefix}-${id}`,
+    leading: shotOrGlyph(m, label),
+    primary: label,
+    secondary: (
+      <>
+        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+        {chip && <span className={styles.source}>{chip}</span>}
+      </>
+    ),
+  };
+}
+
+const EARTH_CHIP = <span className={styles.source}>Earth</span>;
+
+/**
+ * Shared render for the `place` and `layer` arms: a letter glyph, the first
+ * name, the rest as aliases, and an optional source chip. Neither kind has a
+ * thumbnail to look up, so the two differ only in that chip.
+ */
+function glyphRowView(
+  kind: string,
+  id: string,
+  names: readonly string[],
+  chip?: ReactNode,
+): RowView {
+  const primary = names[0] ?? '(unnamed)';
+  const aliases = names.slice(1);
+  return {
+    key: `${kind}:${id}`,
+    testid: `${kind}-row-${id}`,
+    leading: (
+      <span className={styles.glyph} aria-hidden="true">
+        {primary[0] ?? '·'}
+      </span>
+    ),
+    primary,
+    secondary: (
+      <>
+        {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+        {chip}
+      </>
+    ),
+  };
+}
 
 /**
  * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
@@ -62,16 +144,12 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
             ) : null,
         }
       : EMPTY_ROW_VIEW,
-  // The Milky Way is a procedural backdrop with no atlas WebP, so it renders a
-  // first-letter glyph like an alias row, but it is its own row kind.
-  milkyWay: () => ({
+  // The Milky Way is a procedural backdrop with no atlas WebP; it renders its
+  // captured card shot (see `shotOrGlyph`) or falls back to a letter glyph.
+  milkyWay: (m) => ({
     key: 'milkyWay',
     testid: 'milky-way-row',
-    leading: (
-      <span className={styles.glyph} aria-hidden="true">
-        {MILKY_WAY_NAMES[0][0]}
-      </span>
-    ),
+    leading: shotOrGlyph(m, MILKY_WAY_NAMES[0]),
     primary: MILKY_WAY_NAMES[0],
     secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
   }),
@@ -100,47 +178,32 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Scene-body row — letter glyph like the Milky Way (no atlas thumb for a
-  // procedurally-rendered sphere). Aliases come from the same lookup the ranker
-  // scores over, so a row shows exactly the names it can be found by; the chip
-  // is the body's constellation or, failing that, its scale regime (e.g.
+  // Scene-body row — captured card shot when one exists (see `shotOrGlyph`),
+  // else a letter glyph. Aliases come from the same lookup the ranker scores
+  // over, so a row shows exactly the names it can be found by; the chip is
+  // the body's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
-  // Centre").
-  body: (m) => {
-    if (m.kind !== 'body') return EMPTY_ROW_VIEW;
-    const aliases = (BODY_SEARCH_NAMES.get(m.body.id) ?? []).slice(1);
-    const chip = bodyRowChip(m.body.id, m.body.label);
-    return {
-      key: `body:${m.body.id}`,
-      testid: `body-row-${m.body.id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {m.body.label[0] ?? '·'}
-        </span>
-      ),
-      primary: m.body.label,
-      secondary: (
-        <>
-          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
-          {chip && <span className={styles.source}>{chip}</span>}
-        </>
-      ),
-    };
-  },
-  // Structure row — glyph placeholder like an alias (no atlas thumb) + a
-  // category chip (Cluster / Supercluster / Void / Group) from the per-category
-  // display copy, plus the Abell designation as a secondary name when present.
+  // Centre"). A seeded star's row renders identically — same lookups, same
+  // chip — off its own star identity.
+  body: (m) =>
+    m.kind !== 'body'
+      ? EMPTY_ROW_VIEW
+      : namedRowView(m, 'body', 'body-row', m.body.id, m.body.label),
+  starCatalog: (m) =>
+    m.kind !== 'starCatalog'
+      ? EMPTY_ROW_VIEW
+      : namedRowView(m, 'starCatalog', 'star-row', m.star.id, m.star.label),
+  // Structure row — captured card shot when one exists (see `shotOrGlyph`),
+  // else a glyph placeholder, + a category chip (Cluster / Supercluster /
+  // Void / Group) from the per-category display copy, plus the Abell
+  // designation as a secondary name when present.
   structure: (m) => {
     if (m.kind !== 'structure') return EMPTY_ROW_VIEW;
     const { id, name, category, abell } = m.entry;
     return {
       key: `structure:${id}`,
       testid: `structure-row-${id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {name[0] ?? '·'}
-        </span>
-      ),
+      leading: shotOrGlyph(m, name),
       primary: name,
       secondary: (
         <>
@@ -150,4 +213,46 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
+  // Exhibit row — letter glyph like the Milky Way (no atlas thumb: an exhibit
+  // is a scene takeover, not a picturable object).
+  exhibit: (m) => {
+    if (m.kind !== 'exhibit') return EMPTY_ROW_VIEW;
+    return {
+      key: `exhibit:${m.exhibit.id}`,
+      testid: `exhibit-row-${m.exhibit.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.exhibit.label[0] ?? '·'}
+        </span>
+      ),
+      primary: m.exhibit.label,
+      secondary: <span className={styles.source}>Exhibit</span>,
+    };
+  },
+  // Tour row — same glyph treatment as an exhibit; a tour is a beat sequence,
+  // not a picturable object either.
+  tour: (m) => {
+    if (m.kind !== 'tour') return EMPTY_ROW_VIEW;
+    return {
+      key: `tour:${m.tour.id}`,
+      testid: `tour-row-${m.tour.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.tour.label[0] ?? '·'}
+        </span>
+      ),
+      primary: m.tour.label,
+      secondary: <span className={styles.source}>Tour</span>,
+    };
+  },
+  // Layer-published row — no thumbnail vocabulary to look up, and no chip: the
+  // publishing Layer is not a source label the user would recognise.
+  layer: (m) =>
+    m.kind !== 'layer' ? EMPTY_ROW_VIEW : glyphRowView('layer', m.entry.id, m.entry.names),
+  // Earth-place row — the same shape plus a fixed 'Earth' chip, since every row
+  // here is on the one body.
+  place: (m) =>
+    m.kind !== 'place'
+      ? EMPTY_ROW_VIEW
+      : glyphRowView('place', m.entry.id, m.entry.names, EARTH_CHIP),
 };

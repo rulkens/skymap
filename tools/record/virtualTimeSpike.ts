@@ -6,8 +6,8 @@
  * The tour-recorder design (docs/superpowers/specs/2026-07-07-tour-recorder-design.md,
  * "Risks and the spike gate") rests on one genuinely unproven combination:
  * CDP **virtual time** stepping × **WebGPU presentation** on this app. The two
- * halves are individually proven — headless WebGPU + screenshots works (the
- * e2e suite, tests/e2e/cf4-density-volume.spec.ts), and virtual time + canvas
+ * halves are individually proven — headless WebGPU + screenshots works (see
+ * playwright.config.ts's launch notes), and virtual time + canvas
  * stepping is the mechanism behind timecut-class capture tools — but nobody
  * has shown that on skymap each budget grant reliably fires rAF → the render
  * scheduler → runFrame → submit → *present* before the per-frame screenshot

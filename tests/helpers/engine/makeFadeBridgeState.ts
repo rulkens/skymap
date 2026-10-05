@@ -12,13 +12,19 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
-import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
+import { filamentsFadeRows } from '../../../src/layers/cosmicWebFilaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import { starCatalogFadeRows } from '../../../src/layers/starCatalog/present/starCatalogFadeRows';
+import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
+import { cosmicWebDensityFadeRows } from '../../../src/layers/cosmicWebDensity/present/cosmicWebDensityFadeRows';
+import { milkyWayFadeRows } from '../../../src/layers/milkyWay/present/milkyWayFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../src/layers/filaments/types/FilamentsRuntime';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { CosmicWebFilamentsRuntime } from '../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
+import type { CosmicWebDensityRuntime } from '../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
 
 /** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
@@ -28,7 +34,21 @@ const GALAXY_RUNTIME = {
 
 const FILAMENTS_RUNTIME = {
   renderer: { hasCloud: () => true },
-} as unknown as FilamentsRuntime;
+} as unknown as CosmicWebFilamentsRuntime;
+
+/** `fieldLoaded` true, so the `flow` row's demand-loaded guard passes. */
+const FLOW_RUNTIME = {
+  renderer: { fieldLoaded: () => true },
+} as unknown as FlowRuntime;
+
+/**
+ * MCPM is default-on and loads first, so by the time a real sync runs the
+ * renderer already holds it — the field row's guard needs at least one
+ * resident id for the fan-out to have anything to fade.
+ */
+const DENSITY_RUNTIME = {
+  renderer: { listIds: () => ['mcpm'] },
+} as unknown as CosmicWebDensityRuntime;
 
 export function makeFadeBridgeState(): {
   state: FadeBridgeState;
@@ -67,11 +87,16 @@ export function makeFadeBridgeState(): {
     structures: { enabled: true, items: structureItems },
     milkyWay: { enabled: true, labelEnabled: true },
     zoneOfAvoidance: { enabled: true },
-    // Empty volume items: the volumeField intent reads items[id]?.enabled (→
-    // false here) and its post no-ops because assetSlots.syntheticVolumes is
-    // absent — neither throws, which is all this fixture needs.
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
+    // Every cube off: the per-cube intent reads false, which is all this fixture needs.
+    cosmicWebDensity: {
+      enabled: true,
+      items: {
+        mcpm: { enabled: false },
+        'polyphorm-2mrs': { enabled: false },
+        'mcpm-workbench': { enabled: false },
+      },
+    },
+    cosmicWebFilaments: { enabled: true },
     flow: { enabled: true },
     orbitTrails: { enabled: true },
   } as unknown as EngineSettingsState;
@@ -80,8 +105,6 @@ export function makeFadeBridgeState(): {
     settings,
     gpu: {
       galaxyPointRenderer: { hasCatalog: () => true },
-      flowFieldRenderer: { fieldLoaded: () => true },
-      volumeFieldRenderer: { listIds: () => [] },
     },
     subsystems: {
       fades: { fadeTo, setImmediate, targetOf },
@@ -92,7 +115,11 @@ export function makeFadeBridgeState(): {
     fadeRows: [
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
+      ...starCatalogFadeRows(),
       ...filamentsFadeRows(FILAMENTS_RUNTIME),
+      ...flowFadeRows(FLOW_RUNTIME),
+      ...cosmicWebDensityFadeRows(DENSITY_RUNTIME),
+      ...milkyWayFadeRows(),
     ],
   } as unknown as FadeBridgeState;
 

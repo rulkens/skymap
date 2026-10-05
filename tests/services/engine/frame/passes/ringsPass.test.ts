@@ -29,7 +29,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -54,14 +54,13 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
   sceneBodyStates: vi.fn((state: EngineState): ReadonlyMap<string, BodyState> => {
     const m = new Map<string, BodyState>();
     for (const b of (state.data.bodies.planets ?? []) as readonly SeededPlanet[]) {
-      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 });
+      m.set(b.id, { positionMpc: b.positionMpc, orientation: b.orientation });
     }
     const earth = state.data.bodies.earth as SeededPlanet | null;
     if (earth)
       m.set(earth.id, {
         positionMpc: earth.positionMpc,
         orientation: earth.orientation,
-        meanAnomalyRad: 0,
       });
     return m;
   }),
@@ -110,22 +109,21 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
-  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', bodyId } });
+  const slab: Slab = makeSlab({ vp: f64Vp, frame: { kind: 'body-m', hostId: bodyId } });
   return { slab, vp: f32Vp, camPos: [0, 0, 5], viewportPx: [1280, 720] };
 }
 

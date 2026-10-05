@@ -24,21 +24,21 @@ import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
+import { bodySlabRowOf } from '../../../../../src/utils/scene/bodySlabRowOf';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import {
-  sceneBodyLabels,
-  sceneBodyLabelId,
-} from '../../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../../src/services/engine/presentation/sceneBodyLabels';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
+import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -90,12 +90,13 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
 
   const slabs = deriveSlabs({
     cam,
-    cosmoVp: computeViewProj(cam),
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
+    cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
     // Altitude over the hull — what NEAR0's near-plane floor is being tested
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
-    visibleBodies: [earth],
+    visibleRows: [earth].map(bodySlabRowOf),
     viewportPx: VIEWPORT,
     starSphereRangeM: null,
     attachedBodiesByHostId: new Map([
@@ -109,23 +110,25 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     ]),
   });
   const ctx = {
-    simDays: SIM_DAYS,
+    snapshot: {
+      simDays: SIM_DAYS,
+      // No body row has drawn into `foreground:0` in this fixture, so the
+      // ring takes its un-occluded pipeline — the axis these cases are about.
+      renderedTargets: new Set<string>(),
+    },
     slabs,
     bodyPose,
     canvasSize: { width: VIEWPORT[0], height: VIEWPORT[1] },
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: cam.fovYRad,
-    // No body row has drawn into `foreground:0` in this fixture, so the ring
-    // takes its un-occluded pipeline — the axis these cases are about.
-    renderedTargets: new Set<string>(),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 
   const row = {
     type: 'body',
     id: bodyId,
     label: body.label,
     positionMpc: [bodyState.positionMpc[0], bodyState.positionMpc[1], bodyState.positionMpc[2]],
+    driver: bodyDriverGeometry(bodyId),
   } as SelectionRow;
   const meshDraw = vi.fn();
   const ringDraw = vi.fn();
@@ -140,7 +143,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     settings: { galaxyCatalogs: { sizePx: 2 } },
   } as unknown as EngineState;
 
-  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.bodyId === 'earth');
+  const hostRow = slabs.findIndex((s) => s.frame.kind === 'body-m' && s.frame.hostId === 'earth');
   meshBodiesPass.draw({} as never, slabViewOf(ctx, hostRow), ctx, state);
   near0SelectionRingPass.draw({} as never, slabViewOf(ctx, NEAR0), ctx, state);
 
@@ -152,7 +155,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // settings/fade graph this harness has no use for) projected through
   // `near0LabelProjection`'s rebased vp — the pair `foregroundLabelsPass`, the
   // leader line and `labelPickQuads` all consume.
-  const caption = sceneBodyLabels(states).find((l) => l.id === sceneBodyLabelId(bodyId))!;
+  const caption = sceneBodyLabels(states).find((l) => l.id === `sceneBody-${bodyId}`)!;
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
     caption.worldPos[1] - ctx.drawCamPos[1],
@@ -163,7 +166,13 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     // The mesh's origin under its own MVP (the first 16 floats of the packed
     // uniforms) — where the body is actually drawn.
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
-    ringCall: ringCall as [unknown, Float32Array, unknown, { worldPos: Vec3; alpha: number }],
+    ringCall: ringCall as [
+      unknown,
+      Float32Array,
+      unknown,
+      unknown,
+      { worldPos: Vec3; alpha: number },
+    ],
     captionClip: clipOf(near0LabelProjection(ctx).vpF32, camRelAnchor),
   };
 }
@@ -192,7 +201,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     // any real divergence here is a broken seam, not rounding.
     it(`centres the ${id}'s ring and caption on the pixel the mesh draws its origin at`, () => {
       const { meshClip, ringCall, captionClip } = drawAt(id, RING_VISIBLE_RADII);
-      expect(offsetPx(clipOf(ringCall[1], ringCall[3].worldPos), meshClip)).toBeLessThan(1);
+      expect(offsetPx(clipOf(ringCall[1], ringCall[4].worldPos), meshClip)).toBeLessThan(1);
       expect(offsetPx(captionClip, meshClip)).toBeLessThan(1);
     });
 
@@ -202,7 +211,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     // ring is discarded.
     it(`keeps the ${id}'s ring centre inside the NEAR0 frustum`, () => {
       const { ringCall } = drawAt(id, RING_VISIBLE_RADII);
-      const ringClip = clipOf(ringCall[1], ringCall[3].worldPos);
+      const ringClip = clipOf(ringCall[1], ringCall[4].worldPos);
       expect(ringClip[2]).toBeGreaterThanOrEqual(0);
       expect(ringClip[2]).toBeLessThanOrEqual(ringClip[3]);
     });
@@ -214,7 +223,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     it(`draws no ring at the ${id}'s own standoff, where the body overflows the screen`, () => {
       const body = SCENE_MESH_BODIES.find((b) => b.id === id)!;
       expect(drawAt(id, body.standoffRadii).ringCall).toBeUndefined();
-      expect(drawAt(id, RING_VISIBLE_RADII).ringCall[3].alpha).toBe(1);
+      expect(drawAt(id, RING_VISIBLE_RADII).ringCall[4].alpha).toBe(1);
     });
   }
 });

@@ -41,6 +41,7 @@ import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { narrowMat4 } from '../../../src/utils/math/narrowMat4';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 // ── Shared test geometry ──────────────────────────────────────────────────────
 
@@ -81,8 +82,7 @@ const foregroundVp = computeForegroundViewProj({
   targetMpc,
   up,
   renderOrigin,
-  fovYRad,
-  aspect,
+  frustum: symmetricFrustum(fovYRad, aspect),
   near,
   far,
   reversedZ: false,
@@ -220,8 +220,7 @@ describe('composeBodyMvp', () => {
       targetMpc: pcTargetMpc,
       up: [0, 1, 0],
       renderOrigin: pcRenderOrigin,
-      fovYRad: Math.PI / 4,
-      aspect: 1,
+      frustum: symmetricFrustum(Math.PI / 4, 1),
       near: radiusMpc * 0.1,
       far: radiusMpc * 100,
       reversedZ: false,

@@ -35,7 +35,7 @@ export const SIZE_MAX_PC = 200;
  * cloud-size span above, so the erosion bites at the same scale the clouds
  * themselves live at.
  */
-export const DUST_NOISE_TILE_PC = 500;
+const DUST_NOISE_TILE_PC = 500;
 
 /** World-unit tile size at a given `textureScale` — the one place `pcToUnits` combines with `DUST_NOISE_TILE_PC`, so `createGalaxyEngine.ts` doesn't restate the conversion. */
 export function dustNoiseTileUnits(textureScale: number): number {

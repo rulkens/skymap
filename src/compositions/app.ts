@@ -8,10 +8,42 @@
 
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
-import { filamentsLayer } from '../layers/filaments/layer';
+import { blackHolesLayer } from '../layers/blackHoles/layer';
+import { constellationsLayer } from '../layers/constellations/layer';
+import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
+import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
+import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
+import { localBubbleLayer } from '../layers/localBubble/layer';
+import { milkyWayLayer } from '../layers/milkyWay/layer';
+import { starCatalogLayer } from '../layers/starCatalog/layer';
+import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
 export const APP_COMPOSITION = {
-  layers: [galaxyCatalogLayer, filamentsLayer] as const,
+  layers: [
+    galaxyCatalogLayer,
+    starCatalogLayer,
+    cosmicWebDensityLayer,
+    cosmicWebFilamentsLayer,
+    flowLayer,
+    zoneOfAvoidanceLayer,
+    localBubbleLayer,
+    constellationsLayer,
+    blackHolesLayer,
+    milkyWayLayer,
+  ] as const,
   home: EARTH_HOME,
-} satisfies EngineComposition<readonly [typeof galaxyCatalogLayer, typeof filamentsLayer]>;
+} satisfies EngineComposition<
+  readonly [
+    typeof galaxyCatalogLayer,
+    typeof starCatalogLayer,
+    typeof cosmicWebDensityLayer,
+    typeof cosmicWebFilamentsLayer,
+    typeof flowLayer,
+    typeof zoneOfAvoidanceLayer,
+    typeof localBubbleLayer,
+    typeof constellationsLayer,
+    typeof blackHolesLayer,
+    typeof milkyWayLayer,
+  ]
+>;

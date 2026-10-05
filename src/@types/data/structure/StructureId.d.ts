@@ -5,7 +5,7 @@ type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
 /**
  * StructureId — the source-level id for the structure source type
  * (cluster / supercluster / void / group). It is the exact parallel of
- * `GalaxyCatalogId` and `VolumeFieldId`: the key domain for structure
+ * `GalaxyCatalogId` and `CosmicWebDensityFieldId`: the key domain for structure
  * settings, fades, and marker buckets. Derived from the `type: 'structure'`
  * registry rows, so a new structure source widens the union automatically.
  *

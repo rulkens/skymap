@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
-import { SGR_A_STAR_ANCHOR } from '../../../src/data/bodies/sceneSgrAStar';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -33,7 +33,8 @@ describe('BODY_REGIONS', () => {
     // discriminate against the real table: `solar-neighbourhood` is the RESIDUAL
     // region, claiming every anchor no tighter region took, so a fall-through
     // drags its extent 2.3e-3 → 8.178e-3 Mpc and `FOREGROUND_MAX_DISTANCE_MPC`
-    // (extent × 100) 0.23 → 0.82 Mpc — past `MILKY_WAY_LABEL_NEAR_MPC` (0.6),
+    // (extent × 100) 0.23 → 0.82 Mpc — past the Milky Way label's near fade
+    // edge (0.6 Mpc, `MILKY_WAY_LABEL_FADE_BAND` in `produceMilkyWayLabel.ts`),
     // where the "You are here" label stops reaching full alpha in the Local
     // Group. That is a SECOND route to the same gate, distinct from the
     // `|anchorPos|` term prep-02 removed from `foregroundMaxDistance`; both have
@@ -43,11 +44,11 @@ describe('BODY_REGIONS', () => {
       expect(anchoredRegions.some((r) => r.memberIds.includes(region.anchorId))).toBe(true);
     }
 
-    // The consequence, pinned directly. A fallen-through Sgr A* would set the
-    // residual extent to exactly its own distance from the Sun.
+    // The consequence, pinned directly. A fallen-through Galactic Centre would
+    // set the residual extent to exactly its own distance from the Sun.
     const neighbourhood = regionById('solar-neighbourhood');
-    expect(neighbourhood.memberIds).not.toContain('sgr-a-star');
-    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc));
+    expect(neighbourhood.memberIds).not.toContain('galactic-centre');
+    expect(neighbourhood.extentMpc).toBeLessThan(Math.hypot(...GALACTIC_CENTRE_ANCHOR.positionMpc));
   });
 
   it('the galactic-centre region extent covers the widest S-star orbit, not S2', () => {
@@ -114,20 +115,20 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
   it('has extent 0, not NaN, and never resolves the missing anchor', async () => {
     // `Math.max()` over an empty member list is −Infinity, and every edge that
     // scales off an extent would then read −Infinity too. `galactic-centre` no
-    // longer supplies the case — Sgr A* is seeded, so the region correctly holds
-    // its own anchor at extent 0 — so the empty region is made by taking that
-    // anchor back out, which is also the state `bodyRegions.ts` is written to
-    // tolerate (its anchor id is authored ahead of any seed). Emptiness must be
-    // answered BEFORE the anchor is read, or the row resolves a position nothing
-    // seeds and throws at import, taking the whole file with it.
+    // longer supplies the case — the place and Sgr A* are both seeded, so the
+    // region correctly holds them at extent 0 — so the empty region is made by
+    // taking both anchors back out, which is also the state `bodyRegions.ts` is
+    // written to tolerate (its anchor id is authored ahead of any seed).
+    // Emptiness must be answered BEFORE the anchor is read, or the row resolves
+    // a position nothing seeds and throws at import, taking the whole file with it.
     //
-    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchor gone
-    // but the 39 S-star rows still focused on it, `focusResolveOrder` throws on
-    // the dangling focus before any region is built, so the element table is
-    // mocked in step with the anchor table.
+    // "Ahead of the seed" means ahead of BOTH halves of it: with the anchors
+    // gone but the 39 S-star rows still focused on the place, `focusResolveOrder`
+    // throws on the dangling focus before any region is built, so the element
+    // table is mocked in step with the anchor table.
     vi.resetModules();
     vi.doMock('../../../src/data/bodies/sceneAnchors', () => ({
-      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'sgr-a-star'),
+      SCENE_ANCHORS: SCENE_ANCHORS.filter((anchor) => anchor.id !== 'galactic-centre'),
     }));
     vi.doMock('../../../src/data/bodies/orbitalElements', async () => {
       const actual = await vi.importActual<
@@ -135,7 +136,7 @@ describe('BODY_REGIONS — a region whose anchor is not seeded', () => {
       >('../../../src/data/bodies/orbitalElements');
       return {
         ...actual,
-        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'sgr-a-star'),
+        ORBITAL_ELEMENTS: actual.ORBITAL_ELEMENTS.filter((el) => el.focusId !== 'galactic-centre'),
       };
     });
     const { BODY_REGIONS: unseeded } = await import('../../../src/data/bodies/bodyRegions');

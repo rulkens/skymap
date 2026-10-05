@@ -1,4 +1,3 @@
-// src/components/containers/ClipPathInspectorSectionContainer.tsx
 /**
  * ClipPathInspectorSectionContainer — store boundary for the clip-path debug
  * overlay controls.

@@ -86,7 +86,7 @@ export type Label2D = {
    * bounded by the clamps.  Defaults to 0.01 in the renderer if absent.
    */
   readonly worldEmMpc?: number;
-  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Default 1. */
+  /** Fade multiplier in [0,1] driven by produceMilkyWayLabel. Default 1. */
   readonly fadeAlpha?: number;
   /**
    * How much of the occlusion-variant fragment stage's per-pixel scene
@@ -98,6 +98,27 @@ export type Label2D = {
    * -occluding) pipeline.
    */
   readonly occludeWeight?: number;
+  /**
+   * Eye to the subject's NEAR surface (centre distance minus its radius), in
+   * km: the cutoff of the SECOND occluder channel, which reads the sampled
+   * scene depth and so sees the terrain the body spheres stop short of. The
+   * shader takes whichever channel fires. Judged once, at `occludeSubjectPos`
+   * (falling back to `worldPos`) in the vertex stage — not per rendered text
+   * pixel — so a caption hides whole instead of half-cut. Default 0 leaves it
+   * inert — right for every producer whose `occludeWeight` is already 1.
+   */
+  readonly occludeNearKm?: number;
+  /**
+   * World position the sampled-depth channel judges instead of `worldPos`,
+   * when set. A LIFTED caption's own `worldPos` sits screen-up from its
+   * subject (`label2DDirector`'s `applyLift`, unprojected at the lift target)
+   * — over terrain that reads nearer OR farther than the subject's own
+   * ground, which is the wrong question to ask. `applyLift` sets this to the
+   * pre-lift anchor (the same point its leader line's `fromWorld` end lerps
+   * from) for every label it lifts; an unlifted label leaves it undefined and
+   * the shader falls back to `worldPos`, where the two already coincide.
+   */
+  readonly occludeSubjectPos?: Vec3;
   /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).

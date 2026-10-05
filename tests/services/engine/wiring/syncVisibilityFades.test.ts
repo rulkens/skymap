@@ -166,10 +166,9 @@ describe('applyIntent', () => {
   });
 
   it('a held target still runs guard and post', () => {
-    // This is the lazy-volume re-arm, pinned: `maybeLazyLoadDebugVolume` (the
-    // volumeField row's `post`) must re-run every sync even when the fade
-    // write itself is skipped, or a volume that idled back out under
-    // unchanged settings never gets re-armed.
+    // A row's `post` side effect must re-run every sync even when the fade
+    // write itself is skipped, so a demand-loaded layer that idled back out
+    // under unchanged settings still gets re-armed.
     const { state, targetOf } = makeState();
     targetOf.mockReturnValue(1);
     const post = vi.fn<(state: EngineState, item: undefined) => void>();
@@ -205,9 +204,9 @@ const INTENT_KEYS = [
   'bodyLabel',
   'structureRing',
   'structureLabel',
-  'volumeField',
-  'volumesMaster',
-  'filaments',
+  'cosmicWebDensityField',
+  'cosmicWebDensity',
+  'cosmicWebFilaments',
   'orbitTrails',
   'milkyWayDisk',
   'milkyWayLabel',
@@ -240,7 +239,7 @@ describe('syncVisibilityFades', () => {
     }
     // …and nothing from another intent row did.
     expect(fadedHandle(fadeTo, { kind: 'structure', id: STRUCTURE_IDS[0]! })).toBe(false);
-    expect(fadedHandle(fadeTo, { kind: 'volumesMaster' })).toBe(false);
+    expect(fadedHandle(fadeTo, { kind: 'cosmicWebDensity' })).toBe(false);
     expect(fadedHandle(fadeTo, { kind: 'milkyWay' })).toBe(false);
   });
 
@@ -250,30 +249,34 @@ describe('syncVisibilityFades', () => {
     syncVisibilityFades(state, { animate: true });
 
     // A representative handle for each intent key faded at least once. The
-    // volumeField row fans out per VolumeFieldId, so it's checked by kind below
-    // rather than against one hardcoded id.
-    const intentSamples: Record<Exclude<(typeof INTENT_KEYS)[number], 'volumeField'>, FadeId> = {
+    // cosmicWebDensityField row fans out per CosmicWebDensityFieldId, so it's
+    // checked by kind below rather than against one hardcoded id.
+    const intentSamples: Record<
+      Exclude<(typeof INTENT_KEYS)[number], 'cosmicWebDensityField'>,
+      FadeId
+    > = {
       survey: { kind: 'galaxyCatalog', id: GALAXY_CATALOG_IDS[0]! },
       surveyLabel: { kind: 'labelLayer', layer: 'galaxy' },
       starCatalogLabel: { kind: 'labelLayer', layer: 'starCatalog', item: 'famousStar' },
       bodyLabel: { kind: 'labelLayer', layer: 'body', item: 'earth' },
       structureRing: { kind: 'structure', id: STRUCTURE_IDS[0]! },
       structureLabel: { kind: 'labelLayer', layer: 'structure', item: STRUCTURE_IDS[0]! },
-      volumesMaster: { kind: 'volumesMaster' },
-      filaments: { kind: 'filament' },
+      cosmicWebDensity: { kind: 'cosmicWebDensity' },
+      cosmicWebFilaments: { kind: 'cosmicWebFilaments' },
       orbitTrails: { kind: 'orbitTrails' },
       milkyWayDisk: { kind: 'milkyWay' },
       milkyWayLabel: { kind: 'labelLayer', layer: 'milkyWay' },
       flow: { kind: 'flow' },
     };
     for (const key of INTENT_KEYS) {
-      if (key === 'volumeField') continue;
+      if (key === 'cosmicWebDensityField') continue;
       expect(fadedHandle(fadeTo, intentSamples[key]), `intent ${key}`).toBe(true);
     }
-    // At least one volumeField handle faded (the row fans out per registry id).
+    // At least one cosmicWebDensityField handle faded (the row fans out per
+    // registry id).
     expect(
-      fadeTo.mock.calls.some(([id]) => (id as { kind: string }).kind === 'volumeField'),
-      'intent volumeField',
+      fadeTo.mock.calls.some(([id]) => (id as { kind: string }).kind === 'cosmicWebDensityField'),
+      'intent cosmicWebDensityField',
     ).toBe(true);
 
     // The registration-only handles were never faded.

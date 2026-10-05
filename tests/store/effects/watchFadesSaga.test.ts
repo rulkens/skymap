@@ -9,9 +9,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
-import { setMilkyWayEnabled } from '../../../src/layers/milkyWay/settings/milkyWaySlice';
-import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
-import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
+import { setMilkyWayEnabled } from '../../../src/layers/milkyWay/state/milkyWay/slice';
+import { writeCosmicWebDensityField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
+import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 
@@ -33,7 +33,7 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
     expect(reconcile.syncFades).toHaveBeenCalledWith();
 
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+    store.dispatch(writeCosmicWebDensityField({ id: 'mcpm', patch: { contrast: 0.5 } }));
     expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(2);
 

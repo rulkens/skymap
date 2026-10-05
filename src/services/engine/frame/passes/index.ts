@@ -6,15 +6,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { scalarVolumePass } from './scalarVolumePass';
-import { flowFieldPass } from './flowFieldPass';
-import { volumeUpsamplePass } from './volumeUpsamplePass';
-import { milkyWayPass } from './milkyWayPass';
-import { milkyWayAggregatePass } from './milkyWayAggregatePass';
-import { milkyWayUpsamplePass } from './milkyWayUpsamplePass';
 import { horizonShellPass } from './horizonShellPass';
-import { zoneOfAvoidancePass } from './zoneOfAvoidancePass';
-import { zoneOfAvoidanceUpsamplePass } from './zoneOfAvoidanceUpsamplePass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
@@ -23,46 +15,28 @@ import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { earthPass } from './earthPass';
 import { surfaceTilesPass } from './surfaceTilesPass';
+import { terrainPickMarkerPass } from './terrainPickMarkerPass';
+import { contactShadowsPass } from './contactShadowsPass';
 import { cloudShellPass } from './cloudShellPass';
-import { starSpheresPass } from './starSpheresPass';
-import { fieldStarSpherePass } from './fieldStarSpherePass';
 import { planetsPass } from './planetsPass';
 import { texturedBodiesPass } from './texturedBodiesPass';
 import { meshBodiesPass } from './meshBodiesPass';
 import { ringsPass } from './ringsPass';
-import { starPointsPass } from './starPointsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
-import { starCatalogPass } from './starCatalogPass';
-import { starAggregatesPass } from './starAggregatesPass';
-import { starAggregateUpsamplePass } from './starAggregateUpsamplePass';
-import { constellationsPass } from './constellationsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
-import { sgrAStarLensingPass } from './sgrAStarLensingPass';
+import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
+import { domeResamplePass } from './domeResamplePass';
 
 /**
  * Core's contributed passes, as a flat set. It states no order and no grouping:
  * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
-  scalarVolumePass,
-  zoneOfAvoidancePass,
-  flowFieldPass,
-  volumeUpsamplePass,
-  zoneOfAvoidanceUpsamplePass,
   horizonShellPass,
   structureMarkersPass,
-  milkyWayAggregatePass,
-  milkyWayUpsamplePass,
-  milkyWayPass,
-  starPointsPass,
-  starAggregatesPass,
-  starCatalogPass,
-  starAggregateUpsamplePass,
-  constellationsPass,
-  sgrAStarLensingPass,
   orbitTrailsPass,
   bodyGlintsPass,
   selectionRingPass,
@@ -71,9 +45,9 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   labelsPass,
   earthPass,
   surfaceTilesPass,
+  terrainPickMarkerPass,
+  contactShadowsPass,
   cloudShellPass,
-  starSpheresPass,
-  fieldStarSpherePass,
   planetsPass,
   texturedBodiesPass,
   meshBodiesPass,
@@ -81,5 +55,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   foregroundLabelsPass,
   clipPathDebugPass,
   atmosphereShellPass,
+  aerialPerspectivePass,
   skyCubemapBlitPass,
+  domeResamplePass,
 ];

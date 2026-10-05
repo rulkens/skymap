@@ -60,14 +60,14 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { SurfaceTileDrawArgs } from '../../../../../src/@types/rendering/SurfaceTileRenderer';
+import type { SurfaceTileDrawArgs } from '../../../../../src/@types/rendering/surfaceTileRenderer/SurfaceTileDrawArgs';
 
 // Mock the two body-slab compose primitives so the test can (a) assert which
 // vp/pose they consumed by argument identity and (b) hand the layer
@@ -106,7 +106,7 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 
 type SeededBody = (EarthBody | PlanetBody) & Pick<BodyState, 'positionMpc' | 'orientation'>;
 function toBodyState(b: SeededBody): BodyState {
-  return { positionMpc: b.positionMpc, orientation: b.orientation, meanAnomalyRad: 0 };
+  return { positionMpc: b.positionMpc, orientation: b.orientation };
 }
 
 // Fixtures pairing each body's identity record with its real J2000 state —
@@ -169,7 +169,7 @@ const PASS_STUB = {
 // Bare ctx for the null-handle and draw cases: draw never reads ctx, and
 // enabled's handle check must short-circuit BEFORE the ctx.cam read
 // (renderFrame fixtures carry null handles and a bare ctx).
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 /**
  * A ctx whose camera sits `distance` Mpc from Earth's centre along +x,
@@ -180,7 +180,7 @@ const CTX_STUB = {} as ReadyFrameContext;
  * actual position, exactly as before: the two gates it and the sub-pixel
  * cull key off are meant to vary independently across these tests.
  */
-function makeCtx(distance: number): ReadyFrameContext {
+function makeCtx(distance: number): FrameView {
   const drawCamPos: Vec3 = [
     SEEDED_EARTH.positionMpc[0] + 1e-13,
     SEEDED_EARTH.positionMpc[1],
@@ -191,9 +191,8 @@ function makeCtx(distance: number): ReadyFrameContext {
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
     drawPxPerRad: 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // A camera comfortably inside the shared foreground gate. Reused by reference
@@ -221,7 +220,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
   // builds a body-m row's frame.
   const slab: Slab = makeSlab({
     vp: f64Vp,
-    frame: { kind: 'body-m', bodyId: bodyId as BodyId },
+    frame: { kind: 'body-m', hostId: bodyId as BodyId },
   });
   return {
     slab,
@@ -235,7 +234,7 @@ function makeEarthBodyView(bodyId: 'earth' | 'mars' = 'earth'): SlabView {
 function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState {
   return {
     gpu: { earthRenderer },
-    data: { bodies: { earth, planets: [], meshBodies: [], stars: [] } },
+    data: { bodies: { earth, planets: [], meshBodies: [] } },
     // The tile subsystem is absent until `wireSlots` builds it, and a session
     // that never approaches Earth never engages it — so `null` here is the
     // shipped identity case, in which the packed page-table window is all-zero
@@ -355,11 +354,6 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
     const state = {
       gpu: {
         earthRenderer: { draw: vi.fn() },
-        starRenderer: null,
-        // The field-star sphere shares this group; its presence query reads the
-        // catalog off this handle, so a null handle short-circuits its enabled
-        // gate and keeps it out below and above the gate (like the siblings).
-        starCatalogRenderer: null,
         planetRenderer: null,
         texturedBodyRenderer: null,
         // The ring shares this group; its null handle short-circuits enabled, so
@@ -374,15 +368,17 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
         // The detail patches are their own row in this group; a null handle
         // short-circuits their enabled gate like every sibling above.
         surfaceTileRenderer: null,
+        // The terrain-pick debug marker rides this group too; same short-circuit.
+        terrainPickMarkerRenderer: null,
       },
-      data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [], stars: [] } },
+      data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [] } },
     } as unknown as EngineState;
     // The group VIEW_STUB's body-m row resolves: the foreground line's BODY
     // roster, read off the order that draws it.
     const bodyRoster = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground' ? step.bodyPasses : [],
     );
-    const groupAt = (ctx: ReadyFrameContext) =>
+    const groupAt = (ctx: FrameView) =>
       CONTENT_PASSES.filter(
         (pass) => bodyRoster.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );
@@ -422,7 +418,7 @@ describe('prepareBodySurfaceFrame', () => {
     mvpMock.mockClear();
     const state: EngineState = {
       ...makeState({ draw: vi.fn() }, SEEDED_EARTH),
-      data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS], meshBodies: [], stars: [] } },
+      data: { bodies: { earth: SEEDED_EARTH, planets: [SEEDED_MARS], meshBodies: [] } },
     } as unknown as EngineState;
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     const earthView = makeEarthBodyView('earth');
@@ -583,8 +579,7 @@ describe('earthPass.draw', () => {
       drawCamPos,
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     earthPass.draw(PASS_STUB, view, closeCtx, state);
 
@@ -722,7 +717,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
   const ATLAS_VIEW = {} as GPUTextureView;
 
   /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along +x. */
-  function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
+  function makeAltitudeCtx(altitudeKm: number): FrameView {
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
     const drawCamPos: Vec3 = [
@@ -739,8 +734,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       drawCamPos,
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   /** Installs a spy on `state.gpu.earthRenderer.draw`, replacing the

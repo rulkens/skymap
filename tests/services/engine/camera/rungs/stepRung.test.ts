@@ -21,6 +21,7 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCele
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SURFACE_FIXED_SITES } from '../../../../../src/data/bodies/surfaceFixedSites';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
+import { siteGroundRadiusM } from '../../../../../src/utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../../src/utils/camera/sitePointBodyFixed';
 import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -40,7 +41,7 @@ const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const bodyId = (id: string): BodyId => id as BodyId;
 
 function bodyState(positionMpc: Vec3): BodyState {
-  return { positionMpc, orientation: IDENTITY, meanAnomalyRad: 0 };
+  return { positionMpc, orientation: IDENTITY };
 }
 
 // Body-at-origin: the eye's Mpc magnitude alone sets the altitude, so
@@ -213,15 +214,13 @@ describe('stepRung', () => {
   it("a focus in the rung's host subtree keeps the rung while the arm can serve it", () => {
     // Spec §0's premise correction: releasing on any differing focus made the
     // Mars arm unreachable with a rover focused. The eye is a fraction of a
-    // planet radius up OVER Bradbury Landing — far outside the site band, so
+    // planet radius up OVER Curiosity's site — far outside the site band, so
     // this pins Mars holding, not a descent — and above the rover's horizon,
     // which is what bounds the hold (§4.8).
     const marsRadiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'test').surface
       .datumRadiusM;
-    const site = sitePointBodyFixed(
-      findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'test'),
-      marsRadiusM,
-    );
+    const curiosity = findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'test');
+    const site = sitePointBodyFixed(curiosity, siteGroundRadiusM(curiosity, marsRadiusM));
     const mag = Math.hypot(site[0], site[1], site[2]);
     const up: Vec3 = [site[0] / mag, site[1] / mag, site[2] / mag];
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('mars'), bodyStateAtOrigin()]]);

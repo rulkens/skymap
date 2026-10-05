@@ -43,7 +43,7 @@ export function buildStore() {
   const reconcile: ReconcileEffects = {
     requestRender: vi.fn<() => void>(),
     syncFades: vi.fn<() => void>(),
-    logCameraState: vi.fn<() => void>(),
+    logCameraState: vi.fn<ReconcileEffects['logCameraState']>(() => null),
     applySwapFormat: vi.fn<(desired: GPUTextureFormat) => void>(),
   };
 

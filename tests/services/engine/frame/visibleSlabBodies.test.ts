@@ -1,26 +1,35 @@
 /**
- * visibleSlabBodies — which of `bodies` clear the sub-pixel apparent-diameter
+ * visibleSlabBodies — which of `rows` clear the sub-pixel apparent-diameter
  * floor AND the view-frustum angular cull, and so get a body slab row this
- * frame.
+ * frame. Store bodies reach it through `bodySlabRowOf`, as in `deriveView`.
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { visibleSlabBodies } from '../../../../src/services/engine/frame/visibleSlabBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SGR_A_STAR } from '../../../../src/data/bodies/sceneSgrAStar';
+import { blackHoleSlabRow } from '../../../../src/layers/blackHoles/present/blackHoleSlabRow';
+import { BLACK_HOLES } from '../../../../src/layers/blackHoles/data/blackHoles';
+import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
+import { bodySlabRowOf } from '../../../../src/utils/scene/bodySlabRowOf';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
-import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
+const SQUARE_90 = symmetricFrustum(Math.PI / 2, 1);
+// pxPerRad = viewportHeightPx / (tanUp − tanDown), the canonical form
+// `visibleSlabBodies` reads directly off the view.
+const PX_PER_RAD_90 = 1000 / (SQUARE_90.tanUp - SQUARE_90.tanDown);
+const FRUSTUM_60_16_9 = symmetricFrustum(Math.PI / 3, 16 / 9);
+const PX_PER_RAD_60 = 1000 / (FRUSTUM_60_16_9.tanUp - FRUSTUM_60_16_9.tanDown);
 
 function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
-  return { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 };
+  return { positionMpc, orientation: [...IDENTITY] };
 }
 
 /** A body offset `offAxisDeg` from `FORWARD_X`, in the XY plane, at `distanceMpc`. */
@@ -57,16 +66,15 @@ describe('visibleSlabBodies', () => {
     ]);
 
     const visible = visibleSlabBodies({
-      bodies: [belowFloor, aboveFloor],
+      rows: [belowFloor, aboveFloor].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((body) => body.id)).toEqual(['above']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['above']);
   });
 
   it('includes earth alongside surviving planets, and drops a body missing a bodyState', () => {
@@ -84,16 +92,15 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['earth', makeState()]]);
 
     const visible = visibleSlabBodies({
-      bodies: [earth, orphan],
+      rows: [earth, orphan].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((body) => body.id)).toEqual(['earth']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['earth']);
   });
 
   it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
@@ -111,16 +118,15 @@ describe('visibleSlabBodies', () => {
     const bodyStates = new Map<string, BodyState>([['saturn', makeState([dMpc, 0, 0])]]);
 
     const visible = visibleSlabBodies({
-      bodies: [saturn],
+      rows: [saturn].map(bodySlabRowOf),
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
-    expect(visible.map((b) => b.id)).toEqual(['saturn']);
+    expect(visible.map((row) => row.anchorId)).toEqual(['saturn']);
   });
 
   describe('view-frustum angular cull', () => {
@@ -141,22 +147,21 @@ describe('visibleSlabBodies', () => {
         ['wide', makeState(offAxisPositionMpc(offAxisDeg, distanceMpc))],
       ]);
       return visibleSlabBodies({
-        bodies: [wideBody],
+        rows: [wideBody].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
     }
 
     it('drops a body directly behind the camera (180° off-axis)', () => {
-      expect(frustumCase(180).map((b) => b.id)).toEqual([]);
+      expect(frustumCase(180).map((row) => row.anchorId)).toEqual([]);
     });
 
     it('drops a body 90° off-axis', () => {
-      expect(frustumCase(90).map((b) => b.id)).toEqual([]);
+      expect(frustumCase(90).map((row) => row.anchorId)).toEqual([]);
     });
 
     it('keeps a body whose disc straddles the frustum edge even though its centre is well outside it', () => {
@@ -183,16 +188,15 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        bodies: [straddling],
+        rows: [straddling].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
 
-      expect(visible.map((b) => b.id)).toEqual(['straddling']);
+      expect(visible.map((row) => row.anchorId)).toEqual(['straddling']);
     });
 
     it('keeps Saturn at its real ring-outer radius, pose-A off-axis geometry (θ≈20.55°, in view)', () => {
@@ -211,76 +215,91 @@ describe('visibleSlabBodies', () => {
       ]);
 
       const visible = visibleSlabBodies({
-        bodies: [saturn],
+        rows: [saturn].map(bodySlabRowOf),
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: (1000 * 16) / 9,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 3,
+        frustum: FRUSTUM_60_16_9,
+        pxPerRad: PX_PER_RAD_60,
       });
 
-      expect(visible.map((b) => b.id)).toEqual(['saturn']);
+      expect(visible.map((row) => row.anchorId)).toEqual(['saturn']);
+    });
+
+    it('keeps a body just inside the long edge of an off-axis frustum', () => {
+      // tanRight = 3 puts the right edge at atan(3) ≈ 71.6° off-axis. A
+      // symmetric reading of the same fovY/aspect (90°, 1.5) culls past
+      // ≈ 70.1°; the far-edge half-diagonal (≈ 72.5°, ×1.15) keeps it.
+      const bodyStates = new Map<string, BodyState>([
+        ['wide', makeState(offAxisPositionMpc(71, 1000))],
+      ]);
+      const visible = visibleSlabBodies({
+        rows: [wideBody].map(bodySlabRowOf),
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: { tanLeft: 0, tanRight: 3, tanDown: -1, tanUp: 1 },
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((row) => row.anchorId)).toEqual(['wide']);
     });
   });
 
-  it('admits an AnchorPointBody candidate on the same terms as a planet', () => {
-    const visibleAnchor: AnchorPointBody = {
-      id: 'visible-anchor',
-      label: 'Visible anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const hiddenAnchor: AnchorPointBody = {
-      id: 'hidden-anchor',
-      label: 'Hidden anchor',
-      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
-    };
-    const bodyStates = new Map<string, BodyState>([
-      ['visible-anchor', makeState()],
-      ['hidden-anchor', makeState(offAxisPositionMpc(180, 1000))],
-    ]);
-
-    const visible = visibleSlabBodies({
-      bodies: [visibleAnchor, hiddenAnchor],
-      bodyStates,
-      camPosMpc: [0, 0, 0],
-      camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
-    });
-
-    expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
-  });
-
-  it("keeps Sgr A* for its lens band's whole support, even sub-pixel and off-axis", () => {
-    // The lens pass's slab must be born where its fade band OPENS (alpha = 0,
-    // 500 AU), not where the hole's own r_s-scale disc clears the 1-px floor
-    // (~346 AU on a dpr-2 1080p-class viewport — bandAlpha already ~0.4
-    // there: the pop this pins, audit-cubemap-alignment.md §8). Placed
-    // sub-pixel AND behind the camera: both culls must be bypassed inside
-    // the band, since the lensed footprint isn't the disc.
-    const sgrAStar = SGR_A_STAR;
+  describe("Sgr A*'s lens envelope, not a bypass", () => {
+    // Both culls read the lens row's `drawRadiusM` like any other row's
+    // shell, so candidacy tracks where the LENSED SPHERE actually reaches
+    // rather than bypassing for any position inside the band, which would
+    // keep a hole directly behind the camera.
+    const lensRow = BLACK_HOLES.map(blackHoleSlabRow).find(
+      (row) => row.anchorId === GALACTIC_CENTRE_ANCHOR.id,
+    );
+    if (lensRow === undefined) throw new Error('BLACK_HOLES carries no galactic-centre row');
     const insideBandMpc = 400 * SCALE_UNITS.AU_TO_MPC; // < goneAt (500 AU)
     const outsideBandMpc = 600 * SCALE_UNITS.AU_TO_MPC; // > goneAt
 
-    for (const [distanceMpc, expected] of [
-      [insideBandMpc, [SGR_A_STAR.id]],
-      [outsideBandMpc, []],
-    ] as const) {
+    it('keeps the lens inside the band, 30° off-axis (well within the frustum cull threshold)', () => {
       const bodyStates = new Map<string, BodyState>([
-        [SGR_A_STAR.id, makeState(offAxisPositionMpc(180, distanceMpc))],
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(30, insideBandMpc))],
       ]);
       const visible = visibleSlabBodies({
-        bodies: [sgrAStar],
+        rows: [lensRow],
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
-      expect(visible.map((body) => body.id)).toEqual(expected);
-    }
+      expect(visible.map((row) => row.anchorId)).toEqual([GALACTIC_CENTRE_ANCHOR.id]);
+    });
+
+    it('drops the lens inside the band but 180° behind the camera — the envelope does not reach that far', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(180, insideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        rows: [lensRow],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((row) => row.anchorId)).toEqual([]);
+    });
+
+    it('drops the lens outside the band, where the envelope is 0', () => {
+      const bodyStates = new Map<string, BodyState>([
+        [GALACTIC_CENTRE_ANCHOR.id, makeState(offAxisPositionMpc(0, outsideBandMpc))],
+      ]);
+      const visible = visibleSlabBodies({
+        rows: [lensRow],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((row) => row.anchorId)).toEqual([]);
+    });
   });
 });

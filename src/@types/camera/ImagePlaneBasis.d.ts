@@ -2,11 +2,9 @@
  * ImagePlaneBasis — the camera's roll-adjusted up vector together with the
  * orthonormal screen right/up axes it induces.
  *
- * Two consumers need this basis: `computeViewProj` (feeds `rolledUp` to
- * `mat4.lookAt` as the up vector) and `cameraBillboardBasis` (uses `right`/`up`
- * to expand point-cloud billboards). Both used to inline the same Rodrigues
- * roll block plus the same two cross products; this shape is the single value
- * they share so the roll convention lives in one place.
+ * `computeViewProj` feeds `rolledUp` to `mat4.lookAt` as the up vector; the
+ * screen `right`/`up` axes it induces ride along for any caller that needs
+ * them. The shape exists so the Rodrigues roll convention lives in one place.
  *
  * `rolledUp` is kept alongside `right`/`up` (rather than being an internal
  * temporary) precisely because `computeViewProj` wants the raw rotated

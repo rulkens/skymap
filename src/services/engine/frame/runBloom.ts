@@ -33,7 +33,7 @@
  */
 
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
@@ -50,7 +50,7 @@ import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
  */
 function openBloomPass(
   encoder: GPUCommandEncoder,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   view: GPUTextureView,
   target: string,
   loadOp: 'clear' | 'load',
@@ -61,7 +61,7 @@ function openBloomPass(
       ? {
           view,
           loadOp: 'clear',
-          clearValue: ctx.renderTargets.specOf(target).clearValue,
+          clearValue: ctx.snapshot.renderTargets.specOf(target).clearValue,
           storeOp: 'store',
         }
       : { view, loadOp: 'load', storeOp: 'store' };
@@ -74,7 +74,7 @@ function openBloomPass(
 
 export function runBloom(
   encoder: GPUCommandEncoder,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   state: EngineState,
   timing: GpuTimingService,
 ): void {
@@ -85,7 +85,7 @@ export function runBloom(
   if (pyramid === null) return;
 
   const { threshold, strength } = state.settings.bloom;
-  const viewOf = (id: string): GPUTextureView => ctx.renderTargets.viewOf(id);
+  const viewOf = (id: string): GPUTextureView => ctx.snapshot.renderTargets.viewOf(id);
 
   // One `'bloom'` slot spanning the sub-routine: begin on the bright pass, end
   // on the fold pass, sharing the one query pair. A no-op timing service returns

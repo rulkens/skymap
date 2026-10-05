@@ -5,7 +5,7 @@ describe('createClipOpacityChannel', () => {
   it('factorOf returns 1 for an untouched layer', () => {
     const channel = createClipOpacityChannel(1000);
     expect(channel.factorOf('survey', 1000)).toBe(1);
-    expect(channel.factorOf('filaments', 1000)).toBe(1);
+    expect(channel.factorOf('cosmicWebFilaments', 1000)).toBe(1);
     expect(channel.factorOf('flow', 1000)).toBe(1);
   });
 

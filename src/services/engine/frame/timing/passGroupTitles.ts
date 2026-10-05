@@ -9,7 +9,7 @@
  */
 
 import { slabName } from '../slabs';
-import { BODY_SLAB_CAPACITY } from './bodySlabCapacity';
+import { SLAB_ROW_CEILING } from './slabRowCeiling';
 
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // FIRST, because the prelude's dispatches run ahead of every render step and
@@ -20,9 +20,9 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
-  // A sky capture's bake steps — 0 or 12 per row per frame (COSMO + NEAR0 per
-  // face, all six or none), so their own group rather than folding into an
-  // existing title. Keyed on the CAPTURE, not its render target.
+  // A sky capture's bake — one slot per capture, filed under its first step's
+  // group, so its own group rather than folding into an existing title. Keyed
+  // on the CAPTURE, not its render target.
   'sgrAStar·COSMO': 'Sky capture',
   'sgrAStar·NEAR0': 'Sky capture',
   'solarSystem·COSMO': 'Sky capture',
@@ -31,7 +31,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   // host through whichever body row that host holds this frame.
   'probe·COSMO': 'Probe capture',
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `probe·${slabName(k + 2)}`,
       'Probe capture',
     ]),
@@ -39,21 +39,21 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   // One `hdr·BODY[k]` row per capacity slot — today only the black-hole lens
-  // (`sgrAStarLensingPass`) targets `hdr` on a body-m slab, so every slot
+  // (`blackHoleLensingPass`) targets `hdr` on a body-m slab, so every slot
   // buckets under one title regardless of which row Sgr A* lands in this
   // frame, same reasoning as the `foreground:0·BODY[k]` block below.
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `hdr·${slabName(k + 2)}`,
       'Sgr A* lensing',
     ]),
   ),
   'foreground:0·NEAR0': 'Foreground bodies · depth',
   // One `foreground:0·BODY[k]` row per capacity slot, derived from `slabName`
-  // rather than authored — a new SCENE_PLANETS row widens BODY_SLAB_CAPACITY
+  // rather than authored — a new SCENE_PLANETS row widens SLAB_ROW_CEILING
   // and this table follows with no hand-added line.
   ...Object.fromEntries(
-    Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => [
+    Array.from({ length: SLAB_ROW_CEILING }, (_, k) => [
       `foreground:0·${slabName(k + 2)}`,
       'Foreground bodies · depth',
     ]),

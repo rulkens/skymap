@@ -20,7 +20,9 @@
 import type { UiState } from '../../@types/ui/UiState';
 import { hasDeepLink } from '../../utils/url/hasDeepLink';
 import { isCinemaSearch } from '../../utils/url/isCinemaSearch';
-import { CURRENT_SPLASH_VERSION, readSeenVersion, readUrlAtMount } from './splashStorage';
+import { readPersisted } from '../../utils/storage/readPersisted';
+import { SPLASH_SEEN_VERSION } from '../persistedValues';
+import { CURRENT_SPLASH_VERSION, readUrlAtMount } from './splashStorage';
 
 /**
  * Compute the initial UiState.  Called once at store construction.
@@ -34,7 +36,7 @@ import { CURRENT_SPLASH_VERSION, readSeenVersion, readUrlAtMount } from './splas
  */
 export function buildInitialUiState(): UiState {
   const { hash, search } = readUrlAtMount();
-  const seen = readSeenVersion();
+  const seen = readPersisted(SPLASH_SEEN_VERSION);
 
   // Every gate reads the same readUrlAtMount() capture — no gate takes a
   // second, live look at window.location that could disagree with it.
@@ -53,6 +55,7 @@ export function buildInitialUiState(): UiState {
     paletteOpen: false,
     uiHidden: false,
     debugPanelOpen: false,
+    paletteTab: 'highlights',
     splash: {
       visible: splashVisible,
       dismissedVersion: seen,

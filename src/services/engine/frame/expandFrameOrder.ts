@@ -14,7 +14,10 @@ import type { CaptureFaceInput } from '../../../@types/engine/frame/CaptureFaceI
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
+import { bodyRowSteps } from './bodyRowSteps';
+import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
+import { depthKeyOf } from '../../../utils/render/depthKeyOf';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
@@ -36,13 +39,6 @@ type ExpandStep<K extends FrameStepSpec['kind']> = (
   frame: FrameInputs,
 ) => readonly FrameStep[];
 
-/** Authored names → the contributed rows, in authored order; absent names drop. */
-function resolve(names: readonly string[], passes: readonly ContentPass[]): readonly ContentPass[] {
-  return names
-    .map((name) => passes.find((pass) => pass.name === name))
-    .filter((pass): pass is ContentPass => pass !== undefined);
-}
-
 /** `composite` and `tonemap` differ only in blend and whether a tone curve rides. */
 function merge(
   source: string,
@@ -58,6 +54,9 @@ function merge(
  * frame's only switch, and an eight-arm sibling would make that false.
  */
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
+  // `runPlanSteps` runs a `plan` row directly, ahead of `expandFrameOrder`'s
+  // call — it contributes no GPU step at all, the lens's zero-dispatch shape.
+  plan: () => [],
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
     spec.captures.flatMap((key) =>
@@ -66,13 +65,13 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
           kind: 'render',
           slab: COSMO,
           capture: { key, face },
-          passes: resolve(spec.cosmoPasses, passes),
+          passes: resolvePassNames(spec.cosmoPasses, passes),
         },
         {
           kind: 'render',
           slab: NEAR0,
           capture: { key, face },
-          passes: resolve(spec.near0Passes, passes),
+          passes: resolvePassNames(spec.near0Passes, passes),
         },
         // The foreground line's painter-chain rule: every body row restarts depth.
         ...bodySlabs.map(
@@ -81,7 +80,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
             slab,
             capture: { key, face },
             depth: 'clear',
-            passes: resolve(spec.bodyPasses, passes),
+            passes: resolvePassNames(spec.bodyPasses, passes),
           }),
         ),
       ]),
@@ -91,21 +90,28 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       kind: 'render',
       target: spec.target,
       slab,
-      passes: resolve(spec.passes, passes),
+      passes: resolvePassNames(spec.passes, passes),
       ...(spec.depth === undefined ? {} : { depth: spec.depth }),
       ...(spec.slot === undefined ? {} : { slot: spec.slot }),
     })),
   foreground: (spec, passes, frame) =>
-    frame.foregroundChain.map((slab) => ({
-      kind: 'render',
-      target: spec.target,
-      slab,
-      depth: 'clear',
-      passes: resolve(isBodySlabIndex(slab) ? spec.bodyPasses : spec.near0Passes, passes),
-    })),
+    frame.foregroundChain.flatMap((slab): readonly FrameStep[] =>
+      isBodySlabIndex(slab)
+        ? bodyRowSteps(spec, slab, passes)
+        : [
+            {
+              kind: 'render',
+              target: spec.target,
+              slab,
+              depth: 'clear',
+              passes: resolvePassNames(spec.near0Passes, passes),
+            },
+          ],
+    ),
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
   tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
+  copy: (spec) => [{ kind: 'copy', source: spec.source }],
 };
 
 /** A render step with nothing left to draw never opens a pass. */
@@ -116,8 +122,11 @@ function draws(step: FrameStep): boolean {
 /**
  * Two render steps a merge may fold together: everything the pass descriptor is
  * built from must agree, so only the roster differs. `depth` is in the key
- * because folding two depth-CLEARING foreground rows would drop a clear, and
- * folding across `'sample'` would attach a depth the step must not have.
+ * (via `depthKeyOf`, since a `{ sample }` object has no `===` identity across
+ * two independently-authored steps) because folding two depth-CLEARING
+ * foreground rows would drop a clear, and folding a `{ sample }` step into a
+ * clearing/loading one — or into a `{ sample }` of a DIFFERENT source — would
+ * attach a depth the step must not have, or read the wrong row.
  */
 function sameGroup(a: FrameStep, b: FrameStep): boolean {
   return (
@@ -127,7 +136,7 @@ function sameGroup(a: FrameStep, b: FrameStep): boolean {
     a.slab === b.slab &&
     a.capture?.key === b.capture?.key &&
     a.capture?.face === b.capture?.face &&
-    a.depth === b.depth
+    depthKeyOf(a.depth) === depthKeyOf(b.depth)
   );
 }
 

@@ -4,7 +4,7 @@
  *
  * These tests isolate the program's orchestration from both the heavy
  * frame-context derivation and the real GPU: `pickFrameContext` is mocked to
- * a controlled `ReadyFrameContext | null`, the `passes` dep is a set of fake
+ * a controlled `FrameView | null`, the `passes` dep is a set of fake
  * `ContentPass`es with `drawPick` / `enabled` spies, and the device is a fake
  * that records texture allocations, pass descriptors, and staging readbacks.
  * The per-slab draw work each `drawPick` delegates to (galaxyPickRenderer /
@@ -35,7 +35,7 @@ import {
 } from '../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
@@ -45,7 +45,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 const CANVAS = { width: 100, height: 80 } as unknown as HTMLCanvasElement;
 
 /** A ready ctx whose only substance is the two-slab table `slabViewOf` reads. */
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const slab = (index: number): Slab => ({
     index,
     near: 0.01,
@@ -61,7 +61,7 @@ function makeCtx(): ReadyFrameContext {
     slabs: [slab(NEAR0), slab(COSMO)],
     canvasSize: { width: 100, height: 80 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -69,10 +69,10 @@ function makeCtx(): ReadyFrameContext {
  * `deriveSlabs`' real layout. Built with `makeSlab` overrides per the fixture
  * convention (see `executeFrame.test.ts`'s twin), rather than a hand literal.
  */
-function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
-    makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
+    makeSlab({ index: i + 2, frame: { kind: 'body-m', hostId: bodyId as BodyId } }),
   );
   return { ...base, slabs: [...base.slabs, ...bodySlabs] };
 }
@@ -649,11 +649,11 @@ describe('createPickProgram', () => {
     // index, so NEAR0(0) always folded before any body row(2+) and COSMO(1)
     // could even land ahead of a body row — regardless of which was actually
     // nearer the camera. See pick-stars-investigation.md.
-    function makeNearBodyCtx(): ReadyFrameContext {
+    function makeNearBodyCtx(): FrameView {
       const base = makeCtx(); // NEAR0 distanceRangeM[0] = 0.01 Mpc (in metres)
       const nearBody = makeSlab({
         index: 2,
-        frame: { kind: 'body-m', bodyId: 'mars' as BodyId },
+        frame: { kind: 'body-m', hostId: 'mars' as BodyId },
         // Genuinely nearer than NEAR0's bracket above.
         distanceRangeM: [0.0001 * SCALE_UNITS.MPC_TO_M, 0.0005 * SCALE_UNITS.MPC_TO_M],
       });
@@ -723,7 +723,7 @@ describe('createPickProgram', () => {
       // must not let NEAR0 sort as nearest again.
       const base = makeCtx();
       const unresolvedNear0 = { ...base.slabs[0]!, distanceRangeM: null };
-      const body = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
+      const body = makeSlab({ index: 2, frame: { kind: 'body-m', hostId: 'mars' as BodyId } });
       vi.mocked(pickFrameContext).mockReturnValue({
         ...base,
         slabs: [unresolvedNear0, base.slabs[1]!, body],

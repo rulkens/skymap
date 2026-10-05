@@ -22,7 +22,7 @@ import { surfaceFloorM } from '../../../../src/utils/camera/surfaceFloorM';
 import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
-import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
+import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
@@ -51,7 +51,7 @@ const m = (metres: number): number => metres * SCALE_UNITS.M_TO_MPC;
 const AU = SCALE_UNITS.AU_TO_MPC;
 
 function bodyState(positionMpc: Vec3, orientation: Mat3): BodyState {
-  return { positionMpc, orientation, meanAnomalyRad: 0 };
+  return { positionMpc, orientation };
 }
 
 /**

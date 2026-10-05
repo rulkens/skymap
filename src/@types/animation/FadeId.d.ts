@@ -16,9 +16,9 @@
  *                    (cluster, supercluster, void, group). Discriminator:
  *                    `id: StructureId`. One controller per source so a
  *                    source's rings can fade independently of the others.
- *   - volumeField  — one volumetric scalar field (CF-4, rhizome-small,
- *                    rhizome-medium, rhizome-large). Discriminator:
- *                    `id: VolumeFieldId` (the registry id the volume
+ *   - cosmicWebDensityField — one volumetric scalar field (mcpm, polyphorm-2mrs,
+ *                    mcpm-workbench). Discriminator:
+ *                    `id: CosmicWebDensityFieldId` (the registry id the volume
  *                    renderer keys fields by).
  *   - milkyWay     — the Milky-Way star/dust point cloud
  *                    (`milkyWayCloudRenderer`). Its fade is seeded from
@@ -27,6 +27,8 @@
  *                    smoothly on toggle. No discriminator.
  *   - filament     — the single cosmic-web filament skeleton. Fades in on
  *                    first load. No discriminator.
+ *   - localBubble  — the Local Bubble cavity-wall shell. Fades in on first
+ *                    load, like filament. No discriminator.
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
  *                    first load (the slot commit), like filament/galaxy catalog;
  *                    fades out on disable. No discriminator.
@@ -54,12 +56,12 @@
  *   - overlay      — always-on GPU overlay (procedural disks, textured
  *                    disks). Registered at opacity 1.0 via setImmediate.
  *                    Discriminator: `id: OverlayId`.
- *   - volumesMaster — the master enable gate for the whole scalar-
- *                    volume subsystem. Used by setVolumesEnabled and
- *                    the scalarVolumePass / volumeUpsamplePass gates to
+ *   - cosmicWebDensity — the master enable gate for the whole scalar-
+ *                    volume subsystem. Used by setCosmicWebDensityEnabled
+ *                    and the cosmic-web-density raymarch / upsample gates to
  *                    smooth the master toggle. Multiplied into each
- *                    volumeField's per-frame opacity at the call site,
- *                    so a master fade-out drags every field down with
+ *                    cosmicWebDensityField's per-frame opacity at the call
+ *                    site, so a master fade-out drags every field down with
  *                    it. No discriminator.
  *
  * Future kinds (e.g. `galaxyCatalogChunk` for chunked galaxy loading) extend
@@ -72,7 +74,7 @@
 
 import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
-import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { CosmicWebDensityFieldId } from '../data/volume/CosmicWebDensityFieldId';
 import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
@@ -80,9 +82,10 @@ import type { OverlayId } from './OverlayId';
 export type FadeId =
   | { readonly kind: 'galaxyCatalog'; readonly id: GalaxyCatalogId }
   | { readonly kind: 'structure'; readonly id: StructureId }
-  | { readonly kind: 'volumeField'; readonly id: VolumeFieldId }
+  | { readonly kind: 'cosmicWebDensityField'; readonly id: CosmicWebDensityFieldId }
   | { readonly kind: 'milkyWay' }
-  | { readonly kind: 'filament' }
+  | { readonly kind: 'cosmicWebFilaments' }
+  | { readonly kind: 'localBubble' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'constellations' }
   | { readonly kind: 'orbitTrails' }
@@ -93,4 +96,4 @@ export type FadeId =
       readonly item?: LabelCategory;
     }
   | { readonly kind: 'overlay'; readonly id: OverlayId }
-  | { readonly kind: 'volumesMaster' };
+  | { readonly kind: 'cosmicWebDensity' };

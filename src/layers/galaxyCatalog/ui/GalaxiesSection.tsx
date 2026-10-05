@@ -1,4 +1,3 @@
-// src/layers/galaxyCatalog/ui/GalaxiesSection.tsx
 /**
  * GalaxiesSection — presentational Galaxies thematic group for SettingsPanel:
  * per-catalog toggles, tri-state master, sliders, depth-fade and

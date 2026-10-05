@@ -26,7 +26,12 @@ export type DebugLineRenderer = {
    * `beginRenderPass` / `pass.end()` block. The pass target format must match
    * the `targetFormat` passed to `createDebugLineRenderer`.
    */
-  draw(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: Vec2): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: Vec2,
+    pxPerRad: number,
+  ): void;
   /** Number of lines last passed to setLines. Used by tests + the debug pass. */
   lineCount(): number;
   /** Release all GPU resources. No-op if constructed with a null device. */

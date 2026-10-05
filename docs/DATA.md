@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Five formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Six formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -29,6 +29,7 @@ Five formats, each a magic + version header followed by fixed- or variable-size 
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
+| SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
 
 ## `public/data/` layout
 
@@ -37,8 +38,9 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `galaxy-catalog/v9/`: `sdss-*`, `2mrs`, `glade-*`, `milliquas-*`, `desi-{deep,wedge,sgw}`, `famous` `.bin`
 - `star-catalog/v1/`: `stars-{small,medium,large}.bin`
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
-- `scalar-field/v3/`: `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
+- `scalar-field/v3/`: `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
+- `local-bubble/v1/`: `local-bubble.shell`
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
@@ -56,7 +58,7 @@ Boot fetches `<dataBaseUrl>/data/manifest.json` once with `cache: 'no-cache'` ([
 
 Galaxy catalogs ship in three [`Tier`](../src/@types/data/Tier.d.ts) presets the user can hot-swap at runtime: `small` (~300k galaxies, mobile), `medium` (~600k, desktop default), `large` (~2.5M, opt-in full catalog). Per-source caps live on each entry's `tierTargets` in [`src/data/sources.ts`](../src/data/sources.ts) / `src/data/sources/*.ts` (galaxy catalogs: `src/layers/galaxyCatalog/sources/*.ts`); [`tierTargets.ts`](../src/data/tierTargets.ts) is the single place both the fetcher and the builder read for the (source, tier) → filename mapping, so the URL and the on-disk layout can't drift apart.
 
-For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (by default skipping hidden/unwired scalar-field volumes; `--volumes all` includes them, `--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
+For a fresh checkout, `npm run fetch-data` pulls the deployed `manifest.json` and everything it currently names (`--dry-run` lists the selection without downloading). It is the fastest path to real data. Everything from here on is for building the binaries yourself from raw catalog downloads, needed if you're changing a parser, adding a source, or want a build that isn't on R2 yet.
 
 ## Galaxy catalogs
 
@@ -136,7 +138,7 @@ npm run build-famous           # public/data/galaxy-catalog/v9/famous.bin + famo
 
 To add a galaxy, edit `data/seeds/famous_galaxies.seed.json` (`id`, `names`, `ra`/`dec`, `distanceMpc`, `diameterKpc`, `type`, `description`) and re-run the last two steps. Skip this section entirely for survey-only data; the renderer works without `famous.bin`.
 
-A parallel curated list of well-known stars follows the same seed → build shape: `data/seeds/famous_stars.seed.json` drives `npm run build-famous-stars`, which splits into generated render code plus a `famous_stars_meta.json` sidecar.
+A parallel curated list of well-known stars follows the same seed → build shape: `data/seeds/famous_stars.seed.json` and `data/seeds/sun.seed.json` (one schema, one catalog each) drive `npm run build-famous-stars`, which emits a generated render table per seed (`famousStars.generated.ts`, `sun.generated.ts`) plus, over both seeds together, the Gaia/Hipparcos dedup ids and the shared `famous_stars_meta.json` sidecar.
 
 ## Featured structures (clusters, superclusters)
 
@@ -174,20 +176,25 @@ For real-scale runs the canonical builder is the Rust port, `npm run build-stars
 
 ## Cosmic-web volumes
 
-All four share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
+All three share the SCFD format and a common presentation model (palette, contrast, exposure; see each entry in `src/data/sources/*.ts`).
 
-- **CF-4 DM density** (`cf4-density`) and **CF4++ flow field** (`flow`): both derived from the same Courtois 2025 CF4++ ensemble, full fetch/build/maintainer flow in [`data/raw/cf4/README.md`](../data/raw/cf4/README.md). `npm run build-cf4-density` / `npm run build-flow-field`.
 - **MCPM Cosmic Web** (`mcpm`): three tiered `.scfd` from the SDSS DR17 Cosmic Slime VAC. The Python extraction happens once per VAC release; contributors curl the pre-extracted `.npy` tiers and run `npm run build-mcpm`. Full flow in [`data/raw/mcpm/README.md`](../data/raw/mcpm/README.md).
 - **Polyphorm (2MRS)** (`polyphorm-2mrs`, hidden by default): a locally-run Polyphorm export converted by `tools/volumes/extractPolyphormExport.py` into d8/d4/d2 tiers, then imported per tier with `buildRhizomeVolume.ts --clamp 0.2`. The clamp zeroes packed voxels below that log-normalised threshold; 0.2 sits below the renderer's default visibility deadband and shrinks the large tier's gzipped size by two orders of magnitude at no visible cost.
 - **MCPM workbench** (`mcpm-workbench`, hidden, no UI toggle): a durable home for cubes promoted from the `tools/mcpm-workbench/` dev tool. Export in the workbench UI, drop the `.npy`+`.json` pair into `data/raw/mcpm-workbench/`, then `npm run promote-mcpm-workbench -- --stem <stem>`, which imports it via the same `buildRhizomeVolume()` and copies the sidecar to the committed pointer `data/seeds/mcpm_workbench_promoted.json`. Its trace-mass total sits a uniform ~9.28× below the reference VAC; a three-stage investigation ruled this a documented provenance offset in the reference VAC itself, after eliminating every ported quirk, structural cause, and f16-accumulation explanation. See [`docs/research/mcpm-trace-mass-offset.md`](research/mcpm-trace-mass-offset.md).
 
 An **Edenhofer parsec-scale dust volume** already ships three tiered `.scfd` files (`edenhofer-dust-{small,medium,large}.scfd`, tracked by `allowDataFile`) with no `SOURCE_REGISTRY` row yet. The data pipeline landed ahead of its renderer wiring, so don't be surprised to find the files without a UI toggle.
 
+The **CF4++ flow field** (`flow`) shares the same SCFD wrapper format but is a velocity overlay, not a density volume (`type: 'flow'`, not `'volume'`): `flowfield.scfd`, built from the Courtois 2025 CF4++ ensemble via `npm run build-flow-field`. Full fetch/build/maintainer flow in [`data/raw/cf4/README.md`](../data/raw/cf4/README.md).
+
 ## Solar system & Earth imagery
 
 Planet/moon/ring textures and Earth's imagery are gitignored raw pulls with committed README + checksum sidecars, following the same registry pattern as the catalogs. `npm run fetch-textures` (~1.2 GB full pull; `--dev` for a ~7 MB subset) plus `npm run fetch-eox` (EOX s2cloudless tiles, populates `data/raw/eox/`) feed `npm run build-textures` and `npm run build-surface-tiles` (hours for a full bake; `--dev` stops at z5 and skips the EOX and GeoDanmark bands; `--body <id>`, default `earth`, selects a `SURFACE_BODY_BAKES` row). The GeoDanmark z14–19 harvest under `data/raw/geodanmark/` has no fetcher yet — it's a manual demo pull (see its README) — so a fresh checkout without it falls back to EOX's z13 floor over Søndermarken until one is added. Provenance: [`data/raw/textures/README.md`](../data/raw/textures/README.md), [`data/raw/eox/README.md`](../data/raw/eox/README.md), [`data/raw/geodanmark/README.md`](../data/raw/geodanmark/README.md).
 
 Earth's whole-globe base texture and its surface tile pyramid are two publications of one Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants, ~421 MB). The month is chosen once in [`bmngVintage.ts`](../tools/utils/io/bmngVintage.ts) and every registry path, upstream URL, and attribution string reads it from there. The tile layer falls back to the base outside its baked window, so a vintage split between the two would draw a visible seasonal seam along the tile frontier.
+
+### Planet and moon positions (JPL Horizons)
+
+Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100; each Jupiter and Saturn moon, Neptune's Triton and Proteus, and Uranus's Miranda, Ariel, Umbriel, Titania and Oberon, matches to the same bound relative to its parent. The bodies, their Horizons centres and steps live in one table, `tools/bodies/horizonsBodies.ts`. `npm run fetch-horizons` pulls ICRF vectors (gitignored) into `data/raw/horizons/<centre>/` — the planets are 1-day heliocentric, 8 × ~3 MB in `500@10/`; the moons are centred on Jupiter (`500@599/`), Saturn (`500@699/`), Neptune (`500@899/`) or Uranus (`500@799/`) at ≤ P/16, ~8.5M rows — and `npm run build-ephemeris-corrections` fits them into the committed `src/data/bodies/ephemerisCorrections.generated.ts`. A moon's correction is a mean-anomaly series added before Kepler (it stays on its conic, so its trail stays centred) plus a small Cartesian residual. Each row carries its own out-of-span policy: planets hold the edge value, moons switch the correction off before 1900 and after 2100. Regenerate after any element-row or frame change. The exact query is in [`data/raw/horizons/README.md`](../data/raw/horizons/README.md).
 
 ### Earth surface tile pyramid
 
@@ -199,6 +206,10 @@ The same three bands carry a second product, **height**: `earth-tiles/v10/height
 
 At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surfaceTileSubsystem.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
 
+### Mars surface sources
+
+`npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev and Endeavour orthos are grey RED, colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable.
+
 ## Data-refresh re-run orders
 
 Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (a worktree's `data/` is its own; see the deploy doc). The sync step is the deploy path, covered in [docs/DEPLOY.md](DEPLOY.md).
@@ -209,6 +220,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Clusters/superclusters | `fetch-structures`                              | `build-structures` (after `build-tiers`)                         |
 | DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
+| Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.

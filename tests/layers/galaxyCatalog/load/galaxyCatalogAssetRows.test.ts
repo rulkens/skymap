@@ -16,7 +16,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { UiState } from '../../../../src/@types/ui/UiState';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
 // core's authored table plus every Layer's, and the fold is per-key local.
