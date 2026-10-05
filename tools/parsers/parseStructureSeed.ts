@@ -1,9 +1,8 @@
 /**
  * parseStructureSeed — parse + validate `data/seeds/structure_anchors.seed.json`.
  *
- * The seed file is the single source of truth for which galaxy clusters,
- * superclusters, voids, and nearby galaxy groups appear as featured labelled
- * POIs in the renderer.
+ * The seed file is the single source of truth for which structures appear as
+ * featured labelled POIs in the renderer.
  * Two Plan-2 scripts will read it: `buildClusterPois.ts` (cross-matches
  * catalog coverage and emits the runtime POI list) and `auditClusterCoverage.ts`
  * (verifies MCXC/MSCC catalog density at each anchor).  Centralising parsing
@@ -19,8 +18,22 @@
  */
 
 import type { Length } from '../../src/@types/data/Length';
+import type { NebulaKind } from '../../src/@types/data/structure/NebulaKind';
 import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
+import { STRUCTURE_IDS_BY_SLAB } from '../../src/data/structure/structureIdsBySlab';
+
+const NEBULA_KINDS: readonly string[] = [
+  'emission',
+  'reflection',
+  'planetary',
+  'supernova-remnant',
+  'dark',
+] satisfies readonly NebulaKind[];
+
+// Rows inside the Milky Way have no catalogue in this pipeline, so each names
+// the paper its numbers came from; the slab marks exactly those categories.
+const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SLAB.near0;
 
 const LENGTH_UNITS: readonly string[] = ['pc', 'kpc', 'Mpc'] satisfies readonly Length['unit'][];
 
@@ -67,6 +80,15 @@ export type StructureSeedEntry = {
   apparentRadius: Length;
   /** 1–2 sentence curated description shown in the POI info panel. */
   description: string;
+  /** What a nebula is; required on `nebula`, rejected on every other category. */
+  nebulaKind?: NebulaKind;
+  /** Distance is assumed equal to the Galactic Centre's; accepted on `galactic-centre` only. */
+  lineOfSightAssumed?: boolean;
+  /**
+   * Where the row's distance and radii come from (survey, paper or bibcode).
+   * Required on the Milky Way categories; build-time documentation only.
+   */
+  source?: string;
 };
 
 /**
@@ -117,6 +139,28 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
   }
   if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {
     throw new Error(`structure seed: ${e.id} has invalid abell (must be a non-empty string)`);
+  }
+  if (e.category === 'nebula') {
+    if (!NEBULA_KINDS.includes(e.nebulaKind as string)) {
+      throw new Error(
+        `structure seed: ${e.id} needs nebulaKind, got ${JSON.stringify(e.nebulaKind)} (expected ${NEBULA_KINDS.join(' | ')})`,
+      );
+    }
+  } else if (e.nebulaKind !== undefined) {
+    throw new Error(`structure seed: ${e.id} has nebulaKind but is not a nebula`);
+  }
+  if (e.lineOfSightAssumed !== undefined) {
+    if (e.category !== 'galactic-centre') {
+      throw new Error(`structure seed: ${e.id} has lineOfSightAssumed outside galactic-centre`);
+    }
+    if (typeof e.lineOfSightAssumed !== 'boolean') {
+      throw new Error(`structure seed: ${e.id} has non-boolean lineOfSightAssumed`);
+    }
+  }
+  if (SOURCE_REQUIRED.includes(e.category)) {
+    if (typeof e.source !== 'string' || e.source.trim().length === 0) {
+      throw new Error(`structure seed: ${e.id} (${e.category}) missing source`);
+    }
   }
   return e;
 }

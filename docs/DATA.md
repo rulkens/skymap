@@ -146,6 +146,8 @@ A parallel curated list of well-known stars follows the same seed → build shap
 
 Seed rows state `distance`, `physicalRadius` and `apparentRadius` as `{ "value": n, "unit": "pc" | "kpc" | "Mpc" }`, so a compact structure is written in its natural unit; the parser rejects an unknown unit and `lengthToMpc` converts at the two readers (`buildStaticAnchorStructures`, `buildStructures`).
 
+Three optional seed fields belong to the Milky Way categories (those whose registry `slab` is `near0`): `nebulaKind` (`emission` | `reflection` | `planetary` | `supernova-remnant` | `dark`) is required on a `nebula` row and rejected elsewhere; `lineOfSightAssumed` (boolean) is accepted on `galactic-centre` rows only, marking a distance assumed equal to the Centre's; `source` (a survey, paper or bibcode) is required and non-empty on every `near0` row and says where its distance and radii came from. `source` is build-time documentation, never read at runtime.
+
 ```bash
 npm run fetch-structures    # MCXC + MSCC from CDS VizieR, verifies .sha256
 npm run build-tiers         # structures build reads the same public/data/ tree

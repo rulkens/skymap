@@ -5,6 +5,7 @@ import {
   validateStructureSeedEntry,
   type StructureSeedEntry,
 } from '../../../tools/parsers/parseStructureSeed';
+import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { rawDataPath } from '../../../tools/utils/io/rawDataRegistry';
 
 function baseEntry(overrides: Partial<StructureSeedEntry> = {}): StructureSeedEntry {
@@ -27,7 +28,7 @@ describe('parseStructureSeed', () => {
     const raw = readFileSync(rawDataPath('structures.seed'), 'utf8');
     const entries = parseStructureSeed(raw);
     expect(entries.length).toBeGreaterThanOrEqual(25);
-    const validCategories = new Set(['cluster', 'supercluster', 'void', 'group']);
+    const validCategories = new Set(STRUCTURE_IDS as readonly string[]);
     for (const e of entries) {
       expect(validCategories.has(e.category)).toBe(true);
     }
@@ -60,5 +61,49 @@ describe('parseStructureSeed', () => {
 
   it('rejects root that is not an array', () => {
     expect(() => parseStructureSeed('{}')).toThrow(/array/i);
+  });
+});
+
+describe('Milky Way seed fields', () => {
+  const milkyWay = (overrides: Partial<StructureSeedEntry>) =>
+    baseEntry({ category: 'open-cluster', source: 'Hunt & Reffert 2024', ...overrides });
+
+  it('rejects a nebula without nebulaKind', () => {
+    const e = milkyWay({ category: 'nebula' });
+    expect(() => validateStructureSeedEntry(e)).toThrow(/nebulaKind/);
+  });
+
+  it('rejects nebulaKind on a non-nebula', () => {
+    const e = milkyWay({ nebulaKind: 'emission' });
+    expect(() => validateStructureSeedEntry(e)).toThrow(/nebulaKind/);
+  });
+
+  it('rejects an unknown nebulaKind', () => {
+    const e = milkyWay({
+      category: 'nebula',
+      nebulaKind: 'cloud' as StructureSeedEntry['nebulaKind'],
+    });
+    expect(() => validateStructureSeedEntry(e)).toThrow(/nebulaKind/);
+  });
+
+  it('rejects lineOfSightAssumed outside galactic-centre', () => {
+    const e = milkyWay({ lineOfSightAssumed: true });
+    expect(() => validateStructureSeedEntry(e)).toThrow(/lineOfSightAssumed/);
+  });
+
+  it('rejects a Milky Way row without source', () => {
+    const e = milkyWay({ source: undefined });
+    expect(() => validateStructureSeedEntry(e)).toThrow(/source/);
+  });
+
+  it('accepts a complete nebula and a galactic-centre row', () => {
+    expect(() =>
+      validateStructureSeedEntry(milkyWay({ category: 'nebula', nebulaKind: 'dark' })),
+    ).not.toThrow();
+    expect(() =>
+      validateStructureSeedEntry(
+        milkyWay({ category: 'galactic-centre', lineOfSightAssumed: true }),
+      ),
+    ).not.toThrow();
   });
 });
