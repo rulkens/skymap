@@ -8,7 +8,6 @@
  */
 import type { Browser } from '@playwright/test';
 import { launchChromium } from '../utils/browser/launchChromium';
-import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
 import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
 import { spawnDevServer } from '../utils/serve/spawnDevServer';
@@ -34,29 +33,31 @@ async function main(): Promise<number> {
     let base = options.url;
     if (base === undefined) {
       if (options.build) {
-        await ensureServeBuild(SHOT_BUILD_DIR, false);
+        await ensureServeBuild(SHOT_BUILD_DIR, true);
         ensureDataSymlink(SHOT_BUILD_DIR);
         server = await spawnPreviewServer(SHOT_BUILD_DIR, SHOT_PORT);
       } else {
         server = await spawnDevServer();
+      }
+      // A killed run skips `finally`, which would orphan the server.
+      const spawned = server;
+      for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+        process.once(signal, () => {
+          spawned.proc.kill();
+          process.exit(1);
+        });
       }
       base = server.url;
       console.error(`shot: serving at ${base}`);
     }
     browser = await launchChromium();
     const taken = new Set<string>();
-    let checked = false;
     for (const link of options.links) {
       const outPath = options.out ?? shotOutName({ link, now: new Date(), taken });
       taken.add(outPath);
       const outcome = await shootLink(browser, base, link, {
         ...options,
         outPath,
-        onBooted: async (page) => {
-          if (checked) return;
-          checked = true;
-          await warnIfWrongCheckout(page);
-        },
       });
       const label = `#${link.hash}`;
       if (outcome.path !== null) stdoutLine(outcome.path);
@@ -70,8 +71,9 @@ async function main(): Promise<number> {
       if (outcome.timedOut || outcome.error !== null || outcome.path === null) failed = true;
     }
   } finally {
-    await browser?.close();
+    // Kill first: a throwing browser.close() must not orphan the server.
     server?.proc.kill();
+    await browser?.close();
   }
   return failed ? 1 : 0;
 }

@@ -19,19 +19,23 @@ links make several shots in one run.
 
 ## Flags
 
-| flag              | default    | meaning                                                              |
-| ----------------- | ---------- | -------------------------------------------------------------------- |
-| `--url <base>`    | none       | Reuse a running server; never started or stopped. No query or hash.  |
-| `--build`         | off        | Build once into `tools/shot/.build` and serve it. Conflicts `--url`. |
-| `--out <file>`    | see below  | Output file; one link only.                                          |
-| `--size WxH`      | `1600x900` | Viewport in CSS pixels.                                              |
-| `--dpr <n>`       | `2`        | Device pixel ratio; the PNG is size × dpr.                           |
-| `--hide-ui`       | off        | Adds `cinema` to the link's query unless it is already there.        |
-| `--hide-labels`   | off        | Turns every label off before the shot.                               |
-| `--timeout <sec>` | `30`       | How long to wait for the link to settle.                             |
+| flag              | default    | meaning                                                             |
+| ----------------- | ---------- | ------------------------------------------------------------------- |
+| `--url <base>`    | none       | Reuse a running server; never started or stopped. No query or hash. |
+| `--build`         | off        | Rebuild into `tools/shot/.build` and serve it. Conflicts `--url`.   |
+| `--out <file>`    | see below  | Output file; one link only.                                         |
+| `--size WxH`      | `1600x900` | Viewport in CSS pixels.                                             |
+| `--dpr <n>`       | `2`        | Device pixel ratio; the PNG is size × dpr.                          |
+| `--hide-ui`       | off        | Adds `cinema` to the link's query unless it is already there.       |
+| `--hide-labels`   | off        | Turns every label off before the shot.                              |
+| `--timeout <sec>` | `30`       | How long to wait for the link to settle.                            |
 
-With neither `--url` nor `--build` the tool runs `vite` on a free port. **In a worktree, pass
-`--url`** with your own server's `Local:` port, or the shot comes from another branch.
+With neither `--url` nor `--build` the tool runs `vite` on a free port from its own checkout. `--url`
+skips the server start; the tool warns when that server runs from another checkout.
+
+`--hide-labels` also hides the selection ring and structure markers (the passes in
+`tools/utils/capture/hiddenPasses.ts`). A relative `--out` and `data/shots/` resolve against the
+project root, where `npm run` starts the tool.
 
 ## Output
 

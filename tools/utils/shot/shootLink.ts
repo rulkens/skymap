@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import type { Browser, Page } from '@playwright/test';
+import type { Browser } from '@playwright/test';
 import { bootHookedPage } from '../browser/bootHookedPage';
 import { collectPageErrors } from '../browser/collectPageErrors';
 import { dispatchActions } from '../browser/dispatchActions';
+import { warnIfWrongCheckout } from '../browser/warnIfWrongCheckout';
+import { FADE_OUT_DURATION_MS } from '../../../src/services/animation/fadeController';
 import { labelDeclutterActions } from '../capture/labelDeclutterActions';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { ShotLink } from '../../shot/@types/ShotLink';
@@ -17,8 +19,7 @@ const TIMED_OUT = Symbol('timedOut');
  * on screen. A subject that never resolves or a boot that throws still yields a
  * PNG: a picture of the failure is more useful to a reader than none. The boot
  * catches its own errors, so a rejection landing after the timer won is never
- * unhandled. `onBooted` runs once the hook is up (the caller's once-per-run
- * checkout check needs a live page).
+ * unhandled.
  */
 export async function shootLink(
   browser: Browser,
@@ -26,7 +27,6 @@ export async function shootLink(
   link: ShotLink,
   opts: Pick<ShotOptions, 'width' | 'height' | 'dpr' | 'hideUi' | 'hideLabels' | 'timeoutMs'> & {
     outPath: string;
-    onBooted?: (page: Page) => Promise<void>;
   },
 ): Promise<ShotOutcome> {
   const context = await browser.newContext({
@@ -39,17 +39,21 @@ export async function shootLink(
     const params = new URLSearchParams(link.search);
     if (opts.hideUi && !params.has('cinema')) params.set('cinema', '');
     const search = params.toString().replace(/=(&|$)/g, '$1');
-    const url = `${base}/?${search}#${link.hash}`;
+    const url = `${base}/${search === '' ? '' : `?${search}`}#${link.hash}`;
 
     const boot = (async (): Promise<string | null> => {
       try {
         await bootHookedPage(page, url);
-        await opts.onBooted?.(page);
-        if (opts.hideLabels) await dispatchActions(page, labelDeclutterActions());
+        await warnIfWrongCheckout(page);
+        if (opts.hideLabels) {
+          await dispatchActions(page, labelDeclutterActions());
+          // Labels fade out after the dispatch; the next frame would still show them.
+          await page.waitForTimeout(FADE_OUT_DURATION_MS);
+        }
         await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.nextFrame());
         return null;
       } catch (err) {
-        return err instanceof Error ? err.message : String(err);
+        return (err instanceof Error ? err.message : String(err)).split('\n')[0] ?? '';
       }
     })();
     let timer: NodeJS.Timeout | undefined;
@@ -63,7 +67,7 @@ export async function shootLink(
 
     let path: string | null = null;
     try {
-      const png = await page.screenshot({ type: 'png' });
+      const png = await page.screenshot({ type: 'png', timeout: opts.timeoutMs });
       path = resolve(opts.outPath);
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, png);

@@ -28,7 +28,8 @@ export function parseShotArgs(argv: readonly string[]): ShotOptions {
     else if (arg === '--hide-labels') hideLabels = true;
     else if (VALUE_FLAGS.includes(arg)) {
       const value = argv[++i];
-      if (value === undefined) throw new Error(`${arg} requires a value\n${USAGE}`);
+      if (value === undefined || value.startsWith('--'))
+        throw new Error(`${arg} requires a value\n${USAGE}`);
       values.set(arg, value);
     } else if (arg.startsWith('--')) {
       throw new Error(`unknown flag '${arg}'\n${USAGE}`);

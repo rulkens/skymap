@@ -48,4 +48,10 @@ describe('parseShotArgs', () => {
     expect(() => parseShotArgs([LINK, '--dpr', '0'])).toThrow(/--dpr/);
     expect(() => parseShotArgs([LINK, '--timeout', '-1'])).toThrow(/--timeout/);
   });
+  it('a value flag followed by another flag is an error', () => {
+    expect(() => parseShotArgs([LINK, '--out', '--hide-ui'])).toThrow(/--out requires a value/);
+  });
+  it('a value flag at the end of argv is an error', () => {
+    expect(() => parseShotArgs([LINK, '--dpr'])).toThrow(/--dpr requires a value/);
+  });
 });

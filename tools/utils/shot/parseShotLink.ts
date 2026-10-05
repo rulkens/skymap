@@ -11,10 +11,14 @@ export function parseShotLink(raw: string): ShotLink {
     const url = new URL(text);
     return { search: url.search.replace(/^\?/, ''), hash: url.hash.replace(/^#/, '') };
   }
-  // A bare 'focus=…' is a hash body, the form the app's share button yields.
-  if (!text.startsWith('?')) return { search: '', hash: text.replace(/^#/, '') };
+  // Anything before the first '?' or '#' (a scheme-less host, a path) is discarded.
   const hashAt = text.indexOf('#');
-  return hashAt === -1
-    ? { search: text.slice(1), hash: '' }
-    : { search: text.slice(1, hashAt), hash: text.slice(hashAt + 1) };
+  const queryAt = text.indexOf('?');
+  if (hashAt === -1 && queryAt === -1) return { search: '', hash: text };
+  const hash = hashAt === -1 ? '' : text.slice(hashAt + 1);
+  const search =
+    queryAt !== -1 && (hashAt === -1 || queryAt < hashAt)
+      ? text.slice(queryAt + 1, hashAt === -1 ? undefined : hashAt)
+      : '';
+  return { search, hash };
 }
