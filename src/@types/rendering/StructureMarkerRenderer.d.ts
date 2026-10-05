@@ -12,13 +12,13 @@ export type StructureMarkerRenderer = {
   readonly label: string;
   /**
    * Replace the marker set (`[]` clears); partitioned by `category`, one draw each.
-   * Positions are packed relative to `camPos`, so `draw` and `pickRing` need a
-   * view-projection rebased on that same eye (`rebaseViewProj`).
+   * Positions are packed relative to `camPos`, which the renderer remembers:
+   * `draw` and `pickRing` take the f64 view-projection and rebase it on that eye.
    */
   setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void;
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
   ): void;
@@ -26,14 +26,14 @@ export type StructureMarkerRenderer = {
   /**
    * One ring-pick draw per category into the caller's pass, which must already bind
    * the r32uint pick attachment and a `depth24plus` depth attachment (this pipeline
-   * writes + tests depth, so a galaxy in front of a ring claims the pixel). The pose
-   * packs into this renderer's OWN `@group(0)` buffer, never the draw-time uniform,
-   * which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
+   * writes + tests depth, so a galaxy in front of a ring claims the pixel). The
+   * matrix packs into this renderer's OWN `@group(0)` buffer, never the draw-time
+   * uniform, which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
    * FadeUniforms, since every declared group must be bound.
    */
   pickRing(
     passEncoder: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportPx: Vec2,
     pxPerRad: number,
   ): void;

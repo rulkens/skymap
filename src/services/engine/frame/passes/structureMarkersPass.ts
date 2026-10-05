@@ -7,7 +7,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { rebasedViewProjOf } from '../../../../utils/camera/rebasedViewProjOf';
 import { anyFadeBandVisible } from '../../../../utils/math/anyFadeBandVisible';
 import { STRUCTURE_VISIBLE_BANDS } from '../../presentation/structureVisibleBands';
 import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
@@ -54,9 +53,9 @@ export const structureMarkersPass: ContentPass = {
     // anyway, so the BGL matches what the other HDR layers bind at that slot.
     state.gpu.structureMarkerRenderer!.draw(
       pass,
-      // Instances are eye-relative to `view.camPos`; pick reuses them, so it
-      // takes the same view's rebased matrix.
-      rebasedViewProjOf(view),
+      // The renderer rebases this on the eye it packed; pick reuses those
+      // instances through the same rebase, so draw and pick cannot diverge.
+      view.slab.vp,
       view.viewportPx,
       ctx.drawPxPerRad,
     );
@@ -71,7 +70,7 @@ export const structureMarkersPass: ContentPass = {
     if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc)) return;
     state.gpu.structureMarkerRenderer!.pickRing(
       pass,
-      rebasedViewProjOf(view),
+      view.slab.vp,
       view.viewportPx,
       ctx.drawPxPerRad,
     );

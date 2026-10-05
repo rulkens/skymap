@@ -67,6 +67,8 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -150,6 +152,9 @@ export function createStructureMarkerRenderer(
   let capacity = initialCapacity;
   let instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
   let currentMarkerCount = 0;
+  // The eye the instances are packed against: draw and pick rebase the f64
+  // view-projection on it, so no caller can hand a matrix for another eye.
+  let packedEye: Vec3 = [0, 0, 0];
 
   // Per-category bucket bookkeeping: where each category's run begins
   // in the instance buffer + how many descriptors it owns.  Reset at
@@ -440,6 +445,7 @@ export function createStructureMarkerRenderer(
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
     currentMarkerCount = 0;
+    packedEye = [camPos[0], camPos[1], camPos[2]];
     for (const c of STRUCTURE_IDS) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
@@ -496,7 +502,7 @@ export function createStructureMarkerRenderer(
 
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
   ): void {
@@ -513,10 +519,10 @@ export function createStructureMarkerRenderer(
       return;
     if (currentMarkerCount === 0) return;
 
-    // The 80-byte CameraUniforms prefix; `viewProj` is the rebased matrix that
-    // pairs with the eye-relative instances `setMarkers` packed.
+    // The 80-byte CameraUniforms prefix, rebased on the eye the eye-relative
+    // instances were packed against.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
+    writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setBindGroup(0, cameraBindGroup);
@@ -586,17 +592,16 @@ export function createStructureMarkerRenderer(
    */
   function pickRing(
     passEncoder: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportPx: Vec2,
     pxPerRad: number,
   ): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    // Same prefix write as `draw`, into the pick buffer; `viewProj` must be
-    // the one rebased on the eye `setMarkers` last packed against.
+    // Same prefix write as `draw`, into the pick buffer.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
+    writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportPx, pxPerRad);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);

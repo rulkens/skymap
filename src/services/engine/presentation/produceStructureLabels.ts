@@ -57,6 +57,8 @@ import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
+import { STRUCTURE_VISIBLE_BANDS } from './structureVisibleBands';
 
 export function produceStructureLabels(state: EngineState, ctx: FrameView): Label2DProducerOutput {
   const labels: Label2D[] = [];
@@ -69,10 +71,7 @@ export function produceStructureLabels(state: EngineState, ctx: FrameView): Labe
   // descent into the solar system. When every band is at 0 the producer emits
   // nothing — the fade reaches 0 continuously before this skip, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
-  if (
-    STRUCTURE_IDS.every((id) => fadeBand(STRUCTURE_MARKER_STYLES[id].visibleBand, camDistMpc) === 0)
-  )
-    return { labels: [], awake: false };
+  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS, camDistMpc)) return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
   // the same instant and the same focus state.

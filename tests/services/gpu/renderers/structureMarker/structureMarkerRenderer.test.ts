@@ -4,6 +4,8 @@ import type { StructureMarkerDescriptor } from '../../../../../src/@types/render
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
+import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
@@ -168,7 +170,7 @@ describe('StructureMarkerRenderer pick camera', () => {
     renderer.setMarkers([cluster(1)], [0, 0, 0]);
     (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
 
-    const viewProj = Float32Array.from({ length: 16 }, (_, i) => i + 1);
+    const viewProj = Float64Array.from({ length: 16 }, (_, i) => i + 1);
     const viewportPx: Vec2 = [1920, 1080];
 
     const passEncoder = {
@@ -196,7 +198,9 @@ describe('StructureMarkerRenderer pick camera', () => {
     expect(target).toBe(pickCameraBuffer);
     expect(offset).toBe(0);
     expect(payload.byteLength).toBe(CAMERA_UNIFORM_BYTES);
-    expect(Array.from(payload.subarray(0, 16))).toEqual(Array.from(viewProj));
+    expect(Array.from(payload.subarray(0, 16))).toEqual(
+      Array.from(narrowMat4(rebaseViewProj(viewProj, [0, 0, 0]))),
+    );
     expect(payload[16]).toBe(viewportPx[0]);
     expect(payload[17]).toBe(viewportPx[1]);
     expect(device.queue.writeBuffer).not.toHaveBeenCalledWith(
@@ -220,7 +224,9 @@ describe('StructureMarkerRenderer pick camera', () => {
     const firstDrawOrder = drawMock.mock.invocationCallOrder[0]!;
     expect(setBindGroupOrder).toBeLessThan(firstDrawOrder);
   });
+});
 
+describe('StructureMarkerRenderer instance eye', () => {
   it('setMarkers packs positions relative to the camera', () => {
     const writes: Float32Array[] = [];
     const device = {
@@ -252,5 +258,48 @@ describe('StructureMarkerRenderer pick camera', () => {
     renderer.setMarkers([{ ...cluster(1), worldPos: [100, 0, 0] }], [99.5, 0, 0]);
     const packed = writes.at(-1)!;
     expect(Array.from(packed.subarray(0, 3))).toEqual([0.5, 0, 0]);
+  });
+
+  it("pickRing rebases against the eye the instances were packed with, not the pick view's", () => {
+    const writes: Float32Array[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: {
+        writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
+      },
+    } as unknown as GPUDevice;
+    const renderer = createStructureMarkerRenderer(
+      {
+        device,
+        context: null as unknown as GPUCanvasContext,
+        format: 'bgra8unorm' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      false,
+    );
+    const eyeA: [number, number, number] = [10, 20, 30];
+    renderer.setMarkers([cluster(1)], eyeA);
+    writes.length = 0;
+    const vp = Float64Array.from({ length: 16 }, (_, i) => (i % 5 === 0 ? 1 : i * 0.01));
+    const passEncoder = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    renderer.pickRing(passEncoder, vp, [800, 600], 1000);
+    expect(Array.from(writes.at(-1)!.subarray(0, 16))).toEqual(
+      Array.from(narrowMat4(rebaseViewProj(vp, eyeA))),
+    );
   });
 });
