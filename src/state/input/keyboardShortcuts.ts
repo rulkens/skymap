@@ -29,6 +29,7 @@ import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
 import { selectSelectedRef } from '../selection/selectors';
 import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
+import { stepTimelineEvent } from '../exhibits/stepTimelineEvent';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
@@ -70,6 +71,10 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
         : pause({ nowMs: performance.now() }),
   },
   { keys: 'shift+n', run: () => goLiveNowAction() },
+  // Previous / next event of an exhibit's timeline: a focus-free way to drive it, since
+  // `tab` above is taken. Null (inert) outside such an exhibit. No `preventDefault`.
+  { keys: ',', run: (s) => stepTimelineEvent(s, -1) },
+  { keys: '.', run: (s) => stepTimelineEvent(s, +1) },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
   // activate a focused button and the arrow keys must stay free to scroll,
@@ -81,7 +86,8 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
 
 export const SHORTCUTS_BY_KEY: Record<string, KeyboardShortcut> = KEYBOARD_SHORTCUTS.reduce(
   (byKey, shortcut) => {
-    for (const key of shortcut.keys.split(',')) byKey[key] = shortcut;
+    // A comma that ends the string (or stands alone) is the key itself, not a separator.
+    for (const key of shortcut.keys.split(/,(?=.)/)) byKey[key] = shortcut;
     return byKey;
   },
   {} as Record<string, KeyboardShortcut>,

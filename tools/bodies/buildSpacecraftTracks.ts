@@ -5,8 +5,8 @@
  * `src/data/missions/missionEvents.generated.ts`. Samples are merged, decimated so the Hermite
  * the app evaluates stays within 1 km of every raw sample, and every raw sample is re-checked
  * against the kept ones. Each encounter is first blended onto DE441 (`blendEncounterToDE441`);
- * closest approaches come straight from the craft-against-body-centre fetch. Launch and
- * heliopause instants are cited literals (NASA/JPL), not derived.
+ * closest approaches come straight from the craft-against-body-centre fetch. Launch,
+ * boundary and milestone instants are cited literals (NASA/JPL), not derived.
  */
 import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -26,6 +26,7 @@ import { HORIZONS_BODIES } from './horizonsBodies';
 import { blendEncounterToDE441 } from './blendEncounterToDE441';
 import { VOYAGER_ENCOUNTERS } from './voyagerEncounters';
 import { VOYAGER_LAUNCHES } from './voyagerLaunches';
+import { VOYAGER_MILESTONES } from './voyagerMilestones';
 
 const TOLERANCE_KM = 1;
 const RAW_ROOT = rawDataPath('horizons');
@@ -35,11 +36,6 @@ const EVENTS_PATH = 'src/data/missions/missionEvents.generated.ts';
 const UNIX_EPOCH_JD = 2440587.5;
 const MS_PER_DAY = 86_400_000;
 const TITAN_RADIUS_KM = 2574.73;
-
-const HELIOPAUSE: Readonly<Record<string, string>> = {
-  voyager1: '2012-08-25T00:00:00.000Z',
-  voyager2: '2018-11-05T00:00:00.000Z',
-};
 
 const jdToIso = (jd: number): string => new Date((jd - UNIX_EPOCH_JD) * MS_PER_DAY).toISOString();
 
@@ -110,10 +106,13 @@ function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
       e.bodyName === 'Titan' ? `  (surface ${(distanceKm - TITAN_RADIUS_KM).toFixed(0)} km)` : '';
     console.log(`  ${e.bodyName}: ${jdToIso(jd)}  ${distanceKm.toFixed(0)} km from centre${note}`);
     return {
+      id: `${craft.id}-${e.bodyName.toLowerCase()}`,
       bodyId: craft.id,
       kind: 'flyby',
       iso: jdToIso(jd),
-      label: `${e.bodyName} closest approach`,
+      label: e.bodyName,
+      targetId: e.bodyName.toLowerCase(),
+      closestKm: Math.round(distanceKm),
     };
   });
 }
@@ -157,14 +156,17 @@ async function main(): Promise<void> {
     if (worst > TOLERANCE_KM) throw new Error(`${row.id}: reconstruction error ${worst} km`);
     tracks.push(gather(dense, kept));
     events.push(
-      { bodyId: row.id, kind: 'launch', iso: VOYAGER_LAUNCHES[row.id]!.launchIso, label: 'Launch' },
-      ...flybyEvents(dense, row.target),
       {
+        id: `${row.id}-launch`,
         bodyId: row.id,
-        kind: 'heliopause',
-        iso: HELIOPAUSE[row.id]!,
-        label: 'Heliopause crossing',
+        kind: 'launch',
+        iso: VOYAGER_LAUNCHES[row.id]!.launchIso,
+        label: 'Launch',
       },
+      ...flybyEvents(dense, row.target),
+      ...VOYAGER_MILESTONES.filter((m) => m.craftId === row.id).map(
+        ({ id, kind, iso, label }): MissionEvent => ({ id, bodyId: row.id, kind, iso, label }),
+      ),
     );
   }
 
@@ -177,7 +179,7 @@ async function main(): Promise<void> {
     '// src/data/missions/missionEvents.generated.ts\n' +
     '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
     '// Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks\n' +
-    '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch and heliopause instants are cited literals\n' +
+    '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch, boundary and milestone instants are cited literals\n' +
     "import type { MissionEvent } from '../../@types/missions/MissionEvent';\n\n" +
     `export const MISSION_EVENTS: readonly MissionEvent[] = ${JSON.stringify(events)};\n`;
   const outPath = resolve(EVENTS_PATH);

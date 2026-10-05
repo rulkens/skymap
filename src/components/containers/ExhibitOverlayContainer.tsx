@@ -9,16 +9,22 @@
 
 import { useCallback, useState } from 'react';
 import ExhibitOverlay from '../ExhibitOverlay/ExhibitOverlay';
+import ExhibitTimelineContainer from './ExhibitTimelineContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { selectExhibitCopyDelaySec } from '../../state/takeover/selectors';
 import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
 import type { ExhibitId } from '../../@types/exhibits/ExhibitId';
 import type { ExhibitToggle } from '../../@types/exhibits/ExhibitToggle';
+import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 
 export type ExhibitOverlayContainerProps = {
   readonly id: ExhibitId;
 };
+
+const renderTimeline = (section: ExhibitTimelineSection) => (
+  <ExhibitTimelineContainer section={section} />
+);
 
 function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -50,6 +56,7 @@ function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.Re
       enterDelaySec={enterDelaySec}
       toggleOn={toggleOn}
       onToggle={onToggle}
+      renderTimeline={renderTimeline}
       onExit={onExit}
     />
   );

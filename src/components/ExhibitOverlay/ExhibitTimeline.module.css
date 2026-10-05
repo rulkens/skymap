@@ -1,0 +1,342 @@
+/* src/components/ExhibitOverlay/ExhibitTimeline.module.css */
+/*
+ * The timeline's vocabulary is the tour rail's dots (upcoming / passed / current) on lanes
+ * tinted by `--lane`, the craft's own trail colour. The overlay root is click-through, so
+ * every control opts back in with `pointer-events: auto`.
+ */
+
+.root {
+  composes: section from './ExhibitOverlay.module.css';
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heading {
+  composes: sectionHeading from './ExhibitOverlay.module.css';
+}
+
+.meta {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Track ──────────────────────────────────────────────────────────── */
+/* The left margin is the lane-tag gutter; the track itself is the x-axis, so a
+   pointer's offset in it maps straight to a fraction. */
+.plot {
+  margin-left: 26px;
+}
+
+.track {
+  position: relative;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ew-resize;
+  padding-block: 4px 22px;
+  border-radius: 3px;
+}
+.track:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.eras {
+  display: flex;
+  gap: 1px;
+  margin-bottom: 6px;
+}
+.era {
+  flex: 1;
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-label);
+  white-space: nowrap;
+}
+
+.lane {
+  position: relative;
+  height: 20px;
+}
+.laneTag {
+  position: absolute;
+  left: -26px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  color: var(--lane);
+}
+.laneLine {
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 1px;
+  background: var(--border-divider);
+}
+.laneFill {
+  position: absolute;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: var(--lane);
+  border-radius: 1px;
+}
+
+.tick {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(168, 208, 255, 0.18);
+}
+.tick.passed {
+  background: var(--color-fg-label);
+}
+.tick.launch {
+  background: none;
+  box-shadow: inset 0 0 0 1px rgba(168, 208, 255, 0.4);
+}
+.tick.launch.passed {
+  box-shadow: inset 0 0 0 1px var(--color-fg-label);
+}
+.tick.boundary {
+  width: 2px;
+  height: 8px;
+  margin: -4px 0 0 -1px;
+  border-radius: 0;
+}
+.tick.milestone {
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+.tick.current {
+  background: var(--color-accent);
+  box-shadow: none;
+  scale: 1.6;
+}
+.tick.launch.current {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.tick.hot {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 22px;
+  width: 1px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+.knob {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.before,
+.beyond {
+  position: absolute;
+  top: 0;
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  pointer-events: none;
+}
+.before {
+  left: 8px;
+  color: var(--color-fg-tertiary);
+}
+.beyond {
+  right: 0;
+  color: var(--color-accent);
+}
+
+.axis {
+  position: absolute;
+  inset: auto 0 2px 0;
+  height: 12px;
+}
+.axisLabel {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}
+.axisFirst {
+  transform: none;
+}
+.axisLast {
+  transform: translateX(-100%);
+}
+
+/* ── Event list ─────────────────────────────────────────────────────── */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  border-left: 2px solid transparent;
+}
+.itemCurrent {
+  border-left-color: var(--color-accent);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 8px 10ch 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0 4px 8px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  text-align: left;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-fg-tertiary);
+}
+.row:hover,
+.row:focus-visible,
+.row[aria-current='true'] {
+  color: var(--color-fg);
+}
+.row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.glyph {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--lane);
+}
+.glyph.launch {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--lane);
+}
+.glyph.boundary {
+  width: 2px;
+  height: 8px;
+  margin-left: 1.5px;
+  border-radius: 0;
+}
+.glyph.milestone {
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.date {
+  font-variant-numeric: tabular-nums;
+}
+.tag {
+  font-size: 9px;
+  color: var(--lane);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 0 8px 36px;
+}
+.caption {
+  margin: 0;
+  font-family: 'Sora', system-ui, sans-serif;
+  font-weight: 100;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--color-fg-base);
+  text-wrap: pretty;
+}
+.distance {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-tertiary);
+}
+
+/* ── Hint ───────────────────────────────────────────────────────────── */
+.hint {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-tertiary);
+}
+.hint kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-fg-dim);
+}
+.hintTouch {
+  display: none;
+}
+@media (pointer: coarse) {
+  .hintKeys {
+    display: none;
+  }
+  .hintTouch {
+    display: inline;
+  }
+}
+
+@media (max-width: 768px) {
+  .row {
+    min-height: 40px;
+  }
+  .knob {
+    top: -7px;
+    left: -7px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .detail {
+    animation: detailIn 150ms ease-out;
+  }
+}
+@keyframes detailIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

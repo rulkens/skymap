@@ -158,6 +158,15 @@
   flex-direction: column;
   gap: 16px;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
+  /* A long column scrolls instead of running off the viewport. It opts back into
+     pointer events so the wheel scrolls it; the text column no longer orbits the
+     camera, which is the trade. The mask fades the cut edge. */
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  padding-bottom: 28px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 
 /* One section and the hairline above it enter together, `--i` beats after the
@@ -467,10 +476,23 @@
     font-size: 18px;
   }
   .notes {
-    top: 24px;
+    top: 64px;
     right: 24px;
     left: 24px;
     width: auto;
+    max-height: 52vh;
+  }
+  /* The centred pill sits under a manual-mode TimeBar at phone width. */
+  .exitPill {
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    padding: 6px 12px 6px 6px;
+  }
+  .exitKey {
+    display: none;
   }
   .vignetteNotes {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 70%);

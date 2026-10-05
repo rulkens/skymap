@@ -150,6 +150,13 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         capture: VOYAGER1_CAPTURE,
       },
       {
+        id: 'voyager',
+        label: 'Voyager',
+        blurb:
+          'Both Voyagers from launch to today, with every flyby on a timeline you can scrub.',
+        action: { kind: 'exhibit', exhibitId: 'voyager' },
+      },
+      {
         id: 'blackhole-sgr-a-star',
         label: 'Sgr A*',
         blurb:
@@ -336,6 +343,13 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
     id: 'missions',
     label: 'Missions',
     cards: [
+      {
+        id: 'voyager',
+        label: 'Voyager',
+        blurb:
+          'Both Voyagers from launch to today, with every flyby on a timeline you can scrub.',
+        action: { kind: 'exhibit', exhibitId: 'voyager' },
+      },
       {
         id: 'body-hubble',
         label: 'Hubble',

@@ -1,0 +1,62 @@
+import { describe, it, expect } from 'vitest';
+
+import { stepTimelineEvent } from '../../../src/state/exhibits/stepTimelineEvent';
+import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
+import { setSimDays } from '../../../src/state/time/timeSlice';
+import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
+import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
+import type { RootState } from '../../../src/store/types';
+
+const SAVED = MISSION_EVENTS;
+const stateAt = (iso: string, exhibit: 'voyager' | 'solarSystem' | null): RootState =>
+  ({
+    takeover: { active: exhibit ? { kind: 'exhibit', id: exhibit, entry: 'cut' } : null },
+    time: {
+      mode: 'manual',
+      anchor: { simDays: unixMsToJulianDays(Date.parse(iso)), realMs: 0 },
+      rateIndex: 0,
+      direction: 1,
+      paused: true,
+    },
+  }) as unknown as RootState;
+
+const jumpTo = (ms: number) =>
+  expect.objectContaining({
+    type: setSimDays.type,
+    payload: expect.objectContaining({ simDays: expect.closeTo(unixMsToJulianDays(ms), 9) }),
+  });
+
+describe('stepTimelineEvent', () => {
+  it('steps to the next and previous event relative to the current sim day', () => {
+    const state = stateAt('1980-01-01', 'voyager');
+    const before = SAVED.filter((e) => missionEventMs(e) < Date.parse('1980-01-01')).at(-1)!;
+    const after = SAVED.find((e) => missionEventMs(e) > Date.parse('1980-01-01'))!;
+    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(after)));
+    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(before)));
+  });
+
+  it('steps past an event the clock already sits on', () => {
+    const second = SAVED[1]!;
+    const state = stateAt(second.iso, 'voyager');
+    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(SAVED[0]!)));
+    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(SAVED[2]!)));
+  });
+
+  it('does nothing at the ends, or outside a timeline exhibit', () => {
+    expect(stepTimelineEvent(stateAt(SAVED[0]!.iso, 'voyager'), -1)).toBeNull();
+    expect(stepTimelineEvent(stateAt(SAVED.at(-1)!.iso, 'voyager'), 1)).toBeNull();
+    expect(stepTimelineEvent(stateAt('1980-01-01', 'solarSystem'), 1)).toBeNull();
+    expect(stepTimelineEvent(stateAt('1980-01-01', null), 1)).toBeNull();
+  });
+});
+
+describe('the , and . shortcuts', () => {
+  it('are registered and routable by the key hotkeys-js reports', () => {
+    for (const key of [',', '.']) {
+      const shortcut = KEYBOARD_SHORTCUTS.find((s) => s.keys === key);
+      expect(shortcut).toBeDefined();
+      expect(SHORTCUTS_BY_KEY[key]).toBe(shortcut);
+    }
+  });
+});
