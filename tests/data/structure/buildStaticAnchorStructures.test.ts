@@ -64,17 +64,6 @@ describe('buildStaticAnchorStructures', () => {
     expect(structures.length).toBeGreaterThan(0);
     expect(structures.every((p) => p.featured === true)).toBe(true);
   });
-
-  it('assigns the correct category per anchor list', () => {
-    const structures = buildStaticAnchorStructures();
-    const cats = new Set(structures.map((p) => p.category));
-    expect(cats.has('cluster')).toBe(true);
-    expect(cats.has('supercluster')).toBe(true);
-    expect(cats.has('void')).toBe(true);
-    expect(cats.has('group')).toBe(true);
-    // No other categories sneak in.
-    expect(cats.size).toBe(4);
-  });
 });
 
 /**

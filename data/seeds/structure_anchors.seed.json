@@ -498,4 +498,391 @@
     "apparentRadius": { "value": 0.5, "unit": "Mpc" },
     "description": "An edge-on-spiral-rich group ~13.5 Mpc away centred on the lenticular NGC 5866 (often identified with M102). Both radii are estimated."
   }
+,
+{
+  "id": "pleiades",
+  "names": [
+    "Pleiades",
+    "M45",
+    "Melotte 22"
+  ],
+  "category": "open-cluster",
+  "raHours": 3.77865,
+  "decDeg": 24.1085,
+  "distance": { "value": 134.8, "unit": "pc" },
+  "physicalRadius": { "value": 2.7, "unit": "pc" },
+  "apparentRadius": { "value": 11.11, "unit": "pc" },
+  "description": "A young open cluster in Taurus whose brightest members are hot blue stars visible to the naked eye. It lies about 135 pc away and is one of the nearest rich clusters.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row Melotte_22); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "hyades",
+  "names": [
+    "Hyades",
+    "Melotte 25",
+    "Collinder 50"
+  ],
+  "category": "open-cluster",
+  "raHours": 4.44724,
+  "decDeg": 16.0808,
+  "distance": { "value": 47.2, "unit": "pc" },
+  "physicalRadius": { "value": 3.47, "unit": "pc" },
+  "apparentRadius": { "value": 8.62, "unit": "pc" },
+  "description": "The nearest open cluster to the Sun, at about 47 pc in Taurus. Its stars form a V-shaped group on the sky.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row Melotte_25); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "praesepe",
+  "names": [
+    "Praesepe",
+    "M44",
+    "Beehive Cluster",
+    "NGC 2632"
+  ],
+  "category": "open-cluster",
+  "raHours": 8.67254,
+  "decDeg": 19.6659,
+  "distance": { "value": 183.5, "unit": "pc" },
+  "physicalRadius": { "value": 3.24, "unit": "pc" },
+  "apparentRadius": { "value": 10.49, "unit": "pc" },
+  "description": "An open cluster in Cancer about 183 pc away, visible to the naked eye as a faint patch.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2632); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "coma-star-cluster",
+  "names": [
+    "Coma Star Cluster",
+    "Melotte 111"
+  ],
+  "category": "open-cluster",
+  "raHours": 12.40115,
+  "decDeg": 26.4227,
+  "distance": { "value": 85.3, "unit": "pc" },
+  "physicalRadius": { "value": 3.74, "unit": "pc" },
+  "apparentRadius": { "value": 13.95, "unit": "pc" },
+  "description": "A sparse open cluster spread over a large area of Coma Berenices, about 85 pc away. It is among the closest open clusters to the Sun.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row Melotte_111); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "alpha-persei-cluster",
+  "names": [
+    "Alpha Persei Cluster",
+    "Melotte 20"
+  ],
+  "category": "open-cluster",
+  "raHours": 3.42213,
+  "decDeg": 49.1187,
+  "distance": { "value": 173.6, "unit": "pc" },
+  "physicalRadius": { "value": 4.21, "unit": "pc" },
+  "apparentRadius": { "value": 16.85, "unit": "pc" },
+  "description": "A loose open cluster in Perseus around the star Alpha Persei, about 174 pc away. It covers a wide area of sky.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row Melotte_20); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "h-persei",
+  "names": [
+    "h Persei",
+    "NGC 869"
+  ],
+  "category": "open-cluster",
+  "raHours": 2.3177,
+  "decDeg": 57.1401,
+  "distance": { "value": 2279.6, "unit": "pc" },
+  "physicalRadius": { "value": 2.97, "unit": "pc" },
+  "apparentRadius": { "value": 7.94, "unit": "pc" },
+  "description": "One half of the Double Cluster in Perseus, lying about 2280 pc away. The two clusters are visible together to the naked eye.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_869); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "chi-persei",
+  "names": [
+    "Chi Persei",
+    "NGC 884"
+  ],
+  "category": "open-cluster",
+  "raHours": 2.36796,
+  "decDeg": 57.1409,
+  "distance": { "value": 2293.2, "unit": "pc" },
+  "physicalRadius": { "value": 2.35, "unit": "pc" },
+  "apparentRadius": { "value": 6.03, "unit": "pc" },
+  "description": "The companion of h Persei in the Double Cluster in Perseus, about 2293 pc away. It lies close to NGC 869 on the sky and at a similar distance.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_884); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "jewel-box",
+  "names": [
+    "Jewel Box",
+    "NGC 4755",
+    "Kappa Crucis Cluster"
+  ],
+  "category": "open-cluster",
+  "raHours": 12.89425,
+  "decDeg": -60.371,
+  "distance": { "value": 1978.4, "unit": "pc" },
+  "physicalRadius": { "value": 2.11, "unit": "pc" },
+  "apparentRadius": { "value": 13.37, "unit": "pc" },
+  "description": "A young open cluster in Crux about 1978 pc away, containing a few bright blue stars and one red supergiant. It is visible to the naked eye.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_4755); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "wild-duck-cluster",
+  "names": [
+    "Wild Duck Cluster",
+    "M11",
+    "NGC 6705"
+  ],
+  "category": "open-cluster",
+  "raHours": 18.85107,
+  "decDeg": -6.2753,
+  "distance": { "value": 2233.1, "unit": "pc" },
+  "physicalRadius": { "value": 2.46, "unit": "pc" },
+  "apparentRadius": { "value": 6.97, "unit": "pc" },
+  "description": "A rich open cluster in Scutum about 2233 pc away, with its stars packed into a compact region. It is one of the most populous known open clusters.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_6705); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "butterfly-cluster",
+  "names": [
+    "Butterfly Cluster",
+    "M6",
+    "NGC 6405"
+  ],
+  "category": "open-cluster",
+  "raHours": 17.67115,
+  "decDeg": -32.2281,
+  "distance": { "value": 451.9, "unit": "pc" },
+  "physicalRadius": { "value": 1.95, "unit": "pc" },
+  "apparentRadius": { "value": 9.18, "unit": "pc" },
+  "description": "An open cluster in Scorpius about 452 pc away. Its brighter stars trace a butterfly-like shape.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_6405); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "ptolemy-cluster",
+  "names": [
+    "Ptolemy Cluster",
+    "M7",
+    "NGC 6475"
+  ],
+  "category": "open-cluster",
+  "raHours": 17.8984,
+  "decDeg": -34.8283,
+  "distance": { "value": 276, "unit": "pc" },
+  "physicalRadius": { "value": 3.25, "unit": "pc" },
+  "apparentRadius": { "value": 11.9, "unit": "pc" },
+  "description": "An open cluster in Scorpius about 276 pc away, visible to the naked eye near the tail of the scorpion. It has been known since antiquity.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_6475); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m35",
+  "names": [
+    "M35",
+    "NGC 2168"
+  ],
+  "category": "open-cluster",
+  "raHours": 6.15225,
+  "decDeg": 24.3262,
+  "distance": { "value": 838.5, "unit": "pc" },
+  "physicalRadius": { "value": 3.37, "unit": "pc" },
+  "apparentRadius": { "value": 11.22, "unit": "pc" },
+  "description": "A large open cluster in Gemini about 839 pc away. It lies on the sky next to the more distant cluster NGC 2158.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2168); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m36",
+  "names": [
+    "M36",
+    "NGC 1960",
+    "Pinwheel Cluster"
+  ],
+  "category": "open-cluster",
+  "raHours": 5.60569,
+  "decDeg": 34.1342,
+  "distance": { "value": 1124.8, "unit": "pc" },
+  "physicalRadius": { "value": 1.37, "unit": "pc" },
+  "apparentRadius": { "value": 6.08, "unit": "pc" },
+  "description": "An open cluster in Auriga about 1125 pc away. It is one of three Messier open clusters in that constellation.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_1960); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m37",
+  "names": [
+    "M37",
+    "NGC 2099"
+  ],
+  "category": "open-cluster",
+  "raHours": 5.87201,
+  "decDeg": 32.5408,
+  "distance": { "value": 1401.6, "unit": "pc" },
+  "physicalRadius": { "value": 2.82, "unit": "pc" },
+  "apparentRadius": { "value": 12.4, "unit": "pc" },
+  "description": "A rich open cluster in Auriga about 1402 pc away, the richest of the three Messier clusters there.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2099); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m38",
+  "names": [
+    "M38",
+    "NGC 1912",
+    "Starfish Cluster"
+  ],
+  "category": "open-cluster",
+  "raHours": 5.47778,
+  "decDeg": 35.8208,
+  "distance": { "value": 1085.5, "unit": "pc" },
+  "physicalRadius": { "value": 3.52, "unit": "pc" },
+  "apparentRadius": { "value": 12.75, "unit": "pc" },
+  "description": "An open cluster in Auriga about 1085 pc away. Its stars form a loose cross or starfish pattern.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_1912); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m41",
+  "names": [
+    "M41",
+    "NGC 2287"
+  ],
+  "category": "open-cluster",
+  "raHours": 6.76634,
+  "decDeg": -20.703,
+  "distance": { "value": 715.1, "unit": "pc" },
+  "physicalRadius": { "value": 3.32, "unit": "pc" },
+  "apparentRadius": { "value": 9.36, "unit": "pc" },
+  "description": "An open cluster in Canis Major about 715 pc away, visible to the naked eye in dark skies. It lies a few degrees south of Sirius.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2287); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m46",
+  "names": [
+    "M46",
+    "NGC 2437"
+  ],
+  "category": "open-cluster",
+  "raHours": 7.69732,
+  "decDeg": -14.8335,
+  "distance": { "value": 1554.5, "unit": "pc" },
+  "physicalRadius": { "value": 4.75, "unit": "pc" },
+  "apparentRadius": { "value": 17.82, "unit": "pc" },
+  "description": "A rich open cluster in Puppis about 1555 pc away. The planetary nebula NGC 2438 lies within it on the sky, though it is not a member.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2437); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m47",
+  "names": [
+    "M47",
+    "NGC 2422"
+  ],
+  "category": "open-cluster",
+  "raHours": 7.61127,
+  "decDeg": -14.4927,
+  "distance": { "value": 468.3, "unit": "pc" },
+  "physicalRadius": { "value": 2.07, "unit": "pc" },
+  "apparentRadius": { "value": 7.71, "unit": "pc" },
+  "description": "A bright open cluster in Puppis about 468 pc away, much closer than its neighbour M46.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2422); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m50",
+  "names": [
+    "M50",
+    "NGC 2323"
+  ],
+  "category": "open-cluster",
+  "raHours": 7.04697,
+  "decDeg": -8.3547,
+  "distance": { "value": 956.5, "unit": "pc" },
+  "physicalRadius": { "value": 2.88, "unit": "pc" },
+  "apparentRadius": { "value": 10.27, "unit": "pc" },
+  "description": "An open cluster in Monoceros about 957 pc away, with a roughly heart-shaped outline on the sky.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2323); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "m67",
+  "names": [
+    "M67",
+    "NGC 2682"
+  ],
+  "category": "open-cluster",
+  "raHours": 8.85666,
+  "decDeg": 11.8175,
+  "distance": { "value": 837.3, "unit": "pc" },
+  "physicalRadius": { "value": 2.48, "unit": "pc" },
+  "apparentRadius": { "value": 8.71, "unit": "pc" },
+  "description": "An old open cluster in Cancer about 837 pc away. It has survived far longer than most open clusters and is widely used to study stellar evolution.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_2682); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "ngc-752",
+  "names": [
+    "NGC 752",
+    "Caldwell 28"
+  ],
+  "category": "open-cluster",
+  "raHours": 1.944,
+  "decDeg": 37.7927,
+  "distance": { "value": 433.6, "unit": "pc" },
+  "physicalRadius": { "value": 3.01, "unit": "pc" },
+  "apparentRadius": { "value": 12.26, "unit": "pc" },
+  "description": "An old open cluster in Andromeda about 434 pc away. It is large on the sky and visible in binoculars.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row NGC_752); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "ic-2602",
+  "names": [
+    "IC 2602",
+    "Southern Pleiades",
+    "Theta Carinae Cluster"
+  ],
+  "category": "open-cluster",
+  "raHours": 10.73154,
+  "decDeg": -64.3932,
+  "distance": { "value": 150.6, "unit": "pc" },
+  "physicalRadius": { "value": 2.95, "unit": "pc" },
+  "apparentRadius": { "value": 9.84, "unit": "pc" },
+  "description": "A young open cluster in Carina about 151 pc away, visible to the naked eye. It is dominated by the bright star Theta Carinae.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row IC_2602); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "ic-2391",
+  "names": [
+    "IC 2391",
+    "Omicron Velorum Cluster"
+  ],
+  "category": "open-cluster",
+  "raHours": 8.68401,
+  "decDeg": -53.0417,
+  "distance": { "value": 150.2, "unit": "pc" },
+  "physicalRadius": { "value": 1.84, "unit": "pc" },
+  "apparentRadius": { "value": 7.76, "unit": "pc" },
+  "description": "A young open cluster in Vela about 150 pc away, visible to the naked eye. Its brightest star is Omicron Velorum.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row IC_2391); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "trumpler-14",
+  "names": [
+    "Trumpler 14",
+    "Tr 14"
+  ],
+  "category": "open-cluster",
+  "raHours": 10.73236,
+  "decDeg": -59.5518,
+  "distance": { "value": 2389.8, "unit": "pc" },
+  "physicalRadius": { "value": 1.36, "unit": "pc" },
+  "apparentRadius": { "value": 7.46, "unit": "pc" },
+  "description": "A young, compact star cluster in the Carina Nebula about 2390 pc away. It contains many massive hot stars.",
+  "source": "Hunt & Reffert 2024 (A&A 686, A42), VizieR J/A+A/686/A42 clusters table (catalogue row Trumpler_14); distance dist50, radii r50pc and rtpc (tidal radius), coordinates of the densest point"
+},
+{
+  "id": "westerlund-1",
+  "names": [
+    "Westerlund 1",
+    "Wd 1"
+  ],
+  "category": "open-cluster",
+  "raHours": 16.7845,
+  "decDeg": -45.849,
+  "distance": { "value": 4.05, "unit": "kpc" },
+  "physicalRadius": { "value": 2.33, "unit": "pc" },
+  "apparentRadius": { "value": 7, "unit": "pc" },
+  "description": "A very massive young star cluster in Ara, heavily obscured by interstellar dust, about 4.05 kpc away. It contains many evolved massive stars such as red supergiants.",
+  "source": "Navarete et al. 2022 (MNRAS 516, 1289; arXiv:2204.09414): distance 4.05 +/- 0.20 kpc, effective radius R50 = 2.0 arcmin = 2.33 pc, 3 x R50 = 7.0 pc as the outer extent; centre from Clark et al. 2005 as used there. Not in Hunt & Reffert 2024"
+}
 ]
