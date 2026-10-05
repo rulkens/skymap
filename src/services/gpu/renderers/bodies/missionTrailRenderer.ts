@@ -211,7 +211,6 @@ export function createMissionTrailRenderer(
     opacity: number,
     widthPx: number,
     segmentCount: number,
-    tailVertex: number,
     headMpc: Readonly<Vec3> | null,
   ): void {
     const first = firstVertex.get(id);
@@ -233,7 +232,7 @@ export function createMissionTrailRenderer(
       pass.draw(6, segmentCount);
     }
     if (headMpc !== null) {
-      writeHiLoVertex(tracks.get(id)!.posMpc, 3 * tailVertex, headScratch, 0);
+      writeHiLoVertex(tracks.get(id)!.posMpc, 3 * segmentCount, headScratch, 0);
       writeHiLoVertex(headMpc, 0, headScratch, 6);
       device.queue.writeBuffer(headBuffer, slot * HEAD_BYTES, headScratch);
       pass.setVertexBuffer(0, headBuffer, slot * HEAD_BYTES);

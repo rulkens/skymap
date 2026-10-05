@@ -64,16 +64,7 @@ export const missionTrailsPass: ContentPass = {
       if (k === 0) continue;
       // Past the last vertex the craft is held on it: no head segment to draw.
       const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
-      renderer.drawTrail(
-        pass,
-        id,
-        trailColor,
-        layerOpacity,
-        MISSION_TRAIL_WIDTH_PX,
-        k - 1,
-        k - 1,
-        head,
-      );
+      renderer.drawTrail(pass, id, trailColor, layerOpacity, MISSION_TRAIL_WIDTH_PX, k - 1, head);
     }
   },
 };

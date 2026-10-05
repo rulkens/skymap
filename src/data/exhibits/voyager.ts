@@ -38,7 +38,7 @@ const CAPTIONS: Readonly<Record<string, string>> = {
   'voyager2-jupiter':
     'Four months behind its twin, Voyager 2 takes the closest look yet at Europa’s cracked ice.',
   'voyager1-titan':
-    'Voyager 1 passes Titan to study its thick haze, and the flyby bends its path north out of the planets’ plane for good.',
+    'Voyager 1 passes Titan to study its thick haze, and the encounter sends it north out of the planets’ plane for good.',
   'voyager1-saturn':
     'Closest approach to Saturn, eighteen hours after Titan. No planet lies ahead of Voyager 1.',
   'voyager2-saturn':
@@ -46,7 +46,7 @@ const CAPTIONS: Readonly<Record<string, string>> = {
   'voyager2-uranus':
     'The only spacecraft visit Uranus has had. Voyager 2 finds ten moons no one had seen.',
   'voyager2-neptune':
-    'The closest pass of the mission, over Neptune’s north pole. Triton follows five hours later.',
+    'Voyager 2’s closest pass of any planet, over Neptune’s north pole. Triton follows five hours later.',
   'voyager1-pale-blue-dot':
     'From six billion kilometres, Voyager 1 photographs Earth as a dot smaller than a pixel. Its cameras are switched off 34 minutes later.',
   'voyager1-pioneer10':

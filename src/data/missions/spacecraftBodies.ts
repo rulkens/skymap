@@ -4,10 +4,10 @@
  * `trailColor` is the craft's trail tint (linear HDR), the one source for it.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { SampledBody } from '../../@types/missions/SampledBody';
 import { VOYAGER_1_GOLD, VOYAGER_2_AMBER } from '../bodies/palette';
 
-export const SAMPLED_BODIES: readonly { readonly id: string; readonly trailColor: Vec3 }[] = [
+export const SAMPLED_BODIES: readonly SampledBody[] = [
   { id: 'voyager1', trailColor: VOYAGER_1_GOLD },
   { id: 'voyager2', trailColor: VOYAGER_2_AMBER },
 ];

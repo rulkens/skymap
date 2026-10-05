@@ -20,7 +20,7 @@ export type MissionTrailRenderer = Renderer & {
   beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
   /**
    * Draw the first `segmentCount` segments of `id`'s trail, then a head segment
-   * from vertex `tailVertex` to `headMpc` (the craft's own position) when given.
+   * from vertex `segmentCount` to `headMpc` (the craft's own position) when given.
    */
   drawTrail(
     pass: GPURenderPassEncoder,
@@ -29,7 +29,6 @@ export type MissionTrailRenderer = Renderer & {
     opacity: number,
     widthPx: number,
     segmentCount: number,
-    tailVertex: number,
     headMpc: Readonly<Vec3> | null,
   ): void;
 };
