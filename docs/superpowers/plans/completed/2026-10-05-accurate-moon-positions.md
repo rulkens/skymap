@@ -21,7 +21,9 @@ Europa's apsis rates are negative.
 
 **Tech stack:** TypeScript, Vitest, tsx tools, the JPL Horizons API.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-accurate-moon-positions-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-10-05-accurate-moon-positions-design.md`
+
+**Completed 2026-10-05** (#843 prep, #846 feature). Deviations and rulings: see the archived ledger `2026-10-05-accurate-moon-positions.ledger.md`. User smoke passed via deep links.
 
 ## Global constraints
 
@@ -350,7 +352,7 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
 
 ## Definition of Done
 
-- [ ] **Deliverables:**
+- [x] **Deliverables:**
   - `CorrectionSeries` and the reshaped `EphemerisCorrection`
   - `correctionSeriesAt`
   - `EPHEMERIS_CORRECTIONS` with 8 planet rows (`'hold'`) and 11 moon rows (`'off'`, `meanAnomalyRad`
@@ -358,13 +360,13 @@ export function meanAnomalyCorrectionTarget(propagated: OrbitalElements, horizon
   - `HORIZONS_BODIES`, `fetch-horizons` and `build-ephemeris-corrections`
   - `BodyState.orbit`
   - `satellite` `periodKind` and the signed apsis
-- [ ] **Smoke (user, on the dev server):**
+- [x] **Smoke (user, on the dev server):**
   - Set the clock to 1980-11-12 23:46 UT with Saturn focused. Titan is near Voyager 1's
     approach side, and every Saturn-moon trail is centred on Saturn.
   - Set 1979-03-05 at Jupiter. The Galilean trails are centred, and each moon sits on its trail.
   - Scrub across 2100: the moons jump once and keep orbiting, with no NaN or vanishing body.
   - Planets are unchanged.
-- [ ] **Out of scope (deferred):**
+- [x] **Out of scope (deferred):**
   - Earth's Moon accuracy.
   - Uranus and Neptune moons (#838 adds rows later).
   - Edge taper.
