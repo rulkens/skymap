@@ -41,6 +41,10 @@ jobs:
       - name: Tests
         run: npm test
 
+      # A broken website page fails the build here, not on deploy.
+      - name: Build website
+        run: npm run site:build
+
       # `npm run format:check` is intentionally not run in CI yet — there
       # are pre-existing files in the repo that don't match Prettier's
       # current ruleset, so wiring it up here would fail on every PR.
