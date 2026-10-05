@@ -58,13 +58,14 @@ import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
+import type { StructureSlab } from '../../../@types/data/structure/StructureSlab';
 import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
 import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from './structureVisibleBands';
 
 export function produceStructureLabels(
   state: EngineState,
   ctx: FrameView,
-  slab: 'cosmo' | 'near0',
+  slab: StructureSlab,
 ): Label2DProducerOutput {
   const labels: Label2D[] = [];
 

@@ -22,7 +22,7 @@ describe('structureFocusDistance', () => {
     expect(structureFocusDistance(4e-6, FOV60)).toBeLessThan(1e-4);
   });
 
-  it('treats non-finite radius as zero (falling back to 0.1 Mpc)', () => {
+  it('falls back to 0.1 Mpc for a NaN, zero or negative radius', () => {
     // Defensive: a structure with NaN / Infinity radius must not produce a NaN
     // framing distance.
     expect(structureFocusDistance(Number.NaN, FOV60)).toBe(0.1);

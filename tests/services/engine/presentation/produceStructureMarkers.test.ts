@@ -14,6 +14,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { STRUCTURE_MARKER_STYLES } from '../../../../src/services/engine/presentation/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
@@ -218,8 +219,7 @@ describe('produceStructureMarkers', () => {
   });
 
   it('a 4 pc structure seen from 100 pc is not faded by the near guard', () => {
-    // 100 pc is inside the old fixed 1 kpc cut-off but outside the structure's
-    // own 4 pc radius, so the ring must draw.
+    // 100 pc is far outside the structure's own 4 pc radius, so the ring draws.
     const state = makeState();
     const camZ = FULL_BAND_CAM_Z;
     state.data.structures.setGroup('anchors', [
@@ -231,5 +231,26 @@ describe('produceStructureMarkers', () => {
     ]);
     const [m] = produceStructureMarkers(state, makeCtx(0, camZ));
     expect(m!.ringColor[3]).toBeGreaterThan(0);
+  });
+
+  it('a ring at the edge of its own radius keeps its max-apparent fade on a small viewport', () => {
+    const state = makeState();
+    const camZ = FULL_BAND_CAM_Z;
+    const r = 5;
+    const d = 0.99 * r;
+    state.data.structures.setGroup('anchors', [
+      rec('edge', 'cluster', { worldPos: [0, 0, camZ - d], physicalRadiusMpc: r, significance: 1 }),
+    ]);
+    const ctx = { ...makeCtx(0, camZ), drawPxPerRad: 900 } as FrameView;
+    const [m] = produceStructureMarkers(state, ctx);
+    const style = STRUCTURE_MARKER_STYLES.cluster;
+    const t = Math.min(
+      1,
+      ((r / d) * 900 - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
+    );
+    const expected = 1 - t * t * (3 - 2 * t);
+    expect(expected).toBeGreaterThan(0);
+    expect(expected).toBeLessThan(1);
+    expect(m!.ringColor[3]).toBeCloseTo(style.ringColor[3] * expected, 5);
   });
 });

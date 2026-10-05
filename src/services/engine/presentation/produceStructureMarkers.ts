@@ -89,11 +89,11 @@ export function produceStructureMarkers(
     const dz = p.worldPos[2] - cz;
     const distanceMpc = Math.hypot(dx, dy, dz);
 
-    // Camera inside the drawn radius: the ring surrounds the eye, so treat as
-    // fully faded. Still emit a descriptor (alpha 0) to keep the index
+    // The apparent-size projection divides by distance, so an eye exactly on
+    // the anchor gets alpha 0. Still emit a descriptor to keep the index
     // alignment — discarded in-fragment.
     let fadeAlpha: number;
-    if (distanceMpc <= radiusMpc) {
+    if (distanceMpc <= 0) {
       fadeAlpha = 0;
     } else {
       const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;

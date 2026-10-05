@@ -1,4 +1,5 @@
 import type { SourceEntryBase } from '../SourceEntryBase';
+import type { StructureSlab } from './StructureSlab';
 
 /**
  * Structure-typed SOURCE_REGISTRY row — the marker-ring codes (Cluster,
@@ -15,7 +16,7 @@ export type StructureSourceEntry = SourceEntryBase & {
    * The projection slab whose marker pass draws this category: Mpc-scale
    * structures project through COSMO, parsec-scale ones need NEAR0's adaptive planes.
    */
-  readonly slab: 'cosmo' | 'near0';
+  readonly slab: StructureSlab;
   /**
    * True when the category is a region of the extragalactic galaxy distribution:
    * focusing one dims non-member galaxies and its InfoCard counts members.

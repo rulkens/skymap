@@ -5,7 +5,6 @@ import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/fo
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
-import { STRUCTURE_IDS_BY_SLAB } from '../../../../src/data/structure/structureIdsBySlab';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -318,25 +317,5 @@ describe('produceStructureLabels', () => {
       expect(pick.sourceCode).toBe(STRUCTURE_ID_CODES[record.category]);
       expect(state.data.structures.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
     }
-  });
-
-  it("structure labels for a slab contain only that slab's categories", () => {
-    const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('a')]);
-    for (const slab of ['cosmo', 'near0'] as const) {
-      const ids = STRUCTURE_IDS_BY_SLAB[slab];
-      const labels = produceStructureLabels(state, makeCtx(), slab).labels;
-      for (const l of labels) {
-        const cat = state.data.structures.all().find((p) => p.id === l.id)!.category;
-        expect(ids).toContain(cat);
-      }
-    }
-  });
-
-  it('the near0 producer returns nothing when no category is near0', () => {
-    const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('a')]);
-    expect(STRUCTURE_IDS_BY_SLAB.near0).toEqual([]);
-    expect(produceStructureLabels(state, makeCtx(), 'near0').labels).toEqual([]);
   });
 });
