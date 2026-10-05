@@ -334,6 +334,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 216.3,
     meanAnomalyDeg: 189.7,
     periodDays: 0.3187,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 1.1,
     nodalPrecessionYears: 2.3,
     poleRaDeg: 317.7,
@@ -353,6 +354,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0.0,
     meanAnomalyDeg: 205.0,
     periodDays: 1.2625,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0.0,
     nodalPrecessionYears: 56.2,
     poleRaDeg: 316.6,
@@ -363,7 +365,9 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // Jupiter's Galilean moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5
   // TDB, JUP365). Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr)
   // Pnode(yr), pole RA/Dec. P is the anomalistic mean-motion period — for the
-  // fast-precessing inner pair it is ~0.4% shorter than the sidereal period.
+  // fast-precessing inner pair it is ~0.4% shorter than the sidereal period. JPL lists Papsis
+  // unsigned; Io's and Europa's apsides regress (Laplace resonance), so their rows carry it
+  // negative — read +, their longitude runs ~0.74°/day fast.
   satellite({
     // Io: a=421800 e=0.004 ω=49.1 M=330.9 i=0.0 node=0.0 P=1.762732
     // Papsis=1.333 Pnode=0.000; pole RA=268.1 Dec=64.5 (tilt 0.0°). Prograde.
@@ -377,7 +381,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 49.1,
     meanAnomalyDeg: 330.9,
     periodDays: 1.762732,
-    apsidalPrecessionYears: 1.333,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: -1.333,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 268.1,
     poleDecDeg: 64.5,
@@ -395,7 +400,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 45.0,
     meanAnomalyDeg: 345.4,
     periodDays: 3.525463,
-    apsidalPrecessionYears: 1.394,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: -1.394,
     nodalPrecessionYears: 30.202,
     poleRaDeg: 268.1,
     poleDecDeg: 64.5,
@@ -413,6 +419,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 198.3,
     meanAnomalyDeg: 324.8,
     periodDays: 7.155588,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 68.301,
     nodalPrecessionYears: 137.812,
     poleRaDeg: 268.2,
@@ -431,6 +438,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 43.8,
     meanAnomalyDeg: 87.4,
     periodDays: 16.69044,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 277.921,
     nodalPrecessionYears: 577.264,
     poleRaDeg: 268.7,
@@ -441,7 +449,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // Saturn's major moons. JPL sats/elem (Laplace frame, epoch 2000-01-01.5 TDB, SAT441).
   // Columns verbatim: a(km) e ω° M° i° node° P(d) Papsis(yr) Pnode(yr), pole RA/Dec. The inner
   // moons share Saturn's pole (RA≈40.6 Dec≈83.5); Iapetus sits far enough out that its Laplace
-  // plane tilts 14.8° off the equator, which its own pole and i=7.6° carry truthfully.
+  // plane tilts 14.8° off the equator, which its own pole and i=7.6° carry truthfully. P is a
+  // LONGITUDE period here (360/P equals the IAU spin rate), hence `periodKind: 'longitude'`.
   satellite({
     // Mimas: a=186000 e=0.020 ω=160.4 M=275.3 i=1.6 node=66.2 P=0.942422
     // Papsis=0.493 Pnode=0.986; pole RA=40.6 Dec=83.5 (tilt 0.0°). Prograde.
@@ -454,6 +463,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 160.4,
     meanAnomalyDeg: 275.3,
     periodDays: 0.942422,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 0.493,
     nodalPrecessionYears: 0.986,
     poleRaDeg: 40.6,
@@ -473,6 +483,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 119.5,
     meanAnomalyDeg: 57.0,
     periodDays: 1.370218,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 2.916,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 40.6,
@@ -493,6 +504,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 335.3,
     meanAnomalyDeg: 0.0,
     periodDays: 1.887802,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 0.005,
     nodalPrecessionYears: 4.982,
     poleRaDeg: 40.6,
@@ -512,6 +524,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 116.0,
     meanAnomalyDeg: 212.0,
     periodDays: 2.736916,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 11.698,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 40.6,
@@ -530,6 +543,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 44.3,
     meanAnomalyDeg: 31.5,
     periodDays: 4.517503,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 33.939,
     nodalPrecessionYears: 35.775,
     poleRaDeg: 40.6,
@@ -548,6 +562,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 78.3,
     meanAnomalyDeg: 11.7,
     periodDays: 15.945448,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 346.68,
     nodalPrecessionYears: 687.37,
     poleRaDeg: 36.4,
@@ -567,6 +582,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 254.5,
     meanAnomalyDeg: 74.8,
     periodDays: 79.331002,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 1662.9,
     nodalPrecessionYears: 3130.302,
     poleRaDeg: 288.7,
@@ -578,6 +594,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
   // tabulates no pole. The pole below is Uranus's ANGULAR-MOMENTUM pole (RA 77.311, Dec +15.175),
   // the antipode of its IAU north pole: Uranus spins retrograde about that pole and the moons orbit
   // with the spin, so the IAU pole here would run every orbit backwards.
+  // P is a LONGITUDE period, as for Saturn: 360/P matches the IAU (WGCCRE 2009) spin rates.
   satellite({
     // Miranda: a=129846 e=0.001 ω=154.8 M=73.0 i=4.4 node=100.9 P=1.413479
     // Papsis=8.939 Pnode=17.787. Prograde.
@@ -590,6 +607,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 154.8,
     meanAnomalyDeg: 73.0,
     periodDays: 1.413479,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 8.939,
     nodalPrecessionYears: 17.787,
     poleRaDeg: 77.311,
@@ -608,6 +626,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 9.6,
     meanAnomalyDeg: 193.5,
     periodDays: 2.520379,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 28.901,
     nodalPrecessionYears: 0.0,
     poleRaDeg: 77.311,
@@ -626,6 +645,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 183.4,
     meanAnomalyDeg: 253.0,
     periodDays: 4.144177,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 64.126,
     nodalPrecessionYears: 129.745,
     poleRaDeg: 77.311,
@@ -644,6 +664,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 184.0,
     meanAnomalyDeg: 68.1,
     periodDays: 8.705869,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 579.928,
     nodalPrecessionYears: 1644.649,
     poleRaDeg: 77.311,
@@ -662,6 +683,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 132.2,
     meanAnomalyDeg: 143.6,
     periodDays: 13.463237,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 158.604,
     nodalPrecessionYears: 192.798,
     poleRaDeg: 77.311,
@@ -680,6 +702,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0.0,
     meanAnomalyDeg: 50.1,
     periodDays: 0.761833,
+    periodKind: 'longitude',
     apsidalPrecessionYears: 2.226,
     nodalPrecessionYears: 4.454,
     poleRaDeg: 77.311,
@@ -710,6 +733,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0.0,
     meanAnomalyDeg: 304.1,
     periodDays: 6.387222,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0.0,
     nodalPrecessionYears: 0.0,
     // Pluto's IAU pole (WGCCRE 2015), not a Charon one: the pair is mutually tidally locked,
@@ -741,6 +765,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0,
     meanAnomalyDeg: 0,
     periodDays: MESH_BODY_PERIOD_DAYS,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0,
     nodalPrecessionYears: 0,
     poleRaDeg: 0.0,
@@ -759,6 +784,7 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     argPeriapsisDeg: 0,
     meanAnomalyDeg: -PETUNIA_TRAIL_OFFSET_DEG,
     periodDays: MESH_BODY_PERIOD_DAYS,
+    periodKind: 'anomalistic',
     apsidalPrecessionYears: 0,
     nodalPrecessionYears: 0,
     poleRaDeg: 0.0,
