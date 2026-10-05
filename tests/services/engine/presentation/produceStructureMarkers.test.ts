@@ -13,6 +13,8 @@ function makeRegistry(): FadeRegistry {
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // Builds a real engineData store (so state.data.structures is the production
@@ -59,10 +61,14 @@ function makeState(
   } as unknown as TestState;
 }
 
-function makeCtx(focusBlend = 0): FrameView {
+// Past the surveyDeepZoom band's full edge, so the visibility band is 1 and
+// the structures sit ~10 Mpc away to within 0.01%.
+const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
+
+function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
   return {
     snapshot: { focusBlend, nowMs: 0 },
-    drawCamPos: [0, 0, 0],
+    drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     vp: mat4.identity(),
@@ -191,5 +197,23 @@ describe('produceStructureMarkers', () => {
     // The focused structure's ring/halo are unchanged across the blend.
     expect(aFoc.ringColor[3]).toBeCloseTo(aRest.ringColor[3], 6);
     expect(aFoc.haloColor[3]).toBeCloseTo(aRest.haloColor[3], 6);
+  });
+
+  it('marker alpha at a camera distance equals the band value times the unbanded alpha', () => {
+    const band = SCALE_FADE_BANDS.surveyDeepZoom;
+    const unbanded = (() => {
+      const state = makeState();
+      state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+      return produceStructureMarkers(state, makeCtx(0, band.fullAt * 1.01))[0]!;
+    })();
+    for (const dist of [band.fullAt * 1.01, (band.fullAt + band.goneAt) / 2, band.goneAt * 0.5]) {
+      const state = makeState();
+      state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+      const m = produceStructureMarkers(state, makeCtx(0, dist))[0]!;
+      const expected = fadeBand(band, dist);
+      expect(m.ringColor[3]).toBeCloseTo(unbanded.ringColor[3] * expected, 5);
+      expect(m.haloColor[3]).toBeCloseTo(unbanded.haloColor[3] * expected, 5);
+    }
+    expect(fadeBand(band, band.goneAt * 0.5)).toBe(0);
   });
 });

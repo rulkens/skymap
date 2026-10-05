@@ -196,12 +196,6 @@ export function createStructureMarkerRenderer(
   const sourceBuffers = byCategory<GPUBuffer | null>(null);
   let cameraBindGroup: GPUBindGroup | null = null;
   const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
-  // Scratch arrays for the per-frame fade.opacity write.  Same shape
-  // as filamentRenderer's fadeScratchF32: a 16-byte staging buffer that
-  // matches the fade uniform's footprint, with the opacity f32 at offset
-  // 0 and the trailing 12 bytes held at zero.
-  const fadeScratchBuffer = new ArrayBuffer(16);
-  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   if (device) {
     const cameraBgl = device.createBindGroupLayout({
@@ -390,15 +384,15 @@ export function createStructureMarkerRenderer(
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
 
-    // @group(1) FadeUniforms — 16-byte buffer.  Each frame the whole
-    // 16-byte scratch is uploaded; only its first 4 bytes carry the
-    // fade.opacity scalar, the trailing 12 are struct pad and stay zero.
-    // Bind group lives forever; only the buffer contents change.
+    // @group(1) FadeUniforms — 16-byte buffer pinned at opacity 1: the
+    // shaders still apply it, but visibility rides each descriptor's alpha
+    // (per-category bands), so there is no layer-wide scalar to upload.
     fadeBuffer = device.createBuffer({
       label: 'structure-marker-fade-uniform',
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    device.queue.writeBuffer(fadeBuffer, 0, new Float32Array([1, 0, 0, 0]));
     fadeBindGroup = device.createBindGroup({
       label: 'structure-marker-fade-bg',
       layout: fadeBgl,
@@ -514,7 +508,6 @@ export function createStructureMarkerRenderer(
     viewportSize: Vec2,
     pxPerRad: number,
     camPosMpc: Vec3,
-    fadeOpacity: number,
   ): void {
     if (
       !device ||
@@ -537,13 +530,6 @@ export function createStructureMarkerRenderer(
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
     uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
-
-    // Per-frame fade.opacity write — same pattern as filamentRenderer.
-    // The upload spans the full 16-byte scratch (one writeBuffer of a
-    // whole struct, not a partial write): opacity occupies floats [0],
-    // the trailing 12 bytes are pad and stay zero from the zero-init.
-    fadeScratchF32[0] = fadeOpacity;
-    device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
 
     pass.setBindGroup(0, cameraBindGroup);
     pass.setBindGroup(1, fadeBindGroup);

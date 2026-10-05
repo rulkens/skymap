@@ -105,11 +105,11 @@ Seed rows change three fields; nothing else:
 
 **Contract:** the style row type gains `visibleBand`, typed as the element type of `SCALE_FADE_BANDS`. All four rows say `SCALE_FADE_BANDS.surveyDeepZoom`.
 
-- [ ] `produceStructureMarkers` multiplies each descriptor's alpha by `fadeBand(style.visibleBand, camDistFromOrigin)`. `produceStructureLabels` replaces its hoisted global read (`:75-77`) with the same per-category factor, and still returns early when every category is at zero.
-- [ ] `structureMarkersPass` stops reading `SCALE_FADE_BANDS.surveyDeepZoom` directly in `enabled`, `pickEnabled`, `draw` and `drawPick`. Its gate becomes "at least one category this pass draws has a band above zero at this camera distance".
-- [ ] Trace where the pass-level `surveyFade` scalar goes inside `structureMarkerRenderer.draw` (ring and halo). The per-descriptor factor must reach exactly the same terms. If the halo reads the scalar through a path the descriptor alpha does not feed, stop and report before changing the renderer signature. Once equivalent, remove the scalar parameter.
-- [ ] Add the test `marker alpha at a camera distance equals the band value times the unbanded alpha` at three distances: above `fullAt`, mid-band, and below `goneAt` (zero).
-- [ ] Commit.
+- [x] `produceStructureMarkers` multiplies each descriptor's alpha by `fadeBand(style.visibleBand, camDistFromOrigin)`. `produceStructureLabels` replaces its hoisted global read (`:75-77`) with the same per-category factor, and still returns early when every category is at zero.
+- [x] `structureMarkersPass` stops reading `SCALE_FADE_BANDS.surveyDeepZoom` directly in `enabled`, `pickEnabled`, `draw` and `drawPick`. Its gate becomes "at least one category this pass draws has a band above zero at this camera distance".
+- [x] Trace where the pass-level `surveyFade` scalar goes inside `structureMarkerRenderer.draw` (ring and halo). The per-descriptor factor must reach exactly the same terms. If the halo reads the scalar through a path the descriptor alpha does not feed, stop and report before changing the renderer signature. Once equivalent, remove the scalar parameter.
+- [x] Add the test `marker alpha at a camera distance equals the band value times the unbanded alpha` at three distances: above `fullAt`, mid-band, and below `goneAt` (zero).
+- [x] Commit.
 
 ### Task 6 (P4): Radius-relative near guard
 

@@ -15,8 +15,7 @@ export type StructureMarkerRenderer = {
   /**
    * `camPosMpc` is the drawn view's eye, in the same absolute-Mpc frame the
    * instance positions use — the ring/halo vertex stage needs it to build an
-   * eye-facing world basis (see structureMarker/io.wesl). `fadeOpacity` scales
-   * the whole layer's alpha through `lib::fadeUniforms::applyFade`.
+   * eye-facing world basis (see structureMarker/io.wesl).
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -24,7 +23,6 @@ export type StructureMarkerRenderer = {
     viewportSize: Vec2,
     pxPerRad: number,
     camPosMpc: Vec3,
-    fadeOpacity: number,
   ): void;
   markerCount(): number;
   /**

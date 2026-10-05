@@ -280,7 +280,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.draw(pass, viewProj, viewportPx, 1000, camPos, 1);
+    renderer.draw(pass, viewProj, viewportPx, 1000, camPos);
 
     const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
     const [target, , payload] = (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mock
