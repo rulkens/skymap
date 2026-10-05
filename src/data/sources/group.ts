@@ -9,6 +9,7 @@ export const GROUP_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  galaxyMembers: true,
   labelLayer: 'structure',
   detailLabel: 'Galaxy Group',
   shortLabel: 'Group',

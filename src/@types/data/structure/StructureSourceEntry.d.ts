@@ -11,4 +11,9 @@ export type StructureSourceEntry = SourceEntryBase & {
   readonly type: 'structure';
   /** Stable numeric tag, matching the upper 6 bits of the packed pick ID. */
   readonly code: number;
+  /**
+   * True when the category is a region of the extragalactic galaxy distribution:
+   * focusing one dims non-member galaxies and its InfoCard counts members.
+   */
+  readonly galaxyMembers: boolean;
 };

@@ -85,10 +85,10 @@ Seed rows change three fields; nothing else:
 
 **Contract:** `StructureSourceEntry` gains `readonly galaxyMembers: boolean`. All four existing rows say `true`.
 
-- [ ] The four-way `||` at `structureFocusSubsystem.ts:80-86` becomes a registry read: a focused structure produces `ActiveFocus` when its category's row has `galaxyMembers`.
-- [ ] The member-count publisher (`galaxyCatalog/frame.ts:56-76`) publishes a count only for a category with `galaxyMembers`.
-- [ ] Add one test, `a structure whose category has no galaxy members produces no ActiveFocus`, using a stubbed registry lookup or an injected predicate, whichever the subsystem's existing tests already use. If neither seam exists, pass the predicate in as a dependency; do not add a fake category to the real registry.
-- [ ] Commit.
+- [x] The four-way `||` at `structureFocusSubsystem.ts:80-86` becomes a registry read: a focused structure produces `ActiveFocus` when its category's row has `galaxyMembers`.
+- [x] The member-count publisher (`galaxyCatalog/frame.ts:56-76`) publishes a count only for a category with `galaxyMembers`.
+- [x] Add one test, `a structure whose category has no galaxy members produces no ActiveFocus`, using a stubbed registry lookup or an injected predicate, whichever the subsystem's existing tests already use. If neither seam exists, pass the predicate in as a dependency; do not add a fake category to the real registry.
+- [x] Commit.
 
 ### Task 4 (P5): Focus distance from radius
 

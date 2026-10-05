@@ -9,6 +9,7 @@ export const SUPERCLUSTER_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  galaxyMembers: true,
   labelLayer: 'structure',
   detailLabel: 'Supercluster',
   shortLabel: 'Supercluster',
