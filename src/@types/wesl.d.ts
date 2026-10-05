@@ -6,3 +6,4 @@
 // A triple-slash reference here is the belt-and-braces fallback that
 // guarantees resolution from any compiler entry point.
 /// <reference types="wesl-plugin/suffixes" />
+export {};
