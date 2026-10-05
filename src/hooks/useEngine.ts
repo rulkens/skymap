@@ -53,6 +53,7 @@ import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
 import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
+import { installSkymapHook } from '../state/automation/installSkymapHook';
 import { APP_COMPOSITION } from '../compositions/app';
 
 export function useEngine(): UseEngineReturn {
@@ -85,6 +86,8 @@ export function useEngine(): UseEngineReturn {
     // here (not main.tsx) because it needs the live engine handle to reach the
     // GPU timing service via `engine.debug.timingService`.
     installPerfHook(store, handle);
+    // After the mode-gated hooks: tools wait on `__skymap`, then read theirs at once.
+    installSkymapHook(store, handle);
 
     return () => {
       handle.destroy();

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fitSinusoidSeries } from '../../../../tools/utils/math/fitSinusoidSeries';
-import { ephemerisCorrectionMpc } from '../../../../src/utils/orbit/ephemerisCorrectionMpc';
-import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
 
 const START = 2_415_020.5;
 const END = START + 20_000;
@@ -29,11 +28,42 @@ describe('fitSinusoidSeries', () => {
     const fit = fitSinusoidSeries(tJd, [axes[0]!, axes[1]!, axes[2]!], START, END, 1, 50);
 
     expect(fit.terms.length / 7).toBeLessThanOrEqual(4);
-    const correction = { startJd: START, endJd: END, polyKm: fit.polyKm, terms: fit.terms };
+    const series = { startJd: START, endJd: END, ...fit };
     for (let t = START; t <= END; t += 1) {
-      const [x, y, z] = ephemerisCorrectionMpc(correction, t).map((v) => v / SCALE_UNITS.KM_TO_MPC);
+      const [x, y, z] = correctionSeriesAt(series, t, 'hold')!;
       const [sx, sy, sz] = signal(t);
       expect(Math.hypot(x! - sx, y! - sy, z! - sz)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('fitSinusoidSeries fits a scalar channel', () => {
+    // Amplitudes in rad, as a mean-anomaly channel carries them.
+    const amp = [0.3, 0.05];
+    const scalar = (t: number): number => {
+      const tau = (2 * (t - START)) / (END - START) - 1;
+      return (
+        0.1 -
+        0.2 * tau +
+        0.05 * tau ** 3 +
+        amp[0]! * Math.cos((2 * Math.PI * (t - START)) / 333.3 + 0.4) +
+        amp[1]! * Math.sin((2 * Math.PI * (t - START)) / 1777.7 - 1.1)
+      );
+    };
+    const step = 5;
+    const tJd = Float64Array.from(
+      { length: Math.floor((END - START) / step) + 1 },
+      (_, i) => START + i * step,
+    );
+    // The sibling's bound (1 km on a 2,000 km tone): one-pass ω refinement leaves the first tone
+    // a few ppm off while the second is still in the residual, so a 1e-6 bound is not reachable.
+    const tol = 5e-4 * amp[0]!;
+    const fit = fitSinusoidSeries(tJd, [Float64Array.from(tJd, scalar)], START, END, tol, 10);
+
+    expect(fit.poly[0]).toHaveLength(1);
+    expect(fit.terms.length / 3).toBeLessThanOrEqual(4);
+    const series = { startJd: START, endJd: END, ...fit };
+    for (let t = START; t <= END; t += 1) {
+      expect(Math.abs(correctionSeriesAt(series, t, 'hold')![0]! - scalar(t))).toBeLessThan(tol);
     }
   });
 });

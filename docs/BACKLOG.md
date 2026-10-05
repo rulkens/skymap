@@ -36,8 +36,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Engine & State
 
 - [ ] **`?tour` is two notions** `ready` — a debug gate (`TopBarContainer.tsx:26`) that `hasDeepLink.ts:49` also hand-lists as a deep-link query key; rename the gate once `#tour=` ships.
-- [ ] **`afterTwoFrames` guesses a drawn frame** `ready` — the double rAF in `arrivalSaga`, `installPerfHook` and `tools/utils/capture/captureScene.ts` assumes the on-demand loop woke; a `renderScheduler.nextFrame()` that requests a render and resolves after `onFrame` replaces all three.
-- [ ] **`npm run shot` link screenshot** `ready` — open a deep-link URL in its own vite, await `ready` (arrival), save a PNG; deferred out of the deep-link arrival PR (#831).
 - [ ] **Palette `RUN_ACTION` duplicates link dispatch** `needs-design` — `CommandPaletteContainer.tsx:31-45` hand-dispatches focus/exhibit/tour; route through `navigate(intent, 'fly')` after the deep-link arrival PR.
 - [ ] **`DragMode` consumers test `=== 'pan'`, a new variant falls silently into orbit** `ready` — five sites hand-pick one string literal instead of an exhaustive switch, and `orbitControls.ts` keeps its own local `DragMode` type distinct from the shared one. → [details](backlog/2026-09-29-dragmode-binary-pan-tests.md)
 - [ ] **Takeover's camera-cluster merge wipes any field it doesn't set** `ready` — `withSceneSnapshotSaga` merges a partial `camera` cluster, and `mergeSettingsSnapshot` replaces whole clusters rather than fields, so any `CameraSettings` field added later is dropped for the duration of every takeover. → [details](backlog/2026-09-29-takeover-replaces-camera-cluster.md)

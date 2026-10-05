@@ -29,7 +29,7 @@ const FRUSTUM_60_16_9 = symmetricFrustum(Math.PI / 3, 16 / 9);
 const PX_PER_RAD_60 = 1000 / (FRUSTUM_60_16_9.tanUp - FRUSTUM_60_16_9.tanDown);
 
 function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
-  return { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 };
+  return { positionMpc, orientation: [...IDENTITY] };
 }
 
 /** A body offset `offAxisDeg` from `FORWARD_X`, in the XY plane, at `distanceMpc`. */

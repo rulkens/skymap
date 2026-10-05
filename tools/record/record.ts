@@ -24,7 +24,8 @@
  * long each frame takes to render or encode. That loop needs a CDP session,
  * a spawned ffmpeg, and the host filesystem, none of which can live in the
  * app; the app's entire contribution is the `window.__skymapRecorder` seam
- * (installed only under `?cinema`) that this harness drives through
+ * (installed only under `?cinema`; boot and `ready` go through `window.__skymap`)
+ * that this harness drives through
  * `page.evaluate`.
  *
  * ### The three launch-pattern findings (plan Ledger, Task 1 — mandatory)
@@ -68,8 +69,8 @@
  *
  * ### Startup choreography (order matters)
  *
- * Boot runs in REAL time: `?cinema` skips the splash, and the hook's `ready`
- * promise already debounces "engine ready + loads settled" over a ~1 s
+ * Boot runs in REAL time: `?cinema` skips the splash, and `window.__skymap.ready`
+ * already debounces "engine ready + loads settled" over a ~1 s
  * stability window, so the harness just awaits it. Virtual time is paused
  * BEFORE the take is kicked, so its very first frame runs under the virtual
  * clock — kicking first would let a nondeterministic sliver of real time leak
@@ -82,16 +83,8 @@
 
 import type { Browser, Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readlinkSync,
-  rmSync,
-  symlinkSync,
-  unlinkSync,
-} from 'node:fs';
-import { dirname, resolve as resolvePath } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
 import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
@@ -107,7 +100,6 @@ import { launchChromium } from '../utils/browser/launchChromium';
 import { bootHookedPage } from '../utils/browser/bootHookedPage';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
-import { parsePreviewUrl } from '../utils/record/parsePreviewUrl';
 import { buildFfmpegArgs } from '../utils/record/buildFfmpegArgs';
 import { buildCaptureUrl } from '../utils/record/buildCaptureUrl';
 import { defaultOutName } from '../utils/record/defaultOutName';
@@ -115,23 +107,25 @@ import { tourFrameCap } from '../utils/record/tourFrameCap';
 import { clipFrameCap } from '../utils/record/clipFrameCap';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
+import type { PreviewHandle } from '../@types/serve/PreviewHandle';
+import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
+import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
+import { spawnPreviewServer } from '../utils/serve/spawnPreviewServer';
 
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
 const FFMPEG_STDERR_TAIL_LINES = 40;
-// vite build's own console noise; same tail-keeping rationale as ffmpeg's.
-const BUILD_LOG_TAIL_LINES = 40;
 
-// --serve: a recorder-owned build directory, never `dist/` (that one belongs
-// to deploys — see the module doc for --serve). Reused across takes unless
-// --rebuild forces a fresh build.
+// --serve records against a production build behind `vite preview`: it ships
+// no HMR client, so a dev-server reload can never interrupt a long take.
+// The build lives in a recorder-owned directory, never `dist/` (that one
+// belongs to deploys), and is reused across takes unless --rebuild forces one.
 const SERVE_BUILD_DIR = 'tools/record/.build';
 // Arbitrary and quiet; strictPort is left off (vite's default) so a busy
 // port just bumps instead of failing — see spawnPreviewServer, which reads
 // the actual bound port back off stdout rather than assuming this one held.
 const SERVE_PORT = 4517;
-const PREVIEW_READY_TIMEOUT_MS = 30_000;
 
 // Frame rates the Wisdome dome plays back; the first is the default. Both
 // fit H.264 level 6.1 at 4096x4096 (see buildFfmpegArgs).
@@ -431,155 +425,6 @@ function writeFrame(stdin: Writable, png: Buffer): Promise<void> {
 }
 
 /**
- * --serve support: build a production bundle, serve it with `vite preview`,
- * and record against THAT instead of the dev server. The dev client's HMR
- * websocket is the root cause behind two reload-mid-take bugs this branch
- * fixed (see the addInitScript comment in captureTake) — a production build
- * ships no HMR client at all, so this mode is immune by construction rather
- * than patched around a third variant of the same failure. Recommended for
- * any take long enough to outlast the dev client's patience (module doc:
- * hours for a full 4K tour).
- */
-
-/**
- * Build (or reuse) the --serve bundle. `dataUrl()` reads `VITE_DATA_BASE_URL`
- * at build time to decide between the R2 host and a relative `/data/` path
- * (see cloudLoader.ts); blanking it here — in the CHILD's env only, never
- * process.env — makes the served build fetch the catalog from the symlink
- * ensureDataSymlink sets up, exactly like `npm run dev` does. Blanking
- * VITE_COUNTERSCALE_URL likewise skips injecting the analytics tracker into
- * a take that only ever plays on this machine.
- */
-async function ensureServeBuild(dir: string, rebuild: boolean): Promise<void> {
-  if (!rebuild && existsSync(`${dir}/index.html`)) {
-    console.log(`  reusing existing --serve build at ${dir} (pass --rebuild to force a fresh one)`);
-    return;
-  }
-  console.log(
-    `  building --serve bundle into ${dir} ` +
-      (rebuild ? '(--rebuild forced) ...' : '(none found yet) ...'),
-  );
-  const proc = spawn('npx', ['vite', 'build', '--outDir', dir], {
-    env: { ...process.env, VITE_DATA_BASE_URL: '', VITE_COUNTERSCALE_URL: '' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const tailLines: string[] = [];
-  const collect = (chunk: Buffer): void => {
-    for (const line of chunk.toString().split('\n')) {
-      if (line.trim() !== '') tailLines.push(line);
-    }
-    if (tailLines.length > BUILD_LOG_TAIL_LINES) {
-      tailLines.splice(0, tailLines.length - BUILD_LOG_TAIL_LINES);
-    }
-  };
-  proc.stdout?.on('data', collect);
-  proc.stderr?.on('data', collect);
-  const code = await new Promise<number | null>((resolve, reject) => {
-    proc.once('error', (err: NodeJS.ErrnoException) => {
-      reject(
-        err.code === 'ENOENT'
-          ? new Error("'npx' not found on PATH — the --serve build shells out to it")
-          : err,
-      );
-    });
-    proc.once('close', resolve);
-  });
-  if (code !== 0) {
-    throw new Error(`vite build exited with code ${String(code)} — tail:\n${tailLines.join('\n')}`);
-  }
-}
-
-/**
- * Vite's default `copyPublicDir` copies the whole `public/` tree — including
- * `data/`, ~100 MB of catalog `.bin` files, when this worktree has them on
- * disk — into the outDir verbatim on every build. --serve replaces that
- * one-time snapshot with a symlink back at this worktree's public/data/ so
- * a reused build (no --rebuild) still serves whatever the catalog currently
- * is, and so a build doesn't silently double disk usage. Repairs whatever it
- * finds at the link path — a stale symlink (wrong target, or dangling
- * because public/data/ moved), or vite's own copied directory — rather than
- * trusting it.
- */
-function ensureDataSymlink(dir: string): void {
-  const linkPath = resolvePath(dir, 'data');
-  const target = resolvePath('public/data');
-  let stat: ReturnType<typeof lstatSync> | undefined;
-  try {
-    stat = lstatSync(linkPath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-  }
-  if (stat !== undefined) {
-    if (stat.isSymbolicLink()) {
-      const resolvedExisting = resolvePath(dirname(linkPath), readlinkSync(linkPath));
-      if (resolvedExisting === target && existsSync(linkPath)) return; // correct and not dangling
-      console.log(`  repairing stale --serve data symlink at ${linkPath}`);
-      unlinkSync(linkPath);
-    } else {
-      console.log(`  replacing vite's copied ${linkPath} with a symlink to keep data current`);
-      rmSync(linkPath, { recursive: true, force: true });
-    }
-  }
-  symlinkSync(target, linkPath, 'dir');
-  console.log(`  linked ${linkPath} -> ${target}`);
-}
-
-type PreviewHandle = {
-  proc: ChildProcess;
-  /** The URL vite actually bound — see parsePreviewUrl for why this can't be assumed. */
-  url: string;
-};
-
-/**
- * Spawn `vite preview` over the --serve build and read back the URL it
- * actually bound (strictPort is left off, so a busy SERVE_PORT just bumps —
- * assuming the requested port held would silently record against nothing).
- * Mirrors spawnFfmpeg's spawn/error race for the ENOENT case; the ready wait
- * adds a timeout because there is no bounded "it will definitely print a URL
- * eventually" guarantee the way ffmpeg's close event gives one.
- */
-async function spawnPreviewServer(dir: string, port: number): Promise<PreviewHandle> {
-  const proc = spawn('npx', ['vite', 'preview', '--outDir', dir, '--port', String(port)], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  await new Promise<void>((resolve, reject) => {
-    proc.once('spawn', () => resolve());
-    proc.once('error', (err: NodeJS.ErrnoException) => {
-      reject(
-        err.code === 'ENOENT'
-          ? new Error("'npx' not found on PATH — the --serve preview shells out to it")
-          : err,
-      );
-    });
-  });
-  const url = await new Promise<string>((resolve, reject) => {
-    const onData = (chunk: Buffer): void => {
-      const found = parsePreviewUrl(chunk.toString());
-      if (found !== undefined) {
-        clearTimeout(timer);
-        proc.stdout?.off('data', onData);
-        proc.off('close', onClose);
-        resolve(found);
-      }
-    };
-    const onClose = (code: number | null): void => {
-      clearTimeout(timer);
-      reject(
-        new Error(`vite preview exited with code ${String(code)} before printing a 'Local:' URL`),
-      );
-    };
-    const timer = setTimeout(() => {
-      proc.stdout?.off('data', onData);
-      proc.off('close', onClose);
-      reject(new Error(`vite preview gave no 'Local:' URL within ${PREVIEW_READY_TIMEOUT_MS} ms`));
-    }, PREVIEW_READY_TIMEOUT_MS);
-    proc.stdout?.on('data', onData);
-    proc.once('close', onClose);
-  });
-  return { proc, url };
-}
-
-/**
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
  * page in real time, pause virtual time, kick the take, then step
  * grant → captureScreenshot → writeFrame until the in-page status flag reports
@@ -745,7 +590,7 @@ async function captureTake(
   // take with it, so the capture loop deliberately has no such tolerance.
   // The suppression flag below is NOT armed yet during this wait — cold-start
   // full-reload recovery must keep working here.
-  await bootHookedPage(page, captureUrl, '__skymapRecorder');
+  await bootHookedPage(page, captureUrl);
   console.log('capture-ready (engine ready + loads settled, real time)');
 
   // Arm the mid-take full-reload suppression only now that boot has settled —

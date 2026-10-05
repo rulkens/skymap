@@ -9,9 +9,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 
-vi.mock('../../../src/services/animation/afterTwoFrames', () => ({
-  afterTwoFrames: () => Promise.resolve(),
-}));
 // The frame loop's non-camera stages, which the sim harness's stub state cannot feed.
 vi.mock('../../../src/services/engine/wiring/reevaluateDemand', () => ({
   reevaluateDemand: vi.fn(),
@@ -84,7 +81,11 @@ const BOOT_BASE = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distan
 const J2000_MS = Date.UTC(2000, 0, 1, 12);
 const PROJECTION = { fovYRad: LIVE.fovYRad, aspect: 1, near: 1e-20, far: 1e5 };
 
-function build({ milkyWayLanded = true, home = EARTH_HOME } = {}) {
+function build({
+  milkyWayLanded = true,
+  home = EARTH_HOME,
+  nextFrame = () => Promise.resolve(),
+}: { milkyWayLanded?: boolean; home?: typeof EARTH_HOME; nextFrame?: () => Promise<void> } = {}) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
@@ -98,6 +99,7 @@ function build({ milkyWayLanded = true, home = EARTH_HOME } = {}) {
   let booted = false;
   const layerRows = { landed: milkyWayLanded };
   mw.setContext({
+    nextFrame,
     resolveDeps,
     selection: composeSelectionRows(
       () => [
@@ -153,6 +155,19 @@ describe('arrivalSaga', () => {
     expect(h.arrivalCommits()).toBe(1);
     expect(h.tweens()).toBe(0);
     expect(selectFocusRef(h.store.getState())).toEqual({ type: 'body', id: 'mars' });
+    expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
+  it('arrival is not reported until the frame has drawn', async () => {
+    let drawn!: () => void;
+    const h = build({ nextFrame: () => new Promise<void>((resolve) => (drawn = resolve)) });
+    h.arrive({ view: { kind: 'focus', id: 'body-mars' } });
+    h.boot();
+    await flush();
+    expect(h.status().status).toBe('pending');
+
+    drawn();
+    await flush();
     expect(h.status()).toEqual({ status: 'arrived' });
   });
 

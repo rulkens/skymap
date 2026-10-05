@@ -1,7 +1,7 @@
 /**
  * whenStablyReady — resolve once the app has been "measure-ready" for an
- * uninterrupted `READY_STABLE_MS`, so the recorder and perf hooks share one
- * debounce. Ready is engine `ready`, no load in flight and the boot link
+ * uninterrupted `READY_STABLE_MS`, so the base hook's `ready` and the perf
+ * hook's `setTier` share one debounce. Ready is engine `ready`, no load in flight and the boot link
  * arrived; `loadProgress` is also null before the first fetch registers, so a
  * first-true resolve would fire mid-bootstrap. A store subscription arms a
  * timer on a true reading and disarms it on a false one. Over-waiting costs

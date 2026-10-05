@@ -409,6 +409,7 @@ export function createEngine(
   });
 
   cb.setSagaContext({
+    nextFrame: () => state.subsystems.scheduler.nextFrame(),
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     selection,
@@ -501,6 +502,7 @@ export function createEngine(
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
+    nextFrame: () => state.subsystems.scheduler.nextFrame(),
     debug: {
       // The same Map the bootstrap populates, so the dev panel observes slots as
       // they appear. Read-only at the type level, so React-side mutation trips tsc.
