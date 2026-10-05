@@ -8,6 +8,6 @@ export type SkymapHook = {
   readonly getState: () => RootState;
   /** Resolves after the next frame callback returns. */
   readonly nextFrame: () => Promise<void>;
-  /** Absolute path of the checkout this build came from. */
+  /** Absolute path of the checkout this build came from; `''` in a built bundle. */
   readonly projectRoot: string;
 };

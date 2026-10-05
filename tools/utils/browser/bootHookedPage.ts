@@ -36,7 +36,8 @@ async function waitForHookReady(page: Page, url: string): Promise<void> {
     if (isNavigationInterruption(err)) throw err;
     throw new Error(
       `window.__skymap never appeared within ${HOOK_TIMEOUT_MS} ms at ${url} — ` +
-        "the server is not running this branch's build (is the dev server started from this checkout?)",
+        "the server is not running this branch's build (is the dev server started from this checkout?), " +
+        'or it is stale — restart it (see "504 Outdated Optimize Dep" in tools/perf/README.md)',
     );
   }
   // `ready` already debounces "engine ready + loads settled" over a ~1 s

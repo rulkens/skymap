@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * installSkymapHook — the always-on base hook. Pins the properties tools rely
- * on: no URL gate, a lazily created `ready`, and `nextFrame` reaching the engine.
+ * on: no URL gate, and a lazily created `ready`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
@@ -17,7 +17,7 @@ import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 
 const getHook = () => (window as SkymapWindow).__skymap;
-const fakeEngine = (nextFrame = () => Promise.resolve()) => ({ nextFrame }) as EngineHandle;
+const fakeEngine = () => ({ nextFrame: () => Promise.resolve() }) as EngineHandle;
 
 describe('installSkymapHook', () => {
   beforeEach(() => {

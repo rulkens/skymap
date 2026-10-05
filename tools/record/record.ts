@@ -24,7 +24,8 @@
  * long each frame takes to render or encode. That loop needs a CDP session,
  * a spawned ffmpeg, and the host filesystem, none of which can live in the
  * app; the app's entire contribution is the `window.__skymapRecorder` seam
- * (installed only under `?cinema`) that this harness drives through
+ * (installed only under `?cinema`; boot and `ready` go through `window.__skymap`)
+ * that this harness drives through
  * `page.evaluate`.
  *
  * ### The three launch-pattern findings (plan Ledger, Task 1 — mandatory)
@@ -68,8 +69,8 @@
  *
  * ### Startup choreography (order matters)
  *
- * Boot runs in REAL time: `?cinema` skips the splash, and the hook's `ready`
- * promise already debounces "engine ready + loads settled" over a ~1 s
+ * Boot runs in REAL time: `?cinema` skips the splash, and `window.__skymap.ready`
+ * already debounces "engine ready + loads settled" over a ~1 s
  * stability window, so the harness just awaits it. Virtual time is paused
  * BEFORE the take is kicked, so its very first frame runs under the virtual
  * clock — kicking first would let a nondeterministic sliver of real time leak
@@ -116,9 +117,10 @@ const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
 const FFMPEG_STDERR_TAIL_LINES = 40;
 
-// --serve: a recorder-owned build directory, never `dist/` (that one belongs
-// to deploys — see the module doc for --serve). Reused across takes unless
-// --rebuild forces a fresh build.
+// --serve records against a production build behind `vite preview`: it ships
+// no HMR client, so a dev-server reload can never interrupt a long take.
+// The build lives in a recorder-owned directory, never `dist/` (that one
+// belongs to deploys), and is reused across takes unless --rebuild forces one.
 const SERVE_BUILD_DIR = 'tools/record/.build';
 // Arbitrary and quiet; strictPort is left off (vite's default) so a busy
 // port just bumps instead of failing — see spawnPreviewServer, which reads

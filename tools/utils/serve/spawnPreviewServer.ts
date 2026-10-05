@@ -6,11 +6,10 @@ const PREVIEW_READY_TIMEOUT_MS = 30_000;
 
 /**
  * Spawn `vite preview` over the --serve build and read back the URL it
- * actually bound (strictPort is left off, so a busy SERVE_PORT just bumps —
+ * actually bound (strictPort is left off, so a busy port just bumps —
  * assuming the requested port held would silently record against nothing).
- * Mirrors spawnFfmpeg's spawn/error race for the ENOENT case; the ready wait
- * adds a timeout because there is no bounded "it will definitely print a URL
- * eventually" guarantee the way ffmpeg's close event gives one.
+ * The spawn/error race turns ENOENT into a clear error; the ready wait has a
+ * timeout because nothing guarantees the URL line is ever printed.
  */
 export async function spawnPreviewServer(dir: string, port: number): Promise<PreviewHandle> {
   const proc = spawn('npx', ['vite', 'preview', '--outDir', dir, '--port', String(port)], {

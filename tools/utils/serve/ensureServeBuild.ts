@@ -4,17 +4,6 @@ import { existsSync } from 'node:fs';
 const BUILD_LOG_TAIL_LINES = 40;
 
 /**
- * --serve support: build a production bundle, serve it with `vite preview`,
- * and record against THAT instead of the dev server. The dev client's HMR
- * websocket is the root cause behind two reload-mid-take bugs this branch
- * fixed (see the addInitScript comment in captureTake) — a production build
- * ships no HMR client at all, so this mode is immune by construction rather
- * than patched around a third variant of the same failure. Recommended for
- * any take long enough to outlast the dev client's patience (module doc:
- * hours for a full 4K tour).
- */
-
-/**
  * Build (or reuse) the --serve bundle. `dataUrl()` reads `VITE_DATA_BASE_URL`
  * at build time to decide between the R2 host and a relative `/data/` path
  * (see cloudLoader.ts); blanking it here — in the CHILD's env only, never
