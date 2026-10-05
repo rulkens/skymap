@@ -52,7 +52,10 @@ function fakeEngine(): EngineHandle {
     enabled: true,
     subscribe: vi.fn<(listener: (frame: GpuTimingFrame) => void) => () => void>(() => () => {}),
   };
-  return { debug: { timingService, requestRender: vi.fn() } } as unknown as EngineHandle;
+  return {
+    nextFrame: () => Promise.resolve(),
+    debug: { timingService, requestRender: vi.fn() },
+  } as unknown as EngineHandle;
 }
 
 describe('installPerfHook', () => {

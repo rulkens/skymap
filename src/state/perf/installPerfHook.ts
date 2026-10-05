@@ -18,7 +18,6 @@ import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
-import { afterTwoFrames } from '../../services/animation/afterTwoFrames';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SkymapPerfHook } from './@types/SkymapPerfHook';
@@ -52,14 +51,14 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 // the arm is committed as authored — re-spelling a body-parented pose on the
 // world arm lands the right coordinates in the wrong frame (wrong host body,
 // wrong atmosphere).
-function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+function setPose(store: AppStore, engine: EngineHandle, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
   }
   store.dispatch(cancelCameraTween());
   store.dispatch(commitCameraPose(pose.framed));
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
-  return afterTwoFrames();
+  return engine.nextFrame();
 }
 
 function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSample[]> {
@@ -109,7 +108,7 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
   if (!isPerfMode()) return;
   const hook: SkymapPerfHook = {
     ready: whenStablyReady(store),
-    setPose: (pose: PerfPose) => setPose(store, pose),
+    setPose: (pose: PerfPose) => setPose(store, engine, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
