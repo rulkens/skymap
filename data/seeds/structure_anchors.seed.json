@@ -1205,4 +1205,375 @@
   "description": "One of the most distant globular clusters of the Milky Way halo, about 88.47 kpc from the Sun in Lynx.",
   "source": "Baumgardt Galactic globular cluster database (people.smp.uq.edu.au/HolgerBaumgardt/globular, parameter table; distance from Baumgardt & Vasiliev 2021, MNRAS 505, 5957), row NGC 2419: Rsun, projected half-light radius rh,l and tidal radius rt (Webb et al. 2013 eq. 8); coordinates from the same table"
 }
+,
+{
+  "id": "orion",
+  "names": [
+    "Orion Nebula",
+    "M42",
+    "NGC 1976"
+  ],
+  "category": "nebula",
+  "raHours": 5.588007,
+  "decDeg": -5.3876,
+  "distance": { "value": 433, "unit": "pc" },
+  "physicalRadius": { "value": 4.16, "unit": "pc" },
+  "apparentRadius": { "value": 4.16, "unit": "pc" },
+  "description": "The nearest region of massive star formation, in Orion. Its gas is lit by the hot young stars of the Trapezium at its centre.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: SIMBAD major axis 66 arcmin (diameter)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "carina",
+  "names": [
+    "Carina Nebula",
+    "NGC 3372",
+    "RCW 53"
+  ],
+  "category": "nebula",
+  "raHours": 10.750619,
+  "decDeg": -59.69994444,
+  "distance": { "value": 2492, "unit": "pc" },
+  "physicalRadius": { "value": 76.1, "unit": "pc" },
+  "apparentRadius": { "value": 76.1, "unit": "pc" },
+  "description": "A very large star-forming region in the southern Milky Way, home to many massive stars. It spans about 3.5 degrees on the sky.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 Carina sightline l=287.4 b=-0.6; Kuhn et al. 2019, ApJ 870, 32 give 2620 pc); angular size: RCW 53 diameter 210 arcmin (Rodgers et al. 1960, VizieR VII/216)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "lagoon",
+  "names": [
+    "Lagoon Nebula",
+    "M8",
+    "NGC 6523"
+  ],
+  "category": "nebula",
+  "raHours": 18.060278,
+  "decDeg": -24.38666667,
+  "distance": { "value": 1272, "unit": "pc" },
+  "physicalRadius": { "value": 16.7, "unit": "pc" },
+  "apparentRadius": { "value": 16.7, "unit": "pc" },
+  "description": "A large emission nebula in Sagittarius with an embedded young open cluster. It is a site of ongoing star formation.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: Sh 2-25 diameter 90 arcmin (Sharpless 1959, VizieR VII/20)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "trifid",
+  "names": [
+    "Trifid Nebula",
+    "M20",
+    "NGC 6514"
+  ],
+  "category": "nebula",
+  "raHours": 18.045,
+  "decDeg": -22.97166667,
+  "distance": { "value": 1214, "unit": "pc" },
+  "physicalRadius": { "value": 4.94, "unit": "pc" },
+  "apparentRadius": { "value": 4.94, "unit": "pc" },
+  "description": "An emission nebula in Sagittarius divided into lobes by dark dust lanes. It sits close to the Lagoon Nebula on the sky.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: SIMBAD major axis 28 arcmin (diameter)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "eagle",
+  "names": [
+    "Eagle Nebula",
+    "M16",
+    "NGC 6611"
+  ],
+  "category": "nebula",
+  "raHours": 18.312533,
+  "decDeg": -13.792,
+  "distance": { "value": 1690, "unit": "pc" },
+  "physicalRadius": { "value": 19.7, "unit": "pc" },
+  "apparentRadius": { "value": 19.7, "unit": "pc" },
+  "description": "An emission nebula in Serpens surrounding the young cluster NGC 6611. It contains the dense dust columns known as the Pillars of Creation.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: SIMBAD major axis 80 arcmin (diameter)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "omega",
+  "names": [
+    "Omega Nebula",
+    "M17",
+    "Swan Nebula",
+    "NGC 6618"
+  ],
+  "category": "nebula",
+  "raHours": 18.346389,
+  "decDeg": -16.17166667,
+  "distance": { "value": 1524, "unit": "pc" },
+  "physicalRadius": { "value": 13.3, "unit": "pc" },
+  "apparentRadius": { "value": 13.3, "unit": "pc" },
+  "description": "A bright emission nebula in Sagittarius that is one of the most active star-forming regions in the Galaxy.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: Sh 2-45 diameter 60 arcmin (Sharpless 1959, VizieR VII/20)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "rosette",
+  "names": [
+    "Rosette Nebula",
+    "NGC 2237",
+    "Caldwell 49"
+  ],
+  "category": "nebula",
+  "raHours": 6.540767,
+  "decDeg": 4.79363889,
+  "distance": { "value": 1356, "unit": "pc" },
+  "physicalRadius": { "value": 19.7, "unit": "pc" },
+  "apparentRadius": { "value": 19.7, "unit": "pc" },
+  "description": "A ring-shaped emission nebula in Monoceros, cleared at its centre by the winds of the young cluster NGC 2244.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 Rosette sightline l=206.8 b=-1.2); angular size: Sh 2-275 diameter 100 arcmin (Sharpless 1959, VizieR VII/20)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "north-america",
+  "names": [
+    "North America Nebula",
+    "NGC 7000",
+    "Caldwell 20"
+  ],
+  "category": "nebula",
+  "raHours": 20.979722,
+  "decDeg": 44.33,
+  "distance": { "value": 809, "unit": "pc" },
+  "physicalRadius": { "value": 28.2, "unit": "pc" },
+  "apparentRadius": { "value": 28.2, "unit": "pc" },
+  "description": "A large emission nebula in Cygnus whose outline resembles the continent of North America. It is lit by hot stars inside a nearby dust cloud.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: Sh 2-117 diameter 240 arcmin (Sharpless 1959, VizieR VII/20)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "california",
+  "names": [
+    "California Nebula",
+    "NGC 1499"
+  ],
+  "category": "nebula",
+  "raHours": 4.055,
+  "decDeg": 36.42166667,
+  "distance": { "value": 436, "unit": "pc" },
+  "physicalRadius": { "value": 20.3, "unit": "pc" },
+  "apparentRadius": { "value": 20.3, "unit": "pc" },
+  "description": "A long, faint emission nebula in Perseus. It is excited by the star Xi Persei and shaped like the US state.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 California cloud sightline l=162.5 b=-9.5); angular size: Sh 2-220 diameter 320 arcmin (Sharpless 1959, VizieR VII/20)",
+  "nebulaKind": "emission"
+},
+{
+  "id": "horsehead",
+  "names": [
+    "Horsehead Nebula",
+    "Barnard 33"
+  ],
+  "category": "nebula",
+  "raHours": 5.683056,
+  "decDeg": -2.45833333,
+  "distance": { "value": 433, "unit": "pc" },
+  "physicalRadius": { "value": 0.378, "unit": "pc" },
+  "apparentRadius": { "value": 0.378, "unit": "pc" },
+  "description": "A dark nebula in Orion shaped like a horse head, seen against the bright emission nebula IC 434. It is a pillar of dense dust and gas.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (nearest Orion Gaia DR2 sightline, l=206.4 b=-15.4, about 1 degree from the nebula); angular size: SIMBAD major axis 6 arcmin",
+  "nebulaKind": "dark"
+},
+{
+  "id": "coalsack",
+  "names": [
+    "Coalsack Nebula",
+    "Caldwell 99"
+  ],
+  "category": "nebula",
+  "raHours": 12.521944,
+  "decDeg": -63.74333333,
+  "distance": { "value": 189, "unit": "pc" },
+  "physicalRadius": { "value": 11.5, "unit": "pc" },
+  "apparentRadius": { "value": 11.5, "unit": "pc" },
+  "description": "The most prominent dark nebula in the southern sky, in Crux. It is a cloud of dust that blocks the Milky Way behind it.",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: about 7 x 5 degrees (Wikipedia; Astropixels gives 400 x 300 arcmin), 7 degrees taken as the major axis",
+  "nebulaKind": "dark"
+},
+{
+  "id": "ring",
+  "names": [
+    "Ring Nebula",
+    "M57",
+    "NGC 6720"
+  ],
+  "category": "nebula",
+  "raHours": 18.893082,
+  "decDeg": 33.02913425,
+  "distance": { "value": 787.65, "unit": "pc" },
+  "physicalRadius": { "value": 0.132, "unit": "pc" },
+  "apparentRadius": { "value": 0.132, "unit": "pc" },
+  "description": "A planetary nebula in Lyra, a shell of gas shed by a dying star. Its ring shape is a barrel-shaped shell seen end-on.",
+  "source": "Distance: Gaia EDR3 parallax of the central star (Gaia Collaboration, catalogue I/350, via SIMBAD); angular size: SIMBAD major axis 1.153 arcmin",
+  "nebulaKind": "planetary"
+},
+{
+  "id": "dumbbell",
+  "names": [
+    "Dumbbell Nebula",
+    "M27",
+    "NGC 6853"
+  ],
+  "category": "nebula",
+  "raHours": 19.993434,
+  "decDeg": 22.7211978,
+  "distance": { "value": 389.105, "unit": "pc" },
+  "physicalRadius": { "value": 0.379, "unit": "pc" },
+  "apparentRadius": { "value": 0.379, "unit": "pc" },
+  "description": "A planetary nebula in Vulpecula, the first of its kind to be discovered. It is a shell of gas around a hot white-dwarf central star.",
+  "source": "Distance: Gaia EDR3 parallax of the central star (Gaia Collaboration, catalogue I/350, via SIMBAD); angular size: SIMBAD major axis 6.7 arcmin",
+  "nebulaKind": "planetary"
+},
+{
+  "id": "helix",
+  "names": [
+    "Helix Nebula",
+    "NGC 7293",
+    "Caldwell 63"
+  ],
+  "category": "nebula",
+  "raHours": 22.49404,
+  "decDeg": -20.83715201,
+  "distance": { "value": 199.505, "unit": "pc" },
+  "physicalRadius": { "value": 0.389, "unit": "pc" },
+  "apparentRadius": { "value": 0.389, "unit": "pc" },
+  "description": "One of the nearest planetary nebulae, in Aquarius. It is a shell of gas ejected by a dying star.",
+  "source": "Distance: Gaia EDR3 parallax of the central star (Gaia Collaboration, catalogue I/350, via SIMBAD); angular size: SIMBAD major axis 13.4 arcmin",
+  "nebulaKind": "planetary"
+},
+{
+  "id": "cats-eye",
+  "names": [
+    "Cat's Eye Nebula",
+    "NGC 6543",
+    "Caldwell 6"
+  ],
+  "category": "nebula",
+  "raHours": 17.975946,
+  "decDeg": 66.632986315,
+  "distance": { "value": 1365.934, "unit": "pc" },
+  "physicalRadius": { "value": 0.124, "unit": "pc" },
+  "apparentRadius": { "value": 0.124, "unit": "pc" },
+  "description": "A planetary nebula in Draco with a complex structure of concentric shells and jets around a hot central star.",
+  "source": "Distance: Gaia EDR3 parallax of the central star (Gaia Collaboration, catalogue I/350, via SIMBAD); angular size: SIMBAD major axis 0.623 arcmin (bright core, fainter halo is larger)",
+  "nebulaKind": "planetary"
+},
+{
+  "id": "owl",
+  "names": [
+    "Owl Nebula",
+    "M97",
+    "NGC 3587"
+  ],
+  "category": "nebula",
+  "raHours": 11.246587,
+  "decDeg": 55.01902301,
+  "distance": { "value": 809.913, "unit": "pc" },
+  "physicalRadius": { "value": 0.393, "unit": "pc" },
+  "apparentRadius": { "value": 0.393, "unit": "pc" },
+  "description": "A planetary nebula in Ursa Major whose two dark patches resemble the eyes of an owl.",
+  "source": "Distance: Gaia EDR3 parallax of the central star (Gaia Collaboration, catalogue I/350, via SIMBAD); angular size: SIMBAD major axis 3.333 arcmin",
+  "nebulaKind": "planetary"
+},
+{
+  "id": "crab",
+  "names": [
+    "Crab Nebula",
+    "M1",
+    "NGC 1952"
+  ],
+  "category": "nebula",
+  "raHours": 5.575493,
+  "decDeg": 22.0174,
+  "distance": { "value": 1.9, "unit": "kpc" },
+  "physicalRadius": { "value": 1.93, "unit": "pc" },
+  "apparentRadius": { "value": 1.93, "unit": "pc" },
+  "description": "The remnant of the supernova recorded in 1054 CE, in Taurus. A pulsar at its centre powers the surrounding nebula.",
+  "source": "Distance: Lin et al. 2023, ApJ, VLBI parallax of the Crab pulsar, 1.90 +0.22/-0.18 kpc (arXiv:2306.01617); angular size: Green SNR catalogue G184.6-5.8, 7 x 5 arcmin",
+  "nebulaKind": "supernova-remnant"
+},
+{
+  "id": "veil",
+  "names": [
+    "Veil Nebula",
+    "Cygnus Loop"
+  ],
+  "category": "nebula",
+  "raHours": 20.85,
+  "decDeg": 30.66666667,
+  "distance": { "value": 725, "unit": "pc" },
+  "physicalRadius": { "value": 24.3, "unit": "pc" },
+  "apparentRadius": { "value": 24.3, "unit": "pc" },
+  "description": "A large, faint supernova remnant in Cygnus, about 20,000 years old. Its filaments are the brightest parts of the expanding shock front.",
+  "source": "Distance: Fesen et al. 2021, MNRAS 507, 244 (Gaia EDR3), 725 +/-15 pc; angular size: Green SNR catalogue G74.0-8.5, 230 x 160 arcmin",
+  "nebulaKind": "supernova-remnant"
+},
+{
+  "id": "vela",
+  "names": [
+    "Vela Supernova Remnant",
+    "Vela SNR"
+  ],
+  "category": "nebula",
+  "raHours": 8.566667,
+  "decDeg": -45.83333333,
+  "distance": { "value": 294, "unit": "pc" },
+  "physicalRadius": { "value": 10.9, "unit": "pc" },
+  "apparentRadius": { "value": 10.9, "unit": "pc" },
+  "description": "The remnant of a supernova in Vela, powered at its centre by the Vela pulsar. It is one of the nearest known supernova remnants.",
+  "source": "Distance: Caraveo et al. 2001, ApJ 561, 930 (Vela pulsar parallax, 294 +76/-50 pc); angular size: Green SNR catalogue G263.9-3.3, 255 arcmin",
+  "nebulaKind": "supernova-remnant"
+},
+{
+  "id": "cassiopeia-a",
+  "names": [
+    "Cassiopeia A",
+    "Cas A",
+    "3C 461"
+  ],
+  "category": "nebula",
+  "raHours": 23.39056,
+  "decDeg": 58.8113,
+  "distance": { "value": 3.4, "unit": "kpc" },
+  "physicalRadius": { "value": 2.47, "unit": "pc" },
+  "apparentRadius": { "value": 2.47, "unit": "pc" },
+  "description": "The remnant of a massive-star supernova in Cassiopeia, and one of the brightest radio sources in the sky.",
+  "source": "Distance: Reed et al. 1995, ApJ 440, 706 (3.4 +0.3/-0.1 kpc, via SIMBAD); angular size: Green SNR catalogue G111.7-2.1, 5 arcmin",
+  "nebulaKind": "supernova-remnant"
+},
+{
+  "id": "tycho",
+  "names": [
+    "Tycho's Supernova Remnant",
+    "SN 1572",
+    "3C 10"
+  ],
+  "category": "nebula",
+  "raHours": 0.422639,
+  "decDeg": 64.14083333,
+  "distance": { "value": 2.83, "unit": "kpc" },
+  "physicalRadius": { "value": 3.29, "unit": "pc" },
+  "apparentRadius": { "value": 3.29, "unit": "pc" },
+  "description": "The remnant of a Type Ia supernova observed in 1572 in Cassiopeia.",
+  "source": "Distance: Ruiz-Lapuente 2004, ApJ 612, 357 (2.83 +/-0.79 kpc, via SIMBAD); angular size: Green SNR catalogue G120.1+1.4, 8 arcmin",
+  "nebulaKind": "supernova-remnant"
+},
+{
+  "id": "kepler",
+  "names": [
+    "Kepler's Supernova Remnant",
+    "SN 1604",
+    "3C 358"
+  ],
+  "category": "nebula",
+  "raHours": 17.511253,
+  "decDeg": -21.48732,
+  "distance": { "value": 5.1, "unit": "kpc" },
+  "physicalRadius": { "value": 2.23, "unit": "pc" },
+  "apparentRadius": { "value": 2.23, "unit": "pc" },
+  "description": "The remnant of the supernova seen in 1604 in Ophiuchus, the last supernova observed in the Milky Way with the naked eye.",
+  "source": "Distance: Sankrit et al. 2016 (HST filament proper motions and shock speeds, 5.1 +0.8/-0.7 kpc; Ruiz-Lapuente 2017, ApJ 842, 112 give 5 +/-0.7 kpc); angular size: Green SNR catalogue G4.5+6.8, 3 arcmin",
+  "nebulaKind": "supernova-remnant"
+}
 ]
