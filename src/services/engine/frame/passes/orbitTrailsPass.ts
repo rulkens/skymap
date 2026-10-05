@@ -96,14 +96,11 @@ export const orbitTrailsPass: ContentPass = {
     for (let i = 0; i < limit; i++) {
       const elements = rows[i]!;
       const body = states.get(elements.id)!;
-      // The snapshot's own elements, never a re-propagation: trail and body
-      // share one conic. `keplerianEllipse` returns
-      // FRESH vectors per call, so the in-place anchoring below cannot alias a
-      // shared scratch across orbits.
-      const orbit = body.orbit;
-      if (orbit === undefined) {
-        throw new Error(`orbitTrailsPass: trail row '${elements.id}' has no snapshot orbit`);
-      }
+      // The snapshot's own elements, never a re-propagation: trail and body share one
+      // conic. `keplerianEllipse` returns FRESH vectors per call, so the in-place
+      // anchoring below cannot alias a shared scratch across orbits. Every trail row is an
+      // element row, and deriveBodyStates sets `orbit` for each of those.
+      const orbit = body.orbit!;
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(orbit);
       // Centre = the snapshot body position, less its Kepler offset, plus the
       // ellipse centre offset: the body sits on its trail by construction, so any

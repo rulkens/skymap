@@ -11,10 +11,12 @@
  *   old placeholder `0` that pinned every moon to periapsis.
  * - **Periods → rates**: JPL gives a precessing mean ellipse as the mean-motion/
  *   apsidal/nodal periods (`periodDays`/`apsidalPrecessionYears`/
- *   `nodalPrecessionYears`); `moonRatesFromPeriods` turns them into the same
+ *   `nodalPrecessionYears`); the row's `periodKind` says which period P is —
+ *   `'anomalistic'` converts through `moonRatesFromPeriods`, `'longitude'`
+ *   (Saturn's table) through `moonRatesFromSiderealPeriods` — into the same
  *   per-century rate fields the planets carry, so `propagateElements` stays one
- *   branch-free affine map. (That helper owns the +apsis/−node sign convention
- *   and the 0-period "no precession" sentinel — see its header.)
+ *   branch-free affine map. (`moonRatesFromPeriods` owns the signed-apsis/−node
+ *   convention and the 0-period "no precession" sentinel — see its header.)
  * - **Plane from the moon's OWN Laplace pole**: JPL references each moon to its
  *   local Laplace plane and tabulates that plane's pole (`poleRaDeg`/
  *   `poleDecDeg`). Building the frame per-moon via `planeFrameFromPole` (the
@@ -31,6 +33,7 @@
 import { SCALE_UNITS } from '../../scaleUnits';
 import { degToRad } from '../../../utils/math/degToRad';
 import { moonRatesFromPeriods } from '../../../utils/orbit/moonRatesFromPeriods';
+import { moonRatesFromSiderealPeriods } from '../../../utils/orbit/moonRatesFromSiderealPeriods';
 import { planeFrameFromPole } from '../orbitPlaneFrames';
 import type { OrbitalElements } from '../../../@types/scene/OrbitalElements';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -45,6 +48,7 @@ export function satellite(spec: {
   argPeriapsisDeg: number;
   meanAnomalyDeg: number;
   periodDays: number;
+  periodKind: 'anomalistic' | 'longitude';
   apsidalPrecessionYears: number;
   nodalPrecessionYears: number;
   poleRaDeg: number;
@@ -60,11 +64,17 @@ export function satellite(spec: {
     ascendingNodeRad: degToRad(spec.ascendingNodeDeg),
     argPeriapsisRad: degToRad(spec.argPeriapsisDeg),
     meanAnomalyRad: degToRad(spec.meanAnomalyDeg),
-    ...moonRatesFromPeriods({
-      periodDays: spec.periodDays,
-      apsidalPrecessionYears: spec.apsidalPrecessionYears,
-      nodalPrecessionYears: spec.nodalPrecessionYears,
-    }),
+    ...(spec.periodKind === 'longitude'
+      ? moonRatesFromSiderealPeriods({
+          siderealPeriodDays: spec.periodDays,
+          apsidalPrecessionYears: spec.apsidalPrecessionYears,
+          nodalPrecessionYears: spec.nodalPrecessionYears,
+        })
+      : moonRatesFromPeriods({
+          periodDays: spec.periodDays,
+          apsidalPrecessionYears: spec.apsidalPrecessionYears,
+          nodalPrecessionYears: spec.nodalPrecessionYears,
+        })),
     color: spec.color,
     plane: planeFrameFromPole(spec.poleRaDeg, spec.poleDecDeg),
   };

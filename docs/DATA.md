@@ -194,9 +194,9 @@ Planet/moon/ring textures and Earth's imagery are gitignored raw pulls with comm
 
 Earth's whole-globe base texture and its surface tile pyramid are two publications of one Blue Marble month (a 21600×10800 equirect and eight 21600×21600 quadrants, ~421 MB). The month is chosen once in [`bmngVintage.ts`](../tools/utils/io/bmngVintage.ts) and every registry path, upstream URL, and attribution string reads it from there. The tile layer falls back to the base outside its baked window, so a vintage split between the two would draw a visible seasonal seam along the tile frontier.
 
-### Planet positions (JPL Horizons)
+### Planet and moon positions (JPL Horizons)
 
-Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100. The bodies, their Horizons centres and steps live in one table, `tools/bodies/horizonsBodies.ts`. `npm run fetch-horizons` pulls ICRF vectors (gitignored) into `data/raw/horizons/<centre>/` — the planets are 1-day heliocentric, 8 × ~3 MB in `500@10/` — and `npm run build-ephemeris-corrections` fits them into the committed `src/data/bodies/ephemerisCorrections.generated.ts`. Each row carries its own out-of-span policy: planets hold the edge value. Regenerate after any element-row or frame change. The exact query is in [`data/raw/horizons/README.md`](../data/raw/horizons/README.md).
+Each planet's position is its Keplerian row plus a fitted correction series that matches JPL DE to ≤ 1,000 km over 1900–2100; each Jupiter and Saturn moon matches to the same bound relative to its parent. The bodies, their Horizons centres and steps live in one table, `tools/bodies/horizonsBodies.ts`. `npm run fetch-horizons` pulls ICRF vectors (gitignored) into `data/raw/horizons/<centre>/` — the planets are 1-day heliocentric, 8 × ~3 MB in `500@10/`; the moons are centred on Jupiter (`500@599/`) or Saturn (`500@699/`) at ≤ P/16, ~5.2M rows — and `npm run build-ephemeris-corrections` fits them into the committed `src/data/bodies/ephemerisCorrections.generated.ts`. A moon's correction is a mean-anomaly series added before Kepler (it stays on its conic, so its trail stays centred) plus a small Cartesian residual. Each row carries its own out-of-span policy: planets hold the edge value, moons switch the correction off before 1900 and after 2100. Regenerate after any element-row or frame change. The exact query is in [`data/raw/horizons/README.md`](../data/raw/horizons/README.md).
 
 ### Earth surface tile pyramid
 
@@ -222,7 +222,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Clusters/superclusters | `fetch-structures`                              | `build-structures` (after `build-tiers`)                         |
 | DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
 | Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
-| Planet positions       | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
+| Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
