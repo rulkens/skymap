@@ -12,13 +12,14 @@ import Credits from '../components/Credits.astro';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { homeJsonLd } from '../data/homeJsonLd';
 import { PLACES } from '../data/places';
-import { heroPoster } from '../utils/heroPoster';
+import { flightStills } from '../utils/flightStills';
 import { heroVideoUrl } from '../utils/heroVideoUrl';
 
 const title = 'skymap: the mapped universe at true scale, in your browser';
 const description =
   'Fly through the mapped universe, from a Copenhagen park to the cosmic web, in real star and galaxy catalogues. Free, no account, in a current browser.';
-const poster = await heroPoster();
+const stills = await flightStills(FLIGHT_STOPS.map((stop) => stop.id));
+const first = stills[0]!;
 
 // Every fact the page prints, so the Sources list can never drift from the copy.
 const factIds = [
@@ -34,15 +35,19 @@ const factIds = [
 ---
 
 <Base title={title} description={description} jsonLd={homeJsonLd(Astro.site!, description)} heroNav>
-  <link slot="head" rel="preload" as="image" imagesrcset={poster.srcset} imagesizes={poster.sizes} fetchpriority="high" />
-  <Flight poster={poster} videoUrl={heroVideoUrl()} />
+  <!-- The first still is the largest paint on a phone; the same srcsets feed the <picture>, so it is fetched once. -->
+  <Fragment slot="head">
+    <link rel="preload" as="image" type="image/avif" media="(orientation: portrait)" imagesrcset={first.portrait.avif} imagesizes={first.portrait.sizes} fetchpriority="high" />
+    <link rel="preload" as="image" type="image/avif" media="(orientation: landscape)" imagesrcset={first.landscape.avif} imagesizes={first.landscape.sizes} fetchpriority="high" />
+  </Fragment>
+  <Flight stills={stills} videoUrl={heroVideoUrl()} />
   <Lead />
   <Places />
   <Tour />
   <Classroom />
   <Dome />
   <Honesty />
-  <div class="wrap">
+  <div class="wrap section last">
     <Sources ids={factIds} />
     <Credits />
   </div>
