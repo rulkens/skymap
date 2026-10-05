@@ -27,7 +27,9 @@ function writeCube(over: Record<string, string> = {}): string {
     label('LongitudeDirection', 'PositiveEast') +
     'CenterLongitude = 180.0\n' +
     `EquatorialRadius = ${R} <meters>\n` +
-    `UpperLeftCornerX = ${-Math.PI * R} <meters>\n`;
+    `UpperLeftCornerX = ${-Math.PI * R} <meters>\n` +
+    `UpperLeftCornerY = ${(Math.PI * R) / 2} <meters>\n` +
+    `PixelResolution = ${(2 * Math.PI * R) / W} <meters/pixel>\n`;
   const file = Buffer.alloc(512 + 3 * 3 * 4 * 4);
   file.write(text, 0, 'latin1');
   for (let ty = 0; ty < 2; ty++) {
@@ -58,6 +60,12 @@ describe('readIsisCube', () => {
 
   it('derives the left-edge longitude from the label, not the filename', () => {
     expect(readIsisCube(writeCube()).leftLonDeg).toBeCloseTo(0);
+  });
+
+  it('reports the top-edge latitude and degrees per pixel from the label', () => {
+    const cube = readIsisCube(writeCube());
+    expect(cube.topLatDeg).toBeCloseTo(90);
+    expect(cube.degPerPixel).toBeCloseTo(72); // 5 columns span 360 degrees
   });
 
   it('throws on a layout it does not support', () => {

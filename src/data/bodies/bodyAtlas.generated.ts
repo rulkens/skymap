@@ -35,6 +35,7 @@ export const BODY_ATLAS_LAYOUT: Readonly<Record<BodyTextureId, number>> = {
   umbriel: 23,
   titania: 24,
   oberon: 25,
+  triton: 26,
 };
 
 /** The grid those indices address. Feed it to `atlasTileRect` for a crop rect. */

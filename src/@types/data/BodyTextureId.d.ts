@@ -32,4 +32,5 @@ export type BodyTextureId =
   | 'ariel'
   | 'umbriel'
   | 'titania'
-  | 'oberon';
+  | 'oberon'
+  | 'triton';

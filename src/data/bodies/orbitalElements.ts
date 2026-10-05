@@ -710,6 +710,72 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: SAT_ICE,
   }),
 
+  // Neptune's moons. JPL sats/elem (epoch 2000-01-01.5 TDB, NEP097) for Triton and Proteus, each
+  // on its own Laplace plane; Nereid (NEP105) is on the ecliptic at 2020-01-01.0 and is moved back
+  // to J2000 by hand below, because `satellite()` assumes J2000.
+  satellite({
+    // Triton: JPL NEP097 prints a=354800 e=0 M=63.0 i=157.3 node=178.1 P=5.876994 Pnode=340.379.
+    // Retrograde (i > 90): the node advances, so Pnode is entered negative (signed period).
+    // P is read as the mean-anomaly period: it leaves less drift for the correction than the
+    // longitude reading (1.6 against 2.6 deg/yr).
+    id: 'triton',
+    focusId: 'neptune',
+    semiMajorKm: 354800,
+    eccentricity: 0.0,
+    inclinationDeg: 157.3,
+    ascendingNodeDeg: 178.1,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 63.0,
+    periodDays: 5.876994,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: -340.379,
+    poleRaDeg: 299.8,
+    poleDecDeg: 43.1,
+    color: SAT_ICE,
+  }),
+  satellite({
+    // Proteus: a=117600 e=0.000 ω=0.0 M=276.8 i=0.0 node=0.0 P=1.122315
+    // Papsis=0.000 Pnode=0.000; pole RA=299.8 Dec=42.6. Prograde. 360/P is the IAU spin rate to 4 decimals.
+    id: 'proteus',
+    focusId: 'neptune',
+    semiMajorKm: 117600,
+    eccentricity: 0.0,
+    inclinationDeg: 0.0,
+    ascendingNodeDeg: 0.0,
+    argPeriapsisDeg: 0.0,
+    meanAnomalyDeg: 276.8,
+    periodDays: 1.122315,
+    periodKind: 'longitude',
+    apsidalPrecessionYears: 0.0,
+    nodalPrecessionYears: 0.0,
+    poleRaDeg: 299.8,
+    poleDecDeg: 42.6,
+    color: SAT_ROCK,
+  }),
+  satellite({
+    // Nereid (NEP105), JPL ecliptic frame, epoch 2020-01-01.0: a=5513900 e=0.751 ω=296.8 M=318.5
+    // i=5.1 node=319.5 P=360.133039 Papsis=7990.433 Pnode=9426.334. Moved back 7304.5 d
+    // (19.9986 yr) to J2000: M 318.5 - 0.99963058 deg/d * 7304.5 = 216.698; ω 296.8 - 0.901 =
+    // 295.899; node 319.5 + 0.764 = 320.264 (node regresses). The ecliptic is the plane of the
+    // ecliptic pole (RA 270, Dec 66.5607), whose node reference is the vernal equinox.
+    id: 'nereid',
+    focusId: 'neptune',
+    semiMajorKm: 5513900,
+    eccentricity: 0.751,
+    inclinationDeg: 5.1,
+    ascendingNodeDeg: 320.264,
+    argPeriapsisDeg: 295.899,
+    meanAnomalyDeg: 216.698,
+    periodDays: 360.133039,
+    periodKind: 'anomalistic',
+    apsidalPrecessionYears: 7990.433,
+    nodalPrecessionYears: 9426.334,
+    poleRaDeg: 270,
+    poleDecDeg: 66.5607,
+    color: SAT_ROCK,
+  }),
+
   // Charon comes from a different page than every satellite() row above: JPL
   // sats/elem/sep.html "Satellites of Pluto" (mean EQUATORIAL orbital elements, epoch
   // 2000-01-01.5 TDB, ephemeris PLU060; Brozović & Jacobson 2024, AJ 167:256).

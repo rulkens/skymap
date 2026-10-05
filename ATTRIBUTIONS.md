@@ -511,6 +511,29 @@ All public domain; NASA asks that credit go to the named observatory / program.
   Johns Hopkins University Applied Physics Laboratory, Southwest Research Institute, Lunar and
   Planetary Institute", published by USGS Astrogeology Science Center, 2017.
 
+#### USGS Astrogeology — Triton Voyager 2 colour mosaic (Paul Schenk)
+
+- **Use:** Global surface texture for Triton, 600 m/px, shipped with its colours
+  as published. The northern hemisphere, unlit when Voyager 2 flew by, is
+  filled with the mean colour of the rest of the map.
+- **Source:** "Triton Voyager 2 Color Mosaic, Global Fill, 600 m", Paul Schenk
+  (Lunar and Planetary Institute, 2014; NASA PIA18668), from Voyager 2 images
+  (NASA/JPL); published by USGS Astrogeology Science Center,
+  <https://planetarymaps.usgs.gov/mosaic/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif>.
+- **Licence:** Public domain (NASA imagery); credit NASA/JPL/Lunar and Planetary
+  Institute and Paul Schenk.
+
+#### Paul Schenk (LPI): Triton topographic map (Voyager 2)
+
+- **Use:** The shape-from-shading height map of Triton (lon -70 to 95, lat -21 to
+  46), baked into its normal map; a build input, never shipped as runtime pixels.
+- **Source:** "Topographic map of Triton from shape-from-shading information",
+  USRA Houston Repository,
+  <https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94>.
+- **Licence:** Not public domain; no licence is stated. Citation: Schenk, P., et al.
+  (2021), "Triton: Topography and Geology of a Probable Ocean World with Comparison
+  to Pluto and Charon", _Remote Sensing_ 13, 3476.
+
 #### NASA — Pluto derived colour (New Horizons MVIC)
 
 - **PIA11707** — New Horizons global colour map of Pluto, which NASA describes

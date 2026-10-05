@@ -942,6 +942,16 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
+  'textures.usgsTriton': {
+    path: 'data/raw/textures/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Astrogeology Triton Voyager 2 global colour mosaic with global fill, 600 m/px, 14138x7069, 8-bit RGB equirectangular GeoTIFF (Paul Schenk 2014, PIA18668, Lunar and Planetary Institute; NASA/JPL Voyager 2; publisher USGS Astrogeology — see ATTRIBUTIONS.md). The northern ~39% was in polar night and is pure black, painted with the mean colour at build time; ~300 MB.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
   // ─── Uranian satellites — Schenk 2020 ISIS3 cubes (manual browser download) ──
   'textures.schenkMirandaMosaic': {
     path: 'data/raw/textures/schenk-uranian-satellites/mumap-cyl-180180.cub',
@@ -1000,6 +1010,16 @@ export const RAW_DATA = {
     description:
       'Schenk 2020 Miranda merged photoclinometric+stereo DEM, 6294x3147, left edge at lon 0: ISIS3 tiled cube, SimpleCylindrical, Float32 km relative to the triaxial ellipsoid; build-only bake input for the normal map; ~82 MB. Cite P. Schenk, USRA Houston Repository hdl:20.500.11753/1687 and Schenk & Moore 2020 (Phil. Trans. R. Soc. A 378, 20200102); no licence stated, the author asks to be contacted for guidance. Browser download only.',
     upstream: 'https://repository.hou.usra.edu/handle/20.500.11753/1687',
+    manualDownload: true,
+    readme: 'textures.readme',
+  },
+  'textures.schenkTritonDem': {
+    path: 'data/raw/textures/schenk-neptunian-satellites/tndem-Thr-cyl_TA_Tds91.cub',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Schenk 2021 Triton shape-from-shading topographic map, 6493x2636, 600 m/px, a REGIONAL map (lon -70..95, lat -21..46; half the pixels are NULL): ISIS3 tiled cube, SimpleCylindrical, Float32 km; build-only bake input for the normal map; ~70 MB. Cite Schenk et al. (2021), Remote Sensing 13, 3476; no licence stated. Browser download only (the USRA repository sits behind a browser check).',
+    upstream: 'https://repository.hou.usra.edu/items/97fc385d-8a66-4120-b3b7-f35562877a94',
     manualDownload: true,
     readme: 'textures.readme',
   },
@@ -1734,7 +1754,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/` and `500@699/` = the Jupiter and Saturn moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/`, `500@699/` and `500@899/` = the Jupiter, Saturn and Neptune moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',

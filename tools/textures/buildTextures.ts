@@ -26,7 +26,9 @@ import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { binFloatDemToEquirect } from '../utils/image/binFloatDemToEquirect';
 import { fillEquirectNodata } from '../utils/image/fillEquirectNodata';
+import { fillBlackWithMeanColour } from '../utils/image/fillBlackWithMeanColour';
 import { flattenUncoveredNormals } from '../utils/image/flattenUncoveredNormals';
+import { placeCubeInGlobe } from '../utils/image/placeCubeInGlobe';
 import { dropSmallRegions } from '../utils/image/dropSmallRegions';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { isisMosaicToGrey } from '../utils/image/isisMosaicToGrey';
@@ -250,6 +252,26 @@ export async function writePanSharpenedTier(
 }
 
 /**
+ * sharp over a colour source; a row flagged `fillBlack` has its exact-black nodata painted with the
+ * mean colour at SOURCE resolution, so the resize cannot smear black into the boundary.
+ */
+async function openColourSource(
+  bodyId: BodyTextureId,
+  srcPath: string,
+): Promise<ReturnType<typeof sharp>> {
+  if (!('fillBlack' in SOURCE_TABLE[bodyId].surface!)) {
+    return sharp(srcPath, { limitInputPixels: false });
+  }
+  const { data, info } = await sharp(srcPath, { limitInputPixels: false })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const mean = fillBlackWithMeanColour(data);
+  process.stderr.write(`  nodata ${bodyId}: black filled with mean colour ${mean.join(',')}\n`);
+  return sharp(data, { raw: info });
+}
+
+/**
  * Downsample one body source to a tier and write the JPEG, dispatching on the
  * body's registry colour treatment. Width-only resize: the sources are exactly
  * 2:1, so height follows.
@@ -264,7 +286,7 @@ async function writeBodyTier(
 ): Promise<void> {
   switch (treatment.kind) {
     case 'colour': {
-      await sharp(srcPath, { limitInputPixels: false })
+      await (await openColourSource(bodyId, srcPath))
         .resize({ width: widthPx })
         .jpeg({ quality: JPEG_QUALITY })
         .toFile(outPath);
@@ -379,16 +401,17 @@ function bakeNormalOnce(
           );
         } else if (entry.format === 'isisDem') {
           const cube = readIsisCube(srcPath);
-          const src = cube.data;
-          dropSmallRegions(src, cube.width, cube.height, MIN_REGION_FRACTION);
-          // Column 0 is lon `leftLonDeg`, not 0, so the registration shift absorbs it.
+          dropSmallRegions(cube.data, cube.width, cube.height, MIN_REGION_FRACTION);
+          // A regional cube is first padded to a whole globe; a whole-globe one passes through,
+          // and its column 0 is lon `leftLonDeg`, not 0, so the registration shift absorbs that.
+          const globe = placeCubeInGlobe(cube);
           grid = binFloatDemToEquirect(
-            src,
-            cube.width,
-            cube.height,
+            globe.data,
+            globe.width,
+            globe.height,
             width,
             height,
-            entry.lonOffsetDeg - cube.leftLonDeg,
+            entry.lonOffsetDeg - globe.leftLonDeg,
           );
           const covered = Uint8Array.from(grid, (v) => (Number.isNaN(v) ? 0 : 1));
           fillEquirectNodata(grid, width, height);

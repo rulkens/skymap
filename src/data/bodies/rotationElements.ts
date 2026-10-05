@@ -203,6 +203,22 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     poleRaDeg: 257.43,
     poleDecDeg: -15.1,
   },
+  // Triton's IAU pole swings over 20 degrees (periods of ~680 yr), so a fixed IAU constant is wrong
+  // at most dates. The pole is instead opposite the J2000 orbit normal Horizons gives (i 157.3,
+  // node 176.77): RA 298.470, Dec 20.427, 0.13 degrees from the WGCCRE 2015 value. The drawn moon
+  // follows Horizons, not the mean row (node 178.1, which would put the pole 0.5 degrees out).
+  {
+    kind: 'tidallyLocked',
+    id: 'triton',
+    poleRaDeg: 298.47,
+    poleDecDeg: 20.427,
+  },
+  {
+    kind: 'tidallyLocked',
+    id: 'proteus',
+    poleRaDeg: 299.27,
+    poleDecDeg: 42.91,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.

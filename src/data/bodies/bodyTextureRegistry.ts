@@ -226,6 +226,15 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'schenk',
     treatment: { kind: 'monoTint', tint: [1, 1, 1] },
   },
+  // Triton: Schenk's 2014 Voyager 2 colour mosaic as distributed by USGS (hence `usgs`, the host the
+  // build pulls from; the Uranian moons, taken from Schenk's own repository, are `schenk`). Published
+  // colours are kept as they are; the build fills the polar-night black with the mean colour.
+  triton: {
+    bodyId: 'triton',
+    kinds: { surface: 'large', normal: 'large' },
+    provenance: 'usgs',
+    treatment: { kind: 'colour' },
+  },
 };
 
 // Takes `string`, not `BodyTextureId`, so a caller holding an arbitrary body id can

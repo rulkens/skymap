@@ -6,5 +6,7 @@ export type IsisCubeRaster = {
   readonly width: number;
   readonly height: number;
   readonly leftLonDeg: number;
+  readonly topLatDeg: number; // latitude of the top edge of row 0, from UpperLeftCornerY
+  readonly degPerPixel: number; // from PixelResolution; the same in both axes
   readonly equatorialRadiusM: number; // label EquatorialRadius, metres
 };

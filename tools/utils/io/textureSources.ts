@@ -30,6 +30,8 @@ export type TextureSourceEntry = {
   /** Source east longitude minus texture east longitude at the same spot (the
    *  frames differ: prime-meridian constants, or a DEM's own registration). */
   readonly lonOffsetDeg?: number;
+  /** The source is pure black where nothing was imaged: paint it with the mean colour at build. */
+  readonly fillBlack?: true;
 };
 
 // Uranus/Neptune keep a `devFilename` though their native IS the 2k file: fetch
@@ -97,6 +99,10 @@ export const TEXTURE_SOURCES = {
     surface: { native: 'textures.schenkTitaniaMosaic' },
   },
   oberon: { surface: { native: 'textures.schenkOberonMosaic' } },
+  triton: {
+    surface: { native: 'textures.usgsTriton', fillBlack: true },
+    normal: { native: 'textures.schenkTritonDem', format: 'isisDem', lonOffsetDeg: 0 },
+  },
   'saturn-ring': {
     surface: { native: 'textures.sssRing', devFilename: '2k_saturn_ring_alpha.png' },
   },
