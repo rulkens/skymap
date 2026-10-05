@@ -117,6 +117,7 @@
     "site": "npm run dev --workspace @skymap/website",
     "site:build": "npm run build --workspace @skymap/website",
     "site:check": "npm run check --workspace @skymap/website",
+    "site:media": "tsx tools/site/buildHeroMedia.ts",
     "perf": "tsx tools/perf/measurePerf.ts",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
