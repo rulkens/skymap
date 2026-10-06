@@ -29,7 +29,7 @@ const INDEX_HEADER = [
 
 function rebuildIndex(): void {
   const notes = readdirSync(FEEDBACK_DIR)
-    .filter((name) => name.endsWith('.json'))
+    .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
     .map((name) => ({
       stem: name.slice(0, -'.json'.length),
       note: JSON.parse(readFileSync(join(FEEDBACK_DIR, name), 'utf8')) as FeedbackNote,
