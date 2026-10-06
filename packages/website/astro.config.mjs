@@ -25,6 +25,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
+import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
@@ -67,7 +68,8 @@ const devRootStatics = {
       if (command === 'dev')
         updateConfig({
           publicDir: pathToFileURL(`${publicDir}/`),
-          vite: { plugins: [rootStatics] },
+          // The feedback endpoint (src/dev/feedback) rides the dev server only.
+          vite: { plugins: [rootStatics, feedbackPlugin(`${BASE}__feedback`)] },
         });
     },
   },
