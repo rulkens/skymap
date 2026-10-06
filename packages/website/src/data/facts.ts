@@ -1,4 +1,5 @@
 import type { Fact } from '../@types/Fact';
+import { SCIENCE_FACTS } from './scienceFacts';
 import { REPO_BLOB } from './siteIdentity';
 
 const CHECKED = '2026-10-06';
@@ -371,4 +372,5 @@ export const FACTS: readonly Fact[] = [
     sourceLabel: 'the tour, in the skymap repository',
     checked: CHECKED,
   },
+  ...SCIENCE_FACTS,
 ];

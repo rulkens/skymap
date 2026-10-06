@@ -71,12 +71,12 @@ export const HONESTY: Honesty = {
   ],
   drawn: [
     {
-      text: 'The Milky Way from outside, disc and bar: a model fitted to infrared survey data',
+      text: 'The Milky Way from outside: a generated model, with its disc size taken from infrared survey data',
       href: 'https://arxiv.org/abs/astro-ph/9707340',
     },
     {
-      text: 'The Milky Way’s spiral arms: placed from maser parallaxes, then drawn',
-      href: 'https://arxiv.org/abs/1910.03357',
+      text: 'The Milky Way’s spiral arms: four arms shaped by hand, not placed from measurements',
+      href: `${REPO_BLOB}/src/data/milkyWay/milkyWayGalaxyParams.ts`,
     },
     {
       text: 'The edge of the observable universe: a sphere computed from a cosmological model',
