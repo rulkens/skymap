@@ -33,6 +33,13 @@ const { title } = Astro.props;
     color: var(--site-text-dim);
   }
 
+  /* In a fixed row (Steps `count`) the words are short, and the numeral is as large as a section's name. */
+  :global(ol.fixed) > li h3::before {
+    margin-bottom: 0.75rem;
+    font-size: var(--text-h2);
+    line-height: 1;
+  }
+
   li > :global(p:last-child) {
     margin-bottom: 0;
   }

@@ -88,6 +88,14 @@ const { id } = Astro.props;
     padding-top: var(--open-rise);
   }
 
+  /* The line under the label is a figure about the frame: dim, and as long as it likes. */
+  figcaption > :global(p) {
+    max-width: none;
+    margin: 0.5rem 0 0;
+    color: var(--site-text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
   @media (max-width: 900px) {
     .band {
       grid-template-columns: minmax(0, 1fr);

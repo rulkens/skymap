@@ -1,0 +1,112 @@
+---
+/*
+ * Offer — one thing we can deliver, as a ledger row: its picture (slot
+ * `picture`) beside its name, a sentence or two (the slot), what the code does
+ * today and what would be work done for the client (slots `today`, `work`),
+ * then one link (slot `link`). `wide` runs the picture across the row and
+ * sets the words in a row under it. Narrow, the name comes first, then the
+ * picture, then the rest.
+ */
+type Props = { title: string; wide?: boolean };
+
+const { title, wide = false } = Astro.props;
+---
+
+<article class:list={['offer', { wide }]}>
+  <slot name="picture" />
+  <div>
+    <h3>{title}</h3>
+    <slot />
+    <dl>
+      <dt>Today</dt>
+      <dd><slot name="today" /></dd>
+      <dt>Work for you</dt>
+      <dd><slot name="work" /></dd>
+    </dl>
+    <slot name="link" />
+  </div>
+</article>
+
+<style>
+  .offer {
+    display: grid;
+    grid-template-columns: 6fr 5fr;
+    gap: 1.5rem 3.75rem;
+    align-items: center;
+    padding-block: 3rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  h3 {
+    font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+  }
+
+  @media (min-width: 901px) {
+    .wide {
+      grid-template-columns: 1fr;
+    }
+
+    .wide > div {
+      display: grid;
+      grid-template-columns: 5fr 7fr;
+      column-gap: 3.75rem;
+      align-items: start;
+    }
+
+    .wide > div > :global(*) {
+      grid-column: 1;
+    }
+
+    .wide dl {
+      grid-area: 1 / 2 / span 3;
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: auto 1fr;
+      gap: 0 2.5rem;
+    }
+
+    .wide dt {
+      margin-top: 0.5rem;
+    }
+  }
+
+  dl {
+    margin: 0 0 1rem;
+  }
+
+  dt {
+    margin-top: 1rem;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    max-width: var(--measure);
+    margin: 0.15rem 0 0;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .offer {
+      grid-template-columns: 1fr;
+      row-gap: 0;
+    }
+
+    .offer > div {
+      display: contents;
+    }
+
+    h3 {
+      order: -1;
+      margin-bottom: 1.25rem;
+    }
+
+    .offer > :global(figure) {
+      margin-bottom: 1.5rem;
+    }
+  }
+</style>

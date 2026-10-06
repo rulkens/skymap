@@ -1,14 +1,19 @@
 ---
 import Base from '../layouts/Base.astro';
+import Beside from '../components/Beside.astro';
+import Columns from '../components/Columns.astro';
 import ContactForm from '../components/ContactForm.astro';
 import Credits from '../components/Credits.astro';
-import Disc from '../components/Disc.astro';
 import DiscBand from '../components/DiscBand.astro';
+import Figure from '../components/Figure.astro';
+import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
+import Offer from '../components/Offer.astro';
 import Remark from '../components/Remark.astro';
-import Shot from '../components/Shot.astro';
-import ShotCaption from '../components/ShotCaption.astro';
+import SectionHead from '../components/SectionHead.astro';
 import Sources from '../components/Sources.astro';
+import Step from '../components/Step.astro';
+import Steps from '../components/Steps.astro';
 import ViewLink from '../components/ViewLink.astro';
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
@@ -68,100 +73,71 @@ const STEPS = [
       {fact('wisdome-venue').text}{' '}
       {fact('wisdome-dome').text}
     </p>
-    <p class="small aside">
+    <Note flow>
       The showing is our own account: the venue has published nothing about it. The facts about the venue are the
       venue’s.
-    </p>
+    </Note>
     <ObjLink hang href="#contact">Ask about a commission</ObjLink>
-    <p slot="note" class="small px">
+    <p slot="note" class="small">
       This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
       are 4,096.
     </p>
   </DiscBand>
 
   <section class="wrap section" id="deliver">
-    <div class="head">
-      <h2>What we can deliver</h2>
+    <SectionHead title="What we can deliver">
       <p>Three things. For each: what the code does today, and what would be work done for you.</p>
-    </div>
+    </SectionHead>
 
-    <article class="offer">
-      <figure>
-        <div class="disc"><Disc id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" /></div>
-        <figcaption><ShotCaption id="dome-web" open={false} /></figcaption>
-      </figure>
-      <div>
-        <h3>Live fisheye from the app</h3>
-        <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
-        <dl>
-          <dt>Today</dt>
-          <dd>{fact('dome-rig').text} {fact('dome-tilt').text}</dd>
-          <dt>Work for you</dt>
-          <dd>
-            Another tilt, labels or captions on the dome, and control without a mouse. skymap gives one disc: dividing
-            it between projectors is the job of your dome system.
-          </dd>
-        </dl>
-        <ViewLink hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>
-          Open this view in dome mode
-        </ViewLink>
-      </div>
-    </article>
+    <Offer title="Live fisheye from the app">
+      <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" disc="ring" open={false} />
+      <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
+      <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
+      <Fragment slot="work">
+        Another tilt, labels or captions on the dome, and control without a mouse. skymap gives one disc: dividing it
+        between projectors is the job of your dome system.
+      </Fragment>
+      <ViewLink slot="link" hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>
+        Open this view in dome mode
+      </ViewLink>
+    </Offer>
 
-    <article class="offer wide">
-      <figure>
-        <Shot id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" />
-        <figcaption><ShotCaption id="tour-cosmic-web" open={false} /></figcaption>
-      </figure>
-      <div>
-        <h3>A rendered film, fulldome or flat</h3>
-        <p>
-          A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in
-          the projection room.
-        </p>
-        <dl>
-          <dt>Today</dt>
-          <dd>{fact('film-recorder').text} {fact('film-silent').text}</dd>
-          <dt>Work for you</dt>
-          <dd>
-            The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from
-            you or from someone you choose.
-          </dd>
-        </dl>
-        <ViewLink hang href={appLink(siteShot('tour-cosmic-web').link)}>Start the tour the frame is from</ViewLink>
-      </div>
-    </article>
+    <Offer title="A rendered film, fulldome or flat" wide>
+      <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} />
+      <p>
+        A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in
+        the projection room.
+      </p>
+      <Fragment slot="today">{`${fact('film-recorder').text} ${fact('film-silent').text}`}</Fragment>
+      <Fragment slot="work">
+        The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from you
+        or from someone you choose.
+      </Fragment>
+      <ViewLink slot="link" hang href={appLink(siteShot('tour-cosmic-web').link)}>
+        Start the tour the frame is from
+      </ViewLink>
+    </Offer>
 
-    <article class="offer">
-      <figure>
-        <Shot id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
-        <figcaption><ShotCaption id="dome-exhibit" /></figcaption>
-      </figure>
-      <div>
-        <h3>A build for one exhibit or kiosk</h3>
-        <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
-        <dl>
-          <dt>Today</dt>
-          <dd>{fact('exhibits').text} {fact('kiosk-planned').text}</dd>
-          <dt>Work for you</dt>
-          <dd>
-            A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor
-            walks away is the planned kiosk mode, and we would build it for the first venue that needs it.
-          </dd>
-        </dl>
-        <ObjLink hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes, in the docs</ObjLink>
-      </div>
-    </article>
+    <Offer title="A build for one exhibit or kiosk">
+      <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
+      <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
+      <Fragment slot="today">{`${fact('exhibits').text} ${fact('kiosk-planned').text}`}</Fragment>
+      <Fragment slot="work">
+        A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks
+        away is the planned kiosk mode, and we would build it for the first venue that needs it.
+      </Fragment>
+      <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>
+        Screens, quality and domes, in the docs
+      </ObjLink>
+    </Offer>
   </section>
 
   <section class="wrap section" id="honest">
-    <div class="head">
-      <h2>What your audience is looking at</h2>
-    </div>
-    <div class="cols">
+    <SectionHead title="What your audience is looking at" />
+    <Columns count={3}>
       <div>
         <h3>Data and drawing, labelled</h3>
-        <p>
+        <p class="small">
           Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
           photographed the Milky Way from outside, so on your dome it is drawn, and we say so.
         </p>
@@ -169,7 +145,7 @@ const STEPS = [
       </div>
       <div>
         <h3>Credits and licences</h3>
-        <p>
+        <p class="small">
           {fact('imagery-licences').text} For a paid commission we check every licence and replace what may not be
           shown.
         </p>
@@ -177,42 +153,41 @@ const STEPS = [
       </div>
       <div>
         <h3>Open source</h3>
-        <p>
+        <p class="small">
           The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
           signs anything.
         </p>
         <ObjLink hang size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
       </div>
-    </div>
+    </Columns>
     <Remark text={fact('earth-rotation').short!} live="dome-turn" />
   </section>
 
   <section class="wrap section" id="commission">
-    <div class="head">
-      <h2>How a commission runs</h2>
-    </div>
-    <ol class="steps">
+    <SectionHead title="How a commission runs" />
+    <Steps count={STEPS.length}>
       {
         STEPS.map((step) => (
-          <li>
-            <h3>{step.title}</h3>
-            <p>{step.text}</p>
-          </li>
+          <Step title={step.title}>
+            <p class="small">{step.text}</p>
+          </Step>
         ))
       }
-    </ol>
+    </Steps>
   </section>
 
-  <section class="wrap section contact" id="contact">
-    <div>
-      <h2>Write to us</h2>
-      <p>
-        One message is enough to start. If you teach, the <a href={sitePath('/classroom/')}>classroom page</a> has
-        links you can use today without asking anyone.
-      </p>
-      <ObjLink hang size="small" href={sitePath('/')}>Back to the start</ObjLink>
-    </div>
-    <ContactForm />
+  <section class="wrap section" id="contact">
+    <Beside>
+      <div>
+        <h2>Write to us</h2>
+        <p>
+          One message is enough to start. If you teach, the <a href={sitePath('/classroom/')}>classroom page</a> has
+          links you can use today without asking anyone.
+        </p>
+        <ObjLink hang size="small" href={sitePath('/')}>Back to the start</ObjLink>
+      </div>
+      <ContactForm />
+    </Beside>
   </section>
 
   <div class="wrap section last">
@@ -220,213 +195,3 @@ const STEPS = [
     <Credits />
   </div>
 </Base>
-
-<style>
-  /* The size is the lead's (`.say`), which an opening section sets. */
-  .proof {
-    font-family: var(--font-family-display);
-    font-weight: var(--weight-display);
-    line-height: 1.3;
-    color: var(--color-fg);
-  }
-
-  .aside {
-    color: var(--site-text-dim);
-  }
-
-  figure {
-    margin: 0;
-  }
-
-  figcaption {
-    margin-top: 0.5rem;
-  }
-
-  .px {
-    max-width: none;
-    margin: 0.5rem 0 0;
-    color: var(--site-text-dim);
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Never taller than the screen it is on, which matters on a phone held sideways; the margin is the disc's ring. */
-  .disc {
-    max-width: min(26rem, 78svh);
-    margin: 1.1875rem auto;
-  }
-
-  figure > :global(picture img) {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem 3rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .head h2,
-  .head p {
-    margin: 0;
-  }
-
-  .offer {
-    display: grid;
-    grid-template-columns: 6fr 5fr;
-    gap: 1.5rem 3.75rem;
-    align-items: center;
-    padding-block: 3rem;
-    border-top: 1px solid var(--border-divider);
-  }
-
-  .offer h3 {
-    font-size: clamp(1.75rem, 2.6vw, 2.5rem);
-  }
-
-  /* The film is the flat one of the three: its frame runs the full width, with the words in a row under it. */
-  @media (min-width: 901px) {
-    .wide {
-      grid-template-columns: 1fr;
-    }
-
-    .wide > div {
-      display: grid;
-      grid-template-columns: 5fr 7fr;
-      column-gap: 3.75rem;
-      align-items: start;
-    }
-
-    .wide > div > :global(*) {
-      grid-column: 1;
-    }
-
-    .wide dl {
-      grid-area: 1 / 2 / span 3;
-      display: grid;
-      grid-auto-flow: column;
-      grid-template-rows: auto 1fr;
-      gap: 0 2.5rem;
-    }
-
-    .wide dt {
-      margin-top: 0.5rem;
-    }
-  }
-
-  dl {
-    margin: 0 0 1rem;
-  }
-
-  dt {
-    margin-top: 1rem;
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    color: var(--site-text-dim);
-  }
-
-  dd {
-    max-width: var(--measure);
-    margin: 0.15rem 0 0;
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
-    color: var(--site-text-muted);
-  }
-
-  .cols {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2.5rem 3.75rem;
-  }
-
-  .cols p {
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
-  }
-
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 2.5rem 3rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    counter-reset: step;
-  }
-
-  .steps li {
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-divider);
-    counter-increment: step;
-  }
-
-  .steps li::before {
-    content: counter(step);
-    display: block;
-    font: var(--weight-display) var(--text-h2) / 1 var(--font-family-display);
-    color: var(--site-text-dim);
-  }
-
-  .steps h3 {
-    margin-top: 0.75rem;
-  }
-
-  .steps p {
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
-  }
-
-  .contact {
-    display: grid;
-    grid-template-columns: 5fr 6fr;
-    gap: 2.5rem 5rem;
-    align-items: start;
-  }
-
-  @media (max-width: 900px) {
-    .offer,
-    .cols,
-    .contact {
-      grid-template-columns: 1fr;
-    }
-
-    .disc {
-      max-width: min(85%, 78svh);
-    }
-
-    /* The heading first, then its picture, then the rest of the words. */
-    .offer {
-      row-gap: 0;
-    }
-
-    .offer > div {
-      display: contents;
-    }
-
-    .offer h3 {
-      order: -1;
-      margin-bottom: 1.25rem;
-    }
-
-    .offer figure {
-      margin-bottom: 1.5rem;
-    }
-
-    .steps {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 480px) {
-    .steps {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
