@@ -6,10 +6,9 @@
  */
 import { APP_BASE, appLink } from '../data/appLink';
 
-// `bare` leaves the field out and keeps the copy control, for a list where the address would repeat eight times.
-type Props = { hash: string; bare?: boolean };
+type Props = { hash: string };
 
-const { hash, bare = false } = Astro.props;
+const { hash } = Astro.props;
 const origin = new URL(Astro.site!).origin;
 const host = new URL(Astro.site!).host;
 const copy = origin + appLink(hash);
@@ -20,43 +19,33 @@ const params = hash.split('&').map((pair) => {
 ---
 
 <div class="strip">
-  {
-    bare ? (
-      <button class="ring small" type="button" data-copy={copy}>
-        Copy the address
-      </button>
-    ) : (
-      <div class="field">
-        <a class="address" href={appLink(hash)}>
-          {host}{APP_BASE}#{params.map((param, i) => (
-            <span>
-              {i > 0 && '&'}
-              {param.key}=<b>{param.value}</b>
-            </span>
-          ))}
-        </a>
-        <button class="icon" type="button" data-copy={copy} aria-label="Copy the address" title="Copy the address">
-          <svg class="sheets" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="9" width="11" height="11" rx="1.5" />
-            <path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" />
-          </svg>
-          <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12.5l4.5 4.5L19 7.5" />
-          </svg>
-        </button>
-      </div>
-    )
-  }
+  <div class="field">
+    <a class="address" href={appLink(hash)}>
+      {host}{APP_BASE}#{params.map((param, i) => (
+        <span>
+          {i > 0 && '&'}
+          {param.key}=<b>{param.value}</b>
+        </span>
+      ))}
+    </a>
+    <button class="icon" type="button" data-copy={copy} aria-label="Copy the address" title="Copy the address">
+      <svg class="sheets" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="9" y="9" width="11" height="11" rx="1.5" />
+        <path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" />
+      </svg>
+      <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12.5l4.5 4.5L19 7.5" />
+      </svg>
+    </button>
+  </div>
 </div>
 
 <script>
   // The control changes in place instead of anything appearing, so nothing shifts; it reverts so it can be used again.
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
-    const icon = button.classList.contains('icon');
-    const label = icon ? button.getAttribute('aria-label')! : button.textContent!;
+    const label = button.getAttribute('aria-label')!;
     const say = (text: string): void => {
-      if (icon) button.setAttribute('aria-label', text);
-      else button.textContent = text;
+      button.setAttribute('aria-label', text);
       button.toggleAttribute('data-copied', text !== label);
     };
     button.addEventListener('click', async () => {

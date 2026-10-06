@@ -91,6 +91,21 @@ const { id, tall, words = 'left', gap = 'full', eager = false } = Astro.props;
     .gap-none .copy > :global(*) {
       max-width: min(27rem, 34vw);
     }
+
+    /* A page's title is large text and may run past the words' column, over the picture: two lines, never three. */
+    .gap-none .copy > :global(h1) {
+      max-width: min(44rem, 56vw);
+    }
+  }
+
+  /* A header's title and its opening sentence, the same on every page that uses the band. */
+  .band .copy > :global(h1) {
+    font-size: var(--text-h2);
+    text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.6);
+  }
+
+  .band .copy > :global(.say) {
+    font-size: var(--text-lead);
   }
 
   .copy {
