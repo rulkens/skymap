@@ -501,7 +501,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: FEATURE_WIDTHS,
     title: 'Jupiter and its four large moons',
     caption: 'Each on its orbit.',
-    drawn: 'The positions are computed for the instant on the clock, bottom right; the rings are the orbits, drawn as lines.',
+    drawn: 'The positions are computed for the instant on the clock; the rings are the orbits, drawn as lines.',
     alt: 'A small Jupiter inside four rings, with the moons Io, Europa, Ganymede and Callisto labelled, and a clock reading 2033-03-14 21:00 UTC.',
   },
   {

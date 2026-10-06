@@ -1,10 +1,10 @@
 ---
 /*
  * LessonLinks — the ready-made lesson links as one grid of small cards: the
- * picture, its topic, a ring that opens it, one question, what in the picture
- * is data and what is drawn, and a control that copies the address. Four to a
- * row when wide; on an upright phone each is a row with its picture small on
- * the left.
+ * picture, its topic, its name, one question, what in the picture is data and
+ * what is drawn, and the same Open this view link every picture label has.
+ * Four to a row when wide; on an upright phone each is a row with its picture
+ * small on the left.
  */
 import ObjLink from './ObjLink.astro';
 import Shot from './Shot.astro';
@@ -26,9 +26,12 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
           </a>
           <div class="words">
             <p class="topic small">{topic.title}</p>
-            <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
+            <h3>{lesson.title}</h3>
             <p class="ask small">{lesson.ask}</p>
             <p class="drawn small">{drawn(lesson.shot)}</p>
+            <ObjLink size="small" icon="launch" href={appLink(lesson.hash)}>
+              Open this view
+            </ObjLink>
           </div>
         </li>
       )),
@@ -66,8 +69,12 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
     color: var(--site-text-dim);
   }
 
-  .ask {
+  h3 {
     margin: 0.25rem 0 0.5rem;
+  }
+
+  .ask {
+    margin: 0 0 0.5rem;
     color: var(--color-fg);
   }
 
