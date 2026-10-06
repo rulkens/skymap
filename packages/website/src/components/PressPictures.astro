@@ -1,11 +1,14 @@
 ---
 /*
  * PressPictures — the pictures offered for reuse, two to a row: each with its
- * name, its label, the credit to print, the terms, and a link to the widest
- * file the site holds.
+ * name, what it shows, the credit to print, the terms, and links to the view
+ * and to the widest file the site holds. The cards share their rows (subgrid),
+ * so the same line of two cards sits at the same height whatever its length.
  */
-import Figure from './Figure.astro';
 import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ViewLink from './ViewLink.astro';
+import { appLink } from '../data/appLink';
 import { PRESS_PICTURES } from '../data/pressPictures';
 import { siteShot } from '../data/siteShot';
 import { shotSources } from '../utils/shotSources';
@@ -13,7 +16,7 @@ import { shotSources } from '../utils/shotSources';
 const press = PRESS_PICTURES.map((row) => {
   const shot = siteShot(row.shot);
   // The manifest lists widths widest first, and the srcset keeps that order.
-  return { ...row, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
+  return { ...row, view: shot, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
 });
 ---
 
@@ -21,24 +24,39 @@ const press = PRESS_PICTURES.map((row) => {
   {
     press.map((row) => (
       <li>
-        <Figure id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" title={row.title}>
-          <dl class="small">
-            <div>
-              <dt>Credit to print</dt>
-              <dd>{row.credit}.</dd>
-            </div>
-            <div>
-              <dt>Reuse</dt>
-              <dd>
-                {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
-                {row.terms}
-              </dd>
-            </div>
-          </dl>
-          <ObjLink hang size="small" href={row.file}>
-            {row.title}: the file, {row.width.toLocaleString('en-GB')} pixels wide
+        <Shot id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" />
+        <h3>{row.title}</h3>
+        <dl class="small">
+          <div>
+            <dt>Shows</dt>
+            <dd>
+              <span class="name">{row.view.title}</span> {row.view.caption}
+            </dd>
+          </div>
+          <div>
+            <dt>Data and drawing</dt>
+            <dd>{row.view.drawn}</dd>
+          </div>
+          <div>
+            <dt>Credit to print</dt>
+            <dd>{row.credit}.</dd>
+          </div>
+          <div>
+            <dt>Reuse</dt>
+            <dd>
+              {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
+              {row.terms}
+            </dd>
+          </div>
+        </dl>
+        <p class="links">
+          <ViewLink href={appLink(row.view.link, row.view.query)}>
+            {row.view.link.startsWith('tour=') ? 'Start the tour' : 'Open this view'}
+          </ViewLink>
+          <ObjLink size="small" href={row.file}>
+            The file, {row.width.toLocaleString('en-GB')} pixels wide
           </ObjLink>
-        </Figure>
+        </p>
       </li>
     ))
   }
@@ -48,26 +66,50 @@ const press = PRESS_PICTURES.map((row) => {
   ul {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4rem 3.75rem;
+    column-gap: 3.75rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* Seven shared rows: picture, name, four lines of the table, links. */
+  li {
+    display: grid;
+    grid-row: span 7;
+    grid-template-rows: subgrid;
+  }
+
+  li :global(picture img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  h3 {
+    margin: 1rem 0 0.75rem;
+  }
+
+  /* The table's rows are the card's rows, so they line up across the pair. */
+  dl,
+  dl > div {
+    display: grid;
+    grid-template-rows: subgrid;
+  }
+
   dl {
-    margin: 1rem 0 0.5rem;
+    grid-row: span 4;
+    margin: 0;
   }
 
   dl > div {
-    display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-    gap: 1rem;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    column-gap: 1.5rem;
     padding-block: 0.75rem;
     border-top: 1px solid var(--border-divider);
   }
 
   dt {
-    color: var(--color-fg);
+    color: var(--site-text-dim);
   }
 
   dd {
@@ -75,9 +117,31 @@ const press = PRESS_PICTURES.map((row) => {
     color: var(--site-text-muted);
   }
 
+  .name {
+    display: block;
+    color: var(--color-fg);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    max-width: none;
+    margin: 0 0 4rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
   @media (max-width: 900px) {
     ul {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 480px) {
+    dl > div {
+      grid-template-columns: 1fr;
+      row-gap: 0.25rem;
     }
   }
 </style>
