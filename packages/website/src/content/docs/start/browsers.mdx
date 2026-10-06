@@ -1,0 +1,65 @@
+---
+title: Browser support and troubleshooting
+description: skymap runs in any browser that has WebGPU. This page lists the browsers that do, what you see in one that does not, and what to try when the app will not start.
+group: Start
+order: 3
+facts: [webgpu-browsers, app-browser-advice]
+---
+
+import { ISSUES_URL } from '../../../data/contact';
+
+If you are preparing a lesson, [Use skymap in the classroom](/classroom/) has links that are ready to hand out. This page is about the machines those links will be opened on.
+
+## What skymap needs
+
+<Fact id="webgpu-what" />
+
+<Fact id="webgpu-required" />
+
+<Fact id="no-account" />
+
+## Browsers that have WebGPU
+
+As of 6 October 2026, WebGPU is switched on by default in the browsers below. On Linux it depends on the graphics card and its driver, so the only test there is to open the app.
+
+| Browser | Runs on | WebGPU from version |
+| --- | --- | --- |
+| Chrome | Windows, macOS and ChromeOS | 113 |
+| Chrome | Android 12 and later | 121 |
+| Safari | Mac, iPhone and iPad | 26 |
+| Firefox | Windows | 141 |
+| Firefox | Macs with Apple silicon | 147 |
+
+The table follows the [implementation status page](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) kept by the group that writes the standard. Check a browser that is not listed there.
+
+<Fact id="app-browser-advice" />
+
+## What you see without WebGPU
+
+In a browser without WebGPU the app does not start. In place of the map there is a short page headed “Skymap needs WebGPU”. It gives the advice above and links to a [table of browser support](https://caniuse.com/webgpu). None of the map’s data is downloaded.
+
+## When the app does not start
+
+A browser can have WebGPU and still fail to start it on a particular machine, and a download can fail on any machine.
+
+<Fact id="app-start-errors" />
+
+What to do about each:
+
+- **WebGPU failed to initialise.** Reload the page once. If the message returns, open the same link in a recent version of Chrome or Edge.
+- **The galaxy data failed to load.** Check the connection, then reload.
+- **skymap was updated.** Reload the page. The reload fetches data that matches the new version.
+
+<Fact id="app-continue-anyway" />
+
+The link closes the welcome screen while the data is still arriving.
+
+## Phones and small screens
+
+<Fact id="phone-data-size" />
+
+<Fact id="app-data-size-choice" />
+
+## If none of this helps
+
+Tell us on the <a href={ISSUES_URL}>issue list on GitHub</a>. Name the browser with its version and the operating system, and quote the message the app showed. An issue is public and carries your GitHub name.
