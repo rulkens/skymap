@@ -9,6 +9,14 @@ const THUMB_WIDTHS = [240, 160];
 const SUBJECT: SiteShotSettings = { hideLabels: true, hideOrbitTrails: true, hideStructures: true };
 const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
 const NOON = 't=2026-10-05T12:00:00Z';
+const JUPITER = 'focus=body-jupiter&t=2033-03-14T21:00:00Z';
+// Lesson cards sit two to a row: 1120 covers a 2x desktop column, 640 a phone.
+const CARD = { width: 800, height: 600 };
+const CARD_WIDTHS = [1120, 640];
+// Interface screenshots: a small window, so the app's own text stays readable when the picture is narrow.
+const UI = { width: 960, height: 640 };
+const UI_WIDTHS = [1280, 720];
+const DOME = { width: 1024, height: 1024 };
 
 /**
  * Every picture of the app the site publishes, apart from the flight's stills
@@ -76,7 +84,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'classroom-jupiter',
-    link: 'focus=body-jupiter&t=2033-03-14T21:00:00Z',
+    link: JUPITER,
     settings: { settleMs: 5000 },
     size: { width: 1200, height: 900 },
     widths: [1200, 720],
@@ -90,7 +98,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
     query: 'dome',
     settings: SUBJECT,
-    size: { width: 1024, height: 1024 },
+    size: DOME,
     widths: [1200, 720],
     caption:
       'A fisheye frame from the app’s dome mode: the whole sky in one disc, Saturn near the front edge. October 2017, rings wide open.',
@@ -205,5 +213,155 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: THUMB_WIDTHS,
     caption: '',
     alt: '',
+  },
+
+  {
+    id: 'classroom-hero',
+    link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,4.6e-15,0,0.5,0`,
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: WIDE,
+    widths: [1920, 1280],
+    caption:
+      'Jupiter on 14 March 2033 at 21:00 UTC. Its position and its lit side are computed for that date; the cloud tops are a fixed map, not that day’s weather.',
+    alt: 'Jupiter, three quarters lit, with its cloud bands and storms, against a field of stars.',
+    credit: 'Jupiter: Solar System Scope',
+  },
+  {
+    id: 'classroom-hero-portrait',
+    link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,1.25e-14,0,0,0.12`,
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: TALL,
+    widths: [560],
+    caption:
+      'Jupiter on 14 March 2033 at 21:00 UTC. Its position and its lit side are computed for that date; the cloud tops are a fixed map, not that day’s weather.',
+    alt: 'Jupiter, three quarters lit, with its cloud bands and storms, against a field of stars.',
+    credit: 'Jupiter: Solar System Scope',
+  },
+  {
+    id: 'lesson-solar-system',
+    link: 'exhibit=solarSystem',
+    settings: { settleMs: 8000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'The orbits are computed and drawn as lines. The planets are too small to see at this distance, so the labels stand in for them.',
+    alt: 'Nested ellipses around a labelled Sun, with the names of the planets beside them and named stars behind.',
+  },
+  {
+    id: 'lesson-voyager',
+    link: 'focus=body-voyager1&t=2026-09-18T12:56:32Z&pose=a,0,0,0,3.8408163993487223,-0.6565563346622649,2.6e-22,0',
+    settings: { ...SUBJECT, settleMs: 3000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'Voyager 1 where it was on 18 September 2026. The position is computed from tracking data; the spacecraft is a 3D model.',
+    alt: 'The Voyager spacecraft, its white dish towards the camera, against the stars.',
+    credit: 'Model: NASA / Michael D. Carbajal',
+  },
+  {
+    id: 'lesson-earth-june',
+    link: 'focus=body-earth&t=2026-06-21T12:00:00Z&pose=a,0,0,0,3.16,0,6e-16,0',
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'Earth from its sunlit side on 21 June 2026 at 12:00 UTC. The tilt is computed for the date; the clouds are a fixed composite.',
+    alt: 'Earth fully lit, with the Sahara in the middle and Europe and the Arctic towards the top.',
+    credit: 'Earth: NASA Blue Marble',
+  },
+  {
+    id: 'lesson-earth-december',
+    link: 'focus=body-earth&t=2026-12-21T12:00:00Z&pose=a,0,0,0,0.02,0,6e-16,0',
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'Earth from its sunlit side on 21 December 2026 at 12:00 UTC. The tilt is computed for the date; the clouds are a fixed composite.',
+    alt: 'Earth fully lit, mostly ocean, with southern Africa to the right and Antarctica at the lower edge.',
+    credit: 'Earth: NASA Blue Marble',
+  },
+  {
+    id: 'lesson-milky-way',
+    link: 'focus=milkyWay&pose=a,0,0,0,-2.22,0.6,0.045,0',
+    settings: { ...SUBJECT, hideZoneOfAvoidance: true, settleMs: 3000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'The Milky Way from outside. No camera has been there; this is a model. The link opens with a “You are here” label on it.',
+    alt: 'A barred spiral galaxy seen from above, with small companion galaxies around it.',
+  },
+  {
+    id: 'lesson-andromeda',
+    link: 'focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.12,0',
+    settings: { ...ONE_GALAXY, settleMs: 3000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'Andromeda at its catalogued position. The disc is a photograph placed in the scene, with the survey points switched off for this picture.',
+    alt: 'A tilted orange and blue spiral galaxy with a bright core, on black.',
+    credit: 'Photograph: Brody Wesner, CC0',
+  },
+  {
+    id: 'lesson-cosmic-web',
+    link: 'exhibit=cosmicWeb',
+    settings: { settleMs: 8000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'The purple field is density computed from SDSS galaxy positions. The discs and names mark clusters and superclusters; the discs are drawn.',
+    alt: 'A purple web of threads with gold knots, with pale labelled discs on some of the knots.',
+  },
+  {
+    id: 'lesson-universe',
+    link: 'exhibit=observableUniverse',
+    settings: { settleMs: 8000 },
+    size: CARD,
+    widths: CARD_WIDTHS,
+    caption: 'The sphere is drawn from a cosmological model. The pale cloud inside it is every galaxy and quasar in the catalogues.',
+    alt: 'A thin blue sphere on black with a small pale two-lobed cloud of points at its centre.',
+  },
+  {
+    id: 'make-search',
+    link: 'focus=body-moon&t=2026-10-05T12:00:00Z',
+    settings: { ui: true, searchFor: 'Jupiter', settleMs: 3000 },
+    size: UI,
+    widths: UI_WIDTHS,
+    caption: 'The app with its search open and “Jupiter” typed. This is a screenshot of the page, interface included.',
+    alt: 'The skymap interface over the Moon, with a search box holding the word Jupiter and one result under it.',
+  },
+  {
+    id: 'make-date',
+    link: JUPITER,
+    settings: { ui: true, settleMs: 4000 },
+    size: UI,
+    widths: UI_WIDTHS,
+    caption: 'The app on Jupiter with the clock set. The date and time are at the bottom right; the card on the right is Jupiter’s fact sheet.',
+    alt: 'The skymap interface with Jupiter inside a selection ring, a fact card, and a clock reading 2033-03-14 21:00 UTC.',
+  },
+  {
+    id: 'dome-earth',
+    link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,4.6e-16,0`,
+    query: 'dome',
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: DOME,
+    widths: [1400, 800],
+    caption:
+      'A fisheye frame from the app’s dome mode: Earth low at the front of the dome, the stars from Gaia overhead. The surface is satellite photography; the clouds are a fixed composite.',
+    alt: 'A circular all-sky picture: a dense field of stars with the band of the Milky Way, and Earth near the lower edge.',
+    credit: 'Earth: NASA Blue Marble',
+  },
+  {
+    id: 'dome-web',
+    link: 'pose=a,0,0,0,2.1,0.35,260,0',
+    query: 'dome',
+    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, filaments: true, settleMs: 4000 },
+    size: DOME,
+    widths: [1200, 720],
+    caption:
+      'The same mode 260 megaparsecs out. Each point is a catalogued galaxy; the bright threads are filaments traced through them by an algorithm.',
+    alt: 'A circular all-sky picture: a haze of points with bright branching violet threads near the lower edge.',
+  },
+  {
+    id: 'dome-exhibit',
+    link: 'exhibit=cosmicFlows',
+    settings: { ui: true, settleMs: 9000 },
+    size: { width: 1200, height: 750 },
+    widths: [1600, 800],
+    caption:
+      'The Cosmic Flows exhibit as it opens, notes included. The ribbons are a reconstruction of how galaxies move, from Cosmicflows-4.',
+    alt: 'Blue ribbons streaming past the Milky Way and Andromeda, beside a panel of text headed Cosmic Flows.',
   },
 ];

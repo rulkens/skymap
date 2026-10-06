@@ -71,7 +71,18 @@ try {
           await page.waitForTimeout(shot.settings.settleMs);
           await settled();
         }
-        writeFileSync(master, await readCanvas(page, 'png'));
+        if (shot.settings?.searchFor) {
+          await page.keyboard.press('/');
+          await page.keyboard.type(shot.settings.searchFor, { delay: 60 });
+          await page.waitForTimeout(1200);
+        }
+        // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
+        writeFileSync(
+          master,
+          shot.settings?.ui
+            ? await page.screenshot({ type: 'png' })
+            : await readCanvas(page, 'png'),
+        );
       } catch (err) {
         failed = true;
         console.error(`${shot.id}: ${err instanceof Error ? err.message : String(err)}`);

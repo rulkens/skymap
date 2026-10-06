@@ -19,6 +19,10 @@ export type SiteShotSettings = {
   fovDeg?: number;
   /** For a `tour=` link: start at this step (0-based) instead of the first; `settleMs` is then how far into it. */
   tourStep?: number;
+  /** The app's own interface in the picture: a screenshot of the page, not of the canvas alone. */
+  ui?: true;
+  /** With `ui`: open the app's search and type this before the shot. */
+  searchFor?: string;
   /** Extra time before the shot: streamed surface imagery arrives after the app reports settled. */
   settleMs?: number;
 };
