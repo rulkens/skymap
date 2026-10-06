@@ -6,7 +6,7 @@
  * it. `wide` gives the picture the full row and sets the words under it in two
  * columns. Narrow, the name comes first, then the picture, then the rest.
  */
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 
@@ -48,7 +48,7 @@ const sizes = wide ? '(max-width: 900px) 100vw, 72rem' : '(max-width: 900px) 100
         </>
       )
     }
-    <ObjLink icon="launch" href={href}>{action}</ObjLink>
+    <ViewLink hang href={href}>{action}</ViewLink>
   </div>
 </article>
 

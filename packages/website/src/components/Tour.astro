@@ -1,5 +1,5 @@
 ---
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 import { appLink } from '../data/appLink';
@@ -14,7 +14,7 @@ import { HOME_LINKS } from '../data/homeLinks';
       The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe
       and back. Some of the light in it left before our species existed. The tour is shorter.
     </p>
-    <ObjLink href={appLink(HOME_LINKS.tour)}>Start the tour</ObjLink>
+    <ViewLink hang href={appLink(HOME_LINKS.tour)}>Start the tour</ViewLink>
     <ShotCaption id="tour-cosmic-web" open={false} />
   </div>
 </section>

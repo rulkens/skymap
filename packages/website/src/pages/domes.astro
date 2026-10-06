@@ -9,6 +9,7 @@ import Remark from '../components/Remark.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
+import ViewLink from '../components/ViewLink.astro';
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
 import { siteShot } from '../data/siteShot';
@@ -71,7 +72,7 @@ const STEPS = [
       The showing is our own account: the venue has published nothing about it. The facts about the venue are the
       venue’s.
     </p>
-    <ObjLink href="#contact">Ask about a commission</ObjLink>
+    <ObjLink hang href="#contact">Ask about a commission</ObjLink>
     <p slot="note" class="small px">
       This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
       are 4,096.
@@ -87,7 +88,7 @@ const STEPS = [
     <article class="offer">
       <figure>
         <div class="disc"><Disc id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" /></div>
-        <figcaption><ShotCaption id="dome-web" /></figcaption>
+        <figcaption><ShotCaption id="dome-web" open={false} /></figcaption>
       </figure>
       <div>
         <h3>Live fisheye from the app</h3>
@@ -101,7 +102,9 @@ const STEPS = [
             it between projectors is the job of your dome system.
           </dd>
         </dl>
-        <ObjLink size="small" href={appLink(siteShot('dome-web').link, 'dome')}>Open the app in dome mode</ObjLink>
+        <ViewLink hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>
+          Open this view in dome mode
+        </ViewLink>
       </div>
     </article>
 
@@ -125,7 +128,7 @@ const STEPS = [
             you or from someone you choose.
           </dd>
         </dl>
-        <ObjLink size="small" href={appLink('tour=grandTour')}>Watch the tour the frame is from</ObjLink>
+        <ViewLink hang href={appLink(siteShot('tour-cosmic-web').link)}>Start the tour the frame is from</ViewLink>
       </div>
     </article>
 
@@ -146,7 +149,7 @@ const STEPS = [
             walks away is the planned kiosk mode, and we would build it for the first venue that needs it.
           </dd>
         </dl>
-        <ObjLink size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes, in the docs</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes, in the docs</ObjLink>
       </div>
     </article>
   </section>
@@ -162,7 +165,7 @@ const STEPS = [
           Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
           photographed the Milky Way from outside, so on your dome it is drawn, and we say so.
         </p>
-        <ObjLink size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
       </div>
       <div>
         <h3>Credits and licences</h3>
@@ -170,7 +173,7 @@ const STEPS = [
           {fact('imagery-licences').text} For a paid commission we check every licence and replace what may not be
           shown.
         </p>
-        <ObjLink size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
       </div>
       <div>
         <h3>Open source</h3>
@@ -178,7 +181,7 @@ const STEPS = [
           The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
           signs anything.
         </p>
-        <ObjLink size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
       </div>
     </div>
     <Remark text={fact('earth-rotation').short!} live="dome-turn" />
@@ -207,7 +210,7 @@ const STEPS = [
         One message is enough to start. If you teach, the <a href={sitePath('/classroom/')}>classroom page</a> has
         links you can use today without asking anyone.
       </p>
-      <ObjLink size="small" href={sitePath('/')}>Back to the start</ObjLink>
+      <ObjLink hang size="small" href={sitePath('/')}>Back to the start</ObjLink>
     </div>
     <ContactForm />
   </section>

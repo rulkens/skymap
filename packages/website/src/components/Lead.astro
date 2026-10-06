@@ -1,5 +1,5 @@
 ---
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import PictureBand from './PictureBand.astro';
 import ShotCaption from './ShotCaption.astro';
 import { appLink } from '../data/appLink';
@@ -13,7 +13,7 @@ import { HOME_LINKS } from '../data/homeLinks';
     beside the Sun, and nothing cuts away on the way to the cosmic web. The stars come from Gaia, the galaxies from
     catalogues including SDSS, 2MRS and GLADE.
   </p>
-  <ObjLink href={appLink(HOME_LINKS.parkFlight)}>Play the pull-back from the park</ObjLink>
+  <ViewLink hang href={appLink(HOME_LINKS.parkFlight)}>Play the pull-back from the park</ViewLink>
   <ShotCaption id="earth-terminator" />
 </PictureBand>
 

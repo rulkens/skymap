@@ -86,14 +86,14 @@ const press = PRESS_PICTURES.map((row) => {
       <p>{fact('about-maker').text}</p>
       <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
       <p>{fact('about-ai').text}</p>
-      <ObjLink size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+      <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
     </div>
     <div class="alive">
       <h3>Open source, and maintained</h3>
       <Claims items={ALIVE} />
       <div class="links">
-        <ObjLink size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-        <ObjLink size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+        <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
       </div>
     </div>
   </section>
@@ -107,7 +107,7 @@ const press = PRESS_PICTURES.map((row) => {
       <h2>Shown in a dome</h2>
       <p>{fact('wisdome-showing').text}</p>
       <p>{fact('wisdome-venue').text}</p>
-      <ObjLink href={sitePath('/domes/')}>What we do for domes</ObjLink>
+      <ObjLink hang href={sitePath('/domes/')}>What we do for domes</ObjLink>
     </div>
   </section>
 
@@ -126,7 +126,7 @@ const press = PRESS_PICTURES.map((row) => {
             </p>
           )
         }
-        <ObjLink size="small" href={sitePath('/domes/#contact')}>The contact section of the domes page</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/domes/#contact')}>The contact section of the domes page</ObjLink>
       </div>
       <div>
         <h3>For a fault, a correction or a question</h3>
@@ -134,7 +134,7 @@ const press = PRESS_PICTURES.map((row) => {
           Open an issue in the repository. Issues are public and anyone can read them, so leave out anything
           confidential.
         </p>
-        <ObjLink size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
+        <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
       </div>
     </div>
     <p class="small note">
@@ -173,7 +173,7 @@ const press = PRESS_PICTURES.map((row) => {
                     </dd>
                   </div>
                 </dl>
-                <ObjLink size="small" href={row.file}>
+                <ObjLink hang size="small" href={row.file}>
                   {row.title}: the file, {row.width.toLocaleString('en-GB')} pixels wide
                 </ObjLink>
               </figcaption>

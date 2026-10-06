@@ -1,0 +1,16 @@
+---
+/*
+ * ViewLink — the one control that opens a particular view in the app (an
+ * address `appLink` built from a hash): the launch drawing and a small label,
+ * "Open this view" unless the caller names what opens. The bare app is
+ * OpenApp's; a page of this site is ObjLink's plain ring.
+ * tests/packages/website/appLinks.test.ts holds the three apart.
+ */
+import type { HTMLAttributes } from 'astro/types';
+
+import ObjLink from './ObjLink.astro';
+
+type Props = HTMLAttributes<'a'> & { href: string; hang?: boolean };
+---
+
+<ObjLink size="small" icon="launch" {...Astro.props}><slot>Open this view</slot></ObjLink>

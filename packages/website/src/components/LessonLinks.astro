@@ -6,7 +6,7 @@
  * Four to a row when wide; on an upright phone each is a row with its picture
  * small on the left.
  */
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import Shot from './Shot.astro';
 import { appLink } from '../data/appLink';
 import { LESSON_TOPICS } from '../data/lessons';
@@ -29,9 +29,7 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
             <h3>{lesson.title}</h3>
             <p class="ask small">{lesson.ask}</p>
             <p class="drawn small">{drawn(lesson.shot)}</p>
-            <ObjLink size="small" icon="launch" href={appLink(lesson.hash)}>
-              Open this view
-            </ObjLink>
+            <ViewLink href={appLink(lesson.hash)} />
           </div>
         </li>
       )),

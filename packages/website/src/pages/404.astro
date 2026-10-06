@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import ObjLink from '../components/ObjLink.astro';
+import ViewLink from '../components/ViewLink.astro';
 import PictureBand from '../components/PictureBand.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
@@ -18,7 +19,7 @@ import { sitePath } from '../utils/sitePath';
       million cubic megaparsecs of very little. You are in suitable company.
     </p>
     <ObjLink hang size="big" href={sitePath('/')}>Back to the start</ObjLink>
-    <ObjLink hang href={appLink(siteShot('void-bootes').link)}>Or go and see the void</ObjLink>
+    <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
     <ShotCaption id="void-bootes" open={false} />
   </PictureBand>
   <div class="wrap section last">

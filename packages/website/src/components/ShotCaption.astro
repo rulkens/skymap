@@ -7,7 +7,7 @@
  * site's honesty device. It lays itself out by the room it is given: stacked
  * under a narrow picture, in columns along the foot of a wide one.
  */
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import { appLink } from '../data/appLink';
 import { siteShot } from '../data/siteShot';
 
@@ -41,9 +41,7 @@ const shot = siteShot(id);
             </dl>
           )}
           {open && (
-            <ObjLink size="small" icon="launch" href={appLink(shot.link, shot.query)}>
-              Open this view
-            </ObjLink>
+            <ViewLink href={appLink(shot.link, shot.query)} />
           )}
         </div>
       )
