@@ -398,7 +398,8 @@ const vars = (p: (typeof places)[number]) =>
 
     li[data-row] .text {
       --gap: 1.5rem;
-      --width: max(200 * var(--u), 12rem);
+      /* Under the pitch of the upper row (about 210 units), so neighbouring labels never meet. */
+      --width: calc(196 * var(--u));
       top: 100%;
       right: auto;
       left: calc(50% - var(--width) / 2);
