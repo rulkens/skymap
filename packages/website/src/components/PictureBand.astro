@@ -1,0 +1,136 @@
+---
+/*
+ * PictureBand — a section whose ground is one picture, with the words on its
+ * dark side (`words`). Wide, the picture fills the band and fades into the
+ * page; narrow, it comes first and the words follow under it. Home's lead and
+ * closing and each landing page's header are this.
+ */
+import Shot from './Shot.astro';
+
+type Props = {
+  id: string;
+  tall?: string;
+  words?: 'left' | 'right';
+  gap?: 'none' | 'half' | 'full';
+  eager?: boolean;
+};
+
+const { id, tall, words = 'left', gap = 'full', eager = false } = Astro.props;
+---
+
+<section class:list={['band', `words-${words}`, `gap-${gap}`]}>
+  <div class="back">
+    <Shot id={id} tall={tall} sizes="100vw" eager={eager} />
+  </div>
+  <div class="wrap copy">
+    <slot />
+  </div>
+</section>
+
+<style>
+  .band {
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-height: min(56.25vw, 92svh);
+    background: #000;
+  }
+
+  .gap-half {
+    margin-top: calc(var(--section-space) / 2);
+  }
+
+  .gap-full {
+    margin-top: var(--section-space);
+  }
+
+  .back {
+    position: absolute;
+    inset: 0;
+  }
+
+  .back :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% 50%;
+  }
+
+  .words-right .back :global(img) {
+    object-position: 30% 50%;
+  }
+
+  /* No frame edge: the picture fades into the page above and below, and into the words beside it. */
+  .back::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+  }
+
+  .words-right .back::after {
+    background:
+      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(270deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.65) 32%, rgb(0 0 0 / 0) 56%);
+  }
+
+  /* A header has no section above it to fade out of. */
+  .gap-none .back::after {
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+  }
+
+  .copy {
+    position: relative;
+    width: 100%;
+    padding-block: 5rem;
+  }
+
+  .words-right .copy > :global(*) {
+    margin-left: 58%;
+  }
+
+  .copy :global(.caption) {
+    max-width: 27rem;
+    margin-top: 2rem;
+  }
+
+  /* Narrow: the picture first, fading into the words below it. */
+  @media (max-width: 900px) {
+    .band {
+      display: block;
+      min-height: 0;
+    }
+
+    .back {
+      position: relative;
+    }
+
+    .back :global(img) {
+      height: auto;
+      object-position: center;
+    }
+
+    .back::after,
+    .words-right .back::after {
+      background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 14%, rgb(0 0 0 / 0) 68%, #000 100%);
+    }
+
+    .gap-none .back::after {
+      background: linear-gradient(180deg, rgb(0 0 0 / 0) 68%, #000 100%);
+    }
+
+    .copy {
+      margin-top: -3.5rem;
+      padding-block: 0;
+    }
+
+    .words-right .copy > :global(*) {
+      margin-left: 0;
+    }
+  }
+</style>

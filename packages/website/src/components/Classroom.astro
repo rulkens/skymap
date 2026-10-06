@@ -1,26 +1,17 @@
 ---
+import AddressStrip from './AddressStrip.astro';
 import ObjLink from './ObjLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
-import { APP_BASE, appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
 import { sitePath } from '../utils/sitePath';
-
-// The example address is built from the same hash the deep-link test parses.
-const params = new URLSearchParams(HOME_LINKS.classroom);
-const origin = new URL(Astro.site!).origin;
-const host = new URL(Astro.site!).host;
 ---
 
 <section class="wrap section row" id="classroom">
   <div class="frame">
     <Shot id="classroom-jupiter" sizes="(max-width: 900px) 60vw, 55vw" />
-    <div class="strip">
-      <a class="address" href={appLink(HOME_LINKS.classroom)}>
-        {host}{APP_BASE}#focus=<wbr /><b>{params.get('focus')}</b><wbr />&amp;t=<b>{params.get('t')}</b>
-      </a>
-      <button class="ring small" type="button" data-copy={origin + appLink(HOME_LINKS.classroom)}>Copy the address</button>
-    </div>
+    <!-- The example address is built from the same hash the deep-link test parses. -->
+    <AddressStrip hash={HOME_LINKS.classroom} />
     <ShotCaption id="classroom-jupiter" open={false} />
   </div>
   <div class="copy">
@@ -33,18 +24,6 @@ const host = new URL(Astro.site!).host;
     <ObjLink href={sitePath('/classroom/')}>Classroom guide</ObjLink>
   </div>
 </section>
-
-<script>
-  // The label changes instead of anything appearing, so nothing shifts; it reverts so the control can be used again.
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
-    const label = button.textContent;
-    button.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(button.dataset.copy!);
-      button.textContent = 'Copied';
-      setTimeout(() => (button.textContent = label), 2000);
-    });
-  }
-</script>
 
 <style>
   .row {
@@ -62,36 +41,6 @@ const host = new URL(Astro.site!).host;
 
   .frame :global(.caption) {
     margin-top: 0.5rem;
-  }
-
-  /* The one boxed element on the site: it depicts a browser's address field, and it is the real link. */
-  .strip {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0 1.5rem;
-    margin-top: 0.75rem;
-  }
-
-  .address {
-    flex: 1 1 18rem;
-    padding: 0.75rem;
-    border: 1px solid rgb(232 238 255 / 0.28);
-    border-radius: 0.25rem;
-    font: 400 0.875rem / 1.6 var(--font-family-mono);
-    color: var(--site-text-dim);
-    text-decoration: none;
-  }
-
-  /* Lines break only between parameters, never inside a name or a date. */
-  .address b {
-    white-space: nowrap;
-    font-weight: 400;
-    color: var(--color-fg);
-  }
-
-  .address:hover {
-    border-color: var(--color-accent);
   }
 
   @media (max-width: 900px) {

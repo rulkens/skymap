@@ -7,15 +7,16 @@
 import { fact } from '../data/fact';
 import { formatDate } from '../utils/formatDate';
 
-type Props = { ids: readonly string[] };
+type Props = { ids: readonly string[]; label?: string };
 
-const rows = [...new Set(Astro.props.ids)].map(fact);
+const { ids, label = 'Sources for the numbers on this page' } = Astro.props;
+const rows = [...new Set(ids)].map(fact);
 ---
 
 {
   rows.length > 0 && (
     <details class="sources small">
-      <summary class="ring small">Sources for the numbers on this page ({rows.length})</summary>
+      <summary class="ring small">{label} ({rows.length})</summary>
       <ol>
         {rows.map((row) => (
           <li>

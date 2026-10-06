@@ -1,0 +1,77 @@
+---
+/*
+ * AddressStrip — an app address shown as a browser's address field, which is
+ * also the link, with a control that copies it. The one boxed element on the
+ * site: it depicts a real field. Lines break only between parameters.
+ */
+import { APP_BASE, appLink } from '../data/appLink';
+
+type Props = { hash: string };
+
+const { hash } = Astro.props;
+const origin = new URL(Astro.site!).origin;
+const host = new URL(Astro.site!).host;
+const params = hash.split('&').map((pair) => {
+  const at = pair.indexOf('=');
+  return { key: pair.slice(0, at), value: pair.slice(at + 1) };
+});
+---
+
+<div class="strip">
+  <a class="address" href={appLink(hash)}>
+    {host}{APP_BASE}#{
+      params.map((param, i) => (
+        <>
+          {i > 0 && '&'}
+          {param.key}=<wbr />
+          <b>{param.value}</b>
+          <wbr />
+        </>
+      ))
+    }
+  </a>
+  <button class="ring small" type="button" data-copy={origin + appLink(hash)}>Copy the address</button>
+</div>
+
+<script>
+  // The label changes instead of anything appearing, so nothing shifts; it reverts so the control can be used again.
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    const label = button.textContent;
+    button.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(button.dataset.copy!);
+      button.textContent = 'Copied';
+      setTimeout(() => (button.textContent = label), 2000);
+    });
+  }
+</script>
+
+<style>
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .address {
+    flex: 1 1 18rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid rgb(232 238 255 / 0.28);
+    border-radius: 0.25rem;
+    font: 400 0.875rem / 1.6 var(--font-family-mono);
+    color: var(--site-text-dim);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .address b {
+    font-weight: 400;
+    color: var(--color-fg);
+  }
+
+  .address:hover {
+    border-color: var(--color-accent);
+  }
+</style>

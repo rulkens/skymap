@@ -11,6 +11,8 @@ import { NAV_ITEMS } from '../data/nav';
 import { sitePath } from '../utils/sitePath';
 
 const home = sitePath('/');
+// The page you are on keeps its ring filled, like the app's selected object.
+const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page' : undefined);
 ---
 
 <div class="ground" aria-hidden="true"></div>
@@ -22,7 +24,7 @@ const home = sitePath('/');
       {
         NAV_ITEMS.map((item) => (
           <li>
-            <ObjLink size="small" href={sitePath(item.path)}>
+            <ObjLink size="small" href={sitePath(item.path)} aria-current={current(item.path)}>
               {item.label}
             </ObjLink>
           </li>
@@ -37,7 +39,9 @@ const home = sitePath('/');
         {
           NAV_ITEMS.map((item) => (
             <li>
-              <ObjLink href={sitePath(item.path)}>{item.label}</ObjLink>
+              <ObjLink href={sitePath(item.path)} aria-current={current(item.path)}>
+                {item.label}
+              </ObjLink>
             </li>
           ))
         }

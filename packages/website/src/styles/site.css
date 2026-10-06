@@ -209,6 +209,7 @@ img {
 }
 
 .ring[aria-pressed='true']::before,
+.ring[aria-current='page']::before,
 [open] > .ring::before {
   background: var(--color-accent);
 }
