@@ -34,6 +34,7 @@ const FIELDS = [
   CONTACT_ENDPOINT ? (
     <form class="form" method="post" action={CONTACT_ENDPOINT} data-contact>
       <div class="summary" role="alert" tabindex="-1" data-summary hidden />
+      <p class="note small">All four fields are needed.</p>
       {FIELDS.map((field) => (
         <div class="field">
           <label for={`contact-${field.name}`}>{field.label}</label>
@@ -121,8 +122,7 @@ const FIELDS = [
       return message;
     };
 
-    for (const field of fields) field.addEventListener('blur', () => field.getAttribute('aria-invalid') && check(field));
-
+    // Fields are checked on submit only: a message that vanished on blur would move the button out from under a click.
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       status.textContent = '';
@@ -154,7 +154,7 @@ const FIELDS = [
         status.textContent = 'Your message has been sent.';
       } catch {
         status.textContent =
-          'The message was not sent: the server did not accept it. What you wrote is still in the form. Try again in a few minutes.';
+          'The message was not sent. What you wrote is still in the form. Try again in a few minutes.';
       } finally {
         button.disabled = false;
       }
@@ -231,7 +231,7 @@ const FIELDS = [
 
   .summary :global(a) {
     display: block;
-    padding-block: 0.4rem;
+    padding-block: 0.5rem;
     color: #ffb4a6;
   }
 
