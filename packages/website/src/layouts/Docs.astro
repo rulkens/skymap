@@ -59,7 +59,9 @@ const turns = [
         <p class="where small" data-pagefind-ignore>
           <a href={sitePath('/docs/')}>Docs</a>
           <span aria-hidden="true">/</span>
-          <a href={`${sitePath('/docs/')}#${group.name.toLowerCase()}`}>{group.name}</a>
+          <a href={`${sitePath('/docs/')}#${group.name.toLowerCase()}`}>
+            {group.name}<span class="unseen">, a group of the docs</span>
+          </a>
         </p>
         <h1>{title}</h1>
         <p class="say">{description}</p>

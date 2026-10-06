@@ -91,22 +91,19 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       { title: 'Credits', path: '/docs/credits/', status: 'planned', up: '/domes/' },
       { title: 'Cite', path: '/docs/cite/', status: 'planned', up: '/science/' },
       {
-        title: 'Workbenches',
+        title: 'Developer workbenches',
         path: '/docs/developers/workbenches/',
         status: 'planned',
-        under: 'For developers',
       },
       {
         title: 'Command-line tools',
         path: '/docs/developers/cli/',
         status: 'planned',
-        under: 'For developers',
       },
       {
         title: 'Debug panel and flags',
         path: '/docs/developers/debug/',
         status: 'planned',
-        under: 'For developers',
       },
     ],
   },

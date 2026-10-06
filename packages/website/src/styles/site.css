@@ -170,6 +170,16 @@ img {
   white-space: nowrap;
 }
 
+/* Words for a screen reader only: what a sighted reader takes from where a thing stands or how it is set. */
+.unseen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* A key of the keyboard, drawn as a key: the one outlined thing in running text. */
 kbd {
   display: inline-block;

@@ -160,15 +160,6 @@ const { current } = Astro.props;
     border-top: 1px solid var(--border-divider);
   }
 
-  .unseen {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
   /* The search control's ring hangs where the list's markers do, so its label starts on the same edge. */
   .docs-nav > :global(.search-open) {
     margin-left: calc(-1 * var(--hang));

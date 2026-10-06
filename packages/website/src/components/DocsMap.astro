@@ -114,15 +114,6 @@ const written = pages.filter((page) => page.status === 'live').length;
     color: var(--site-text-faint);
   }
 
-  .unseen {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
   @media (min-width: 901px) {
     .about {
       grid-column: span 3;
