@@ -53,7 +53,9 @@ describe('app links', () => {
   });
 
   it('only ViewLink puts the view mark on a ring', () => {
-    const marked = files.filter((file) => /icon="(view|launch)"/.test(file.text)).map((file) => file.name);
+    const marked = files
+      .filter((file) => /icon="(view|launch)"/.test(file.text))
+      .map((file) => file.name);
     expect(marked).toEqual(['components/ViewLink.astro']);
   });
 });
