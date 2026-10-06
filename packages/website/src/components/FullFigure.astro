@@ -1,0 +1,51 @@
+---
+/*
+ * FullFigure — one picture across the whole page, between sections. It fades
+ * to the page's black above and below so no frame edge shows, and its caption
+ * sits in the text column under it.
+ */
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+
+type Props = { id: string; tall?: string };
+
+const { id, tall } = Astro.props;
+---
+
+<figure class="full">
+  <div class="frame">
+    <Shot id={id} tall={tall} sizes="100vw" />
+  </div>
+  <figcaption class="wrap"><ShotCaption id={id} /></figcaption>
+</figure>
+
+<style>
+  .full {
+    margin: var(--section-space) 0 0;
+  }
+
+  .frame {
+    position: relative;
+    background: #000;
+  }
+
+  .frame :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 92svh;
+    object-fit: cover;
+  }
+
+  .frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 14%, rgb(0 0 0 / 0) 86%, #000 100%);
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+</style>

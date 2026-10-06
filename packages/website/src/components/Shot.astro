@@ -1,0 +1,41 @@
+---
+/*
+ * Shot — one picture from the shot manifest, by id. `tall` names a second
+ * manifest row shot for upright screens; it replaces the picture below 700px
+ * (art direction, not a crop), and each source carries its own size so the
+ * box is reserved either way. Alt text comes from the manifest unless the
+ * picture is decoration beside its own words. `sizes` may understate a phone's
+ * width on purpose: at 3x the full figure would fetch the desktop file.
+ */
+import { siteShot } from '../data/siteShot';
+import { shotSources } from '../utils/shotSources';
+
+type Props = { id: string; tall?: string; sizes: string; alt?: string; eager?: boolean };
+
+const { id, tall, sizes, alt, eager = false } = Astro.props;
+const wide = shotSources(id);
+const upright = tall ? shotSources(tall) : undefined;
+const TALL_MEDIA = '(max-width: 700px)';
+---
+
+<picture>
+  {
+    upright && (
+      <>
+        <source media={TALL_MEDIA} type="image/avif" srcset={upright.avif} sizes="100vw" width={upright.width} height={upright.height} />
+        <source media={TALL_MEDIA} type="image/webp" srcset={upright.webp} sizes="100vw" width={upright.width} height={upright.height} />
+      </>
+    )
+  }
+  <source type="image/avif" srcset={wide.avif} sizes={sizes} width={wide.width} height={wide.height} />
+  <img
+    src={wide.fallback}
+    srcset={wide.webp}
+    sizes={sizes}
+    width={wide.width}
+    height={wide.height}
+    alt={alt ?? siteShot(id).alt}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+  />
+</picture>

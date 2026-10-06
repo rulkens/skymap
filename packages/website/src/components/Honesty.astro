@@ -1,13 +1,15 @@
 ---
 import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
 import { HONESTY } from '../data/honesty';
 import { sitePath } from '../utils/sitePath';
 
 // The three words keep one meaning across the site (08, house style).
 const BINS = [
-  { id: 'measured', title: 'Measured', gloss: 'An instrument recorded it.' },
-  { id: 'derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
-  { id: 'drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
+  { id: 'measured', shot: 'galaxies-measured', title: 'Measured', gloss: 'An instrument recorded it.' },
+  { id: 'derived', shot: 'filaments-derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
+  { id: 'drawn', shot: 'milky-way-drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
 ] as const;
 ---
 
@@ -21,6 +23,12 @@ const BINS = [
       <div class="bin">
         <h3>{bin.title}</h3>
         <p class="gloss small">{bin.gloss}</p>
+        <figure>
+          <Shot id={bin.shot} sizes="(max-width: 900px) 50vw, 24rem" />
+          <figcaption>
+            <ShotCaption id={bin.shot} />
+          </figcaption>
+        </figure>
         <ul class="small">
           {HONESTY[bin.id].map((item) => (
             <li>
@@ -53,10 +61,20 @@ const BINS = [
     margin-bottom: 0;
   }
 
-  /* The rule belongs to each list, so the three read as columns of one table. */
-  .bin {
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-divider);
+  /* One picture heads each list: an example of the word, with its own address. */
+  figure {
+    margin: 0 0 1rem;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    min-height: 6em;
+    margin-top: 0.5rem;
   }
 
   .gloss {
@@ -82,7 +100,8 @@ const BINS = [
       grid-template-columns: 1fr;
     }
 
-    .gloss {
+    .gloss,
+    figcaption {
       min-height: 0;
     }
   }

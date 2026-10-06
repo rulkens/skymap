@@ -1,25 +1,18 @@
 ---
-import { Picture } from 'astro:assets';
-
 import ObjLink from './ObjLink.astro';
-// PLACEHOLDER SLOT (dome-image): a flat frame cropped to a disc. The copy promises fisheye output, so this must become
-// a real fisheye render from the app's dome mode.
-import still from '../assets/flight/cosmic-web-landscape.avif';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
 import { sitePath } from '../utils/sitePath';
 ---
 
 <section class="wrap section row" id="dome">
-  <div class="dome">
-    <Picture
-      src={still}
-      alt="The cosmic web in skymap: a purple and orange density map with catalogued galaxies as points."
-      formats={['avif', 'webp']}
-      fallbackFormat="webp"
-      widths={[480, 800, 1200]}
-      sizes="(max-width: 900px) 90vw, 40vw"
-      loading="lazy"
-    />
-  </div>
+  <figure>
+    <!-- The frame is the app's own fisheye output, a disc inscribed in a square: the round mask trims only its black corners. -->
+    <div class="dome">
+      <Shot id="dome-saturn" sizes="(max-width: 900px) 60vw, 40vw" />
+    </div>
+    <figcaption><ShotCaption id="dome-saturn" /></figcaption>
+  </figure>
   <div class="copy">
     <h2>Put it on a dome</h2>
     <p class="proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
@@ -37,6 +30,15 @@ import { sitePath } from '../utils/sitePath';
     grid-template-columns: 5fr 6fr;
     gap: 5rem;
     align-items: center;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  figcaption {
+    max-width: 38.75rem;
+    margin: 2.5rem auto 0;
   }
 
   .dome {

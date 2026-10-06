@@ -1,27 +1,21 @@
 ---
-import { Picture } from 'astro:assets';
-
 import ObjLink from './ObjLink.astro';
-// PLACEHOLDER SLOT (tour-image): the flight's Local Group still stands in until a frame from the tour itself is shot.
-import tourStill from '../assets/flight/local-group-landscape.avif';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
 import { appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
 ---
 
 <section class="tour">
-  <Picture
-    src={tourStill}
-    alt="The Local Group and nearby galaxy groups in skymap: translucent spheres mark the groups among catalogued galaxies."
-    formats={['avif', 'webp']}
-    fallbackFormat="webp"
-    widths={[640, 960, 1280, 1600]}
-    sizes="100vw"
-    loading="lazy"
-  />
+  <Shot id="tour-cosmic-web" sizes="100vw" />
   <div class="over">
     <h2>Take the tour</h2>
-    <p>The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe and back.</p>
+    <p>
+      The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe
+      and back. Some of the light in it left before our species existed. The tour is shorter.
+    </p>
     <ObjLink href={appLink(HOME_LINKS.tour)}>Start the tour</ObjLink>
+    <ShotCaption id="tour-cosmic-web" open={false} />
   </div>
 </section>
 
@@ -41,21 +35,25 @@ import { HOME_LINKS } from '../data/homeLinks';
     object-fit: cover;
   }
 
-  /* Local scrim: the left third, where the words are. */
+  /* The frame is black where the words sit; the scrim only softens the web's lower edge behind them. */
   .tour::after {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(90deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.5) 38%, rgb(0 0 0 / 0) 62%);
+    background: linear-gradient(20deg, rgb(0 0 0 / 0.94) 0%, rgb(0 0 0 / 0.78) 30%, rgb(0 0 0 / 0) 58%);
   }
 
   .over {
     position: absolute;
     z-index: 2;
     left: max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter));
-    bottom: 12%;
-    max-width: 26rem;
+    bottom: 9%;
+    max-width: 28rem;
+  }
+
+  .over :global(.caption) {
+    margin-top: 1.25rem;
   }
 
   .over :global(.ring) {
@@ -69,6 +67,7 @@ import { HOME_LINKS } from '../data/homeLinks';
 
     .tour :global(img) {
       aspect-ratio: 4 / 3;
+      object-position: 35% 50%;
     }
 
     .over {

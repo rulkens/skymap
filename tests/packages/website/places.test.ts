@@ -6,12 +6,11 @@
  * rest (bodies, galaxies, structures, black holes) only against the palette's own
  * focus cards, which is the list the app dispatches `requestFocus` from.
  */
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { PLACES } from '../../../packages/website/src/data/places';
 import { fact } from '../../../packages/website/src/data/fact';
+import { siteShot } from '../../../packages/website/src/data/siteShot';
 import { appLink, APP_BASE } from '../../../packages/website/src/data/appLink';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
@@ -49,12 +48,8 @@ describe.each(PLACES)('place $id', (place) => {
     if (id.startsWith('star-')) expect(starIds.has(id), `${id} not in famous stars`).toBe(true);
   });
 
-  it('its image exists in the shared featured set and its fact row exists', () => {
-    expect(place.image).toMatch(/^\/images\/featured\/[^/]+\.webp$/);
-    expect(
-      existsSync(resolve(import.meta.dirname, '../../../public', place.image.slice(1))),
-      place.image,
-    ).toBe(true);
+  it('its thumbnail is a row of the shot manifest and its fact row exists', () => {
+    expect(() => siteShot(place.shot)).not.toThrow();
     if (place.factId) expect(() => fact(place.factId!)).not.toThrow();
   });
 });

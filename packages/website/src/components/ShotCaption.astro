@@ -1,0 +1,40 @@
+---
+/*
+ * ShotCaption — the line under a picture: what is data and what is drawn, the
+ * credit where third-party imagery is in frame, and the address the picture
+ * was taken at. Every picture being an address is the site's honesty device.
+ */
+import { appLink } from '../data/appLink';
+import { siteShot } from '../data/siteShot';
+
+type Props = { id: string; open?: boolean };
+
+const { id, open = true } = Astro.props;
+const shot = siteShot(id);
+---
+
+<p class="caption small">
+  {shot.caption}
+  {shot.credit && <span class="credit">{shot.credit}.</span>}
+  {open && <a href={appLink(shot.link, shot.query)}>Open this view</a>}
+</p>
+
+<style>
+  .caption {
+    max-width: 60ch;
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  .credit::before {
+    content: ' ';
+  }
+
+  a {
+    display: inline-block;
+    margin-left: 0.25em;
+    padding-block: 0.6rem;
+    margin-block: -0.6rem;
+    white-space: nowrap;
+  }
+</style>

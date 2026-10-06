@@ -1,10 +1,7 @@
 ---
-import { Picture } from 'astro:assets';
-
 import ObjLink from './ObjLink.astro';
-// PLACEHOLDER SLOT (classroom-image): the copy and the address say Jupiter on 14 March 2027; this is the flight's
-// outer-planets still until that exact view is shot from the app.
-import still from '../assets/flight/outer-planets-landscape.avif';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
 import { APP_BASE, appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
 import { sitePath } from '../utils/sitePath';
@@ -17,27 +14,21 @@ const host = new URL(Astro.site!).host;
 
 <section class="wrap section row" id="classroom">
   <div class="frame">
-    <Picture
-      src={still}
-      alt="The solar system in skymap: the planets' orbits with labels, and catalogued stars behind."
-      formats={['avif', 'webp']}
-      fallbackFormat="webp"
-      widths={[640, 960, 1280]}
-      sizes="(max-width: 900px) 100vw, 55vw"
-      loading="lazy"
-    />
+    <Shot id="classroom-jupiter" sizes="(max-width: 900px) 60vw, 55vw" />
     <div class="strip">
       <a class="address" href={appLink(HOME_LINKS.classroom)}>
         {host}{APP_BASE}#focus=<wbr /><b>{params.get('focus')}</b><wbr />&amp;t=<b>{params.get('t')}</b>
       </a>
       <button class="ring small" type="button" data-copy={origin + appLink(HOME_LINKS.classroom)}>Copy the address</button>
     </div>
+    <ShotCaption id="classroom-jupiter" open={false} />
   </div>
   <div class="copy">
     <h2>Use it in a classroom</h2>
     <p>
       Point the camera at Jupiter, set the date, and copy the address. Every pupil who opens the link lands on Jupiter
-      at that date. No accounts, nothing to install.
+      at that date. No accounts, nothing to install. The link carries the date, so next year’s class sees the same
+      sky.
     </p>
     <ObjLink href={sitePath('/classroom/')}>Classroom guide</ObjLink>
   </div>
@@ -67,8 +58,10 @@ const host = new URL(Astro.site!).host;
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
+  }
+
+  .frame :global(.caption) {
+    margin-top: 0.5rem;
   }
 
   /* The one boxed element on the site: it depicts a browser's address field, and it is the real link. */

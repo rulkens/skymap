@@ -32,6 +32,6 @@ describe('Home deep links', () => {
     );
     expect(view.kind).toBe('focus');
     expect(focusIds).toContain(view.kind === 'focus' ? view.id : '');
-    expect(t).toBe(Date.UTC(2027, 2, 14, 21, 0, 0));
+    expect(t).toBe(Date.UTC(2033, 2, 14, 21, 0, 0));
   });
 });

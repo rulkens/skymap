@@ -6,6 +6,8 @@ import Places from '../components/Places.astro';
 import Tour from '../components/Tour.astro';
 import Classroom from '../components/Classroom.astro';
 import Dome from '../components/Dome.astro';
+import Closing from '../components/Closing.astro';
+import FullFigure from '../components/FullFigure.astro';
 import Honesty from '../components/Honesty.astro';
 import Sources from '../components/Sources.astro';
 import Credits from '../components/Credits.astro';
@@ -31,6 +33,9 @@ const factIds = [
   'sondermarken-flyout',
   'geodanmark-orthophoto',
   'grand-tour-steps',
+  'flight-camera-path',
+  'megaparsec-length',
+  'speed-of-light',
 ];
 ---
 
@@ -43,10 +48,12 @@ const factIds = [
   <Flight stills={stills} videoUrl={heroVideoUrl()} />
   <Lead />
   <Places />
+  <FullFigure id="hubble" tall="hubble-portrait" />
   <Tour />
   <Classroom />
   <Dome />
   <Honesty />
+  <Closing />
   <div class="wrap section last">
     <Sources ids={factIds} />
     <Credits />
