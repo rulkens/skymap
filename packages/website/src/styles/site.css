@@ -237,6 +237,21 @@ img {
 }
 
 /*
+ * Hung in the margin: the marker stands left of the text edge, so a stack of
+ * links of different sizes lines its labels up with the paragraph above. Only
+ * where the page has margin enough to hold the big marker.
+ */
+@media (min-width: 1200px) {
+  .ring.hang {
+    margin-left: -1.8125rem;
+  }
+
+  .ring.big.hang {
+    margin-left: -2.875rem;
+  }
+}
+
+/*
  * A navigation link carries a drawing of its destination where the marker
  * would be (components/Icon.astro). The ring is still the selection: it is
  * drawn around the drawing when the link is pointed at, focused or the page
