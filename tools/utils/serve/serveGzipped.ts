@@ -19,6 +19,9 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.woff2': 'font/woff2',
 };
+// Node's 10 MB default resets every stream (ENHANCE_YOUR_CALM) once the queued
+// response bodies pass it, which a few concurrent catalog downloads do at once.
+const H2_SESSION_MEMORY_MB = 1024;
 const TEXT_EXTENSIONS: readonly string[] = ['.html', '.js', '.css', '.svg'];
 
 /**
@@ -65,7 +68,10 @@ export async function serveGzipped(
   const server =
     certs === undefined
       ? createServer(handle)
-      : createSecureServer({ ...certs, allowHTTP1: true }, handle as never);
+      : createSecureServer(
+          { ...certs, allowHTTP1: true, maxSessionMemory: H2_SESSION_MEMORY_MB },
+          handle as never,
+        );
   await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
   const bound = (server.address() as AddressInfo).port;
   return {
