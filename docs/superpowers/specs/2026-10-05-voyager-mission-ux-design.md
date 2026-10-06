@@ -321,3 +321,13 @@ Distances are **from the body's centre**, because that is what the tool measures
 3. Event kinds widened (`launch | flyby | boundary | milestone`) with the extra cited literals.
 4. Voyager 2 trail moves toward a deeper copper; labels and lanes still carry identity.
 5. The exhibit leaves the visitor's clock rate alone (N4 stays Next).
+
+### Revision 1 (user, 2026-10-06): one craft at a time
+
+Both craft in one timeline confused: the interleaved event list, the two lanes on one track, and the time control. Rulings (sketch: two-variant mockup in the dash, variant B chosen):
+
+1. **Craft switch.** Two tabs, Voyager 1 / Voyager 2, at the top of the timeline. The chapter bar, the scrubber ticks and the event card show only the selected craft's events. The clock stays shared.
+2. **Story-first time control.** A chapter bar (one segment per event of the selected craft, past / current / future) plus Previous / Next buttons with an "n of m" count. A faint one-lane scrubber sits below and still drags freely; its dots jump to events. `,` / `.` step through the selected craft's events only.
+3. **Event card replaces the list.** Only the current event shows: date, label, caption, flyby distance.
+4. **Era-split axis kept** on the scrubber.
+5. **The other craft dims** in the 3D view: its trail and its label render dimmed, not hidden. The emphasis ends when the exhibit exits.
