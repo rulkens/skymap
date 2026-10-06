@@ -50,9 +50,7 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
       A lesson link is a web address that opens skymap on one object at one date. Every pupil who opens it lands in
       the same place. This one is Jupiter on 14 March 2033.
     </p>
-    <div class="link">
-      <AddressStrip hash={HOME_LINKS.classroom} />
-    </div>
+    <AddressStrip hash={HOME_LINKS.classroom} />
     <ShotCaption id="classroom-hero" />
   </PictureBand>
 
@@ -86,7 +84,7 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
     <div class="head">
       <h2>Ready-made links</h2>
       <p>
-        {lessonCount} links in {LESSON_TOPICS.length} topics. Each opens exactly where its picture was taken. The
+        {lessonCount} links, sorted by topic. Each opens exactly where its picture was taken. The
         pictures have the name labels switched off; the links open with them on.
       </p>
     </div>
@@ -199,7 +197,6 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
   }
 
   .say {
-    max-width: 30rem;
     font-size: var(--text-lead);
   }
 
@@ -219,10 +216,6 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
 
   .head h2 {
     max-width: 20ch;
-  }
-
-  .link {
-    max-width: 27rem;
   }
 
   /* The argument reads at body size; what it runs on is reference, set small beside it. */
@@ -315,10 +308,12 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
     min-width: 0;
   }
 
-  .steps .address :global(.address) {
-    flex-basis: 100%;
-    padding: 1.25rem;
-    font-size: 1rem;
+  @media (min-width: 901px) {
+    .steps .address :global(.address) {
+      flex-basis: 100%;
+      padding: 1.25rem;
+      font-size: 1rem;
+    }
   }
 
   .limits {
@@ -346,16 +341,28 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
       grid-template-columns: 1fr;
     }
 
-    .link {
-      max-width: none;
-    }
-
     .runs {
       padding-left: 1.25rem;
     }
 
+    /* The step's name first, then its picture, then the rest of the words. */
     .steps li {
+      row-gap: 0;
       padding-block: 2rem;
+    }
+
+    .steps li > div:last-child {
+      display: contents;
+    }
+
+    .steps h3 {
+      order: -1;
+      margin-bottom: 1rem;
+    }
+
+    .steps figure,
+    .steps .address {
+      margin-bottom: 1.25rem;
     }
   }
 </style>

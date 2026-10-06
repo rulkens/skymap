@@ -23,12 +23,10 @@ const params = hash.split('&').map((pair) => {
     !bare && (
       <a class="address" href={appLink(hash)}>
         {host}{APP_BASE}#{params.map((param, i) => (
-          <>
+          <span>
             {i > 0 && '&'}
-            {param.key}=<wbr />
-            <b>{param.value}</b>
-            <wbr />
-          </>
+            {param.key}=<b>{param.value}</b>
+          </span>
         ))}
       </a>
     )
@@ -67,6 +65,12 @@ const params = hash.split('&').map((pair) => {
     color: var(--site-text-dim);
     text-decoration: none;
     overflow-wrap: anywhere;
+  }
+
+  /* A parameter moves to the next line whole; it breaks inside only when it is wider than the field. */
+  .address span {
+    display: inline-block;
+    max-width: 100%;
   }
 
   .address b {

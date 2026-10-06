@@ -111,9 +111,9 @@ const STEPS = [
       </div>
     </article>
 
-    <article class="offer">
+    <article class="offer wide">
       <figure>
-        <Shot id="tour-cosmic-web" sizes="(max-width: 900px) 100vw, 36rem" />
+        <Shot id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" />
         <figcaption><ShotCaption id="tour-cosmic-web" open={false} /></figcaption>
       </figure>
       <div>
@@ -266,9 +266,10 @@ const STEPS = [
     font-variant-numeric: tabular-nums;
   }
 
+  /* Never taller than the screen it is on, which matters on a phone held sideways. */
   .disc {
     width: 100%;
-    max-width: 44rem;
+    max-width: min(44rem, 78svh);
     aspect-ratio: 1;
     margin-inline: auto;
     border-radius: 50%;
@@ -280,7 +281,7 @@ const STEPS = [
   }
 
   .offer .disc {
-    max-width: 26rem;
+    max-width: min(26rem, 78svh);
     margin: 1.1875rem auto;
   }
 
@@ -320,6 +321,36 @@ const STEPS = [
 
   .offer h3 {
     font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+  }
+
+  /* The film is the flat one of the three: its frame runs the full width, with the words in a row under it. */
+  @media (min-width: 901px) {
+    .wide {
+      grid-template-columns: 1fr;
+    }
+
+    .wide > div {
+      display: grid;
+      grid-template-columns: 5fr 7fr;
+      column-gap: 3.75rem;
+      align-items: start;
+    }
+
+    .wide > div > :global(*) {
+      grid-column: 1;
+    }
+
+    .wide dl {
+      grid-area: 1 / 2 / span 3;
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: auto 1fr;
+      gap: 0 2.5rem;
+    }
+
+    .wide dt {
+      margin-top: 0.5rem;
+    }
   }
 
   dl {
@@ -424,8 +455,32 @@ const STEPS = [
       order: 2;
     }
 
-    .disc {
-      max-width: 85%;
+    .hero .disc,
+    .offer .disc {
+      max-width: min(85%, 78svh);
+    }
+
+    .hero figcaption {
+      max-width: none;
+      margin-inline: 0;
+    }
+
+    /* The heading first, then its picture, then the rest of the words. */
+    .offer {
+      row-gap: 0;
+    }
+
+    .offer > div {
+      display: contents;
+    }
+
+    .offer h3 {
+      order: -1;
+      margin-bottom: 1.25rem;
+    }
+
+    .offer figure {
+      margin-bottom: 1.5rem;
     }
 
     .steps {

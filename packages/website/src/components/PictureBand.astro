@@ -77,11 +77,20 @@ const { id, tall, words = 'left', gap = 'full', eager = false } = Astro.props;
       linear-gradient(270deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.65) 32%, rgb(0 0 0 / 0) 56%);
   }
 
-  /* A header has no section above it to fade out of. */
+  /*
+   * A header has no section above it to fade out of. Its words include small dim text, so the dark side holds 0.8
+   * as far as the words reach (40% of the width): the least that keeps 4.5:1 over a white star.
+   */
   .gap-none .back::after {
     background:
       linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
-      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+      linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0.8) 40%, rgb(0 0 0 / 0) 64%);
+  }
+
+  @media (min-width: 901px) {
+    .gap-none .copy > :global(*) {
+      max-width: min(27rem, 34vw);
+    }
   }
 
   .copy {
