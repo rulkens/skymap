@@ -120,6 +120,7 @@ export function sceneBodyLabels(
         scaleToUnitMax(body.albedo),
         'meshBody',
       ),
+      bodyId: body.id,
       revealBand: captionRevealBand(body.captionRevealM),
     })),
   ];

@@ -16,3 +16,9 @@ export const selectOrbitTrailsEnabled = createSelector(
   [selectRoute],
   (route: OrbitTrailsSettings): boolean => route.enabled,
 );
+
+/** The emphasised sampled craft's id, or null for none. */
+export const selectMissionEmphasis = createSelector(
+  [selectRoute],
+  (route: OrbitTrailsSettings): string | null => route.emphasis,
+);

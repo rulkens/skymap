@@ -20,6 +20,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
 import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
 import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
+import { emphasisDim } from '../../../../utils/scene/emphasisDim';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 export const missionTrailsPass: ContentPass = {
@@ -59,11 +60,12 @@ export const missionTrailsPass: ContentPass = {
     for (const { id, trailColor } of SAMPLED_BODIES) {
       const track = tracks.get(id);
       if (track === undefined) continue;
+      const dim = emphasisDim(state.settings.orbitTrails.emphasis, id);
       const k = trailVertexCount(track.tDays, ctx.snapshot.simDays);
       if (k === 0) continue;
       // Past the last vertex the craft is held on it: no head segment to draw.
       const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
-      renderer.drawTrail(pass, id, trailColor, layerOpacity, k - 1, head);
+      renderer.drawTrail(pass, id, trailColor, layerOpacity * dim, k - 1, head);
     }
   },
 };

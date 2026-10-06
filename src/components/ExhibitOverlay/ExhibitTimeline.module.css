@@ -137,10 +137,6 @@
   background: none;
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
-.tick.hot {
-  outline: 1px solid var(--color-accent);
-  outline-offset: 3px;
-}
 
 .thumb {
   position: absolute;
@@ -197,80 +193,119 @@
   transform: translateX(-100%);
 }
 
-/* ── Event list ─────────────────────────────────────────────────────── */
-.list {
+/* ── Craft tabs ─────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tab {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-bottom: 2px solid transparent;
+  border-radius: 3px;
+  color: var(--color-fg-tertiary);
+}
+.tab:hover {
+  color: var(--color-fg);
+}
+.tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tabSelected {
+  color: var(--color-fg);
+  border-color: var(--lane);
+  border-bottom-color: var(--lane);
+}
+.tabName {
+  font-family: var(--font-family-display);
+  font-size: 14px;
+}
+.tabSub {
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-tertiary);
+}
+
+/* ── Story: chapter bar, event card, stepper ────────────────────────── */
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chapters {
+  display: flex;
+  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-
-.item {
-  border-left: 2px solid transparent;
+.chapterItem {
+  flex: 1;
 }
-.itemCurrent {
-  border-left-color: var(--color-accent);
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 8px 10ch 1fr auto;
-  align-items: center;
-  gap: 10px;
+.chapter {
+  display: block;
   width: 100%;
-  padding: 4px 0 4px 8px;
-  background: none;
-  border: 0;
+  height: 8px;
+  padding: 0;
   cursor: pointer;
   pointer-events: auto;
-  text-align: left;
-  font-family: var(--font-family-mono);
-  font-size: 11px;
-  color: var(--color-fg-tertiary);
+  background: rgba(168, 208, 255, 0.14);
+  border: 0;
+  border-radius: 1px;
 }
-.row:hover,
-.row:focus-visible,
-.row[aria-current='true'] {
-  color: var(--color-fg);
+.chapter:hover {
+  background: rgba(168, 208, 255, 0.35);
 }
-.row:focus-visible {
+.chapter:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
-
-.glyph {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+.chapterPast {
   background: var(--lane);
+  opacity: 0.55;
 }
-.glyph.launch {
-  background: none;
-  box-shadow: inset 0 0 0 1px var(--lane);
-}
-.glyph.boundary {
-  width: 2px;
-  height: 8px;
-  margin-left: 1.5px;
-  border-radius: 0;
-}
-.glyph.milestone {
-  border-radius: 0;
-  transform: rotate(45deg);
+.chapterCurrent {
+  background: var(--lane);
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--lane);
 }
 
-.date {
-  font-variant-numeric: tabular-nums;
-}
-.tag {
-  font-size: 9px;
-  color: var(--lane);
-}
-
-.detail {
+.card {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 0 8px 36px;
+  min-height: 7.5em;
+  padding-left: 10px;
+  border-left: 2px solid var(--lane);
+}
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.date {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-tertiary);
+}
+.cardLabel {
+  font-family: var(--font-family-display);
+  font-size: 15px;
+  color: var(--color-fg);
 }
 .caption {
   margin: 0;
@@ -286,6 +321,52 @@
   font-family: var(--font-family-mono);
   font-size: 10px;
   color: var(--color-fg-tertiary);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.step {
+  padding: 6px 10px;
+  cursor: pointer;
+  pointer-events: auto;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+}
+.step:hover:not(:disabled) {
+  color: var(--color-fg);
+  border-color: var(--lane);
+}
+.step:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.count {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-tertiary);
+}
+
+/* The scrubber still drags freely but sits behind the story controls until reached for. */
+.scrubber {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.scrubber:hover,
+.scrubber:focus-within {
+  opacity: 1;
 }
 
 /* ── Hint ───────────────────────────────────────────────────────────── */
@@ -316,7 +397,8 @@
 }
 
 @media (max-width: 768px) {
-  .row {
+  .step,
+  .tab {
     min-height: 40px;
   }
   .knob {
@@ -328,7 +410,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .detail {
+  .card {
     animation: detailIn 150ms ease-out;
   }
 }

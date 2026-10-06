@@ -9,8 +9,13 @@ import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { RootState } from '../../../src/store/types';
 
 const SAVED = MISSION_EVENTS;
-const stateAt = (iso: string, exhibit: 'voyager' | 'solarSystem' | null): RootState =>
+const stateAt = (
+  iso: string,
+  exhibit: 'voyager' | 'solarSystem' | null,
+  emphasis: string | null = null,
+): RootState =>
   ({
+    settings: { orbitTrails: { enabled: true, emphasis } },
     takeover: { active: exhibit ? { kind: 'exhibit', id: exhibit, entry: 'cut' } : null },
     time: {
       mode: 'manual',
@@ -48,6 +53,16 @@ describe('stepTimelineEvent', () => {
     expect(stepTimelineEvent(stateAt(SAVED.at(-1)!.iso, 'voyager'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', 'solarSystem'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', null), 1)).toBeNull();
+  });
+});
+
+describe('stepTimelineEvent with a craft emphasised', () => {
+  it("steps only through that craft's events", () => {
+    const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
+    const state = stateAt(v2[1]!.iso, 'voyager', 'voyager2');
+    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(v2[2]!)));
+    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(v2[0]!)));
+    expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager', 'voyager2'), 1)).toBeNull();
   });
 });
 

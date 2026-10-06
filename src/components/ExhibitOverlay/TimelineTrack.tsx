@@ -1,5 +1,5 @@
 /**
- * TimelineTrack — the slider part of the exhibit timeline: era headers, one lane per craft
+ * TimelineTrack — the scrubber of the exhibit timeline: era headers, the selected craft's lane
  * with its fill and event ticks, the thumb, and the year axis. Pointer drag and keys both
  * report instants through `onSeekMs`; the parent owns the clock.
  */
@@ -30,7 +30,6 @@ export type TimelineTrackProps = {
   readonly simMs: number;
   readonly endMs: number;
   readonly currentId: string | null;
-  readonly hotId: string | null;
   readonly onSeekMs: (ms: number) => void;
 };
 
@@ -46,7 +45,6 @@ function TimelineTrack({
   simMs,
   endMs,
   currentId,
-  hotId,
   onSeekMs,
 }: TimelineTrackProps): ReactNode {
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
@@ -148,7 +146,6 @@ function TimelineTrack({
                     styles[e.kind],
                     missionEventMs(e) <= simMs && styles.passed,
                     currentId === e.id && styles.current,
-                    hotId === e.id && styles.hot,
                   )}
                   style={{ left: pct(timelineFraction(missionEventMs(e), axis)) }}
                 />

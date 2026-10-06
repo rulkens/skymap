@@ -1,11 +1,6 @@
 import { missionEventMs } from './missionEventMs';
+import { SAME_INSTANT_MS } from '../../../data/exhibits/sameInstantMs';
 import type { MissionEvent } from '../../../@types/missions/MissionEvent';
-
-/**
- * Half a second: a clock just set to an event's instant must not count that event as still
- * ahead or behind, and the Julian-day round trip loses tens of microseconds.
- */
-const SAME_INSTANT_MS = 500;
 
 /** The nearest event strictly before (-1) or after (+1) `ms`; null at either end. */
 export function adjacentMissionEvent(

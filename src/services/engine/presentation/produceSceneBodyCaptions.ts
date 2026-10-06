@@ -14,6 +14,8 @@ import type { CaptionComposeContext } from '../../../@types/rendering/CaptionCom
 import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
+import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { emphasisDim } from '../../../utils/scene/emphasisDim';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
@@ -60,9 +62,14 @@ export function produceSceneBodyCaptions(
     occluders: sceneOccluderBodies(state, ctx),
   };
 
-  const labels = baseLabelsFor(sceneBodyStates(state, ctx), ctx.snapshot.simDays).map((label) =>
-    composeForegroundCaption(composeCtx, label, clipFactorBody),
-  );
+  // After the memo, never inside it: the memo only rebuilds when the sim clock moves, but the
+  // visitor can flip the emphasis while it is paused.
+  const emphasis = state.settings.orbitTrails.emphasis;
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx), ctx.snapshot.simDays).map((label) => {
+    const sampled = SAMPLED_BODIES.some((b) => b.id === label.bodyId);
+    const dim = sampled ? emphasisDim(emphasis, label.bodyId!) : 1;
+    return composeForegroundCaption(composeCtx, label, clipFactorBody * dim);
+  });
 
   return { labels, awake: false };
 }

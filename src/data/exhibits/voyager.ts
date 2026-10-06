@@ -65,7 +65,7 @@ export const voyager: Exhibit = {
   id: 'voyager',
   label: 'Voyager',
   settings: {
-    orbitTrails: { ...orbitTrailsInitialState, enabled: true },
+    orbitTrails: { ...orbitTrailsInitialState, enabled: true, emphasis: 'voyager1' },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
     picking: {
       kinds: {
@@ -91,7 +91,7 @@ export const voyager: Exhibit = {
     {
       kind: 'prose',
       heading: 'What you’re seeing',
-      text: 'Each line is one craft’s path since launch, from JPL’s tracking data. The lines grow as the clock runs and shrink when it runs back. Voyager 1, in pale gold, climbs north out of the planets’ plane after Saturn. Voyager 2, in copper, turns south after Neptune.',
+      text: 'Each line is one craft’s path since launch, from JPL’s tracking data. The lines grow as the clock runs and shrink when it runs back. Voyager 1, in pale gold, climbs north out of the planets’ plane after Saturn. Voyager 2, in copper, turns south after Neptune. The switch above the timeline picks which craft to follow; the other craft’s line and name dim.',
     },
     {
       kind: 'timeline',

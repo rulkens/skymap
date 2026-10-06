@@ -31,6 +31,8 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrAStar';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
+import { MISSION_EMPHASIS_DIM } from '../../../../src/data/missions/missionTrailStyle';
+import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -106,6 +108,7 @@ function makeState(
       },
     },
     settings: {
+      orbitTrails: { emphasis: null },
       bodies: { items: bodyItems },
       blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: true } } },
       starCatalogs: {
@@ -286,6 +289,33 @@ describe('produceSceneBodyCaptions', () => {
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const out = produceSceneBodyCaptions(makeState(true, {}, { bodyLabel: 0.25 }), makeCtx(camPos));
     expect(fadeAlphaOf(out.labels, EARTH_LABEL_ID)).toBeCloseTo(0.25);
+  });
+
+  it('dims only the non-emphasised sampled craft, on a state the memo already saw', () => {
+    // Sampled craft are captioned only once their track is loaded.
+    for (const id of ['voyager1', 'voyager2']) {
+      trajectoryRegistry.set({
+        id,
+        tDays: Float64Array.from([CONST_J2000 - 10, CONST_J2000 + 10]),
+        posKm: Float64Array.from([1e9, 0, 0, 1e9, 0, 0]),
+        velKmS: new Float32Array(6),
+      });
+    }
+    const loaded = sceneBodyLabels(deriveBodyStates(CONST_J2000), CONST_J2000);
+    const camPos = loaded.find((l) => l.id === 'sceneBody-voyager2')!.worldPos as Vec3;
+    const ctx = makeCtx(camPos, 1e-9);
+    const state = makeState();
+    const full = fadeAlphaOf(produceSceneBodyCaptions(state, ctx).labels, 'sceneBody-voyager2')!;
+    expect(full).toBeGreaterThan(0);
+
+    // Same bodyStates identity (paused clock), so only a post-memo dim can show the change.
+    (state.settings as { orbitTrails: { emphasis: string | null } }).orbitTrails.emphasis =
+      'voyager1';
+    const out = produceSceneBodyCaptions(state, ctx).labels;
+    expect(fadeAlphaOf(out, 'sceneBody-voyager2')).toBeCloseTo(full * MISSION_EMPHASIS_DIM);
+    expect(fadeAlphaOf(out, EARTH_LABEL_ID)).toBe(
+      fadeAlphaOf(produceSceneBodyCaptions(makeState(), ctx).labels, EARTH_LABEL_ID),
+    );
   });
 
   it('constellation captions do not double-count the registry', () => {
