@@ -78,6 +78,36 @@ rclone copyto public/data/site/earth-to-universe-v1.mp4 r2:skymap-data/data/site
 
 The name carries a version because the object is `immutable` and never purged: new bytes mean a new name, never an overwrite. Until the file is uploaded the page falls back to its poster. The data manifest's drift guard ignores `public/data/site/` (`allowDataFile` is an allow-list and names nothing there), so neither `build-data-manifest` nor `sync-r2` sees it.
 
+### Opening the contact form
+
+The website's form on `/domes/` posts to `POST /api/contact`, a route of the existing Worker (`src/worker.ts`, handler `src/services/worker/handleContact.ts`). It is **closed until you configure it**: while any of the four values below is missing the route answers `503 {"error":"not_configured"}` and does nothing else, and the site build shows "Contact opens soon" instead of the form until both site values are set. Every other request, and any other method on that path, goes to the static assets as before (`run_worker_first = ["/api/contact"]` in `wrangler.toml` only makes the Worker see that path; a `GET` there still gets the SPA fallback). The path is root-absolute and independent of the site's base, so the later move of the site to the root changes nothing here.
+
+What it does: checks `Origin` is the page's own origin, the content type is JSON, the body is at most 16 KB and each field within its cap (`src/data/worker/contactConfig.ts`), answers `200` without sending when the honeypot `website` is filled, verifies the Turnstile token with `siteverify`, then sends one plain-text email (`Reply-To` the visitor, `From` your own address) through the `send_email` binding. Statuses: 200 sent · 400 a field is invalid (the body names it) · 403 wrong `Origin` or spam check failed · 413 body too large · 415 not JSON · 502 Turnstile unreachable or the email provider refused · 503 not configured. It stores nothing (no KV, no D1) and logs only the provider's error code. There is no rate limit of its own (it would need new infrastructure); Turnstile is the guard, and a dashboard rate-limiting rule on `POST /api/contact` can be added later without a code change.
+
+Steps, in order (each is yours; nothing here has been done):
+
+1. **Email Routing and a verified destination.** Dashboard → the `rulkens.com` zone → Email → Email Routing → enable it, then add your own inbox as a destination address and click the link in the verification mail. A Worker may send only to a verified destination.
+2. **Email sending for the sender domain.** Dashboard → Compute → Email Service → Email Sending → Onboard Domain, and pick the domain (or a subdomain) the sender address will be on; Cloudflare adds the SPF, DKIM and DMARC records. The sender must be on an onboarded domain or the binding refuses with `E_SENDER_NOT_VERIFIED` (a `502` from the endpoint).
+3. **Turnstile widget.** Dashboard → Turnstile → Add widget; hostnames `skymap.rulkens.com` (add `localhost` only while testing); mode Managed. Keep the **site key** (public) and the **secret key**.
+4. **The binding.** Add to `wrangler.toml` (the Git deploy treats that file as the source of truth for bindings, so a binding added only in the dashboard can be dropped by the next deploy):
+
+   ```toml
+   [[send_email]]
+   name = "CONTACT_EMAIL"
+   ```
+
+5. **Three secrets** (never `[vars]`, never the repo): `npx wrangler secret put CONTACT_TO` (your inbox, the verified destination), `npx wrangler secret put CONTACT_FROM` (the sender address on the onboarded domain), `npx wrangler secret put TURNSTILE_SECRET_KEY`. Secrets survive deploys.
+6. **The two site values**, as build variables of the Cloudflare project (the same route as `SKYMAP_SITE_MODE`): `SKYMAP_CONTACT_ENDPOINT=/api/contact` and `SKYMAP_TURNSTILE_SITE_KEY=<the site key>`. Both are public, and the form is rendered only when both are set. They are read at build time, so push (or retrigger a build) after setting them. If the domes page still says "Contact opens soon" after that build, the values did not reach `process.env` of the build; `.gitignore` records a case where dashboard variables did not.
+7. **Update `/privacy/` the same day.** The "plan, not yet in effect" paragraph in `packages/website/src/pages/privacy.astro` and the fact row `privacy-form-closed` in `packages/website/src/data/privacyFacts.ts` describe a design; rewrite them as what happens, and change the date at the foot of the page. The widget is a third-party request (`challenges.cloudflare.com`, on the domes page only, once the form scrolls into view), so the "what the website loads" facts change too.
+
+Test before step 6 with `npx wrangler dev` (default port 8787) and a git-ignored `.dev.vars` file holding `CONTACT_TO`, `CONTACT_FROM` and `TURNSTILE_SECRET_KEY`. `wrangler dev` simulates `send_email`: it prints the message and writes its text under `.wrangler/` instead of sending (add `remote = true` to the binding to send for real). Turnstile's documented test secrets work with any token: `1x0000000000000000000000000000000AA` always passes, `2x0000000000000000000000000000000AA` always fails (site key for the widget: `1x00000000000000000000AA`).
+
+```
+curl -i -X POST http://localhost:8787/api/contact -H 'Origin: http://localhost:8787' -H 'Content-Type: application/json' -d '{"name":"Ada","organisation":"Wisdome","email":"ada@example.org","message":"A dome.","website":"","token":"x"}'
+```
+
+To close the form again, delete any one secret (`npx wrangler secret delete CONTACT_TO`) and unset the site values; the endpoint answers 503 and the page shows its closed state.
+
 ### Cache-Control + CORS
 
 - **Cache:** shell via `public/_headers` (JS/CSS/WGSL/WASM `max-age=31536000, immutable`; famous WebPs `max-age=86400`) — these rules are belt-and-braces that only reach `public/data/` under a local `vite preview`; production data bytes come from R2, whose cache policy is set independently by `buildGroups()`. R2 objects get their `Cache-Control` per group from `buildGroups()` in `syncR2.ts`: every hashed data file (the five binary families under `public/data/` plus the root JSON) is `immutable, max-age=31536000` and never purged — the content hash invalidates a stale file, not the cache header. `manifest.json` is the one exception: `no-cache`, purged on every sync, and uploaded **last** so it never names a file the run hasn't finished uploading. Famous/hi-res images, planet textures, and every surface-tile manifest keep `max-age=86400`; the surface-tile bodies stay `immutable` (their own `<manifestKey>/vN` epoch, see above). `Mesh sources` is `no-cache` too but never purged: an edited `.blend` is re-saved under the same key, so an `immutable` header would hand a restore the pre-edit bytes. A purge must name each CORS origin: the CDN caches one copy per `Origin` header, and a bare-URL purge misses the copy the page fetches (`purgeFileEntries.ts` expands every URL over the `r2Cors.json` origins).
