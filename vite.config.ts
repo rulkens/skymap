@@ -1,4 +1,3 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import react from '@vitejs/plugin-react';
@@ -8,6 +7,7 @@ import viteWesl from 'wesl-plugin/vite';
 
 import { DEV_PORTS } from './tools/utils/io/devPorts.ts';
 import { distDir } from './tools/utils/io/distDir.ts';
+import { readCertPair } from './tools/utils/serve/readCertPair.ts';
 import { inlineEntryCssPlugin } from './tools/utils/vite/inlineEntryCssPlugin.ts';
 import { minifyStaticWgslPlugin } from './tools/utils/wgsl/minifyStaticWgslPlugin.ts';
 
@@ -35,11 +35,8 @@ import { minifyStaticWgslPlugin } from './tools/utils/wgsl/minifyStaticWgslPlugi
 function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer } } | undefined {
   if (process.env.SKYMAP_HTTPS !== '1') return undefined;
 
-  const certDir = join(import.meta.dirname, '.certs');
-  const files = existsSync(certDir) ? readdirSync(certDir) : [];
-  const keyFile = files.find((f) => f.endsWith('-key.pem'));
-  const certFile = files.find((f) => f.endsWith('.pem') && !f.endsWith('-key.pem'));
-  if (!keyFile || !certFile) {
+  const certs = readCertPair(join(import.meta.dirname, '.certs'));
+  if (certs === undefined) {
     throw new Error(
       'SKYMAP_HTTPS=1 but no cert pair found in .certs/. Run: ' +
         'mkdir -p .certs && cd .certs && mkcert <lan-ip> localhost',
@@ -48,10 +45,7 @@ function lanHttpsServer(): { host: boolean; https: { cert: Buffer; key: Buffer }
 
   return {
     host: true, // bind 0.0.0.0 so the LAN can reach it
-    https: {
-      cert: readFileSync(join(certDir, certFile)),
-      key: readFileSync(join(certDir, keyFile)),
-    },
+    https: certs,
   };
 }
 

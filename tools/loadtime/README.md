@@ -10,6 +10,7 @@ npm run loadtime                                  # 3g, slow-4g, fast-4g
 npm run loadtime -- --profile slow-4g --rebuild   # one profile, fresh build
 npm run loadtime -- --link '#focus=body-saturn'   # a deep link: no splash
 npm run loadtime -- --filmstrip data/shots/load   # screenshots at 1, 2, 4, 8, 15, 30 s
+npm run loadtime -- --serve --rebuild             # serve the build at https://localhost:4520 to try by hand
 ```
 
 ## Milestones
@@ -42,6 +43,16 @@ A milestone not reached within `--timeout` prints as `>90`.
 - The server gzips what production gzips (the shell's text assets, and data files per
   `tools/deploy/r2/shouldGzipOnWire.ts`). It serves everything from one origin, so the extra
   connection to the R2 data host is not in the numbers, and Cloudflare's Brotli would make the
-  bundle a little smaller than gzip does.
+  chunks a little smaller than gzip does.
+- With a mkcert pair in `.certs/` (`mkdir -p .certs && cd .certs && mkcert localhost`) the server
+  speaks HTTP/2 over TLS, as production does. Without one it falls back to HTTP/1.1 and says so;
+  its six-connection limit then queues the chunks, which production never does.
 - One run per profile. Throttled runs repeat to within about 0.2 s; rerun before reading anything
   into a smaller difference.
+
+## Trying the build by hand
+
+`--serve` skips the measuring and keeps the server up on a fixed port, so the origin's
+localStorage (the splash's seen flag) survives restarts. Open it in Chrome and throttle in
+DevTools. The dev server is no stand-in for this: it serves hundreds of unbundled modules, so a
+throttled load there says nothing about production.

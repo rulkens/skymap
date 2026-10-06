@@ -55,6 +55,8 @@ import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
 import { PERSISTED_VALUES } from './state/persistedValues';
+import { selectArrivalPending } from './state/arrival/selectors';
+import { selectSplashVisible } from './state/ui/selectors';
 import { persistValues } from './utils/storage/persistValues';
 import { installRecorderHook } from './state/recorder/installRecorderHook';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
@@ -113,5 +115,15 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
       </Provider>,
     ),
   );
-  document.getElementById('boot')?.remove();
+  // The shell stays up until React has something to show in its place: the
+  // splash at once, otherwise the first drawn frame, which is what `arrival`
+  // reports. Dropping it at mount left a black canvas while the engine loaded.
+  const dropBootShell = (): void => {
+    const state = store.getState();
+    if (!selectSplashVisible(state) && selectArrivalPending(state)) return;
+    document.getElementById('boot')?.remove();
+    unsubscribe();
+  };
+  const unsubscribe = store.subscribe(dropBootShell);
+  dropBootShell();
 }

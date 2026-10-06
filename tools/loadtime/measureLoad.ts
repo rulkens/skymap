@@ -9,6 +9,7 @@ import type { Browser } from '@playwright/test';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { ensureDataSymlink } from '../utils/serve/ensureDataSymlink';
 import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
+import { readCertPair } from '../utils/serve/readCertPair';
 import { serveGzipped } from '../utils/serve/serveGzipped';
 import type { LoadMilestones } from './@types/LoadMilestones';
 import type { MarkedWindow } from './@types/MarkedWindow';
@@ -16,6 +17,8 @@ import type { NetworkProfile } from './@types/NetworkProfile';
 import { NETWORK_PROFILES } from './networkProfiles';
 
 const BUILD_DIR = 'tools/loadtime/.build';
+// Fixed, so the origin (and its localStorage) is the same on every `--serve`.
+const SERVE_PORT = 4520;
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const MOBILE_DPR = 3;
 const FILMSTRIP_SECONDS: readonly number[] = [1, 2, 4, 8, 15, 30];
@@ -59,6 +62,8 @@ async function measure(
   const context = await browser.newContext({
     viewport: MOBILE_VIEWPORT,
     deviceScaleFactor: MOBILE_DPR,
+    // The mkcert CA is not in headless Chromium's trust store.
+    ignoreHTTPSErrors: true,
     isMobile: true,
     hasTouch: true,
   });
@@ -115,6 +120,7 @@ async function main(): Promise<void> {
       timeout: { type: 'string', default: '90' },
       filmstrip: { type: 'string' },
       rebuild: { type: 'boolean', default: false },
+      serve: { type: 'boolean', default: false },
     },
   });
   const names = values.profile ?? ['3g', 'slow-4g', 'fast-4g'];
@@ -123,7 +129,18 @@ async function main(): Promise<void> {
   console.log = console.error;
   await ensureServeBuild(BUILD_DIR, values.rebuild);
   ensureDataSymlink(BUILD_DIR);
-  const server = await serveGzipped(BUILD_DIR);
+  const certs = readCertPair('.certs');
+  if (certs === undefined) {
+    console.error(
+      '  no cert pair in .certs/, so serving HTTP/1.1; for HTTP/2 run: ' +
+        'mkdir -p .certs && cd .certs && mkcert localhost',
+    );
+  }
+  const server = await serveGzipped(BUILD_DIR, certs, values.serve ? SERVE_PORT : 0);
+  if (values.serve) {
+    log(`serving the production build at ${server.url} (Ctrl-C to stop)`);
+    await new Promise(() => {});
+  }
   const browser = await launchChromium();
   try {
     log(`| profile | ${MILESTONES.join(' | ')} |`);
