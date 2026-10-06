@@ -5,10 +5,8 @@ import Claims from '../components/Claims.astro';
 import Columns from '../components/Columns.astro';
 import Credits from '../components/Credits.astro';
 import Figure from '../components/Figure.astro';
-import LinkRow from '../components/LinkRow.astro';
 import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
-import Onward from '../components/Onward.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import PressPictures from '../components/PressPictures.astro';
@@ -73,10 +71,10 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
   <section class="wrap section" id="what">
     <h2>What skymap is</h2>
     <p class="what">{whatIs}</p>
-    <Onward>
+    <div class="link-row onward">
       <OpenApp />
       <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
-    </Onward>
+    </div>
   </section>
 
   <section class="wrap section" id="maker">
@@ -91,10 +89,10 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
       <div class="alive">
         <h3>Open source, and maintained</h3>
         <Claims items={ALIVE} narrow />
-        <LinkRow>
+        <div class="link-row">
           <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
           <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
-        </LinkRow>
+        </div>
       </div>
     </Columns>
   </section>

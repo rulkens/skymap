@@ -3,11 +3,9 @@ import Base from '../layouts/Base.astro';
 import Caveat from '../components/Caveat.astro';
 import Claims from '../components/Claims.astro';
 import Group from '../components/Group.astro';
-import LinkRow from '../components/LinkRow.astro';
 import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
 import PictureBand from '../components/PictureBand.astro';
-import Prose from '../components/Prose.astro';
 import Remark from '../components/Remark.astro';
 import SectionHead from '../components/SectionHead.astro';
 import ShotCaption from '../components/ShotCaption.astro';
@@ -99,12 +97,12 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     <SectionHead title="The contact form" narrow>
       <p>{fact('privacy-form-closed').text}</p>
     </SectionHead>
-    <Prose>
+    <div class="prose tap-links">
       <p>
         Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is public,
         it carries your GitHub name, and GitHub’s own privacy statement applies to it.
       </p>
-    </Prose>
+    </div>
     <Caveat title="The plan, not yet in effect">
       <p>
         When the form opens, your message will go to a small program of ours on Cloudflare, which forwards the four
@@ -126,16 +124,16 @@ const checked = formatDate(fact('privacy-site-requests').checked);
         {MAKER_NAME}, who makes skymap, decides what the site and the app load and keep.
       </p>
     </SectionHead>
-    <Prose>
+    <div class="prose tap-links">
       <p>
         To ask what we hold about you, or to have it removed, open an issue on GitHub that says only that you have
         a privacy request, and we will reply with an address. Today the answer is short: the counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
       </p>
-    </Prose>
-    <LinkRow>
+    </div>
+    <div class="link-row">
       <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
       <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
-    </LinkRow>
+    </div>
   </section>
 
   <div class="wrap section last">

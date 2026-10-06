@@ -180,6 +180,25 @@ img {
   margin-block: -0.625rem;
 }
 
+/* Running paragraphs of a section, at the lead's measure, which is wider than a column's. */
+.prose p {
+  max-width: var(--measure-lead);
+}
+
+/* Ring links side by side under the text they follow; `onward` is the row that closes a section, launch button included. */
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  margin-top: 1.5rem;
+}
+
+.link-row.onward {
+  align-items: center;
+  row-gap: 0.75rem;
+  margin-top: 2.5rem;
+}
+
 .wrap {
   max-width: var(--wrap-max);
   margin-inline: auto;
@@ -261,6 +280,20 @@ img {
   [data-views] > * {
     transition: none !important;
   }
+}
+
+/* A gallery's words (a label, an address): one cell, so the tallest reserves the room, and a quicker change than the pictures'. */
+.view-words {
+  --view-out: 0.3s;
+  --view-wait: 0.3s;
+  --view-in: 0.6s;
+  display: grid;
+  align-items: start;
+}
+
+.view-words > * {
+  grid-area: 1 / 1;
+  min-width: 0;
 }
 
 /* One gap above every section of a page; the page's last block closes it. */

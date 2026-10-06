@@ -9,7 +9,6 @@ import cardUrl from '../assets/og-card.jpg?url';
 import { siteShot } from '../data/siteShot';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import JsonLd from '../components/JsonLd.astro';
 import DevFeedback from '../dev/feedback/DevFeedback.astro';
 import { INDEXABLE } from '../data/site';
 
@@ -57,7 +56,8 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
     <meta name="twitter:image:alt" content={imageAlt} />
-    {jsonLd.map((data) => <JsonLd data={data} />)}
+    <!-- `<` is escaped so a string containing `</script>` cannot close the block. -->
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
     <slot name="head" />
   </head>
   <body class={heroNav ? 'hero-nav' : undefined}>

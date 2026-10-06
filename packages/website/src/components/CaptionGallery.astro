@@ -1,7 +1,7 @@
 ---
 /*
  * CaptionGallery — the label of a gallery band (PictureBand with `views`): one
- * ShotCaption per view in one cell, so the tallest reserves the room, under a
+ * ShotCaption per view in one cell (`.view-words` in styles/site.css), under a
  * row of ring markers, one per view, that choose the view. A host treats it as
  * a single label (it carries the `caption` class and draws the same foot).
  * Without script the markers stay hidden and the first label stands.
@@ -31,7 +31,7 @@ const { ids } = Astro.props;
       ))
     }
   </div>
-  <div class="labels" data-views aria-live="polite">
+  <div class="labels view-words" data-views aria-live="polite">
     {ids.map((id) => <ShotCaption id={id} />)}
   </div>
 </div>
@@ -54,14 +54,6 @@ const { ids } = Astro.props;
 
   .labels {
     --caption-foot: none;
-    --view-out: 0.3s;
-    --view-wait: 0.3s;
-    --view-in: 0.6s;
-    display: grid;
-  }
-
-  .labels > :global(*) {
-    grid-area: 1 / 1;
   }
 
   /* The row stands in the host's rise above the label (`--caption-lift`), clear of the arm at the rule's left end. */

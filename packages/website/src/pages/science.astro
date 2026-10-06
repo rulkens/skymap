@@ -8,10 +8,8 @@ import Credits from '../components/Credits.astro';
 import Figure from '../components/Figure.astro';
 import FullFigure from '../components/FullFigure.astro';
 import Group from '../components/Group.astro';
-import LinkRow from '../components/LinkRow.astro';
 import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
-import Onward from '../components/Onward.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import Remark from '../components/Remark.astro';
@@ -254,17 +252,17 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
   <section class="wrap section" id="onward">
     <h2>Further reading</h2>
-    <LinkRow>
+    <div class="link-row">
       <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
       <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
       <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
       <ObjLink hang href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
       <ObjLink hang href={sitePath('/classroom/')}>Use skymap in the classroom</ObjLink>
       <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
-    </LinkRow>
-    <Onward>
+    </div>
+    <div class="link-row onward">
       <OpenApp />
-    </Onward>
+    </div>
   </section>
 
   <div class="wrap section last">
