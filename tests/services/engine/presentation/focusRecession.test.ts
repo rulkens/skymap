@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FILAMENT_RECESSION,
   focusRecession,
+  LABEL_RECESSION,
   resolveLayerOpacity,
 } from '../../../../src/services/engine/presentation/focusRecession';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -44,6 +45,19 @@ function makeClipPlayer(factor: number): ClipPlayer {
 describe('focusRecession', () => {
   it('returns the exact target for a tagged handle at blend 1', () => {
     expect(focusRecession({ kind: 'cosmicWebFilaments' }, 1)).toBe(FILAMENT_RECESSION);
+  });
+});
+
+describe('focusRecession of the Milky Way and constellations', () => {
+  it('the Milky Way kind and the constellations kind recede; the You-are-here label does not', () => {
+    expect(focusRecession({ kind: 'milkyWay' }, 1)).toBe(FILAMENT_RECESSION);
+    expect(focusRecession({ kind: 'constellations' }, 1)).toBe(FILAMENT_RECESSION);
+    expect(
+      focusRecession({ kind: 'labelLayer', layer: 'milkyWay', item: 'milkyWay' } as never, 1),
+    ).toBe(1);
+    expect(focusRecession({ kind: 'labelLayer', layer: 'starCatalog', item: 'sun' }, 1)).toBe(
+      LABEL_RECESSION,
+    );
   });
 });
 

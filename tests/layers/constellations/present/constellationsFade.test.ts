@@ -26,9 +26,8 @@ function makeCtx(camDistMpc: number): FrameView {
   } as unknown as FrameView;
 }
 
-// `focusRecession` and the clip factor are both neutral (1) for the
-// `constellations` kind — see `focusRecession.ts`'s RECESSION_BY_KIND and
-// `fadeIdToVisibilityKey`'s mapping — so this stub isolates the toggle term.
+// `focusRecession` is neutral at the fixture's blend 0 and the clip factor is
+// stubbed to 1, so this stub isolates the toggle term.
 function makeState(toggle: number): Pick<EngineState, 'subsystems'> {
   return {
     subsystems: {

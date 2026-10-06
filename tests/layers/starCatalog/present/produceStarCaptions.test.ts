@@ -22,6 +22,7 @@ import {
   unpackPick,
   PICK_SENTINEL_OFFSET,
 } from '../../../../src/data/selectionEncoding';
+import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { Source } from '../../../../src/data/source';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { StarRowFixture } from '../../../support/selectionResolverOver';
@@ -51,9 +52,9 @@ const NO_STARS_LOADED: StarRowFixture = {
 
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-function makeCtx(camPos: Vec3): FrameView {
+function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0 },
+    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend },
     cam: { distance: 5e-4 },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -110,6 +111,14 @@ function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined
 }
 
 describe('produceStarCaptions', () => {
+  it('a star caption recedes with the focus blend and is full at blend 0', () => {
+    const alphaAt = (blend: number) =>
+      fadeAlphaOf(produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend)).labels, PROXIMA_ID);
+    const full = alphaAt(0)!;
+    expect(full).toBeGreaterThan(0);
+    expect(alphaAt(1)).toBeCloseTo(full * LABEL_RECESSION, 10);
+  });
+
   it('captions every drawn famous star and the Sun with their kinds, and no S-star', () => {
     // `Label2DProducerOutput` types its labels as the base `Label2D`, but
     // every one this producer emits is built by `bodyCaption` and so carries

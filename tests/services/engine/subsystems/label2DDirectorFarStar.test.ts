@@ -154,7 +154,7 @@ const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDow
 
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
-    snapshot: { nowMs: 0, simDays: CONST_J2000 },
+    snapshot: { nowMs: 0, simDays: CONST_J2000, focusBlend: 0 },
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },

@@ -30,7 +30,7 @@ const STATE = {
 } as unknown as EngineState;
 
 const CTX = {
-  snapshot: { simDays: CONST_J2000, nowMs: 0 },
+  snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0 },
   cam: { distance: 1e-3 },
   drawCamPos: [0, 0, 0],
   drawPxPerRad: 720,

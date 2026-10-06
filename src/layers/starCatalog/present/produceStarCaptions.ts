@@ -85,6 +85,7 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       drawPxPerRad: ctx.drawPxPerRad,
       fades: state.subsystems.fades,
       nowMs: now,
+      focusBlend: ctx.snapshot.focusBlend,
       occluders: sceneOccluderBodies(state, ctx),
     };
 

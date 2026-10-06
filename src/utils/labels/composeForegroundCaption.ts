@@ -10,6 +10,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { Label2D } from '../../@types/rendering/Label2D';
 import type { CaptionComposeContext } from '../../@types/rendering/CaptionComposeContext';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
+import { focusRecession } from '../../services/engine/presentation/focusRecession';
 import { CAPTION_FADE_RULES } from '../../services/engine/presentation/captionFadeRules';
 import {
   CAPTION_PRIORITY,
@@ -53,7 +54,8 @@ export function composeForegroundCaption(
     revealAlpha *
     overflowFade(subjectSizePx, ctx.viewportShortSidePx) *
     registryOpacity *
-    clipFactor;
+    clipFactor *
+    (rule.fadeHandle === null ? 1 : focusRecession(rule.fadeHandle, ctx.focusBlend));
 
   const prominencePx =
     CAPTION_PRIORITY[label.kind] * CAPTION_TIER_SCALE +

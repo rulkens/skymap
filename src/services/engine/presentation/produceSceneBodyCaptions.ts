@@ -52,6 +52,7 @@ export function produceSceneBodyCaptions(
     drawPxPerRad: ctx.drawPxPerRad,
     fades: state.subsystems.fades,
     nowMs: now,
+    focusBlend: ctx.snapshot.focusBlend,
     // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
     // FRONT of a body from one behind it — deciding that per caption is what
     // keeps the whale's name legible over Earth's disc while the Moon's still

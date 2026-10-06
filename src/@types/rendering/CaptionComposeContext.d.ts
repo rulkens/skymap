@@ -13,5 +13,7 @@ export type CaptionComposeContext = {
   readonly drawPxPerRad: number;
   readonly fades: FadeRegistry;
   readonly nowMs: number;
+  /** The focus blend (0 = none, 1 = full): captions recede with it like every other layer. */
+  readonly focusBlend: number;
   readonly occluders: readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[];
 };
