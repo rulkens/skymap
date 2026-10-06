@@ -18,6 +18,7 @@ import { feedbackNoteStem } from './utils/feedbackNoteStem';
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const FEEDBACK_DIR = join(REPO_ROOT, '.superpowers/sdd/2026-10-05-companion-website/feedback');
 const MAX_BODY_BYTES = 1_000_000;
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 const INDEX_HEADER = [
   '# Site feedback notes',
@@ -45,6 +46,8 @@ function isNote(value: unknown): value is FeedbackNote {
     typeof note?.text === 'string' &&
     note.text.trim() !== '' &&
     typeof note.timestamp === 'string' &&
+    // The timestamp becomes part of a file name: only an ISO instant, never a path.
+    ISO_INSTANT.test(note.timestamp) &&
     typeof note.page?.path === 'string' &&
     typeof note.element?.selector === 'string'
   );
@@ -83,6 +86,10 @@ function saveNote(note: FeedbackNote): string {
 }
 
 async function answer(req: IncomingMessage): Promise<[number, object]> {
+  // Another site open in the same browser must not write or delete notes here. A browser
+  // names the requester's relation; a command-line client sends no such header.
+  const site = req.headers['sec-fetch-site'];
+  if (site !== undefined && site !== 'same-origin') return [403, { error: 'same-origin only' }];
   if (req.method === 'POST') {
     const note: unknown = JSON.parse(await readBody(req));
     return isNote(note) ? [200, { id: saveNote(note) }] : [400, { error: 'not a feedback note' }];
