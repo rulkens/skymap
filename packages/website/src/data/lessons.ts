@@ -75,7 +75,7 @@ export const LESSON_TOPICS: readonly LessonTopic[] = [
   },
   {
     id: 'large-scale',
-    title: 'Large-scale structure',
+    title: 'The largest structures',
     lessons: [
       {
         id: 'cosmic-web',

@@ -21,7 +21,7 @@ export const IMAGE_CREDITS: readonly Credit[] = [
     licenceHref: CC_BY,
   },
   {
-    name: 'Earth elsewhere: EOxCloudless by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2025',
+    name: 'Earth in chosen regions: EOxCloudless by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2025',
     href: 'https://cloudless.eox.at',
     licence: 'CC BY-NC-SA 4.0, used with written permission from EOX',
     licenceHref: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',

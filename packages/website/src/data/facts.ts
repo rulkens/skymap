@@ -52,7 +52,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://arxiv.org/abs/2006.09837',
     sourceLabel: 'Joyce et al. 2020, Betelgeuse',
     checked: CHECKED,
-    short: 'about 550 light-years away, with estimates from 500 to 720',
+    short: 'about 550 light-years away (estimates run from 500 to 720)',
   },
   {
     id: 'betelgeuse-estimates',
@@ -79,7 +79,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'virgo-distance',
-    text: 'The Virgo cluster is about 54 million light-years away (16.5 megaparsecs, uncertain by about 7 percent).',
+    text: 'The Virgo cluster is about 54 million light-years away (16.5 megaparsecs, uncertain by about 7 per cent).',
     source: 'https://arxiv.org/abs/astro-ph/0702510',
     sourceLabel: 'Mei et al. 2007, Virgo cluster distance',
     checked: CHECKED,
@@ -150,14 +150,14 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: '2mrs-coverage',
-    text: '2MRS covers 91 percent of the sky but not the plane of the Milky Way, where dust hides the galaxies behind it (galactic latitude below 5 degrees, 8 degrees towards the centre).',
+    text: '2MRS covers 91 per cent of the sky but not the plane of the Milky Way, where dust hides the galaxies behind it (galactic latitude below 5 degrees, 8 degrees towards the centre).',
     source: 'https://arxiv.org/abs/1108.0669',
     sourceLabel: 'Huchra et al. 2012, 2MRS',
     checked: CHECKED,
   },
   {
     id: 'observable-edge',
-    text: 'The edge of the observable universe is about 46 billion (46 thousand million) light-years away. That is a present-day distance in a flat Lambda-CDM model with Planck 2018 parameters, which is why it exceeds the age of the universe in years.',
+    text: 'The edge of the observable universe is about 46 billion (46 thousand million) light-years away. That is a present-day distance in a flat Lambda-CDM model, the standard model of cosmology, with Planck 2018 parameters, which is why it exceeds the age of the universe in years.',
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck 2018, cosmological parameters',
     checked: CHECKED,
@@ -222,7 +222,7 @@ export const FACTS: readonly Fact[] = [
     id: 'flight-camera-path',
     about: 'app',
     text: 'The camera distance shown beside the flight is computed from the path the film was recorded on: from 19,140 kilometres from Earth’s centre to 29,500 megaparsecs in 70 seconds, eased at both ends. Earth’s radius of 6,371 kilometres is subtracted, and far out it is a distance in the map, not a light-travel time.',
-    source: `${REPO_BLOB}/src/data/animation/clips/makers/makeEarthLoop.ts`,
+    source: `${REPO_BLOB}/packages/website/src/data/flightPath.ts`,
     sourceLabel: 'the flight’s camera path, in the skymap repository',
     checked: CHECKED,
   },
@@ -236,7 +236,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'lesson-link',
     about: 'app',
-    text: 'An address written by skymap names the object the camera is on (focus) and, once the clock has been paused or set, the instant (t). A link with an instant opens with the clock paused there.',
+    text: 'An address written by skymap names the object the camera is on (focus) and, once the clock has been paused or set, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: 'the address parameters, in the skymap repository',
     checked: CHECKED,
@@ -268,7 +268,6 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'webgpu-browsers',
-    about: 'app',
     text: 'As of 6 October 2026, WebGPU is switched on by default in Chrome 113 and later on Windows, macOS and ChromeOS, in Chrome 121 and later on Android 12 and later, in Safari 26 on Mac, iPhone and iPad, and in Firefox 141 and later on Windows (147 on Macs with Apple silicon). On Linux it depends on the graphics card and driver.',
     source: 'https://github.com/gpuweb/gpuweb/wiki/Implementation-Status',
     sourceLabel: 'WebGPU implementation status, from the group that writes the standard',
@@ -353,6 +352,7 @@ export const FACTS: readonly Fact[] = [
     id: 'date-entry-utc',
     about: 'app',
     text: 'The date field on the app’s clock is read in UTC, not in the computer’s local time.',
+    short: 'The date field on the app’s clock is read in UTC, the time at Greenwich without summer time, not in the computer’s local time.',
     source: `${REPO_BLOB}/src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx`,
     sourceLabel: 'the date field, in the skymap repository',
     checked: CHECKED,
@@ -415,7 +415,6 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'imagery-licences',
-    about: 'app',
     text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in skymap with EOX’s written permission. Paul Schenk’s maps of five moons of Uranus state no licence.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: 'the attributions file, in the skymap repository',

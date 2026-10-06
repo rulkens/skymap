@@ -9,7 +9,7 @@ const CITE_PAPER = 'Public release. Cite the paper.';
 
 const GALAXIES = 'Galaxies and quasars';
 const STARS = 'Stars';
-const SOLAR = 'Solar System';
+const SOLAR = 'Solar system';
 const FIELDS = 'Structures and fields';
 const IMAGERY = 'Imagery';
 
@@ -39,7 +39,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     id: '2mrs',
     group: GALAXIES,
     name: '2MRS, the 2MASS Redshift Survey',
-    gives: 'Positions, spectroscopic velocities and infrared magnitudes of nearby galaxies over 91 percent of the sky',
+    gives: 'Positions, spectroscopic velocities and infrared magnitudes of nearby galaxies over 91 per cent of the sky',
     release: 'Huchra et al. 2012, table 3 (VizieR J/ApJS/199/26)',
     rows: '44,599 galaxies',
     drawn: '34,974',
@@ -63,7 +63,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     id: 'milliquas',
     group: GALAXIES,
     name: 'Milliquas, the Million Quasars catalogue',
-    gives: 'Positions and redshifts of quasars and other active galactic nuclei, the deepest objects in the scene',
+    gives: 'Positions and redshifts of quasars and other active galactic nuclei, the most distant objects in the scene',
     release: 'Version 8, Flesch 2023',
     rows: '1,021,800 objects',
     drawn: '943,440',
