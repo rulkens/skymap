@@ -377,7 +377,10 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
   }
 
   .flight[data-live] .hint {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
     position: absolute;
     left: 0;
     right: 0;
@@ -386,6 +389,39 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     margin: 0;
     text-align: center;
     color: var(--site-text-muted);
+  }
+
+  /* A mouse with its wheel rolling; the wheel is a background so one box draws both. */
+  @media (hover: hover) and (pointer: fine) {
+    .flight[data-live] .hint::before {
+      content: '';
+      width: 1.125rem;
+      height: 1.75rem;
+      border: 1px solid currentColor;
+      border-radius: 0.5625rem;
+      background: linear-gradient(var(--color-accent), var(--color-accent)) no-repeat 50% 0.3125rem / 2px
+        0.375rem;
+      animation: wheel 1.8s ease-in-out infinite;
+    }
+  }
+
+  @keyframes wheel {
+    60% {
+      background-position-y: 0.8125rem;
+      background-size: 2px 0.375rem;
+    }
+
+    80%,
+    100% {
+      background-position-y: 0.8125rem;
+      background-size: 2px 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flight[data-live] .hint::before {
+      animation: none;
+    }
   }
 
   .flight[data-live] .arrive {
