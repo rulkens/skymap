@@ -162,6 +162,30 @@ img {
   font-size: clamp(1.25rem, 3svh, var(--text-lead));
 }
 
+/*
+ * A gallery (scripts/initGallery.ts): each `data-views` element holds one child per view, and only the current
+ * one shows. Without script that is the first. Opacity only, so nothing is laid out again; a part sets its own
+ * pace with `--view-out`, `--view-wait` and `--view-in`, words leaving before the next arrive.
+ */
+[data-views] > * {
+  transition: opacity var(--view-in, 1s) ease var(--view-wait, 0s);
+}
+
+[data-gallery]:not([data-live]) [data-views] > :nth-child(n + 2),
+[data-gallery][data-live] [data-views] > :not([data-here]) {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--view-out, 1s) ease,
+    visibility 0s linear var(--view-out, 1s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-views] > * {
+    transition: none !important;
+  }
+}
+
 /* One gap above every section of a page; the page's last block closes it. */
 .section {
   padding-top: var(--section-space);

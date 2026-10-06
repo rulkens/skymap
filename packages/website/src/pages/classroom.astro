@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import AddressStrip from '../components/AddressStrip.astro';
+import CaptionGallery from '../components/CaptionGallery.astro';
 import Columns from '../components/Columns.astro';
 import Credits from '../components/Credits.astro';
 import Feature from '../components/Feature.astro';
@@ -12,15 +13,17 @@ import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import Remark from '../components/Remark.astro';
 import SectionHead from '../components/SectionHead.astro';
-import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import Step from '../components/Step.astro';
 import Steps from '../components/Steps.astro';
+import ViewStack from '../components/ViewStack.astro';
 import { appLink } from '../data/appLink';
 import { CLASS_FEATURES } from '../data/classFeatures';
+import { CLASS_VIEWS } from '../data/classViews';
 import { fact } from '../data/fact';
 import { HOME_LINKS } from '../data/homeLinks';
 import { LESSON_TOPICS } from '../data/lessons';
+import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
@@ -57,15 +60,17 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   description={description}
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}
 >
-  <PictureBand id="classroom-hero" tall="classroom-hero-portrait" gap="none" eager>
+  <PictureBand views={CLASS_VIEWS} gap="none" eager>
     <h1>Use skymap in the classroom</h1>
     <p class="say">
       Distances in space are hard to feel from a page. In skymap your pupils fly them, from the Moon to the nearest
       galaxies, at true scale.
     </p>
     <p>You share a view as a link, and every pupil who opens it lands in the same place.</p>
-    <AddressStrip hash={HOME_LINKS.classroom} />
-    <ShotCaption id="classroom-hero" />
+    <ViewStack>
+      {CLASS_VIEWS.map((view) => <AddressStrip hash={siteShot(view.id).link} />)}
+    </ViewStack>
+    <CaptionGallery ids={CLASS_VIEWS.map((view) => view.id)} />
   </PictureBand>
 
   <section class="wrap section" id="lesson">
@@ -120,7 +125,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
         <p>{says('lesson-link')}</p>
         <AddressStrip hash={HOME_LINKS.classroom} />
         <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
-        <ObjLink size="small" href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
+        <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
       </Step>
     </Steps>
   </section>
@@ -135,7 +140,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
           {says('webgpu-required')}
         </p>
         <p class="small">{says('webgpu-browsers')}</p>
-        <ObjLink size="small" href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
+        <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
       </div>
       <div>
         <h3>Before the lesson</h3>
