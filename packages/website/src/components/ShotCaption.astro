@@ -4,8 +4,9 @@
  * with an arm that rises to the picture, the title, one sentence, then what is
  * data and what is drawn, the credit for third-party imagery in frame, and the
  * address the picture was taken at. Every picture being an address is the
- * site's honesty device. It lays itself out by the room it is given: stacked
- * under a narrow picture, in columns along the foot of a wide one.
+ * site's honesty device. It is set quietly, as a caption: nothing in it is
+ * brighter than the page's body text. It lays itself out by the room it is
+ * given: stacked under a narrow picture, in columns along the foot of a wide one.
  */
 import ViewLink from './ViewLink.astro';
 import { appLink } from '../data/appLink';
@@ -76,15 +77,16 @@ const shot = siteShot(id);
     background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
   }
 
-  /* 0.34 is the faintest the rule can be and still read as a line over a starfield. */
+  /* The rule is as faint as the page's dividers; the label stands where its picture has faded to black. */
   .plate {
-    --rule: rgb(232 238 255 / 0.34);
+    --rule: rgb(232 238 255 / 0.2);
     position: relative;
     display: grid;
-    gap: 0.5rem 2.5rem;
+    gap: 0.375rem 2.5rem;
     max-width: 34rem;
-    padding-top: 0.625rem;
+    padding-top: 0.5rem;
     border-top: 1px solid var(--rule);
+    line-height: 1.4;
   }
 
   /* The arm: the rule turns up at its left end and reaches for the picture above it. */
@@ -93,7 +95,7 @@ const shot = siteShot(id);
     position: absolute;
     left: 0;
     bottom: 100%;
-    height: 0.875rem;
+    height: 0.5rem;
     border-left: 1px solid var(--rule);
   }
 
@@ -106,17 +108,17 @@ const shot = siteShot(id);
 
   strong {
     display: block;
-    font-weight: 500;
-    color: var(--color-fg);
+    font-weight: inherit;
+    color: var(--site-text-muted);
   }
 
   .what,
   dd {
-    color: var(--site-text-muted);
+    color: var(--site-text-dim);
   }
 
   dt {
-    color: var(--site-text-dim);
+    color: var(--site-text-faint);
   }
 
   /* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */

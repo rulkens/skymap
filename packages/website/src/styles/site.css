@@ -26,6 +26,8 @@
   --site-text: #dfe6fb;
   --site-text-muted: #c3cde8;
   --site-text-dim: #9aa7c9;
+  /* The names of a picture label's parts: the dimmest text that still holds 4.5:1 on the page's black (6.2:1). */
+  --site-text-faint: #7f8bab;
 
   --font-family-display: 'Cormorant Site', ui-serif, Georgia, serif;
   --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
