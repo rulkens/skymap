@@ -238,7 +238,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'lesson-link',
     about: 'app',
-    text: 'An address written by skymap names the object the camera is on (focus) and, once the clock has been paused or set, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
+    text: 'An address written by skymap names the object the camera is on (focus) and, once you have set a date or changed the clock’s speed, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: 'the address parameters, in the skymap repository',
     checked: CHECKED,
