@@ -17,7 +17,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     up: '/',
     pages: [
       { title: 'First flight', path: '/docs/start/first-flight/', status: 'live' },
-      { title: 'What is in the scene', path: '/docs/start/scene/', status: 'planned' },
+      { title: 'What is in the scene', path: '/docs/start/scene/', status: 'live' },
       {
         title: 'Browser support and troubleshooting',
         path: '/docs/start/browsers/',
