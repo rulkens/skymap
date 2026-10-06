@@ -238,6 +238,75 @@ Not a subagent task. With the dev server up and all rows in, tune and commit:
 
 ---
 
+## Focus dimming for Milky Way structures (Tasks 11–14)
+
+Added after the first on-screen check (asks DWxG and svKi, 2026-10-06). Rulings: focusing any structure dims everything not part of it; this applies to all four Milky Way categories; the Milky Way glow recedes on every focus, cluster focus included; constellation lines and captions, star names and body names recede; dimmed stars are not pickable. This replaces the spec's "focusing one dims no galaxies" (§6). The card's galaxy count stays tied to `galaxyMembers`.
+
+How focus works today, for all four tasks: `structureFocusSubsystem` turns the focused structure into `FocusUniformsValue { center, apparentRadiusMpc, physicalRadiusMpc, blend }` (`runFrame.ts:225-230`, on `snapshot.focus` / `snapshot.focusBlend`). The galaxy shaders dim instances outside that sphere through `focusAlphaMultiplier` (`shaders/lib/focusUniforms.wesl:37-64`); `focusRecession` (`presentation/focusRecession.ts`) dims whole layers by `snapshot.focusBlend`.
+
+### Task 11: Every structure focus drives the focus blend
+
+**Files:** `src/services/engine/subsystems/structureFocusSubsystem.ts` and its type (modify), its test (modify), `docs/superpowers/specs/2026-10-05-milky-way-structures-design.md` (modify §6 and the §8 membership bullet)
+
+- [ ] Remove the `hasGalaxyMembers` gate and its injectable dep from the focus subsystem (`structureFocusSubsystem.ts:70-86`): any focused structure yields an `ActiveFocus`. `structureHasGalaxyMembers` keeps its one other reader, the card's member count (`layers/galaxyCatalog/frame.ts:69-78`).
+- [ ] Test `a category without galaxy members still drives the focus blend`, replacing the test that asserted the opposite. The member-count test stays.
+- [ ] Spec §6: focusing a Milky Way structure dims what lies outside its sphere, as for clusters. Commit.
+
+### Task 12: Layers that recede on focus
+
+**review: yes** (label alpha composition)
+
+**Files:** `src/services/engine/presentation/focusRecession.ts` (modify), `src/utils/labels/composeForegroundCaption.ts` (modify) and its callers if the signature grows, their tests (modify)
+
+**Contract:** in the recession tables, `milkyWay` and `constellations` (kinds) and `starCatalog`, `body`, `blackHoles` (label layers) take a recession target; reuse the existing constants (`FILAMENT_RECESSION` for the two kinds, `LABEL_RECESSION` for the label layers) unless one is plainly wrong on reading. The `milkyWay` label layer (the "You are here" pin) and `scaleBar` stay unreceded.
+
+- [ ] Near-field captions do not pass through `resolveLayerOpacity`: `composeForegroundCaption.ts:50-56` multiplies registry opacity and clip factor itself. Add the recession factor there, from the same `focusRecession(fadeId, snapshot.focusBlend)`, so one function still owns the dimming rule.
+- [ ] Rewrite the table comments that explain why these rows do not recede (`focusRecession.ts:39-46` and the `milkyWay` / `constellations` row comments): the focus blend is now also driven at parsec scales.
+- [ ] Test `a star caption recedes with the focus blend and is full at blend 0`.
+- [ ] Test `the Milky Way kind and the constellations kind recede; the You-are-here label does not`.
+- [ ] Commit.
+
+### Task 13: Survey stars dim outside the focus sphere
+
+**review: yes** (shader, TS↔WGSL uniform layout, pick)
+
+**Files:** `src/services/gpu/shaders/starCatalog/{io,vertex}.wesl` (modify), `src/layers/starCatalog/render/starCatalogRenderer.ts`, `render/cut/computeStarCut.ts`, `render/cut/drawStarStream.ts`, the star pick renderer if it packs its own `StarUniforms` (modify), their tests (modify)
+
+**Contract:** `StarUniforms` gains the focus sphere in the shader's own space, which is camera-relative Mpc:
+
+```wgsl
+focusCenterRelCam: vec3<f32>,   // focus centre − camera, subtracted in f64 on the CPU
+focusApparentRadiusMpc: f32,
+focusPhysicalRadiusMpc: f32,
+focusBlend: f32,
+```
+
+The byte offsets follow WGSL alignment rules; state the final offsets and total size in a table in the commit body and keep the TS packing in lockstep (a `vec3<f32>` aligns to 16 and the scalar after it may share its tail). The camera position subtracted is the same one the cut rebases against (`computeStarCut.ts:160`).
+
+- [ ] The dim factor is the existing `focusAlphaMultiplier` rule. Reuse the function from `lib/focusUniforms.wesl` by building a `FocusUniforms` value from the new fields, rather than writing a second copy of the smoothstep.
+- [ ] Multiply it into per-star intensity (`vertex.wesl:373-388`) and into aggregate nodes by their own position, so the half-res aggregate glow dims too.
+- [ ] Pick: a star dimmed below the level the galaxy shader excludes at is not pickable. Mirror how `galaxyCatalog/points/vertex.wesl:228-236` excludes dimmed galaxies from the pick pass; use the same threshold symbol, not a new literal.
+- [ ] At blend 0 the output is bit-identical to before: the multiplier is exactly 1.
+- [ ] Test on the TS side: `the packed focus centre is camera-relative` and `blend 0 packs a multiplier-neutral sphere` (non-degenerate radii, as `ZERO_FOCUS` does, so the smoothstep edges never coincide).
+- [ ] Commit.
+
+### Task 14: Curated stars dim outside the focus sphere
+
+**Files:** `src/utils/structure/focusAlphaMultiplier.ts` (create) with a test, `src/layers/starCatalog/passes/starPointsPass.ts` (modify)
+
+**Contract:** `focusAlphaMultiplier(worldPos: Vec3, focus: FocusUniformsValue): number`, the TS statement of the WGSL rule, with the same `0.6` core fraction and `0.08` floor. Name the WGSL file in its header as the twin it must match.
+
+- [ ] `starPointsPass` already multiplies each star's uploaded colour by a CPU fade (`starPointsPass.ts:166-196`); multiply by the focus factor there, from `ctx.snapshot.focus`. Its pick stamp excludes a star at the same threshold as Task 13.
+- [ ] Tests: `inside the physical radius the multiplier is 1`, `far outside it is 0.08 at blend 1`, `at blend 0 it is 1 everywhere`.
+- [ ] Commit.
+
+Smoke for these four, added to the list below:
+
+- `#focus=open-cluster-pleiades`: stars outside the cluster dim, the Pleiades' own stars stay bright, constellation lines and star names recede; clicking a dimmed star does nothing, clicking empty space or another ring still works.
+- `#focus=globular-cluster-m13`: the Milky Way glow dims behind it.
+- `#focus=cluster-virgo-m87`: galaxies dim as on main; the Milky Way now dims too.
+- Clearing focus brings everything back over about half a second.
+
 ## Dispatch grouping
 
 1. Tasks 1–2 (registry, types, parser).
