@@ -69,6 +69,7 @@ export function drawStarStream(
       brightness: prep.brightness,
       glowOverlap: prep.glowOverlap,
       aggregateIntensityCap: prep.aggregateIntensityCap,
+      focus: prep.focus,
       frustumPlanes,
       glowMarginAngleRad,
       viewSlot: ctx.viewSlot,

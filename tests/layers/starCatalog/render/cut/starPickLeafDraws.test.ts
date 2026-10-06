@@ -13,6 +13,7 @@ import { starPickLeafDraws } from '../../../../../src/layers/starCatalog/render/
 import type { PreparedStarCut } from '../../../../../src/layers/starCatalog/@types/PreparedStarCut';
 import type { StarNodeStream } from '../../../../../src/layers/starCatalog/@types/StarNodeStream';
 import { Source } from '../../../../../src/data/sources';
+import { STAR_FOCUS_AT_REST } from '../../../../fixtures/starFocusAtRest';
 
 /** One instanced draw `walkStarOctreeCut` selected, for this file's own fixtures. */
 type StarNodeDraw = { nodeIndex: number; firstRecord: number; recordCount: number };
@@ -69,6 +70,7 @@ describe('starPickLeafDraws', () => {
       brightness: 1,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
+      focus: STAR_FOCUS_AT_REST,
     };
 
     const draws = starPickLeafDraws(prep);

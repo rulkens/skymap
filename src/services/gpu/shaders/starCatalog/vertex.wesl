@@ -190,6 +190,9 @@ import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
 import package::lib::starPhotometry::toRefPx;
 import package::lib::pickDepthBands::PICK_BAND_SURVEY_STAR_EPS;
+import package::lib::focusUniforms::FocusUniforms;
+import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<storage, read> nodeParams: array<NodeParams>;
@@ -389,15 +392,25 @@ fn vs(
     node.isAggregate != 0u
   );
 
+  // Focus dim: stars outside a focused structure's sphere recede through the
+  // same rule the survey galaxies use, evaluated at this record's own position
+  // (an aggregate dims by its box record, so the half-res glow dims too). It is
+  // exactly 1.0 at rest, so the visual output is unchanged without a focus.
+  let focus = FocusUniforms(
+    vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
+    u.focusBlend,
+    u.focusPhysicalRadiusMpc,
+    0.0,
+    0.0,
+  );
+  let focusMult = focusAlphaMultiplier(worldRelCam, focus);
+
   // Near-sprite dissolve -- retire the wobbling sprite as its would-be sphere
   // resolves (constants block above). Why fade ANY near record and not just the
   // focused star: the wobble is a property of PROXIMITY (the f32
   // near-cancellation at 'worldRelCam'), so this distance-keyed fade targets
-  // exactly the set that swims -- leaves and aggregates alike -- and needs no
-  // per-focus uniform. A focused-record match would be more precise but adds a
-  // field to StarUniforms, the packing surface a concurrent layout refactor
-  // owns; the local band covers the case without that coupling. Accepted
-  // trade-off: free-flying into a NON-focused star's band fades its sprite with
+  // exactly the set that swims -- leaves and aggregates alike -- without a
+  // focused-record match. Accepted trade-off: free-flying into a NON-focused star's band fades its sprite with
   // no sphere to replace it -- AU-proximity is reached essentially only by
   // focus-framing, so the transient gap is unobtrusive.
   //
@@ -457,13 +470,19 @@ fn vs(
   // beats the field behind it' does.
   out.clip.z = select(out.clip.z, out.clip.w * PICK_BAND_SURVEY_STAR_EPS, u.pickPass == 1u);
 
+  // Pick exclusion, as the survey galaxies do: a star the focus dims is not
+  // hit-testable, so clicking the faded field cannot fight the isolation.
+  if (u.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
+    out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  }
+
   out.uv = corner;
 
   // Dequant BP−RP colour (bin centre) → stellar spectral tint.
   let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
   out.color = starTint(bpRp);
   out.opacity = node.opacity;
-  out.intensity = intensity;
+  out.intensity = intensity * focusMult;
   // The record's bin-global index (its slice base + in-node index), already
   // computed above as 'base' to vertex-pull the record. The pick fragment packs
   // it into the r32uint texture; 'resolveStarRecord' inverts it back to the star.

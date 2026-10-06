@@ -42,6 +42,7 @@ export function drawStarPick(
       originRelCamMpc: d.originRelCamMpc,
       cellScaleMpc: d.cellScaleMpc,
       sizePx: prep.sizePx,
+      focus: prep.focus,
       frustumPlanes,
       glowMarginAngleRad,
     });

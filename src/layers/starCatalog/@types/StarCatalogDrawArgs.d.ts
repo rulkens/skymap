@@ -1,6 +1,7 @@
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarDrawStream } from './StarDrawStream';
+import type { StarFocusSphere } from './StarFocusSphere';
 
 /**
  * Everything one `StarCatalogRenderer.draw` call needs for a single source's
@@ -131,6 +132,8 @@ export type StarCatalogDrawArgs = {
    * shared camera uniform beside `sizePx` / `brightness` / `glowOverlap`.
    */
   readonly aggregateIntensityCap: number;
+  /** The focus sphere, camera-relative; source-independent, so it rides the shared uniform. */
+  readonly focus: StarFocusSphere;
   /**
    * The six packed frustum planes for THIS frame's rebased view-projection
    * (`frustumPlanesFromViewProj` — 24 floats, six unit-normalized `(nx,ny,nz,d)`

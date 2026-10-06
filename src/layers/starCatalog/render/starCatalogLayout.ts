@@ -26,6 +26,7 @@
 
 import { CAMERA_UNIFORM_BYTES } from '../../../services/gpu/lib/cameraUniforms';
 import { roundUpToMultiple } from '../../../utils/math/roundUpToMultiple';
+import type { StarFocusSphere } from '../@types/StarFocusSphere';
 
 /**
  * Bytes of one `NodeParams` element in the `array<NodeParams>` storage buffer:
@@ -44,17 +45,32 @@ export const NODE_PARAMS_BYTES = 32;
 export const PREFIX_BYTES = 4;
 
 /**
+ * Byte offset of `focusCenterRelCam` (vec3): the six scalars before it end at
+ * byte 104 (the first four fill one 16-byte tail, 80 + 16 → 96; the last two
+ * open a second), and a vec3 aligns to 16, so it starts at 112 with 8 pad bytes
+ * before it. Its 4th lane (byte 124) is where the next f32 lands.
+ */
+const FOCUS_CENTER_BYTE_OFFSET = CAMERA_UNIFORM_BYTES + 32;
+const FOCUS_APPARENT_BYTE_OFFSET = FOCUS_CENTER_BYTE_OFFSET + 12;
+const FOCUS_PHYSICAL_BYTE_OFFSET = FOCUS_CENTER_BYTE_OFFSET + 16;
+const FOCUS_BLEND_BYTE_OFFSET = FOCUS_CENTER_BYTE_OFFSET + 20;
+
+/**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
- * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
- * + `pickPass` u32 + `aggregateIntensityCap` f32 + `pxPerRad` f32, rounded up
- * to the prefix's 16-byte alignment = 112 (mirrors `struct StarUniforms` in
- * shaders/starCatalog/io.wesl). The first four appended scalars fill one 16-byte
- * tail (80 + 16 → 96); the last two open a second, so 8 bytes at 104..111 are
- * pad and the buffer rounds to 112. Derived from
+ * `CameraUniforms` prefix + the six scalars (`sizePx`, `brightness`,
+ * `glowOverlap`, `pickPass`, `aggregateIntensityCap`, `pxPerRad`) + the focus
+ * sphere (vec3 + three f32), rounded up to the prefix's 16-byte alignment = 144
+ * (mirrors `struct StarUniforms` in shaders/starCatalog/io.wesl). Derived from
  * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
  * galaxy points `Uniforms` struct appends its own scalars.
  */
-export const STAR_UNIFORM_BYTES = roundUpToMultiple(CAMERA_UNIFORM_BYTES + 24, 16);
+export const STAR_UNIFORM_BYTES = roundUpToMultiple(FOCUS_BLEND_BYTE_OFFSET + 4, 16);
+
+/** Float indices (byte offset / 4) of the focus fields in the `StarUniforms` scratch. */
+export const FOCUS_CENTER_FLOAT_INDEX = FOCUS_CENTER_BYTE_OFFSET / 4;
+export const FOCUS_APPARENT_FLOAT_INDEX = FOCUS_APPARENT_BYTE_OFFSET / 4;
+export const FOCUS_PHYSICAL_FLOAT_INDEX = FOCUS_PHYSICAL_BYTE_OFFSET / 4;
+export const FOCUS_BLEND_FLOAT_INDEX = FOCUS_BLEND_BYTE_OFFSET / 4;
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
@@ -99,6 +115,18 @@ export const AGG_INTENSITY_CAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 16) / 4;
  * by. The pick renderer leaves it zero-init: its fragment ignores intensity.
  */
 export const PX_PER_RAD_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 20) / 4;
+
+/**
+ * Write the focus sphere into a `StarUniforms` f32 scratch. Both star renderers
+ * call it on every draw: the shader's focus smoothstep has no safe zero state
+ * (equal radii give NaN), so a scratch that skipped it would not be neutral.
+ */
+export function writeStarFocus(scratch: Float32Array, focus: StarFocusSphere): void {
+  scratch.set(focus.centerRelCamMpc, FOCUS_CENTER_FLOAT_INDEX);
+  scratch[FOCUS_APPARENT_FLOAT_INDEX] = focus.apparentRadiusMpc;
+  scratch[FOCUS_PHYSICAL_FLOAT_INDEX] = focus.physicalRadiusMpc;
+  scratch[FOCUS_BLEND_FLOAT_INDEX] = focus.blend;
+}
 
 /**
  * Pack one `NodeParams` block at byte `base` of `view`, in the field order the

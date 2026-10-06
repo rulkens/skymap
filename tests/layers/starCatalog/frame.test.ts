@@ -6,6 +6,7 @@
  * mid-fade.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -30,7 +31,7 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 
 function makeCtx(camPos: Readonly<Vec3>, nowMs: number): FrameView {
   return {
-    snapshot: { nowMs },
+    snapshot: { nowMs, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     viewSlot: 0,
     viewKind: 'frame',

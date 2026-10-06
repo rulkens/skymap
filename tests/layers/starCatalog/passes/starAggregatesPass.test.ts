@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
 import { computeStarCut } from '../../../../src/layers/starCatalog/render/cut/computeStarCut';
@@ -54,7 +55,7 @@ function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): FrameView 
   return {
     // Frame-owned (`ReadyFrameContext`), nested for `computeStarCut` and
     // `starAggregatesPass.ts`'s `ctx.snapshot.renderTargets` read.
-    snapshot: { nowMs, renderTargets },
+    snapshot: { nowMs, renderTargets, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     viewSlot: capture ? 1 : 0,
     viewKind: capture ? 'capture' : 'frame',

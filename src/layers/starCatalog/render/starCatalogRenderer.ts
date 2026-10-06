@@ -120,6 +120,7 @@ import {
   GLOW_OVERLAP_FLOAT_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
   PX_PER_RAD_FLOAT_INDEX,
+  writeStarFocus,
   writeStarNodeParams,
 } from './starCatalogLayout';
 import type { StarDrawStream } from '../@types/StarDrawStream';
@@ -416,6 +417,7 @@ export function createStarCatalogRenderer(
       brightness,
       glowOverlap,
       aggregateIntensityCap,
+      focus,
       pxPerRad,
       frustumPlanes,
       glowMarginAngleRad,
@@ -443,6 +445,7 @@ export function createStarCatalogRenderer(
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = aggregateIntensityCap;
     cameraScratch[PX_PER_RAD_FLOAT_INDEX] = pxPerRad;
+    writeStarFocus(cameraScratch, focus);
     cameraRing.writeSlot(viewSlot, cameraScratch);
 
     // Pack every SURVIVING draw's params contiguously and build the exclusive

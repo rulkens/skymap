@@ -17,6 +17,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
 import { rebaseViewProj } from '../../../../src/utils/camera/rebaseViewProj';
@@ -57,7 +58,7 @@ function camAtPc(distPc: number): Vec3 {
 // (what the old slot-less fixture got implicitly, `undefined !== 0`).
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    snapshot: { nowMs, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     viewKind: 'capture',
     canvasSize: { width: 1280, height: 720 },

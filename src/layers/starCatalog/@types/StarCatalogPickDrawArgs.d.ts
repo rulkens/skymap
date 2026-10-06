@@ -1,5 +1,6 @@
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarFocusSphere } from './StarFocusSphere';
 
 /**
  * One source's per-frame LEAF cut, as the pick pass draws it — a subset of the
@@ -43,6 +44,8 @@ export type StarCatalogPickDrawArgs = {
    * the vertex stage's pick branch so a sub-pixel star stays clickable.
    */
   readonly sizePx: number;
+  /** The focus sphere: the vertex stage drops a star it dims out of the pick pass. */
+  readonly focus: StarFocusSphere;
   /**
    * The six frustum planes as `frustumPlanesFromViewProj` packs them (6 × vec4,
    * `Float32Array(24)`), against which each leaf node's bounding sphere is

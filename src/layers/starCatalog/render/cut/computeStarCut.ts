@@ -9,6 +9,7 @@ import { starOctreeIndex } from '../../../../utils/star/starOctreeIndex';
 import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { frameStarCutFrustum } from './frameStarCutFrustum';
+import { starFocusRelCam } from './starFocusRelCam';
 import { fadeStateFor } from './starFadeState';
 import { streamsFor } from './starCatalogStreams';
 import { pushStarNode } from './starNodeStream';
@@ -162,5 +163,6 @@ export function computeStarCut(
     brightness,
     glowOverlap,
     aggregateIntensityCap,
+    focus: starFocusRelCam(view.snapshot.focus, camPos),
   };
 }

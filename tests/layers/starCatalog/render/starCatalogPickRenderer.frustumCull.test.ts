@@ -26,6 +26,7 @@ import { mat4 } from 'wgpu-matrix';
 import { createStarCatalogPickRenderer } from '../../../../src/layers/starCatalog/render/starCatalogPickRenderer';
 import { frustumPlanesFromViewProj } from '../../../../src/utils/camera/frustumPlanesFromViewProj';
 import { Source } from '../../../../src/data/sources';
+import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { StarCatalogPickResources } from '../../../../src/layers/starCatalog/@types/StarCatalogPickResources';
 import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 
@@ -91,6 +92,7 @@ function twoLeafArgs(
   const bZ = overrides?.bZ ?? 50;
   return {
     source: Source.GaiaStars,
+    focus: STAR_FOCUS_AT_REST,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
     pxPerRad: 1000,

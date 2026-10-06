@@ -67,6 +67,7 @@ import {
   BRIGHTNESS_FLOAT_INDEX,
   GLOW_OVERLAP_FLOAT_INDEX,
   PICK_PASS_U32_INDEX,
+  writeStarFocus,
   writeStarNodeParams,
 } from './starCatalogLayout';
 import type { StarCatalogPickDrawArgs } from '../@types/StarCatalogPickDrawArgs';
@@ -228,6 +229,7 @@ export function createStarCatalogPickRenderer(
       originRelCamMpc,
       cellScaleMpc,
       sizePx,
+      focus,
       frustumPlanes,
       glowMarginAngleRad,
     } = args;
@@ -239,6 +241,7 @@ export function createStarCatalogPickRenderer(
     // visual pass's buffer is never touched.
     writeCameraPrefix(uniformF32, vp, viewportPx, pxPerRad);
     uniformF32[SIZE_PX_FLOAT_INDEX] = sizePx;
+    writeStarFocus(uniformF32, focus);
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     // Pack every SURVIVING leaf draw's NodeParams contiguously + the exclusive

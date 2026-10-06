@@ -5,6 +5,7 @@
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { PreparedStarSource } from './PreparedStarSource';
+import type { StarFocusSphere } from './StarFocusSphere';
 
 export type PreparedStarCut = {
   sources: PreparedStarSource[];
@@ -18,4 +19,6 @@ export type PreparedStarCut = {
   brightness: number;
   glowOverlap: number;
   aggregateIntensityCap: number;
+  /** The focus sphere about `originMpc`, source-independent like the scalars above. */
+  focus: StarFocusSphere;
 };

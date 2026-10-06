@@ -28,6 +28,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { mat4d } from 'wgpu-matrix';
 
 import { readStarCut } from '../../../../../src/layers/starCatalog/render/cut/readStarCut';
@@ -74,7 +75,7 @@ function camAtPc(distPc: number): Vec3 {
  */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    snapshot: { nowMs, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     viewSlot,
     viewKind: viewSlot === 0 ? 'frame' : 'capture',
@@ -493,7 +494,7 @@ describe('the frame star cut over several views', () => {
     const look = mat4d.lookAt(eyeMpc, targetMpc, [0, 1, 0], new Float64Array(16));
     const vp = mat4d.multiply(proj, look, new Float64Array(16)) as Float64Array;
     return {
-      snapshot: { nowMs },
+      snapshot: { nowMs, focus: ZERO_FOCUS },
       drawCamPos: eyeMpc,
       viewSlot: 0,
       viewKind: 'frame',

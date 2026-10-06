@@ -34,7 +34,8 @@
 //                'CameraUniforms' prefix (rebased vp + viewportPx) followed
 //                by the user's base star-dot size 'sizePx', star-brightness
 //                trim 'brightness', aggregate glow spread 'glowOverlap' and
-//                aggregate peak ceiling 'aggregateIntensityCap'. The
+//                aggregate peak ceiling 'aggregateIntensityCap', then the focus
+//                sphere (centre / radii / blend) that dims stars outside it. The
 //                mirror of the galaxy points 'Uniforms { cam: CameraUniforms,
 //                ..., pointSizePx, brightness, ... }' shape — the scalars
 //                are source-independent, so they ride the camera uniform that is
@@ -54,9 +55,12 @@ import package::lib::camera::CameraUniforms;
 //   offset 92  pickPass              u32             (0 = visual, 1 = pick)
 //   offset 96  aggregateIntensityCap f32             (peak ceiling for aggregates)
 //   offset 100 pxPerRad              f32             (target px per radian, toRefPx)
-//   struct size 112 (rounded up to the prefix's 16-byte alignment; the six
-//   scalars overflow the first 16-byte tail, so 'aggregateIntensityCap' opens a
-//   second one and 8 bytes at 104..111 are pure pad).
+//   offset 112 focusCenterRelCam     vec3<f32>       (focus centre - camera, Mpc; align 16)
+//   offset 124 focusApparentRadiusMpc f32            (rides the vec3's 4th lane)
+//   offset 128 focusPhysicalRadiusMpc f32
+//   offset 132 focusBlend            f32             (0 = no focus; multiplier is 1)
+//   struct size 144 (rounded up to the prefix's 16-byte alignment; 8 bytes at
+//   104..111 are pad before the vec3, 12 at 136..143 trail the blend).
 //
 // 'pickPass' (float index 23, byte 92) is written only by the pick pipeline. The
 // VISUAL draw never writes it -- the renderer's per-source camera write stops at
@@ -84,6 +88,12 @@ struct StarUniforms {
   pickPass: u32,
   aggregateIntensityCap: f32,
   pxPerRad: f32,
+  // The focus sphere in camera-relative space (see the layout table above). The
+  // CPU subtracts the camera in f64 so the shader never has to.
+  focusCenterRelCam: vec3<f32>,
+  focusApparentRadiusMpc: f32,
+  focusPhysicalRadiusMpc: f32,
+  focusBlend: f32,
 };
 
 struct VSOut {
