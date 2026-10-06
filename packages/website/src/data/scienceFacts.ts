@@ -145,9 +145,9 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-milky-way-points',
-    text: 'The model is drawn as about 150,000 points of light, each standing in for roughly 700,000 stars.',
-    source: `${REPO_BLOB}/src/services/engine/galaxyGenerator/v1/README.md`,
-    sourceLabel: `the Milky Way generator’s notes, ${IN_REPO}`,
+    text: 'At the largest of the app’s three data sizes the model is drawn as about 150,000 points of light, each standing in for roughly 700,000 stars.',
+    source: `${REPO_BLOB}/src/data/milkyWay/milkyWayGalaxyParams.ts`,
+    sourceLabel: `the Milky Way parameters, ${IN_REPO}`,
     checked: CHECKED,
   },
   {

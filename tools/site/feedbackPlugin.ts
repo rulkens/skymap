@@ -14,11 +14,11 @@ import type { Plugin } from 'vite';
 import type { FeedbackNote } from './@types/FeedbackNote';
 import { feedbackIndexLine } from './utils/feedbackIndexLine';
 import { feedbackNoteStem } from './utils/feedbackNoteStem';
+import { isFeedbackNote } from './utils/isFeedbackNote';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const FEEDBACK_DIR = join(REPO_ROOT, '.superpowers/sdd/2026-10-05-companion-website/feedback');
 const MAX_BODY_BYTES = 1_000_000;
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 const INDEX_HEADER = [
   '# Site feedback notes',
@@ -38,19 +38,6 @@ function rebuildIndex(): void {
     .sort((a, b) => b.note.timestamp.localeCompare(a.note.timestamp));
   const lines = notes.map(({ stem, note }) => feedbackIndexLine(note, stem));
   writeFileSync(join(FEEDBACK_DIR, 'index.md'), `${INDEX_HEADER}${lines.join('\n')}\n`);
-}
-
-function isNote(value: unknown): value is FeedbackNote {
-  const note = value as FeedbackNote | null;
-  return (
-    typeof note?.text === 'string' &&
-    note.text.trim() !== '' &&
-    typeof note.timestamp === 'string' &&
-    // The timestamp becomes part of a file name: only an ISO instant, never a path.
-    ISO_INSTANT.test(note.timestamp) &&
-    typeof note.page?.path === 'string' &&
-    typeof note.element?.selector === 'string'
-  );
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -92,7 +79,9 @@ async function answer(req: IncomingMessage): Promise<[number, object]> {
   if (site !== undefined && site !== 'same-origin') return [403, { error: 'same-origin only' }];
   if (req.method === 'POST') {
     const note: unknown = JSON.parse(await readBody(req));
-    return isNote(note) ? [200, { id: saveNote(note) }] : [400, { error: 'not a feedback note' }];
+    return isFeedbackNote(note)
+      ? [200, { id: saveNote(note) }]
+      : [400, { error: 'not a feedback note' }];
   }
   if (req.method === 'DELETE') {
     const id = new URL(req.url ?? '', 'http://localhost').searchParams.get('id') ?? '';

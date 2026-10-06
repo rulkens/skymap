@@ -13,6 +13,7 @@ import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
 import { HORIZON_RADIUS_GPC } from '../../../src/data/rendering/horizonRadiusGpc';
 import { C_KM_S, H0_KM_S_MPC, PC_TO_LY } from '../../../src/utils/math/constants';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
+import { statedFigures } from './statedFigures';
 
 const OMEGA_M = 0.315;
 // Photons and three massless neutrino species: Omega_r h^2 = 4.18e-5.
@@ -33,35 +34,82 @@ function horizonMpc(h0: number): number {
 }
 
 describe('science page numbers', () => {
-  it('the app still uses the constants the page states', () => {
-    expect(H0_KM_S_MPC).toBe(70);
-    expect(HORIZON_RADIUS_GPC).toBe(14.3);
-    expect(HORIZON_RADIUS_GPC * PC_TO_LY).toBeCloseTo(46.6, 1);
+  it('the page states the constants the app uses', () => {
+    const [h0, omegaM] = statedFigures(
+      'sci-galaxy-distance',
+      /Hubble constant of (\d+) km\/s per megaparsec and a matter density of (\d+(?:\.\d+)?)/,
+    );
+    expect(h0).toBe(H0_KM_S_MPC);
+    expect(omegaM).toBe(OMEGA_M);
+    const [gpc, gly] = statedFigures(
+      'sci-horizon-shell',
+      /drawn at (\d+(?:\.\d+)?) gigaparsecs \((\d+(?:\.\d+)?) thousand million light-years\)/,
+    );
+    expect(gpc).toBe(HORIZON_RADIUS_GPC);
+    expect(gpc! * PC_TO_LY).toBeCloseTo(gly!, 1);
   });
 
-  it('the horizon is about 13.6 Gpc with H0 = 70 and near 14.3 only with a constant near 67', () => {
-    const at70 = horizonMpc(H0_KM_S_MPC) / 1000;
-    expect(at70).toBeCloseTo(13.6, 1);
-    expect(Math.round((HORIZON_RADIUS_GPC / at70 - 1) * 100)).toBe(5);
-    expect(horizonMpc(67.4) / 1000).toBeGreaterThan(14.1);
+  it('the horizon for the Hubble constant we use, and how far out the sphere is drawn', () => {
+    const [shell, fits, ours, model, percent] = statedFigures(
+      'sim-horizon-h0',
+      /sphere at (\d+(?:\.\d+)?) gigaparsecs fits a Hubble constant near (\d+)\. With the (\d+) we use .* gives about (\d+(?:\.\d+)?) gigaparsecs\. The sphere is drawn about (\d+) per cent/,
+    );
+    expect([shell, ours]).toEqual([HORIZON_RADIUS_GPC, H0_KM_S_MPC]);
+    const horizon = horizonMpc(H0_KM_S_MPC) / 1000;
+    expect(horizon).toBeCloseTo(model!, 1);
+    expect(Math.round((shell! / horizon - 1) * 100)).toBe(percent);
+    expect(horizonMpc(fits!) / 1000).toBeCloseTo(shell!, 0);
   });
 
-  it('redshift distances: 0.3 is about 1.2 Gpc, 7 about 8.5 Gpc and 59 percent of the way to the sphere', () => {
-    expect(redshiftToDistanceMpc(0.3) / 1000).toBeCloseTo(1.2, 1);
-    const deepest = redshiftToDistanceMpc(7) / 1000;
-    expect(deepest).toBeCloseTo(8.5, 1);
-    expect(Math.round((deepest / HORIZON_RADIUS_GPC) * 100)).toBe(59);
+  it('redshift distances and the share of the way to the sphere', () => {
+    const [quasarZ, quasarGpc, percent, sdssZ, sdssGpc] = statedFigures(
+      'sci-deepest',
+      /redshift near (\d+)\. Our model places that about (\d+(?:\.\d+)?) gigaparsecs away, (\d+) per cent of the way to the sphere\. The SDSS galaxies stop at a redshift of (\d+(?:\.\d+)?), about (\d+(?:\.\d+)?) gigaparsecs/,
+    );
+    const deepest = redshiftToDistanceMpc(quasarZ!) / 1000;
+    expect(deepest).toBeCloseTo(quasarGpc!, 1);
+    expect(Math.round((deepest / HORIZON_RADIUS_GPC) * 100)).toBe(percent);
+    expect(redshiftToDistanceMpc(sdssZ!) / 1000).toBeCloseTo(sdssGpc!, 1);
   });
 
-  it('errors and velocities as megaparsecs', () => {
-    expect(redshiftToDistanceMpc(0.115) - redshiftToDistanceMpc(0.1)).toBeCloseTo(60, -1);
-    expect(Math.round(300 / H0_KM_S_MPC)).toBe(4);
-    expect(Math.round((300 / (30 * H0_KM_S_MPC)) * 100)).toBe(14);
-    expect(Math.round((100 * H0_KM_S_MPC) / 73)).toBe(96);
-    expect(Math.round((100 * H0_KM_S_MPC) / 67.4)).toBe(104);
-    expect(Math.round((74.6 / H0_KM_S_MPC - 1) * 100)).toBe(7);
-    expect(Math.round(30 * PC_TO_LY)).toBe(98);
-    expect(Math.round((935 / 2100) * 100)).toBe(45);
+  it('errors, velocities and other constants as megaparsecs', () => {
+    const [cutMpc, cutMly] = statedFigures(
+      'sci-galaxy-distance',
+      /Beyond (\d+) megaparsecs \((\d+) million light-years\)/,
+    );
+    expect(Math.round(cutMpc! * PC_TO_LY)).toBe(cutMly);
+    const [placed, nearer, high, farther, low] = statedFigures(
+      'sci-h0-range',
+      /place at (\d+) megaparsecs would sit at about (\d+) with a constant of (\d+(?:\.\d+)?), or (\d+) with (\d+(?:\.\d+)?)/,
+    );
+    expect(Math.round((placed! * H0_KM_S_MPC) / high!)).toBe(nearer);
+    expect(Math.round((placed! * H0_KM_S_MPC) / low!)).toBe(farther);
+    const [kmS, share, atMpc, allAtMpc] = statedFigures(
+      'sci-local-volume',
+      /: (\d+) km\/s is (\d+) per cent of the expansion at (\d+) megaparsecs and all of it at about (\d+)/,
+    );
+    expect(Math.round((kmS! / (atMpc! * H0_KM_S_MPC)) * 100)).toBe(share);
+    expect(Math.round(kmS! / H0_KM_S_MPC)).toBe(allAtMpc);
+    const [streakKmS, streakMpc] = statedFigures(
+      'sim-redshift-space',
+      /(\d+) km\/s shifts it by about (\d+) megaparsecs/,
+    );
+    expect(Math.round(streakKmS! / H0_KM_S_MPC)).toBe(streakMpc);
+    const [photometric, usableMillions, percent, error, z, errorMpc] = statedFigures(
+      'sci-photometric-share',
+      /about ([\d,]+) of its (\d+(?:\.\d+)?) million usable rows, roughly (\d+) per cent, .* error near (\d+(?:\.\d+)?)\. At a redshift of (\d+(?:\.\d+)?) that error is about (\d+) megaparsecs/,
+    );
+    expect(Math.round((photometric! / (usableMillions! * 1e6)) * 100)).toBe(percent);
+    expect(redshiftToDistanceMpc(z! + error!) - redshiftToDistanceMpc(z!)).toBeCloseTo(
+      errorMpc!,
+      -1,
+    );
+    const [cosmicflows, outside, step] = statedFigures(
+      'sim-scale-step',
+      /Hubble constant of (\d+(?:\.\d+)?) km\/s per megaparsec\. Outside we use (\d+)\. .* about (\d+) per cent/,
+    );
+    expect(outside).toBe(H0_KM_S_MPC);
+    expect(Math.round((cosmicflows! / outside! - 1) * 100)).toBe(step);
   });
 });
 
