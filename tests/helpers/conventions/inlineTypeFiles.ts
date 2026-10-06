@@ -129,7 +129,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/utils/render/disk/byDistanceToCamera.ts',
   'src/utils/surfaceTiles/cutSurfaceTiles.ts',
   'src/utils/volume/packLogTraceVoxels.ts',
-  'src/worker.ts',
   'tools/capture/parseFeaturedArgs.ts',
   'tools/catalog/buildAllBins.ts',
   'tools/catalog/catalogDistanceFor.ts',
