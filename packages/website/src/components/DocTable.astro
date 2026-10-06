@@ -1,0 +1,22 @@
+---
+/*
+ * DocTable — what a Markdown table becomes on a docs page: the same table in a
+ * box of its own that scrolls sideways when the table is wider than the text
+ * column. The box can be focused, so a keyboard can scroll it.
+ */
+---
+
+<div class="doc-table" role="region" aria-label="Table" tabindex="0">
+  <table><slot /></table>
+</div>
+
+<style>
+  .doc-table {
+    margin: 0 0 var(--stack);
+    overflow-x: auto;
+  }
+
+  .doc-table:focus-visible {
+    outline-offset: 2px;
+  }
+</style>

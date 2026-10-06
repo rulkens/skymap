@@ -1,0 +1,10 @@
+---
+/* DocFigure — `<Figure id="…" />` on a docs page: a picture from the shot manifest at the text column's width, with its label and "Open this view". */
+import Figure from './Figure.astro';
+
+type Props = { id: string };
+
+const { id } = Astro.props;
+---
+
+<Figure id={id} sizes="(max-width: 900px) 100vw, 40rem" />

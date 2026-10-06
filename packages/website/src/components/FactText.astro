@@ -1,0 +1,16 @@
+---
+/*
+ * FactText — `<Fact id="…" />` on a docs page: the words of one sourced row of
+ * data/facts.ts, as a paragraph. `inline` prints the words alone, inside a
+ * sentence of the page's own. The page's source list finds the id in the text
+ * (pages/docs/[...slug].astro), so a printed fact is always a listed one.
+ */
+import { fact } from '../data/fact';
+
+type Props = { id: string; inline?: boolean };
+
+const { id, inline = false } = Astro.props;
+const { text } = fact(id);
+---
+
+{inline ? text : <p>{text}</p>}

@@ -1,0 +1,188 @@
+---
+/*
+ * DocBody — the running text of a docs page: everything Markdown can emit,
+ * set for reading at length on black. Jost 400 at 18px, about 65 characters
+ * to the line at the column the Docs layout gives it; headings in the display
+ * face, never under 20px; a list's bullets are the site's ring, small. The
+ * rules reach into the slot because the text is compiled Markdown, which
+ * carries no component scope.
+ */
+---
+
+<div class="doc-body"><slot /></div>
+
+<style>
+  .doc-body {
+    font: var(--weight-small) 1.125rem / 1.65 var(--font-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .doc-body > :global(:first-child) {
+    margin-top: 0;
+  }
+
+  .doc-body :global(:is(p, li, dd)) {
+    max-width: none;
+    text-wrap: pretty;
+  }
+
+  /* The gap above a heading is always larger than the one below it. */
+  .doc-body :global(h2) {
+    margin: 3.5rem 0 1rem;
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .doc-body :global(h3) {
+    margin: 2.5rem 0 0.75rem;
+  }
+
+  .doc-body :global(h4) {
+    margin: 2rem 0 0.5rem;
+    font: var(--weight-display) var(--text-body) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  .doc-body :global(strong) {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .doc-body :global(:is(ul, ol)) {
+    margin: 0 0 var(--stack);
+    padding-left: 1.5rem;
+    color: var(--site-text-muted);
+  }
+
+  .doc-body :global(li) {
+    margin-block: 0.5rem;
+  }
+
+  .doc-body :global(li > :is(ul, ol)) {
+    margin-bottom: 0;
+  }
+
+  .doc-body :global(ul) {
+    list-style: none;
+  }
+
+  .doc-body :global(ul > li) {
+    position: relative;
+  }
+
+  .doc-body :global(ul > li::before) {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 0.65em;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+  }
+
+  .doc-body :global(ol > li::marker) {
+    color: var(--site-text-dim);
+  }
+
+  .doc-body :global(:is(code, pre)) {
+    font-family: var(--font-family-mono);
+    font-size: 0.875em;
+    color: var(--color-fg);
+  }
+
+  /* A block of code scrolls inside its own rules; the page never scrolls sideways. */
+  .doc-body :global(pre) {
+    margin: 0 0 var(--stack);
+    padding-block: 1rem;
+    border-block: 1px solid var(--border-divider);
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+
+  .doc-body :global(pre code) {
+    font-size: inherit;
+  }
+
+  .doc-body :global(blockquote) {
+    margin: 2rem 0;
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--color-accent);
+  }
+
+  .doc-body :global(blockquote p) {
+    color: var(--site-text);
+  }
+
+  .doc-body :global(blockquote > :last-child) {
+    margin-bottom: 0;
+  }
+
+  .doc-body :global(dl) {
+    margin: 0 0 var(--stack);
+  }
+
+  .doc-body :global(dt) {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+    color: var(--color-fg);
+  }
+
+  .doc-body :global(dd) {
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+  }
+
+  .doc-body :global(hr) {
+    margin: 3rem 0;
+    border: 0;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .doc-body :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-small);
+    line-height: 1.45;
+    text-align: left;
+  }
+
+  .doc-body :global(:is(th, td)) {
+    padding: 0.75rem 1.5rem 0.75rem 0;
+    vertical-align: top;
+  }
+
+  .doc-body :global(:is(th, td):last-child) {
+    padding-right: 0;
+  }
+
+  .doc-body :global(th) {
+    font-weight: var(--weight-small);
+    color: var(--color-fg);
+    white-space: nowrap;
+  }
+
+  .doc-body :global(thead th) {
+    border-bottom: 1px solid rgb(232 238 255 / 0.2);
+  }
+
+  .doc-body :global(td) {
+    color: var(--site-text-muted);
+  }
+
+  .doc-body :global(tbody tr + tr > *) {
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .doc-body :global(figure) {
+    margin: 2.5rem 0;
+  }
+
+  .doc-body :global(.caveat) {
+    margin-block: 2.5rem;
+  }
+
+  .doc-body :global(.caveat h3) {
+    margin-top: 0;
+  }
+</style>
