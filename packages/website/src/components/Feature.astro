@@ -15,10 +15,10 @@ import ShotCaption from './ShotCaption.astro';
 
 type Props = {
   shot: string;
-  tall?: string;
+  tall: string;
   title: string;
-  kicker?: string;
-  ask?: string;
+  kicker: string;
+  ask: string;
   href: string;
   action: string;
   wide?: boolean;
@@ -33,7 +33,7 @@ const sizes = wide
 
 <article class:list={['feature grid', { wide }]}>
   <header>
-    {kicker && <p class="kicker small">{kicker}</p>}
+    <p class="kicker small">{kicker}</p>
     <h3>{title}</h3>
   </header>
   <figure>
@@ -46,14 +46,8 @@ const sizes = wide
     <slot />
   </div>
   <div class="act">
-    {
-      ask && (
-        <>
-          <p class="label small">Ask the class</p>
-          <p class="ask">{ask}</p>
-        </>
-      )
-    }
+    <p class="label small">Ask the class</p>
+    <p class="ask">{ask}</p>
     <ViewLink hang href={href}>{action}</ViewLink>
   </div>
 </article>

@@ -9,16 +9,16 @@ import { fact } from '../data/fact';
 import { formatDate } from '../utils/formatDate';
 import { listedSources } from '../utils/listedSources';
 
-type Props = { ids: readonly string[]; label?: string; all?: boolean };
+type Props = { ids: readonly string[]; all?: boolean };
 
-const { ids, label = 'Sources for this page', all = false } = Astro.props;
+const { ids, all = false } = Astro.props;
 const rows = listedSources([...new Set(ids)].map(fact), all);
 ---
 
 {
   rows.length > 0 && (
     <details class="sources small">
-      <summary class="ring small">{label} ({rows.length})</summary>
+      <summary class="ring small">Sources for this page ({rows.length})</summary>
       <ol>
         {rows.map((row) => (
           <li>

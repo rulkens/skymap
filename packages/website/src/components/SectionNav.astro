@@ -2,37 +2,29 @@
 /*
  * SectionNav — the sections of a long page, as a contents row under its
  * opening: a quiet heading that says what the row is, then one cell per
- * section, in equal columns of the page grid, with a drawing, the section's
- * name and what it answers. Plain
- * anchors, no script. The ring around the drawing is the top bar's selection
+ * section, in equal columns of the page grid, with a drawing and the
+ * section's name. Plain anchors, no script. The ring around the drawing is the top bar's selection
  * (styles/site.css `.ring > .glyph`); hairlines and a dim heading keep this
  * second navigation quieter than the bar.
  */
 import type { IconName } from '../@types/IconName';
 import Icon from './Icon.astro';
 
-type Props = {
-  items: { href: string; label: string; icon: IconName; note?: string }[];
-  /** Shown above the row and read as the landmark's name. */
-  label?: string;
-};
+type Props = { items: { href: string; label: string; icon: IconName }[] };
 
-const { items, label = 'On this page' } = Astro.props;
+const { items } = Astro.props;
 const headingId = 'section-nav-label';
 ---
 
 <nav class="wrap" aria-labelledby={headingId}>
-  <p class="heading small" id={headingId}>{label}</p>
+  <p class="heading small" id={headingId}>On this page</p>
   <ol class="grid" style={`--span: ${12 / items.length}`}>
     {
       items.map((item) => (
         <li>
           <a href={item.href}>
             <Icon name={item.icon} />
-            <span class="words">
-              <span class="name">{item.label}</span>
-              {item.note && <span class="note small">{item.note}</span>}
-            </span>
+            <span class="name">{item.label}</span>
           </a>
         </li>
       ))
@@ -103,27 +95,10 @@ const headingId = 'section-nav-label';
     border-color: var(--color-accent);
   }
 
-  .words {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
   .name {
     font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
     letter-spacing: -0.015em;
     text-wrap: balance;
-  }
-
-  .note {
-    text-wrap: balance;
-    color: var(--site-text-dim);
-    transition: color 0.25s ease;
-  }
-
-  a:hover .note,
-  a:focus-visible .note {
-    color: var(--site-text-muted);
   }
 
   /* Narrow: a contents list, drawing beside the words, two columns while they fit. */
@@ -168,8 +143,7 @@ const headingId = 'section-nav-label';
   }
 
   @media (prefers-reduced-motion: reduce) {
-    a :global(.glyph),
-    .note {
+    a :global(.glyph) {
       transition: none;
     }
   }

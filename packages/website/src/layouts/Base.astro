@@ -16,23 +16,15 @@ import { INDEXABLE } from '../data/site';
 type Props = {
   title: string;
   description: string;
-  image?: string;
-  imageAlt?: string;
   jsonLd?: readonly Record<string, unknown>[];
   heroNav?: boolean;
 };
 
-const {
-  title,
-  description,
-  image = cardUrl,
-  imageAlt = siteShot('og-card').alt,
-  jsonLd = [],
-  heroNav = false,
-} = Astro.props;
+const { title, description, jsonLd = [], heroNav = false } = Astro.props;
+const imageAlt = siteShot('og-card').alt;
 // Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const imageUrl = new URL(image, Astro.site).href;
+const imageUrl = new URL(cardUrl, Astro.site).href;
 ---
 
 <!doctype html>

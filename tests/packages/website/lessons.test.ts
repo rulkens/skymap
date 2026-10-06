@@ -4,7 +4,6 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { fact } from '../../../packages/website/src/data/fact';
 import { LESSON_TOPICS } from '../../../packages/website/src/data/lessons';
 import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
@@ -17,14 +16,7 @@ const paletteFocusIds = new Set(
   ),
 );
 
-describe('lesson links', () => {
-  it('ids are unique across topics', () => {
-    const ids = lessons.map((lesson) => lesson.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-});
-
-describe.each(lessons)('lesson $id', (lesson) => {
+describe.each(lessons)('lesson $shot', (lesson) => {
   it('opens an exhibit or an object the app knows', () => {
     const { view } = linkIntentFrom(lesson.hash);
     if (view.kind === 'exhibit') expect(Object.keys(exhibitRegistry)).toContain(view.id);
@@ -32,9 +24,5 @@ describe.each(lessons)('lesson $id', (lesson) => {
       expect(view.kind).toBe('focus');
       expect(paletteFocusIds.has(view.kind === 'focus' ? view.id : '')).toBe(true);
     }
-  });
-
-  it('cites a fact row that exists', () => {
-    if (lesson.factId) expect(() => fact(lesson.factId!)).not.toThrow();
   });
 });

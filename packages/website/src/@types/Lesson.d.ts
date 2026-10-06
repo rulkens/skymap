@@ -5,7 +5,6 @@
  * number in it.
  */
 export type Lesson = {
-  id: string;
   title: string;
   hash: string;
   shot: string;

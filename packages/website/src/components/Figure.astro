@@ -1,32 +1,29 @@
 ---
 /*
  * Figure — a picture from the shot manifest with its label under it. `disc`
- * shows a fisheye frame round: `ring` with the dome's ring about it, centred
- * and never taller than the screen it is on; `plain` as wide as its column.
- * `title` names the picture above the label, and the slot is for what
- * follows the label.
+ * shows a fisheye frame round with the dome's ring about it, centred and never
+ * taller than the screen it is on. The slot is for what follows the label.
  */
 import Disc from './Disc.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 
-type Props = { id: string; sizes: string; open?: boolean; disc?: 'ring' | 'plain'; title?: string };
+type Props = { id: string; sizes: string; open?: boolean; disc?: boolean };
 
-const { id, sizes, open = true, disc, title } = Astro.props;
+const { id, sizes, open = true, disc = false } = Astro.props;
 ---
 
 <figure>
   {
     disc ? (
-      <div class:list={[disc === 'ring' && 'ringed']}>
-        <Disc id={id} sizes={sizes} ring={disc === 'ring'} />
+      <div class="ringed">
+        <Disc id={id} sizes={sizes} />
       </div>
     ) : (
       <Shot id={id} sizes={sizes} />
     )
   }
   <figcaption>
-    {title && <h3>{title}</h3>}
     <ShotCaption id={id} open={open} />
     <slot />
   </figcaption>
@@ -45,10 +42,6 @@ const { id, sizes, open = true, disc, title } = Astro.props;
 
   figcaption {
     margin-top: 0.5rem;
-  }
-
-  h3 {
-    margin-bottom: 0.5rem;
   }
 
   /* The margin is the room the disc's ring stands in. */
