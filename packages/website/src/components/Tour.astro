@@ -21,8 +21,10 @@ import { HOME_LINKS } from '../data/homeLinks';
 </section>
 
 <style>
+  /* Isolated: the words' layer is ordered inside the section, so it passes under the top bar's ground like the rest. */
   .tour {
     position: relative;
+    isolation: isolate;
     margin-top: var(--section-space);
     overflow-x: clip;
     background: #000;
