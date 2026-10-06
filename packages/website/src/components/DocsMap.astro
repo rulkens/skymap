@@ -1,0 +1,148 @@
+---
+/*
+ * DocsMap — the docs' front page: what they cover, search, and the whole tree
+ * of data/docsTree.ts, one band to a group. A group's name and purpose stand
+ * in the first three columns of the page grid and its pages in the other
+ * nine, three to a row. A written page carries the ring, as every link to a
+ * place does; a planned one is its name alone, dimmer, so the map is honest
+ * about how much of it exists.
+ */
+import DocsSearch from './DocsSearch.astro';
+import { DOCS_TREE } from '../data/docsTree';
+import { sitePath } from '../utils/sitePath';
+
+const pages = DOCS_TREE.flatMap((group) => group.pages);
+const written = pages.filter((page) => page.status === 'live').length;
+---
+
+<header class="wrap open" data-opening>
+  <h1>Docs</h1>
+  <p class="say">
+    These pages document what skymap does, the data it is built from and how it draws that data.
+  </p>
+  <DocsSearch big />
+  <p class="count small">
+    {written} of {pages.length} pages {written === 1 ? 'is' : 'are'} written so far. A name with a ring is a page you
+    can read. The dimmer names are planned, and listed so that you can see what is coming.
+  </p>
+</header>
+
+<div class="wrap map">
+  {
+    DOCS_TREE.map((group) => (
+      <section class="grid" id={group.name.toLowerCase()} aria-labelledby={`${group.name.toLowerCase()}-name`}>
+        <div class="about">
+          <h2 id={`${group.name.toLowerCase()}-name`}>{group.name}</h2>
+          <p class="small">{group.purpose}</p>
+        </div>
+        <ul class="grid small">
+          {group.pages.map((page) => (
+            <li>
+              {page.status === 'live' ? (
+                <a class="ring small" href={sitePath(page.path)}>
+                  {page.title}
+                </a>
+              ) : (
+                <span class="planned">
+                  {page.title}
+                  <span class="unseen"> (not written yet)</span>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>
+
+<style>
+  .open {
+    padding-block: var(--open-top) 3.5rem;
+  }
+
+  .open h1 {
+    margin-bottom: 0.25em;
+  }
+
+  .say {
+    max-width: var(--measure-lead);
+  }
+
+  .count {
+    max-width: 34rem;
+    margin: 1.5rem 0 0;
+    color: var(--site-text-dim);
+  }
+
+  .map {
+    padding-bottom: var(--section-space);
+  }
+
+  section {
+    row-gap: 1rem;
+    padding-block: 2rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  h2 {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .about p {
+    max-width: 22rem;
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  ul {
+    align-content: start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A planned page's name starts where a written page's label does, right of the ring it does not have. */
+  .planned {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding-left: 1.3125rem;
+    line-height: 1.2;
+    color: var(--site-text-faint);
+  }
+
+  .unseen {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (min-width: 901px) {
+    .about {
+      grid-column: span 3;
+    }
+
+    ul {
+      grid-column: 4 / -1;
+      --cols: 9;
+      /* The first row of names stands on the group name's line. */
+      margin-top: -0.25rem;
+    }
+
+    li {
+      grid-column: span 3;
+    }
+  }
+
+  @media (min-width: 561px) and (max-width: 900px) {
+    li {
+      grid-column: span 6;
+    }
+  }
+</style>
