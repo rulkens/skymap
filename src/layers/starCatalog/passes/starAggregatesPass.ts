@@ -11,13 +11,10 @@
  * SUMMED aggregate field. The leaf stream stays full-resolution in HDR
  * (`starCatalogPass`).
  *
- * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other star layers via `starCutFor`: the Layer's `frame`
- * hook advances the fades once and sets `computeStarCut`'s result on the
- * renderer before either draws, so this layer and `starCatalogPass` both read
- * that one cut rather than walking again. This layer records ONLY the
- * aggregate sub-stream, via the shared `drawStarStream` helper with
- * `stream: 'aggregate'` — the `fsLinear` pipeline into the offscreen.
+ * The cut, its LOD fades and the leaf/aggregate split are one GPU compute
+ * (`star-cut`) shared with `starCatalogPass`; this layer draws ONLY the
+ * aggregate list, via `drawStarCut` with `stream: 'aggregate'` — the
+ * `fsLinear` pipeline into the offscreen.
  *
  * ### Why `enabled` shares `starCatalogVisible`
  *
@@ -32,8 +29,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { starCatalogVisible } from '../render/cut/starCatalogVisible';
-import { starCutFor } from '../render/cut/starCutFor';
-import { drawStarStream } from '../render/cut/drawStarStream';
+import { drawStarCut } from '../render/cut/drawStarCut';
 
 export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
   return {
@@ -44,9 +40,6 @@ export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      const prep = starCutFor(runtime, state.settings.starCatalogs, ctx);
-      if (prep === null) return;
-
       // Viewport is the DESTINATION target's allocated size, not the canvas:
       // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
       // RASTERISED, so the canvas size would make the floor 0.75 texels here and
@@ -63,13 +56,12 @@ export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
           ? ctx.canvasSize
           : ctx.snapshot.renderTargets.sizeOf('star-aggregates');
 
-      drawStarStream(
-        runtime.renderer,
+      drawStarCut(
+        runtime,
         pass,
         { ...view, viewportPx: [vw, vh] },
-        prep,
-        'aggregate',
         ctx,
+        'aggregate',
       );
     },
   };

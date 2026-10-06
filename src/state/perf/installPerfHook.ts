@@ -11,6 +11,7 @@
 
 import { isPerfMode } from '../../utils/url/isPerfMode';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
+import { cpuSpans } from '../../utils/perf/cpuSpans';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { clearSelection } from '../selection/selectionSlice';
@@ -97,6 +98,21 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
   });
 }
 
+// A frame's spans are whatever `cpuSpans` summed between two `nextFrame`
+// resolutions; `requestRender` pumps the loop for the same reason as above.
+async function collectCpu(engine: EngineHandle, frames: number): Promise<Record<string, number>[]> {
+  const out: Record<string, number>[] = [];
+  cpuSpans.on = true;
+  for (let i = 0; i < PERF_WARMUP_FRAMES + frames; i++) {
+    cpuSpans.ms.clear();
+    engine.debug.requestRender();
+    await engine.nextFrame();
+    if (i >= PERF_WARMUP_FRAMES) out.push(Object.fromEntries(cpuSpans.ms));
+  }
+  cpuSpans.on = false;
+  return out;
+}
+
 // A FRESH `whenStablyReady` rather than a per-source wait: the same engine-ready
 // + loads-settled debounce that gates boot also detects a tier reload completing.
 function setTier(store: AppStore, tier: Tier): Promise<void> {
@@ -110,6 +126,7 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     setPose: (pose: PerfPose) => setPose(store, engine, pose),
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
+    collectCpu: (frames: number) => collectCpu(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
     memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),

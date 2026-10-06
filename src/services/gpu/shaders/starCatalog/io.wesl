@@ -16,20 +16,9 @@
 //   VSOut      — the vertex/fragment contract (one authoritative
 //                declaration makes @location drift structurally impossible,
 //                the same reasoning bodies/starPoints/io.wesl states).
-//   NodeParams — one element of the per-source 'array<NodeParams>' storage
-//                buffer, one 32-byte block per drawn octree node, packed
-//                CONTIGUOUSLY (index = draw slot). It carries everything a
-//                node's records need that is NOT in the record itself: the
-//                node box origin (already rebased camera-relative in f64 by
-//                starNodeOriginRelCamMpc, then narrowed to f32), the box
-//                scale, the record-blob base offset for this node's slice,
-//                and the per-node draw opacity (source crossfade times the
-//                node's octree-cut LOD fade). Written ONCE per frame per
-//                source (never mutated mid-frame — see the renderer header on
-//                the writeBuffer / submit ordering trap). The whole cut is
-//                drawn in one instanced call; the vertex stage finds a
-//                record's owning slot by binary-searching the parallel
-//                'prefix' sum, not by a dynamic offset.
+//   NodeParams — everything a node's records need that is NOT in the record
+//                itself. Never a buffer: the vertex stage builds one per
+//                instance from the GPU cut's node table (cutIo.wesl).
 //   StarUniforms — the @group(0) per-frame uniform: the shared 80-byte
 //                'CameraUniforms' prefix (rebased vp + viewportPx) followed
 //                by the user's base star-dot size 'sizePx', star-brightness
@@ -102,12 +91,12 @@ struct VSOut {
   // starCatalog/vertex.wesl's photometric derivation). A leaf carries one
   // star's flux; an aggregate carries its subtree's MEAN star flux, which the
   // vertex stage multiplies by the subtree star count to recover the summed
-  // light — so the two deposit the same total whether or not the walker refined
+  // light — so the two deposit the same total whether or not the cut refined
   // the node.
   @location(3) intensity: f32,
-  // Bin-global record index of this instance's record — 'node.firstRecord +
-  // (instance_index - prefix[slot])', the same offset the vertex stage already
-  // computed to vertex-pull the record. It is the value 'resolveStarRecord'
+  // Bin-global record index of this instance's record — the node's firstRecord
+  // plus the instance's place within the node, the same index the vertex stage
+  // already computed to vertex-pull the record. It is the value 'resolveStarRecord'
   // decodes a pick's localIdx back into (the pick fragment packs it into the
   // r32uint texture; see starCatalog/pickFragment.wesl). Flat-interpolated
   // because integers cannot be linearly interpolated and all three triangle
@@ -117,24 +106,14 @@ struct VSOut {
   @location(4) @interpolate(flat) recordIdx: u32,
 };
 
-// Per-drawn-node storage element. Byte layout (WGSL std430 storage rules) must
-// stay byte-exact with the renderer's per-draw write:
-//
-//   offset  0  originRelCamMpc  vec3<f32>  (box origin, camera-relative Mpc)
-//   offset 12  cellScaleMpc     f32        (box edge in Mpc; offset unit = /1024)
-//   offset 16  firstRecord      u32        (base index into the records blob)
-//   offset 20  opacity          f32        (crossfade alpha x node LOD fade)
-//   offset 24  isAggregate      u32        (0 = leaf, 1 = aggregate)
-//   offset 28  subtreeStarCount f32        (stars this record stands in for)
-//   struct size 32 (rounded up to the vec3's 16-byte alignment — 'isAggregate'
-//   and 'subtreeStarCount' ride the pad the vec3 alignment already reserved).
-//   Under std430 the array stride is that 32, so draws pack back-to-back with
-//   no gaps (the std140 window this replaced was the same 32 bytes).
+// One drawn node, as the vertex stage rebuilds it: box origin (camera-relative
+// Mpc), box edge (the record offset's unit is edge / 1024), the node's base
+// index into the records blob, its opacity (source crossfade x LOD fade), and:
 //
 // 'isAggregate' is the leaf-vs-aggregate discriminant the format deliberately
 // keeps OUT of the record (the record's 5 spare bits stay zero — see
-// starCatalogFormat.ts). The layer sends an EXPLICIT flag derived from the
-// node's childMask (0 ⇒ leaf); it can no longer be read off the octree level,
+// starCatalogFormat.ts). It comes from the node's childMask (0 ⇒ leaf), never
+// from the octree level,
 // because a fat leaf (a sparse subtree merged into one node) lives at level > 0
 // yet is a leaf whose records are real stars. The vertex stage needs the flag
 // because a leaf record is a POINT source (its real stars) while an aggregate

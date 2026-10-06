@@ -2,38 +2,22 @@
 // (Gaia bin) stars.
 //
 // One instance = one octree record (a leaf star, or an interior node's
-// flux-mip aggregate). The whole cut is drawn in ONE instanced call, so an
-// instance is not owned by a per-draw bind: the vertex stage ROUTES itself to
-// its owning octree node by binary-searching the 'prefix' sum (below), then
-// PULLS its record from the per-source storage blob at 'node.firstRecord +
-// localIdx'. The renderer uploads the record bytes once, so the per-frame cost
-// is one NodeParams + prefix write and a single draw — no per-node draw calls.
-// See the starCatalogRenderer module header for the storage discipline.
+// flux-mip aggregate). The frame's cut is taken on the GPU (cut.wesl), which
+// leaves a draw list per stream; an instance finds its node from its place in
+// that list with no search, rebuilds the node's camera-relative box from the
+// static node table, and PULLS its record from the per-source blob.
 //
 // ## Bindings
 //
-//   @group(0) @binding(0)  cam        CameraUniforms — the rebased,
+//   @group(0) @binding(0)  u          StarUniforms — the rebased,
 //                                      camera-relative view-projection + viewport.
-//   @group(1) @binding(0)  nodeParams array<NodeParams> — every drawn node's
-//                                      box origin, scale, record-slice base,
-//                                      opacity, packed one element per draw slot.
-//   @group(1) @binding(1)  prefix     array<u32> — each draw slot's exclusive
-//                                      starting global instance index (a prefix
-//                                      sum of record counts). 'arrayLength' of it
-//                                      is the draw count.
+//   @group(1) @binding(0)  cut        CutUniforms — the cut's camera split.
+//   @group(1) @binding(1)  cutNodes   array<CutNode> — the static node table.
+//   @group(1) @binding(2)  cutOpacity array<f32> — each node's LOD fade.
+//   @group(1) @binding(3)  cutList    array<u32> — this stream's draw list.
+//   @group(1) @binding(4)  cutStream  CutStream — the list's instances per entry.
 //   @group(2) @binding(0)  records    array<u32> — the source's whole record
 //                                      blob, two u32 halves per 6-byte record.
-//
-// ## Instance routing (the prefix-sum binary search)
-//
-// 'prefix' is strictly increasing from prefix[0] == 0 (every draw has >= 1
-// record). For an instance index 'ii', its owning draw slot is the LARGEST s
-// with prefix[s] <= ii; then the in-node record index is 'ii - prefix[s]'. A
-// binary search finds s in ~log2(drawCount) <= 32 steps. The loop invariant
-// 'prefix[slotLo] <= ii' holds at entry (slotLo starts 0, prefix[0] == 0 <= ii)
-// and is preserved by only moving slotLo up to a mid whose prefix is still <= ii,
-// so on exit (slotLo == slotHi) slotLo is that largest s — never out of range at
-// ii == 0 or the last instance.
 //
 // ## Record unpack (bit-for-bit the inverse of packStarRecord)
 //
@@ -51,8 +35,8 @@
 //
 // ## World reconstruction (the precision seam's GPU half)
 //
-// starNodeOriginRelCamMpc already did the large-minus-large subtraction in
-// f64 and handed us a small camera-relative origin, so here the f32 math is
+// cutIo.wesl's camera split makes the node-minus-camera subtraction
+// integer-exact, so the node origin arrives small and the f32 math here is
 // well-conditioned:
 //
 //   worldRelCam = originRelCamMpc + (offset / 1024) * cellScaleMpc
@@ -77,7 +61,7 @@
 //      every record deposits L = EXPOSURE * flux, drawing an aggregate
 //      (L = EXPOSURE * mean * N) equals drawing its refined children
 //      (sum of EXPOSURE * flux_child) -- identical total. The cut is a covering
-//      partition (walkStarOctreeCut), so no double-count.
+//      partition (cut.wesl), so no double-count.
 //      This exactness holds in the SUB-KNEE regime, where the fragment's
 //      hue-preserving compression is ~linear (fragment.wesl); once a parent or
 //      its children cross the knee the concave rolloff makes the refined sum
@@ -177,6 +161,13 @@
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::NodeParams;
 import package::starCatalog::io::StarUniforms;
+import package::starCatalog::cutIo::CutNode;
+import package::starCatalog::cutIo::CutUniforms;
+import package::starCatalog::cutIo::CutStream;
+import package::starCatalog::cutIo::nodeEdgeCells;
+import package::starCatalog::cutIo::nodeIsAggregate;
+import package::starCatalog::cutIo::nodeRecordCount;
+import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
@@ -192,8 +183,11 @@ import package::lib::starPhotometry::toRefPx;
 import package::lib::pickDepthBands::PICK_BAND_SURVEY_STAR_EPS;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
-@group(1) @binding(0) var<storage, read> nodeParams: array<NodeParams>;
-@group(1) @binding(1) var<storage, read> prefix: array<u32>;
+@group(1) @binding(0) var<uniform> cut: CutUniforms;
+@group(1) @binding(1) var<storage, read> cutNodes: array<CutNode>;
+@group(1) @binding(2) var<storage, read> cutOpacity: array<f32>;
+@group(1) @binding(3) var<storage, read> cutList: array<u32>;
+@group(1) @binding(4) var<uniform> cutStream: CutStream;
 @group(2) @binding(0) var<storage, read> records: array<u32>;
 
 // Magnitude / colour LUT dequant constants — mirror the frozen windows in
@@ -266,29 +260,38 @@ const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 // pixel-identically. This stage imports them (above) and keeps only its
 // aggregate-specific + record-unpack constants here.
 
+// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 instances per
+// entry) and 0 for the aggregate list (one instance per entry).
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
   @builtin(instance_index) ii: u32,
 ) -> VSOut {
-  // Route this instance to its owning draw slot: the largest 'slotLo' with
-  // prefix[slotLo] <= ii (see the header). Bounded at 32 iterations — more than
-  // log2 of any u32 draw count — so the loop always terminates on the GPU.
-  let drawCount = arrayLength(&prefix);
-  var slotLo = 0u;
-  var slotHi = drawCount - 1u;
-  for (var iter = 0u; iter < 32u; iter = iter + 1u) {
-    if (slotLo >= slotHi) { break; }
-    // Upper mid so slotLo can advance; invariant keeps prefix[slotLo] <= ii.
-    let mid = (slotLo + slotHi + 1u) >> 1u;
-    if (prefix[mid] <= ii) { slotLo = mid; } else { slotHi = mid - 1u; }
+  let shift = cutStream.blockShift;
+  let entry = cutList[ii >> shift];
+  let nodeIdx = entry & 0x3fffffu;
+  let n = cutNodes[nodeIdx];
+  let local = ((entry >> 22u) << shift) | (ii & ((1u << shift) - 1u));
+  if (local >= nodeRecordCount(n)) {
+    // A spare instance of the node's last block: outside the clip volume.
+    var skip: VSOut;
+    skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+    return skip;
   }
-  let node = nodeParams[slotLo];
+  let isAgg = nodeIsAggregate(n);
+  var node: NodeParams;
+  node.originRelCamMpc = nodeMinCells(n, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
+  node.cellScaleMpc = nodeEdgeCells(n) * cut.cellEdgeMpc;
+  node.firstRecord = n.firstRecord;
+  node.opacity = cutOpacity[nodeIdx] * cut.opacity;
+  node.isAggregate = select(0u, 1u, isAgg);
+  node.subtreeStarCount = select(1.0, f32(n.subtreeCount), isAgg);
+  return shadeRecord(node, n.firstRecord + local, vi);
+}
 
-  // Vertex-pull this instance's record: 'ii - prefix[slotLo]' is the in-node
-  // record index; 'node.firstRecord' is the node's slice start. Two u32 per
-  // record in the repacked blob.
-  let base = node.firstRecord + (ii - prefix[slotLo]);
+// Everything past "which node, which record".
+fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
+  // Two u32 per record in the repacked blob.
   let lo = records[base * 2u + 0u];
   let hi = records[base * 2u + 1u];
 
@@ -300,7 +303,7 @@ fn vs(
   let absMagIdx = (hi >> 6u) & 0x7fu;
   let colorIdx = (hi >> 13u) & 0x3fu;
 
-  // World position, camera-relative (the f64 rebase already happened CPU-side).
+  // World position, camera-relative.
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
   let worldRelCam = node.originRelCamMpc + offset * node.cellScaleMpc;
 
@@ -450,12 +453,16 @@ fn vs(
   // survey star onto the survey band 'z = w * PICK_BAND_SURVEY_STAR_EPS'.
   // That band sits BELOW the scene-star band (smaller eps → smaller z/w →
   // loses 'greater'), so survey stars always lose to scene/famous stars, glints
-  // and spheres, and sit above only the Milky Way backdrop band. Consequence: two
-  // overlapping survey stars tie on this one constant depth, so the leaf-walk draw
-  // order decides between them — acceptable because 'nearest of two overlapping
-  // dots in a dense 7 px field' carries no user meaning, whereas 'famous star
-  // beats the field behind it' does.
-  out.clip.z = select(out.clip.z, out.clip.w * PICK_BAND_SURVEY_STAR_EPS, u.pickPass == 1u);
+  // and spheres, and sit above only the Milky Way backdrop band.
+  //
+  // WITHIN the band the apparently brighter star wins: the GPU cut lists nodes
+  // in no fixed order, so a constant depth would let the draw order — different
+  // from one frame to the next — pick between two overlapping dots. The rank
+  // spreads the band over [1, 1.9) x eps, still under the scene band at 2 x eps;
+  // log2 of apparent flux spans about -100..0, so 128 keeps it inside [0, 1).
+  let pickRank = clamp(0.9 + log2(max(fluxApp, 1e-30)) / 128.0, 0.0, 0.9);
+  let pickZ = out.clip.w * PICK_BAND_SURVEY_STAR_EPS * (1.0 + pickRank);
+  out.clip.z = select(out.clip.z, pickZ, u.pickPass == 1u);
 
   out.uv = corner;
 

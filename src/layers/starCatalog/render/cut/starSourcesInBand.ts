@@ -1,7 +1,6 @@
 /**
- * The one home of the anchor derivation + two-part source gate PR 1 left in
- * three copies (`advanceStarFades`, `computeStarCut`, `starCatalogVisible`).
- * Loaded survey catalogs whose crossfade at `camDistPc` is > 0; empty when
+ * The one home of the two-part source gate shared by `starCutFrame` and
+ * `starCatalogVisible`. Loaded survey catalogs whose crossfade at `camDistPc` is > 0; empty when
  * the master toggle is off.
  */
 

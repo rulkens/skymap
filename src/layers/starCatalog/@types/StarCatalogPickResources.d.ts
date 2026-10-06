@@ -24,8 +24,14 @@ import type { SourceType } from '../../../@types/data/SourceType';
  */
 export type StarCatalogPickResources = {
   readonly cameraBgl: GPUBindGroupLayout;
+  /** `@group(1)`: the GPU cut's node table, fades and one draw list. */
   readonly drawBgl: GPUBindGroupLayout;
   readonly recordsBgl: GPUBindGroupLayout;
-  /** The @group(2) records bind group for `source`, or `null` if not loaded. */
   recordsBindGroup(source: SourceType): GPUBindGroup | null;
+  /** The frame cut's leaf list; `null` until a frame has cut the source. */
+  leafDraw(source: SourceType): {
+    readonly bindGroup: GPUBindGroup;
+    readonly indirect: GPUBuffer;
+    readonly indirectOffset: number;
+  } | null;
 };

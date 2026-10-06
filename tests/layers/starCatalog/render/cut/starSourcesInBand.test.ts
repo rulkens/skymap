@@ -1,7 +1,6 @@
 /**
  * `starSourcesInBand` — the one home of the two-part source gate
- * (`advanceStarFades`/`computeStarCut`/`starCatalogVisible` all delegate to
- * it): a loaded survey catalog draws only when the master toggle is on AND
+ * (`starCutFrame`/`starCatalogVisible` both delegate to it): a loaded survey catalog draws only when the master toggle is on AND
  * its crossfade at the camera's heliocentric distance is > 0.
  */
 import { describe, it, expect, vi } from 'vitest';

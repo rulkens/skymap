@@ -28,7 +28,7 @@ export const GAIA_STARS_ENTRY = {
   binBaseName: 'stars',
   tiered: true, // small / medium / large `.bin` variants
   // Per-frame drawn-point budget: bounds Σ recordCount of the cut
-  // `walkStarOctreeCut` emits. Sized so the small/medium tiers can refine to
+  // the GPU cut (`cut.wesl`) emits. Sized so the small/medium tiers can refine to
   // (near-)all leaves when the camera is close, while `hardCap` protects the
   // draw-call count on the large tier. Starting values (grill Q9), raised
   // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower

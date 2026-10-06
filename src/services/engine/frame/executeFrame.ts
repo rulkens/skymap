@@ -97,6 +97,7 @@ import { runBloom } from './runBloom';
 import { sampledDepthFor } from './sampledDepthFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
+import { cpuSpans } from '../../../utils/perf/cpuSpans';
 
 /**
  * Resolve a render-target id to its texture view. The swap-vs-offscreen branch
@@ -228,7 +229,9 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // this frame, and these rows carry their own gates (an empty atmosphere
         // draw list, flow switched off) — claiming up front would leave a row
         // reporting the query set's stale ticks from when it last ran.
+        const startMs = cpuSpans.on ? performance.now() : 0;
         compute.encode(encoder, ctx, state, () => timestampSpread(timing, slot));
+        if (cpuSpans.on) cpuSpans.add(`compute:${step.name}`, startMs);
         break;
       }
       case 'render': {
@@ -496,7 +499,9 @@ function renderGroup(
       ...timestampSpread(timing, captureSlot ?? groupKey),
     });
     for (const contentPass of group) {
+      const startMs = cpuSpans.on ? performance.now() : 0;
       contentPass.draw(pass, view, ctx, state);
+      if (cpuSpans.on) cpuSpans.add(`draw:${contentPass.name}`, startMs);
     }
     pass.end();
     return;
@@ -529,7 +534,9 @@ function renderGroup(
         : {}),
       ...timestampSpread(timing, slot),
     });
+    const startMs = cpuSpans.on ? performance.now() : 0;
     contentPass.draw(pass, view, ctx, state);
+    if (cpuSpans.on) cpuSpans.add(`draw:${contentPass.name}`, startMs);
     pass.end();
   });
 }

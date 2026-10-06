@@ -24,21 +24,19 @@ describe('starCullMargins', () => {
     ['60°', Math.PI / 3],
     ['90°', Math.PI / 2],
   ])(
-    'at %s, leaf/pick pin the tangent form and stay ≥ the old small-angle margin',
+    'at %s, pick pins the tangent form and stay ≥ the old small-angle margin',
     (_label, fovYRad) => {
       const sizePx = STAR_SIZE_REF_PX * 1.5;
       const pxPerRad = pxPerRadAt(fovYRad);
-      const { leaf, pick } = starCullMargins(sizePx, pxPerRad);
+      const { pick } = starCullMargins(sizePx, pxPerRad);
 
       const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / STAR_SIZE_REF_PX);
       const pickPxRadius = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX);
 
       // Tangent-form pin: margin = pxRadius / pxPerRad = pxRadius * 2*tan(fovY/2) / h.
-      expect(leaf).toBeCloseTo((leafPxRadius * 2 * Math.tan(fovYRad / 2)) / H, 12);
       expect(pick).toBeCloseTo((pickPxRadius * 2 * Math.tan(fovYRad / 2)) / H, 12);
 
       // The "only keeps more nodes" property.
-      expect(leaf).toBeGreaterThanOrEqual((leafPxRadius * fovYRad) / H);
       expect(pick).toBeGreaterThanOrEqual((pickPxRadius * fovYRad) / H);
     },
   );

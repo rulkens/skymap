@@ -7,8 +7,8 @@ import { starCrossfadeOpacity } from './starCrossfadeOpacity';
  * How much one source contributes to the star cut this frame — `0` ⇒ nothing,
  * so an additive draw of it would be invisible. The single home of the
  * per-source draw decision: `starCatalogVisible` asks whether ANY source is
- * above 0 without walking an octree, `computeStarCut` uses the value as the
- * node opacity multiplier. Two readers, one predicate, no drift.
+ * above 0 without walking an octree, `starCutFrame` hands the value to the
+ * GPU cut as the source's opacity multiplier. Two readers, one predicate, no drift.
  */
 export function starSourceDrawOpacity(
   entry: SourceEntry,

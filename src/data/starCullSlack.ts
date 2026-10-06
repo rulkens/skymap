@@ -1,5 +1,5 @@
 /**
- * starCullSlack — px constants the star-catalog CPU cull's angular slack is
+ * starCullSlack — px constants the star cut's angular frustum slack is
  * sized from, each a WESL twin (parity-tested). Independent of
  * `DEFAULT_STAR_SIZE_PX` (`data/defaults.ts`), which only seeds the slider.
  * The cull slack is sized off the glow FLOOR, never `STAR_GLOW_MAX_PX` — a

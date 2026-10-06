@@ -15,7 +15,7 @@
  * aggregate's present children (named by `childMask`) sit at level `L-1`,
  * Morton `(M << 3) | k` for each set bit `k`; a childless node is a leaf. Box
  * origin is `gridOrigin + mortonDecode3(M) · (cellEdgePc · 2^L)` — the same
- * reconstruction `walkStarOctreeCut` and `starNodeOriginRelCamMpc` invert.
+ * reconstruction `starCutLayout` and `starNodeOriginRelCamMpc` invert.
  */
 import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
