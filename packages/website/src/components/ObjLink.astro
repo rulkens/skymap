@@ -1,15 +1,28 @@
 ---
 /*
- * ObjLink — a link dressed as the site's one control, the ring plus a label
- * (styles/site.css `.ring`, shared with the menu's summary and real buttons).
+ * ObjLink — a link dressed as the site's one control (styles/site.css `.ring`).
+ * A drawing of where it goes takes the marker's place: the destination page's
+ * icon or the mark of a link that leaves (utils/linkIcon.ts), unless `icon`
+ * names another; a jump within the page keeps the plain marker. `hang` puts the
+ * marker in the margin so the label starts at the text edge.
  */
 import type { HTMLAttributes } from 'astro/types';
 
-type Props = HTMLAttributes<'a'> & { href: string; size?: 'small' | 'default' | 'big' };
+import type { IconName } from '../@types/IconName';
+import { linkIcon } from '../utils/linkIcon';
+import Icon from './Icon.astro';
 
-const { size = 'default', class: extra, ...rest } = Astro.props;
+type Props = HTMLAttributes<'a'> & {
+  href: string;
+  size?: 'small' | 'default' | 'big';
+  icon?: IconName;
+  hang?: boolean;
+};
+
+const { size = 'default', icon, hang = false, class: extra, ...rest } = Astro.props;
+const drawing = icon ?? linkIcon(rest.href, import.meta.env.BASE_URL);
 ---
 
-<a class:list={['ring', size !== 'default' && size, extra]} {...rest}>
-  <slot />
+<a class:list={['ring', size !== 'default' && size, hang && 'hang', extra]} {...rest}>
+  {drawing && <Icon name={drawing} />}<slot />
 </a>

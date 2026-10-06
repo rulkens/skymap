@@ -1,11 +1,9 @@
 /*
  * site.css — the website's type, spacing and page rules.
- *
  * The one cross-package import: the palette is the app's own tokens, shared by
  * path rather than copied, so a palette change reaches the site. The tokens
  * file carries no page rules (that is why it was split out of the app's
  * global.css).
- *
  * Type floors: Jost 300 only at 20px and above, 400 below; the display face
  * never below 20px, so small controls keep the ring and take a Jost label.
  */
@@ -26,6 +24,8 @@
   --site-text: #dfe6fb;
   --site-text-muted: #c3cde8;
   --site-text-dim: #9aa7c9;
+  /* The names of a picture label's parts: the dimmest text that still holds 4.5:1 on the page's black (6.2:1). */
+  --site-text-faint: #7f8bab;
 
   --font-family-display: 'Cormorant Site', ui-serif, Georgia, serif;
   --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -38,7 +38,8 @@
   --text-body: 1.25rem;
   --text-lead: 1.5rem;
   --text-h3: 1.5rem;
-  --text-h2: clamp(2.5rem, 5.2vw, 5.25rem);
+  /* Capped by a short window, so an opening section's title still fits it and no heading under it is larger. */
+  --text-h2: min(clamp(2.5rem, 5.2vw, 5.25rem), 9svh);
   --text-ring-big: clamp(1.875rem, 3.4vw, 3rem);
   --leading-body: 1.6;
   --leading-display: 1.05;
@@ -47,11 +48,23 @@
 
   /* One gap between sections; inside a section nothing exceeds half of it. */
   --gutter: 2.75rem;
+  /* The one gap between columns of the page grid (`.grid`, below). */
+  --col-gap: 3rem;
   --wrap-max: 77.5rem;
   --section-space: 9.375rem;
   --stack: 1.5rem;
   --nav-height: 4.5rem;
   --tap: 2.75rem;
+  /* How far the ring about a dome frame (Disc) stands outside it; its host leaves that room. */
+  --disc-ring: 1.1875rem;
+
+  /*
+   * A page's opening section (`data-opening`) fits the first screen under the top bar, label included;
+   * `npm run site:fold` holds it. On a short window the rise above the picture's label gives way first.
+   */
+  --first-screen: calc(100svh - var(--nav-height));
+  --open-top: 1.5rem;
+  --open-rise: clamp(2rem, 20svh - 7.75rem, 4rem);
 }
 
 /* The 900px breakpoint is also in components/Nav.astro (CSS variables cannot be used in media queries). */
@@ -62,6 +75,8 @@
     --weight-body: 400;
     --text-lead: 1.25rem;
     --gutter: 1.25rem;
+    /* Eleven gaps must fit a phone even with the reader's text size doubled, so the gap also follows the window. */
+    --col-gap: min(1.25rem, 3.6vw);
     --section-space: 5rem;
     --nav-height: 3.75rem;
   }
@@ -86,6 +101,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* A word too long for its line (an address, a file name, any word at a doubled text size) breaks; the page never scrolls sideways. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -127,6 +144,10 @@ a {
   text-underline-offset: 0.2em;
 }
 
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 4px;
@@ -136,10 +157,157 @@ img {
   max-width: 100%;
 }
 
+/* The sentence of proof on a page, in the display face at whatever size its place gives it. */
+.proof {
+  font-family: var(--font-family-display);
+  font-weight: var(--weight-display);
+  line-height: 1.3;
+  color: var(--color-fg);
+}
+
+/* A date is one word: it never breaks across two lines. */
+.date {
+  white-space: nowrap;
+}
+
+/*
+ * A link inside a sentence, where a component asks for it: 44px tall to the thumb, and the margin takes the
+ * padding back so the lines around it stay where they were.
+ */
+.tap-links a {
+  display: inline-block;
+  padding-block: 0.625rem;
+  margin-block: -0.625rem;
+}
+
+/* Running paragraphs of a section, at the lead's measure, which is wider than a column's. */
+.prose p {
+  max-width: var(--measure-lead);
+}
+
+/* Ring links side by side under the text they follow; `onward` is the row that closes a section, launch button included. */
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  margin-top: 1.5rem;
+}
+
+.link-row.onward {
+  align-items: center;
+  row-gap: 0.75rem;
+  margin-top: 2.5rem;
+}
+
 .wrap {
   max-width: var(--wrap-max);
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/*
+ * The page grid: twelve columns and one gap across the text column (`.wrap`). Every part that sets things side by
+ * side is a `.grid` and gives its children a span, so a column edge in one section is a line the sections above
+ * and below also use. A child that spans N columns says so in `--cols`, and a grid inside it then has those N
+ * columns: the same lines, not new ones. Unplaced children take the whole row, which is also the narrow layout.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+  column-gap: var(--col-gap);
+}
+
+:where(.grid) > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* Named spans for children that come from a slot: equal columns by their count. */
+@media (min-width: 901px) {
+  .grid.halves > * {
+    grid-column: span 6;
+    --cols: 6;
+  }
+
+  .grid.thirds > * {
+    grid-column: span 4;
+    --cols: 4;
+  }
+
+  .grid.quarters > * {
+    grid-column: span 3;
+    --cols: 3;
+  }
+
+  /* Over the statements of a Claims list, clear of its three columns of names. */
+  .grid > .statements {
+    grid-column: 4 / span 7;
+    --cols: 7;
+  }
+}
+
+/*
+ * An opening section's title and its lead (`.say`), the same on every page. The title has a section heading's
+ * size, the largest on its page; the lead shrinks with a short window and stops at 20px, the floor for Jost 300.
+ */
+[data-opening] h1 {
+  font-size: var(--text-h2);
+}
+
+[data-opening] .say {
+  font-size: clamp(1.25rem, 3svh, var(--text-lead));
+}
+
+/*
+ * A gallery (scripts/initGallery.ts): each `data-views` element holds one child per view, and only the current
+ * one shows. Without script that is the first. Opacity only, so nothing is laid out again; a part sets its own
+ * pace with `--view-out`, `--view-wait` and `--view-in`, words leaving before the next arrive.
+ */
+[data-views] > * {
+  transition: opacity var(--view-in, 1s) ease var(--view-wait, 0s);
+}
+
+[data-gallery]:not([data-live]) [data-views] > :nth-child(n + 2),
+[data-gallery][data-live] [data-views] > :not([data-here]) {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--view-out, 1s) ease,
+    visibility 0s linear var(--view-out, 1s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-views] > * {
+    transition: none !important;
+  }
+}
+
+/* A gallery's words (a label, an address): one cell, so the tallest reserves the room, and a quicker change than the pictures'. */
+.view-words {
+  --view-out: 0.3s;
+  --view-wait: 0.3s;
+  --view-in: 0.6s;
+  display: grid;
+  align-items: start;
+}
+
+.view-words > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+/*
+ * A picture's label (ShotCaption, CaptionGallery) along the foot of a full-width picture: the host (PictureBand,
+ * Tour, the 404 page) sets `--caption-foot: ''` and a top padding of `--caption-rise` (4rem unless it sets one),
+ * and the picture then ends at the label, black from the rule down across the whole window. The host clips the
+ * overflow and keeps 2rem under the label.
+ */
+.caption::before {
+  content: var(--caption-foot, none);
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw) -2rem;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
 }
 
 /* One gap above every section of a page; the page's last block closes it. */
@@ -168,9 +336,11 @@ img {
  * `summary` and the few real buttons alike.
  */
 .ring {
+  --mark: 0.9375rem;
+  --gap: 0.875rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--gap);
   max-width: 100%;
   min-height: var(--tap);
   padding: 0.375rem 0;
@@ -181,13 +351,15 @@ img {
   text-decoration: none;
   color: var(--color-fg);
   font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  /* `anywhere`, so the label may also shrink below its longest word inside the flex line. */
+  overflow-wrap: anywhere;
 }
 
 .ring::before {
   content: '';
   flex: none;
-  width: 0.9375rem;
-  height: 0.9375rem;
+  width: var(--mark);
+  height: var(--mark);
   border: 1px solid var(--color-accent);
   border-radius: 50%;
   transition:
@@ -209,34 +381,123 @@ img {
 }
 
 .ring[aria-pressed='true']::before,
+.ring[aria-current='page']::before,
 [open] > .ring::before {
   background: var(--color-accent);
 }
 
 .ring.big {
-  gap: 1.25rem;
+  --mark: 1.625rem;
+  --gap: 1.25rem;
   font-size: var(--text-ring-big);
-}
-
-.ring.big::before {
-  width: 1.625rem;
-  height: 1.625rem;
 }
 
 /* Under 20px the display face loses its hairlines, so the small ring's label is Jost. */
 .ring.small {
-  gap: 0.625rem;
+  --mark: 0.6875rem;
+  --gap: 0.625rem;
   font: var(--weight-small) var(--text-small) / 1.2 var(--font-body);
   letter-spacing: 0.01em;
 }
 
-.ring.small::before {
-  width: 0.6875rem;
-  height: 0.6875rem;
+/*
+ * A navigation link carries a drawing of its destination where the marker
+ * would be (components/Icon.astro). The ring is still the selection: it is
+ * drawn around the drawing when the link is pointed at, focused or the page
+ * you are on. Padding and border are taken back by the margin, so the ring
+ * costs no room and the label does not move.
+ */
+.ring:has(> .glyph) {
+  --mark: 1.5rem;
+  --gap: 1.125rem;
+}
+
+.ring.small:has(> .glyph) {
+  --mark: 1.25rem;
+  --gap: 0.875rem;
+}
+
+.ring.big:has(> .glyph) {
+  --mark: 2rem;
+  --gap: 1.375rem;
+}
+
+/* The view mark recurs under every picture, so it is set small and dim; pointing at its link lights it. */
+.ring.small:has(> [data-icon='view']) {
+  --mark: 1rem;
+  --gap: 0.75rem;
+}
+
+.ring:has(> .glyph)::before {
+  content: none;
+}
+
+.glyph {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring > .glyph {
+  width: var(--mark);
+  height: var(--mark);
+}
+
+/* `.glyph-ring` is a link that is not a ring control but selects its drawing the same way (SectionNav). */
+:is(.ring, .glyph-ring) > .glyph {
+  box-sizing: content-box;
+  margin: -0.4375rem;
+  padding: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  stroke: var(--color-accent);
+  transition: border-color 0.25s ease;
+}
+
+.ring > .glyph[data-icon='view'] {
+  stroke: var(--site-text-dim);
+  transition:
+    border-color 0.25s ease,
+    stroke 0.25s ease;
+}
+
+:is(.ring, .glyph-ring):hover > .glyph,
+:is(.ring, .glyph-ring):focus-visible > .glyph,
+.ring[aria-current='page'] > .glyph {
+  border-color: var(--color-accent);
+  stroke: var(--color-accent);
+}
+
+/*
+ * Hung in the margin: the marker or drawing stands left of the text edge, so
+ * the label starts where the paragraph above it does and a stack of links of
+ * different sizes shares one label edge. The right margin gives back what the
+ * left one took, so links hung side by side keep their spacing, and each row
+ * they wrap to starts at the text edge. Only where the page has margin enough
+ * to hold the big marker; narrower, a link under a big one is set in by the
+ * difference (2.875rem is the big marker and its gap), so the labels still meet.
+ */
+@media (min-width: 1200px) {
+  .ring.hang {
+    --hang: calc(var(--mark) + var(--gap));
+    margin-inline: calc(-1 * var(--hang)) var(--hang);
+  }
+}
+
+@media (max-width: 1199px) {
+  .ring.big.hang + .ring.hang {
+    padding-left: calc(2.875rem - var(--mark) - var(--gap));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ring::before {
+  .ring::before,
+  .glyph {
     transition: none;
   }
 }

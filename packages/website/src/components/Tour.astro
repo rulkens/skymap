@@ -1,5 +1,5 @@
 ---
-import ObjLink from './ObjLink.astro';
+import ViewLink from './ViewLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 import { appLink } from '../data/appLink';
@@ -7,22 +7,26 @@ import { HOME_LINKS } from '../data/homeLinks';
 ---
 
 <section class="tour">
-  <Shot id="tour-cosmic-web" sizes="100vw" />
+  <Shot id="tour-cosmic-web" sizes="(max-width: 900px) 134vw, 100vw" />
   <div class="over">
     <h2>Take the tour</h2>
     <p>
-      The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe
-      and back. Some of the light in it left before our species existed. The tour is shorter.
+      The Long Way Out is a captioned tour in 14 steps, from the Milky Way to the edge of the observable universe
+      and back. Some of the light you see on the way set out before our species existed. The tour is shorter, at
+      about five minutes.
     </p>
-    <ObjLink href={appLink(HOME_LINKS.tour)}>Start the tour</ObjLink>
+    <ViewLink hang href={appLink(HOME_LINKS.tour)}>Start the tour</ViewLink>
     <ShotCaption id="tour-cosmic-web" open={false} />
   </div>
 </section>
 
 <style>
+  /* Isolated: the words' layer is ordered inside the section, so it passes under the top bar's ground like the rest. */
   .tour {
     position: relative;
+    isolation: isolate;
     margin-top: var(--section-space);
+    overflow-x: clip;
     background: #000;
   }
 
@@ -44,16 +48,27 @@ import { HOME_LINKS } from '../data/homeLinks';
     background: linear-gradient(20deg, rgb(0 0 0 / 0.94) 0%, rgb(0 0 0 / 0.78) 30%, rgb(0 0 0 / 0) 58%);
   }
 
+  /* The words keep their column; the picture's label runs along its foot, as in a PictureBand. */
   .over {
     position: absolute;
     z-index: 2;
-    left: max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter));
-    bottom: 9%;
+    inset: auto max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter)) 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .over > :global(a) {
+    align-self: flex-start;
+  }
+
+  .over > :global(*) {
     max-width: 28rem;
   }
 
-  .over :global(.caption) {
-    margin-top: 1.25rem;
+  .over > :global(.caption) {
+    --caption-foot: '';
+    max-width: none;
+    padding-top: 4rem;
   }
 
   .over :global(.ring) {
@@ -72,7 +87,14 @@ import { HOME_LINKS } from '../data/homeLinks';
 
     .over {
       position: static;
-      padding: 1.5rem var(--gutter) 0;
+      padding: 0 var(--gutter);
+    }
+
+    .over > :global(.caption) {
+      --caption-foot: none;
+      order: -1;
+      margin-bottom: 2rem;
+      padding-top: 0.75rem;
     }
   }
 </style>

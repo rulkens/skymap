@@ -1,0 +1,57 @@
+---
+/*
+ * AskList — the set texts some sources ask a user to print, each under its
+ * source's name with a link to the page that holds the full, current wording.
+ */
+import { DATA_SOURCES } from '../data/dataSources';
+
+const asks = DATA_SOURCES.filter((row) => row.ask);
+---
+
+<div class="asks small tap-links">
+  <p>
+    Every source in the table asks to be cited, and its row links to the paper or page to cite. Four also ask for a
+    set text. For SDSS and DESI we print only the opening: take the full, current wording from the linked page.
+  </p>
+  <ul>
+    {
+      asks.map((row) => (
+        <li>
+          <b>{row.id === '2mass-xsc' ? 'Catalogues read through VizieR' : row.name}</b>
+          <blockquote>{row.ask}</blockquote>
+          <a href={row.askHref}>Acknowledgement page for {row.id === '2mass-xsc' ? 'VizieR' : row.name.split(',')[0]}</a>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  p {
+    max-width: 60ch;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  b {
+    font-weight: 400;
+    color: var(--color-fg);
+  }
+
+  blockquote {
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    border-left: 1px solid var(--site-text-dim);
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+  }
+</style>

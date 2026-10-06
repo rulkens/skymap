@@ -1,0 +1,161 @@
+---
+/*
+ * PressPictures — the pictures offered for reuse, in halves of the page grid: each with its
+ * name, what it shows, the credit to print, the terms, and links to the view
+ * and to the widest file the site holds. The cards share their rows (subgrid),
+ * so the same line of two cards sits at the same height whatever its length.
+ */
+import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ViewLink from './ViewLink.astro';
+import { appLink } from '../data/appLink';
+import { PRESS_PICTURES } from '../data/pressPictures';
+import { siteShot } from '../data/siteShot';
+import { shotSources } from '../utils/shotSources';
+
+const press = PRESS_PICTURES.map((row) => {
+  const shot = siteShot(row.shot);
+  // The manifest lists widths widest first, and the srcset keeps that order.
+  return { ...row, view: shot, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
+});
+---
+
+<ul class="grid halves">
+  {
+    press.map((row) => (
+      <li>
+        <Shot id={row.shot} sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem" />
+        <h3>{row.title}</h3>
+        <dl class="small">
+          <div>
+            <dt>Shows</dt>
+            <dd>
+              <span class="name">{row.view.title}</span> {row.view.caption}
+            </dd>
+          </div>
+          <div>
+            <dt>Data and drawing</dt>
+            <dd>{row.view.drawn}</dd>
+          </div>
+          <div>
+            <dt>Credit to print</dt>
+            <dd>{row.credit}.</dd>
+          </div>
+          <div>
+            <dt>Reuse</dt>
+            <dd>
+              {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
+              {row.terms}
+            </dd>
+          </div>
+        </dl>
+        <p class="links">
+          <ViewLink href={appLink(row.view.link, row.view.query)}>
+            {row.view.link.startsWith('tour=') ? 'Start the tour' : 'Open this view'}
+          </ViewLink>
+          <ObjLink size="small" href={row.file}>
+            The file, {row.width.toLocaleString('en-GB')} pixels wide
+          </ObjLink>
+        </p>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Seven shared rows: picture, name, four lines of the table, links. */
+  li {
+    display: grid;
+    grid-row: span 7;
+    grid-template-rows: subgrid;
+  }
+
+  li :global(picture img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  h3 {
+    margin: 1rem 0 0.75rem;
+  }
+
+  /* The table's rows are the card's rows, so they line up across the pair. */
+  dl,
+  dl > div {
+    display: grid;
+    grid-template-rows: subgrid;
+  }
+
+  dl {
+    grid-row: span 4;
+    margin: 0;
+  }
+
+  /* The names take two of the card's six columns, so the statements start on a line of the page grid. */
+  dl > div {
+    grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    grid-column: span 2;
+  }
+
+  dd {
+    grid-column: 3 / -1;
+  }
+
+  dt {
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  .name {
+    display: block;
+    color: var(--color-fg);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    max-width: none;
+    margin: 0 0 4rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  @media (max-width: 900px) {
+    dt {
+      grid-column: span 4;
+    }
+
+    dd {
+      grid-column: 5 / -1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    dl > div {
+      row-gap: 0.25rem;
+    }
+
+    dt,
+    dd {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

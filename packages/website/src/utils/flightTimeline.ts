@@ -1,46 +1,45 @@
-import type { FlightSpan } from '../@types/FlightSpan';
 import type { FlightTimeline } from '../@types/FlightTimeline';
 
-// All in viewport heights of scroll. A stop rests long enough to read two lines;
-// the first rests briefly, because its words are already on screen at load.
-const REST = 0.5;
-const FIRST_REST = 0.25;
-const ARRIVAL_REST = 0.7;
-// Film seconds become scroll at this rate, within limits, so the 20 s pull-back
-// from Earth is not a blur and a 3 s hop is not a twitch.
-const TRAVEL_PER_SEC = 0.06;
-const TRAVEL_MIN = 0.35;
-const TRAVEL_MAX = 1.1;
-// The next still fades in over the end of the travel, never longer than this.
-const FADE = 0.35;
+// Scroll between two stops, in viewport heights: a fixed share so captions come
+// at an even pace, plus a little per film second so a long leg is not a blur.
+const LEG_BASE = 0.7;
+const LEG_PER_SEC = 0.04;
+const LEG_MAX = 1.5;
+// From the last stop to the film's end, where the closing words come up.
+const LEG_ARRIVAL = 0.6;
+// The film's speed at the two ends, as a share of its first and last leg's average.
+const END_EASE = 0.5;
 
 /**
- * Lay the stops out along the scroll. Every stop gets a rest and a travel to
- * the next one (the last travels to the film's end, where the arrival rests),
- * so captions are evenly paced however unevenly the recording moves.
+ * Lay the stops out along the scroll, with the film's speed at each. The film
+ * never rests: where two legs run at different speeds the stop between them
+ * takes their harmonic mean, which keeps the curve through the knots rising
+ * everywhere (Fritsch and Carlson's condition for a monotone cubic).
  */
 export function flightTimeline(stopSecs: readonly number[], duration: number): FlightTimeline {
-  const raw = stopSecs.map((atSec, i) => {
-    const nextSec = stopSecs[i + 1] ?? duration;
-    const travel = Math.min(TRAVEL_MAX, Math.max(TRAVEL_MIN, (nextSec - atSec) * TRAVEL_PER_SEC));
-    return { atSec, nextSec, rest: i === 0 ? FIRST_REST : REST, travel };
-  });
-  raw.push({ atSec: duration, nextSec: duration, rest: ARRIVAL_REST, travel: 0 });
+  const secs = [...stopSecs, duration];
+  const legs = stopSecs.map((atSec, i) =>
+    i === stopSecs.length - 1
+      ? LEG_ARRIVAL
+      : Math.min(LEG_MAX, LEG_BASE + (secs[i + 1]! - atSec) * LEG_PER_SEC),
+  );
+  const units = legs.reduce((sum, leg) => sum + leg, 0);
+  const speeds = legs.map((leg, i) => ((secs[i + 1]! - secs[i]!) * units) / leg);
 
-  const units = raw.reduce((sum, r) => sum + r.rest + r.travel, 0);
   let at = 0;
-  const spans: FlightSpan[] = raw.map((r) => {
-    const start = at;
-    at += r.rest + r.travel;
-    return {
-      start: start / units,
-      dwellEnd: (start + r.rest) / units,
-      fadeStart: (at - Math.min(FADE, r.travel)) / units,
-      end: at / units,
-      atSec: r.atSec,
-      nextSec: r.nextSec,
-    };
+  const knots = secs.map((sec, i) => {
+    const before = speeds[i - 1];
+    const after = speeds[i];
+    const slope =
+      before === undefined
+        ? after! * END_EASE
+        : after === undefined
+          ? before * END_EASE
+          : (2 * before * after) / (before + after);
+    const knot = { at: at / units, sec, slope };
+    at += legs[i] ?? 0;
+    return knot;
   });
-  spans[spans.length - 1]!.end = 1;
-  return { units, spans };
+  knots[knots.length - 1]!.at = 1;
+  return { units, knots };
 }

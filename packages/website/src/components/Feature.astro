@@ -1,0 +1,173 @@
+---
+/*
+ * Feature — one thing the app does, as a ledger row: its picture with the
+ * picture's label, and beside it a small line of context, the name, the words
+ * (the slot), one question set in the display face, and the control that opens
+ * it, on the page grid: the picture in seven columns and the words in five.
+ * `wide` gives the picture the full row and sets the name, the words and the
+ * question under it in thirds, or with the name above them while the page is
+ * narrower than its full column. Narrow, the name comes first, then the
+ * picture, then the rest.
+ */
+import ViewLink from './ViewLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+
+type Props = {
+  shot: string;
+  tall: string;
+  title: string;
+  kicker: string;
+  ask: string;
+  href: string;
+  action: string;
+  wide?: boolean;
+};
+
+const { shot, tall, title, kicker, ask, href, action, wide = false } = Astro.props;
+// The picture's box: the text column when wide, seven of its twelve columns otherwise.
+const sizes = wide
+  ? '(max-width: 900px) 100vw, min(calc(100vw - 5.5rem), 72rem)'
+  : '(max-width: 900px) 100vw, (max-width: 1239px) calc(58.4vw - 4.5rem), 40.75rem';
+---
+
+<article class:list={['feature grid', { wide }]}>
+  <header>
+    <p class="kicker small">{kicker}</p>
+    <h3>{title}</h3>
+  </header>
+  <figure>
+    <Shot id={shot} tall={tall} sizes={sizes} />
+    <figcaption>
+      <ShotCaption id={shot} open={false} />
+    </figcaption>
+  </figure>
+  <div class="words">
+    <slot />
+  </div>
+  <div class="act">
+    <p class="label small">Ask the class</p>
+    <p class="ask">{ask}</p>
+    <ViewLink hang href={href}>{action}</ViewLink>
+  </div>
+</article>
+
+<style>
+  .feature {
+    grid-template-rows: auto auto auto 1fr;
+    padding-block: 3.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  figure {
+    grid-column: 1 / span 7;
+    grid-row: 1 / -1;
+    margin: 0;
+    --cols: 7;
+  }
+
+  header,
+  .words,
+  .act {
+    grid-column: 8 / -1;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.875rem;
+  }
+
+  .kicker,
+  .label {
+    margin: 0 0 0.5rem;
+    color: var(--site-text-dim);
+  }
+
+  h3 {
+    font-size: var(--text-ring-big);
+    line-height: var(--leading-display);
+  }
+
+  .words :global(p) {
+    margin-bottom: 0.75rem;
+  }
+
+  .act {
+    margin-top: 1rem;
+  }
+
+  /* The question is what the teacher reads out: it gets the display face. */
+  .ask {
+    margin-bottom: 0.75rem;
+    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  /* The picture across the row, then the name beside the words and the question. */
+  .wide {
+    grid-template-rows: auto auto;
+    row-gap: 2rem;
+  }
+
+  .wide figure {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    --cols: 12;
+  }
+
+  .wide header,
+  .wide .words,
+  .wide .act {
+    grid-column: span 4;
+    grid-row: 2;
+  }
+
+  .wide .act {
+    margin-top: 0;
+  }
+
+  /* While the text column is under its full width a third holds too few words a line: the name goes above. */
+  @media (max-width: 1239px) {
+    .wide header {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .wide .words,
+    .wide .act {
+      grid-column: span 6;
+      grid-row: 3;
+    }
+
+    .wide header :global(h3) {
+      margin-bottom: 0;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .feature,
+    .wide {
+      display: block;
+      padding-block: 2.5rem;
+    }
+
+    figure {
+      margin-block: 1rem 1.5rem;
+    }
+
+    /* An upright picture runs to the screen's edges; its label keeps the text edge. */
+    figure :global(picture) {
+      display: block;
+      margin-inline: calc(-1 * var(--gutter));
+    }
+
+    .act {
+      margin-top: 1.25rem;
+    }
+  }
+</style>

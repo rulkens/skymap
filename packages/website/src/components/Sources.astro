@@ -2,25 +2,30 @@
 /*
  * Sources — the page's numbered source list, generated from the fact ids it
  * used. Closed by default: sixteen entries are two phone screens, and the
- * count in the summary says they are there.
+ * count in the summary says they are there. Only science claims are listed;
+ * `all` lists statements about the app too, for the Privacy page.
  */
 import { fact } from '../data/fact';
 import { formatDate } from '../utils/formatDate';
+import { listedSources } from '../utils/listedSources';
 
-type Props = { ids: readonly string[] };
+type Props = { ids: readonly string[]; all?: boolean };
 
-const rows = [...new Set(Astro.props.ids)].map(fact);
+const { ids, all = false } = Astro.props;
+const rows = listedSources([...new Set(ids)].map(fact), all);
 ---
 
 {
   rows.length > 0 && (
     <details class="sources small">
-      <summary class="ring small">Sources for the numbers on this page ({rows.length})</summary>
+      <summary class="ring small">Sources for this page ({rows.length})</summary>
       <ol>
         {rows.map((row) => (
           <li>
-            {row.text} <a href={row.source}>{row.sourceLabel}</a>, checked{' '}
-            <span class="date">{formatDate(row.checked)}</span>.
+            {row.text} <a href={row.source}>{row.sourceLabel}</a>{' '}
+            <span class="checked">
+              checked <span class="date">{formatDate(row.checked)}</span>
+            </span>
           </li>
         ))}
       </ol>
@@ -53,7 +58,8 @@ const rows = [...new Set(Astro.props.ids)].map(fact);
     padding-block: 0.25rem;
   }
 
-  .date {
-    white-space: nowrap;
+  /* When we last looked is a footnote to the footnote: the quietest text that still passes 4.5:1 on black. */
+  .checked {
+    color: color-mix(in srgb, var(--site-text-dim) 72%, #000);
   }
 </style>

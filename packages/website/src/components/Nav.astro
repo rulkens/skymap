@@ -1,16 +1,21 @@
 ---
 /*
  * Nav — sticky on every page, so the launch control is never more than a
- * glance away. Its black ground is a separate layer below the bar: a hero
- * (Flight, z-index 2) paints over the ground and the bar floats on the
- * picture; every other section passes under it. No script decides that.
+ * glance away. Its black ground is a separate layer below the bar, and every
+ * section passes under it. On a page with a hero the ground lies above the
+ * hero and is clear (`--nav-ground`, set by scripts/initFlight.ts), so the
+ * bar floats on the picture, and it comes back before the hero lets go, so
+ * nothing of the hero scrolls up through the bar's labels. Without script
+ * the ground is simply there.
  */
 import ObjLink from './ObjLink.astro';
-import { appLink } from '../data/appLink';
+import OpenApp from './OpenApp.astro';
 import { NAV_ITEMS } from '../data/nav';
 import { sitePath } from '../utils/sitePath';
 
 const home = sitePath('/');
+// The page you are on keeps the ring around its icon, like the app's selected object.
+const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page' : undefined);
 ---
 
 <div class="ground" aria-hidden="true"></div>
@@ -22,7 +27,7 @@ const home = sitePath('/');
       {
         NAV_ITEMS.map((item) => (
           <li>
-            <ObjLink size="small" href={sitePath(item.path)}>
+            <ObjLink size="small" icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
               {item.label}
             </ObjLink>
           </li>
@@ -37,7 +42,9 @@ const home = sitePath('/');
         {
           NAV_ITEMS.map((item) => (
             <li>
-              <ObjLink href={sitePath(item.path)}>{item.label}</ObjLink>
+              <ObjLink icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
+                {item.label}
+              </ObjLink>
             </li>
           ))
         }
@@ -45,7 +52,7 @@ const home = sitePath('/');
     </details>
   </nav>
 
-  <ObjLink size="small" class="launch" href={appLink()}>Fly it yourself</ObjLink>
+  <OpenApp size="small" />
 </header>
 
 <script>
@@ -96,6 +103,11 @@ const home = sitePath('/');
     margin-bottom: calc(-1 * var(--nav-height));
   }
 
+  :global(.hero-nav) .ground {
+    z-index: 3;
+    opacity: var(--nav-ground, 1);
+  }
+
   .mark {
     display: inline-flex;
     align-items: center;
@@ -104,6 +116,10 @@ const home = sitePath('/');
     font: var(--weight-display) 1.75rem / 1 var(--font-family-display);
     color: var(--color-fg);
     text-decoration: none;
+  }
+
+  .mark:hover {
+    color: var(--color-accent);
   }
 
   .links,
@@ -146,6 +162,36 @@ const home = sitePath('/');
       order: 3;
     }
 
+    /*
+     * With the reader's text size doubled the three controls are wider than a phone. Each grows only as far as
+     * the window's width allows (at the usual size these caps are above the rem values), and its spacing follows
+     * its own text, so the bar never pushes the page sideways.
+     */
+    .nav {
+      gap: min(1rem, 3vw);
+      padding-inline: min(var(--gutter), 5vw);
+    }
+
+    .mark {
+      font-size: min(1.75rem, 9vw);
+    }
+
+    .nav :global(:is(summary.ring.small, .open-app.small)) {
+      --mark: 0.6875em;
+      --gap: 0.625em;
+      font-size: min(var(--text-small), 4.6vw);
+    }
+
+    .nav :global(.open-app.small) {
+      gap: 0.5em;
+      padding-inline: 0.75em 1em;
+    }
+
+    .nav :global(.open-app.small .glyph) {
+      width: 1.25em;
+      height: 1.25em;
+    }
+
     .menu ul {
       position: absolute;
       left: 0;
@@ -173,11 +219,11 @@ const home = sitePath('/');
 
   @media (max-width: 400px) {
     .nav {
-      gap: 0.75rem;
+      gap: min(0.75rem, 3vw);
     }
 
     .mark {
-      font-size: 1.5rem;
+      font-size: min(1.5rem, 9vw);
     }
   }
 </style>

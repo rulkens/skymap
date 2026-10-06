@@ -1,0 +1,226 @@
+/*
+ * Dev-only feedback overlay. Everything sits in one fixed, click-through root
+ * (so the page scrolls and works as usual with the mode off); only the dock,
+ * the note panel and, in feedback mode, the capture layer take the pointer.
+ * The capture layer is never scrollable and sets no touch-action, so wheel
+ * and touch scrolling pass through to the page.
+ */
+.fb-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  font: 400 1rem / 1.4 var(--font-body);
+  color: var(--color-fg);
+}
+
+.fb-root [hidden],
+.fb-pins[hidden] {
+  display: none;
+}
+
+.fb-capture {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fb-hover,
+.fb-mark {
+  position: fixed;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px solid var(--color-accent);
+  box-shadow:
+    0 0 0 1px #000,
+    inset 0 0 0 1px #000;
+  background: rgba(168, 208, 255, 0.12);
+}
+
+.fb-mark {
+  background: rgba(168, 208, 255, 0.2);
+}
+
+.fb-hover-label {
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  max-width: 24rem;
+  padding: 0.125rem 0.5rem;
+  overflow: hidden;
+  background: #000;
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fb-hover.below .fb-hover-label {
+  bottom: auto;
+  top: 100%;
+}
+
+.fb-dock {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.fb-dock .ring {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  pointer-events: auto;
+  background: #000;
+  color: var(--color-fg);
+}
+
+.fb-list,
+.fb-panel {
+  pointer-events: auto;
+  box-sizing: border-box;
+  background: #05070d;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  color: var(--color-fg);
+}
+
+.fb-list {
+  width: 20rem;
+  max-width: 100%;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.fb-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fb-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fb-list .n,
+.fb-dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.fb-list .t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fb-list .ring {
+  min-height: 2rem;
+  padding: 0.125rem 0.25rem;
+  background: none;
+}
+
+.fb-panel {
+  position: fixed;
+  width: 20rem;
+  max-width: calc(100vw - 1rem);
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.fb-panel textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+}
+
+.fb-panel textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.fb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+
+.fb-actions .ring {
+  pointer-events: auto;
+  min-height: 2.25rem;
+  padding: 0.125rem 0;
+}
+
+.fb-hint,
+.fb-status {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--site-text-muted);
+}
+
+.fb-status:empty {
+  display: none;
+}
+
+.fb-status.error {
+  color: #ffb4a8;
+}
+
+/* Pins live in the page, not the fixed root, so they scroll with the content they mark. */
+.fb-pins {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147482000;
+  pointer-events: none;
+  font: 600 0.875rem / 1 var(--font-body);
+}
+
+.fb-pin {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.fb-pin .fb-dot {
+  position: absolute;
+  top: -0.75rem;
+  left: -0.75rem;
+  pointer-events: auto;
+  box-shadow: 0 0 0 2px #000;
+  cursor: help;
+}
+
+.fb-pin:has(.fb-dot:hover) {
+  border: 2px dashed var(--color-accent);
+  background: rgba(168, 208, 255, 0.1);
+}

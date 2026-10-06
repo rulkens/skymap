@@ -1,0 +1,28 @@
+---
+/*
+ * Columns — its children side by side in `count` equal columns of the page
+ * grid when wide, stacked when narrow. Each child is one column: a heading and
+ * what belongs under it.
+ */
+type Props = { count: 2 | 3 };
+
+const { count } = Astro.props;
+---
+
+<div class:list={['columns grid', count === 2 ? 'halves' : 'thirds']}>
+  <slot />
+</div>
+
+<style>
+  .columns {
+    row-gap: 2.5rem;
+  }
+
+  .columns :global(h3) {
+    font-size: var(--text-lead);
+  }
+
+  .columns :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

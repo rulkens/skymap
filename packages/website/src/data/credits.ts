@@ -21,7 +21,7 @@ export const IMAGE_CREDITS: readonly Credit[] = [
     licenceHref: CC_BY,
   },
   {
-    name: 'Earth elsewhere: EOxCloudless by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2025',
+    name: 'Earth in chosen regions: EOxCloudless by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2025',
     href: 'https://cloudless.eox.at',
     licence: 'CC BY-NC-SA 4.0, used with written permission from EOX',
     licenceHref: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
@@ -38,7 +38,7 @@ export const DATA_CREDITS: readonly Credit[] = [
   {
     name: 'Gaia, an ESA mission processed by the Gaia DPAC',
     href: 'https://www.cosmos.esa.int/gaia',
-    licence: 'Gaia Data Licence',
+    licence: 'CC BY-NC 3.0 IGO',
     licenceHref: 'https://www.cosmos.esa.int/web/gaia-users/license',
   },
   {
@@ -50,8 +50,7 @@ export const DATA_CREDITS: readonly Credit[] = [
   {
     name: 'GLADE v2.3, Dálya et al. 2018',
     href: 'https://arxiv.org/abs/1804.05709',
-    licence: 'CC BY 4.0',
-    licenceHref: CC_BY,
+    licence: 'no licence stated; the authors ask to be cited',
   },
   {
     name: 'DESI DR1',

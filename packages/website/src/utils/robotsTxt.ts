@@ -6,9 +6,14 @@ const CRAWLERS = [
   'ClaudeBot',
   'Claude-SearchBot',
   'Claude-User',
+  'anthropic-ai',
   'PerplexityBot',
   'Perplexity-User',
   'Google-Extended',
+  'Applebot-Extended',
+  'Meta-ExternalAgent',
+  'Amazonbot',
+  'DuckAssistBot',
   'CCBot',
 ];
 

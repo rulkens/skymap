@@ -1,0 +1,195 @@
+---
+import Base from '../layouts/Base.astro';
+import Beside from '../components/Beside.astro';
+import Columns from '../components/Columns.astro';
+import ContactForm from '../components/ContactForm.astro';
+import Credits from '../components/Credits.astro';
+import DiscBand from '../components/DiscBand.astro';
+import Figure from '../components/Figure.astro';
+import Note from '../components/Note.astro';
+import ObjLink from '../components/ObjLink.astro';
+import Offer from '../components/Offer.astro';
+import Remark from '../components/Remark.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Sources from '../components/Sources.astro';
+import Step from '../components/Step.astro';
+import Steps from '../components/Steps.astro';
+import ViewLink from '../components/ViewLink.astro';
+import { appLink } from '../data/appLink';
+import { fact } from '../data/fact';
+import { siteShot } from '../data/siteShot';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'Domes and museums | skymap';
+const description =
+  'We showed skymap in the dome at Wisdome Malmö in September 2026. We can deliver a live fisheye picture, a dome or 4K film, or a screen built around one exhibit.';
+
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  'wisdome-showing',
+  'wisdome-venue',
+  'wisdome-dome',
+  'dome-flag',
+  'dome-rig',
+  'dome-tilt',
+  'film-recorder',
+  'film-silent',
+  'exhibits',
+  'kiosk-planned',
+  'imagery-licences',
+  'gaia-licence',
+  'earth-rotation',
+];
+const STEPS = [
+  {
+    title: 'You write to us',
+    text: 'Tell us about the dome or the room, the screen, the audience, and a date if there is one.',
+  },
+  {
+    title: 'We answer with a plan',
+    text: 'We say what exists today, what would be new work, and what the new work costs. Nothing is built before you agree.',
+  },
+  {
+    title: 'We send a test',
+    text: 'A short piece in your format, for you to run on your own system. A dome shows faults that a desk monitor hides.',
+  },
+  {
+    title: 'We build and deliver',
+    text: 'Files or a web address, with the list of credits your screen has to show. You review it on the dome before it opens.',
+  },
+];
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}
+>
+  <!-- The disc leads: the page's subject is round, so its header is not a rectangle with words on it. -->
+  <DiscBand id="dome-earth">
+    <h1>Domes and museums</h1>
+    <p class="say proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
+    <p>
+      {fact('wisdome-dome').short} {fact('wisdome-venue').short} We can do three things for a dome or a gallery: a
+      live fisheye picture from the app, a rendered film, or a screen built around one exhibit.
+    </p>
+    <Note flow>The showing is our own account: the venue has published nothing about it.</Note>
+    <ObjLink hang href="#contact">How to reach us</ObjLink>
+    <p slot="note" class="small">
+      This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
+      are 4,096.
+    </p>
+  </DiscBand>
+
+  <section class="wrap section" id="deliver">
+    <SectionHead title="What we can deliver">
+      <p>For each: what the code does today, and what would be work for you.</p>
+    </SectionHead>
+
+    <Offer title="Live fisheye from the app">
+      <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc open={false} />
+      <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
+      <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
+      <Fragment slot="work">
+        Another tilt, labels or captions on the dome, and control without a mouse. skymap gives one disc: dividing it
+        between projectors is the job of your dome system.
+      </Fragment>
+      <ViewLink slot="link" hang href={appLink(siteShot('dome-web').link, siteShot('dome-web').query)}>
+        Open this view in dome mode
+      </ViewLink>
+    </Offer>
+
+    <Offer title="A rendered film, for a dome or a flat screen" wide>
+      <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} />
+      <p>
+        A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in
+        the projection room.
+      </p>
+      <Fragment slot="today">{`${fact('film-recorder').text} ${fact('film-silent').text}`}</Fragment>
+      <Fragment slot="work">
+        The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from you
+        or from someone you choose.
+      </Fragment>
+      <ViewLink slot="link" hang href={appLink(siteShot('tour-cosmic-web').link)}>
+        Start the tour
+      </ViewLink>
+    </Offer>
+
+    <Offer title="A build for one exhibit or kiosk">
+      <Figure slot="picture" id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
+      <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
+      <Fragment slot="today">{`${fact('exhibits').text} ${fact('kiosk-planned').text}`}</Fragment>
+      <Fragment slot="work">
+        A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor walks
+        away is the planned kiosk mode, and we would build it for the first venue that needs it.
+      </Fragment>
+      <ObjLink slot="link" hang size="small" href={sitePath('/docs/guide/screens-and-domes/')}>
+        Screens, quality and domes, in the docs
+      </ObjLink>
+    </Offer>
+  </section>
+
+  <section class="wrap section" id="honest">
+    <SectionHead title="What your audience is looking at" />
+    <Columns count={3}>
+      <div>
+        <h3>Data and drawing, labelled</h3>
+        <p class="small">
+          Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
+          photographed the Milky Way from outside, so on your dome it is drawn, and we say so.
+        </p>
+        <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
+      </div>
+      <div>
+        <h3>Credits and licences</h3>
+        <p class="small">
+          Some data and imagery in skymap carry non-commercial licences. The stars are Gaia data.{' '}
+          {fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source
+          by source, ask the rights holders where the terms require it, and replace what may not be shown.
+        </p>
+        <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
+      </div>
+      <div>
+        <h3>Open source</h3>
+        <p class="small">
+          The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
+          signs anything.
+        </p>
+        <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
+      </div>
+    </Columns>
+    <Remark text={fact('earth-rotation').short!} live="dome-turn" />
+  </section>
+
+  <section class="wrap section" id="commission">
+    <SectionHead title="How a commission runs" />
+    <Steps count={4}>
+      {
+        STEPS.map((step) => (
+          <Step title={step.title}>
+            <p class="small">{step.text}</p>
+          </Step>
+        ))
+      }
+    </Steps>
+  </section>
+
+  <section class="wrap section" id="contact">
+    <Beside>
+      <div>
+        <h2>Write to us</h2>
+        <p>
+          If you teach, <a href={sitePath('/classroom/')}>Use skymap in the classroom</a> has links you can use today
+          without asking anyone.
+        </p>
+      </div>
+      <ContactForm />
+    </Beside>
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} />
+    <Credits />
+  </div>
+</Base>

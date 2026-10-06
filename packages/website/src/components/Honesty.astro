@@ -3,28 +3,22 @@ import ObjLink from './ObjLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 import { HONESTY } from '../data/honesty';
+import { HONESTY_BINS } from '../data/honestyBins';
 import { sitePath } from '../utils/sitePath';
-
-// The three words keep one meaning across the site (08, house style).
-const BINS = [
-  { id: 'measured', shot: 'galaxies-measured', title: 'Measured', gloss: 'An instrument recorded it.' },
-  { id: 'derived', shot: 'filaments-derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
-  { id: 'drawn', shot: 'milky-way-drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
-] as const;
 ---
 
-<section class="wrap section honest" id="honest">
-  <div class="intro">
+<section class="wrap section honest grid" id="honest">
+  <div class="intro grid">
     <h2>What is measured, derived and drawn</h2>
-    <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
+    <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
   </div>
   {
-    BINS.map((bin) => (
+    HONESTY_BINS.map((bin) => (
       <div class="bin">
         <h3>{bin.title}</h3>
         <p class="gloss small">{bin.gloss}</p>
         <figure>
-          <Shot id={bin.shot} sizes="(max-width: 900px) 50vw, 24rem" />
+          <Shot id={bin.shot} sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(33.4vw - 3.75rem), 22rem" />
           <figcaption>
             <ShotCaption id={bin.shot} />
           </figcaption>
@@ -43,22 +37,32 @@ const BINS = [
 
 <style>
   .honest {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2.5rem 3.75rem;
+    row-gap: 2.5rem;
   }
 
   .intro {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 0 2rem;
   }
 
   h2 {
     margin-bottom: 0;
+  }
+
+  /* Thirds of the page grid; the link beside the heading stands over the third. */
+  @media (min-width: 901px) {
+    .bin {
+      grid-column: span 4;
+      --cols: 4;
+    }
+
+    h2 {
+      grid-column: span 8;
+    }
+
+    .intro > :global(a) {
+      grid-column: 9 / -1;
+      justify-self: start;
+    }
   }
 
   /* One picture heads each list: an example of the word, with its own address. */
@@ -91,13 +95,13 @@ const BINS = [
 
   li a {
     display: block;
-    padding-block: 0.5rem;
+    padding-block: 0.625rem;
     color: var(--site-text-muted);
   }
 
   @media (max-width: 900px) {
-    .honest {
-      grid-template-columns: 1fr;
+    .intro > :global(a) {
+      justify-self: start;
     }
 
     .gloss,

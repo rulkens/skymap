@@ -1,32 +1,43 @@
 /*
- * initFlight — scroll moves the hero through its stops. The stills carry the
- * flight everywhere; where `data-film` was set before first paint, the film is
- * attached after load and plays over them. Scroll is never touched: the
- * picture follows the page, not the other way round. Nothing here changes
- * layout, so a film that never arrives costs no shift.
+ * initFlight — scroll moves the hero along its flight without a rest. The
+ * stills carry the flight everywhere; where `data-film` was set before first
+ * paint, the film is attached after load and plays over them. Scroll is never
+ * touched: the picture follows the page, not the other way round. Nothing
+ * here changes layout, so a film that never arrives costs no shift.
  */
 import type { FlightTimeline } from '../@types/FlightTimeline';
 import { flightAt } from '../utils/flightAt';
 import { flightDistanceKm } from '../utils/flightDistanceKm';
+import { flightStillWeights } from '../utils/flightStillWeights';
+import { followDamped } from '../utils/followDamped';
 import { formatScale } from '../utils/formatScale';
 
 // Keep identical to the inline script's query in components/Flight.astro.
 const FILM_QUERY =
   '(min-width: 960px) and (min-height: 600px) and (min-aspect-ratio: 4/3) and (prefers-reduced-motion: no-preference)';
-// How much larger a still starts than it ends: scrolling pulls it back.
-const PULL_BACK = 0.16;
-// A caption has gone by this share of the travel away from its stop.
-const CAPTION_OUT = 0.3;
+// How much larger a still starts than it ends, over the two legs it is on screen: scrolling pulls it back.
+const PULL_BACK = 0.12;
+// As shares of a leg: a stop's caption starts to leave here, and the next one's starts to
+// arrive once it has gone, so two captions never share the corner they are both set in.
+// The change is short, so wherever the page stops a caption is nearly always at full strength.
+const CAPTION_LEAVES = 0.44;
+const CAPTION_ARRIVES = 0.5;
+const CAPTION_FADE = 0.06;
+// Pixels of scroll before the pinned stage lets go, over which the top bar's ground comes back:
+// the closing words and the spine then scroll up under a bar that has its ground.
+const GROUND_RETURN_PX = 160;
 // Half a film frame, so a seek to a stop's time lands on that frame and not the one before.
 const HALF_FRAME = 1 / 48;
+// Per second: the picture settles on a new scroll position in about a quarter of a second.
+const FOLLOW_RATE = 14;
 // The path is measured from Earth's centre; the readout says "from Earth", so it counts from the surface.
 const EARTH_RADIUS_KM = 6371;
 const unit = (v: number): number => Math.max(0, Math.min(1, v));
 
 export function initFlight(root: HTMLElement): void {
   const timeline: FlightTimeline = JSON.parse(root.dataset.timeline!);
-  const { spans } = timeline;
-  const count = spans.length - 1;
+  const { knots } = timeline;
+  const count = knots.length - 1;
   const track = root.querySelector<HTMLElement>('.track')!;
   const video = root.querySelector<HTMLVideoElement>('.film')!;
   const intro = root.querySelector<HTMLElement>('[data-intro]')!;
@@ -49,9 +60,11 @@ export function initFlight(root: HTMLElement): void {
   let visible = false;
   let running = false;
   let eased = -1;
+  let speed = 0;
   let last = 0;
   let current = -1;
   let fetched = -1;
+  let ground = -1;
 
   function attach(): void {
     if (video.src || !root.hasAttribute('data-film')) return;
@@ -59,7 +72,7 @@ export function initFlight(root: HTMLElement): void {
     // A missing or undecodable film leaves the stills, which are already the page.
     video.addEventListener('error', () => {
       loaded = false;
-      root.classList.remove('has-video', 'rest');
+      root.classList.remove('has-video');
     });
     const link = document.createElement('link');
     link.rel = 'preconnect';
@@ -72,32 +85,36 @@ export function initFlight(root: HTMLElement): void {
   function render(p: number): void {
     const pose = flightAt(timeline, p);
     const snap = still.matches;
-    const mix = snap ? Math.round(pose.mix) : pose.mix;
     const film = loaded && filmFits.matches;
-    const picture = Math.min(pose.index, count - 1);
+    const at = pose.index + pose.travel;
 
-    const target = pose.sec + HALF_FRAME;
-    const settled = film && !video.seeking && Math.abs(video.currentTime - target) <= 0.02;
-    if (film && !video.seeking && !settled) video.currentTime = target;
+    const target = Math.min(pose.sec + HALF_FRAME, knots[count]!.sec);
+    if (film && !video.seeking && Math.abs(video.currentTime - target) > 0.02) {
+      video.currentTime = target;
+    }
     root.classList.toggle('has-video', film);
-    // Resting on a stop, the film is on the frame the still was cut from: show the still.
-    root.classList.toggle('rest', settled && pose.travel === 0 && pose.index < count);
 
+    const weights = flightStillWeights(pose, count);
+    const under = Math.min(pose.index, count - 1);
     pictures.forEach((el, k) => {
-      const opacity = k === picture ? 1 : k === picture + 1 && pose.index < count ? mix : 0;
-      el.style.opacity = String(opacity);
-      if (opacity === 0 || film || snap) {
+      const weight = snap ? Math.round(weights[k]!) : weights[k]!;
+      // The earlier still stays solid under the later one, so the pair never thins to the black behind.
+      el.style.opacity = String(k === under && !snap ? 1 : weight);
+      if (weight === 0 || film || snap) {
         el.style.transform = '';
         return;
       }
-      const from = k === 0 ? 0 : spans[k - 1]!.fadeStart;
-      const life = unit((p - from) / (spans[k]!.end - from));
-      el.style.transform = `scale(${(1 + PULL_BACK * (1 - life)).toFixed(4)})`;
+      // On screen from the stop before its own to the one after, shrinking all the way.
+      el.style.transform = `scale(${(1 + (PULL_BACK * (k + 1 - at)) / 2).toFixed(4)})`;
     });
 
+    const leaving = snap
+      ? Math.round(pose.travel)
+      : unit((pose.travel - CAPTION_LEAVES) / CAPTION_FADE);
+    const arriving = snap
+      ? Math.round(pose.travel)
+      : unit((pose.travel - CAPTION_ARRIVES) / CAPTION_FADE);
     words.forEach((el, k) => {
-      const leaving = snap ? Math.round(pose.travel) : unit(pose.travel / CAPTION_OUT);
-      const arriving = snap ? mix : unit((mix - 0.5) * 2);
       const opacity = k === pose.index ? 1 - leaving : k === pose.index + 1 ? arriving : 0;
       el.style.opacity = String(opacity);
       // An invisible control must not take focus or clicks.
@@ -106,12 +123,14 @@ export function initFlight(root: HTMLElement): void {
         el.style.pointerEvents = opacity < 0.5 ? 'none' : 'auto';
       }
     });
+    // The readout shares the bottom edge with the wordmark block's hint, so it waits for that block to leave.
+    scale.style.opacity = String(pose.index === 0 ? leaving : 1);
 
     const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
     if (scale.textContent !== readout) scale.textContent = readout;
 
-    fill.style.height = `${unit(p / spans[count]!.start) * 100}%`;
-    const shown = Math.min(pose.index + Math.round(mix), count - 1);
+    fill.style.height = `${p * 100}%`;
+    const shown = Math.min(Math.round(at), count - 1);
     if (shown !== current) {
       current = shown;
       rings.forEach((ring, k) => ring.setAttribute('aria-current', String(k === shown)));
@@ -129,15 +148,32 @@ export function initFlight(root: HTMLElement): void {
 
   const range = (): number => track.offsetHeight - innerHeight;
 
+  // From the page's own position, not the eased one: the ground must be back when the stage moves.
+  function showGround(): void {
+    const left = range() + track.getBoundingClientRect().top;
+    const next = Math.round(unit(1 - left / GROUND_RETURN_PX) * 100) / 100;
+    if (next === ground) return;
+    ground = next;
+    document.documentElement.style.setProperty('--nav-ground', String(next));
+  }
+
   function frame(now: number): void {
+    showGround();
     if (!visible) {
       running = false;
       return;
     }
     const p = unit(-track.getBoundingClientRect().top / range());
-    // Frame-rate independent easing: the picture trails the page by roughly a tenth of a second.
-    eased =
-      eased < 0 || still.matches ? p : eased + (p - eased) * (1 - Math.exp(-(now - last) / 90));
+    if (eased < 0 || still.matches) {
+      eased = p;
+      speed = 0;
+    } else {
+      // A wheel moves the page in steps and a film seek takes a frame or two: the picture
+      // follows with its own momentum, so neither shows as a stutter.
+      const next = followDamped(eased, speed, p, FOLLOW_RATE, (now - last) / 1000);
+      eased = unit(next.value);
+      speed = next.velocity;
+    }
     last = now;
     render(eased);
     requestAnimationFrame(frame);
@@ -153,6 +189,7 @@ export function initFlight(root: HTMLElement): void {
   new IntersectionObserver(
     ([entry]) => {
       visible = entry!.isIntersecting;
+      showGround();
       start();
     },
     { rootMargin: '10% 0px' },
@@ -160,10 +197,7 @@ export function initFlight(root: HTMLElement): void {
 
   rings.forEach((ring, k) =>
     ring.addEventListener('click', () => {
-      // Just inside the stop's rest, where its caption is fully up.
-      const span = spans[k]!;
-      const p = span.start + (span.dwellEnd - span.start) * 0.3;
-      const top = scrollY + track.getBoundingClientRect().top + p * range();
+      const top = scrollY + track.getBoundingClientRect().top + knots[k]!.at * range();
       scrollTo({ top, behavior: still.matches ? 'auto' : 'smooth' });
     }),
   );

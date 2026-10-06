@@ -1,0 +1,75 @@
+---
+/*
+ * CaptionGallery — the label of a gallery band (PictureBand with `views`): one
+ * ShotCaption per view in one cell (`.view-words` in styles/site.css), under a
+ * row of ring markers, one per view, that choose the view. A host treats it as
+ * a single label (it carries the `caption` class and draws the same foot).
+ * Without script the markers stay hidden and the first label stands.
+ */
+import ShotCaption from './ShotCaption.astro';
+import { siteShot } from '../data/siteShot';
+
+type Props = { ids: readonly string[] };
+
+const { ids } = Astro.props;
+---
+
+<div class="caption views">
+  <div class="marks" role="group" aria-label="Views">
+    <span class="small" aria-hidden="true">Views</span>
+    {
+      ids.map((id, i) => (
+        <button
+          class="ring small"
+          type="button"
+          data-go
+          aria-label={siteShot(id).title}
+          title={siteShot(id).title}
+          aria-pressed={i === 0 ? 'true' : 'false'}
+          tabindex={i === 0 ? 0 : -1}
+        />
+      ))
+    }
+  </div>
+  <div class="labels view-words" data-views aria-live="polite">
+    {ids.map((id) => <ShotCaption id={id} />)}
+  </div>
+</div>
+
+<style>
+  .views {
+    position: relative;
+    z-index: 0;
+    width: 100%;
+  }
+
+  /* The foot (`.caption::before` in styles/site.css) is drawn once, here, so it holds still while the labels change. */
+  .labels {
+    --caption-foot: none;
+  }
+
+  /* The row stands in the host's rise above the label (`--caption-lift`), clear of the arm at the rule's left end. */
+  .marks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: calc(-1 * var(--caption-lift, 0rem));
+    padding-left: 0.5rem;
+  }
+
+  .marks span {
+    margin-right: 0.25rem;
+    color: var(--site-text-dim);
+  }
+
+  .marks .ring {
+    flex: none;
+    justify-content: center;
+    width: var(--tap);
+    padding: 0;
+  }
+
+  :global([data-gallery]:not([data-live])) .marks {
+    visibility: hidden;
+  }
+</style>

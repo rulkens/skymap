@@ -19,14 +19,15 @@ import { heroVideoUrl } from '../utils/heroVideoUrl';
 
 const title = 'skymap: the mapped universe at true scale, in your browser';
 const description =
-  'Fly through the mapped universe, from a Copenhagen park to the cosmic web, in real star and galaxy catalogues. Free, no account, in a current browser.';
+  'Fly from a Copenhagen park to the cosmic web in one unbroken scene, through real star and galaxy catalogues. Free, no account, in a current browser.';
 const stills = await flightStills(FLIGHT_STOPS.map((stop) => stop.id));
 const first = stills[0]!;
 
-// Every fact the page prints, so the Sources list can never drift from the copy.
+// Every fact the page prints, so the Sources list can never drift from the copy. The Moon's place card is left
+// out: the flight's Moon row states the same distance from the same source.
 const factIds = [
   ...FLIGHT_STOPS.flatMap((s) => (s.factId ? [s.factId] : [])),
-  ...PLACES.flatMap((p) => (p.factId ? [p.factId] : [])),
+  ...PLACES.flatMap((p) => (p.factId && p.factId !== 'moon-distance' ? [p.factId] : [])),
   'proxima-distance',
   'betelgeuse-estimates',
   '2mrs-coverage',
@@ -34,7 +35,6 @@ const factIds = [
   'geodanmark-orthophoto',
   'grand-tour-steps',
   'flight-camera-path',
-  'megaparsec-length',
   'speed-of-light',
 ];
 ---

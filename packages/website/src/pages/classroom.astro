@@ -1,0 +1,204 @@
+---
+import Base from '../layouts/Base.astro';
+import AddressStrip from '../components/AddressStrip.astro';
+import CaptionGallery from '../components/CaptionGallery.astro';
+import Columns from '../components/Columns.astro';
+import Credits from '../components/Credits.astro';
+import Feature from '../components/Feature.astro';
+import LessonLinks from '../components/LessonLinks.astro';
+import ObjLink from '../components/ObjLink.astro';
+import OpenApp from '../components/OpenApp.astro';
+import PictureBand from '../components/PictureBand.astro';
+import Remark from '../components/Remark.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Sources from '../components/Sources.astro';
+import Step from '../components/Step.astro';
+import Steps from '../components/Steps.astro';
+import { appLink } from '../data/appLink';
+import { CLASS_FEATURES } from '../data/classFeatures';
+import { CLASS_VIEWS } from '../data/classViews';
+import { fact } from '../data/fact';
+import { HOME_LINKS } from '../data/homeLinks';
+import { HONESTY_BINS } from '../data/honestyBins';
+import { LESSON_TOPICS } from '../data/lessons';
+import { siteShot } from '../data/siteShot';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'Use skymap in the classroom | skymap';
+const description =
+  'Pupils fly the distances of space at true scale, from the Moon to the galaxies. A five-minute tour, ready-made lesson links, no accounts, nothing to install.';
+
+const lessons = LESSON_TOPICS.flatMap((topic) => topic.lessons);
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const said = [
+  'double-click-focus',
+  'date-entry-utc',
+  'date-entry-paused',
+  'lesson-link',
+  'link-pose',
+  'webgpu-required',
+  'webgpu-browsers',
+  'app-browser-advice',
+  'no-account',
+  'privacy-counter',
+  'english-only',
+  'phone-data-size',
+  'earth-orbit-speed',
+];
+const factIds = [
+  ...CLASS_FEATURES.flatMap((feature) => feature.factIds),
+  ...said,
+  ...lessons.flatMap((lesson) => (lesson.factId ? [lesson.factId] : [])),
+];
+const says = (id: string) => fact(id).short ?? fact(id).text;
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Classrooms', path: '/classroom/' }])]}
+>
+  <PictureBand views={CLASS_VIEWS} gap="none" eager>
+    <h1>Use skymap in the classroom</h1>
+    <p class="say">
+      Distances in space are hard to feel from a page. In skymap your pupils fly across them, from the Moon to the
+      galaxies, at true scale.
+    </p>
+    <p>You share a view as a link, and every pupil who opens it lands on the same object at the same date.</p>
+    <div class="view-words" data-views>
+      {CLASS_VIEWS.map((view) => <AddressStrip hash={siteShot(view.id).link} />)}
+    </div>
+    <CaptionGallery ids={CLASS_VIEWS.map((view) => view.id)} />
+  </PictureBand>
+
+  <section class="wrap section" id="lesson">
+    <SectionHead title="What you can do in a lesson">
+      <p>The first needs no preparation.</p>
+    </SectionHead>
+    {
+      CLASS_FEATURES.map((feature, i) => (
+        <Feature
+          shot={feature.shot}
+          tall={feature.tall}
+          title={feature.title}
+          kicker={feature.prep}
+          ask={feature.ask}
+          href={appLink(feature.hash)}
+          action={feature.action}
+          wide={i === 0}
+        >
+          <p>{feature.factIds.map(says).join(' ')}</p>
+          <p>{feature.lesson}</p>
+        </Feature>
+      ))
+    }
+    <Remark text={says('earth-orbit-speed')} />
+  </section>
+
+  <section class="wrap section" id="links">
+    <SectionHead title="Ready-made links">
+      <p>
+        Each link has one question. It opens where its picture was taken. The pictures have the name labels switched
+        off; the links open with them on.
+      </p>
+    </SectionHead>
+    <LessonLinks />
+  </section>
+
+  <section class="wrap section" id="make">
+    <SectionHead title="Make your own link">
+      <p>There is no share button: the address bar is the link.</p>
+    </SectionHead>
+    <Steps>
+      <Step title="Find the object">
+        <p>Open the search, type a name and press Enter. {says('double-click-focus')}</p>
+      </Step>
+      <Step title="Set the date">
+        <p>
+          Select the clock at the bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}{' '}
+          {says('date-entry-paused')}
+        </p>
+      </Step>
+      <Step title="Copy the address">
+        <p>{says('lesson-link')}</p>
+      </Step>
+    </Steps>
+    <Columns count={2}>
+      <AddressStrip hash={HOME_LINKS.classroom} />
+      <div>
+        <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
+        <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
+      </div>
+    </Columns>
+  </section>
+
+  <section class="wrap section" id="runs">
+    <SectionHead title="Before you rely on it" />
+    <Columns count={3}>
+      <div>
+        <h3>What it runs on</h3>
+        <p>
+          WebGPU is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}
+          {says('webgpu-required')}
+        </p>
+        <p class="small">{says('webgpu-browsers')}</p>
+        <ObjLink size="small" hang href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
+      </div>
+      <div>
+        <h3>Before the lesson</h3>
+        <p>
+          Open one link on a pupil’s device before the lesson. School networks and older graphics chips differ.{' '}
+          {says('app-browser-advice')}
+        </p>
+        <p>
+          There is nothing to install. {says('no-account')} The app counts visits without cookies: the{' '}
+          <a href={sitePath('/privacy/')}>privacy page</a> has the details.
+        </p>
+      </div>
+      <div>
+        <h3>Limits</h3>
+        <p>{says('english-only')}</p>
+        <p>{says('phone-data-size')}</p>
+        <p>
+          A link pins the camera against the stars, not to a spot on the ground. It cannot show the Moon’s phases as
+          they look from Earth, so there is no link for phases or eclipses.
+        </p>
+      </div>
+    </Columns>
+  </section>
+
+  <section class="wrap section" id="honest">
+    <SectionHead title="What is accurate enough to teach from">
+      <p>
+        Some of the scene is data, some is derived from data, and some is a choice of ours. It makes a lesson in how we
+        know things: of anything on screen, ask which of the three it is.
+      </p>
+    </SectionHead>
+    <Columns count={3}>
+      {
+        HONESTY_BINS.map((bin) => (
+          <div>
+            <h3>{bin.title}</h3>
+            <p>{bin.gloss}</p>
+          </div>
+        ))
+      }
+    </Columns>
+    <div class="link-row">
+      <ObjLink hang href={sitePath('/science/#bins')}>The science behind skymap</ObjLink>
+    </div>
+  </section>
+
+  <div class="wrap section">
+    <div class="link-row onward">
+      <OpenApp />
+      <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
+    </div>
+  </div>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} />
+    <Credits />
+  </div>
+</Base>

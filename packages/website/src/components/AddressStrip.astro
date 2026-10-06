@@ -1,0 +1,147 @@
+---
+/*
+ * AddressStrip — an app address shown as a browser's address field, which is
+ * also the link, with a copy icon at its end as a browser has. The one boxed
+ * element on the site: it depicts a real field. Lines break only between parameters.
+ */
+import { APP_BASE, appLink } from '../data/appLink';
+
+type Props = { hash: string };
+
+const { hash } = Astro.props;
+const origin = new URL(Astro.site!).origin;
+const host = new URL(Astro.site!).host;
+const copy = origin + appLink(hash);
+const params = hash.split('&').map((pair) => {
+  const at = pair.indexOf('=');
+  // A long value (a pose) may break after a comma, never inside a number.
+  return { key: pair.slice(0, at), parts: pair.slice(at + 1).split(',') };
+});
+---
+
+<div class="strip">
+  <div class="field">
+    <a class="address" href={appLink(hash)}>
+      {host}{APP_BASE}#{params.map((param, i) => (
+        <span>
+          {i > 0 && '&'}
+          {param.key}=<b>{param.parts.map((part, k) => <>{k > 0 && <>,<wbr /></>}{part}</>)}</b>
+        </span>
+      ))}
+    </a>
+    <button class="icon" type="button" data-copy={copy} aria-label="Copy the address" title="Copy the address">
+      <svg class="sheets" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="9" y="9" width="11" height="11" rx="1.5" />
+        <path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" />
+      </svg>
+      <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12.5l4.5 4.5L19 7.5" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  // The control changes in place instead of anything appearing, so nothing shifts; it reverts so it can be used again.
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    const label = button.getAttribute('aria-label')!;
+    const say = (text: string): void => {
+      button.setAttribute('aria-label', text);
+      button.toggleAttribute('data-copied', text !== label);
+    };
+    // No clipboard on plain http, and a permission can be refused: then the label stays as it was.
+    button.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(button.dataset.copy!).then(
+        () => {
+          say('Copied');
+          setTimeout(() => say(label), 2000);
+        },
+        () => {},
+      );
+    });
+  }
+</script>
+
+<style>
+  /* The wrapper centres the field in a column taller than it (the classroom page's row under its steps). */
+  .strip {
+    display: flex;
+    align-items: center;
+    margin-top: 0.75rem;
+  }
+
+  .field {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    border: 1px solid rgb(232 238 255 / 0.28);
+    border-radius: 0.25rem;
+  }
+
+  .field:hover,
+  .field:focus-within {
+    border-color: var(--color-accent);
+  }
+
+  .address {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem;
+    /* The one text under 16px on the site, with the BibTeX box: an address field's own face and size. */
+    font: 400 0.875rem / 1.6 var(--font-family-mono);
+    color: var(--site-text-dim);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  /* A parameter moves to the next line whole; it breaks inside only when it is wider than the field. */
+  .address span {
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  .address b {
+    font-weight: 400;
+    color: var(--color-fg);
+  }
+
+  /* 44 px square: the smallest target a finger hits reliably. */
+  .icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--site-text-dim);
+    cursor: pointer;
+  }
+
+  .icon:hover,
+  .icon:focus-visible,
+  .icon[data-copied] {
+    color: var(--color-accent);
+  }
+
+  .icon svg {
+    grid-area: 1 / 1;
+    width: 1.125rem;
+    height: 1.125rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .icon .tick,
+  .icon[data-copied] .sheets {
+    visibility: hidden;
+  }
+
+  .icon[data-copied] .tick {
+    visibility: visible;
+  }
+</style>

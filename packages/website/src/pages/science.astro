@@ -1,0 +1,304 @@
+---
+import Base from '../layouts/Base.astro';
+import AskList from '../components/AskList.astro';
+import Citation from '../components/Citation.astro';
+import Claims from '../components/Claims.astro';
+import Columns from '../components/Columns.astro';
+import Credits from '../components/Credits.astro';
+import Figure from '../components/Figure.astro';
+import FullFigure from '../components/FullFigure.astro';
+import Group from '../components/Group.astro';
+import Note from '../components/Note.astro';
+import ObjLink from '../components/ObjLink.astro';
+import OpenApp from '../components/OpenApp.astro';
+import PictureBand from '../components/PictureBand.astro';
+import Remark from '../components/Remark.astro';
+import SectionHead from '../components/SectionHead.astro';
+import SectionNav from '../components/SectionNav.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import SourceTable from '../components/SourceTable.astro';
+import { DATA_SOURCES } from '../data/dataSources';
+import { fact } from '../data/fact';
+import { REPO_URL } from '../data/siteIdentity';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { formatDate } from '../utils/formatDate';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'The science behind skymap: data, methods, limits';
+const description =
+  'Where skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.';
+
+const MEASURED = [
+  { term: 'Directions', id: 'sci-directions' },
+  { term: 'Redshifts', id: 'sci-redshifts' },
+  { term: 'Stars', id: 'sci-star-observables' },
+  { term: 'Galaxy brightness', id: 'sci-magnitudes' },
+  { term: 'Surfaces', id: 'sci-surfaces' },
+];
+const DERIVED = [
+  { term: 'Galaxy distances', id: 'sci-galaxy-distance' },
+  { term: 'The Hubble constant', id: 'sci-h0-range' },
+  { term: 'Nearby galaxies', id: 'sci-local-volume' },
+  { term: 'Two kinds of redshift', id: 'sci-two-redshifts' },
+  { term: 'Star distances', id: 'sci-star-distance' },
+  { term: 'Planets and moons', id: 'sci-ephemeris' },
+  { term: 'Density field', id: 'sci-density-field' },
+  { term: 'Filaments', id: 'sci-filaments' },
+  { term: 'Flows', id: 'sci-flows' },
+  { term: 'Galaxy colour', id: 'sci-colour' },
+  { term: 'Clusters', id: 'sci-structures' },
+];
+const DRAWN = [
+  { term: 'The Milky Way', id: 'sci-milky-way' },
+  { term: 'Its stars', id: 'sci-milky-way-points' },
+  { term: 'The edge sphere', id: 'sci-horizon-shell' },
+  { term: 'How far the data go', id: 'sci-deepest' },
+  { term: 'Planet maps', id: 'sci-planet-maps' },
+  { term: 'Atmospheres', id: 'sci-atmospheres' },
+  { term: 'Earth’s clouds', id: 'sci-earth-clouds' },
+  { term: 'Galaxy discs', id: 'sci-galaxy-discs' },
+  { term: 'Galaxy tilt', id: 'sci-galaxy-tilt' },
+  { term: 'DESI brightness', id: 'sci-desi-brightness' },
+  { term: 'The black hole', id: 'sci-black-hole' },
+  { term: 'Zone of Avoidance band', id: 'sci-zoa-band' },
+  { term: 'Structure markers', id: 'sci-markers' },
+  { term: 'Glow and tone', id: 'sci-tone' },
+];
+const SIMPLIFIED = [
+  {
+    title: 'Distance',
+    items: [
+      { term: 'Redshift space', id: 'sim-redshift-space' },
+      { term: 'Reference frame', id: 'sim-frames' },
+      { term: 'Two expansion rates', id: 'sim-horizon-h0' },
+      { term: 'A step at 30 megaparsecs', id: 'sim-scale-step' },
+      { term: 'Estimated redshifts', id: 'sci-photometric-share' },
+    ],
+  },
+  {
+    title: 'Coverage',
+    items: [
+      { term: 'SDSS footprint', id: 'survey-gaps' },
+      { term: '2MRS footprint', id: '2mrs-coverage' },
+      { term: 'Zone of Avoidance', id: 'sim-zone' },
+      { term: 'DESI', id: 'sim-desi-patches' },
+      { term: 'Flux limits', id: 'sim-flux-limits' },
+      { term: 'Our own dimming', id: 'sim-reweight' },
+      { term: 'Data sizes', id: 'sim-data-sizes' },
+      { term: 'Duplicates', id: 'sim-duplicates' },
+    ],
+  },
+  {
+    title: 'Stars, planets and time',
+    items: [
+      { term: 'Stars stand still', id: 'sim-star-epoch' },
+      { term: 'Which stars', id: 'sim-star-coverage' },
+      { term: 'Outside 1900 to 2100', id: 'sim-ephemeris-span' },
+    ],
+  },
+  {
+    title: 'Size and brightness',
+    items: [
+      { term: 'Exposure', id: 'sim-exposure' },
+      { term: 'Quasars', id: 'sim-quasar-boost' },
+      { term: 'Galaxy points', id: 'sim-point-floor' },
+      { term: 'Planets and stars', id: 'sim-true-size' },
+    ],
+  },
+];
+
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  ...[...MEASURED, ...DERIVED, ...DRAWN, ...SIMPLIFIED.flatMap((group) => group.items)].map((item) => item.id),
+  'sci-built-counts',
+  'sci-cite-skymap',
+  'sci-cite-file',
+  'astronomical-unit',
+  'megaparsec-length',
+];
+const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Science', path: '/science/' }])]}
+>
+  <PictureBand id="science-wedges" gap="none" eager>
+    <h1>The science behind skymap</h1>
+    <p class="say">
+      skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says
+      what is measured, what is derived and what is drawn, and lists where we simplify.
+    </p>
+    <ShotCaption id="science-wedges" />
+  </PictureBand>
+
+  <SectionNav
+    items={[
+      { href: '#sources', label: 'The sources', icon: 'sources' },
+      {
+        href: '#bins',
+        label: 'Measured, derived, drawn',
+        icon: 'method',
+      },
+      {
+        href: '#simplifications',
+        label: 'Known simplifications',
+        icon: 'simplified',
+      },
+      { href: '#cite', label: 'How to cite', icon: 'cite' },
+    ]}
+  />
+
+  <section class="wrap section" id="sources">
+    <SectionHead title="The sources">
+      <p>
+        The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name links to the
+        catalogue or its paper. “Our record” links to the file in our repository that says which release we use.
+      </p>
+    </SectionHead>
+    <SourceTable>
+      <p>
+        {fact('sci-built-counts').text}{' '}
+        <a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a>
+      </p>
+      <p>
+        “Rows we read” is the size of the table or query. “We draw” is smaller because rows without a usable
+        redshift are dropped, overlapping catalogues are merged, and SDSS is cut to about 500,000 of its most
+        luminous galaxies. An empty cell means neither our build nor the
+        source’s own record gives a number we can stand behind.
+      </p>
+      <p>
+        Terrain heights, the Mars rover sites, 3D models, the constellation lines, the photographs of named galaxies
+        and the survey pictures fetched for other galaxies are not in the table. They are recorded in the
+        repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a> and its{' '}
+        <a href={`${REPO_URL}/blob/main/ATTRIBUTIONS.md`}>attributions file</a>.
+      </p>
+    </SourceTable>
+  </section>
+
+  <section class="wrap section" id="bins">
+    <SectionHead title="Measured, derived, drawn">
+      <p>
+        Each word has one meaning on this site. A point in the scene is usually all three at once: a measured
+        direction, a derived distance and a drawn dot.
+      </p>
+    </SectionHead>
+
+    <Group title="Measured" big>
+      <p slot="lede">An instrument recorded it, and we use the published value.</p>
+      <Claims items={MEASURED} />
+    </Group>
+
+    <Group title="Derived" big>
+      <p slot="lede">Computed from measurements by a method we can name.</p>
+      <div class="pair">
+        <Figure id="science-web-points" sizes="(max-width: 900px) 100vw, 36rem" />
+        <Figure id="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
+      </div>
+      <Claims items={DERIVED} />
+    </Group>
+
+    <Group title="Drawn" big>
+      <p slot="lede">
+        A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the
+        Milky Way, so its portrait from outside has to be drawn.
+      </p>
+      <div class="one grid">
+        <div class="statements"><Figure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" /></div>
+      </div>
+      <Claims items={DRAWN} />
+    </Group>
+    <Remark text={fact('astronomical-unit').short!} />
+  </section>
+
+  <FullFigure id="science-zoa" />
+
+  <section class="wrap section" id="simplifications">
+    <SectionHead title="Known simplifications">
+      <p>
+        {count} places where the scene departs from the sky, or from what a careful analysis would do. Each was
+        checked against the code on {formatDate(fact('sim-frames').checked)}.
+      </p>
+    </SectionHead>
+    {
+      SIMPLIFIED.map((group) => (
+        <Group title={group.title} big>
+          <Claims items={group.items} />
+        </Group>
+      ))
+    }
+    <Note>
+      If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.
+    </Note>
+  </section>
+
+  <section class="wrap section" id="cite">
+    <SectionHead title="How to cite">
+      <p>Cite skymap for the pictures, and the catalogues for the data in them.</p>
+    </SectionHead>
+    <Columns count={2}>
+      <div>
+        <h3>skymap</h3>
+        <Citation />
+      </div>
+      <div>
+        <h3>The catalogues</h3>
+        <AskList />
+      </div>
+    </Columns>
+  </section>
+
+  <section class="wrap section" id="onward">
+    <h2>Further reading</h2>
+    <div class="link-row">
+      <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
+      <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
+      <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
+      <ObjLink hang href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+      <ObjLink hang href={sitePath('/classroom/')}>Use skymap in the classroom</ObjLink>
+      <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
+    </div>
+    <div class="link-row onward">
+      <OpenApp />
+    </div>
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} />
+    <Credits />
+  </div>
+</Base>
+
+<style>
+  /* One camera, two layers: the frames sit edge to edge so the eye carries a place across. */
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 0.25rem;
+  }
+
+  .pair,
+  .one {
+    margin-bottom: 2.5rem;
+  }
+
+  /* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
+  @media (min-width: 901px) {
+    .pair :global(figcaption) {
+      padding-right: calc(var(--col-gap) / 2 - 0.125rem);
+      --cols: 6;
+    }
+
+    .pair > :global(:nth-child(2) figcaption) {
+      padding-inline: calc(var(--col-gap) / 2 - 0.125rem) 0;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .pair {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

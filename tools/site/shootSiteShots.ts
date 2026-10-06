@@ -6,23 +6,18 @@
  *
  *   npm run site:shots -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *
- * The full-size PNG of each row is kept in `data/shots/site/` (gitignored);
- * `--from-masters` re-encodes from those without visiting the app.
+ * `--from-masters` re-encodes from the full-size PNGs kept in `data/shots/site/` (gitignored).
  */
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 
 import { SITE_SHOTS } from '../../packages/website/src/data/siteShots';
-import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
-import { bootHookedPage } from '../utils/browser/bootHookedPage';
-import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
-import { siteShotActions } from './utils/siteShotActions';
-import { siteShotUrl } from './utils/siteShotUrl';
+import { openSiteShot } from './utils/openSiteShot';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
@@ -30,6 +25,9 @@ const DPR = 2;
 // Measured on these frames: AVIF 50 holds a star field, and WebP needs 76 to match it.
 const AVIF = { quality: 50, effort: 9 };
 const WEBP = { quality: 76, effort: 6 };
+// Typed as a person types, then long enough for the palette's results to land.
+const KEY_DELAY_MS = 60;
+const RESULTS_SETTLE_MS = 1200;
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -60,18 +58,21 @@ try {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
       try {
         const page = await context.newPage();
-        await bootHookedPage(page, siteShotUrl(base!, shot));
+        await openSiteShot(page, base!, shot);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
-        await dispatchActions(page, siteShotActions(shot));
-        const settled = () =>
-          page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
-        await settled();
-        if (shot.settings?.settleMs) {
-          await page.waitForTimeout(shot.settings.settleMs);
-          await settled();
+        if (shot.settings?.searchFor !== undefined) {
+          await page.keyboard.press('/');
+          await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
+          await page.waitForTimeout(RESULTS_SETTLE_MS);
         }
-        writeFileSync(master, await readCanvas(page, 'png'));
+        // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
+        writeFileSync(
+          master,
+          shot.settings?.ui
+            ? await page.screenshot({ type: 'png' })
+            : await readCanvas(page, 'png'),
+        );
       } catch (err) {
         failed = true;
         console.error(`${shot.id}: ${err instanceof Error ? err.message : String(err)}`);
@@ -90,10 +91,24 @@ try {
       if (/^(.+)-\d+\.(avif|webp)$/.exec(file)?.[1] === shot.id) rmSync(join(OUT_DIR, file));
     }
     const sizes: string[] = [];
+    const crop = shot.settings?.crop;
+    const frame = crop
+      ? sharp(master).extract({
+          left: crop.left * DPR,
+          top: crop.top * DPR,
+          width: crop.width * DPR,
+          height: crop.height * DPR,
+        })
+      : sharp(master);
+    const narrowest = Math.min(...shot.widths);
     for (const width of shot.widths) {
-      const resized = sharp(master).resize({ width, kernel: 'lanczos3' });
+      const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
       const avif = join(OUT_DIR, `${shot.id}-${width}.avif`);
-      await resized.clone().avif(AVIF).toFile(avif);
+      const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
+      await resized
+        .clone()
+        .avif({ ...AVIF, quality })
+        .toFile(avif);
       await resized
         .clone()
         .webp(WEBP)

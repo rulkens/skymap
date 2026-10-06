@@ -1,12 +1,14 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { FACTS } from '../../../packages/website/src/data/facts';
 import { fact } from '../../../packages/website/src/data/fact';
-import { C_KM_S } from '../../../src/utils/math/constants';
+import { C_KM_S, PC_TO_LY } from '../../../src/utils/math/constants';
+import { statedFigures } from './statedFigures';
 
-const LY_PER_PC = 3.26156;
-const KM_PER_LY = C_KM_S * 365.25 * 86_400;
-const YEAR_S = 365.25 * 86_400;
+const ROOT = resolve(import.meta.dirname, '../../..');
+const SITE = join(ROOT, 'packages/website/src');
 
 describe('website facts', () => {
   it('every row has a unique id, text, an https source with a label and an ISO check date', () => {
@@ -26,20 +28,76 @@ describe('website facts', () => {
     expect(() => fact('no-such-fact')).toThrow(/no-such-fact/);
   });
 
-  // Each number below is a calculation the row only states, so it is redone here from its inputs.
-  it('derived light-travel times and distances match their inputs', () => {
-    expect(384_400 / C_KM_S).toBeCloseTo(1.3, 1);
-    expect(1_205.5e6 / C_KM_S / 60).toBeCloseTo(67, 0);
-    expect(1_658.6e6 / C_KM_S / 60).toBeCloseTo(92, 0);
-    expect(Math.round((8_178 * LY_PER_PC) / 100) * 100).toBe(26_700);
-    expect(Math.round((761e3 * LY_PER_PC) / 1e5) / 10).toBe(2.5);
-    expect(Math.round((16.5e6 * LY_PER_PC) / 1e6)).toBe(54);
-    expect((1 / 0.7680665) * LY_PER_PC).toBeCloseTo(4.25, 2);
+  // `npm run move-files` does not rewrite a path inside a string, so a moved file would leave a published dead link.
+  it('every repository path cited as a source exists', () => {
+    const cited = readdirSync(SITE, { recursive: true, encoding: 'utf8' })
+      .filter((name) => /\.(ts|astro)$/.test(name))
+      .flatMap((name) => [
+        ...readFileSync(join(SITE, name), 'utf8').matchAll(/\$\{REPO_BLOB\}\/([^`'"#?\s]+)/g),
+      ])
+      .map((match) => match[1]!);
+    expect(cited.length).toBeGreaterThan(50);
+    expect(cited.filter((path) => !existsSync(join(ROOT, path)))).toEqual([]);
   });
 
-  it('the Voyager 1 trip to Proxima Centauri takes about 75,000 years', () => {
-    const years = (4.2465 * KM_PER_LY) / 17.0 / YEAR_S;
-    expect(years).toBeGreaterThan(74_000);
-    expect(years).toBeLessThan(76_000);
+  it('light-travel times follow from the distances', () => {
+    const [moonKm, moonSeconds] = statedFigures(
+      'moon-orbit-light',
+      /([\d,]+) km, which light covers in about (\d+(?:\.\d+)?) seconds/,
+    );
+    expect(moonKm! / C_KM_S).toBeCloseTo(moonSeconds!, 1);
+    // Nearest and farthest in km, NASA Saturn fact sheet.
+    const [near, far] = statedFigures('saturn-distance', /between (\d+) and (\d+) light-minutes/);
+    expect(Math.round(1_205.5e6 / C_KM_S / 60)).toBe(near);
+    expect(Math.round(1_658.6e6 / C_KM_S / 60)).toBe(far);
+    const [kmS, years, ly] = statedFigures(
+      'voyager1-to-proxima',
+      /speed of (\d+(?:\.\d+)?) km\/s .* about ([\d,]+) years to travel the (\d+(?:\.\d+)?) light-years/,
+    );
+    expect(Math.abs((ly! * C_KM_S) / kmS! - years!)).toBeLessThan(1000);
+  });
+
+  it('light-years follow from the parsecs or the parallax beside them', () => {
+    const [sgrLy, sgrPc] = statedFigures(
+      'sgr-a-distance',
+      /about ([\d,]+) light-years away \(([\d,]+) parsecs\)/,
+    );
+    expect(Math.round((sgrPc! * PC_TO_LY) / 100) * 100).toBe(sgrLy);
+    const [m31Mly, m31Kpc] = statedFigures(
+      'andromeda-distance',
+      /about (\d+(?:\.\d+)?) million light-years away \((\d+) kiloparsecs/,
+    );
+    expect(Math.round((m31Kpc! * PC_TO_LY) / 100) / 10).toBe(m31Mly);
+    const [virgoMly, virgoMpc] = statedFigures(
+      'virgo-distance',
+      /about (\d+) million light-years away \((\d+(?:\.\d+)?) megaparsecs/,
+    );
+    expect(Math.round(virgoMpc! * PC_TO_LY)).toBe(virgoMly);
+    const [proximaLy, mas] = statedFigures(
+      'proxima-distance',
+      /is (\d+(?:\.\d+)?) light-years away \(Gaia parallax (\d+(?:\.\d+)?) milliarcseconds/,
+    );
+    expect((1000 / mas!) * PC_TO_LY).toBeCloseTo(proximaLy!, 2);
+    const [across] = statedFigures('bootes-void', /about (\d+) million light-years across/);
+    const millionCubicMpcBall = 2 * Math.cbrt((3 * 1e6) / (4 * Math.PI));
+    expect(Math.round((millionCubicMpcBall * PC_TO_LY) / 100) * 100).toBe(across);
+  });
+
+  it('Earth’s turn, its travel along its orbit and Io’s lap follow from the periods and speed', () => {
+    const [hours, degrees] = statedFigures(
+      'earth-rotation',
+      /in (\d+(?:\.\d+)?) hours, which is (\d+) degrees an hour/,
+    );
+    expect(Math.round(360 / hours!)).toBe(degrees);
+    const [kmS, km, minutes] = statedFigures(
+      'earth-orbit-speed',
+      /mean (\d+(?:\.\d+)?) kilometres a second, which is about ([\d,]+) km in (\d+) minutes/,
+    );
+    expect(Number((kmS! * minutes! * 60).toPrecision(2))).toBe(km);
+    const [ioDays, hoursPerSecond, seconds] = statedFigures(
+      'io-lap',
+      /Jupiter in (\d+(?:\.\d+)?) days .* clock at (\d+) hours per second, one lap of Io takes about (\d+) seconds/,
+    );
+    expect(Math.round((ioDays! * 24) / hoursPerSecond!)).toBe(seconds);
   });
 });

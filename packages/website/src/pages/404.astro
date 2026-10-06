@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import ObjLink from '../components/ObjLink.astro';
-import Shot from '../components/Shot.astro';
+import ViewLink from '../components/ViewLink.astro';
+import PictureBand from '../components/PictureBand.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import { appLink } from '../data/appLink';
@@ -9,101 +10,20 @@ import { siteShot } from '../data/siteShot';
 import { sitePath } from '../utils/sitePath';
 ---
 
-<Base title="Page not found: skymap" description="This address is not on the map. The way back to skymap starts here.">
-  <section class="lost">
-    <div class="back">
-      <Shot id="void-bootes" sizes="100vw" eager />
-    </div>
-    <div class="wrap copy">
-      <h1>There is nothing here</h1>
-      <p class="say">
-        This address is not on the map. The picture is the Boötes Void, found in 1981 and described then as a
-        million cubic megaparsecs of very little. You are in suitable company.
-      </p>
-      <ObjLink size="big" href={sitePath('/')}>Back to the start</ObjLink>
-      <ObjLink href={appLink(siteShot('void-bootes').link)}>Or go and see the void</ObjLink>
-      <ShotCaption id="void-bootes" open={false} />
-      <Sources ids={['bootes-void']} />
-    </div>
-  </section>
+<Base title="Page not found: skymap" description="This address is not on the map. Start again from the skymap home page.">
+  <!-- The void's ring is in the middle of the frame: zoomed, it stands beside the words, not under them. -->
+  <PictureBand id="void-bootes" gap="none" zoom={1.45} eager>
+    <h1>There is nothing here</h1>
+    <p class="say">
+      This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec
+      void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable
+      company.
+    </p>
+    <ObjLink hang size="big" href={sitePath('/')}>skymap home page</ObjLink>
+    <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
+    <ShotCaption id="void-bootes" open={false} />
+  </PictureBand>
+  <div class="wrap section last">
+    <Sources ids={['bootes-void']} />
+  </div>
 </Base>
-
-<style>
-  .lost {
-    position: relative;
-    display: grid;
-    align-items: center;
-    min-height: calc(100svh - var(--nav-height));
-    background: #000;
-  }
-
-  /* Wide: the picture runs off the right edge, which puts the void's ring beside the words, not under them. */
-  .back {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-  }
-
-  .back :global(img) {
-    display: block;
-    width: 145%;
-    max-width: none;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .back::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0) 55%);
-  }
-
-  .copy {
-    position: relative;
-    width: 100%;
-    padding-block: 4rem;
-  }
-
-  h1 {
-    font-size: var(--text-h2);
-  }
-
-  .say {
-    max-width: 30rem;
-    font-size: var(--text-lead);
-  }
-
-  .copy :global(.ring) {
-    display: flex;
-    width: fit-content;
-  }
-
-  .copy :global(.caption) {
-    margin-block: 2rem 1rem;
-  }
-
-  /* Narrow: the ring above, the words under it. */
-  @media (max-width: 900px) {
-    .lost {
-      align-items: start;
-    }
-
-    .back {
-      bottom: auto;
-      height: 46svh;
-    }
-
-    .back :global(img) {
-      width: 100%;
-    }
-
-    .back::after {
-      background: linear-gradient(180deg, rgb(0 0 0 / 0) 60%, #000 100%);
-    }
-
-    .copy {
-      padding-block: 40svh 3rem;
-    }
-  }
-</style>

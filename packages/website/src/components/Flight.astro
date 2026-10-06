@@ -1,17 +1,15 @@
 ---
 /*
  * Flight — the hero. A sticky full-height stage inside a tall track; scrolling
- * moves through the stops (scripts/initFlight.ts) and never changes scroll
- * speed or direction. Each stop is one list item holding its still and its
- * caption, so the words cannot drift from the picture.
- *
+ * moves along the flight without a rest (scripts/initFlight.ts) and never
+ * changes scroll speed or direction. Each stop is one list item holding its
+ * still and its caption, so the words cannot drift from the picture.
  * The stills are the flight at every width. On a wide screen with a capable
  * connection the film loads after first paint and plays over them; the layout
  * never depends on it, so a film that fails to arrive moves nothing. Without
  * script the same list reads top to bottom as captioned pictures.
  */
-import ObjLink from './ObjLink.astro';
-import { appLink } from '../data/appLink';
+import OpenApp from './OpenApp.astro';
 import { fact } from '../data/fact';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { flightTimeline } from '../utils/flightTimeline';
@@ -21,19 +19,30 @@ import type { FlightStill } from '../@types/FlightStill';
 type Props = { stills: FlightStill[]; videoUrl: string };
 
 const { stills, videoUrl } = Astro.props;
-// Shown at the end of the flight; the Milky Way and the web glow are the two drawn things a viewer has seen by then.
+// Shown at the end of the flight; the web glow (derived) and the Milky Way (drawn) are the two things a viewer has seen by then that are not catalogue points.
 const closing =
-  'The stars and galaxies in this flight sit where the catalogues put them. The Milky Way’s disc and the glow of the web are drawn, and the flight says so.';
+  'The stars and galaxies in this flight sit where the catalogues put them. The glow of the web is computed from those positions, and the Milky Way’s disc is drawn. Each stop says which.';
+// What each still shows, by stop id: written from the frames, so re-read them after `npm run site:media`.
+const ALT: Record<string, string> = {
+  earth: 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.',
+  'moon-orbit': 'The Moon’s orbit as a thin ring around a small Earth, against labelled stars.',
+  'outer-planets': 'The orbits of the planets as nested rings around the Sun, against the stars.',
+  'nearby-stars': 'A dense field of stars, some with name labels.',
+  'milky-way': 'A spiral galaxy seen from outside under the label You are here, with two small companion galaxies below it.',
+  'local-group': 'A pale disc labelled Local Group among other labelled discs, on a field of points.',
+  'cosmic-web': 'A purple and gold glow across one corner of a field of galaxies, with pale discs marking clusters.',
+  surveys: 'A bright knot of points with dark gaps cut into it, thinning outwards.',
+  universe: 'A thin blue sphere enclosing a small cloud of galaxies in two fans.',
+};
 const timeline = flightTimeline(
   FLIGHT_STOPS.map((stop) => stop.atSec),
   HERO_MEDIA.outSec - HERO_MEDIA.inSec,
 );
-const arrival = timeline.spans[FLIGHT_STOPS.length]!.start;
 const stops = FLIGHT_STOPS.map((stop, i) => ({
   ...stop,
   line: stop.factId ? (fact(stop.factId).short ?? '') : '',
   still: stills[i]!,
-  spineTop: `${((timeline.spans[i]!.start / arrival) * 100).toFixed(2)}%`,
+  spineTop: `${(timeline.knots[i]!.at * 100).toFixed(2)}%`,
 }));
 ---
 
@@ -57,19 +66,21 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
       ).matches;
       var touchTablet = matchMedia("(pointer: coarse)").matches && innerWidth < 1100;
       root.setAttribute("data-live", "");
+      // The top bar's ground stays clear over the stage (components/Nav.astro); initFlight brings it back.
+      document.documentElement.style.setProperty("--nav-ground", "0");
       if (wide && !slow && !touchTablet) root.setAttribute("data-film", "");
     })();
   </script>
 
   <div class="track">
-    <div class="stage">
+    <div class="stage" data-opening>
       <div class="intro" data-intro>
         <div class="titles">
           <h1 class="word">skymap</h1>
           <p class="tag">The mapped universe at true scale. You hold the camera.</p>
         </div>
         <div class="start">
-          <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+          <OpenApp />
           <small>Free. No account, nothing to install.</small>
         </div>
         <p class="hint small" aria-hidden="true">Scroll to pull back</p>
@@ -88,11 +99,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
                   src={stop.still.landscape.src}
                   width={stop.still.landscape.width}
                   height={stop.still.landscape.height}
-                  alt={
-                    i === 0
-                      ? 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.'
-                      : `${stop.name}, as skymap draws it at this point in the flight.`
-                  }
+                  alt={ALT[stop.id]}
                   loading={i === 0 ? 'eager' : 'lazy'}
                   fetchpriority={i === 0 ? 'high' : undefined}
                   decoding="async"
@@ -116,7 +123,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
       <div class="arrive" data-arrive>
         <p>{closing}</p>
-        <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+        <OpenApp />
       </div>
 
       <div class="spine" data-spine role="group" aria-label="Stops on the flight">
@@ -143,7 +150,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 <style>
   .flight {
     position: relative;
-    /* Above the nav's ground layer (components/Nav.astro), so the bar floats on the picture. */
+    /* A layer of its own, under the nav's ground (components/Nav.astro), which is clear while the stage is pinned. */
     z-index: 2;
     background: #000;
   }
@@ -159,7 +166,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
   .word {
     margin: 0 0 0.08em -0.04em;
-    font-size: clamp(4.5rem, 22vw, 8rem);
+    font-size: min(clamp(4.5rem, 22vw, 8rem), 27vw);
     line-height: 1;
   }
 
@@ -173,6 +180,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
   .start small {
     display: block;
+    margin-top: 0.625rem;
     color: var(--site-text-muted);
   }
 
@@ -298,25 +306,30 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     transition: opacity 0.3s ease;
   }
 
-  /* At a stop the film gives way to the sharper still of the same frame. */
-  .flight.has-video:not(.rest) .film {
+  .flight.has-video .film {
     opacity: 1;
   }
 
-  .flight[data-live] .cap,
-  /* One line of fixed height under the nav; tabular figures so the number does not jitter as it changes. */
+  /* A quiet footnote in the captions' bottom padding; tabular figures so the number does not jitter as it changes. */
   .flight[data-live] .scale {
     display: block;
     position: absolute;
     z-index: 3;
-    top: calc(var(--nav-height) + 0.75rem);
     left: var(--gutter);
+    bottom: 1.25rem;
+    max-width: none;
     margin: 0;
-    color: var(--site-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: var(--site-text-dim);
     font-variant-numeric: tabular-nums;
     text-shadow: 0 0 0.5rem #000, 0 0 0.25rem #000;
+    opacity: 0;
+    pointer-events: none;
   }
 
+  /* Every caption is set in the bottom left corner; only the script's opacity tells them apart. */
+  .flight[data-live] .cap,
   .flight[data-live] .arrive {
     position: absolute;
     z-index: 3;
@@ -373,7 +386,10 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
   }
 
   .flight[data-live] .hint {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
     position: absolute;
     left: 0;
     right: 0;
@@ -382,6 +398,39 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     margin: 0;
     text-align: center;
     color: var(--site-text-muted);
+  }
+
+  /* A mouse with its wheel rolling; the wheel is a background so one box draws both. */
+  @media (hover: hover) and (pointer: fine) {
+    .flight[data-live] .hint::before {
+      content: '';
+      width: 1.125rem;
+      height: 1.75rem;
+      border: 1px solid currentColor;
+      border-radius: 0.5625rem;
+      background: linear-gradient(var(--color-accent), var(--color-accent)) no-repeat 50% 0.3125rem / 2px
+        0.375rem;
+      animation: wheel 1.8s ease-in-out infinite;
+    }
+  }
+
+  @keyframes wheel {
+    60% {
+      background-position-y: 0.8125rem;
+      background-size: 2px 0.375rem;
+    }
+
+    80%,
+    100% {
+      background-position-y: 0.8125rem;
+      background-size: 2px 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flight[data-live] .hint::before {
+      animation: none;
+    }
   }
 
   .flight[data-live] .arrive {
@@ -497,8 +546,9 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
       inset: -11rem 0 0;
     }
 
+    /* Never wider than the window, whatever the reader's text size. */
     .flight[data-live] .word {
-      font-size: clamp(4.5rem, 24vw, 7rem);
+      font-size: min(clamp(4.5rem, 24vw, 7rem), 27vw);
     }
 
     .flight[data-live] .start {
@@ -506,7 +556,11 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     }
 
     .flight[data-live] .cap {
-      padding: 0 var(--gutter) 2.25rem;
+      padding: 0 var(--gutter) 2.75rem;
+    }
+
+    .flight[data-live] .scale {
+      bottom: 0.875rem;
     }
 
     .flight[data-live] .cap::before {
@@ -516,7 +570,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
     .flight[data-live] .arrive {
       align-items: flex-start;
-      padding-bottom: 2.25rem;
+      padding-bottom: 2.75rem;
       text-align: left;
     }
 
@@ -562,7 +616,11 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
     .flight[data-live] .cap {
       max-width: 62%;
-      padding-bottom: 1.25rem;
+      padding-bottom: 2rem;
+    }
+
+    .flight[data-live] .scale {
+      bottom: 0.625rem;
     }
 
     .name {

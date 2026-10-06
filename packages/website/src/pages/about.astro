@@ -1,0 +1,183 @@
+---
+import Base from '../layouts/Base.astro';
+import Beside from '../components/Beside.astro';
+import Claims from '../components/Claims.astro';
+import Columns from '../components/Columns.astro';
+import Credits from '../components/Credits.astro';
+import Figure from '../components/Figure.astro';
+import Note from '../components/Note.astro';
+import ObjLink from '../components/ObjLink.astro';
+import OpenApp from '../components/OpenApp.astro';
+import PictureBand from '../components/PictureBand.astro';
+import PressPictures from '../components/PressPictures.astro';
+import SectionHead from '../components/SectionHead.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import { aboutJsonLd } from '../data/aboutJsonLd';
+import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
+import { fact } from '../data/fact';
+import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { formatDate } from '../utils/formatDate';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'About skymap: who makes it and which pictures you may reuse';
+const description = `skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, pictures for reuse, and a colophon.`;
+
+const ALIVE = [
+  { term: 'Licence', id: 'about-licence' },
+  { term: 'Version', id: 'about-version' },
+  { term: 'History', id: 'about-history' },
+];
+const COLOPHON = [
+  { term: 'Pictures', id: 'about-pictures' },
+  { term: 'Headings', id: 'about-display-face' },
+  { term: 'Text', id: 'about-text-face' },
+  { term: 'Font files', id: 'about-fonts-hosted' },
+  { term: 'Pages', id: 'about-built-with' },
+];
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  'about-what-is',
+  'about-maker',
+  'about-ai',
+  ...ALIVE.map((item) => item.id),
+  'wisdome-showing',
+  'wisdome-venue',
+  'about-picture-licence',
+  'gaia-licence',
+  ...COLOPHON.map((item) => item.id),
+];
+
+const whatIs = fact('about-what-is').text;
+const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
+const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[
+    breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
+    ...aboutJsonLd(Astro.site!, pageUrl, whatIs),
+  ]}
+>
+  <PictureBand id="about-milky-way" gap="none" eager>
+    <h1>About skymap</h1>
+    <p class="say">skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
+    <ShotCaption id="about-milky-way" />
+  </PictureBand>
+
+  <section class="wrap section" id="what">
+    <h2>What skymap is</h2>
+    <p class="what">{whatIs}</p>
+    <div class="link-row onward">
+      <OpenApp />
+      <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
+    </div>
+  </section>
+
+  <section class="wrap section" id="maker">
+    <Columns count={2}>
+      <div>
+        <h2>Who makes it</h2>
+        <p>{fact('about-maker').text}</p>
+        <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
+        <p>{fact('about-ai').text}</p>
+        <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+      </div>
+      <div class="alive">
+        <h3>Open source, and maintained</h3>
+        <Claims items={ALIVE} narrow />
+        <div class="link-row">
+          <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
+          <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+        </div>
+      </div>
+    </Columns>
+  </section>
+
+  <section class="wrap section" id="dome">
+    <Beside picture="28rem" wordsFirst>
+      <Figure id="dome-saturn" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 23.75rem), 26rem" disc />
+      <div>
+        <h2>Shown in a dome</h2>
+        <p>{fact('wisdome-showing').text}</p>
+        <p>{fact('wisdome-venue').text}</p>
+        <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
+      </div>
+    </Beside>
+  </section>
+
+  <section class="wrap section" id="contact">
+    <h2>Get in touch</h2>
+    <Columns count={2}>
+      <div>
+        <h3>For a dome, a museum or a commission</h3>
+        {
+          CONTACT_ENDPOINT ? (
+            <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+          ) : (
+            <p>The contact form is not open yet. The domes page says how to reach us in the meantime.</p>
+          )
+        }
+        <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
+      </div>
+      <div>
+        <h3>For a fault, a correction or a question</h3>
+        <p>
+          Open an issue in the repository. Issues are public and anyone can read them, so leave out anything
+          confidential.
+        </p>
+        <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
+      </div>
+    </Columns>
+    <Note>
+      What the site and the app load and keep is on the{' '}
+      <a href={sitePath('/privacy/')}>privacy page</a>.
+    </Note>
+  </section>
+
+  <section class="wrap section" id="press">
+    <SectionHead title="Pictures you can reuse" narrow>
+      <p>
+        {fact('about-picture-licence').text} Each picture below lists what is in it and the credit to print. Its
+        address opens the same view in the app, where you can take your own.
+      </p>
+    </SectionHead>
+    <PressPictures />
+    <Note>
+      {fact('gaia-licence').text}{' '}
+      <a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures
+      that show Earth close up or a photograph of a galaxy are not offered here, because their imagery has terms we
+      cannot pass on in one line. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.
+    </Note>
+  </section>
+
+  <section class="wrap section" id="colophon">
+    <SectionHead title="Colophon" narrow>
+      <p>How this site is made. Checked on {formatDate(fact('about-built-with').checked)}.</p>
+    </SectionHead>
+    <Claims items={COLOPHON} />
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} />
+    <Credits />
+  </div>
+</Base>
+
+<style>
+  /* The paragraph people quote: set large, at a measure a quote box can hold. */
+  .what {
+    max-width: 34em;
+    font-size: var(--text-lead);
+    line-height: 1.5;
+    color: var(--site-text);
+  }
+
+  /* The shorter column stands on the foot of the row, level with the maker's link. */
+  .alive {
+    align-self: end;
+  }
+</style>

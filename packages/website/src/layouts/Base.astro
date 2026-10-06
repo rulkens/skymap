@@ -9,29 +9,21 @@ import cardUrl from '../assets/og-card.jpg?url';
 import { siteShot } from '../data/siteShot';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import JsonLd from '../components/JsonLd.astro';
+import DevFeedback from '../dev/feedback/DevFeedback.astro';
 import { INDEXABLE } from '../data/site';
 
 type Props = {
   title: string;
   description: string;
-  image?: string;
-  imageAlt?: string;
   jsonLd?: readonly Record<string, unknown>[];
   heroNav?: boolean;
 };
 
-const {
-  title,
-  description,
-  image = cardUrl,
-  imageAlt = siteShot('og-card').alt,
-  jsonLd = [],
-  heroNav = false,
-} = Astro.props;
+const { title, description, jsonLd = [], heroNav = false } = Astro.props;
+const imageAlt = siteShot('og-card').alt;
 // Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const imageUrl = new URL(image, Astro.site).href;
+const imageUrl = new URL(cardUrl, Astro.site).href;
 ---
 
 <!doctype html>
@@ -64,7 +56,8 @@ const imageUrl = new URL(image, Astro.site).href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
     <meta name="twitter:image:alt" content={imageAlt} />
-    {jsonLd.map((data) => <JsonLd data={data} />)}
+    <!-- `<` is escaped so a string containing `</script>` cannot close the block. -->
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
     <slot name="head" />
   </head>
   <body class={heroNav ? 'hero-nav' : undefined}>
@@ -74,5 +67,6 @@ const imageUrl = new URL(image, Astro.site).href;
       <slot />
     </main>
     <Footer />
+    {import.meta.env.DEV && <DevFeedback />}
   </body>
 </html>

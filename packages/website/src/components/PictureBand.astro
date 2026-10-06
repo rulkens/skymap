@@ -1,0 +1,339 @@
+---
+/*
+ * PictureBand — a section whose ground is one picture, with the words on its
+ * dark side (`words`). Wide, the picture fills the band and its label (a ShotCaption
+ * among the words) runs along the foot; narrow, picture, label and words follow in turn.
+ * `gap="none"` makes it a page's opening section: it fits the first screen, and
+ * narrow its title and lead come before the picture. `zoom` enlarges a wide
+ * picture past the right edge, to bring a centred subject out from under the words.
+ * With `views` the band is a gallery (scripts/initGallery.ts): the words carry a
+ * CaptionGallery and a `.view-words` block for anything else that follows the view.
+ */
+import type { GalleryView } from '../@types/GalleryView';
+import { shotSources } from '../utils/shotSources';
+import Shot from './Shot.astro';
+
+type Props = ({ id: string; tall?: string; views?: undefined } | { views: readonly GalleryView[] }) & {
+  words?: 'left' | 'right';
+  gap?: 'none' | 'half' | 'full';
+  eager?: boolean;
+  zoom?: number;
+};
+
+const props = Astro.props;
+const { words = 'left', gap = 'full', eager = false, zoom = 1 } = props;
+const views: readonly GalleryView[] = props.views ? props.views : [{ id: props.id, tall: props.tall }];
+const many = views.length > 1;
+// A phone's pictures share one box, shaped as the first view's: its upright cut up to Shot's 700px, the wide one above.
+const shape = (id: string) => `${shotSources(id).width} / ${shotSources(id).height}`;
+const first = views[0]!;
+const ratio = (id: string) => shotSources(id).width / shotSources(id).height;
+// How wide a picture is drawn, in window widths: the zoom, and for a gallery view with no upright cut the width
+// it has once a phone's upright box has cropped it.
+const cropped = (view: GalleryView) =>
+  many && !view.tall ? Math.ceil((100 * ratio(view.id)) / ratio(first.tall ?? first.id)) : 100;
+const sizes = (view: GalleryView) =>
+  `(max-width: 700px) ${Math.round(cropped(view) * zoom)}vw, ${Math.round(100 * zoom)}vw`;
+---
+
+<section
+  class:list={['band', `words-${words}`, `gap-${gap}`, zoom !== 1 && 'zoomed']}
+  data-opening={gap === 'none' || undefined}
+  data-gallery={many || undefined}
+  style={`--zoom:${zoom}; --shape:${shape(first.id)}; --shape-tall:${shape(first.tall ?? first.id)}`}
+>
+  <div class:list={['back', many && 'many']} data-views={many || undefined}>
+    {views.map((view, i) => <Shot id={view.id} tall={view.tall} sizes={sizes(view)} eager={eager && i === 0} />)}
+  </div>
+  <div class="wrap copy">
+    <slot />
+  </div>
+</section>
+
+<script>
+  import { initGallery } from '../scripts/initGallery';
+
+  for (const band of document.querySelectorAll<HTMLElement>('[data-gallery]')) initGallery(band);
+</script>
+
+<style>
+  .band {
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-height: min(56.25vw, 92svh);
+    overflow-x: clip;
+    background: #000;
+  }
+
+  .gap-half {
+    margin-top: calc(var(--section-space) / 2);
+  }
+
+  .gap-full {
+    margin-top: var(--section-space);
+  }
+
+  .back {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .back :global(img) {
+    display: block;
+    width: calc(100% * var(--zoom));
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% 50%;
+  }
+
+  .words-right .back :global(img) {
+    object-position: 30% 50%;
+  }
+
+  /* A gallery's pictures lie on one another. A later one does not exist until the script warms it, so it is not fetched. */
+  .many {
+    --view-out: 1.4s;
+    --view-in: 1.4s;
+    isolation: isolate;
+  }
+
+  .many > :global(picture) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .many > :global(picture:nth-child(n + 2):not([data-warm])) {
+    display: none;
+  }
+
+  /* No frame edge: the picture fades into the page above and below, and into the words beside it. */
+  .back::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+  }
+
+  .words-right .back::after {
+    background:
+      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(270deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.65) 32%, rgb(0 0 0 / 0) 56%);
+  }
+
+  /*
+   * A header has no section above it to fade out of. Its words include small dim text, so the dark side holds 0.8
+   * as far as the words reach (40% of the width): the least that keeps 4.5:1 over a white star.
+   */
+  .gap-none .back::after {
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0.8) 40%, rgb(0 0 0 / 0) 64%);
+  }
+
+  @media (min-width: 901px) {
+    /* Never taller than the picture's own shape, so a tall window does not crop it to a strip. */
+    .gap-none {
+      min-height: min(56.25vw, var(--first-screen));
+    }
+
+    .gap-none .copy {
+      padding-top: var(--open-top);
+    }
+
+    .gap-none .copy > :global(.caption) {
+      --caption-rise: var(--open-rise);
+    }
+
+    .gap-none .copy > :global(*) {
+      max-width: min(27rem, 38vw);
+    }
+
+    /*
+     * A gallery's title runs over pictures nobody framed for it, so the dark side also reaches along the title's
+     * first line, as far as a title goes: 0.6 is the least that keeps 4.5:1 over a white star.
+     */
+    .gap-none .many::before {
+      content: '';
+      position: absolute;
+      z-index: 1;
+      inset: 0 auto auto 0;
+      width: 82%;
+      height: calc(var(--open-top) + var(--text-h2) * 1.05 + 4rem);
+      background: linear-gradient(180deg, rgb(0 0 0 / 0.6) calc(100% - 3.5rem), rgb(0 0 0 / 0) 100%);
+      mask-image: linear-gradient(90deg, #000 80%, rgb(0 0 0 / 0) 100%);
+    }
+
+    /* An address's longest parameter, a pose, is 44 characters: at 28rem it stays on one line, in any window. */
+    .gap-none .copy > :global([data-views]) {
+      max-width: 28rem;
+    }
+
+    /* A page's title is large text and may run past the words' column, over the picture: two lines, never three. */
+    .gap-none .copy > :global(h1) {
+      max-width: min(50rem, 60vw);
+    }
+  }
+
+  .band .copy > :global(h1) {
+    text-shadow: 0 0 1.5rem rgb(0 0 0 / 0.6);
+  }
+
+  /*
+   * A column, so the label can leave the words: the two auto margins centre the words in the room above the
+   * label and push the label to the foot, where the picture has faded to black.
+   */
+  .copy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    width: 100%;
+    padding-block: 5rem 2rem;
+  }
+
+  .copy > :global(:first-child) {
+    margin-top: auto;
+  }
+
+  /* A control is as wide as its words, not as the column. */
+  .copy > :global(a) {
+    align-self: flex-start;
+  }
+
+  /* The eighth line of the page grid. */
+  .words-right .copy > :global(*) {
+    margin-left: calc((100% + var(--col-gap)) * 7 / 12);
+  }
+
+  .band .copy > :global(.caption) {
+    --caption-foot: '';
+    --caption-lift: 2.75rem;
+    max-width: none;
+    margin: auto 0 0;
+    padding-top: var(--caption-rise, 4rem);
+  }
+
+  /* On a short window an opening section's paragraphs under the lead are set small: at 16px Jost is 400. */
+  @media (min-width: 901px) and (max-height: 720px) {
+    .gap-none .copy > :global(p:not(.say)) {
+      font-size: var(--text-small);
+      font-weight: var(--weight-small);
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  /* Narrow: the picture first, fading into the words below it. */
+  @media (max-width: 900px) {
+    .band {
+      display: block;
+      min-height: 0;
+    }
+
+    /* The title has the whole column: a page's own narrower measure would push it to a third line. */
+    .band .copy > :global(h1) {
+      max-width: none;
+    }
+
+    .back {
+      position: relative;
+    }
+
+    .back :global(img) {
+      width: 100%;
+      height: auto;
+      object-position: center;
+    }
+
+    /* One box for every view; a view with no upright cut is cropped to it, about the side its subject is on. */
+    .many {
+      aspect-ratio: var(--shape);
+    }
+
+    .many :global(img) {
+      height: 100%;
+      object-position: 70% 50%;
+    }
+
+    .back::after,
+    .gap-none .back::after,
+    .words-right .back::after {
+      background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 14%, rgb(0 0 0 / 0) 68%, #000 100%);
+    }
+
+    .copy {
+      margin-top: -1.5rem;
+      padding-block: 0;
+    }
+
+    .copy > :global(:first-child) {
+      margin-top: 0;
+    }
+
+    .words-right .copy > :global(*) {
+      margin-left: 0;
+    }
+
+    .band .copy > :global(.caption) {
+      --caption-foot: none;
+      --caption-lift: 0rem;
+      order: -1;
+      margin-bottom: 2.5rem;
+      padding-top: 0;
+    }
+
+    /*
+     * An opening section: the words' children become the band's own rows, so the title and the lead can stand
+     * above the picture, where a phone's first screen shows what page this is; the label and the rest follow it.
+     */
+    .gap-none {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gap-none .copy {
+      display: contents;
+    }
+
+    .gap-none .copy > :global(*) {
+      order: 2;
+      margin-inline: var(--gutter);
+    }
+
+    .gap-none .copy > :global(a) {
+      justify-self: start;
+    }
+
+    .gap-none .copy > :global(h1) {
+      order: -2;
+      margin-top: 2rem;
+    }
+
+    .gap-none .copy > :global(.say) {
+      order: -1;
+      margin-bottom: 0.5rem;
+    }
+
+    .gap-none .copy > :global(.caption) {
+      order: 1;
+      width: auto;
+      margin: -1.5rem var(--gutter) 2.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .many {
+        aspect-ratio: var(--shape-tall);
+      }
+    }
+
+    /* A zoomed picture is cut taller here instead of wider, which enlarges its centre as much. */
+    .zoomed .back :global(img) {
+      aspect-ratio: calc(16 / 9 / var(--zoom));
+    }
+  }
+</style>

@@ -1,0 +1,35 @@
+---
+/*
+ * Steps — a numbered procedure, its steps side by side on the page grid when
+ * wide and stacked when narrow. Each child is a Step, which takes its number
+ * from the counter this list starts. Three columns, unless `count` says four
+ * for a row of short steps: Step then sets its numeral large, and the row
+ * folds to two columns, then one.
+ */
+type Props = { count?: 4 };
+
+const { count } = Astro.props;
+---
+
+<ol class:list={['grid', count ? 'quarters fixed' : 'thirds']}>
+  <slot />
+</ol>
+
+<style>
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .fixed {
+    row-gap: 2rem;
+  }
+
+  @media (min-width: 481px) and (max-width: 900px) {
+    .fixed > :global(*) {
+      grid-column: span 6;
+    }
+  }
+</style>
