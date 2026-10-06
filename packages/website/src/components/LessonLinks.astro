@@ -18,23 +18,25 @@ import { LESSON_TOPICS } from '../data/lessons';
       <h3 id={`topic-${topic.id}`}>{topic.title}</h3>
       <ul>
         {topic.lessons.map((lesson) => (
-          <li>
+          <li class:list={{ solo: topic.lessons.length === 1 }}>
             <figure>
               <a href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
-                <Shot id={lesson.shot} sizes="(max-width: 900px) 60vw, 28rem" alt="" />
+                <Shot id={lesson.shot} sizes="(max-width: 900px) 92vw, 28rem" alt="" />
               </a>
               <figcaption>
                 <ShotCaption id={lesson.shot} open={false} />
               </figcaption>
             </figure>
-            <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
-            <dl>
-              <dt>The class sees</dt>
-              <dd>{lesson.sees}</dd>
-              <dt>Ask</dt>
-              <dd>{lesson.ask}</dd>
-            </dl>
-            <AddressStrip hash={lesson.hash} />
+            <div class="words">
+              <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
+              <dl>
+                <dt>The class sees</dt>
+                <dd>{lesson.sees}</dd>
+                <dt>Ask</dt>
+                <dd class="ask">{lesson.ask}</dd>
+              </dl>
+              <AddressStrip hash={lesson.hash} bare />
+            </div>
           </li>
         ))}
       </ul>
@@ -70,6 +72,20 @@ import { LESSON_TOPICS } from '../data/lessons';
 
   li {
     min-width: 0;
+  }
+
+  /* A topic with one link: the picture keeps its column and the words take the other, so no half row stands empty. */
+  .solo {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+  }
+
+  /* The question is what the teacher reads out: it gets the display face. */
+  .ask {
+    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
   }
 
   figure {
@@ -113,6 +129,10 @@ import { LESSON_TOPICS } from '../data/lessons';
 
     ul {
       grid-template-columns: 1fr;
+    }
+
+    .solo {
+      display: block;
     }
   }
 </style>

@@ -21,6 +21,7 @@ const factIds = [
   'wisdome-showing',
   'wisdome-venue',
   'wisdome-dome',
+  'dome-flag',
   'dome-rig',
   'dome-tilt',
   'film-recorder',
@@ -96,10 +97,7 @@ const STEPS = [
       </figure>
       <div>
         <h3>Live fisheye from the app</h3>
-        <p>
-          Add <code>?dome</code> to the address and the app draws a fisheye disc, the round picture a dome projector
-          needs, while someone flies it.
-        </p>
+        <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
         <dl>
           <dt>Today</dt>
           <dd>{fact('dome-rig').text} {fact('dome-tilt').text}</dd>
@@ -344,11 +342,6 @@ const STEPS = [
     color: var(--site-text-muted);
   }
 
-  code {
-    font: 400 0.875em var(--font-family-mono);
-    color: var(--color-fg);
-  }
-
   .cols {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -413,9 +406,22 @@ const STEPS = [
       padding-top: 2.5rem;
     }
 
-    /* Phone: the disc first, the claim under it. */
+    /* Phone: the name and the claim, then the disc, then the rest of the words. */
+    .hero {
+      row-gap: 0;
+    }
+
+    .words {
+      display: contents;
+    }
+
     .hero figure {
-      order: -1;
+      order: 1;
+      margin-block: 1.5rem 2.5rem;
+    }
+
+    .words > :not(h1, .proof) {
+      order: 2;
     }
 
     .disc {

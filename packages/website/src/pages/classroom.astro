@@ -25,6 +25,10 @@ const said = [
   'lesson-link',
   'no-account',
   'link-pose',
+  'search-key',
+  'double-click-focus',
+  'date-entry-utc',
+  'date-entry-paused',
   'webgpu-required',
   'webgpu-browsers',
   'app-browser-advice',
@@ -46,13 +50,15 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
       A lesson link is a web address that opens skymap on one object at one date. Every pupil who opens it lands in
       the same place. This one is Jupiter on 14 March 2033.
     </p>
-    <AddressStrip hash={HOME_LINKS.classroom} />
+    <div class="link">
+      <AddressStrip hash={HOME_LINKS.classroom} />
+    </div>
     <ShotCaption id="classroom-hero" />
   </PictureBand>
 
-  <section class="wrap section prose" id="why">
+  <section class="wrap section" id="why">
     <h2>Why a link suits a class</h2>
-    <div class="cols">
+    <div class="why">
       <div>
         <h3>One view for everyone</h3>
         <p>{fact('lesson-link').text}</p>
@@ -60,12 +66,10 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
           So a link with a date in it opens on that date for everyone, including the pupil who arrives late. From
           there each pupil can turn, zoom and fly on their own.
         </p>
-      </div>
-      <div>
         <h3>Nothing to set up</h3>
         <p>It is a web page: there is nothing to install. {fact('no-account').text}</p>
       </div>
-      <div>
+      <div class="runs">
         <h3>What it runs on</h3>
         <p>{fact('webgpu-required').text}</p>
         <p>{fact('webgpu-browsers').text}</p>
@@ -103,8 +107,7 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
         <div>
           <h3>Find the object</h3>
           <p>
-            Open the search with the <kbd>/</kbd> key or the search field at the top, type a name and press Enter. The
-            camera flies there. A double-click on anything in the scene does the same.
+            {fact('search-key').text} Type a name and press Enter. {fact('double-click-focus').text}
           </p>
         </div>
       </li>
@@ -116,8 +119,9 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
         <div>
           <h3>Set the date</h3>
           <p>
-            Select the clock at the bottom right, type a date and time in UTC, and press Enter. The clock stops at
-            that instant and the planets and moons move to where they were, or will be.
+            Select the clock at the bottom right, type a date and a time, and press Enter.{' '}
+            {fact('date-entry-utc').text}{' '}
+            {fact('date-entry-paused').text}
           </p>
         </div>
       </li>
@@ -145,7 +149,7 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
         links to its source.
       </p>
     </div>
-    <div class="cols two">
+    <div class="cols">
       <div>
         <h3>Accurate enough to teach from</h3>
         <ul class="small">
@@ -214,25 +218,44 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
   }
 
   .head h2 {
-    max-width: 16ch;
+    max-width: 20ch;
   }
 
-  .cols {
+  .link {
+    max-width: 27rem;
+  }
+
+  /* The argument reads at body size; what it runs on is reference, set small beside it. */
+  .why {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 7fr 5fr;
     gap: 2.5rem 3.75rem;
     margin-top: 2.5rem;
   }
 
-  .cols.two {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 0;
+  .why h3 {
+    font-size: var(--text-lead);
   }
 
-  .cols p {
+  .why h3:not(:first-child) {
+    margin-top: 2.5rem;
+  }
+
+  .runs {
+    padding-left: 2rem;
+    border-left: 1px solid var(--border-divider);
+  }
+
+  .runs p {
     font-size: var(--text-small);
     font-weight: var(--weight-small);
     line-height: 1.5;
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem 3.75rem;
   }
 
   .cols ul {
@@ -243,7 +266,7 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
 
   .cols li a {
     display: block;
-    padding-block: 0.5rem;
+    padding-block: 0.625rem;
     color: var(--site-text-muted);
   }
 
@@ -287,15 +310,15 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
     margin-top: 0.5rem;
   }
 
+  /* Step three's picture is the address itself, set as large as the column allows. */
   .steps .address {
     min-width: 0;
   }
 
-  kbd {
-    padding: 0 0.35em;
-    border: 1px solid rgb(232 238 255 / 0.28);
-    border-radius: 0.2rem;
-    font: 400 0.875em var(--font-family-mono);
+  .steps .address :global(.address) {
+    flex-basis: 100%;
+    padding: 1.25rem;
+    font-size: 1rem;
   }
 
   .limits {
@@ -318,9 +341,17 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
 
   @media (max-width: 900px) {
     .cols,
-    .cols.two,
+    .why,
     .steps li {
       grid-template-columns: 1fr;
+    }
+
+    .link {
+      max-width: none;
+    }
+
+    .runs {
+      padding-left: 1.25rem;
     }
 
     .steps li {

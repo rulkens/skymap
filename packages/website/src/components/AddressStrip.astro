@@ -6,9 +6,10 @@
  */
 import { APP_BASE, appLink } from '../data/appLink';
 
-type Props = { hash: string };
+// `bare` leaves the field out and keeps the copy control, for a list where the address would repeat eight times.
+type Props = { hash: string; bare?: boolean };
 
-const { hash } = Astro.props;
+const { hash, bare = false } = Astro.props;
 const origin = new URL(Astro.site!).origin;
 const host = new URL(Astro.site!).host;
 const params = hash.split('&').map((pair) => {
@@ -18,18 +19,20 @@ const params = hash.split('&').map((pair) => {
 ---
 
 <div class="strip">
-  <a class="address" href={appLink(hash)}>
-    {host}{APP_BASE}#{
-      params.map((param, i) => (
-        <>
-          {i > 0 && '&'}
-          {param.key}=<wbr />
-          <b>{param.value}</b>
-          <wbr />
-        </>
-      ))
-    }
-  </a>
+  {
+    !bare && (
+      <a class="address" href={appLink(hash)}>
+        {host}{APP_BASE}#{params.map((param, i) => (
+          <>
+            {i > 0 && '&'}
+            {param.key}=<wbr />
+            <b>{param.value}</b>
+            <wbr />
+          </>
+        ))}
+      </a>
+    )
+  }
   <button class="ring small" type="button" data-copy={origin + appLink(hash)}>Copy the address</button>
 </div>
 
