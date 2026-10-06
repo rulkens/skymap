@@ -32,7 +32,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     up: '/classroom/',
     pages: [
       { title: 'Moving around', path: '/docs/guide/moving/', status: 'live' },
-      { title: 'Finding things', path: '/docs/guide/finding/', status: 'planned' },
+      { title: 'Finding things', path: '/docs/guide/finding/', status: 'live' },
       { title: 'Time', path: '/docs/guide/time/', status: 'planned' },
       { title: 'Tours and exhibits', path: '/docs/guide/tours/', status: 'planned' },
       { title: 'Sharing a view', path: '/docs/guide/sharing/', status: 'planned' },

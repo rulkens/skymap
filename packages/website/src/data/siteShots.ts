@@ -605,4 +605,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The bright patch is every galaxy in the catalogues. The sphere around it is drawn where a model puts the edge of the observable universe.',
     alt: 'A small bright patch in two fans inside a faint blue sphere on black, with the app’s panels around it and a scale bar reading 10.0 Gpc.',
   },
+  {
+    id: 'guide-search-typed',
+    link: `focus=body-earth&${NOON}`,
+    settings: { ui: true, searchFor: 'coma', settleMs: 9000, crop: { left: 290, top: 40, width: 620, height: 500 } },
+    size: FEATURE,
+    widths: [1200, 800],
+    title: 'The search with “coma” typed in',
+    caption: 'Cut from a wider window. Galaxies come first, then clusters; the Leo Cluster is listed because its description mentions Coma.',
+    drawn: 'Each row’s tag says what kind of thing it is.',
+    alt: 'A search box holding the word coma above a list of results: several galaxies with NGC numbers, then Coma tagged Cluster, Coma Supercluster tagged Supercluster and Leo Cluster tagged Cluster.',
+  },
 ];
