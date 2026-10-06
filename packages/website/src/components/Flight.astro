@@ -1,9 +1,9 @@
 ---
 /*
  * Flight — the hero. A sticky full-height stage inside a tall track; scrolling
- * moves through the stops (scripts/initFlight.ts) and never changes scroll
- * speed or direction. Each stop is one list item holding its still and its
- * caption, so the words cannot drift from the picture.
+ * moves along the flight without a rest (scripts/initFlight.ts) and never
+ * changes scroll speed or direction. Each stop is one list item holding its
+ * still and its caption, so the words cannot drift from the picture.
  *
  * The stills are the flight at every width. On a wide screen with a capable
  * connection the film loads after first paint and plays over them; the layout
@@ -28,12 +28,11 @@ const timeline = flightTimeline(
   FLIGHT_STOPS.map((stop) => stop.atSec),
   HERO_MEDIA.outSec - HERO_MEDIA.inSec,
 );
-const arrival = timeline.spans[FLIGHT_STOPS.length]!.start;
 const stops = FLIGHT_STOPS.map((stop, i) => ({
   ...stop,
   line: stop.factId ? (fact(stop.factId).short ?? '') : '',
   still: stills[i]!,
-  spineTop: `${((timeline.spans[i]!.start / arrival) * 100).toFixed(2)}%`,
+  spineTop: `${(timeline.knots[i]!.at * 100).toFixed(2)}%`,
 }));
 ---
 
@@ -298,8 +297,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     transition: opacity 0.3s ease;
   }
 
-  /* At a stop the film gives way to the sharper still of the same frame. */
-  .flight.has-video:not(.rest) .film {
+  .flight.has-video .film {
     opacity: 1;
   }
 
