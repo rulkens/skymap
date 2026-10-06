@@ -17,8 +17,10 @@
  * `envDir` is the repo root so `VITE_DATA_BASE_URL` (committed in `.env.production`)
  * reaches the pages the same way it reaches the app.
  */
+import mdx from '@astrojs/mdx';
 import { defineConfig } from 'astro/config';
-import { statSync, writeFileSync } from 'node:fs';
+import { createIndex } from 'pagefind';
+import { readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -89,6 +91,25 @@ const crawlFiles = {
   },
 };
 
+// The search index is cut from the built pages, into the build itself, so it follows base and outDir like they do.
+// Only a page whose `<main>` carries `data-pagefind-body` is in it (layouts/Base.astro).
+const searchIndex = {
+  name: 'search-index',
+  hooks: {
+    'astro:build:done': async ({ dir, logger }) => {
+      const out = fileURLToPath(dir);
+      const { index, errors } = await createIndex();
+      if (!index) throw new Error(`pagefind: ${errors.join('; ')}`);
+      await index.addDirectory({ path: out });
+      const { outputPath } = await index.writeFiles({ outputPath: join(out, 'pagefind') });
+      // Pagefind also writes its ready-made interfaces; the site draws its own (components/DocsSearch.astro).
+      for (const name of readdirSync(outputPath))
+        if (/-ui\.|-highlight\./.test(name)) rmSync(join(outputPath, name));
+      logger.info(`search index written to ${outputPath}`);
+    },
+  },
+};
+
 export default defineConfig({
   site,
   base: BASE,
@@ -97,6 +118,8 @@ export default defineConfig({
   // The whole stylesheet is under 6 KB compressed: inlined, it saves the one render-blocking round trip.
   build: { format: 'directory', inlineStylesheets: 'always' },
   server: { port: DEV_PORTS.website },
-  integrations: [devRootStatics, crawlFiles],
+  // One accent on the page: a code block is set in the mono face and not coloured by token.
+  markdown: { syntaxHighlight: false },
+  integrations: [mdx(), devRootStatics, crawlFiles, searchIndex],
   vite: { envDir: resolve(import.meta.dirname, '../..') },
 });
