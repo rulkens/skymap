@@ -10,9 +10,14 @@ const SUBJECT: SiteShotSettings = { hideLabels: true, hideOrbitTrails: true, hid
 const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
 const NOON = 't=2026-10-05T12:00:00Z';
 const JUPITER = 'focus=body-jupiter&t=2033-03-14T21:00:00Z';
-// Lesson cards sit two to a row: 1120 covers a 2x desktop column, 640 a phone.
+// Lesson cards sit two to a row: 1120 covers a 2x desktop column, 640 a small tablet, and 320 the 88 px picture a phone's row has.
 const CARD = { width: 800, height: 600 };
-const CARD_WIDTHS = [1120, 640];
+const CARD_WIDTHS = [1120, 640, 320];
+// An upright cut fills a phone's width: 800 covers it at 2x, and a 3x phone is spared a larger file. Only a
+// dense screen is sent the 800, so it is encoded coarser: 60 KB where quality 50 is 103, and sharper at 2x
+// than the 560 file stretched (compared side by side on Jupiter's limb and the stars behind it).
+const TALL_WIDTHS = [800, 560];
+const TALL_DENSE_QUALITY = 36;
 // A lesson feature: the app's window on a laptop, and for upright screens the app on a phone or a cut of the window.
 const FEATURE = { width: 1200, height: 750 };
 const FEATURE_WIDTHS = [1600, 960];
@@ -39,7 +44,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,5.5e-16,0,0.25,0`,
     settings: SUBJECT,
     size: WIDE,
-    widths: [1920, 1280],
+    widths: [1920, 1280, 640],
     title: 'Earth on 5 October 2026 at 12:00 UTC',
     drawn: 'The surface is satellite photography; the clouds are a fixed composite, not that day’s weather.',
     alt: 'Earth against a dense field of stars, the Indian Ocean in daylight and night arriving from the east.',
@@ -50,7 +55,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,7.5e-16,0`,
     settings: SUBJECT,
     size: TALL,
-    widths: [560],
+    widths: TALL_WIDTHS,
+    denseQuality: TALL_DENSE_QUALITY,
     title: 'Earth on 5 October 2026 at 12:00 UTC',
     drawn: 'The surface is satellite photography; the clouds are a fixed composite, not that day’s weather.',
     alt: 'Earth against a dense field of stars, the Indian Ocean in daylight and night arriving from the east.',
@@ -121,7 +127,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,0.38,9e-15,0,-0.2,0',
     settings: SUBJECT,
     size: WIDE,
-    widths: [1920, 1280],
+    widths: [1920, 1280, 640],
     title: 'Saturn on 15 October 2017',
     caption: 'Its rings wide open and the planet’s shadow across them.',
     drawn: 'Position and ring tilt are computed for that date.',
@@ -133,7 +139,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.5e-14,0',
     settings: SUBJECT,
     size: TALL,
-    widths: [560],
+    widths: TALL_WIDTHS,
+    denseQuality: TALL_DENSE_QUALITY,
     title: 'Saturn on 15 October 2017',
     caption: 'Its rings wide open and the planet’s shadow across them.',
     drawn: 'Position and ring tilt are computed for that date.',
@@ -166,7 +173,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=milkyWay&pose=a,0,0,0,-2.22,0.6,0.04,0,0.25,0',
     settings: { ...SUBJECT, hideZoneOfAvoidance: true },
     size: WIDE,
-    widths: [800, 640],
+    // The Science page shows it seven columns wide: 1280 covers that at 2x.
+    widths: [1280, 800, 640],
     title: 'The Milky Way from outside',
     drawn: 'A model. Every camera we have is inside it.',
     alt: 'A barred spiral galaxy seen from above, with small companion galaxies around it.',
@@ -177,7 +185,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     // The app's label atlas has no ö, so its own label would read "Botes Void".
     settings: { hideStructureLabels: true, settleMs: 5000 },
     size: WIDE,
-    widths: [1600, 960],
+    // The 404 page enlarges it 1.45 times, so a wide window needs the whole shot.
+    widths: [2560, 1600, 1120, 960],
     title: 'The Boötes Void in skymap',
     drawn: 'The sphere marking it is drawn; the scarcity of galaxies inside it is measured.',
     alt: 'A thin blue ring on a dark, nearly empty field.',
@@ -250,7 +259,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,1.25e-14,0,0,0.12`,
     settings: { ...SUBJECT, settleMs: 4000 },
     size: TALL,
-    widths: [560],
+    widths: TALL_WIDTHS,
+    denseQuality: TALL_DENSE_QUALITY,
     title: 'Jupiter on 14 March 2033 at 21:00 UTC',
     drawn: 'Jupiter’s position and lit side are computed for the date in the address. The cloud tops are a fixed map, not that day’s weather.',
     alt: 'Jupiter, three quarters lit, with its cloud bands and storms, against a field of stars.',
@@ -339,7 +349,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'exhibit=observableUniverse',
     settings: { settleMs: 8000 },
     size: CARD,
-    widths: CARD_WIDTHS,
+    // Also the footer's ground, 1024 to 1280 px wide on every page: the whole shot.
+    widths: [1600, ...CARD_WIDTHS],
     title: 'The Observable Universe exhibit',
     drawn: 'The sphere is drawn from a cosmological model. The pale cloud inside it is every galaxy and quasar in the catalogues.',
     alt: 'A thin blue sphere on black with a small pale cloud of points in two fans at its centre.',
@@ -349,7 +360,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'pose=a,0,0,0,0.9,0.55,1500,0',
     settings: { ...POINTS_ONLY, settleMs: 3000 },
     size: WIDE,
-    widths: [1920, 1280],
+    widths: [1920, 1280, 640],
     title: 'Every galaxy and quasar in the catalogues',
     caption: 'From far outside them.',
     drawn: 'Each point is one catalogued object. The two fans follow the sky SDSS covered; the dark gaps are directions it did not.',

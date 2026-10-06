@@ -22,7 +22,7 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
       topic.lessons.map((lesson) => (
         <li>
           <a class="picture" href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
-            <Shot id={lesson.shot} sizes="(max-width: 600px) 30vw, (max-width: 900px) 46vw, 17rem" alt="" />
+            <Shot id={lesson.shot} sizes="(max-width: 600px) 5.5rem, (max-width: 1100px) calc(50vw - 1.875rem), 15.75rem" alt="" />
           </a>
           <div class="words">
             <p class="topic small">{topic.title}</p>

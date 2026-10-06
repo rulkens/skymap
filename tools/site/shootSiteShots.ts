@@ -110,10 +110,15 @@ try {
           height: crop.height * DPR,
         })
       : sharp(master);
+    const narrowest = Math.min(...shot.widths);
     for (const width of shot.widths) {
       const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
       const avif = join(OUT_DIR, `${shot.id}-${width}.avif`);
-      await resized.clone().avif(AVIF).toFile(avif);
+      const quality = width > narrowest ? (shot.denseQuality ?? AVIF.quality) : AVIF.quality;
+      await resized
+        .clone()
+        .avif({ ...AVIF, quality })
+        .toFile(avif);
       await resized
         .clone()
         .webp(WEBP)

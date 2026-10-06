@@ -30,6 +30,13 @@ const many = views.length > 1;
 // A phone's pictures share one box, shaped as the first view's: its upright cut up to Shot's 700px, the wide one above.
 const shape = (id: string) => `${shotSources(id).width} / ${shotSources(id).height}`;
 const first = views[0]!;
+const ratio = (id: string) => shotSources(id).width / shotSources(id).height;
+// How wide a picture is drawn, in window widths: the zoom, and for a gallery view with no upright cut the width
+// it has once a phone's upright box has cropped it.
+const cropped = (view: GalleryView) =>
+  many && !view.tall ? Math.ceil((100 * ratio(view.id)) / ratio(first.tall ?? first.id)) : 100;
+const sizes = (view: GalleryView) =>
+  `(max-width: 700px) ${Math.round(cropped(view) * zoom)}vw, ${Math.round(100 * zoom)}vw`;
 ---
 
 <section
@@ -39,7 +46,7 @@ const first = views[0]!;
   style={`--zoom:${zoom}; --shape:${shape(first.id)}; --shape-tall:${shape(first.tall ?? first.id)}`}
 >
   <div class:list={['back', many && 'many']} data-views={many}>
-    {views.map((view, i) => <Shot id={view.id} tall={view.tall} sizes="100vw" eager={eager && i === 0} />)}
+    {views.map((view, i) => <Shot id={view.id} tall={view.tall} sizes={sizes(view)} eager={eager && i === 0} />)}
   </div>
   <div class="wrap copy">
     <slot />
@@ -89,7 +96,7 @@ const first = views[0]!;
     object-position: 30% 50%;
   }
 
-  /* A gallery's pictures lie on one another. Until the page has loaded only the first exists, so only it is fetched. */
+  /* A gallery's pictures lie on one another. A later one does not exist until the script warms it, so it is not fetched. */
   .many {
     --view-out: 1.4s;
     --view-in: 1.4s;
@@ -101,7 +108,7 @@ const first = views[0]!;
     inset: 0;
   }
 
-  .band:not([data-warm]) .many > :global(picture:nth-child(n + 2)) {
+  .many > :global(picture:nth-child(n + 2):not([data-warm])) {
     display: none;
   }
 
@@ -159,7 +166,7 @@ const first = views[0]!;
       z-index: 1;
       inset: 0 auto auto 0;
       width: 82%;
-      height: calc(var(--open-top) + min(var(--text-h2), 9svh) * 1.05 + 4rem);
+      height: calc(var(--open-top) + var(--text-h2) * 1.05 + 4rem);
       background: linear-gradient(180deg, rgb(0 0 0 / 0.6) calc(100% - 3.5rem), rgb(0 0 0 / 0) 100%);
       mask-image: linear-gradient(90deg, #000 80%, rgb(0 0 0 / 0) 100%);
     }

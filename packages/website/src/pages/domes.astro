@@ -88,7 +88,7 @@ const STEPS = [
     </SectionHead>
 
     <Offer title="Live fisheye from the app">
-      <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" disc="ring" open={false} />
+      <Figure slot="picture" id="dome-web" sizes="(max-width: 900px) min(calc(85vw - 2.125rem), 26rem), 26rem" disc="ring" open={false} />
       <p>{fact('dome-flag').text} It is the live app: someone flies it while the audience watches.</p>
       <Fragment slot="today">{`${fact('dome-rig').text} ${fact('dome-tilt').text}`}</Fragment>
       <Fragment slot="work">

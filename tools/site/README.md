@@ -32,6 +32,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - The last step sets the link-preview card (`packages/website/src/assets/og-card.jpg`) from the `og-card` row, in the browser so the wordmark is the repo's Cormorant.
 - Look at every picture after a run. Surface imagery streams in late (`settleMs`), and `tour-cosmic-web` is taken from a tour that keeps turning, so its framing differs a little each time.
 - Budget: at most about 400 KB for a row's largest file. The runner prints each file's size.
+- A row's `denseQuality` lowers the AVIF quality of every width above its narrowest. Use it only where the wider files are drawn at 2x or more (the upright cuts a phone gets), and look at the result at that density.
 
 ## Loops
 

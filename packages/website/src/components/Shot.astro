@@ -36,6 +36,7 @@ const TALL_MEDIA = '(max-width: 700px)';
     height={wide.height}
     alt={alt ?? siteShot(id).alt}
     loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : undefined}
     decoding="async"
   />
 </picture>

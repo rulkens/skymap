@@ -24,7 +24,7 @@ const press = PRESS_PICTURES.map((row) => {
   {
     press.map((row) => (
       <li>
-        <Shot id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" />
+        <Shot id={row.shot} sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem" />
         <h3>{row.title}</h3>
         <dl class="small">
           <div>

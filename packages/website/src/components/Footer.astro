@@ -28,7 +28,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
 <footer class="footer">
   <div class="ground" aria-hidden="true">
-    <Shot id={GROUND} sizes="(max-width: 700px) 210px, 1120px" alt="" />
+    <Shot id={GROUND} sizes="clamp(64rem, 75vw, 80rem)" alt="" />
   </div>
 
   <div class="wrap inner">
@@ -43,7 +43,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
         {
           groups.map((group) => (
             <div>
-              <h2>{group.heading}</h2>
+              <p class="heading">{group.heading}</p>
               <ul>
                 {group.links.map((link) => (
                   <li>
@@ -95,7 +95,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   /*
    * The sphere starts 3% down its picture and the cloud of galaxies 30% down. Pushed 55% below the foot,
    * the picture shows the sphere's top and the top of the cloud, which rises into the room the bottom
-   * padding leaves under the small print. No wider than 80rem: the file is 1120px.
+   * padding leaves under the small print. No wider than 80rem: the file is 1600px.
    */
   .ground :global(img) {
     position: absolute;
@@ -172,11 +172,11 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
     padding-top: 0.75rem;
   }
 
-  h2 {
+  /* A list's name, in the heading face; not a heading, so a page's outline ends with the page. */
+  .heading {
     margin: 0 0 0.75rem;
-    font-size: var(--text-h3);
-    line-height: 1.1;
-    letter-spacing: 0;
+    font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+    color: var(--color-fg);
   }
 
   ul {

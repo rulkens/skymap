@@ -25,7 +25,10 @@ type Props = {
 };
 
 const { shot, tall, title, kicker, ask, href, action, wide = false } = Astro.props;
-const sizes = wide ? '(max-width: 900px) 100vw, 72rem' : '(max-width: 900px) 100vw, 42rem';
+// The picture's box: the text column when wide, seven of its twelve columns otherwise.
+const sizes = wide
+  ? '(max-width: 900px) 100vw, min(calc(100vw - 5.5rem), 72rem)'
+  : '(max-width: 900px) 100vw, (max-width: 1239px) calc(58.4vw - 4.5rem), 40.75rem';
 ---
 
 <article class:list={['feature grid', { wide }]}>

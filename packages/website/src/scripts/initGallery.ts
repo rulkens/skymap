@@ -28,17 +28,25 @@ export function initGallery(root: HTMLElement): void {
   let chosen = false;
   let rested = 0;
 
-  // The later pictures are kept out of the first load (PictureBand); from here on the browser may fetch them.
-  const warm = (): void => {
-    if (root.hasAttribute('data-warm')) return;
-    root.setAttribute('data-warm', '');
-    for (let view = 1; view < count; view++)
-      for (const img of pictures(view)) img.loading = 'eager';
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  const saving = connection?.saveData === true;
+
+  // A later picture is kept out of the first load (PictureBand); from here on the browser may fetch this one.
+  const warm = (view: number): void => {
+    for (const img of pictures(wrapIndex(view, count))) {
+      img.closest('picture')?.setAttribute('data-warm', '');
+      img.loading = 'eager';
+    }
+  };
+  // One view ahead and no more; a reader who asked to save data fetches only the views they choose.
+  const warmNext = (): void => {
+    if (!saving) warm(at + 1);
   };
 
   const show = (view: number, byReader: boolean): void => {
     at = wrapIndex(view, count);
-    warm();
+    warm(at);
+    warmNext();
     // A change nobody asked for is not read out: a label announced every few seconds talks over the page.
     live?.setAttribute('aria-live', byReader ? 'polite' : 'off');
     for (const stack of stacks)
@@ -69,11 +77,11 @@ export function initGallery(root: HTMLElement): void {
   for (const stack of stacks) stack[0]?.toggleAttribute('data-here', true);
   root.setAttribute('data-live', '');
 
-  root.addEventListener('pointerenter', warm, { once: true });
-  root.addEventListener('focusin', warm, { once: true });
+  root.addEventListener('pointerenter', warmNext, { once: true });
+  root.addEventListener('focusin', warmNext, { once: true });
   const whenIdle = window.requestIdleCallback ?? ((run: () => void) => setTimeout(run, 2000));
-  if (document.readyState === 'complete') whenIdle(warm);
-  else window.addEventListener('load', () => whenIdle(warm), { once: true });
+  if (document.readyState === 'complete') whenIdle(warmNext);
+  else window.addEventListener('load', () => whenIdle(warmNext), { once: true });
 
   const waiting = (): boolean =>
     document.hidden ||
