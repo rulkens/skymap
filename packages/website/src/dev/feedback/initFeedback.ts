@@ -34,6 +34,27 @@ function make<K extends keyof HTMLElementTagNameMap>(
 
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
+// An edit to the page reloads it under the dev server; the mode and a half-written note must survive that.
+const MODE_KEY = 'skymap-feedback-on';
+const DRAFT_KEY = 'skymap-feedback-draft';
+
+function remember(key: string, value: string | null): void {
+  try {
+    if (value === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
+  } catch {
+    /* private window: nothing survives a reload */
+  }
+}
+
+function recall(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 function loadPins(): FeedbackPin[] {
   try {
     return JSON.parse(sessionStorage.getItem(STORE_KEY) ?? '[]') as FeedbackPin[];
@@ -195,6 +216,7 @@ function initFeedback(): void {
 
   function setMode(next: boolean): void {
     on = next;
+    remember(MODE_KEY, on ? '1' : null);
     toggle.setAttribute('aria-pressed', String(on));
     capture.hidden = layer.hidden = !on;
     if (!on) endSelection();
@@ -204,6 +226,7 @@ function initFeedback(): void {
 
   function endSelection(): void {
     selection = null;
+    remember(DRAFT_KEY, null);
     panel.hidden = mark.hidden = true;
     status.textContent = '';
   }
@@ -216,6 +239,32 @@ function initFeedback(): void {
     status.textContent = '';
     layout();
     text.focus();
+    keepDraft();
+  }
+
+  function keepDraft(): void {
+    if (!selection) return;
+    const { kind, rect } = selection;
+    remember(DRAFT_KEY, JSON.stringify({ kind, rect, text: text.value, path: location.pathname }));
+  }
+
+  // After a reload the element is found again under the centre of the remembered rectangle.
+  function restoreDraft(): void {
+    const stored = recall(DRAFT_KEY);
+    if (!stored) return;
+    const draft = JSON.parse(stored) as Pick<FeedbackSelection, 'kind' | 'rect'> & {
+      text: string;
+      path: string;
+    };
+    if (draft.path !== location.pathname) return remember(DRAFT_KEY, null);
+    const view = viewRect(draft.rect);
+    choose({
+      kind: draft.kind,
+      rect: draft.rect,
+      element: pick(view.x + view.width / 2, view.y + view.height / 2),
+    });
+    text.value = draft.text;
+    keepDraft();
   }
 
   async function send(): Promise<void> {
@@ -328,6 +377,7 @@ function initFeedback(): void {
     e.preventDefault();
     void send();
   });
+  text.addEventListener('input', keepDraft);
   text.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
@@ -357,6 +407,14 @@ function initFeedback(): void {
     true,
   );
   renderPins();
+  if (recall(MODE_KEY)) {
+    setMode(true);
+    // The browser puts the scroll position back after load; the draft is placed once it has.
+    const restore = (): void =>
+      void requestAnimationFrame(() => requestAnimationFrame(restoreDraft));
+    if (document.readyState === 'complete') restore();
+    else addEventListener('load', restore, { once: true });
+  }
 }
 
 initFeedback();
