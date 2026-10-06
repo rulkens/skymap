@@ -21,8 +21,10 @@ export type SiteShotSettings = {
   tourStep?: number;
   /** The app's own interface in the picture: a screenshot of the page, not of the canvas alone. */
   ui?: true;
-  /** With `ui`: open the app's search and type this before the shot. */
+  /** With `ui`: open the app’s search and type this before the shot; an empty string leaves it on its picture cards. */
   searchFor?: string;
+  /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */
+  crop?: { left: number; top: number; width: number; height: number };
   /** Extra time before the shot: streamed surface imagery arrives after the app reports settled. */
   settleMs?: number;
 };

@@ -1,0 +1,23 @@
+---
+/*
+ * Steps — a numbered procedure, its steps side by side when wide and stacked
+ * when narrow. Each child is a Step, which takes its number from the counter
+ * this list starts.
+ */
+---
+
+<ol>
+  <slot />
+</ol>
+
+<style>
+  ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 0 3.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+</style>

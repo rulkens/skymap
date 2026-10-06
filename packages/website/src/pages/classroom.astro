@@ -1,42 +1,53 @@
 ---
 import Base from '../layouts/Base.astro';
 import AddressStrip from '../components/AddressStrip.astro';
+import Columns from '../components/Columns.astro';
 import Credits from '../components/Credits.astro';
+import Feature from '../components/Feature.astro';
+import Honesty from '../components/Honesty.astro';
 import LessonLinks from '../components/LessonLinks.astro';
 import ObjLink from '../components/ObjLink.astro';
+import Onward from '../components/Onward.astro';
+import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
-import Shot from '../components/Shot.astro';
+import SectionHead from '../components/SectionHead.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
+import Step from '../components/Step.astro';
+import Steps from '../components/Steps.astro';
 import { appLink } from '../data/appLink';
+import { CLASS_FEATURES } from '../data/classFeatures';
 import { fact } from '../data/fact';
 import { HOME_LINKS } from '../data/homeLinks';
-import { HONESTY } from '../data/honesty';
 import { LESSON_TOPICS } from '../data/lessons';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'Teach with skymap: lesson links for astronomy | skymap';
+const title = 'Teach with skymap: tours, exhibits and lesson links | skymap';
 const description =
-  'A lesson link opens the same view of the mapped universe for every pupil. No accounts, nothing to install. Ready-made links by topic, and how to make your own.';
+  'A five-minute tour for the projector, exhibits with their sources, a clock to run, fact cards and ready-made lesson links. No accounts, nothing to install.';
 
+const lessons = LESSON_TOPICS.flatMap((topic) => topic.lessons);
 // Every fact row the page prints, so the Sources list cannot drift from the copy.
 const said = [
-  'lesson-link',
-  'no-account',
-  'link-pose',
-  'search-key',
   'double-click-focus',
   'date-entry-utc',
   'date-entry-paused',
+  'lesson-link',
+  'link-pose',
   'webgpu-required',
   'webgpu-browsers',
   'app-browser-advice',
-  'phone-data-size',
+  'no-account',
   'english-only',
+  'phone-data-size',
 ];
-const factIds = [...said, ...LESSON_TOPICS.flatMap((t) => t.lessons.flatMap((l) => (l.factId ? [l.factId] : [])))];
-const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
+const factIds = [
+  ...CLASS_FEATURES.flatMap((feature) => feature.factIds),
+  ...said,
+  ...lessons.flatMap((lesson) => (lesson.factId ? [lesson.factId] : [])),
+];
+const says = (id: string) => fact(id).short ?? fact(id).text;
 ---
 
 <Base
@@ -47,327 +58,119 @@ const lessonCount = LESSON_TOPICS.reduce((n, t) => n + t.lessons.length, 0);
   <PictureBand id="classroom-hero" tall="classroom-hero-portrait" gap="none" eager>
     <h1>Use skymap in the classroom</h1>
     <p class="say">
-      Distances in space are hard to feel from a page. In skymap your pupils fly them: from the Moon, past the
-      planets, out to the nearest galaxies, in one scene at true scale. The stars and galaxies are catalogued ones,
-      so their questions have real answers.
+      Distances in space are hard to feel from a page. In skymap your pupils fly them, from the Moon to the nearest
+      galaxies, at true scale.
     </p>
-    <p>
-      You share a view as a link, and every pupil who opens it lands in the same place. This one is Jupiter on 14
-      March 2033.
-    </p>
+    <p>You share a view as a link, and every pupil who opens it lands in the same place.</p>
     <AddressStrip hash={HOME_LINKS.classroom} />
     <ShotCaption id="classroom-hero" />
   </PictureBand>
 
-  <section class="wrap section" id="why">
-    <h2>Why a link suits a class</h2>
-    <div class="why">
-      <div>
-        <h3>One view for everyone</h3>
-        <p>{fact('lesson-link').text}</p>
-        <p>
-          So a link with a date in it opens on that date for everyone, including the pupil who arrives late. From
-          there each pupil can turn, zoom and fly on their own.
-        </p>
-        <h3>Nothing to set up</h3>
-        <p>It is a web page: there is nothing to install. {fact('no-account').text}</p>
-      </div>
-      <div class="runs">
-        <h3>What it runs on</h3>
-        <p>{fact('webgpu-required').text}</p>
-        <p>{fact('webgpu-browsers').text}</p>
-        <p>
-          {fact('app-browser-advice').text} Open one link on a pupil’s device before the lesson: school networks and
-          older graphics chips differ.
-        </p>
-        <ObjLink size="small" href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
-      </div>
-    </div>
+  <section class="wrap section" id="lesson">
+    <SectionHead title="What you can do in a lesson">
+      <p>Five things, starting with the one that needs no preparation.</p>
+    </SectionHead>
+    {
+      CLASS_FEATURES.map((feature, i) => (
+        <Feature
+          shot={feature.shot}
+          tall={feature.tall}
+          title={feature.title}
+          kicker={feature.prep}
+          ask={feature.ask}
+          href={appLink(feature.hash)}
+          action={feature.action}
+          wide={i === 0}
+        >
+          <p>{feature.factIds.map(says).join(' ')}</p>
+          <p>{feature.lesson}</p>
+        </Feature>
+      ))
+    }
   </section>
 
   <section class="wrap section" id="links">
-    <div class="head">
-      <h2>Ready-made links</h2>
+    <SectionHead title="Ready-made links">
       <p>
-        {lessonCount} links, sorted by topic. Each opens exactly where its picture was taken. The
-        pictures have the name labels switched off; the links open with them on.
+        {lessons.length} links, each with one question. A link opens where its picture was taken. The pictures have
+        the name labels switched off; the links open with them on.
       </p>
-    </div>
+    </SectionHead>
     <LessonLinks />
   </section>
 
   <section class="wrap section" id="make">
-    <div class="head">
-      <h2>Make your own link</h2>
+    <SectionHead title="Make your own link">
       <p>Three steps, in the app itself. There is no share button: the address bar is the link.</p>
-    </div>
-    <ol class="steps">
-      <li>
-        <figure>
-          <Shot id="make-search" sizes="(max-width: 900px) 60vw, 36rem" />
-          <figcaption><ShotCaption id="make-search" /></figcaption>
-        </figure>
-        <div>
-          <h3>Find the object</h3>
-          <p>
-            {fact('search-key').text} Type a name and press Enter. {fact('double-click-focus').text}
-          </p>
-        </div>
-      </li>
-      <li>
-        <figure>
-          <Shot id="make-date" sizes="(max-width: 900px) 60vw, 36rem" />
-          <figcaption><ShotCaption id="make-date" /></figcaption>
-        </figure>
-        <div>
-          <h3>Set the date</h3>
-          <p>
-            Select the clock at the bottom right, type a date and a time, and press Enter.{' '}
-            {fact('date-entry-utc').text}{' '}
-            {fact('date-entry-paused').text}
-          </p>
-        </div>
-      </li>
-      <li>
-        <div class="address">
-          <AddressStrip hash={HOME_LINKS.classroom} />
-        </div>
-        <div>
-          <h3>Copy the address</h3>
-          <p>
-            The address bar now names the object and the instant. Copy it into your lesson plan, a slide or the class
-            chat. {fact('link-pose').text}
-          </p>
-          <ObjLink size="small" href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
-        </div>
-      </li>
-    </ol>
+    </SectionHead>
+    <Steps>
+      <Step title="Find the object">
+        <p>Open the search, type a name and press Enter. {says('double-click-focus')}</p>
+      </Step>
+      <Step title="Set the date">
+        <p>
+          Select the clock at the bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}{' '}
+          {says('date-entry-paused')}
+        </p>
+      </Step>
+      <Step title="Copy the address">
+        <p>{says('lesson-link')}</p>
+        <AddressStrip hash={HOME_LINKS.classroom} />
+        <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
+        <ObjLink size="small" href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
+      </Step>
+    </Steps>
   </section>
 
-  <section class="wrap section" id="accuracy">
-    <div class="head">
-      <h2>What you can teach from, and what is drawn</h2>
-      <p>
-        Some of the scene is data and some is a model or a choice of ours. A class can check each line: every one
-        links to its source.
-      </p>
-    </div>
-    <div class="cols">
+  <section class="wrap section" id="runs">
+    <SectionHead title="What it runs on, and its limits" />
+    <Columns>
       <div>
-        <h3>Accurate enough to teach from</h3>
-        <ul class="small">
-          {[...HONESTY.measured, ...HONESTY.derived].map((item) => <li><a href={item.href}>{item.text}</a></li>)}
-        </ul>
+        <h3>What it runs on</h3>
+        <p>
+          WebGPU is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}
+          {says('webgpu-required')}
+        </p>
+        <p class="small">{says('webgpu-browsers')}</p>
+        <ObjLink size="small" href={sitePath('/docs/start/browsers/')}>Browser support and troubleshooting</ObjLink>
       </div>
       <div>
-        <h3>Drawn or simplified: say so in class</h3>
-        <ul class="small">
-          {HONESTY.drawn.map((item) => <li><a href={item.href}>{item.text}</a></li>)}
-        </ul>
+        <h3>Before the lesson</h3>
+        <p>
+          Open one link on a pupil’s device first: school networks and older graphics chips differ.{' '}
+          {says('app-browser-advice')}
+        </p>
+        <p>It is a web page, so there is nothing to install. {says('no-account')}</p>
       </div>
-    </div>
-    <div class="onward">
+      <div>
+        <h3>Limits</h3>
+        <p>{says('english-only')}</p>
+        <p>{says('phone-data-size')}</p>
+        <p>
+          A link pins the camera against the stars, not to a spot on the ground. It cannot show the Moon’s phases as
+          they look from Earth, so there is no link for phases or eclipses.
+        </p>
+      </div>
+    </Columns>
+  </section>
+
+  <Honesty title="What is accurate enough to teach from">
+    <p>
+      Some of the scene is data, some is computed, and some is a choice of ours. It makes a lesson in how we know
+      things: of anything on screen, ask which of the three it is. Every line below links to its source.
+    </p>
+  </Honesty>
+
+  <div class="wrap section">
+    <Onward>
+      <OpenApp />
       <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
-      <ObjLink href={sitePath('/docs/simplifications/')}>Known simplifications</ObjLink>
-    </div>
-  </section>
-
-  <section class="wrap section prose" id="limits">
-    <h2>Limits worth knowing before the lesson</h2>
-    <ul class="limits">
-      <li>{fact('english-only').text}</li>
-      <li>{fact('phone-data-size').text}</li>
-      <li>
-        A link pins the camera against the stars, not to a spot on the ground. It cannot show the Moon’s phases as
-        they look from Earth, so there is no ready-made link for phases or eclipses.
-      </li>
-    </ul>
-    <div class="onward">
-      <ObjLink href={appLink()}>Fly it yourself</ObjLink>
       <ObjLink href={sitePath('/domes/')}>For a dome or a museum</ObjLink>
-      <ObjLink href={sitePath('/')}>Back to the start</ObjLink>
-    </div>
-  </section>
+    </Onward>
+  </div>
 
   <div class="wrap section last">
     <Sources ids={factIds} label="Sources for the claims on this page" />
     <Credits />
   </div>
 </Base>
-
-<style>
-  h1 {
-    max-width: 12ch;
-    font-size: var(--text-h2);
-  }
-
-  .say {
-    font-size: var(--text-lead);
-  }
-
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem 3rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .head h2,
-  .head p {
-    margin: 0;
-  }
-
-  .head h2 {
-    max-width: 20ch;
-  }
-
-  /* The argument reads at body size; what it runs on is reference, set small beside it. */
-  .why {
-    display: grid;
-    grid-template-columns: 7fr 5fr;
-    gap: 2.5rem 3.75rem;
-    margin-top: 2.5rem;
-  }
-
-  .why h3 {
-    font-size: var(--text-lead);
-  }
-
-  .why h3:not(:first-child) {
-    margin-top: 2.5rem;
-  }
-
-  .runs {
-    padding-left: 2rem;
-    border-left: 1px solid var(--border-divider);
-  }
-
-  .runs p {
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
-    line-height: 1.5;
-  }
-
-  .cols {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2.5rem 3.75rem;
-  }
-
-  .cols ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .cols li a {
-    display: block;
-    padding-block: 0.625rem;
-    color: var(--site-text-muted);
-  }
-
-  .steps {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    counter-reset: step;
-  }
-
-  .steps li {
-    display: grid;
-    grid-template-columns: 6fr 5fr;
-    gap: 1.5rem 3.75rem;
-    align-items: center;
-    padding-block: 2.5rem;
-    border-top: 1px solid var(--border-divider);
-    counter-increment: step;
-  }
-
-  .steps h3 {
-    font-size: var(--text-lead);
-  }
-
-  .steps h3::before {
-    content: counter(step) '. ';
-    color: var(--site-text-dim);
-  }
-
-  .steps figure {
-    margin: 0;
-  }
-
-  .steps figure :global(img) {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .steps figcaption {
-    margin-top: 0.5rem;
-  }
-
-  /* Step three's picture is the address itself, set as large as the column allows. */
-  .steps .address {
-    min-width: 0;
-  }
-
-  @media (min-width: 901px) {
-    .steps .address :global(.address) {
-      flex-basis: 100%;
-      padding: 1.25rem;
-      font-size: 1rem;
-    }
-  }
-
-  .limits {
-    max-width: 44rem;
-    margin: 0 0 2rem;
-    padding-left: 1.25rem;
-    color: var(--site-text-muted);
-  }
-
-  .limits li {
-    padding-block: 0.4rem;
-  }
-
-  .onward {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2.5rem;
-    margin-top: 2rem;
-  }
-
-  @media (max-width: 900px) {
-    .cols,
-    .why,
-    .steps li {
-      grid-template-columns: 1fr;
-    }
-
-    .runs {
-      padding-left: 1.25rem;
-    }
-
-    /* The step's name first, then its picture, then the rest of the words. */
-    .steps li {
-      row-gap: 0;
-      padding-block: 2rem;
-    }
-
-    .steps li > div:last-child {
-      display: contents;
-    }
-
-    .steps h3 {
-      order: -1;
-      margin-bottom: 1rem;
-    }
-
-    .steps figure,
-    .steps .address {
-      margin-bottom: 1.25rem;
-    }
-  }
-</style>

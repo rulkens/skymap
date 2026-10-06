@@ -71,7 +71,7 @@ try {
           await page.waitForTimeout(shot.settings.settleMs);
           await settled();
         }
-        if (shot.settings?.searchFor) {
+        if (shot.settings?.searchFor !== undefined) {
           await page.keyboard.press('/');
           await page.keyboard.type(shot.settings.searchFor, { delay: 60 });
           await page.waitForTimeout(1200);
@@ -101,8 +101,17 @@ try {
       if (/^(.+)-\d+\.(avif|webp)$/.exec(file)?.[1] === shot.id) rmSync(join(OUT_DIR, file));
     }
     const sizes: string[] = [];
+    const crop = shot.settings?.crop;
+    const frame = crop
+      ? sharp(master).extract({
+          left: crop.left * DPR,
+          top: crop.top * DPR,
+          width: crop.width * DPR,
+          height: crop.height * DPR,
+        })
+      : sharp(master);
     for (const width of shot.widths) {
-      const resized = sharp(master).resize({ width, kernel: 'lanczos3' });
+      const resized = frame.clone().resize({ width, kernel: 'lanczos3' });
       const avif = join(OUT_DIR, `${shot.id}-${width}.avif`);
       await resized.clone().avif(AVIF).toFile(avif);
       await resized

@@ -1,70 +1,46 @@
 ---
 /*
- * LessonLinks — the ready-made lesson links as a ledger: the topic in the
- * margin, its links beside it. Each link is its picture, a ring that opens
- * it, what the class sees, one question, and the address to copy.
+ * LessonLinks — the ready-made lesson links as one grid of small cards: the
+ * picture, its topic, a ring that opens it, one question, what in the picture
+ * is data and what is drawn, and a control that copies the address. Four to a
+ * row when wide; on an upright phone each is a row with its picture small on
+ * the left.
  */
-import AddressStrip from './AddressStrip.astro';
 import ObjLink from './ObjLink.astro';
 import Shot from './Shot.astro';
-import ShotCaption from './ShotCaption.astro';
 import { appLink } from '../data/appLink';
 import { LESSON_TOPICS } from '../data/lessons';
+import { siteShot } from '../data/siteShot';
+
+// A card has no room for the picture's full label: it keeps the line that says what is data and what is drawn.
+const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${siteShot(id).credit}.`].filter(Boolean).join(' ');
 ---
 
-{
-  LESSON_TOPICS.map((topic) => (
-    <section class="topic" aria-labelledby={`topic-${topic.id}`}>
-      <h3 id={`topic-${topic.id}`}>{topic.title}</h3>
-      <ul>
-        {topic.lessons.map((lesson) => (
-          <li class:list={{ solo: topic.lessons.length === 1 }}>
-            <figure>
-              <a href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
-                <Shot id={lesson.shot} sizes="(max-width: 600px) 92vw, (max-width: 900px) 46vw, 28rem" alt="" />
-              </a>
-              <figcaption>
-                <ShotCaption id={lesson.shot} open={false} />
-              </figcaption>
-            </figure>
-            <div class="words">
-              <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
-              <dl>
-                <dt>The class sees</dt>
-                <dd>{lesson.sees}</dd>
-                <dt>Ask</dt>
-                <dd class="ask">{lesson.ask}</dd>
-              </dl>
-              <AddressStrip hash={lesson.hash} bare />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  ))
-}
+<ul>
+  {
+    LESSON_TOPICS.flatMap((topic) =>
+      topic.lessons.map((lesson) => (
+        <li>
+          <a class="picture" href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
+            <Shot id={lesson.shot} sizes="(max-width: 600px) 30vw, (max-width: 900px) 46vw, 17rem" alt="" />
+          </a>
+          <div class="words">
+            <p class="topic small">{topic.title}</p>
+            <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
+            <p class="ask small">{lesson.ask}</p>
+            <p class="drawn small">{drawn(lesson.shot)}</p>
+          </div>
+        </li>
+      )),
+    )
+  }
+</ul>
 
 <style>
-  .topic {
-    display: grid;
-    grid-template-columns: 1fr 3fr;
-    gap: 1.5rem 3.75rem;
-    padding-block: 2.5rem;
-    border-top: 1px solid var(--border-divider);
-  }
-
-  h3 {
-    position: sticky;
-    top: calc(var(--nav-height) + 1.5rem);
-    align-self: start;
-    margin: 0;
-    font-size: var(--text-lead);
-  }
-
   ul {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3rem 3.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3rem 2.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -74,68 +50,54 @@ import { LESSON_TOPICS } from '../data/lessons';
     min-width: 0;
   }
 
-  /* A topic with one link: the picture keeps its column and the words take the other, so no half row stands empty. */
-  .solo {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: subgrid;
-    align-items: center;
+  .picture {
+    display: block;
+    margin-bottom: 0.875rem;
   }
 
-  /* The question is what the teacher reads out: it gets the display face. */
-  .ask {
-    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
-    color: var(--color-fg);
-  }
-
-  figure {
-    margin: 0 0 0.75rem;
-  }
-
-  figure :global(img) {
+  .picture :global(img) {
     display: block;
     width: 100%;
     height: auto;
   }
 
-  figcaption {
-    margin-top: 0.5rem;
-  }
-
-  dl {
-    margin: 0.25rem 0 0;
-  }
-
-  dt {
-    font-size: var(--text-small);
-    font-weight: var(--weight-small);
+  .topic {
+    margin: 0;
     color: var(--site-text-dim);
   }
 
-  dd {
-    margin: 0 0 0.75rem;
-    color: var(--site-text-muted);
+  .ask {
+    margin: 0.25rem 0 0.5rem;
+    color: var(--color-fg);
   }
 
-  @media (max-width: 900px) {
-    .topic {
-      grid-template-columns: 1fr;
-      padding-block: 2rem;
-    }
+  .drawn {
+    margin: 0;
+    color: var(--site-text-dim);
+  }
 
-    h3 {
-      position: static;
+  @media (max-width: 1100px) {
+    ul {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  /* A tablet and a phone held sideways keep two links to a row; only an upright phone stacks them. */
   @media (max-width: 600px) {
     ul {
       grid-template-columns: 1fr;
+      gap: 0;
     }
 
-    .solo {
-      display: block;
+    li {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 1rem;
+      padding-block: 1.5rem;
+      border-top: 1px solid var(--border-divider);
+    }
+
+    .picture {
+      margin: 0.375rem 0 0;
     }
   }
 </style>

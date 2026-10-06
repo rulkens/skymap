@@ -26,7 +26,7 @@ export function shotSources(id: string): ShotSources {
     avif: srcset('avif'),
     webp: srcset('webp'),
     fallback: url(Math.min(...shot.widths), 'webp'),
-    width: shot.size.width,
-    height: shot.size.height,
+    width: shot.settings?.crop?.width ?? shot.size.width,
+    height: shot.settings?.crop?.height ?? shot.size.height,
   };
 }

@@ -1,0 +1,43 @@
+---
+/*
+ * Step — one step of a Steps list: its number, large and dim, its name, and
+ * its words (the slot), under the rule that heads the column.
+ */
+type Props = { title: string };
+
+const { title } = Astro.props;
+---
+
+<li>
+  <h3>{title}</h3>
+  <slot />
+</li>
+
+<style>
+  li {
+    min-width: 0;
+    padding-block: 1.5rem 2rem;
+    border-top: 1px solid var(--border-divider);
+    counter-increment: step;
+  }
+
+  h3 {
+    font-size: var(--text-lead);
+  }
+
+  h3::before {
+    content: counter(step);
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: var(--text-ring-big);
+    color: var(--site-text-dim);
+  }
+
+  li > :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  li :global(.strip) {
+    margin-block: 0 var(--stack);
+  }
+</style>

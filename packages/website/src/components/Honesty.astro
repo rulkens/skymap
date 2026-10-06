@@ -5,6 +5,11 @@ import ShotCaption from './ShotCaption.astro';
 import { HONESTY } from '../data/honesty';
 import { sitePath } from '../utils/sitePath';
 
+// A page may ask the same three bins its own question: its heading, and a sentence under it (the slot).
+type Props = { title?: string };
+
+const { title = 'What is measured, derived and drawn' } = Astro.props;
+
 // The three words keep one meaning across the site (08, house style).
 const BINS = [
   { id: 'measured', shot: 'galaxies-measured', title: 'Measured', gloss: 'An instrument recorded it.' },
@@ -15,9 +20,10 @@ const BINS = [
 
 <section class="wrap section honest" id="honest">
   <div class="intro">
-    <h2>What is measured, derived and drawn</h2>
+    <h2>{title}</h2>
     <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
   </div>
+  {Astro.slots.has('default') && <div class="say"><slot /></div>}
   {
     BINS.map((bin) => (
       <div class="bin">
@@ -61,6 +67,14 @@ const BINS = [
     margin-bottom: 0;
   }
 
+  .say {
+    grid-column: 1 / -1;
+  }
+
+  .say :global(p) {
+    margin-bottom: 0;
+  }
+
   /* One picture heads each list: an example of the word, with its own address. */
   figure {
     margin: 0 0 1rem;
@@ -91,7 +105,7 @@ const BINS = [
 
   li a {
     display: block;
-    padding-block: 0.5rem;
+    padding-block: 0.625rem;
     color: var(--site-text-muted);
   }
 

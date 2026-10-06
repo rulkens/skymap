@@ -1,0 +1,20 @@
+---
+/*
+ * Onward — the row of controls that closes a section or a page: where to go
+ * next. The launch button and ring links sit on one line and wrap when narrow.
+ */
+---
+
+<div class="onward">
+  <slot />
+</div>
+
+<style>
+  .onward {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 2.5rem;
+    margin-top: 2.5rem;
+  }
+</style>
