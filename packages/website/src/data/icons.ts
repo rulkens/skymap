@@ -6,6 +6,8 @@ import type { IconName } from '../@types/IconName';
  * so separate strokes keep about 3 units between their centre lines.
  */
 export const ICONS: Record<IconName, string> = {
+  // A star as the eye sees it, with its four rays: somebody looking up.
+  visitor: 'M12 3c.6 4.8 4.2 8.4 9 9-4.8.6-8.4 4.2-9 9-.6-4.8-4.2-8.4-9-9 4.8-.6 8.4-4.2 9-9z',
   // A classroom globe: the sphere, its tilted mount and a foot.
   classroom: 'M6 10.5a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0-11 0M14.8 2.7A8.5 8.5 0 0 1 8.2 18.3M11.5 19v2.5M7.5 21.5h8',
   // A planetarium dome on its floor, with the arc a star is projected along.

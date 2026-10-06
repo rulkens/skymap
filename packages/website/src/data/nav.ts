@@ -14,6 +14,7 @@ export const FOOTER_GROUPS: NavGroup[] = [
   {
     heading: 'Who it is for',
     items: [
+      { label: 'Curious visitors', path: '/', icon: 'visitor' },
       { label: 'Classrooms', path: '/classroom/', icon: 'classroom' },
       { label: 'Domes and museums', path: '/domes/', icon: 'dome' },
     ],
