@@ -706,4 +706,28 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The positions are computed for 18:00 UTC on that day; the rings are the orbits, drawn as lines, and the names stand in for planets too small to see.',
     alt: 'Nested orbit rings around a labelled Sun with the names Jupiter and Saturn close together on one side, a title reading Solar System and a panel of notes.',
   },
+  {
+    // 8 s into the second step: the camera has reached the cluster and the caption is up.
+    id: 'guide-tour-virgo',
+    link: 'tour=webShowcase',
+    settings: { ui: true, tourStep: 1, settleMs: 8000 },
+    size: FEATURE,
+    widths: FEATURE_WIDTHS,
+    title: 'The second step of “Named Cosmic Web”',
+    caption: 'The caption counts the steps, the four buttons are at the foot and the three dots at the right edge mark the place.',
+    drawn: 'Each point is a catalogued galaxy; the rings mark named clusters.',
+    alt: 'A field of points with ringed clusters, a caption headed The Virgo Cluster under the line Named Cosmic Web 02 / 03, four round buttons and three dots at the right edge.',
+  },
+  {
+    // Taller than the other interface shots: the notes do not scroll, and at 750 px the sources fall below the window.
+    id: 'guide-exhibit-web',
+    link: 'exhibit=cosmicWeb',
+    settings: { ui: true, settleMs: 9000 },
+    size: { width: 1200, height: 900 },
+    widths: FEATURE_WIDTHS,
+    title: 'The Cosmic Web exhibit with its notes',
+    caption: 'The key carries the switch that brings the galaxies back.',
+    drawn: 'The purple field is density computed from SDSS galaxy positions; the rings mark named clusters and superclusters.',
+    alt: 'A purple web of threads with ringed, named clusters, a title reading Cosmic Web, and on the right notes headed What you’re seeing, How it was made, Key and Sources, with an Exit view button at the foot.',
+  },
 ];
