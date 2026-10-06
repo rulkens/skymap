@@ -109,6 +109,9 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
         }
       </ol>
 
+      <!-- Rewritten on every scroll frame, so it is kept from screen readers; the stops' captions carry the same story. -->
+      <p class="scale small" data-scale aria-hidden="true"></p>
+
       <video class="film" muted playsinline preload="none" tabindex="-1" aria-hidden="true"></video>
 
       <div class="arrive" data-arrive>
@@ -218,7 +221,8 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
   .film,
   .spine,
-  .hint {
+  .hint,
+  .scale {
     display: none;
   }
 
@@ -300,6 +304,19 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
   }
 
   .flight[data-live] .cap,
+  /* One line of fixed height under the nav; tabular figures so the number does not jitter as it changes. */
+  .flight[data-live] .scale {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    top: calc(var(--nav-height) + 0.75rem);
+    left: var(--gutter);
+    margin: 0;
+    color: var(--site-text-muted);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 0.5rem #000, 0 0 0.25rem #000;
+  }
+
   .flight[data-live] .arrive {
     position: absolute;
     z-index: 3;

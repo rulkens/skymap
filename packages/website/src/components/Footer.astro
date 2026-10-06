@@ -1,6 +1,7 @@
 ---
 import ObjLink from './ObjLink.astro';
 import pkg from '../../../../package.json';
+import { fact } from '../data/fact';
 import { FOOTER_ITEMS } from '../data/nav';
 import { MAKER_NAME, REPO_BLOB, REPO_URL } from '../data/siteIdentity';
 import { sitePath } from '../utils/sitePath';
@@ -11,13 +12,38 @@ import { sitePath } from '../utils/sitePath';
     skymap is made by {MAKER_NAME}. The code is open source under the <a href={`${REPO_BLOB}/LICENSE`}>{pkg.license} licence</a>.
     Version {pkg.version}.
   </p>
+  <p class="light" data-light>{fact('speed-of-light').short}</p>
   <nav aria-label="Footer">
     {FOOTER_ITEMS.map((item) => <ObjLink size="small" href={sitePath(item.path)}>{item.label}</ObjLink>)}
     <ObjLink size="small" href={REPO_URL}>GitHub</ObjLink>
   </nav>
 </footer>
 
+<script>
+  import { lightSinceLine } from '../utils/lightSinceLine';
+
+  // Worked out when the footer comes into view and then left alone: a figure that kept counting would be motion.
+  const line = document.querySelector<HTMLElement>('[data-light]');
+  if (line) {
+    new IntersectionObserver(([entry]) => {
+      if (entry!.isIntersecting) line.textContent = lightSinceLine(performance.now() / 1000);
+    }).observe(line);
+  }
+</script>
+
 <style>
+  /* Room for the longer line (three lines on a narrow phone), so the swap moves nothing. */
+  .light {
+    min-height: 1.5em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 900px) {
+    .light {
+      min-height: 4.5em;
+    }
+  }
+
   .footer {
     padding-block: 2rem 4rem;
     border-top: 1px solid var(--border-divider);

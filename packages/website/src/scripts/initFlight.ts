@@ -7,6 +7,8 @@
  */
 import type { FlightTimeline } from '../@types/FlightTimeline';
 import { flightAt } from '../utils/flightAt';
+import { flightDistanceKm } from '../utils/flightDistanceKm';
+import { formatScale } from '../utils/formatScale';
 
 // Keep identical to the inline script's query in components/Flight.astro.
 const FILM_QUERY =
@@ -17,6 +19,8 @@ const PULL_BACK = 0.16;
 const CAPTION_OUT = 0.3;
 // Half a film frame, so a seek to a stop's time lands on that frame and not the one before.
 const HALF_FRAME = 1 / 48;
+// The path is measured from Earth's centre; the readout says "from Earth", so it counts from the surface.
+const EARTH_RADIUS_KM = 6371;
 const unit = (v: number): number => Math.max(0, Math.min(1, v));
 
 export function initFlight(root: HTMLElement): void {
@@ -28,6 +32,7 @@ export function initFlight(root: HTMLElement): void {
   const intro = root.querySelector<HTMLElement>('[data-intro]')!;
   const arrive = root.querySelector<HTMLElement>('[data-arrive]')!;
   const fill = root.querySelector<HTMLElement>('[data-fill]')!;
+  const scale = root.querySelector<HTMLElement>('[data-scale]')!;
   const rings = [...root.querySelectorAll<HTMLButtonElement>('[data-ring]')];
   const stops = [...root.querySelectorAll<HTMLElement>('[data-stop]')];
   const pictures = stops.map((stop) => stop.querySelector<HTMLElement>('picture')!);
@@ -101,6 +106,9 @@ export function initFlight(root: HTMLElement): void {
         el.style.pointerEvents = opacity < 0.5 ? 'none' : 'auto';
       }
     });
+
+    const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
+    if (scale.textContent !== readout) scale.textContent = readout;
 
     fill.style.height = `${unit(p / spans[count]!.start) * 100}%`;
     const shown = Math.min(pose.index + Math.round(mix), count - 1);

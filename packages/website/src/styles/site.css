@@ -191,14 +191,21 @@ img {
   border: 1px solid var(--color-accent);
   border-radius: 50%;
   transition:
-    transform 0.25s ease,
+    box-shadow 0.25s ease,
     background-color 0.25s ease;
 }
 
+/*
+ * Pointing at a control selects it the way the app selects an object: the
+ * marker becomes the object and a thin ring stands off around it. A shadow,
+ * so nothing is measured again and the label does not move.
+ */
 .ring:hover::before,
 .ring:focus-visible::before {
-  transform: scale(1.5);
-  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 0.3125rem var(--color-bg),
+    0 0 0 0.375rem var(--color-accent);
 }
 
 .ring[aria-pressed='true']::before,
