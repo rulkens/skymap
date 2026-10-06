@@ -3,7 +3,8 @@
  * SourceTable — every data source in one table. Wide, it is a table to read
  * across. Narrow, each row becomes a block with its column names repeated
  * beside the values, so nothing scrolls sideways; the ARIA roles keep it a
- * table to a screen reader once CSS has taken the table display away.
+ * table to a screen reader once CSS has taken the table display away. The
+ * slot is for notes on how to read it, set under a rule at its foot.
  */
 import { DATA_SOURCES } from '../data/dataSources';
 
@@ -53,6 +54,7 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     ))
   }
 </table>
+{Astro.slots.has('default') && <div class="notes small tap-links"><slot /></div>}
 
 <style>
   table {
@@ -133,6 +135,18 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
 
   .evidence {
     white-space: nowrap;
+    color: var(--site-text-dim);
+  }
+
+  .notes {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .notes :global(p) {
+    max-width: 68ch;
+    margin-bottom: 0.75rem;
     color: var(--site-text-dim);
   }
 
