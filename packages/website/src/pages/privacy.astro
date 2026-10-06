@@ -1,0 +1,246 @@
+---
+import Base from '../layouts/Base.astro';
+import Claims from '../components/Claims.astro';
+import ObjLink from '../components/ObjLink.astro';
+import PictureBand from '../components/PictureBand.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
+import { fact } from '../data/fact';
+import { MAKER_NAME } from '../data/siteIdentity';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { formatDate } from '../utils/formatDate';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'Privacy: what skymap loads, counts and keeps';
+const description =
+  'This website sets no cookies and counts nothing. The app counts visits without cookies and keeps one note in your browser. Each claim names its source.';
+
+const SITE = [
+  { term: 'What it loads', id: 'privacy-site-requests' },
+  { term: 'Who serves it', id: 'privacy-host' },
+  { term: 'What the host sees', id: 'privacy-host-sees' },
+];
+const COUNTER = [
+  { term: 'The counter', id: 'privacy-counter' },
+  { term: 'What it sends', id: 'privacy-counter-sends' },
+  { term: 'What is stored', id: 'privacy-counter-stores' },
+  { term: 'No cookie', id: 'privacy-counter-cache' },
+  { term: 'How long', id: 'privacy-counter-retention' },
+  { term: 'No notice', id: 'privacy-no-notice' },
+];
+const APP = [
+  { term: 'In your browser', id: 'privacy-app-storage' },
+  { term: 'Galaxy pictures', id: 'privacy-thumbnails' },
+];
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [...SITE, ...COUNTER, ...APP].map((item) => item.id).concat('privacy-form-closed');
+const checked = formatDate(fact('privacy-site-requests').checked);
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Privacy', path: '/privacy/' }])]}
+>
+  <PictureBand id="privacy-far-side" gap="none" eager>
+    <h1>Privacy</h1>
+    <p class="say">
+      This website collects nothing about you. The app counts visits without cookies and keeps one note in your
+      browser.
+    </p>
+    <p class="small when">Each statement below was read from the code on <span class="date">{checked}</span>.</p>
+    <ShotCaption id="privacy-far-side" />
+  </PictureBand>
+
+  <section class="wrap section" id="website">
+    <div class="head">
+      <h2>This website</h2>
+      <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, and this one.</p>
+    </div>
+    <Claims items={SITE} />
+  </section>
+
+  <section class="wrap section" id="app">
+    <div class="head">
+      <h2>The app</h2>
+      <p>The map itself, which opens when you choose “Fly it yourself”. It does more than the pages do, so there is more to say.</p>
+    </div>
+    <h3>The visit counter</h3>
+    <Claims items={COUNTER} />
+    <div class="short">
+      <h3>Where this falls short</h3>
+      <p>
+        The counter starts without asking you, and the app does not mention it. We have not set a limit of our own on
+        how long its rows are kept, so treat them as kept with no fixed end date until this page says otherwise.
+      </p>
+      <p>
+        A content blocker that stops requests to <span class="host">counterscale.rulkens.workers.dev</span> stops the
+        counter. The app works the same without it.
+      </p>
+    </div>
+    <h3>Everything else</h3>
+    <Claims items={APP} />
+    <p class="small after">
+      The app’s data files come from the same host as this website, described above. Links in the app to outside
+      catalogues, such as NED and Aladin, open those sites only when you choose them.
+    </p>
+  </section>
+
+  <section class="wrap section" id="form">
+    <div class="head">
+      <h2>The contact form</h2>
+      <p>{CONTACT_ENDPOINT ? 'The form on the domes page is open.' : fact('privacy-form-closed').text}</p>
+    </div>
+    {
+      !CONTACT_ENDPOINT && (
+        <p>
+          Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is public,
+          it carries your GitHub name, and GitHub’s own privacy statement applies to it.
+        </p>
+      )
+    }
+    <div class="plan">
+      <h3>{CONTACT_ENDPOINT ? 'What happens to a message' : 'The plan, not yet in effect'}</h3>
+      <p>
+        {CONTACT_ENDPOINT ? 'When you send the form' : 'When the form opens'}, your message will go to a small program
+        of ours on Cloudflare, which forwards the four fields to us as an email. Cloudflare Turnstile, a spam check, will run
+        before the message is accepted. We will keep the email for as long as the conversation needs it.
+      </p>
+      <p class="small">
+        This paragraph describes a design, not a running system. We will rewrite this section when the form opens,
+        and the date at the foot of the page will change with it.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap section" id="responsible">
+    <div class="head">
+      <h2>Who is responsible</h2>
+      <p>
+        {MAKER_NAME}, who makes skymap, decides what the site and the app load and keep.
+      </p>
+    </div>
+    <p>
+      To ask what we hold about you, or to have it removed, open an issue. Today the honest answer is short: the
+      counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
+    </p>
+    <div class="links">
+      <ObjLink size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
+      <ObjLink size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
+    </div>
+    <p class="small checked">This page was last checked against the code on {checked}.</p>
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} label="Sources for the statements on this page" />
+  </div>
+</Base>
+
+<style>
+  h1 {
+    font-size: var(--text-h2);
+  }
+
+  .say {
+    font-size: var(--text-lead);
+  }
+
+  .when,
+  .after,
+  .checked {
+    color: var(--site-text-dim);
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 3rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .head h2,
+  .head p {
+    margin: 0;
+  }
+
+  .head h2 {
+    max-width: 12ch;
+  }
+
+  .head p {
+    max-width: var(--measure-lead);
+  }
+
+  h3 {
+    margin: 3.5rem 0 1.5rem;
+  }
+
+  .head + h3 {
+    margin-top: 0;
+  }
+
+  /* The page's one admission: set apart by a rule in the accent, not by a box. */
+  .short,
+  .plan {
+    max-width: 46rem;
+    margin-top: 3.5rem;
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--color-accent);
+  }
+
+  .short h3,
+  .plan h3 {
+    margin: 0 0 1rem;
+  }
+
+  .short p,
+  .plan p {
+    max-width: none;
+  }
+
+  .short p:last-child,
+  .plan p:last-child {
+    margin-bottom: 0;
+  }
+
+  .plan .small {
+    color: var(--site-text-dim);
+  }
+
+  .date {
+    white-space: nowrap;
+  }
+
+  .host {
+    overflow-wrap: anywhere;
+    color: var(--color-fg);
+  }
+
+  .after {
+    max-width: 68ch;
+    margin-top: 2rem;
+  }
+
+  section > p {
+    max-width: var(--measure-lead);
+  }
+
+  section > p a {
+    display: inline-block;
+    padding-block: 0.625rem;
+    margin-block: -0.625rem;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+  }
+
+  .checked {
+    margin-top: 2rem;
+  }
+</style>
