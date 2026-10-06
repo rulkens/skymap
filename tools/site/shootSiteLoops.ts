@@ -2,8 +2,8 @@
  * Record every film in the website's loop manifest from a running app: open
  * the manifest picture it starts from, then move the camera or the clock one
  * step per frame and read the canvas back, so the film is exact however slow
- * a frame is to draw. Each is written twice, AV1 and H.264, into the site's
- * committed assets.
+ * a frame is to draw. Each is written as H.264 into the site's committed
+ * assets.
  *
  *   npm run site:loops -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *
@@ -34,9 +34,6 @@ const MASTERS_DIR = 'data/shots/site/loops';
 const OUT_DIR = 'packages/website/src/assets/loops';
 // The same as the stills (shootSiteShots.ts), so stars are drawn the same size in both.
 const DPR = 2;
-const FILES = { av1: 'webm', h264: 'mp4' } as const;
-// Past these the picture loses its colour before it loses much more weight.
-const CRF_CEILING = { av1: 60, h264: 38 } as const;
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -118,29 +115,20 @@ try {
       console.error(`${loop.id}: no frames in ${framesDir}; run with --url first`);
       continue;
     }
-    const sizes: string[] = [];
-    for (const codec of ['av1', 'h264'] as const) {
-      const file = join(OUT_DIR, `${loop.id}.${FILES[codec]}`);
-      let crf = codec === 'av1' ? SITE_LOOP_PLAN.av1Crf : SITE_LOOP_PLAN.h264Crf;
-      let kb = Infinity;
-      for (
-        ;
-        kb > SITE_LOOP_PLAN.maxKb && crf <= CRF_CEILING[codec];
-        crf += SITE_LOOP_PLAN.crfStep
-      ) {
-        const frames = join(framesDir, '%04d.png');
-        execFileSync(
-          'ffmpeg',
-          ['-v', 'error', ...loopVideoArgs(SITE_LOOP_PLAN, codec, crf, frames, file)],
-          // SVT-AV1 prints its whole configuration unless told otherwise.
-          { env: { ...process.env, SVT_LOG: '1' } },
-        );
-        kb = Math.round(statSync(file).size / 1024);
-      }
-      if (kb > SITE_LOOP_PLAN.maxKb) failed = true;
-      sizes.push(`${FILES[codec]} ${kb} KB at CRF ${crf - SITE_LOOP_PLAN.crfStep}`);
+    const file = join(OUT_DIR, `${loop.id}.mp4`);
+    let crf = SITE_LOOP_PLAN.crf;
+    let kb = Infinity;
+    for (
+      ;
+      kb > SITE_LOOP_PLAN.maxKb && crf <= SITE_LOOP_PLAN.crfCeiling;
+      crf += SITE_LOOP_PLAN.crfStep
+    ) {
+      const frames = join(framesDir, '%04d.png');
+      execFileSync('ffmpeg', ['-v', 'error', ...loopVideoArgs(SITE_LOOP_PLAN, crf, frames, file)]);
+      kb = Math.round(statSync(file).size / 1024);
     }
-    console.log(`${loop.id}  ${sizes.join(' · ')}`);
+    if (kb > SITE_LOOP_PLAN.maxKb) failed = true;
+    console.log(`${loop.id}  ${kb} KB at CRF ${crf - SITE_LOOP_PLAN.crfStep}`);
   }
 } finally {
   await browser?.close();

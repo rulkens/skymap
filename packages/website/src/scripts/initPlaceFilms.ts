@@ -1,6 +1,6 @@
 /*
  * initPlaceFilms — the short film inside a place's disc (components/Places.astro).
- * A link that has one carries its two addresses (`data-webm`, `data-mp4`); the
+ * A link that has one carries its address (`data-film-src`); the
  * <video> is only made the first time that place is pointed at, focused from
  * the keyboard or, on a screen that cannot hover, scrolled to the middle. So
  * a visitor who does none of that fetches nothing, and neither does one who
@@ -28,15 +28,7 @@ export function initPlaceFilms(root: HTMLElement): void {
     film.disableRemotePlayback = true;
     film.tabIndex = -1;
     film.setAttribute('aria-hidden', 'true');
-    for (const [type, src] of [
-      ['video/webm; codecs="av01.0.01M.08"', link.dataset.webm],
-      ['video/mp4', link.dataset.mp4],
-    ] as const) {
-      const source = document.createElement('source');
-      source.type = type;
-      source.src = src!;
-      film.append(source);
-    }
+    film.src = link.dataset.filmSrc!;
     // Shown only once it has a frame to show, so the still never gives way to an empty box.
     film.addEventListener('playing', () => link.setAttribute('data-film', ''), { once: true });
     link.querySelector('[data-screen]')!.append(film);
@@ -68,7 +60,7 @@ export function initPlaceFilms(root: HTMLElement): void {
     follow();
   };
 
-  const links = [...root.querySelectorAll<HTMLElement>('a[data-webm]')];
+  const links = [...root.querySelectorAll<HTMLElement>('a[data-film-src]')];
   if (matchMedia('(hover: hover)').matches) {
     for (const link of links) {
       link.addEventListener('pointerenter', () => play(link));

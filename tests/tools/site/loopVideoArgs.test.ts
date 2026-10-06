@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { SITE_LOOP_PLAN } from '../../../tools/site/siteLoopPlan';
 import { loopVideoArgs } from '../../../tools/site/utils/loopVideoArgs';
 
-describe.each(['av1', 'h264'] as const)('loopVideoArgs %s', (codec) => {
-  const args = loopVideoArgs(SITE_LOOP_PLAN, codec, 41, 'frames/%04d.png', 'out');
+describe('loopVideoArgs', () => {
+  const args = loopVideoArgs(SITE_LOOP_PLAN, 35, 'frames/%04d.png', 'out.mp4');
   const after = (flag: string): string => args[args.indexOf(flag) + 1]!;
 
   // Untagged or full-range, the film sits brighter than the still it lies over.
@@ -18,6 +18,6 @@ describe.each(['av1', 'h264'] as const)('loopVideoArgs %s', (codec) => {
     expect(args).toContain('-an');
     expect(after('-vf')).toContain(`scale=${SITE_LOOP_PLAN.size}:${SITE_LOOP_PLAN.size}:`);
     expect(after('-framerate')).toBe(String(SITE_LOOP_PLAN.fps));
-    expect(after('-crf')).toBe('41');
+    expect(after('-crf')).toBe('35');
   });
 });

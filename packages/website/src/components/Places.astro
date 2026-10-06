@@ -17,7 +17,7 @@
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
 import { PLACES } from '../data/places';
-import { loopSources } from '../utils/loopSources';
+import { loopUrl } from '../utils/loopUrl';
 import { smoothPath } from '../utils/smoothPath';
 import Icon from './Icon.astro';
 import Shot from './Shot.astro';
@@ -62,7 +62,7 @@ const DEPTHS = [-8, 12, -16, 9, -13, 18, -9, 14, -18];
 const places = PLACES.map((place, i) => {
   const words = place.name.split(' ');
   const name = { head: words.slice(0, -1).join(' '), last: words.at(-1)! };
-  const film = place.loop ? loopSources(place.loop) : undefined;
+  const film = place.loop ? loopUrl(place.loop) : undefined;
   return { place, name, film, tall: tall[i]!, wide: wide[i]!, depth: DEPTHS[i]! };
 });
 const vars = (p: (typeof places)[number]) =>
@@ -86,7 +86,7 @@ const vars = (p: (typeof places)[number]) =>
       {
         places.map((p) => (
           <li style={vars(p)} data-side={p.tall.side} data-hang={p.wide.hang} data-row={p.wide.row}>
-            <a class="thing" href={appLink(p.place.hash)} data-webm={p.film?.webm} data-mp4={p.film?.mp4}>
+            <a class="thing" href={appLink(p.place.hash)} data-film-src={p.film}>
               <span class="disc">
                 <span class="screen" data-screen>
                   <Shot id={p.place.shot} sizes="(min-width: 900px) 15vw, 45vw" alt="" />

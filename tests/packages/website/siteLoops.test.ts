@@ -20,12 +20,10 @@ describe.each(SITE_LOOPS)('loop $id', (loop) => {
     expect(() => siteShot(loop.shot)).not.toThrow();
   });
 
-  it('has both files, each within the cap', () => {
-    for (const ext of ['webm', 'mp4']) {
-      const file = resolve(LOOPS_DIR, `${loop.id}.${ext}`);
-      expect(existsSync(file), file).toBe(true);
-      expect(statSync(file).size / 1024, file).toBeLessThanOrEqual(SITE_LOOP_PLAN.maxKb);
-    }
+  it('has its file, within the cap', () => {
+    const file = resolve(LOOPS_DIR, `${loop.id}.mp4`);
+    expect(existsSync(file), file).toBe(true);
+    expect(statSync(file).size / 1024, file).toBeLessThanOrEqual(SITE_LOOP_PLAN.maxKb);
   });
 });
 

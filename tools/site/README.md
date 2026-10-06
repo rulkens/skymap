@@ -8,7 +8,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 | `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`        | `public/apple-touch-icon.png` from `public/favicon.svg`                         |
 | `buildHeroMedia.ts`    | `npm run site:media -- [recording]`        | the flight's stills (one pair per stop) and its scrub video, from the recording |
 | `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>` | every picture in the shot manifest, AVIF and WebP, and the link-preview card    |
-| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>` | every film in the loop manifest, AV1 in WebM and H.264 in MP4                   |
+| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>` | every film in the loop manifest, H.264 in MP4                                   |
 | `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                    |
 
 ## Hero media
@@ -35,12 +35,12 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Loops
 
-`npm run site:loops -- --url http://localhost:<port>` records every row of `packages/website/src/data/siteLoops.ts` from a running app and writes it to `packages/website/src/assets/loops/<id>.webm` (AV1) and `.mp4` (H.264), which are committed: they are small, ship with the site and need no upload. A loop is the short silent film inside a place's disc on Home; the page fetches one only when a visitor points at that place.
+`npm run site:loops -- --url http://localhost:<port>` records every row of `packages/website/src/data/siteLoops.ts` from a running app and writes it to `packages/website/src/assets/loops/<id>.mp4` (H.264), which is committed: the files are small, ship with the site and need no upload. A loop is the short silent film inside a place's disc on Home; the page fetches one only when a visitor points at that place.
 
 - A row names the shot it starts from (`shot`), so the film opens on the picture it lies over, and a `motion`. `orbit` takes the camera once round its target with the clock stopped; `swayDeg` swings it that far to each side and back; `clockDays` leaves the camera alone and runs the clock, which must bring the scene back to its start (Earth: one turn against the stars, 0.99727 days). All three end where they began, so the film repeats without a seam.
-- The runner moves the camera or the clock one step, draws a frame and reads the canvas, so a slow frame costs time and never smoothness. Frames are kept as PNGs in `data/shots/site/loops/<id>/` (gitignored); `--from-masters` re-encodes from those, `--only id,id` limits a run. Needs `ffmpeg` with `libsvtav1` and `libx264`.
-- Size, frame rate, starting CRFs and the cap are in `siteLoopPlan.ts`. A file over the cap is encoded again at a higher CRF until it fits; the runner prints each file's size and the CRF it ended on, and fails if a file cannot be brought under.
-- What costs bytes is every pixel changing: a full orbit of a dense field of points (Laniakea) is 2.7 MB at the starting CRF, a sway of 5 degrees fits the cap. Choose the motion before raising the cap.
+- The runner moves the camera or the clock one step, draws a frame and reads the canvas, so a slow frame costs time and never smoothness. Frames are kept as PNGs in `data/shots/site/loops/<id>/` (gitignored); `--from-masters` re-encodes from those, `--only id,id` limits a run. Needs `ffmpeg` with `libx264`.
+- Size, frame rate, CRF and the cap are in `siteLoopPlan.ts`, with the measurement that chose H.264 over AV1 (at these sizes AV1 turns the coloured stars grey). A file over the cap is encoded again at a higher CRF until it fits; the runner prints each file's size and the CRF it ended on, and fails if a file cannot be brought under.
+- What costs bytes is every pixel changing: a full orbit of a dense field of points (Laniakea) is 1.8 MB at the starting CRF, a sway of 5 degrees fits the cap. Choose the motion before raising the cap.
 - Look at each film after a run: a camera orbit passes the night side of a planet, which is true and dark.
 
 ## Link check
