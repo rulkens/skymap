@@ -6,6 +6,7 @@ import FullFigure from '../components/FullFigure.astro';
 import ObjLink from '../components/ObjLink.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
+import SectionNav from '../components/SectionNav.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
@@ -137,12 +138,24 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     <ShotCaption id="science-wedges" />
   </PictureBand>
 
-  <nav class="wrap jump" aria-label="On this page">
-    <ObjLink size="small" href="#sources">What is in it</ObjLink>
-    <ObjLink size="small" href="#bins">Measured, derived, drawn</ObjLink>
-    <ObjLink size="small" href="#simplifications">Known simplifications</ObjLink>
-    <ObjLink size="small" href="#cite">How to cite</ObjLink>
-  </nav>
+  <SectionNav
+    items={[
+      { href: '#sources', label: 'What is in it', icon: 'sources', note: 'The sources behind everything you see.' },
+      {
+        href: '#bins',
+        label: 'Measured, derived, drawn',
+        icon: 'method',
+        note: 'Three words, and what each one means here.',
+      },
+      {
+        href: '#simplifications',
+        label: 'Known simplifications',
+        icon: 'simplified',
+        note: 'Where the scene departs from the sky.',
+      },
+      { href: '#cite', label: 'How to cite', icon: 'cite', note: 'skymap for the pictures, the catalogues for the data.' },
+    ]}
+  />
 
   <section class="wrap section" id="sources">
     <div class="head">
@@ -320,13 +333,6 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
   .say {
     font-size: var(--text-lead);
-  }
-
-  .jump {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2.5rem;
-    padding-top: 2rem;
   }
 
   .head {

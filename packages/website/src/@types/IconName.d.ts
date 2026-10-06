@@ -9,4 +9,7 @@ export type IconName =
   | 'cite'
   | 'about'
   | 'privacy'
-  | 'code';
+  | 'code'
+  | 'sources'
+  | 'method'
+  | 'simplified';

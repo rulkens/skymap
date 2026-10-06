@@ -27,4 +27,10 @@ export const ICONS: Record<IconName, string> = {
   privacy: 'M3 7.5c2.4 4 5.4 6 9 6s6.6-2 9-6M12 13.5V17M7 12.2l-1.8 2.8M17 12.2l1.8 2.8',
   // A branch of the source tree.
   code: 'M5 5.5a2 2 0 1 0 4 0a2 2 0 1 0-4 0M5 18.5a2 2 0 1 0 4 0a2 2 0 1 0-4 0M15 8.5a2 2 0 1 0 4 0a2 2 0 1 0-4 0M7 7.5v9M17 10.5c0 3-2.5 4.2-5.5 4.5-2 .2-3.6.6-4.5 1.5',
+  // Catalogues laid one over another: what the map is made of.
+  sources: 'M12 3.5l8.5 4.25L12 12 3.5 7.75zM3.5 12l8.5 4.25L20.5 12M3.5 16.25l8.5 4.25 8.5-4.25',
+  // A pair of compasses, the tool that both measures and draws.
+  method: 'M12 2.5v2M10.5 6a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M11.4 7.4L6.5 20.5M12.6 7.4l4.9 13.1M8.4 15.5a9 9 0 0 0 7.2 0',
+  // A measured curve and the straight line we draw in its place.
+  simplified: 'M3 9c2-5 4-5 6 0s4 5 6 0s4-5 6 0M3 18.5h18',
 };
