@@ -211,3 +211,6 @@ ds-bundle/
 # ~300 MB, regenerable on demand — same rationale as the .bin catalogs.  The
 # generator + the images.js manifest stay tracked so the page is reproducible.
 docs/powers-of-ten/images/
+
+# Astro generated types/cache for the website workspace
+packages/website/.astro/

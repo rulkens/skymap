@@ -27,7 +27,7 @@ Owner's: dark theme only · Astro in `packages/website/` as an npm workspace · 
 
 ## Ground preparation
 
-Ideal diff, data first: `workspaces: ["packages/*"]` · `toolPages.website = 'home'` · `DEV_PORTS.website = 5700` · the build chain gains `npm run site:build` · `packages/website/`.
+Ideal diff, data first: `workspaces: ["packages/*"]` · `toolPages.website = 'home'` · `DEV_PORTS.website = 5800` · the build chain gains `npm run site:build` · `packages/website/`.
 
 One missing joint: `src/styles/global.css` holds the font faces and `:root` tokens (lines 55–362) together with the app's page rules (`html`, `body`, `#c`). The site needs the first without the second. **Prep:** move the font faces and tokens to `src/styles/tokens.css`, imported by `global.css`. No behaviour change; its own commit, first.
 
@@ -40,7 +40,7 @@ packages/website/
   astro.config.mjs        base/outDir from toolPages, port from DEV_PORTS; dev publicDir = repo public/, build publicDir off
   src/layouts/            Base (head, nav, footer), Docs (sidebar, on-this-page, prev/next)
   src/components/         ObjLink (the ring control), Flight (hero), Places, Sources, Figure, …
-  src/pages/              index, educators, venues, science, docs/**
+  src/pages/              index, classroom, domes, science, about, privacy, 404, docs/**
   src/content/docs/       MDX, one file per docs page (content collection, typed frontmatter)
   src/data/               facts.ts, places.ts, appLink.ts, nav.ts
   src/styles/site.css     imports ../../../../src/styles/tokens.css
@@ -60,10 +60,14 @@ Required behaviour beyond the prototype: the poster is the first paint and the L
 
 ## Pages
 
-- **Use it in a classroom** (`/educators/`): what a lesson link is, ready-made links by topic, how to make one, what it needs (browser, no accounts), what is and is not accurate enough to teach from.
-- **Domes and museums** (`/venues/`): proof first (Wisdome Malmö, September 2026), what can be delivered (fisheye, film, exhibit build), how a commission runs, the form. Facts about the venue only as published by the venue (07 and the venue research in the session; tilt, resolution and software are unpublished and are not stated).
+- **Use it in a classroom** (`/classroom/`, nav label "Classrooms"; was `/educators/`, renamed while the site is unindexed so the address names a task, not an audience): what a lesson link is, ready-made links by topic, how to make one, what it needs (browser, no accounts), what is and is not accurate enough to teach from.
+- **Domes and museums** (`/domes/`, form at `#contact`; was `/venues/`, which matches none of the queries a dome operator types): proof first (Wisdome Malmö, September 2026), what can be delivered (fisheye, film, exhibit build), how a commission runs, the form. Facts about the venue only as published by the venue (07 and the venue research in the session; tilt, resolution and software are unpublished and are not stated).
 - **Science** (`/science/`): data sources at a glance, measured versus modelled, known simplifications, how to cite, links into the docs.
-- **Docs** (`/docs/`): Guide (every feature, by task) · Reference (keys, URL parameters, settings, object lists) · Data (every source: what it is, licence, attribution text, upstream link, where it enters the pipeline) · Rendering (the frame, techniques, precision, performance) · Science (models and their references) · Known simplifications · Roadmap · Credits · Cite. The page tree is fixed from 09's proposed site map; 10 supplies the roadmap and tells the tree where to leave room.
+- **About** (`/about/`): who makes skymap, why, how to reach us (the form, no personal address), press images, colophon.
+- **Privacy** (`/privacy/`): what the contact form stores and for how long; no analytics, no cookies.
+- **Docs** (`/docs/`): seven sidebar groups, in this order, adopted from `12-taste-and-structure.md` section 4.2: **Start** (First flight, the one tutorial; What is in the scene; Browser support and troubleshooting) · **Guide** (every feature, by task) · **Reference** (controls, URL parameters, settings, object catalogue, Glossary) · **Data** (every source: what it is, licence, attribution text, upstream link, where it enters the pipeline; plus the pipeline page) · **Science** (measured, derived, modelled, drawn; models and their references; known simplifications) · **Rendering** (the frame, techniques, precision, performance) · **Project** (Roadmap, Credits, Cite, For developers). Search is **Pagefind**, a static index built with the site: no service, small payload. The page tree is fixed from 09's proposed site map and 12's tree; 10 supplies the roadmap and tells the tree where to leave room.
+
+Screenshots: every guide page shows the real app. Each image is a row in a shot manifest `{ id, deep link, caption, alt }` and is produced by `npm run shot` against a dev server with real data, so the whole set regenerates with one command when the app changes. No hand-captured or mocked images; a guide page whose feature cannot be reached by a deep link gets its shot scripted through the same tool or says so in the ledger.
 
 Cross-linking rule: every feature mention links to its guide page, every dataset mention to its data page, every technique to its rendering or science page, and every one of those links out to the primary source. Landing pages link down into docs; docs pages link back up to the relevant landing page and across to each other. The internal link check is the enforcement.
 
@@ -92,14 +96,14 @@ Each is a branch on the one before. Tasks are one commit each.
 
 1. **#748, this branch** — research 06–10, prototype, this spec.
 2. **`site/01-foundation`** — T1 tokens split (prep) · T2 workspace, registry rows, Astro scaffold, build chain, CI · T3 site styles, Base layout, nav, footer, `ObjLink`, fonts · T4 `appLink`, `facts`, `places` with their tests · T5 Home · T6 hero media tool and R2 sync group (`review: yes`) · T7 internal link check.
-3. **`site/02-landing-pages`** — T1 educators · T2 venues, form UI · T3 Worker contact endpoint behind configuration (`review: yes`) · T4 science.
-4. **`site/03-docs-guide`** — T1 Docs layout and collection · T2 guide pages · T3 reference pages.
+3. **`site/02-landing-pages`** — T1 classroom · T2 domes, form UI · T3 Worker contact endpoint behind configuration (`review: yes`) · T4 science · T5 about and privacy.
+4. **`site/03-docs-guide`** — T1 Docs layout, collection, seven-group sidebar and Pagefind search · T2 Start and guide pages · T3 reference pages.
 5. **`site/04-attribution-hygiene`** — the gaps listed in the research README, plus the registry-coverage test.
 6. **`site/05-docs-data`** — generated data pages, credits, cite.
 7. **`site/06-docs-rendering-science`** — rendering, science, known simplifications, roadmap.
 8. **`site/07-crosslinks`** — cross-link pass, external link check run, whole-site review and its one fix round.
 
-Not in this effort: the root swap and `/app` move, a purpose-made hero flight, analytics, search, translations.
+Not in this effort: the root swap and `/app` move, a purpose-made hero flight, analytics, translations. Search is in (Pagefind, docs slice); it was out of scope until the taste research showed it is the recovery route for a several-hundred-name object catalogue.
 
 ## For the owner, on return
 

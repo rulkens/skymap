@@ -1,0 +1,108 @@
+---
+import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+import { appLink } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+---
+
+<section class="lead">
+  <div class="back">
+    <Shot id="earth-terminator" tall="earth-terminator-portrait" sizes="100vw" />
+  </div>
+  <div class="wrap copy">
+    <h2>From a park to the cosmic web, without a cut</h2>
+    <p class="say">
+      Start just above Søndermarken, a park in Copenhagen, and pull back. The park becomes the Earth, the Earth a dot
+      beside the Sun, and nothing cuts away on the way to the cosmic web. The stars come from Gaia, the galaxies from
+      catalogues including SDSS, 2MRS and GLADE.
+    </p>
+    <ObjLink href={appLink(HOME_LINKS.parkFlight)}>Play the pull-back from the park</ObjLink>
+    <ShotCaption id="earth-terminator" />
+  </div>
+</section>
+
+<style>
+  /* Wide: the picture is the section's ground, Earth on the right, the words on the dark left. */
+  .lead {
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-height: min(56.25vw, 92svh);
+    margin-top: calc(var(--section-space) / 2);
+    background: #000;
+  }
+
+  .back {
+    position: absolute;
+    inset: 0;
+  }
+
+  .back :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% 50%;
+  }
+
+  /* No frame edge: the picture fades into the page above and below, and into the words on the left. */
+  .back::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 84%, #000 100%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.88) 0%, rgb(0 0 0 / 0.6) 34%, rgb(0 0 0 / 0) 58%);
+  }
+
+  .copy {
+    position: relative;
+    width: 100%;
+    padding-block: 5rem;
+  }
+
+  h2 {
+    max-width: 13ch;
+  }
+
+  .say {
+    max-width: 27rem;
+    font-size: var(--text-lead);
+  }
+
+  .copy :global(.caption) {
+    max-width: 27rem;
+    margin-top: 2rem;
+  }
+
+  /* Narrow: the picture first, fading into the words below it. */
+  @media (max-width: 900px) {
+    .lead {
+      display: block;
+      min-height: 0;
+    }
+
+    .back {
+      position: relative;
+    }
+
+    .back :global(img) {
+      height: auto;
+      object-position: center;
+    }
+
+    .back::after {
+      background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0) 14%, rgb(0 0 0 / 0) 68%, #000 100%);
+    }
+
+    .copy {
+      margin-top: -3.5rem;
+      padding-block: 0;
+    }
+
+    h2 {
+      max-width: 17ch;
+    }
+  }
+</style>

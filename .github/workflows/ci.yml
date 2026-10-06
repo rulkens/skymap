@@ -19,10 +19,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node 20
+      - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -40,6 +40,15 @@ jobs:
       # vitest run, single pass.  All 594 tests pass at time of writing.
       - name: Tests
         run: npm test
+
+      # A broken website page fails the build here, not on deploy.
+      - name: Build website
+        run: npm run site:build
+
+      # Every internal href/src in the built site resolves; planned-but-unbuilt
+      # pages are an explicit allow-list that can only shrink.
+      - name: Check website links
+        run: npm run site:links
 
       # `npm run format:check` is intentionally not run in CI yet — there
       # are pre-existing files in the repo that don't match Prettier's

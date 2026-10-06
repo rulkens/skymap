@@ -1,0 +1,15 @@
+---
+/*
+ * ObjLink — a link dressed as the site's one control, the ring plus a label
+ * (styles/site.css `.ring`, shared with the menu's summary and real buttons).
+ */
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'a'> & { href: string; size?: 'small' | 'default' | 'big' };
+
+const { size = 'default', class: extra, ...rest } = Astro.props;
+---
+
+<a class:list={['ring', size !== 'default' && size, extra]} {...rest}>
+  <slot />
+</a>

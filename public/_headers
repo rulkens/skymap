@@ -16,6 +16,12 @@
 /*.wasm
   Cache-Control: public, max-age=31536000, immutable
 
+# The website preview's hashed build output (images, fonts, CSS under /home/_astro/).
+# The names carry content hashes, as above. Moves to /_astro/* at the root swap;
+# tests/packages/website/siteMode.test.ts fails if it no longer matches the build.
+/home/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Famous-galaxy thumbnails — not hash-fingerprinted (the URL is part of
 # the seed JSON and stable), so cap at one day to allow refreshes if the
 # atlas is regenerated.

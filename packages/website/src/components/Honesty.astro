@@ -1,0 +1,108 @@
+---
+import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+import { HONESTY } from '../data/honesty';
+import { sitePath } from '../utils/sitePath';
+
+// The three words keep one meaning across the site (08, house style).
+const BINS = [
+  { id: 'measured', shot: 'galaxies-measured', title: 'Measured', gloss: 'An instrument recorded it.' },
+  { id: 'derived', shot: 'filaments-derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
+  { id: 'drawn', shot: 'milky-way-drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
+] as const;
+---
+
+<section class="wrap section honest" id="honest">
+  <div class="intro">
+    <h2>What is measured, derived and drawn</h2>
+    <ObjLink size="small" href={sitePath('/science/')}>Read the science</ObjLink>
+  </div>
+  {
+    BINS.map((bin) => (
+      <div class="bin">
+        <h3>{bin.title}</h3>
+        <p class="gloss small">{bin.gloss}</p>
+        <figure>
+          <Shot id={bin.shot} sizes="(max-width: 900px) 50vw, 24rem" />
+          <figcaption>
+            <ShotCaption id={bin.shot} />
+          </figcaption>
+        </figure>
+        <ul class="small">
+          {HONESTY[bin.id].map((item) => (
+            <li>
+              <a href={item.href}>{item.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</section>
+
+<style>
+  .honest {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem 3.75rem;
+  }
+
+  .intro {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0 2rem;
+  }
+
+  h2 {
+    margin-bottom: 0;
+  }
+
+  /* One picture heads each list: an example of the word, with its own address. */
+  figure {
+    margin: 0 0 1rem;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    min-height: 6em;
+    margin-top: 0.5rem;
+  }
+
+  .gloss {
+    min-height: 3em;
+    margin: 0 0 0.75rem;
+    color: var(--site-text-dim);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li a {
+    display: block;
+    padding-block: 0.5rem;
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .honest {
+      grid-template-columns: 1fr;
+    }
+
+    .gloss,
+    figcaption {
+      min-height: 0;
+    }
+  }
+</style>

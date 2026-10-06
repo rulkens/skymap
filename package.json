@@ -26,11 +26,14 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build",
+    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build && npm run site:build",
     "build-data-manifest": "tsx tools/deploy/buildDataManifest.ts",
     "structure-audit": "tsx tools/structure-audit/structureAudit.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
@@ -111,6 +114,12 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "move-files": "tsx tools/dev/moveFiles.ts",
+    "site": "npm run dev --workspace @skymap/website",
+    "site:build": "npm run build --workspace @skymap/website",
+    "site:check": "npm run check --workspace @skymap/website",
+    "site:media": "tsx tools/site/buildHeroMedia.ts",
+    "site:links": "tsx tools/site/checkSiteLinks.ts",
+    "site:shots": "tsx tools/site/shootSiteShots.ts",
     "perf": "tsx tools/perf/measurePerf.ts",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
@@ -123,8 +132,8 @@
     "sync-r2-secure": "bash tools/deploy/syncR2Secure.sh",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json",
-    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json && npm run site:check",
+    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json && npm run site:check"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "4.7.2",

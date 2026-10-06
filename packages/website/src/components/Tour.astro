@@ -1,0 +1,78 @@
+---
+import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+import { appLink } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+---
+
+<section class="tour">
+  <Shot id="tour-cosmic-web" sizes="100vw" />
+  <div class="over">
+    <h2>Take the tour</h2>
+    <p>
+      The Long Way Out is a captioned flight in 14 steps, from the Milky Way to the edge of the observable universe
+      and back. Some of the light in it left before our species existed. The tour is shorter.
+    </p>
+    <ObjLink href={appLink(HOME_LINKS.tour)}>Start the tour</ObjLink>
+    <ShotCaption id="tour-cosmic-web" open={false} />
+  </div>
+</section>
+
+<style>
+  .tour {
+    position: relative;
+    margin-top: var(--section-space);
+    background: #000;
+  }
+
+  .tour :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 80svh;
+    object-fit: cover;
+  }
+
+  /* The frame is black where the words sit; the scrim only softens the web's lower edge behind them. */
+  .tour::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(20deg, rgb(0 0 0 / 0.94) 0%, rgb(0 0 0 / 0.78) 30%, rgb(0 0 0 / 0) 58%);
+  }
+
+  .over {
+    position: absolute;
+    z-index: 2;
+    left: max(var(--gutter), (100% - var(--wrap-max)) / 2 + var(--gutter));
+    bottom: 9%;
+    max-width: 28rem;
+  }
+
+  .over :global(.caption) {
+    margin-top: 1.25rem;
+  }
+
+  .over :global(.ring) {
+    margin-top: -0.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .tour::after {
+      display: none;
+    }
+
+    .tour :global(img) {
+      aspect-ratio: 4 / 3;
+      object-position: 35% 50%;
+    }
+
+    .over {
+      position: static;
+      padding: 1.5rem var(--gutter) 0;
+    }
+  }
+</style>

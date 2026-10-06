@@ -1,0 +1,78 @@
+---
+import '@fontsource-variable/jost/wght.css';
+import '../styles/site.css';
+// The two faces every page paints with at once; preloaded so the first paint is the last swap.
+import jostUrl from '@fontsource-variable/jost/files/jost-latin-wght-normal.woff2?url';
+import displayUrl from '../assets/fonts/cormorant-garamond-600-site.woff2?url';
+// The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
+import cardUrl from '../assets/og-card.jpg?url';
+import { siteShot } from '../data/siteShot';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import JsonLd from '../components/JsonLd.astro';
+import { INDEXABLE } from '../data/site';
+
+type Props = {
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt?: string;
+  jsonLd?: readonly Record<string, unknown>[];
+  heroNav?: boolean;
+};
+
+const {
+  title,
+  description,
+  image = cardUrl,
+  imageAlt = siteShot('og-card').alt,
+  jsonLd = [],
+  heroNav = false,
+} = Astro.props;
+// Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const imageUrl = new URL(image, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="preload" as="font" type="font/woff2" href={displayUrl} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={jostUrl} crossorigin />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {!INDEXABLE && <meta name="robots" content="noindex" />}
+    {INDEXABLE && <link rel="sitemap" href="/sitemap.xml" />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="skymap" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+    {jsonLd.map((data) => <JsonLd data={data} />)}
+    <slot name="head" />
+  </head>
+  <body class={heroNav ? 'hero-nav' : undefined}>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

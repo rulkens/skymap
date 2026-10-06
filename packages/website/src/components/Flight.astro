@@ -1,0 +1,606 @@
+---
+/*
+ * Flight — the hero. A sticky full-height stage inside a tall track; scrolling
+ * moves through the stops (scripts/initFlight.ts) and never changes scroll
+ * speed or direction. Each stop is one list item holding its still and its
+ * caption, so the words cannot drift from the picture.
+ *
+ * The stills are the flight at every width. On a wide screen with a capable
+ * connection the film loads after first paint and plays over them; the layout
+ * never depends on it, so a film that fails to arrive moves nothing. Without
+ * script the same list reads top to bottom as captioned pictures.
+ */
+import ObjLink from './ObjLink.astro';
+import { appLink } from '../data/appLink';
+import { fact } from '../data/fact';
+import { FLIGHT_STOPS } from '../data/flightStops';
+import { flightTimeline } from '../utils/flightTimeline';
+import { HERO_MEDIA } from '../../../../tools/site/heroMediaPlan';
+import type { FlightStill } from '../@types/FlightStill';
+
+type Props = { stills: FlightStill[]; videoUrl: string };
+
+const { stills, videoUrl } = Astro.props;
+// Shown at the end of the flight; the Milky Way and the web glow are the two drawn things a viewer has seen by then.
+const closing =
+  'The stars and galaxies in this flight sit where the catalogues put them. The Milky Way’s disc and the glow of the web are drawn, and the flight says so.';
+const timeline = flightTimeline(
+  FLIGHT_STOPS.map((stop) => stop.atSec),
+  HERO_MEDIA.outSec - HERO_MEDIA.inSec,
+);
+const arrival = timeline.spans[FLIGHT_STOPS.length]!.start;
+const stops = FLIGHT_STOPS.map((stop, i) => ({
+  ...stop,
+  line: stop.factId ? (fact(stop.factId).short ?? '') : '',
+  still: stills[i]!,
+  spineTop: `${((timeline.spans[i]!.start / arrival) * 100).toFixed(2)}%`,
+}));
+---
+
+<section
+  class="flight"
+  data-flight
+  data-timeline={JSON.stringify(timeline)}
+  data-video={videoUrl}
+  style={`--units:${timeline.units.toFixed(3)}`}
+>
+  <script is:inline>
+    // Before first paint, so the layout is decided once. The film needs a wide, landscape,
+    // fine-pointer screen and a connection that is neither metered nor slow; keep the
+    // query identical to FILM_QUERY in scripts/initFlight.ts.
+    (function () {
+      var root = document.currentScript.parentElement;
+      var c = navigator.connection;
+      var slow = c && (c.saveData || /(^|-)2g$|3g/.test(c.effectiveType || ""));
+      var wide = matchMedia(
+        "(min-width: 960px) and (min-height: 600px) and (min-aspect-ratio: 4/3) and (prefers-reduced-motion: no-preference)"
+      ).matches;
+      var touchTablet = matchMedia("(pointer: coarse)").matches && innerWidth < 1100;
+      root.setAttribute("data-live", "");
+      if (wide && !slow && !touchTablet) root.setAttribute("data-film", "");
+    })();
+  </script>
+
+  <div class="track">
+    <div class="stage">
+      <div class="intro" data-intro>
+        <div class="titles">
+          <h1 class="word">skymap</h1>
+          <p class="tag">The mapped universe at true scale. You hold the camera.</p>
+        </div>
+        <div class="start">
+          <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+          <small>Free. No account, nothing to install.</small>
+        </div>
+        <p class="hint small" aria-hidden="true">Scroll to pull back</p>
+      </div>
+
+      <ol class="stops">
+        {
+          stops.map((stop, i) => (
+            <li class:list={['stop', i === 0 && 'near']} data-stop>
+              <picture>
+                <source media="(orientation: portrait)" type="image/avif" srcset={stop.still.portrait.avif} sizes={stop.still.portrait.sizes} />
+                <source media="(orientation: portrait)" type="image/webp" srcset={stop.still.portrait.webp} sizes={stop.still.portrait.sizes} />
+                <source type="image/avif" srcset={stop.still.landscape.avif} sizes={stop.still.landscape.sizes} />
+                <source type="image/webp" srcset={stop.still.landscape.webp} sizes={stop.still.landscape.sizes} />
+                <img
+                  src={stop.still.landscape.src}
+                  width={stop.still.landscape.width}
+                  height={stop.still.landscape.height}
+                  alt={
+                    i === 0
+                      ? 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.'
+                      : `${stop.name}, as skymap draws it at this point in the flight.`
+                  }
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  fetchpriority={i === 0 ? 'high' : undefined}
+                  decoding="async"
+                />
+              </picture>
+              {i > 0 && (
+                <div class="cap">
+                  <p class="name">{stop.name}</p>
+                  {stop.line && <p class="line">{stop.line}</p>}
+                </div>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+
+      <!-- Rewritten on every scroll frame, so it is kept from screen readers; the stops' captions carry the same story. -->
+      <p class="scale small" data-scale aria-hidden="true"></p>
+
+      <video class="film" muted playsinline preload="none" tabindex="-1" aria-hidden="true"></video>
+
+      <div class="arrive" data-arrive>
+        <p>{closing}</p>
+        <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+      </div>
+
+      <div class="spine" data-spine role="group" aria-label="Stops on the flight">
+        <i data-fill></i>
+        {
+          stops.map((stop) => (
+            <button type="button" style={`top:${stop.spineTop}`} data-ring aria-label={`Scroll the flight to ${stop.name}`}>
+              <span>{stop.name}</span>
+            </button>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initFlight } from '../scripts/initFlight';
+
+  const root = document.querySelector<HTMLElement>('[data-flight]');
+  if (root) initFlight(root);
+</script>
+
+<style>
+  .flight {
+    position: relative;
+    /* Above the nav's ground layer (components/Nav.astro), so the bar floats on the picture. */
+    z-index: 2;
+    background: #000;
+  }
+
+  /* ── Without script: the wordmark, then the stops as captioned pictures ── */
+  .intro {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: calc(var(--nav-height) + 2rem) var(--gutter) 2.5rem;
+  }
+
+  .word {
+    margin: 0 0 0.08em -0.04em;
+    font-size: clamp(4.5rem, 22vw, 8rem);
+    line-height: 1;
+  }
+
+  .tag {
+    max-width: 22ch;
+    margin: 0;
+    font-size: var(--text-lead);
+    line-height: 1.4;
+    color: var(--site-text);
+  }
+
+  .start small {
+    display: block;
+    color: var(--site-text-muted);
+  }
+
+  .stops {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .stop img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .cap {
+    padding: 1.25rem var(--gutter) 2.5rem;
+  }
+
+  .name {
+    max-width: none;
+    margin: 0 0 0.35em;
+    font: var(--weight-display) var(--text-h2) / 1.05 var(--font-family-display);
+    letter-spacing: -0.015em;
+    color: var(--color-fg);
+    text-wrap: balance;
+  }
+
+  .line {
+    max-width: 34rem;
+    margin: 0;
+    line-height: 1.45;
+    color: var(--site-text);
+  }
+
+  .arrive {
+    padding: 1rem var(--gutter) 3rem;
+  }
+
+  .arrive p {
+    margin: 0 0 1rem;
+    color: var(--site-text);
+  }
+
+  .film,
+  .spine,
+  .hint,
+  .scale {
+    display: none;
+  }
+
+  @media (orientation: portrait) {
+    .stop img {
+      aspect-ratio: 4 / 5;
+    }
+  }
+
+  /* ── With script: one sticky stage, the stops stacked inside it ───────── */
+  .flight[data-live] .track {
+    /* svh, not dvh: the page's length must not change when a phone's toolbar retracts. */
+    height: calc(var(--units) * 100svh + 100svh);
+  }
+
+  .flight[data-live] .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* The nav's local scrim: only as tall as the bar needs. */
+  .flight[data-live] .stage::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0 0 auto;
+    height: calc(var(--nav-height) * 1.6);
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.8) 30%, rgb(0 0 0 / 0));
+    pointer-events: none;
+  }
+
+  .flight[data-live] .stops,
+  .flight[data-live] .stop {
+    position: absolute;
+    inset: 0;
+  }
+
+  .flight[data-live] .stop picture {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+
+  .flight[data-live] .stop:first-child picture {
+    opacity: 1;
+  }
+
+  /* A still two stops away is not fetched yet: only the first is in the first load. */
+  .flight[data-live] .stop:not(.near) picture {
+    display: none;
+  }
+
+  .flight[data-live] .stop img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .flight[data-film] .film {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  /* At a stop the film gives way to the sharper still of the same frame. */
+  .flight.has-video:not(.rest) .film {
+    opacity: 1;
+  }
+
+  .flight[data-live] .cap,
+  /* One line of fixed height under the nav; tabular figures so the number does not jitter as it changes. */
+  .flight[data-live] .scale {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    top: calc(var(--nav-height) + 0.75rem);
+    left: var(--gutter);
+    margin: 0;
+    color: var(--site-text-muted);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 0.5rem #000, 0 0 0.25rem #000;
+  }
+
+  .flight[data-live] .arrive {
+    position: absolute;
+    z-index: 3;
+    left: 0;
+    bottom: 0;
+    padding: 0 3.5rem 3.5rem var(--gutter);
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
+  }
+
+  .flight[data-live] .cap {
+    max-width: min(54rem, 100%);
+  }
+
+  /* Local scrims: under the words only, so the rest of the frame keeps its light. */
+  .flight[data-live] .cap::before,
+  .flight[data-live] .intro::before,
+  .flight[data-live] .arrive::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -7rem -9rem 0 0;
+    background: radial-gradient(
+      ellipse 100% 100% at 0% 100%,
+      rgb(0 0 0 / 0.9) 0%,
+      rgb(0 0 0 / 0.8) 55%,
+      rgb(0 0 0 / 0) 100%
+    );
+  }
+
+  .flight[data-live] .intro {
+    position: absolute;
+    z-index: 4;
+    inset: auto 0 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 1.5rem 3rem;
+    padding: 0 5.5rem 4.5rem var(--gutter);
+  }
+
+  .flight[data-live] .intro::before {
+    inset: -7rem 0 0;
+    background: linear-gradient(0deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.74) 55%, rgb(0 0 0 / 0) 100%);
+  }
+
+  .flight[data-live] .word {
+    font-size: clamp(5.5rem, 10vw, 10rem);
+  }
+
+  .flight[data-live] .start {
+    text-align: right;
+  }
+
+  .flight[data-live] .hint {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.25rem;
+    max-width: none;
+    margin: 0;
+    text-align: center;
+    color: var(--site-text-muted);
+  }
+
+  .flight[data-live] .arrive {
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-inline: var(--gutter);
+    text-align: center;
+  }
+
+  .flight[data-live] .arrive::before {
+    inset: -6rem 0 0;
+    background: radial-gradient(ellipse 60% 100% at 50% 100%, rgb(0 0 0 / 0.86) 0%, rgb(0 0 0 / 0.6) 50%, rgb(0 0 0 / 0) 100%);
+  }
+
+  .flight[data-live] .arrive p {
+    max-width: 38ch;
+    margin: 0;
+  }
+
+  .flight[data-live] .spine {
+    display: block;
+    position: absolute;
+    z-index: 5;
+    right: 1.875rem;
+    top: calc(var(--nav-height) + 2.5rem);
+    bottom: 8.5rem;
+    width: 0.9375rem;
+  }
+
+  .spine::before,
+  .spine i {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1px;
+    margin-left: -0.5px;
+  }
+
+  .spine::before {
+    bottom: 0;
+    background: rgb(232 238 255 / 0.3);
+  }
+
+  .spine i {
+    background: var(--color-accent);
+  }
+
+  .spine button {
+    position: absolute;
+    left: 0;
+    width: 0.9375rem;
+    height: 0.9375rem;
+    margin-top: -0.46875rem;
+    padding: 0;
+    border: 1px solid rgb(168 208 255 / 0.8);
+    border-radius: 50%;
+    background: #000;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  /* The ring is 15px; the finger gets 44. */
+  .spine button::after {
+    content: '';
+    position: absolute;
+    inset: calc((100% - var(--tap)) / 2);
+  }
+
+  .spine button:hover,
+  .spine button:focus-visible {
+    transform: scale(1.4);
+  }
+
+  .spine button[aria-current='true'] {
+    background: var(--color-accent);
+  }
+
+  .spine span {
+    position: absolute;
+    right: 1.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+    color: var(--color-fg);
+    opacity: 0;
+    pointer-events: none;
+    text-shadow:
+      0 0 0.75rem #000,
+      0 0 0.25rem #000;
+    transition: opacity 0.2s ease;
+  }
+
+  .spine button:hover span,
+  .spine button:focus-visible span,
+  .spine button[aria-current='true'] span {
+    opacity: 1;
+  }
+
+  /* ── Upright screens: the words take the bottom, the spine the top right ── */
+  @media (max-width: 760px) and (orientation: portrait) {
+    .flight[data-live] .intro {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      padding: 0 var(--gutter) 3.75rem;
+    }
+
+    .flight[data-live] .intro::before {
+      inset: -11rem 0 0;
+    }
+
+    .flight[data-live] .word {
+      font-size: clamp(4.5rem, 24vw, 7rem);
+    }
+
+    .flight[data-live] .start {
+      text-align: left;
+    }
+
+    .flight[data-live] .cap {
+      padding: 0 var(--gutter) 2.25rem;
+    }
+
+    .flight[data-live] .cap::before {
+      inset: -6rem 0 0;
+      background: linear-gradient(0deg, rgb(0 0 0 / 0.9) 0%, rgb(0 0 0 / 0.72) 55%, rgb(0 0 0 / 0) 100%);
+    }
+
+    .flight[data-live] .arrive {
+      align-items: flex-start;
+      padding-bottom: 2.25rem;
+      text-align: left;
+    }
+
+    .flight[data-live] .spine {
+      right: 0.875rem;
+      top: calc(var(--nav-height) + 1.25rem);
+      bottom: 52%;
+      width: 0.6875rem;
+    }
+
+    .spine button {
+      width: 0.6875rem;
+      height: 0.6875rem;
+      margin-top: -0.34375rem;
+    }
+
+    .spine span {
+      display: none;
+    }
+  }
+
+  /* ── Short screens (a phone on its side): everything smaller, nothing stacked ── */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .flight[data-live] .intro {
+      padding: 0 4rem 2.25rem var(--gutter);
+    }
+
+    .flight[data-live] .word {
+      font-size: clamp(3.5rem, 9vw, 5rem);
+    }
+
+    .flight[data-live] .tag {
+      max-width: none;
+      font-size: var(--text-small);
+      font-weight: var(--weight-small);
+    }
+
+    /* No room for the hint or for spine labels that would repeat the caption beside them. */
+    .flight[data-live] .hint,
+    .spine span {
+      display: none;
+    }
+
+    .flight[data-live] .cap {
+      max-width: 62%;
+      padding-bottom: 1.25rem;
+    }
+
+    .name {
+      font-size: 2rem;
+    }
+
+    .flight[data-live] .line,
+    .flight[data-live] .arrive p {
+      font-size: var(--text-small);
+      font-weight: var(--weight-small);
+    }
+
+    .flight[data-live] .arrive {
+      padding-bottom: 1rem;
+      gap: 0.25rem;
+    }
+
+    .flight[data-live] .arrive p {
+      max-width: 60ch;
+    }
+
+    .flight[data-live] .spine {
+      right: 1.25rem;
+      top: calc(var(--nav-height) + 0.75rem);
+      bottom: 1.5rem;
+    }
+
+    /* Nine rings in under 300px: each keeps the full width and the height its slot allows (over the 24px minimum). */
+    .spine button::after {
+      inset: -0.5rem calc((100% - var(--tap)) / 2);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .film,
+    .spine button,
+    .spine span {
+      transition: none;
+    }
+  }
+</style>
