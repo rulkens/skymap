@@ -7,7 +7,6 @@ export type IconName =
   | 'docs'
   | 'app'
   | 'view'
-  | 'launch'
   | 'outbound'
   | 'credits'
   | 'cite'

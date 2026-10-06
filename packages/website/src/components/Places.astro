@@ -4,7 +4,7 @@
  * that runs out from Earth: each a disc that grows with its distance, its name
  * and how far away it is. Disc, name and distance are one link (the one view
  * link that is not a ViewLink, because the picture is part of the target), so
- * the launch drawing follows the name. Pointed at or focused, a disc gets the
+ * the view mark follows the name. Pointed at or focused, a disc gets the
  * ring of the site drawn round it and plays its film (scripts/initPlaceFilms.ts),
  * with a mark going round the ring once per loop. Scrolling draws the line
  * and drifts the discs a few pixels at different depths (scripts/initPlaceDrift.ts).
@@ -58,7 +58,7 @@ const wide = [
 // How many pixels each disc drifts, up or down, while the field crosses the screen.
 const DEPTHS = [-8, 12, -16, 9, -13, 18, -9, 14, -18];
 
-// The launch drawing stays on the line of the last word of the name.
+// The view mark stays on the line of the last word of the name.
 const places = PLACES.map((place, i) => {
   const words = place.name.split(' ');
   const name = { head: words.slice(0, -1).join(' '), last: words.at(-1)! };
@@ -101,7 +101,7 @@ const vars = (p: (typeof places)[number]) =>
                   {p.name.head}{' '}
                   <span class="last">
                     {p.name.last}
-                    <Icon name="launch" />
+                    <Icon name="view" />
                   </span>
                 </b>
                 <span class="far small">{p.place.factId ? fact(p.place.factId).short : p.place.note}</span>
@@ -366,8 +366,18 @@ const vars = (p: (typeof places)[number]) =>
     white-space: nowrap;
   }
 
+  /* The view mark at the size and dimness it has under every picture; pointing at the place lights it. */
   b :global(.glyph) {
+    width: 1rem;
+    height: 1rem;
     margin-left: 0.25rem;
+    stroke: var(--site-text-dim);
+    transition: stroke 0.25s ease;
+  }
+
+  .thing:hover b :global(.glyph),
+  .thing:focus-visible b :global(.glyph) {
+    stroke: var(--color-accent);
   }
 
   .far {

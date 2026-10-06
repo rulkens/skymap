@@ -23,8 +23,6 @@ export const ICONS: Record<IconName, string> = {
   app: 'M4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-13A1.5 1.5 0 0 1 4.5 4zM3 7.75h18M12 10.75c.3 2.1 1.4 3.2 3.5 3.5-2.1.3-3.2 1.4-3.5 3.5-.3-2.1-1.4-3.2-3.5-3.5 2.1-.3 3.2-1.4 3.5-3.5z',
   // One exact view: a viewfinder's corners about the point it is aimed at. Drawn to be shown at 16px.
   view: VIEW,
-  // Places asks for the view mark by this name.
-  launch: VIEW,
   // A link that leaves the site: an arrow out of a frame.
   outbound: 'M10.5 5.5h-4A1.5 1.5 0 0 0 5 7v10.5A1.5 1.5 0 0 0 6.5 19H17a1.5 1.5 0 0 0 1.5-1.5v-4M14.5 4H20v5.5M20 4l-8.5 8.5',
   // A picture and the credit line under it.
