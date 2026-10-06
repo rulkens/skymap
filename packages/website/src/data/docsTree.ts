@@ -16,7 +16,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'A first flight, what the scene holds, and whether the app runs on your machine.',
     up: '/',
     pages: [
-      { title: 'First flight', path: '/docs/start/first-flight/', status: 'planned' },
+      { title: 'First flight', path: '/docs/start/first-flight/', status: 'live' },
       { title: 'What is in the scene', path: '/docs/start/scene/', status: 'planned' },
       {
         title: 'Browser support and troubleshooting',
