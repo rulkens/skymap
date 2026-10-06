@@ -4,12 +4,12 @@ import Claims from '../components/Claims.astro';
 import Credits from '../components/Credits.astro';
 import FullFigure from '../components/FullFigure.astro';
 import ObjLink from '../components/ObjLink.astro';
+import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import SourceTable from '../components/SourceTable.astro';
-import { appLink } from '../data/appLink';
 import { CITATION } from '../data/citation';
 import { DATA_SOURCES } from '../data/dataSources';
 import { fact } from '../data/fact';
@@ -300,7 +300,9 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       <ObjLink href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
       <ObjLink href={sitePath('/classroom/')}>Use it in the classroom</ObjLink>
       <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
-      <ObjLink href={appLink()}>Fly it yourself</ObjLink>
+    </div>
+    <div class="onward">
+      <OpenApp />
     </div>
   </section>
 

@@ -2,14 +2,19 @@
 /*
  * ObjLink — a link dressed as the site's one control, the ring plus a label
  * (styles/site.css `.ring`, shared with the menu's summary and real buttons).
+ * With `icon`, the drawing takes the marker's place and the ring is drawn
+ * around it when the link is pointed at, focused or the current page.
  */
 import type { HTMLAttributes } from 'astro/types';
 
-type Props = HTMLAttributes<'a'> & { href: string; size?: 'small' | 'default' | 'big' };
+import type { IconName } from '../@types/IconName';
+import Icon from './Icon.astro';
 
-const { size = 'default', class: extra, ...rest } = Astro.props;
+type Props = HTMLAttributes<'a'> & { href: string; size?: 'small' | 'default' | 'big'; icon?: IconName };
+
+const { size = 'default', icon, class: extra, ...rest } = Astro.props;
 ---
 
 <a class:list={['ring', size !== 'default' && size, extra]} {...rest}>
-  <slot />
+  {icon && <Icon name={icon} />}<slot />
 </a>

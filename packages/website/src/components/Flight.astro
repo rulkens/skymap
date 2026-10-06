@@ -10,8 +10,7 @@
  * never depends on it, so a film that fails to arrive moves nothing. Without
  * script the same list reads top to bottom as captioned pictures.
  */
-import ObjLink from './ObjLink.astro';
-import { appLink } from '../data/appLink';
+import OpenApp from './OpenApp.astro';
 import { fact } from '../data/fact';
 import { FLIGHT_STOPS } from '../data/flightStops';
 import { flightTimeline } from '../utils/flightTimeline';
@@ -68,7 +67,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
           <p class="tag">The mapped universe at true scale. You hold the camera.</p>
         </div>
         <div class="start">
-          <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+          <OpenApp />
           <small>Free. No account, nothing to install.</small>
         </div>
         <p class="hint small" aria-hidden="true">Scroll to pull back</p>
@@ -115,7 +114,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
       <div class="arrive" data-arrive>
         <p>{closing}</p>
-        <ObjLink size="big" href={appLink()}>Fly it yourself</ObjLink>
+        <OpenApp />
       </div>
 
       <div class="spine" data-spine role="group" aria-label="Stops on the flight">
@@ -172,6 +171,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
   .start small {
     display: block;
+    margin-top: 0.625rem;
     color: var(--site-text-muted);
   }
 

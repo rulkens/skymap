@@ -3,12 +3,12 @@ import Base from '../layouts/Base.astro';
 import Claims from '../components/Claims.astro';
 import Credits from '../components/Credits.astro';
 import ObjLink from '../components/ObjLink.astro';
+import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import { aboutJsonLd } from '../data/aboutJsonLd';
-import { appLink } from '../data/appLink';
 import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
 import { PRESS_PICTURES } from '../data/pressPictures';
@@ -75,7 +75,7 @@ const press = PRESS_PICTURES.map((row) => {
     <h2>What skymap is</h2>
     <p class="what">{whatIs}</p>
     <div class="links">
-      <ObjLink href={appLink()}>Fly it yourself</ObjLink>
+      <OpenApp />
       <ObjLink href={sitePath('/science/')}>Where the numbers come from</ObjLink>
     </div>
   </section>
@@ -225,6 +225,12 @@ const press = PRESS_PICTURES.map((row) => {
     flex-wrap: wrap;
     gap: 0 2.5rem;
     margin-top: 1.5rem;
+  }
+
+  /* The button is taller than a ring link and sits beside one, then above it when the row wraps. */
+  #what .links {
+    align-items: center;
+    row-gap: 0.5rem;
   }
 
   .split,

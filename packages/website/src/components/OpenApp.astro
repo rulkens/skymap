@@ -1,0 +1,63 @@
+---
+/*
+ * OpenApp — the launch control, and the site's one button: every other control
+ * is the ring (ObjLink), so the one solid block on a page is the way into the
+ * app. Same label, icon and shape wherever it appears; `small` is the bar's
+ * size. A link in fact, since it goes to another address.
+ */
+import type { HTMLAttributes } from 'astro/types';
+
+import Icon from './Icon.astro';
+import { OPEN_APP_LABEL, appLink } from '../data/appLink';
+
+type Props = Omit<HTMLAttributes<'a'>, 'href'> & { size?: 'small' | 'default' };
+
+const { size = 'default', class: extra, ...rest } = Astro.props;
+---
+
+<a class:list={['open-app', size === 'small' && 'small', extra]} href={appLink()} {...rest}>
+  <Icon name="launch" />{OPEN_APP_LABEL}
+</a>
+
+<style>
+  /* Black on the accent is 13:1. The corner is the address field's, not a capsule. */
+  .open-app {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 3.5rem;
+    padding: 0 1.5rem 0 1.25rem;
+    border-radius: 0.25rem;
+    background: var(--color-accent);
+    color: var(--color-bg);
+    font: 500 var(--text-body) / 1 var(--font-body);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    text-shadow: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+  }
+
+  .open-app:hover,
+  .open-app:focus-visible {
+    background: #fff;
+  }
+
+  .small {
+    gap: 0.5rem;
+    min-height: var(--tap);
+    padding: 0 1rem 0 0.75rem;
+    font-size: var(--text-small);
+  }
+
+  .small :global(.glyph) {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .open-app {
+      transition: none;
+    }
+  }
+</style>

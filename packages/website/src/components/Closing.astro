@@ -1,14 +1,13 @@
 ---
-import ObjLink from './ObjLink.astro';
+import OpenApp from './OpenApp.astro';
 import PictureBand from './PictureBand.astro';
 import ShotCaption from './ShotCaption.astro';
-import { appLink } from '../data/appLink';
 ---
 
 <PictureBand id="saturn" tall="saturn-portrait" words="right">
   <h2>Every picture here is an address</h2>
   <p>Open one and you are standing where it was taken. From there the camera is yours.</p>
-  <ObjLink size="big" class="go" href={appLink()}>Fly it yourself</ObjLink>
+  <OpenApp class="go" />
   <ShotCaption id="saturn" />
 </PictureBand>
 
@@ -19,5 +18,6 @@ import { appLink } from '../data/appLink';
 
   .go {
     display: flex;
+    width: fit-content;
   }
 </style>

@@ -6,12 +6,12 @@
  * picture; every other section passes under it. No script decides that.
  */
 import ObjLink from './ObjLink.astro';
-import { appLink } from '../data/appLink';
+import OpenApp from './OpenApp.astro';
 import { NAV_ITEMS } from '../data/nav';
 import { sitePath } from '../utils/sitePath';
 
 const home = sitePath('/');
-// The page you are on keeps its ring filled, like the app's selected object.
+// The page you are on keeps the ring around its icon, like the app's selected object.
 const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page' : undefined);
 ---
 
@@ -24,7 +24,7 @@ const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page
       {
         NAV_ITEMS.map((item) => (
           <li>
-            <ObjLink size="small" href={sitePath(item.path)} aria-current={current(item.path)}>
+            <ObjLink size="small" icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
               {item.label}
             </ObjLink>
           </li>
@@ -39,7 +39,7 @@ const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page
         {
           NAV_ITEMS.map((item) => (
             <li>
-              <ObjLink href={sitePath(item.path)} aria-current={current(item.path)}>
+              <ObjLink icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
                 {item.label}
               </ObjLink>
             </li>
@@ -49,7 +49,7 @@ const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page
     </details>
   </nav>
 
-  <ObjLink size="small" class="launch" href={appLink()}>Fly it yourself</ObjLink>
+  <OpenApp size="small" />
 </header>
 
 <script>

@@ -5,6 +5,7 @@ import ObjLink from '../components/ObjLink.astro';
 import PictureBand from '../components/PictureBand.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
+import { OPEN_APP_LABEL } from '../data/appLink';
 import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
 import { MAKER_NAME } from '../data/siteIdentity';
@@ -64,7 +65,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
   <section class="wrap section" id="app">
     <div class="head">
       <h2>The app</h2>
-      <p>The map itself, which opens when you choose “Fly it yourself”. It does more than the pages do, so there is more to say.</p>
+      <p>The map itself, which opens when you choose “{OPEN_APP_LABEL}”. It does more than the pages do, so there is more to say.</p>
     </div>
     <h3>The visit counter</h3>
     <Claims items={COUNTER} />

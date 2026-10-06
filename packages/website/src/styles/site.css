@@ -236,8 +236,60 @@ img {
   height: 0.6875rem;
 }
 
+/*
+ * A navigation link carries a drawing of its destination where the marker
+ * would be (components/Icon.astro). The ring is still the selection: it is
+ * drawn around the drawing when the link is pointed at, focused or the page
+ * you are on. Padding and border are taken back by the margin, so the ring
+ * costs no room and the label does not move.
+ */
+.ring:has(> .glyph) {
+  gap: 1.125rem;
+}
+
+.ring.small:has(> .glyph) {
+  gap: 0.875rem;
+}
+
+.ring:has(> .glyph)::before {
+  content: none;
+}
+
+.glyph {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring > .glyph {
+  box-sizing: content-box;
+  margin: -0.4375rem;
+  padding: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  stroke: var(--color-accent);
+  transition: border-color 0.25s ease;
+}
+
+.ring.small > .glyph {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ring:hover > .glyph,
+.ring:focus-visible > .glyph,
+.ring[aria-current='page'] > .glyph {
+  border-color: var(--color-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ring::before {
+  .ring::before,
+  .glyph {
     transition: none;
   }
 }

@@ -14,8 +14,8 @@ import { sitePath } from '../utils/sitePath';
   </p>
   <p class="light" data-light>{fact('speed-of-light').short}</p>
   <nav aria-label="Footer">
-    {FOOTER_ITEMS.map((item) => <ObjLink size="small" href={sitePath(item.path)}>{item.label}</ObjLink>)}
-    <ObjLink size="small" href={REPO_URL}>GitHub</ObjLink>
+    {FOOTER_ITEMS.map((item) => <ObjLink size="small" icon={item.icon} href={sitePath(item.path)}>{item.label}</ObjLink>)}
+    <ObjLink size="small" icon="code" href={REPO_URL}>GitHub</ObjLink>
   </nav>
 </footer>
 
