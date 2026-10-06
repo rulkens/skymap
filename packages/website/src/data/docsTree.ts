@@ -31,7 +31,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Each thing the app does, one task to a page.',
     up: '/classroom/',
     pages: [
-      { title: 'Moving around', path: '/docs/guide/moving/', status: 'planned' },
+      { title: 'Moving around', path: '/docs/guide/moving/', status: 'live' },
       { title: 'Finding things', path: '/docs/guide/finding/', status: 'planned' },
       { title: 'Time', path: '/docs/guide/time/', status: 'planned' },
       { title: 'Tours and exhibits', path: '/docs/guide/tours/', status: 'planned' },
