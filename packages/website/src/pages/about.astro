@@ -1,22 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
+import Beside from '../components/Beside.astro';
 import Claims from '../components/Claims.astro';
+import Columns from '../components/Columns.astro';
 import Credits from '../components/Credits.astro';
+import Figure from '../components/Figure.astro';
+import LinkRow from '../components/LinkRow.astro';
+import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
+import Onward from '../components/Onward.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
-import Shot from '../components/Shot.astro';
+import PressPictures from '../components/PressPictures.astro';
+import SectionHead from '../components/SectionHead.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import { aboutJsonLd } from '../data/aboutJsonLd';
 import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
 import { fact } from '../data/fact';
-import { PRESS_PICTURES } from '../data/pressPictures';
-import { siteShot } from '../data/siteShot';
 import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
-import { shotSources } from '../utils/shotSources';
 import { sitePath } from '../utils/sitePath';
 
 const title = 'About skymap: who makes it and how to reach us';
@@ -50,11 +54,6 @@ const factIds = [
 const whatIs = fact('about-what-is').text;
 const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
 const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
-const press = PRESS_PICTURES.map((row) => {
-  const shot = siteShot(row.shot);
-  // The manifest lists widths widest first, and the srcset keeps that order.
-  return { ...row, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
-});
 ---
 
 <Base
@@ -74,46 +73,47 @@ const press = PRESS_PICTURES.map((row) => {
   <section class="wrap section" id="what">
     <h2>What skymap is</h2>
     <p class="what">{whatIs}</p>
-    <div class="links">
+    <Onward>
       <OpenApp />
       <ObjLink href={sitePath('/science/')}>Where the numbers come from</ObjLink>
-    </div>
+    </Onward>
   </section>
 
-  <section class="wrap section split" id="maker">
-    <div>
-      <h2>Who makes it</h2>
-      <p>{fact('about-maker').text}</p>
-      <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
-      <p>{fact('about-ai').text}</p>
-      <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
-    </div>
-    <div class="alive">
-      <h3>Open source, and maintained</h3>
-      <Claims items={ALIVE} />
-      <div class="links">
-        <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
-        <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+  <section class="wrap section" id="maker">
+    <Columns count={2}>
+      <div>
+        <h2>Who makes it</h2>
+        <p>{fact('about-maker').text}</p>
+        <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
+        <p>{fact('about-ai').text}</p>
+        <ObjLink hang size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
       </div>
-    </div>
+      <div class="alive">
+        <h3>Open source, and maintained</h3>
+        <Claims items={ALIVE} narrow />
+        <LinkRow>
+          <ObjLink hang size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
+          <ObjLink hang size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+        </LinkRow>
+      </div>
+    </Columns>
   </section>
 
-  <section class="wrap section dome" id="dome">
-    <figure>
-      <div class="disc"><Shot id="dome-saturn" sizes="(max-width: 900px) 70vw, 28rem" /></div>
-      <figcaption><ShotCaption id="dome-saturn" /></figcaption>
-    </figure>
-    <div>
-      <h2>Shown in a dome</h2>
-      <p>{fact('wisdome-showing').text}</p>
-      <p>{fact('wisdome-venue').text}</p>
-      <ObjLink hang href={sitePath('/domes/')}>What we do for domes</ObjLink>
-    </div>
+  <section class="wrap section" id="dome">
+    <Beside picture="28rem" wordsFirst>
+      <Figure id="dome-saturn" sizes="(max-width: 900px) 70vw, 28rem" disc="plain" />
+      <div>
+        <h2>Shown in a dome</h2>
+        <p>{fact('wisdome-showing').text}</p>
+        <p>{fact('wisdome-venue').text}</p>
+        <ObjLink hang href={sitePath('/domes/')}>What we do for domes</ObjLink>
+      </div>
+    </Beside>
   </section>
 
   <section class="wrap section" id="contact">
     <h2>Get in touch</h2>
-    <div class="routes">
+    <Columns count={2}>
       <div>
         <h3>For a dome, a museum or a commission</h3>
         {
@@ -136,64 +136,33 @@ const press = PRESS_PICTURES.map((row) => {
         </p>
         <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
       </div>
-    </div>
-    <p class="small note">
+    </Columns>
+    <Note>
       We publish no email address. What the site and the app load and keep is on the{' '}
       <a href={sitePath('/privacy/')}>privacy page</a>.
-    </p>
+    </Note>
   </section>
 
   <section class="wrap section" id="press">
-    <div class="head">
-      <h2>Pictures you can reuse</h2>
+    <SectionHead title="Pictures you can reuse" narrow>
       <p>
         {fact('about-picture-licence').text} Each picture below lists what is in it and the credit to print. Its
         address opens the same view in the app, where you can take your own.
       </p>
-    </div>
-    <ul class="press">
-      {
-        press.map((row) => (
-          <li>
-            <figure>
-              <Shot id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" />
-              <figcaption>
-                <h3>{row.title}</h3>
-                <ShotCaption id={row.shot} />
-                <dl class="small">
-                  <div>
-                    <dt>Credit</dt>
-                    <dd>{row.credit}.</dd>
-                  </div>
-                  <div>
-                    <dt>Reuse</dt>
-                    <dd>
-                      {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
-                      {row.terms}
-                    </dd>
-                  </div>
-                </dl>
-                <ObjLink hang size="small" href={row.file}>
-                  {row.title}: the file, {row.width.toLocaleString('en-GB')} pixels wide
-                </ObjLink>
-              </figcaption>
-            </figure>
-          </li>
-        ))
-      }
-    </ul>
-    <p class="small note">
-      {fact('gaia-licence').text} <a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures
+    </SectionHead>
+    <PressPictures />
+    <Note>
+      {fact('gaia-licence').text}{' '}
+      <a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures
       that show Earth close up or a photograph of a galaxy are not offered here, because their imagery has terms we
       cannot pass on in one line. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.
-    </p>
+    </Note>
   </section>
 
   <section class="wrap section" id="colophon">
-    <div class="head">
-      <h2>Colophon</h2>
+    <SectionHead title="Colophon" narrow>
       <p>How this site is made. Checked on {formatDate(fact('about-built-with').checked)}.</p>
-    </div>
+    </SectionHead>
     <Claims items={COLOPHON} />
   </section>
 
@@ -204,14 +173,6 @@ const press = PRESS_PICTURES.map((row) => {
 </Base>
 
 <style>
-  h1 {
-    font-size: var(--text-h2);
-  }
-
-  .say {
-    font-size: var(--text-lead);
-  }
-
   /* The paragraph people quote: set large, at a measure a quote box can hold. */
   .what {
     max-width: 34em;
@@ -220,165 +181,8 @@ const press = PRESS_PICTURES.map((row) => {
     color: var(--site-text);
   }
 
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2.5rem;
-    margin-top: 1.5rem;
-  }
-
-  /* The button is taller than a ring link and sits beside one, then above it when the row wraps. */
-  #what .links {
-    align-items: center;
-    row-gap: 0.5rem;
-  }
-
-  .split,
-  .routes {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3rem 3.75rem;
-  }
-
-  .split > div,
-  .routes > div {
-    min-width: 0;
-  }
-
+  /* The shorter column stands on the foot of the row, level with the maker's link. */
   .alive {
     align-self: end;
-  }
-
-  .alive h3,
-  .routes h3 {
-    margin-bottom: 1rem;
-  }
-
-  /* The right column is half the page: the term column narrows to fit it. */
-  .alive :global(.claims > div) {
-    grid-template-columns: 6.5rem minmax(0, 1fr);
-    gap: 0.25rem 1.5rem;
-  }
-
-  .dome {
-    display: grid;
-    grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
-    gap: 3rem 5rem;
-    align-items: center;
-  }
-
-  figure {
-    margin: 0;
-  }
-
-  figure :global(img) {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  figcaption {
-    margin-top: 0.75rem;
-  }
-
-  /* The frame is the app's fisheye output, a disc in a square: the mask trims only its black corners. */
-  .disc {
-    overflow: hidden;
-    border-radius: 50%;
-    aspect-ratio: 1;
-  }
-
-  .routes {
-    margin-top: 1.5rem;
-  }
-
-  .note {
-    max-width: 68ch;
-    margin: 2.5rem 0 0;
-    color: var(--site-text-dim);
-  }
-
-  .note a {
-    display: inline-block;
-    padding-block: 0.625rem;
-    margin-block: -0.625rem;
-  }
-
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem 3rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .head h2,
-  .head p {
-    margin: 0;
-  }
-
-  .head h2 {
-    max-width: 12ch;
-  }
-
-  .head p {
-    max-width: var(--measure-lead);
-  }
-
-  .press {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4rem 3.75rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .press h3 {
-    margin-bottom: 0.5rem;
-  }
-
-  .press dl {
-    margin: 1rem 0 0.5rem;
-  }
-
-  .press dl > div {
-    display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-    gap: 1rem;
-    padding-block: 0.75rem;
-    border-top: 1px solid var(--border-divider);
-  }
-
-  .press dt {
-    color: var(--color-fg);
-  }
-
-  .press dd {
-    margin: 0;
-    color: var(--site-text-muted);
-  }
-
-  @media (max-width: 900px) {
-    .split,
-    .routes,
-    .dome,
-    .press {
-      grid-template-columns: 1fr;
-    }
-
-    .dome figure {
-      max-width: 24rem;
-    }
-
-    /* The name before its picture, as on the domes page. */
-    .dome > div {
-      order: -1;
-    }
-
-    .alive :global(.claims > div) {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

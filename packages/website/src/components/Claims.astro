@@ -3,15 +3,16 @@
  * Claims — a list of sourced statements, each a short name beside the fact
  * row's own words and the link that backs them. Wide, names run down a left
  * column so the list scans; narrow, each name sits over its statement.
+ * `narrow` shortens the name column, for a list in half the page's width.
  */
 import { fact } from '../data/fact';
 
-type Props = { items: readonly { term: string; id: string }[] };
+type Props = { items: readonly { term: string; id: string }[]; narrow?: boolean };
 
-const { items } = Astro.props;
+const { items, narrow = false } = Astro.props;
 ---
 
-<dl class="claims small">
+<dl class:list={['claims small', { narrow }]}>
   {
     items.map(({ term, id }) => {
       const row = fact(id);
@@ -38,6 +39,11 @@ const { items } = Astro.props;
     gap: 0.25rem 2rem;
     padding-block: 1rem;
     border-top: 1px solid var(--border-divider);
+  }
+
+  .narrow > div {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    column-gap: 1.5rem;
   }
 
   dt {

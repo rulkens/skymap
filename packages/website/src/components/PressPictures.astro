@@ -1,0 +1,83 @@
+---
+/*
+ * PressPictures — the pictures offered for reuse, two to a row: each with its
+ * name, its label, the credit to print, the terms, and a link to the widest
+ * file the site holds.
+ */
+import Figure from './Figure.astro';
+import ObjLink from './ObjLink.astro';
+import { PRESS_PICTURES } from '../data/pressPictures';
+import { siteShot } from '../data/siteShot';
+import { shotSources } from '../utils/shotSources';
+
+const press = PRESS_PICTURES.map((row) => {
+  const shot = siteShot(row.shot);
+  // The manifest lists widths widest first, and the srcset keeps that order.
+  return { ...row, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
+});
+---
+
+<ul>
+  {
+    press.map((row) => (
+      <li>
+        <Figure id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" title={row.title}>
+          <dl class="small">
+            <div>
+              <dt>Credit</dt>
+              <dd>{row.credit}.</dd>
+            </div>
+            <div>
+              <dt>Reuse</dt>
+              <dd>
+                {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
+                {row.terms}
+              </dd>
+            </div>
+          </dl>
+          <ObjLink hang size="small" href={row.file}>
+            {row.title}: the file, {row.width.toLocaleString('en-GB')} pixels wide
+          </ObjLink>
+        </Figure>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem 3.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  dl {
+    margin: 1rem 0 0.5rem;
+  }
+
+  dl > div {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    color: var(--color-fg);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    ul {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

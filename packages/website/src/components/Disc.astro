@@ -1,18 +1,19 @@
 ---
 /*
  * Disc — a fisheye frame from the app's dome mode, shown round with a ring
- * about it. The frame is a disc inscribed in a square, so the round mask trims
- * only its black corners. It is as wide as the box it is put in; the ring
- * stands 1.1875rem outside that, which the host leaves room for.
+ * about it (`ring={false}` leaves the ring off). The frame is a disc inscribed
+ * in a square, so the round mask trims only its black corners. It is as wide
+ * as the box it is put in; the ring stands 1.1875rem outside that, which the
+ * host leaves room for.
  */
 import Shot from './Shot.astro';
 
-type Props = { id: string; sizes: string; eager?: boolean };
+type Props = { id: string; sizes: string; eager?: boolean; ring?: boolean };
 
-const { id, sizes, eager = false } = Astro.props;
+const { id, sizes, eager = false, ring = true } = Astro.props;
 ---
 
-<div class="disc">
+<div class:list={['disc', { ringed: ring }]}>
   <Shot id={id} sizes={sizes} eager={eager} />
 </div>
 
@@ -22,6 +23,9 @@ const { id, sizes, eager = false } = Astro.props;
     aspect-ratio: 1;
     border-radius: 50%;
     overflow: hidden;
+  }
+
+  .ringed {
     box-shadow:
       0 0 0 1px rgb(232 238 255 / 0.5),
       0 0 0 1.125rem #000,
