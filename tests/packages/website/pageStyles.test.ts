@@ -5,11 +5,11 @@
  * in a component (see components/), and a page with no entry gets none.
  */
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const PAGES = 'packages/website/src/pages';
+const PAGES = resolve(import.meta.dirname, '../../../packages/website/src/pages');
 
 const ALLOWED: Record<string, number> = {
   // The quoted paragraph's measure, and the short column standing on the foot of its row.

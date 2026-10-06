@@ -9,13 +9,14 @@
  * without being listed here.
  */
 import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { launchChromium } from '../utils/browser/launchChromium';
 import type { FoldMeasure } from './@types/FoldMeasure';
 import { FOLD_SIZES } from './foldSizes';
 import { foldVerdict } from './utils/foldVerdict';
 
-const PAGES_DIR = 'packages/website/src/pages';
+const PAGES_DIR = resolve(import.meta.dirname, '../../packages/website/src/pages');
 // Fonts and the first picture decide the layout; the flight on Home never goes network-idle.
 const SETTLE_MS = 800;
 
@@ -26,10 +27,10 @@ if (!base) {
   process.exit(1);
 }
 
-const routes = readdirSync(PAGES_DIR)
+const routes = readdirSync(PAGES_DIR, { recursive: true, encoding: 'utf8' })
   .filter((name) => name.endsWith('.astro'))
-  .map((name) => name.replace(/\.astro$/, ''))
-  .map((name) => (name === 'index' ? '' : `${name}/`));
+  .map((name) => name.replace(/(index)?\.astro$/, ''))
+  .map((name) => (name === '' || name.endsWith('/') ? name : `${name}/`));
 
 const failures: string[] = [];
 const browser = await launchChromium();

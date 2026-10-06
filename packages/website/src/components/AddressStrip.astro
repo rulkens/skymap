@@ -49,27 +49,30 @@ const params = hash.split('&').map((pair) => {
       button.setAttribute('aria-label', text);
       button.toggleAttribute('data-copied', text !== label);
     };
-    button.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(button.dataset.copy!);
-      say('Copied');
-      setTimeout(() => say(label), 2000);
+    // No clipboard on plain http, and a permission can be refused: then the label stays as it was.
+    button.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(button.dataset.copy!).then(
+        () => {
+          say('Copied');
+          setTimeout(() => say(label), 2000);
+        },
+        () => {},
+      );
     });
   }
 </script>
 
 <style>
+  /* The wrapper centres the field in a column taller than it (the classroom page's row under its steps). */
   .strip {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 0 1.5rem;
     margin-top: 0.75rem;
   }
 
   .field {
     display: flex;
-    flex: 1 1 18rem;
-    align-items: stretch;
+    flex: 1;
     min-width: 0;
     border: 1px solid rgb(232 238 255 / 0.28);
     border-radius: 0.25rem;

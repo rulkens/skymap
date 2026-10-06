@@ -5,11 +5,11 @@
  * an app address to a page's ring or grow a second launch control.
  */
 import { readFileSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const SRC = 'packages/website/src';
+const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
 
 // Feature hands its `href` to a ViewLink.
 const VIEW_LINK_TAGS = ['ViewLink', 'Feature'];

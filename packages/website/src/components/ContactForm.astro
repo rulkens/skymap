@@ -108,6 +108,8 @@ const FIELDS = [
 }
 
 <script>
+  import type { TurnstileApi } from '../@types/TurnstileApi';
+
   const form = document.querySelector<HTMLFormElement>('[data-contact]');
   if (form) {
     const summary = form.querySelector<HTMLElement>('[data-summary]')!;
@@ -117,17 +119,15 @@ const FIELDS = [
     form.noValidate = true;
 
     // The widget is a request to Cloudflare, so it waits until the form is on screen. A token is single-use: reset after every attempt.
-    type TurnstileApi = {
-      render(el: HTMLElement, options: Record<string, unknown>): string;
-      reset(id: string): void;
-    };
     const turnstile = () => (window as unknown as { turnstile?: TurnstileApi }).turnstile;
     let token = '';
+    let blocked = false;
     let widgetId: string | undefined;
     const loadWidget = () => {
       const script = Object.assign(document.createElement('script'), {
         src: 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
         async: true,
+        onerror: () => (blocked = true),
         onload: () => {
           widgetId = turnstile()?.render(form.querySelector<HTMLElement>('[data-turnstile]')!, {
             sitekey: form.dataset.sitekey,
@@ -180,18 +180,20 @@ const FIELDS = [
         return;
       }
       if (!token) {
-        status.textContent = 'The spam check has not finished. Wait a moment, then send again.';
+        status.textContent = blocked
+          ? 'The spam check could not load, so this form cannot send from your browser. The issue list on GitHub reaches us too.'
+          : 'The spam check has not finished. Wait a moment, then send again.';
         return;
       }
       const button = form.querySelector('button')!;
       button.disabled = true;
       status.textContent = 'Sending.';
       try {
-        const { 'cf-turnstile-response': _widget, ...fields } = Object.fromEntries(new FormData(form));
+        const { 'cf-turnstile-response': _widget, ...values } = Object.fromEntries(new FormData(form));
         const response = await fetch(form.action, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ ...fields, token }),
+          body: JSON.stringify({ ...values, token }),
         });
         if (!response.ok) throw new Error(String(response.status));
         form.reset();

@@ -41,11 +41,11 @@ const sizes = (view: GalleryView) =>
 
 <section
   class:list={['band', `words-${words}`, `gap-${gap}`, zoom !== 1 && 'zoomed']}
-  data-opening={gap === 'none'}
-  data-gallery={many}
+  data-opening={gap === 'none' || undefined}
+  data-gallery={many || undefined}
   style={`--zoom:${zoom}; --shape:${shape(first.id)}; --shape-tall:${shape(first.tall ?? first.id)}`}
 >
-  <div class:list={['back', many && 'many']} data-views={many}>
+  <div class:list={['back', many && 'many']} data-views={many || undefined}>
     {views.map((view, i) => <Shot id={view.id} tall={view.tall} sizes={sizes(view)} eager={eager && i === 0} />)}
   </div>
   <div class="wrap copy">
