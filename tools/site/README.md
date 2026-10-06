@@ -2,12 +2,13 @@
 
 One-shot generators for the website's committed assets and its hero media. Each is run by hand when its input changes.
 
-| Script                 | Run                                       | Writes                                                                          |
-| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
-| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`       | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                    |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`       | `public/apple-touch-icon.png` from `public/favicon.svg`                         |
-| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`       | the flight's stills (one pair per stop) and its scrub video, from the recording |
-| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts` | the site's subset of Cormorant Garamond (needs `pyftsubset`)                    |
+| Script                 | Run                                        | Writes                                                                          |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
+| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                    |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`        | `public/apple-touch-icon.png` from `public/favicon.svg`                         |
+| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`        | the flight's stills (one pair per stop) and its scrub video, from the recording |
+| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>` | every picture in the shot manifest, AVIF and WebP, and the link-preview card    |
+| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                    |
 
 ## Hero media
 
@@ -19,6 +20,16 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - **Versioning**: the production copy is served `immutable`. New bytes need a new `videoFile` name (bump `v1`); the site reads the name from the plan.
 - **Upload** is the owner's step: see "Site media" in `docs/DEPLOY.md`.
 - After changing a cut point, re-check every stop's name against its still: each name must be something drawn or labelled in that frame.
+
+## Shots
+
+`npm run site:shots -- --url http://localhost:<port>` takes every row of `packages/website/src/data/siteShots.ts` from a running app (this checkout's `npm run dev`, with catalogue data: see the `link-data` skill) and writes it to `packages/website/src/assets/shots/<id>-<width>.avif` and `.webp`, which are committed. Nothing is resized at build: the pages read those files by id.
+
+- A deep link carries no settings, so a row's `settings` lists what the runner changes after the link has loaded (labels off, a layer on, a lens). `tools/site/utils/siteShotActions.ts` turns them into store actions; `npm run shot` itself is untouched.
+- Each row is shot at twice its `size` and kept as a PNG in `data/shots/site/` (gitignored). `--from-masters` re-encodes from those, for a change of widths or quality; `--only id,id` limits a run.
+- The last step sets the link-preview card (`packages/website/src/assets/og-card.jpg`) from the `og-card` row, in the browser so the wordmark is the repo's Cormorant.
+- Look at every picture after a run. Surface imagery streams in late (`settleMs`), and `tour-cosmic-web` is taken from a tour that keeps turning, so its framing differs a little each time.
+- Budget: at most about 400 KB for a row's largest file. The runner prints each file's size.
 
 ## Link check
 
