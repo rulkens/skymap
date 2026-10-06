@@ -6,6 +6,7 @@ import FullFigure from '../components/FullFigure.astro';
 import ObjLink from '../components/ObjLink.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
+import Remark from '../components/Remark.astro';
 import SectionNav from '../components/SectionNav.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
@@ -120,6 +121,7 @@ const factIds = [
   'sci-built-counts',
   'sci-cite-skymap',
   'sci-cite-file',
+  'astronomical-unit',
 ];
 const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 ---
@@ -235,6 +237,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       </figure>
       <Claims items={DRAWN} />
     </div>
+    <Remark text={fact('astronomical-unit').short!} />
   </section>
 
   <FullFigure id="science-zoa" />

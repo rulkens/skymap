@@ -78,14 +78,10 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
 <script>
   import { lightSinceLine } from '../utils/lightSinceLine';
+  import { liveLine } from '../utils/liveLine';
 
-  // Worked out when the footer comes into view and then left alone: a figure that kept counting would be motion.
   const line = document.querySelector<HTMLElement>('[data-light]');
-  if (line) {
-    new IntersectionObserver(([entry]) => {
-      if (entry!.isIntersecting) line.textContent = lightSinceLine(performance.now() / 1000);
-    }).observe(line);
-  }
+  if (line) liveLine(line, () => lightSinceLine(performance.now() / 1000));
 </script>
 
 <style>

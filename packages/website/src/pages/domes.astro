@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import ContactForm from '../components/ContactForm.astro';
 import Credits from '../components/Credits.astro';
 import ObjLink from '../components/ObjLink.astro';
+import Remark from '../components/Remark.astro';
 import Shot from '../components/Shot.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
@@ -29,6 +30,7 @@ const factIds = [
   'exhibits',
   'kiosk-planned',
   'imagery-licences',
+  'earth-rotation',
 ];
 const STEPS = [
   {
@@ -187,6 +189,7 @@ const STEPS = [
         <ObjLink size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
       </div>
     </div>
+    <Remark text={fact('earth-rotation').short!} live="dome-turn" />
   </section>
 
   <section class="wrap section" id="commission">

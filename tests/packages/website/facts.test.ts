@@ -37,6 +37,11 @@ describe('website facts', () => {
     expect((1 / 0.7680665) * LY_PER_PC).toBeCloseTo(4.25, 2);
   });
 
+  it('Earth’s turn and its travel along its orbit match the fact sheet’s period and speed', () => {
+    expect(Math.round(360 / 23.9345)).toBe(15);
+    expect(Number((29.78 * 45 * 60).toPrecision(2))).toBe(80_000);
+  });
+
   it('the Voyager 1 trip to Proxima Centauri takes about 75,000 years', () => {
     const years = (4.2465 * KM_PER_LY) / 17.0 / YEAR_S;
     expect(years).toBeGreaterThan(74_000);

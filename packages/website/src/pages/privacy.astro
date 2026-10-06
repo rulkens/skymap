@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import Claims from '../components/Claims.astro';
 import ObjLink from '../components/ObjLink.astro';
 import PictureBand from '../components/PictureBand.astro';
+import Remark from '../components/Remark.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import { OPEN_APP_LABEL } from '../data/appLink';
@@ -60,6 +61,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
       <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, and this one.</p>
     </div>
     <Claims items={SITE} />
+    <Remark text="Your browser fetched every file on this page from skymap’s own addresses." live="files-fetched" />
   </section>
 
   <section class="wrap section" id="app">

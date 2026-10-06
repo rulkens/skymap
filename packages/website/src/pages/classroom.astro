@@ -10,6 +10,7 @@ import ObjLink from '../components/ObjLink.astro';
 import Onward from '../components/Onward.astro';
 import OpenApp from '../components/OpenApp.astro';
 import PictureBand from '../components/PictureBand.astro';
+import Remark from '../components/Remark.astro';
 import SectionHead from '../components/SectionHead.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
@@ -41,6 +42,7 @@ const said = [
   'no-account',
   'english-only',
   'phone-data-size',
+  'earth-orbit-speed',
 ];
 const factIds = [
   ...CLASS_FEATURES.flatMap((feature) => feature.factIds),
@@ -87,6 +89,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
         </Feature>
       ))
     }
+    <Remark text={says('earth-orbit-speed')} />
   </section>
 
   <section class="wrap section" id="links">
