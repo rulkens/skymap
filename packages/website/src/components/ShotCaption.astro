@@ -63,15 +63,16 @@ const shot = siteShot(id);
 
   /*
    * For a host that lays the label along the foot of a full-width picture (PictureBand, Tour, the 404 page): it
-   * sets `--caption-foot: ''` and a top padding of 4rem, and the picture then ends at the label, black from the
-   * rule down across the whole window. The host clips the overflow and keeps 2rem under the label.
+   * sets `--caption-foot: ''` and a top padding of `--caption-rise` (4rem unless it sets one), and the picture
+   * then ends at the label, black from the rule down across the whole window. The host clips the overflow and
+   * keeps 2rem under the label.
    */
   .caption::before {
     content: var(--caption-foot, none);
     position: absolute;
     z-index: -1;
     inset: 0 calc(50% - 50vw) -2rem;
-    background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 4rem);
+    background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
   }
 
   /* 0.34 is the faintest the rule can be and still read as a line over a starfield. */

@@ -2,6 +2,8 @@
 import Base from '../layouts/Base.astro';
 import ContactForm from '../components/ContactForm.astro';
 import Credits from '../components/Credits.astro';
+import Disc from '../components/Disc.astro';
+import DiscBand from '../components/DiscBand.astro';
 import ObjLink from '../components/ObjLink.astro';
 import Remark from '../components/Remark.astro';
 import Shot from '../components/Shot.astro';
@@ -57,34 +59,24 @@ const STEPS = [
   description={description}
   jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}
 >
-  <section class="wrap hero">
-    <div class="words">
-      <h1>Domes and museums</h1>
-      <p class="proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
-      <p>
-        {fact('wisdome-venue').text}{' '}
-        {fact('wisdome-dome').text}
-      </p>
-      <p class="small aside">
-        The showing is our own account: the venue has published nothing about it. The facts about the venue are the
-        venue’s.
-      </p>
-      <ObjLink href="#contact">Ask about a commission</ObjLink>
-    </div>
-    <figure>
-      <!-- The frame is the app's own fisheye output, a disc inscribed in a square: the round mask trims only its black corners. -->
-      <div class="disc">
-        <Shot id="dome-earth" sizes="(max-width: 900px) 85vw, 44rem" eager />
-      </div>
-      <figcaption>
-        <ShotCaption id="dome-earth" />
-        <p class="small px">
-          This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
-          are 4,096.
-        </p>
-      </figcaption>
-    </figure>
-  </section>
+  <!-- The disc leads: the page's subject is round, so its header is not a rectangle with words on it. -->
+  <DiscBand id="dome-earth">
+    <h1>Domes and museums</h1>
+    <p class="say proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
+    <p>
+      {fact('wisdome-venue').text}{' '}
+      {fact('wisdome-dome').text}
+    </p>
+    <p class="small aside">
+      The showing is our own account: the venue has published nothing about it. The facts about the venue are the
+      venue’s.
+    </p>
+    <ObjLink href="#contact">Ask about a commission</ObjLink>
+    <p slot="note" class="small px">
+      This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
+      are 4,096.
+    </p>
+  </DiscBand>
 
   <section class="wrap section" id="deliver">
     <div class="head">
@@ -94,7 +86,7 @@ const STEPS = [
 
     <article class="offer">
       <figure>
-        <div class="disc"><Shot id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" /></div>
+        <div class="disc"><Disc id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" /></div>
         <figcaption><ShotCaption id="dome-web" /></figcaption>
       </figure>
       <div>
@@ -227,21 +219,11 @@ const STEPS = [
 </Base>
 
 <style>
-  /* The disc leads: the page's subject is round, so its header is not a rectangle with words on it. */
-  .hero {
-    display: grid;
-    grid-template-columns: 5fr 6fr;
-    gap: 2.5rem 5rem;
-    align-items: center;
-    padding-top: 3.5rem;
-  }
-
-  h1 {
-    font-size: var(--text-h2);
-  }
-
+  /* The size is the lead's (`.say`), which an opening section sets. */
   .proof {
-    font: var(--weight-display) var(--text-lead) / 1.3 var(--font-family-display);
+    font-family: var(--font-family-display);
+    font-weight: var(--weight-display);
+    line-height: 1.3;
     color: var(--color-fg);
   }
 
@@ -257,11 +239,6 @@ const STEPS = [
     margin-top: 0.5rem;
   }
 
-  .hero figcaption {
-    max-width: 38.75rem;
-    margin: 2.5rem auto 0;
-  }
-
   .px {
     max-width: none;
     margin: 0.5rem 0 0;
@@ -269,34 +246,16 @@ const STEPS = [
     font-variant-numeric: tabular-nums;
   }
 
-  /* Never taller than the screen it is on, which matters on a phone held sideways. */
+  /* Never taller than the screen it is on, which matters on a phone held sideways; the margin is the disc's ring. */
   .disc {
-    width: 100%;
-    max-width: min(44rem, 78svh);
-    aspect-ratio: 1;
-    margin-inline: auto;
-    border-radius: 50%;
-    overflow: hidden;
-    box-shadow:
-      0 0 0 1px rgb(232 238 255 / 0.5),
-      0 0 0 1.125rem #000,
-      0 0 0 1.1875rem rgb(232 238 255 / 0.18);
-  }
-
-  .offer .disc {
     max-width: min(26rem, 78svh);
     margin: 1.1875rem auto;
   }
 
-  figure :global(img) {
+  figure > :global(picture img) {
     display: block;
     width: 100%;
     height: auto;
-  }
-
-  .disc :global(img) {
-    height: 100%;
-    object-fit: cover;
   }
 
   .head {
@@ -429,43 +388,14 @@ const STEPS = [
   }
 
   @media (max-width: 900px) {
-    .hero,
     .offer,
     .cols,
     .contact {
       grid-template-columns: 1fr;
     }
 
-    .hero {
-      padding-top: 2.5rem;
-    }
-
-    /* Phone: the name and the claim, then the disc, then the rest of the words. */
-    .hero {
-      row-gap: 0;
-    }
-
-    .words {
-      display: contents;
-    }
-
-    .hero figure {
-      order: 1;
-      margin-block: 1.5rem 2.5rem;
-    }
-
-    .words > :not(h1, .proof) {
-      order: 2;
-    }
-
-    .hero .disc,
-    .offer .disc {
+    .disc {
       max-width: min(85%, 78svh);
-    }
-
-    .hero figcaption {
-      max-width: none;
-      margin-inline: 0;
     }
 
     /* The heading first, then its picture, then the rest of the words. */

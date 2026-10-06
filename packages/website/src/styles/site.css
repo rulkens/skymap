@@ -52,6 +52,14 @@
   --stack: 1.5rem;
   --nav-height: 4.5rem;
   --tap: 2.75rem;
+
+  /*
+   * A page's opening section (`data-opening`) fits the first screen under the top bar, label included;
+   * `npm run site:fold` holds it. On a short window the rise above the picture's label gives way first.
+   */
+  --first-screen: calc(100svh - var(--nav-height));
+  --open-top: 1.5rem;
+  --open-rise: clamp(2rem, 20svh - 7.75rem, 4rem);
 }
 
 /* The 900px breakpoint is also in components/Nav.astro (CSS variables cannot be used in media queries). */
@@ -140,6 +148,18 @@ img {
   max-width: var(--wrap-max);
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/*
+ * An opening section's title and its lead (`.say`), the same on every page. Both shrink with a short window so
+ * the section still fits it: the lead stops at 20px, the floor for Jost 300.
+ */
+[data-opening] h1 {
+  font-size: min(var(--text-h2), 9svh);
+}
+
+[data-opening] .say {
+  font-size: clamp(1.25rem, 3svh, var(--text-lead));
 }
 
 /* One gap above every section of a page; the page's last block closes it. */

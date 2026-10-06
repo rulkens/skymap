@@ -119,6 +119,7 @@
     "site:check": "npm run check --workspace @skymap/website",
     "site:media": "tsx tools/site/buildHeroMedia.ts",
     "site:links": "tsx tools/site/checkSiteLinks.ts",
+    "site:fold": "tsx tools/site/checkFold.ts",
     "site:shots": "tsx tools/site/shootSiteShots.ts",
     "perf": "tsx tools/perf/measurePerf.ts",
     "preview": "vite preview",

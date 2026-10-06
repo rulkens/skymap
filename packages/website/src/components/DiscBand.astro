@@ -1,0 +1,132 @@
+---
+/*
+ * DiscBand — a page's opening section when its picture is a fisheye disc: the
+ * words beside the disc, the disc's label along the foot (`note` adds a line
+ * under it). The section is one screen tall and the disc takes the height the
+ * label leaves, so the label is never pushed off the screen. Narrow, the title
+ * and the lead (`.say`) come first, then the disc and its label, then the rest.
+ */
+import Disc from './Disc.astro';
+import ShotCaption from './ShotCaption.astro';
+
+type Props = { id: string };
+
+const { id } = Astro.props;
+---
+
+<section class="wrap band" data-opening>
+  <div class="words">
+    <slot />
+  </div>
+  <figure>
+    <div class="room">
+      <div class="fit">
+        <Disc id={id} sizes="(max-width: 900px) 85vw, 44rem" eager />
+      </div>
+    </div>
+    <figcaption>
+      <ShotCaption id={id} />
+      <slot name="note" />
+    </figcaption>
+  </figure>
+</section>
+
+<style>
+  .band {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    grid-template-rows: 1fr auto;
+    column-gap: 5rem;
+    min-height: var(--first-screen);
+    padding-block: var(--open-top) 2rem;
+  }
+
+  /* On a short window the disc is small whatever its column, so the words take the width it cannot use. */
+  @media (max-height: 800px) {
+    .band {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      column-gap: 3rem;
+    }
+
+    .words > :global(*) {
+      max-width: none;
+    }
+  }
+
+  /* Shorter still, the paragraphs under the lead are set small: at 16px Jost is 400. */
+  @media (min-width: 901px) and (max-height: 720px) {
+    .words > :global(p:not(.say)) {
+      font-size: var(--text-small);
+      font-weight: var(--weight-small);
+      line-height: 1.5;
+    }
+  }
+
+  .words {
+    align-self: center;
+  }
+
+  /* The figure's two parts are the band's own cells: the disc beside the words, the label under both. */
+  figure {
+    display: contents;
+  }
+
+  /* A size container gives its cell no height of its own, so the words and the label alone set the rows. */
+  .room {
+    container-type: size;
+    display: grid;
+    place-items: center;
+  }
+
+  /* The largest disc the room holds, less the ring that stands outside it. */
+  .fit {
+    width: calc(min(100cqw, 100cqh, 46.375rem) - 2.375rem);
+  }
+
+  figcaption {
+    grid-column: 1 / -1;
+    padding-top: var(--open-rise);
+  }
+
+  @media (max-width: 900px) {
+    .band {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      min-height: 0;
+      padding-block: 2rem 0;
+    }
+
+    .words {
+      display: contents;
+    }
+
+    .words > :global(*) {
+      order: 3;
+    }
+
+    .words > :global(a) {
+      justify-self: start;
+    }
+
+    .words > :global(:is(h1, .say)) {
+      order: 0;
+    }
+
+    .room {
+      order: 1;
+      container-type: normal;
+      margin-block: 1.5rem 2.5rem;
+    }
+
+    /* Never taller than the screen it is on, which matters on a phone held sideways. */
+    .fit {
+      width: min(85%, 78svh);
+    }
+
+    figcaption {
+      order: 2;
+      margin-bottom: 2.5rem;
+      padding-top: 0;
+    }
+  }
+</style>

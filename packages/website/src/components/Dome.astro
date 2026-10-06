@@ -1,15 +1,14 @@
 ---
+import Disc from './Disc.astro';
 import ObjLink from './ObjLink.astro';
-import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 import { sitePath } from '../utils/sitePath';
 ---
 
 <section class="wrap section row" id="dome">
   <figure>
-    <!-- The frame is the app's own fisheye output, a disc inscribed in a square: the round mask trims only its black corners. -->
     <div class="dome">
-      <Shot id="dome-saturn" sizes="(max-width: 900px) 60vw, 40vw" />
+      <Disc id="dome-saturn" sizes="(max-width: 900px) 60vw, 40vw" />
     </div>
     <figcaption><ShotCaption id="dome-saturn" /></figcaption>
   </figure>
@@ -42,23 +41,8 @@ import { sitePath } from '../utils/sitePath';
   }
 
   .dome {
-    width: 100%;
     max-width: 38.75rem;
-    aspect-ratio: 1;
     margin-inline: auto;
-    border-radius: 50%;
-    overflow: hidden;
-    box-shadow:
-      0 0 0 1px rgb(232 238 255 / 0.5),
-      0 0 0 1.125rem #000,
-      0 0 0 1.1875rem rgb(232 238 255 / 0.18);
-  }
-
-  .dome :global(img) {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
   }
 
   .proof {

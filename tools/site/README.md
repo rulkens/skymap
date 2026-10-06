@@ -35,3 +35,11 @@ One-shot generators for the website's committed assets and its hero media. Each 
 ## Link check
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. Links to planned pages that do not exist yet are listed in `notYetBuilt.ts` and reported as pending; the check fails if a listed page now exists, so the PR that builds a page deletes its row.
+
+## First-screen check
+
+`npm run site:fold -- --url http://localhost:<port>/home/` opens every page of a running website (`npm run dev --workspace @skymap/website`) in the windows of `foldSizes.ts` and fails when a page's opening section does not fit the first screen. Run it after changing a header, its copy or its picture; it needs a browser and a server, so CI does not run it.
+
+- The opening section is the one element marked `data-opening`. `PictureBand` (with `gap="none"`), `DiscBand` and the Home flight set it; a page without one fails.
+- Wide windows: the whole section ends inside the window, the picture's label included. Phones (the rows marked `phone`): the title and the lead are inside and the picture has begun; its label may be below.
+- The rule itself is `utils/foldVerdict.ts`. The room comes from `--first-screen` in the site's `site.css`.
