@@ -360,6 +360,28 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A purple web of threads across the frame, with gold knots towards the lower left where it ends.',
   },
   {
+    id: 'about-milky-way',
+    link: 'focus=milkyWay&pose=a,0,0,0,-2.22,0.6,0.05,0,0.3,0',
+    settings: { ...SUBJECT, hideZoneOfAvoidance: true, settleMs: 3000 },
+    size: WIDE,
+    widths: [1920, 1280],
+    caption:
+      'The Milky Way from outside, with its small companion galaxies around it. No camera has been there; this is a model.',
+    alt: 'A barred spiral galaxy seen from above on a field of stars, with small companion galaxies around it.',
+  },
+  {
+    // New moon, so the Sun is behind the camera and both discs are fully lit.
+    id: 'privacy-far-side',
+    link: 'focus=body-moon&t=2026-10-10T12:00:00Z&pose=a,0,0,0,4.9,0,1.3e-15,0,0.07,0',
+    settings: { ...SUBJECT, fovDeg: 14, settleMs: 4000 },
+    size: WIDE,
+    widths: [1920, 1280],
+    caption:
+      'The far side of the Moon on 10 October 2026 at 12:00 UTC, with Earth beyond it. Both positions and both lit sides are computed for that instant.',
+    alt: 'The cratered far side of the Moon, fully lit, with a small Earth beyond it against the stars.',
+    credit: 'Moon: Solar System Scope. Earth: NASA Blue Marble',
+  },
+  {
     id: 'make-search',
     link: 'focus=body-moon&t=2026-10-05T12:00:00Z',
     settings: { ui: true, searchFor: 'Jupiter', settleMs: 3000 },

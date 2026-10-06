@@ -7,7 +7,6 @@
  * deletes its row here. Add a row only for a page the spec names.
  */
 export const NOT_YET_BUILT: readonly string[] = [
-  '/about/', // site/02-landing-pages (maker, how to reach us, press images)
   '/privacy/', // site/02-landing-pages (what the contact form stores)
   '/docs/', // site/03-docs-guide T1
   '/docs/start/browsers/', // site/03-docs-guide T2 (will it run on school machines)

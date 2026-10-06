@@ -1,4 +1,5 @@
 import type { Fact } from '../@types/Fact';
+import { ABOUT_FACTS } from './aboutFacts';
 import { SCIENCE_FACTS } from './scienceFacts';
 import { REPO_BLOB } from './siteIdentity';
 
@@ -373,4 +374,5 @@ export const FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   ...SCIENCE_FACTS,
+  ...ABOUT_FACTS,
 ];

@@ -1,0 +1,378 @@
+---
+import Base from '../layouts/Base.astro';
+import Claims from '../components/Claims.astro';
+import Credits from '../components/Credits.astro';
+import ObjLink from '../components/ObjLink.astro';
+import PictureBand from '../components/PictureBand.astro';
+import Shot from '../components/Shot.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import { aboutJsonLd } from '../data/aboutJsonLd';
+import { appLink } from '../data/appLink';
+import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
+import { fact } from '../data/fact';
+import { PRESS_PICTURES } from '../data/pressPictures';
+import { siteShot } from '../data/siteShot';
+import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { formatDate } from '../utils/formatDate';
+import { shotSources } from '../utils/shotSources';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'About skymap: who makes it and how to reach us';
+const description = `skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, pictures for reuse, and a colophon.`;
+
+const ALIVE = [
+  { term: 'Licence', id: 'about-licence' },
+  { term: 'Version', id: 'about-version' },
+  { term: 'History', id: 'about-history' },
+];
+const COLOPHON = [
+  { term: 'Pictures', id: 'about-pictures' },
+  { term: 'Headings', id: 'about-display-face' },
+  { term: 'Text', id: 'about-text-face' },
+  { term: 'Font files', id: 'about-fonts-hosted' },
+  { term: 'Pages', id: 'about-built-with' },
+];
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  'about-what-is',
+  'about-maker',
+  'about-ai',
+  ...ALIVE.map((item) => item.id),
+  'wisdome-showing',
+  'wisdome-venue',
+  'about-picture-licence',
+  'gaia-licence',
+  ...COLOPHON.map((item) => item.id),
+];
+
+const whatIs = fact('about-what-is').text;
+const pageUrl = new URL(sitePath('/about/'), Astro.site).href;
+const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
+const press = PRESS_PICTURES.map((row) => {
+  const shot = siteShot(row.shot);
+  // The manifest lists widths widest first, and the srcset keeps that order.
+  return { ...row, file: shotSources(row.shot).webp.split(' ')[0]!, width: shot.widths[0]! };
+});
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[
+    breadcrumbJsonLd(Astro.site!, [{ name: 'About', path: '/about/' }]),
+    ...aboutJsonLd(Astro.site!, pageUrl, whatIs),
+  ]}
+>
+  <PictureBand id="about-milky-way" gap="none" eager>
+    <h1>About skymap</h1>
+    <p class="say">Who makes it, whether it is alive, and how to reach us.</p>
+    <ShotCaption id="about-milky-way" />
+  </PictureBand>
+
+  <section class="wrap section" id="what">
+    <h2>What skymap is</h2>
+    <p class="what">{whatIs}</p>
+    <div class="links">
+      <ObjLink href={appLink()}>Fly it yourself</ObjLink>
+      <ObjLink href={sitePath('/science/')}>Where the numbers come from</ObjLink>
+    </div>
+  </section>
+
+  <section class="wrap section split" id="maker">
+    <div>
+      <h2>Who makes it</h2>
+      <p>{fact('about-maker').text}</p>
+      <p>The “we” on this site is the project. Counted in people, it comes to one.</p>
+      <p>{fact('about-ai').text}</p>
+      <ObjLink size="small" href={makerProfile}>{MAKER_NAME} on GitHub</ObjLink>
+    </div>
+    <div class="alive">
+      <h3>Open source, and maintained</h3>
+      <Claims items={ALIVE} />
+      <div class="links">
+        <ObjLink size="small" href={REPO_URL}>The repository on GitHub</ObjLink>
+        <ObjLink size="small" href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section dome" id="dome">
+    <figure>
+      <div class="disc"><Shot id="dome-saturn" sizes="(max-width: 900px) 70vw, 28rem" /></div>
+      <figcaption><ShotCaption id="dome-saturn" /></figcaption>
+    </figure>
+    <div>
+      <h2>Shown in a dome</h2>
+      <p>{fact('wisdome-showing').text}</p>
+      <p>{fact('wisdome-venue').text}</p>
+      <ObjLink href={sitePath('/domes/')}>What we do for domes</ObjLink>
+    </div>
+  </section>
+
+  <section class="wrap section" id="contact">
+    <h2>Get in touch</h2>
+    <div class="routes">
+      <div>
+        <h3>For a dome, a museum or a commission</h3>
+        {
+          CONTACT_ENDPOINT ? (
+            <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
+          ) : (
+            <p>
+              The form on the domes page is built but not open yet: its mailbox is not connected. The page says so
+              where the form will be.
+            </p>
+          )
+        }
+        <ObjLink size="small" href={sitePath('/domes/#contact')}>The contact section of the domes page</ObjLink>
+      </div>
+      <div>
+        <h3>For a fault, a correction or a question</h3>
+        <p>
+          Open an issue in the repository. Issues are public and anyone can read them, so leave out anything
+          confidential.
+        </p>
+        <ObjLink size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
+      </div>
+    </div>
+    <p class="small note">
+      We publish no email address. What the site and the app load and keep is on the{' '}
+      <a href={sitePath('/privacy/')}>privacy page</a>.
+    </p>
+  </section>
+
+  <section class="wrap section" id="press">
+    <div class="head">
+      <h2>Pictures you can reuse</h2>
+      <p>
+        {fact('about-picture-licence').text} Each picture below lists what is in it and the credit to print. Its
+        address opens the same view in the app, where you can take your own.
+      </p>
+    </div>
+    <ul class="press">
+      {
+        press.map((row) => (
+          <li>
+            <figure>
+              <Shot id={row.shot} sizes="(max-width: 900px) 100vw, 37rem" />
+              <figcaption>
+                <h3>{row.title}</h3>
+                <ShotCaption id={row.shot} />
+                <dl class="small">
+                  <div>
+                    <dt>Credit</dt>
+                    <dd>{row.credit}.</dd>
+                  </div>
+                  <div>
+                    <dt>Reuse</dt>
+                    <dd>
+                      {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
+                      {row.terms}
+                    </dd>
+                  </div>
+                </dl>
+                <ObjLink size="small" href={row.file}>
+                  {row.title}: the file, {row.width.toLocaleString('en-GB')} pixels wide
+                </ObjLink>
+              </figcaption>
+            </figure>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="small note">
+      {fact('gaia-licence').text} <a href={fact('gaia-licence').source}>{fact('gaia-licence').sourceLabel}</a>. Pictures
+      that show Earth close up or a photograph of a galaxy are not offered here, because their imagery has terms we
+      cannot pass on in one line. The <a href={sitePath('/docs/credits/')}>credits page</a> has every source.
+    </p>
+  </section>
+
+  <section class="wrap section" id="colophon">
+    <div class="head">
+      <h2>Colophon</h2>
+      <p>How this site is made. Checked on {formatDate(fact('about-built-with').checked)}.</p>
+    </div>
+    <Claims items={COLOPHON} />
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Credits />
+  </div>
+</Base>
+
+<style>
+  h1 {
+    font-size: var(--text-h2);
+  }
+
+  .say {
+    font-size: var(--text-lead);
+  }
+
+  /* The paragraph people quote: set large, at a measure a quote box can hold. */
+  .what {
+    max-width: 34em;
+    font-size: var(--text-lead);
+    line-height: 1.5;
+    color: var(--site-text);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .split,
+  .routes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3rem 3.75rem;
+  }
+
+  .split > div,
+  .routes > div {
+    min-width: 0;
+  }
+
+  .alive {
+    align-self: end;
+  }
+
+  .alive h3,
+  .routes h3 {
+    margin-bottom: 1rem;
+  }
+
+  /* The right column is half the page: the term column narrows to fit it. */
+  .alive :global(.claims > div) {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 0.25rem 1.5rem;
+  }
+
+  .dome {
+    display: grid;
+    grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+    gap: 3rem 5rem;
+    align-items: center;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.75rem;
+  }
+
+  /* The frame is the app's fisheye output, a disc in a square: the mask trims only its black corners. */
+  .disc {
+    overflow: hidden;
+    border-radius: 50%;
+    aspect-ratio: 1;
+  }
+
+  .routes {
+    margin-top: 1.5rem;
+  }
+
+  .note {
+    max-width: 68ch;
+    margin: 2.5rem 0 0;
+    color: var(--site-text-dim);
+  }
+
+  .note a {
+    display: inline-block;
+    padding-block: 0.625rem;
+    margin-block: -0.625rem;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 3rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .head h2,
+  .head p {
+    margin: 0;
+  }
+
+  .head h2 {
+    max-width: 12ch;
+  }
+
+  .head p {
+    max-width: var(--measure-lead);
+  }
+
+  .press {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem 3.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .press h3 {
+    margin-bottom: 0.5rem;
+  }
+
+  .press dl {
+    margin: 1rem 0 0.5rem;
+  }
+
+  .press dl > div {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .press dt {
+    color: var(--color-fg);
+  }
+
+  .press dd {
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .split,
+    .routes,
+    .dome,
+    .press {
+      grid-template-columns: 1fr;
+    }
+
+    .dome figure {
+      max-width: 24rem;
+    }
+
+    /* The name before its picture, as on the domes page. */
+    .dome > div {
+      order: -1;
+    }
+
+    .alive :global(.claims > div) {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
