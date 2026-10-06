@@ -21,6 +21,9 @@ const TALL_DENSE_QUALITY = 36;
 // A lesson feature: the app's window on a laptop, and for upright screens the app on a phone or a cut of the window.
 const FEATURE = { width: 1200, height: 750 };
 const FEATURE_WIDTHS = [1600, 960];
+// A docs page sets a whole-window interface shot nine columns wide (852 px) and opens it larger on a click:
+// 2400 is the shot as taken, which covers both on a 2x screen.
+const DOCS_WIDTHS = [2400, ...FEATURE_WIDTHS];
 const PHONE = { width: 400, height: 560 };
 const PHONE_WIDTHS = [800];
 const DOME = { width: 1024, height: 1024 };
@@ -576,7 +579,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-earth',
     settings: { ui: true, settleMs: 4000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'The app once the welcome screen has closed',
     caption: 'Earth is selected, so its card is open on the right.',
     drawn: 'The white ring is the app’s selection marker. Earth is lit as it is at the moment the link is opened.',
@@ -588,7 +591,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-earth&pose=a,0,0,0,6.14,1.0,8.4e-14,0',
     settings: { ui: true, settleMs: 4000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'Earth and the Moon’s orbit, from about 2.6 million kilometres',
     drawn: 'The ring is the Moon’s orbit, drawn as a line. Earth is too small to see from here, so the small circle and the name stand in for it.',
     alt: 'A small circle labelled Earth inside a larger ring with the Moon labelled on it, among stars, with a scale bar reading a few hundred thousand kilometres.',
@@ -598,7 +601,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-earth',
     settings: { ui: true, searchFor: 'Saturn', settleMs: 3000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'The search with “Saturn” typed in',
     drawn: 'The result’s small picture was taken in the app.',
     alt: 'A search box holding the word Saturn above one result, Saturn, tagged Solar System, with the scene dimmed behind it.',
@@ -608,7 +611,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn',
     settings: { ui: true, settleMs: 4000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'Saturn, as a link to it opens',
     caption: 'Its card has replaced Earth’s.',
     drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for the moment the link is opened.',
@@ -620,7 +623,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,1.3e-13,0',
     settings: { ui: true, settleMs: 4000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'Saturn’s moons on their orbits, with the clock stopped',
     caption: 'The clock’s controls are open at the lower right. A link opens the clock stopped at real speed, so the speed here reads 1 s/s.',
     drawn: 'The positions are computed for 7 October 2026 at 12:00 UTC; the rings around the planet are the moons’ orbits, drawn as lines.',
@@ -632,7 +635,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'tour=grandTour',
     settings: { ui: true, tourStep: 0, settleMs: 9000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'The first step of “The Long Way Out”',
     caption: 'With the tour’s four buttons at the foot and its fourteen steps marked on the right.',
     drawn: 'The Milky Way here is a model.',
@@ -667,7 +670,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     link: 'pose=a,0,0,0,2.1,0.35,60000,0',
     settings: { ui: true, settleMs: 4000 },
     size: FEATURE,
-    widths: FEATURE_WIDTHS,
+    widths: DOCS_WIDTHS,
     title: 'As far back as the camera goes',
     caption: 'The scale bar at the lower right reads 10 gigaparsecs.',
     drawn: 'The bright patch is every galaxy in the catalogues. The sphere around it is drawn where a model puts the edge of the observable universe.',
