@@ -130,6 +130,11 @@ export function createStructureMarkerRenderer(
    * depth test, resolved through `resolveDepthCompare`.
    */
   reversedZ: boolean,
+  /**
+   * Depth format of the pick pass this instance's slab records into; the
+   * slabs differ, and a mismatch invalidates the whole pick encoder.
+   */
+  pickDepthFormat: GPUTextureFormat,
   /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
   categories: readonly StructureId[],
   initialCapacity = 64,
@@ -171,7 +176,7 @@ export function createStructureMarkerRenderer(
   let ringPipeline: GPURenderPipeline | null = null;
   // Ring-pick pipeline — same vertex source as ringPipeline, fragment
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
-  // r32uint + depth24plus added.  See the pick pipeline build below for
+  // r32uint + a depth attachment added.  See the pick pipeline build below for
   // the full rationale; in short, this is the structure-marker sibling of the
   // galaxy pick path in galaxyPickRenderer.ts.
   let ringPickPipeline: GPURenderPipeline | null = null;
@@ -311,7 +316,7 @@ export function createStructureMarkerRenderer(
     // Differences vs. the visible-ring pipeline:
     //   - Fragment target is `r32uint` (integer pick texture).
     //   - No blend descriptor — integer formats don't support blending.
-    //   - depthStencil enabled with `depth24plus` + `less`+writeEnabled
+    //   - depthStencil enabled with the pick pass's depth format + writeEnabled
     //     so a closer galaxy pick fragment (running just before us in
     //     the same pass) wins the pixel over an occluded structure ring.
     //     The depth attachment is the same texture the galaxy pick
@@ -338,7 +343,7 @@ export function createStructureMarkerRenderer(
       },
       primitive: { topology: 'triangle-list' },
       depthStencil: {
-        format: 'depth24plus',
+        format: pickDepthFormat,
         depthWriteEnabled: true,
         depthCompare: resolveDepthCompare('nearer', reversedZ),
       },

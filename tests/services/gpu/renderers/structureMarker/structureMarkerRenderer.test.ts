@@ -22,6 +22,7 @@ const newRenderer = (initialCapacity?: number) => {
     'rgba16float',
     null as unknown as FadeUniformsBgl,
     false,
+    'depth24plus',
     STRUCTURE_IDS,
     initialCapacity,
   );
@@ -107,6 +108,7 @@ describe('StructureMarkerRenderer categories', () => {
       'rgba16float',
       null as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       ['void'],
     );
     r.setMarkers([cluster(1), void_(2), group(3), void_(4)], [0, 0, 0]);
@@ -143,6 +145,7 @@ describe('StructureMarkerRenderer colour target', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       STRUCTURE_IDS,
     );
 
@@ -154,6 +157,42 @@ describe('StructureMarkerRenderer colour target', () => {
     expect(formatByLabel.get('structure-marker-halo-pipeline')).toBe('rgba16float');
     expect(formatByLabel.get('structure-marker-ring-pipeline')).toBe('rgba16float');
     expect(formatByLabel.get('structure-marker-ring-pick-pipeline')).toBe('r32uint');
+  });
+
+  it("builds the pick pipeline with its slab's pick depth format", () => {
+    // The NEAR0 pick pass carries depth32float; a pipeline built with the
+    // COSMO format invalidates the whole pick encoder on the first pick.
+    const captured: GPURenderPipelineDescriptor[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
+        captured.push(desc);
+        return { getBindGroupLayout: () => ({}) };
+      }),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: { writeBuffer: vi.fn() },
+    } as unknown as GPUDevice;
+    createStructureMarkerRenderer(
+      {
+        device,
+        context: null as unknown as GPUCanvasContext,
+        format: 'bgra8unorm' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      true,
+      'depth32float',
+      STRUCTURE_IDS,
+    );
+    const pick = captured.find((p) => p.label === 'structure-marker-ring-pick-pipeline');
+    expect(pick?.depthStencil?.format).toBe('depth32float');
   });
 });
 
@@ -194,6 +233,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       STRUCTURE_IDS,
     );
     renderer.setMarkers([cluster(1)], [0, 0, 0]);
@@ -282,6 +322,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       STRUCTURE_IDS,
     );
     writes.length = 0;
@@ -316,6 +357,7 @@ describe('StructureMarkerRenderer instance eye', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       STRUCTURE_IDS,
     );
     const eyeA: [number, number, number] = [10, 20, 30];
@@ -362,6 +404,7 @@ describe('StructureMarkerRenderer maxDistanceMpc', () => {
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
       false,
+      'depth24plus',
       STRUCTURE_IDS,
     );
     writes.length = 0;
