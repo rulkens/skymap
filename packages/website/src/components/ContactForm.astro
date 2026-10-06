@@ -1,0 +1,266 @@
+---
+/*
+ * ContactForm — the commission enquiry. With no endpoint configured
+ * (data/contact.ts) it prints a plain message in place of the form. With one,
+ * it posts four fields as JSON; the script only reports what the server
+ * answered, so "sent" is never shown for a message that was not accepted.
+ * Without script the browser posts the form itself, with its own validation.
+ */
+import ObjLink from './ObjLink.astro';
+import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
+import { sitePath } from '../utils/sitePath';
+
+const FIELDS = [
+  { name: 'name', label: 'Your name', type: 'text', autocomplete: 'name', missing: 'Enter your name.' },
+  {
+    name: 'organisation',
+    label: 'Organisation',
+    type: 'text',
+    autocomplete: 'organization',
+    missing: 'Enter the name of your dome, museum or organisation.',
+  },
+  {
+    name: 'email',
+    label: 'Email address',
+    type: 'email',
+    autocomplete: 'email',
+    hint: 'We use it only to answer you.',
+    missing: 'Enter an email address, like name@example.org.',
+  },
+] as const;
+---
+
+{
+  CONTACT_ENDPOINT ? (
+    <form class="form" method="post" action={CONTACT_ENDPOINT} data-contact>
+      <div class="summary" role="alert" tabindex="-1" data-summary hidden />
+      {FIELDS.map((field) => (
+        <div class="field">
+          <label for={`contact-${field.name}`}>{field.label}</label>
+          {'hint' in field && (
+            <p class="hint small" id={`contact-${field.name}-hint`}>
+              {field.hint}
+            </p>
+          )}
+          <input
+            id={`contact-${field.name}`}
+            name={field.name}
+            type={field.type}
+            autocomplete={field.autocomplete}
+            required
+            data-missing={field.missing}
+            aria-describedby={'hint' in field ? `contact-${field.name}-hint` : undefined}
+          />
+          <p class="error small" id={`contact-${field.name}-error`} hidden />
+        </div>
+      ))}
+      <div class="field">
+        <label for="contact-message">What you have in mind</label>
+        <p class="hint small" id="contact-message-hint">
+          The dome or room, the screen, the audience, and a date if there is one. A few lines are enough.
+        </p>
+        <textarea
+          id="contact-message"
+          name="message"
+          rows="6"
+          required
+          data-missing="Tell us in a line or two what you have in mind."
+          aria-describedby="contact-message-hint"
+        />
+        <p class="error small" id="contact-message-error" hidden />
+      </div>
+      <!-- Honeypot: people never see or reach this field; a filled one marks the post as automated. -->
+      <div class="leave" aria-hidden="true">
+        <label for="contact-website">Leave this field empty</label>
+        <input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+      <p class="note small">
+        Sending this gives us these four fields as an email. We use them to answer you and for nothing else. What we
+        keep, and for how long, is on the <a href={sitePath('/privacy/')}>privacy page</a>.
+      </p>
+      <button class="ring" type="submit">Send the message</button>
+      <p class="status" role="status" data-status />
+    </form>
+  ) : (
+    <div class="closed">
+      <p class="lead">Contact opens soon.</p>
+      <p>
+        The form for this page is built. The mailbox behind it is not connected yet, so we have left the form out
+        instead of showing one that goes nowhere.
+      </p>
+      <p>
+        Until then you can reach us through the project’s issue list on GitHub. Issues are public and anyone can read
+        them, so leave out anything confidential.
+      </p>
+      <ObjLink href={ISSUES_URL}>Open an issue on GitHub</ObjLink>
+      <p class="note small">
+        When the form opens, what it stores will be described on the <a href={sitePath('/privacy/')}>privacy page</a>.
+      </p>
+    </div>
+  )
+}
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact]');
+  if (form) {
+    const summary = form.querySelector<HTMLElement>('[data-summary]')!;
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const fields = [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-missing]')];
+    // Our own messages replace the browser's bubbles, which screen readers announce unevenly.
+    form.noValidate = true;
+
+    const check = (field: HTMLInputElement | HTMLTextAreaElement): string => {
+      const empty = field.value.trim() === '';
+      const message = empty || !field.validity.valid ? field.dataset.missing! : '';
+      const error = form.querySelector<HTMLElement>(`#${field.id}-error`)!;
+      error.textContent = message;
+      error.hidden = message === '';
+      field.setAttribute('aria-invalid', String(message !== ''));
+      const hint = form.querySelector(`#${field.id}-hint`) ? `${field.id}-hint ` : '';
+      field.setAttribute('aria-describedby', `${hint}${message ? error.id : ''}`.trim());
+      return message;
+    };
+
+    for (const field of fields) field.addEventListener('blur', () => field.getAttribute('aria-invalid') && check(field));
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '';
+      const problems = fields.map((field) => ({ field, message: check(field) })).filter((p) => p.message);
+      summary.hidden = problems.length === 0;
+      if (problems.length > 0) {
+        summary.replaceChildren(
+          Object.assign(document.createElement('p'), {
+            textContent: `The message was not sent. ${problems.length === 1 ? 'One field needs' : `${problems.length} fields need`} attention.`,
+          }),
+          ...problems.map(({ field, message }) =>
+            Object.assign(document.createElement('a'), { href: `#${field.id}`, textContent: message }),
+          ),
+        );
+        summary.focus();
+        return;
+      }
+      const button = form.querySelector('button')!;
+      button.disabled = true;
+      status.textContent = 'Sending.';
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        form.reset();
+        status.textContent = 'Your message has been sent.';
+      } catch {
+        status.textContent =
+          'The message was not sent: the server did not accept it. What you wrote is still in the form. Try again in a few minutes.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+</script>
+
+<style>
+  .form,
+  .closed {
+    max-width: 36rem;
+  }
+
+  .field {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font: var(--weight-display) var(--text-h3) / 1.2 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  .hint {
+    margin: 0.25rem 0 0;
+    color: var(--site-text-dim);
+  }
+
+  /* 16px and up, so a phone does not zoom the page when a field takes focus. */
+  input,
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: var(--tap);
+    margin-top: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgb(232 238 255 / 0.45);
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--color-fg);
+    font: var(--weight-small) 1.125rem / 1.5 var(--font-body);
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible {
+    outline-offset: 2px;
+    border-color: var(--color-accent);
+  }
+
+  [aria-invalid='true'] {
+    border-color: #ff9d8a;
+  }
+
+  .error {
+    margin: 0.4rem 0 0;
+    color: #ffb4a6;
+  }
+
+  .summary {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid #ff9d8a;
+    border-radius: 0.25rem;
+  }
+
+  .summary :global(p) {
+    margin: 0 0 0.25rem;
+    color: var(--color-fg);
+  }
+
+  .summary :global(a) {
+    display: block;
+    padding-block: 0.4rem;
+    color: #ffb4a6;
+  }
+
+  .leave {
+    position: absolute;
+    left: -100vw;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .note {
+    max-width: none;
+    color: var(--site-text-dim);
+  }
+
+  .status {
+    min-height: 1.6em;
+    margin: 0.75rem 0 0;
+    color: var(--color-fg);
+  }
+
+  .lead {
+    font: var(--weight-display) var(--text-h2) / var(--leading-display) var(--font-family-display);
+    color: var(--color-fg);
+    margin-bottom: 0.45em;
+  }
+
+  .closed .note {
+    margin-top: 1.5rem;
+  }
+</style>

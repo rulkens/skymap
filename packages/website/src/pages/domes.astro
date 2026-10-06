@@ -1,0 +1,435 @@
+---
+import Base from '../layouts/Base.astro';
+import ContactForm from '../components/ContactForm.astro';
+import Credits from '../components/Credits.astro';
+import ObjLink from '../components/ObjLink.astro';
+import Shot from '../components/Shot.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import { appLink } from '../data/appLink';
+import { fact } from '../data/fact';
+import { siteShot } from '../data/siteShot';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'skymap for planetariums, domes and museums | skymap';
+const description =
+  'We showed skymap in the dome at Wisdome Malmö in September 2026. What we can deliver: live fisheye, a fulldome or 4K film, an exhibit build. How to ask us.';
+
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  'wisdome-showing',
+  'wisdome-venue',
+  'wisdome-dome',
+  'dome-rig',
+  'dome-tilt',
+  'film-recorder',
+  'film-silent',
+  'exhibits',
+  'kiosk-planned',
+  'imagery-licences',
+];
+const STEPS = [
+  {
+    title: 'You write to us',
+    text: 'Tell us about the dome or the room, the screen, the audience, and a date if there is one.',
+  },
+  {
+    title: 'We answer with a plan',
+    text: 'We say what exists today, what would be new work, and what the new work costs. Nothing is built before you agree.',
+  },
+  {
+    title: 'We send a test',
+    text: 'A short piece in your format, for you to run on your own system. A dome shows faults that a desk monitor hides.',
+  },
+  {
+    title: 'We build and deliver',
+    text: 'Files or a web address, with the list of credits your screen has to show. You review it on the dome before it opens.',
+  },
+];
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Domes and museums', path: '/domes/' }])]}
+>
+  <section class="wrap hero">
+    <div class="words">
+      <h1>Domes and museums</h1>
+      <p class="proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
+      <p>
+        {fact('wisdome-venue').text}{' '}
+        {fact('wisdome-dome').text}
+      </p>
+      <p class="small aside">
+        The showing is our own account: the venue has published nothing about it. The facts about the venue are the
+        venue’s.
+      </p>
+      <ObjLink href="#contact">Ask about a commission</ObjLink>
+    </div>
+    <figure>
+      <!-- The frame is the app's own fisheye output, a disc inscribed in a square: the round mask trims only its black corners. -->
+      <div class="disc">
+        <Shot id="dome-earth" sizes="(max-width: 900px) 85vw, 44rem" eager />
+      </div>
+      <figcaption>
+        <ShotCaption id="dome-earth" />
+        <p class="small px">
+          This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
+          are 4,096.
+        </p>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="wrap section" id="deliver">
+    <div class="head">
+      <h2>What we can deliver</h2>
+      <p>Three things. For each: what the code does today, and what would be work done for you.</p>
+    </div>
+
+    <article class="offer">
+      <figure>
+        <div class="disc"><Shot id="dome-web" sizes="(max-width: 900px) 70vw, 30rem" /></div>
+        <figcaption><ShotCaption id="dome-web" /></figcaption>
+      </figure>
+      <div>
+        <h3>Live fisheye from the app</h3>
+        <p>
+          Add <code>?dome</code> to the address and the app draws a fisheye disc, the round picture a dome projector
+          needs, while someone flies it.
+        </p>
+        <dl>
+          <dt>Today</dt>
+          <dd>{fact('dome-rig').text} {fact('dome-tilt').text}</dd>
+          <dt>Work for you</dt>
+          <dd>
+            Another tilt, labels or captions on the dome, and control without a mouse. skymap gives one disc: dividing
+            it between projectors is the job of your dome system.
+          </dd>
+        </dl>
+        <ObjLink size="small" href={appLink(siteShot('dome-web').link, 'dome')}>Open the app in dome mode</ObjLink>
+      </div>
+    </article>
+
+    <article class="offer">
+      <figure>
+        <Shot id="tour-cosmic-web" sizes="(max-width: 900px) 100vw, 36rem" />
+        <figcaption><ShotCaption id="tour-cosmic-web" open={false} /></figcaption>
+      </figure>
+      <div>
+        <h3>A rendered film, fulldome or flat</h3>
+        <p>
+          A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in
+          the projection room.
+        </p>
+        <dl>
+          <dt>Today</dt>
+          <dd>{fact('film-recorder').text} {fact('film-silent').text}</dd>
+          <dt>Work for you</dt>
+          <dd>
+            The flight itself: where it goes, how long it rests, what the captions say. Narration and music come from
+            you or from someone you choose.
+          </dd>
+        </dl>
+        <ObjLink size="small" href={appLink('tour=grandTour')}>Watch the tour the frame is from</ObjLink>
+      </div>
+    </article>
+
+    <article class="offer">
+      <figure>
+        <Shot id="dome-exhibit" sizes="(max-width: 900px) 100vw, 36rem" />
+        <figcaption><ShotCaption id="dome-exhibit" /></figcaption>
+      </figure>
+      <div>
+        <h3>A build for one exhibit or kiosk</h3>
+        <p>A screen in a gallery that opens on one subject, with notes a visitor can read standing up.</p>
+        <dl>
+          <dt>Today</dt>
+          <dd>{fact('exhibits').text} {fact('kiosk-planned').text}</dd>
+          <dt>Work for you</dt>
+          <dd>
+            A new exhibit on your subject, in your words. A locked screen that returns to its start when a visitor
+            walks away is the planned kiosk mode, and we would build it for the first venue that needs it.
+          </dd>
+        </dl>
+        <ObjLink size="small" href={sitePath('/docs/guide/screens-and-domes/')}>Screens, quality and domes, in the docs</ObjLink>
+      </div>
+    </article>
+  </section>
+
+  <section class="wrap section" id="honest">
+    <div class="head">
+      <h2>What your audience is looking at</h2>
+    </div>
+    <div class="cols">
+      <div>
+        <h3>Data and drawing, labelled</h3>
+        <p>
+          Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
+          photographed the Milky Way from outside, so on your dome it is drawn, and we say so.
+        </p>
+        <ObjLink size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
+      </div>
+      <div>
+        <h3>Credits and licences</h3>
+        <p>
+          {fact('imagery-licences').text} For a paid commission we check every licence and replace what may not be
+          shown.
+        </p>
+        <ObjLink size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
+      </div>
+      <div>
+        <h3>Open source</h3>
+        <p>
+          The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
+          signs anything.
+        </p>
+        <ObjLink size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="commission">
+    <div class="head">
+      <h2>How a commission runs</h2>
+    </div>
+    <ol class="steps">
+      {
+        STEPS.map((step) => (
+          <li>
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="wrap section contact" id="contact">
+    <div>
+      <h2>Write to us</h2>
+      <p>
+        One message is enough to start. If you teach, the <a href={sitePath('/classroom/')}>classroom page</a> has
+        links you can use today without asking anyone.
+      </p>
+      <ObjLink size="small" href={sitePath('/')}>Back to the start</ObjLink>
+    </div>
+    <ContactForm />
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Credits />
+  </div>
+</Base>
+
+<style>
+  /* The disc leads: the page's subject is round, so its header is not a rectangle with words on it. */
+  .hero {
+    display: grid;
+    grid-template-columns: 5fr 6fr;
+    gap: 2.5rem 5rem;
+    align-items: center;
+    padding-top: 3.5rem;
+  }
+
+  h1 {
+    font-size: var(--text-h2);
+  }
+
+  .proof {
+    font: var(--weight-display) var(--text-lead) / 1.3 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  .aside {
+    color: var(--site-text-dim);
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+
+  .hero figcaption {
+    max-width: 38.75rem;
+    margin: 2.5rem auto 0;
+  }
+
+  .px {
+    max-width: none;
+    margin: 0.5rem 0 0;
+    color: var(--site-text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .disc {
+    width: 100%;
+    max-width: 44rem;
+    aspect-ratio: 1;
+    margin-inline: auto;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgb(232 238 255 / 0.5),
+      0 0 0 1.125rem #000,
+      0 0 0 1.1875rem rgb(232 238 255 / 0.18);
+  }
+
+  .offer .disc {
+    max-width: 26rem;
+    margin: 1.1875rem auto;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .disc :global(img) {
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 3rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .head h2,
+  .head p {
+    margin: 0;
+  }
+
+  .offer {
+    display: grid;
+    grid-template-columns: 6fr 5fr;
+    gap: 1.5rem 3.75rem;
+    align-items: center;
+    padding-block: 3rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .offer h3 {
+    font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+  }
+
+  dl {
+    margin: 0 0 1rem;
+  }
+
+  dt {
+    margin-top: 1rem;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    max-width: var(--measure);
+    margin: 0.15rem 0 0;
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+    color: var(--site-text-muted);
+  }
+
+  code {
+    font: 400 0.875em var(--font-family-mono);
+    color: var(--color-fg);
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5rem 3.75rem;
+  }
+
+  .cols p {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2.5rem 3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-divider);
+    counter-increment: step;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    display: block;
+    font: var(--weight-display) var(--text-h2) / 1 var(--font-family-display);
+    color: var(--site-text-dim);
+  }
+
+  .steps h3 {
+    margin-top: 0.75rem;
+  }
+
+  .steps p {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+  }
+
+  .contact {
+    display: grid;
+    grid-template-columns: 5fr 6fr;
+    gap: 2.5rem 5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .hero,
+    .offer,
+    .cols,
+    .contact {
+      grid-template-columns: 1fr;
+    }
+
+    .hero {
+      padding-top: 2.5rem;
+    }
+
+    /* Phone: the disc first, the claim under it. */
+    .hero figure {
+      order: -1;
+    }
+
+    .disc {
+      max-width: 85%;
+    }
+
+    .steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
