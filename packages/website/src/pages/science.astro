@@ -56,6 +56,7 @@ const DRAWN = [
   { term: 'Its stars', id: 'sci-milky-way-points' },
   { term: 'The edge sphere', id: 'sci-horizon-shell' },
   { term: 'How far the data go', id: 'sci-deepest' },
+  { term: 'Planet maps', id: 'sci-planet-maps' },
   { term: 'Atmospheres', id: 'sci-atmospheres' },
   { term: 'Earth’s clouds', id: 'sci-earth-clouds' },
   { term: 'Galaxy discs', id: 'sci-galaxy-discs' },
@@ -128,8 +129,8 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <PictureBand id="science-wedges" gap="none" eager>
     <h1>The science behind skymap</h1>
     <p class="say">
-      skymap places catalogued stars, galaxies and quasars in three dimensions. This page names every source, says
-      what is measured, what is computed and what is drawn, and lists where we simplify.
+      skymap places catalogued stars, galaxies and quasars in three dimensions. This page names the sources, says
+      what is measured, what is derived and what is drawn, and lists where we simplify.
     </p>
     <ShotCaption id="science-wedges" />
   </PictureBand>
@@ -156,7 +157,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <section class="wrap section" id="sources">
     <SectionHead title="What is in it">
       <p>
-        Everything you see comes from one of these {DATA_SOURCES.length} sources. Each name links to the
+        The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name links to the
         catalogue or its paper. “Our record” links to the file in our repository that says which release we use.
       </p>
     </SectionHead>
@@ -167,12 +168,15 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       </p>
       <p>
         “In the file” is the size of the table or query we read. “We draw” is smaller because rows without a usable
-        redshift are dropped and overlapping catalogues are merged. An empty cell means neither our build nor the
+        redshift are dropped, overlapping catalogues are merged, and SDSS is cut to about 500,000 of its most
+        luminous galaxies. An empty cell means neither our build nor the
         source’s own record gives a number we can stand behind.
       </p>
       <p>
-        Terrain heights, the Mars rover sites, 3D models and the constellation lines are recorded source by source in
-        the repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a>.
+        Terrain heights, the Mars rover sites, 3D models, the constellation lines, the photographs of named galaxies
+        and the survey pictures fetched for other galaxies are not in the table. They are recorded in the
+        repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a> and its{' '}
+        <a href={`${REPO_URL}/blob/main/ATTRIBUTIONS.md`}>attributions file</a>.
       </p>
     </SourceTable>
   </section>
@@ -186,7 +190,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </SectionHead>
 
     <Group title="Measured" big>
-      <p slot="lede">An instrument recorded it. We pass it on unchanged.</p>
+      <p slot="lede">An instrument recorded it, and we use the published value.</p>
       <Claims items={MEASURED} />
     </Group>
 

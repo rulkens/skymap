@@ -257,7 +257,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'webgpu-required',
     about: 'app',
-    text: 'skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; nothing else is loaded.',
+    text: 'skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; none of the map’s data is loaded.',
     source: `${REPO_BLOB}/src/main.tsx`,
     sourceLabel: 'the WebGPU check, in the skymap repository',
     checked: CHECKED,
@@ -408,7 +408,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'imagery-licences',
     about: 'app',
-    text: 'Some imagery in skymap is licensed for non-commercial use: the cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0 and is used with EOX’s written permission.',
+    text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in skymap with EOX’s written permission. Paul Schenk’s maps of five moons of Uranus state no licence.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: 'the attributions file, in the skymap repository',
     checked: CHECKED,

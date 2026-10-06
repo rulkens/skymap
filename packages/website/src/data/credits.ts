@@ -50,8 +50,7 @@ export const DATA_CREDITS: readonly Credit[] = [
   {
     name: 'GLADE v2.3, Dálya et al. 2018',
     href: 'https://arxiv.org/abs/1804.05709',
-    licence: 'CC BY 4.0',
-    licenceHref: CC_BY,
+    licence: 'no licence stated; the authors ask to be cited',
   },
   {
     name: 'DESI DR1',

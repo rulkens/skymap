@@ -42,6 +42,14 @@ describe('website facts', () => {
     expect(Number((29.78 * 45 * 60).toPrecision(2))).toBe(80_000);
   });
 
+  it('Io laps Jupiter in about 7 seconds at 6 hours per second, and twice for each lap of Europa', () => {
+    // Sidereal periods in days, NASA Jovian satellite fact sheet.
+    expect((1.769138 * 24) / 6).toBeCloseTo(7, 0);
+    expect(Math.round(3.551181 / 1.769138)).toBe(2);
+    expect(fact('io-lap').text).toContain('1.77 days');
+    expect(fact('io-lap').text).toContain('3.55 days');
+  });
+
   it('the Voyager 1 trip to Proxima Centauri takes about 75,000 years', () => {
     const years = (4.2465 * KM_PER_LY) / 17.0 / YEAR_S;
     expect(years).toBeGreaterThan(74_000);

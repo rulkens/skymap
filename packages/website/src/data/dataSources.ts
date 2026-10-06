@@ -55,7 +55,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     release: 'Version 2.3 (VizieR VII/281). GLADE+ is newer; we do not use it.',
     rows: '3,262,881 rows',
     drawn: '1,665,935',
-    licence: CITE_PAPER,
+    licence: 'The catalogue’s page states no licence. Its authors ask that the paper be cited.',
     href: `${VIZIER}VII/281`,
     evidence: REGISTRY,
   },
@@ -185,7 +185,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 's-stars',
-    group: SOLAR,
+    group: STARS,
     name: 'Stars orbiting Sagittarius A*',
     gives: 'The orbits of 40 stars around the black hole at the centre of the Milky Way',
     release: 'Gillessen et al. 2017, table 3, plus one star from the GRAVITY Collaboration 2026',

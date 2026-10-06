@@ -38,6 +38,7 @@ const factIds = [
   'exhibits',
   'kiosk-planned',
   'imagery-licences',
+  'gaia-licence',
   'earth-rotation',
 ];
 const STEPS = [
@@ -146,8 +147,9 @@ const STEPS = [
       <div>
         <h3>Credits and licences</h3>
         <p class="small">
-          {fact('imagery-licences').text} For a paid commission we check every licence and replace what may not be
-          shown.
+          Some data and imagery in skymap carry non-commercial licences. The stars are Gaia data.{' '}
+          {fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source
+          by source, ask the rights holders where the terms require it, and replace what may not be shown.
         </p>
         <ObjLink hang size="small" href={sitePath('/docs/credits/')}>Credits and licences</ObjLink>
       </div>

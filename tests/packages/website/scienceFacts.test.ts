@@ -56,6 +56,7 @@ describe('science page numbers', () => {
   it('errors and velocities as megaparsecs', () => {
     expect(redshiftToDistanceMpc(0.115) - redshiftToDistanceMpc(0.1)).toBeCloseTo(60, -1);
     expect(Math.round(300 / H0_KM_S_MPC)).toBe(4);
+    expect(Math.round((300 / (30 * H0_KM_S_MPC)) * 100)).toBe(14);
     expect(Math.round((100 * H0_KM_S_MPC) / 73)).toBe(96);
     expect(Math.round((100 * H0_KM_S_MPC) / 67.4)).toBe(104);
     expect(Math.round((74.6 / H0_KM_S_MPC - 1) * 100)).toBe(7);
@@ -72,7 +73,9 @@ describe('data sources', () => {
       for (const url of [row.href, row.evidence, ...(row.askHref ? [row.askHref] : [])]) {
         expect(new URL(url).protocol, row.id).toBe('https:');
       }
-      expect(Boolean(row.ask), `${row.id} quotes a text only with its page`).toBe(Boolean(row.askHref));
+      expect(Boolean(row.ask), `${row.id} quotes a text only with its page`).toBe(
+        Boolean(row.askHref),
+      );
     }
   });
 });

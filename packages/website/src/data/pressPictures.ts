@@ -12,7 +12,7 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     title: 'Every catalogued galaxy and quasar',
     credit: 'skymap / Alexander Rulkens. Data: SDSS, 2MRS, GLADE, DESI, Milliquas',
     terms:
-      'Contains catalogue positions only. DESI and GLADE are CC BY 4.0 and the others are public releases that ask to be cited, so the credit line is the condition.',
+      'Contains catalogue positions only. DESI is CC BY 4.0; the others are public releases that ask to be cited (GLADE’s page states no licence), so the credit line is the condition.',
     nonCommercial: false,
   },
   {

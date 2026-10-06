@@ -7,8 +7,8 @@ const IN_REPO = 'in the skymap repository';
 /**
  * What the Classroom page says the app does, spread into FACTS. Each row was
  * read from the file it cites. `tour-length` is the total `npm run tour-length`
- * prints (311 s); `io-lap` is Io's period in the element table (1.76 days)
- * divided by the clock step it names.
+ * prints (311 s); `io-lap` is Io's period against the stars on NASA's fact
+ * sheet (1.769138 days) divided by the clock step it names.
  */
 export const CLASSROOM_FACTS: readonly Fact[] = [
   {
@@ -55,17 +55,18 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'ephemeris-span',
-    text: 'For dates from 1900 to 2100 the planets, and the moons of Jupiter and Saturn, are placed within 1,000 km of the positions NASA’s JPL Horizons service gives. Outside those years the fit is not applied to the moons and is held at its last value for the planets.',
+    about: 'app',
+    text: 'For dates from 1900 to 2100 the planets, and 18 moons of Jupiter, Saturn, Uranus and Neptune, are placed within 1,000 km of the positions NASA’s JPL Horizons service gives. A planet here means the centre of mass of the planet with its moons. Earth’s Moon is not in that fit: it follows mean orbital elements. Outside those years the fit is not applied to the moons and is held at its last value for the planets.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data notes, ${IN_REPO}`,
     checked: CHECKED,
-    short: 'Planets and their large moons are where they were, or will be, at the instant it shows: checked against NASA’s positions for the years 1900 to 2100.',
+    short: 'The planets, and the large moons of Jupiter, Saturn, Uranus and Neptune, are where they were, or will be, at the instant it shows: checked against NASA’s positions for the years 1900 to 2100.',
   },
   {
     id: 'io-lap',
-    text: 'In skymap Io goes round Jupiter in 1.76 days and Europa in 3.53 days. With the clock at 6 hours per second, one lap of Io takes about 7 seconds.',
-    source: `${REPO_BLOB}/src/data/bodies/orbitalElements.ts`,
-    sourceLabel: `the moons’ orbits, ${IN_REPO}`,
+    text: 'Measured against the stars, Io goes round Jupiter in 1.77 days and Europa in 3.55 days. With the clock at 6 hours per second, one lap of Io takes about 7 seconds.',
+    source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/joviansatfact.html',
+    sourceLabel: 'NASA Jovian satellite fact sheet',
     checked: CHECKED,
     short: 'At 6 hours per second Io, the innermost of the four, laps Jupiter in about 7 seconds.',
   },

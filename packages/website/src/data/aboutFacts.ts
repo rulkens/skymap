@@ -2,7 +2,6 @@ import type { Fact } from '../@types/Fact';
 import pkg from '../../../../package.json';
 import sitePkg from '../../package.json';
 import { CITATION } from './citation';
-import { DATA_SOURCES } from './dataSources';
 import { MAKER_NAME, REPO_BLOB, REPO_URL } from './siteIdentity';
 import { formatDate } from '../utils/formatDate';
 
@@ -18,7 +17,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-what-is',
     about: 'app',
-    text: `skymap is a free, open-source web app that draws the mapped universe in three dimensions at true scale. It places catalogued stars, galaxies and quasars where ${DATA_SOURCES.length} published sources put them, and you fly the camera from a park on Earth to the edge of the observable universe in one continuous scene. It runs in a browser with WebGPU, the graphics interface recent browsers ship, and needs no account and no installation. Every source is named, and the site says which parts are measured, which are derived and which are drawn.`,
+    text: 'skymap is a free, open-source web app that draws the mapped universe in three dimensions at true scale. Catalogued stars, galaxies and quasars sit where published surveys put them. You fly the camera from a park in Copenhagen to the edge of the observable universe in one continuous scene. It runs in a current browser, with no account and nothing to install. The sources are named, and the site says which parts are measured, which are derived and which are drawn.',
     source: `${REPO_BLOB}/README.md`,
     sourceLabel: `the project’s README, ${IN_REPO}`,
     checked: CHECKED,
@@ -113,7 +112,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   },
   {
     id: 'gaia-licence',
-    text: 'Gaia data are published under CC BY-NC 3.0 IGO: credit ESA/Gaia/DPAC, and no commercial use without ESA’s agreement.',
+    text: 'Gaia data are distributed under CC BY-NC 3.0 IGO, a non-commercial licence: credit ESA/Gaia/DPAC. For commercial use, ESA’s licence page points to its terms and conditions for the science archives.',
     source: 'https://www.cosmos.esa.int/web/gaia-users/license',
     sourceLabel: 'ESA, the Gaia data licence',
     checked: CHECKED,

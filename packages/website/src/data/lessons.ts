@@ -20,7 +20,7 @@ export const LESSON_TOPICS: readonly LessonTopic[] = [
         id: 'orbits',
         title: 'The planets’ orbits from above',
         ...at('lesson-solar-system'),
-        ask: 'Compare the innermost ring with the outermost. How many times wider is it?',
+        ask: 'Mercury’s orbit is the innermost ring and Neptune’s the outermost. How many times wider is Neptune’s?',
       },
       {
         id: 'voyager',

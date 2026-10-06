@@ -43,7 +43,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-surfaces',
-    text: 'The surfaces of Earth, the Moon, the planets and the larger moons are photographs and mosaics from spacecraft, satellites and aircraft, each credited in the attributions file.',
+    text: 'The surfaces of Earth, Pluto, Charon and the larger moons of the giant planets are photographs and mosaics from spacecraft, satellites and aircraft, each credited in the attributions file.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,
@@ -66,7 +66,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-local-volume',
-    text: 'Inside 30 megaparsecs a galaxy’s own motion is as large as the expansion, so redshift is a poor guide. There we use distances measured without redshift: a short hand-checked list first, then Cosmicflows-4, then HyperLEDA.',
+    text: 'Inside 30 megaparsecs a galaxy’s own motion is a large part of its redshift: 300 km/s is 14 percent of the expansion at 30 megaparsecs and all of it at about 4. Redshift is a poor guide there, so we use distances measured without it: a short hand-checked list first, then Cosmicflows-4, then HyperLEDA.',
     source: `${REPO_BLOB}/tools/catalog/catalogDistanceFor.ts`,
     sourceLabel: `the nearby-distance lookup, ${IN_REPO}`,
     checked: CHECKED,
@@ -87,7 +87,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-ephemeris',
-    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. 18 moons of Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet.',
+    text: 'Planet positions are Kepler orbits from JPL’s published elements plus a fitted correction that matches JPL Horizons to within 1,000 km from 1900 to 2100. What is fitted is Mercury, Venus, the Earth-Moon barycentre and, from Mars to Neptune, the centre of mass of each planet with its moons. Of the moons, 18 that belong to Jupiter, Saturn, Uranus and Neptune are fitted to the same bound against their planet. Earth’s Moon is not: it follows mean orbital elements.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -145,7 +145,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-horizon-shell',
-    text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks how far the matter that sent the oldest light is today, according to a cosmological model. Nothing is observed at that distance.',
+    text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer. Nothing is observed at that distance.',
     source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
@@ -172,8 +172,15 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
+    id: 'sci-planet-maps',
+    text: 'The maps of seven planets and the Moon, and Saturn’s rings, are Solar System Scope’s. Its own page says they are based on NASA elevation and imagery data, that gaps are filled with fictional terrain, and that the colours are slightly more saturated.',
+    source: 'https://www.solarsystemscope.com/textures/',
+    sourceLabel: 'Solar System Scope, textures',
+    checked: CHECKED,
+  },
+  {
     id: 'sci-galaxy-discs',
-    text: 'A galaxy that covers 8 to 14 pixels is drawn as a generated disc. 81 named galaxies carry a photograph instead, and the rest are points.',
+    text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc, which is not its real shape. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
     source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
     checked: CHECKED,
@@ -280,7 +287,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-data-sizes',
-    text: 'The app loads one of three data sizes. The two smaller ones keep the most luminous galaxies of each catalogue and the apparently bright nearby ones: 156,000 SDSS galaxies at the middle size and none at the smallest.',
+    text: 'The app loads one of three data sizes, and every size cuts SDSS to its most luminous galaxies: about 500,000 of 970,067 at the largest, 156,000 at the middle, where the apparently bright nearby ones are also kept, and none at the smallest.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources/sdss.ts`,
     sourceLabel: `the SDSS definition, ${IN_REPO}`,
     checked: CHECKED,
@@ -346,7 +353,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-built-counts',
     about: 'app',
-    text: 'The counts in the “we draw” column are for the largest data size as published on 6 October 2026. Each galaxy file is a 16-byte header and 64 bytes per object, so a count is the file size minus 16, divided by 64.',
+    text: 'The counts in the “we draw” column are for the largest data size as published on 6 October 2026. Each galaxy file is a 16-byte header and 64 bytes per object, so a count is the size of the file once decompressed, minus 16, divided by 64.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest',
     checked: CHECKED,

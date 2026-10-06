@@ -57,7 +57,7 @@ export const HONESTY: Honesty = {
       href: 'https://arxiv.org/abs/1804.05709',
     },
     {
-      text: 'Planet and moon positions: fits to JPL Horizons, within 1,000 km from 1900 to 2100',
+      text: 'Planets, and 18 moons of the four giant planets: positions fitted to JPL Horizons, within 1,000 km from 1900 to 2100',
       href: 'https://ssd.jpl.nasa.gov/horizons/',
     },
     {
