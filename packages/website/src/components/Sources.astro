@@ -22,8 +22,10 @@ const rows = listedSources([...new Set(ids)].map(fact), all);
       <ol>
         {rows.map((row) => (
           <li>
-            {row.text} <a href={row.source}>{row.sourceLabel}</a>, checked{' '}
-            <span class="date">{formatDate(row.checked)}</span>.
+            {row.text} <a href={row.source}>{row.sourceLabel}</a>{' '}
+            <span class="checked">
+              checked <span class="date">{formatDate(row.checked)}</span>
+            </span>
           </li>
         ))}
       </ol>
@@ -54,5 +56,10 @@ const rows = listedSources([...new Set(ids)].map(fact), all);
 
   li {
     padding-block: 0.25rem;
+  }
+
+  /* When we last looked is a footnote to the footnote: the quietest text that still passes 4.5:1 on black. */
+  .checked {
+    color: color-mix(in srgb, var(--site-text-dim) 72%, #000);
   }
 </style>
