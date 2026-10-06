@@ -60,7 +60,7 @@ import package::lib::camera::CameraUniforms;
 //   offset 128 focusPhysicalRadiusMpc f32
 //   offset 132 focusBlend            f32             (0 = no focus; multiplier is 1)
 //   struct size 144 (rounded up to the prefix's 16-byte alignment; 8 bytes at
-//   104..111 are pad before the vec3, 12 at 136..143 trail the blend).
+//   104..111 are pad before the vec3, 8 at 136..143 trail the blend).
 //
 // 'pickPass' (float index 23, byte 92) is written only by the pick pipeline. The
 // VISUAL draw never writes it -- the renderer's per-source camera write stops at

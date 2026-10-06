@@ -410,7 +410,8 @@ fn vs(
   // focused star: the wobble is a property of PROXIMITY (the f32
   // near-cancellation at 'worldRelCam'), so this distance-keyed fade targets
   // exactly the set that swims -- leaves and aggregates alike -- without a
-  // focused-record match. Accepted trade-off: free-flying into a NON-focused star's band fades its sprite with
+  // focused-record match. Accepted trade-off: free-flying into a NON-focused
+  // star's band fades its sprite with
   // no sphere to replace it -- AU-proximity is reached essentially only by
   // focus-framing, so the transient gap is unobtrusive.
   //
