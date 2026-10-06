@@ -1,12 +1,10 @@
 /**
  * structureFocusSubsystem — focus-driven structure "focus mode".
  *
- * When a cluster / supercluster / void / group structure is focused, non-member
- * galaxies fade to ~8% alpha over ~400 ms (the shader does the
- * per-vertex membership test; this subsystem only supplies the centre,
- * radius, and the smoothstep blend). All four categories behave
- * identically — the focused structure's interior galaxies stay bright;
- * voids are just an underdense case of the same rule. See
+ * When any structure is focused, everything outside its sphere fades to ~8%
+ * alpha over ~400 ms (the shaders do the per-vertex test; this subsystem only
+ * supplies the centre, radius, and the smoothstep blend). Every category
+ * behaves identically; voids are just an underdense case of the same rule. See
  * `StructureFocusSubsystem.d.ts` for the rationale (focus as single
  * source of truth; GPU re-derivation instead of a CPU member list).
  *
@@ -33,8 +31,6 @@
  */
 
 import { createFadeController } from '../../animation/fadeController';
-import { structureHasGalaxyMembers } from '../../../data/structure/structureHasGalaxyMembers';
-import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
@@ -65,13 +61,9 @@ type ActiveFocus = {
 };
 
 export function createStructureFocusSubsystem(
-  deps: {
-    readonly requestRender: () => void;
-    readonly hasGalaxyMembers?: (id: StructureId) => boolean;
-  },
+  deps: { readonly requestRender: () => void },
   initialNowMs: number = performance.now(),
 ): StructureFocusSubsystem {
-  const hasGalaxyMembers = deps.hasGalaxyMembers ?? structureHasGalaxyMembers;
   const fade = createFadeController(0, initialNowMs);
   // The structure we emit centre/radius for. Latched through fade-out.
   let active: ActiveFocus | null = null;
@@ -79,11 +71,10 @@ export function createStructureFocusSubsystem(
   let focusedId: string | null = null;
 
   function update(structure: StructureInfo | null, nowMs: number): void {
-    // Narrow to a focus-eligible extended structure. famousGalaxy has
-    // no radius, so it (and null) drives a fade-out. Groups share the
-    // same fade band mechanic as clusters — R0 > Rh gives a real band.
+    // null drives a fade-out. Groups share the same fade band mechanic as
+    // clusters — R0 > Rh gives a real band.
     let next: ActiveFocus | null = null;
-    if (structure !== null && hasGalaxyMembers(structure.category)) {
+    if (structure !== null) {
       // Pass the structure's two real radii; the shader ramps the fade
       // across the [physical, apparent] band (and supplies a soft band of
       // its own when the two are equal — SC/void have no wider extent).

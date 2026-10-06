@@ -34,13 +34,10 @@ describe('structureFocusSubsystem', () => {
     expect(settled.physicalRadiusMpc).toBe(7);
   });
 
-  it('a structure whose category has no galaxy members produces no ActiveFocus', () => {
-    const sub = createStructureFocusSubsystem(
-      { requestRender: () => {}, hasGalaxyMembers: () => false },
-      0,
-    );
-    sub.update(makeCluster(), 0);
-    expect(sub.produceFocusUniforms(500).blend).toBe(0);
+  it('a category without galaxy members still drives the focus blend', () => {
+    const sub = makeStructureFocus(0);
+    sub.update(makeCluster({ category: 'open-cluster', physicalRadiusMpc: 1e-5 }), 0);
+    expect(sub.produceFocusUniforms(500).blend).toBe(1);
   });
 
   it('emits apparent (fade outer edge) and physical (core) radii independently', () => {

@@ -19,7 +19,7 @@ export type StructureSourceEntry = SourceEntryBase & {
   readonly slab: StructureSlab;
   /**
    * True when the category is a region of the extragalactic galaxy distribution:
-   * focusing one dims non-member galaxies and its InfoCard counts members.
+   * its InfoCard counts member galaxies.
    */
   readonly galaxyMembers: boolean;
 };

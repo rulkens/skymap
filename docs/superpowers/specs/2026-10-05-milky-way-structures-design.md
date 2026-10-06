@@ -92,7 +92,7 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - **P3 — band on the style row.** `visibleBand` on every row, all four `surveyDeepZoom`. The pass keeps a cheap skip when every category it draws is at zero.
 - **P4 — near guards protect only the division.** Both 1 kpc guards become "distance is zero". Inside its own radius a ring is already faded by the max-apparent-radius band, which scales with the object, so no fixed distance is needed.
 - **P5 — focus from radius.** Drop `MIN_FRAMING_DISTANCE_MPC`; keep the maximum. No seeded row has a radius under 0.05 Mpc, so today's framing is unchanged.
-- **P6 — `galaxyMembers` on the registry row.** The four existing rows say `true`. `structureFocusSubsystem`'s predicate and the member-count publisher read it.
+- **P6 — `galaxyMembers` on the registry row.** The four existing rows say `true`. The member-count publisher reads it; the focus subsystem does not.
 - **P7 — camera-relative marker instances.** `setMarkers` uploads `worldPos − camPos` computed in f64; `ring.wesl` and `ringPick.wesl` drop their `camPosMpc` add.
 - **P8 — derived category lists.** `emitCounts`, `VALID_CATEGORIES` and `SeedEntry.category` read `STRUCTURE_IDS` / `StructureId`.
 - **P9 — unit-tagged seed.** `Length` + `lengthToMpc`; the 42 rows migrate (`"distance": { "value": 16.5, "unit": "Mpc" }`); parser, `buildStaticAnchorStructures`, `buildStructures`, `demoTour.ts`, `docs/DATA.md` and the seed tests follow. Runtime records stay in Mpc.
@@ -129,7 +129,7 @@ Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `
 
 - `galacticStructures` is keyed on camera distance from the render origin, like `surveyDeepZoom`, and is its mirror: full inside the Galaxy, gone at `FOREGROUND_MAX_DISTANCE_MPC`, where NEAR0 content switches off anyway. `fullAt` is tuned on screen.
 - The per-marker apparent-radius fades do the rest: from the Sun, a Galactic Centre place 8 kpc away is far below the minimum on-screen radius and stays hidden until the camera approaches.
-- Focus frames at `FOCUS_FILL × apparentRadius` (P5). `galaxyMembers: false` means focusing one dims no galaxies and the card shows no galaxy count.
+- Focus frames at `FOCUS_FILL × apparentRadius` (P5). Focusing a Milky Way structure dims what lies outside its sphere, as for clusters; `galaxyMembers: false` only means the card shows no galaxy count.
 
 ## 7. Card and search
 
@@ -145,7 +145,7 @@ Each test below fails on a real bug nothing else catches.
 - Slab partition: every structure category is drawn by exactly one of the two marker passes, and its labels go to the matching director.
 - Band: a `near0` category is at full alpha at the Sun and zero at `FOREGROUND_MAX_DISTANCE_MPC`; a `cosmo` category is the reverse.
 - Focus distance: a 4 pc radius frames within tens of parsecs; an existing cluster's framing distance is unchanged from before P5.
-- Membership: a `galaxyMembers: false` category yields no `ActiveFocus` and no member count.
+- Membership: a `galaxyMembers: false` category still yields an `ActiveFocus` (it dims what lies outside it) but no member count.
 - Seed sanity: every Milky Way row lies within 0.1 Mpc of the origin; every Galactic Centre place lies within 50 pc of `GALACTIC_CENTRE_ANCHOR`.
 
 Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centauri; Orion Nebula; Arches from near Sgr A\*; the whole Galaxy from 50 kpc with all four categories on; an existing cluster (Virgo) to confirm nothing moved.
