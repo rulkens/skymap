@@ -179,6 +179,20 @@ function initFeedback(): void {
     }
   }
 
+  // A note the agent has applied is deleted on the server; its pin goes with it.
+  async function prune(): Promise<void> {
+    try {
+      const { ids } = (await (await fetch(ROUTE)).json()) as { ids: string[] };
+      if (pins.every((pin) => ids.includes(pin.id))) return;
+      pins = pins.filter((pin) => ids.includes(pin.id));
+      renderPins();
+    } catch {
+      /* server restarting: keep the pins, the next focus tries again */
+    }
+  }
+  window.addEventListener('focus', () => void prune());
+  void prune();
+
   function setMode(next: boolean): void {
     on = next;
     toggle.setAttribute('aria-pressed', String(on));

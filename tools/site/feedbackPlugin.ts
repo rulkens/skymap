@@ -95,7 +95,15 @@ async function answer(req: IncomingMessage): Promise<[number, object]> {
     if (existsSync(FEEDBACK_DIR)) rebuildIndex();
     return [200, { id }];
   }
-  return [405, { error: 'POST or DELETE only' }];
+  if (req.method === 'GET') {
+    // The page asks which notes still exist, to drop the pins of applied ones.
+    const names = existsSync(FEEDBACK_DIR) ? readdirSync(FEEDBACK_DIR) : [];
+    const ids = names
+      .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
+      .map((name) => name.slice(0, -'.json'.length));
+    return [200, { ids }];
+  }
+  return [405, { error: 'GET, POST or DELETE only' }];
 }
 
 function handleFeedback(req: IncomingMessage, res: ServerResponse): void {
