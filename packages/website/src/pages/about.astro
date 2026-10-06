@@ -23,7 +23,7 @@ import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'About skymap: who makes it and how to reach us';
+const title = 'About skymap: who makes it and which pictures you may reuse';
 const description = `skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, pictures for reuse, and a colophon.`;
 
 const ALIVE = [
@@ -66,7 +66,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
 >
   <PictureBand id="about-milky-way" gap="none" eager>
     <h1>About skymap</h1>
-    <p class="say">Who makes it, whether it is alive, and how to reach us.</p>
+    <p class="say">skymap is made by one person. This page says who, how to reach us and which pictures you may reuse.</p>
     <ShotCaption id="about-milky-way" />
   </PictureBand>
 
@@ -75,7 +75,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
     <p class="what">{whatIs}</p>
     <Onward>
       <OpenApp />
-      <ObjLink href={sitePath('/science/')}>Where the numbers come from</ObjLink>
+      <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
     </Onward>
   </section>
 
@@ -106,7 +106,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
         <h2>Shown in a dome</h2>
         <p>{fact('wisdome-showing').text}</p>
         <p>{fact('wisdome-venue').text}</p>
-        <ObjLink hang href={sitePath('/domes/')}>What we do for domes</ObjLink>
+        <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
       </div>
     </Beside>
   </section>
@@ -120,13 +120,10 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
           CONTACT_ENDPOINT ? (
             <p>The form on the domes page reaches us by email. Four fields, and one message is enough to start.</p>
           ) : (
-            <p>
-              The form on the domes page is built but not open yet: its mailbox is not connected. The page says so
-              where the form will be.
-            </p>
+            <p>The contact form is not open yet. The domes page says how to reach us in the meantime.</p>
           )
         }
-        <ObjLink hang size="small" href={sitePath('/domes/#contact')}>The contact section of the domes page</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/domes/#contact')}>Write to us, on the domes page</ObjLink>
       </div>
       <div>
         <h3>For a fault, a correction or a question</h3>
@@ -138,7 +135,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
       </div>
     </Columns>
     <Note>
-      We publish no email address. What the site and the app load and keep is on the{' '}
+      What the site and the app load and keep is on the{' '}
       <a href={sitePath('/privacy/')}>privacy page</a>.
     </Note>
   </section>
@@ -167,7 +164,7 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
   </section>
 
   <div class="wrap section last">
-    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

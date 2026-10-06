@@ -105,7 +105,7 @@ export const PRIVACY_FACTS: readonly Fact[] = [
   {
     id: 'privacy-form-closed',
     about: 'app',
-    text: 'There is no contact form on this website today. The form is built, but it is left out of the page until its mailbox is connected, so nothing you type here can reach us or anyone else.',
+    text: 'There is no contact form on this website today, so nothing you type here can reach us or anyone else.',
     source: `${REPO_BLOB}/packages/website/src/data/contact.ts`,
     sourceLabel: `the contact setting, ${IN_REPO}`,
     checked: CHECKED,

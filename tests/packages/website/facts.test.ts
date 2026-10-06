@@ -50,6 +50,11 @@ describe('website facts', () => {
     expect(fact('io-lap').text).toContain('3.55 days');
   });
 
+  it('a ball of a million cubic megaparsecs is about 400 million light-years across', () => {
+    const diameterMpc = 2 * Math.cbrt((3 * 1e6) / (4 * Math.PI));
+    expect(Math.round((diameterMpc * LY_PER_PC) / 100) * 100).toBe(400);
+  });
+
   it('the Voyager 1 trip to Proxima Centauri takes about 75,000 years', () => {
     const years = (4.2465 * KM_PER_LY) / 17.0 / YEAR_S;
     expect(years).toBeGreaterThan(74_000);

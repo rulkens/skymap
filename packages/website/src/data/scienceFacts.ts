@@ -79,6 +79,13 @@ export const SCIENCE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
+    id: 'sci-two-redshifts',
+    text: 'GLADE mixes two kinds of redshift: spectroscopic ones, and photometric ones estimated from a galaxy’s colours. “Estimated redshifts”, under Known simplifications, says how many and how far off.',
+    source: `${REPO_BLOB}/tools/parsers/glade.ts`,
+    sourceLabel: `the GLADE parser, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
     id: 'sci-star-distance',
     text: 'Star distances are the Bailer-Jones estimates, statistical distances built on Gaia parallax (the yearly shift of a star against the background as Earth orbits the Sun). We take the estimate that also uses colour and brightness first, the parallax-only one second, and the Gaia Catalogue of Nearby Stars last. We never use one divided by parallax.',
     source: `${REPO_BLOB}/tools/stars/resolveStarDistancePc.ts`,

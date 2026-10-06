@@ -27,9 +27,9 @@ import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'Teach with skymap: tours, exhibits and lesson links | skymap';
+const title = 'Use skymap in the classroom | skymap';
 const description =
-  'A five-minute tour for the projector, exhibits with their sources, a clock to run, fact cards and ready-made lesson links. No accounts, nothing to install.';
+  'Pupils fly the distances of space at true scale, from the Moon to the galaxies. A five-minute tour, ready-made lesson links, no accounts, nothing to install.';
 
 const lessons = LESSON_TOPICS.flatMap((topic) => topic.lessons);
 // Every fact row the page prints, so the Sources list cannot drift from the copy.
@@ -43,6 +43,7 @@ const said = [
   'webgpu-browsers',
   'app-browser-advice',
   'no-account',
+  'privacy-counter',
   'english-only',
   'phone-data-size',
   'earth-orbit-speed',
@@ -66,7 +67,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
       Distances in space are hard to feel from a page. In skymap your pupils fly them, from the Moon to the nearest
       galaxies, at true scale.
     </p>
-    <p>You share a view as a link, and every pupil who opens it lands in the same place.</p>
+    <p>You share a view as a link, and every pupil who opens it lands on the same object at the same date.</p>
     <ViewStack>
       {CLASS_VIEWS.map((view) => <AddressStrip hash={siteShot(view.id).link} />)}
     </ViewStack>
@@ -75,7 +76,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
 
   <section class="wrap section" id="lesson">
     <SectionHead title="What you can do in a lesson">
-      <p>Five things, starting with the one that needs no preparation.</p>
+      <p>The first needs no preparation.</p>
     </SectionHead>
     {
       CLASS_FEATURES.map((feature, i) => (
@@ -100,8 +101,8 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   <section class="wrap section" id="links">
     <SectionHead title="Ready-made links">
       <p>
-        {lessons.length} links, each with one question. A link opens where its picture was taken. The pictures have
-        the name labels switched off; the links open with them on.
+        Each link has one question. It opens where its picture was taken. The pictures have the name labels switched
+        off; the links open with them on.
       </p>
     </SectionHead>
     <LessonLinks />
@@ -109,7 +110,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
 
   <section class="wrap section" id="make">
     <SectionHead title="Make your own link">
-      <p>Three steps, in the app itself. There is no share button: the address bar is the link.</p>
+      <p>There is no share button: the address bar is the link.</p>
     </SectionHead>
     <Steps>
       <Step title="Find the object">
@@ -131,7 +132,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   </section>
 
   <section class="wrap section" id="runs">
-    <SectionHead title="What it runs on, and its limits" />
+    <SectionHead title="Before you rely on it" />
     <Columns>
       <div>
         <h3>What it runs on</h3>
@@ -145,10 +146,13 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
       <div>
         <h3>Before the lesson</h3>
         <p>
-          Open one link on a pupil’s device first: school networks and older graphics chips differ.{' '}
+          Open one link on a pupil’s device before the lesson. School networks and older graphics chips differ.{' '}
           {says('app-browser-advice')}
         </p>
-        <p>It is a web page, so there is nothing to install. {says('no-account')}</p>
+        <p>
+          There is nothing to install. {says('no-account')} The app counts visits without cookies: the{' '}
+          <a href={sitePath('/privacy/')}>privacy page</a> has the details.
+        </p>
       </div>
       <div>
         <h3>Limits</h3>
@@ -164,7 +168,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
 
   <Honesty title="What is accurate enough to teach from">
     <p>
-      Some of the scene is data, some is computed, and some is a choice of ours. It makes a lesson in how we know
+      Some of the scene is data, some is derived from data, and some is a choice of ours. It makes a lesson in how we know
       things: of anything on screen, ask which of the three it is.
     </p>
   </Honesty>
@@ -173,12 +177,12 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     <Onward>
       <OpenApp />
       <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
-      <ObjLink href={sitePath('/domes/')}>For a dome or a museum</ObjLink>
+      <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </Onward>
   </div>
 
   <div class="wrap section last">
-    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

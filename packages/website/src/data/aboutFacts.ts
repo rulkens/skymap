@@ -25,7 +25,7 @@ export const ABOUT_FACTS: readonly Fact[] = [
   {
     id: 'about-maker',
     about: 'app',
-    text: `skymap is made by one person, ${MAKER_NAME}: the name on the copyright line of the licence file and on the repository’s commits.`,
+    text: `skymap is made by one person, ${MAKER_NAME}.`,
     source: `${REPO_BLOB}/LICENSE`,
     sourceLabel: `the licence file, ${IN_REPO}`,
     checked: CHECKED,

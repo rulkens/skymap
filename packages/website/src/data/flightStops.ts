@@ -11,11 +11,11 @@ import type { FlightStop } from '../@types/FlightStop';
 export const FLIGHT_STOPS: readonly FlightStop[] = [
   { id: 'earth', atSec: 0, name: 'Earth' },
   { id: 'moon-orbit', atSec: 20.5,name: 'The Moon’s orbit', factId: 'moon-orbit-light' },
-  { id: 'outer-planets', atSec: 28, name: 'The outer planets', factId: 'neptune-voyager2' },
+  { id: 'outer-planets', atSec: 28, name: 'Out to Neptune', factId: 'neptune-voyager2' },
   { id: 'nearby-stars', atSec: 32.5, name: 'The nearby stars', factId: 'voyager1-to-proxima' },
   { id: 'milky-way', atSec: 41, name: 'The Milky Way, drawn', factId: 'galactic-centre-light' },
   { id: 'local-group', atSec: 44, name: 'The Local Group', factId: 'andromeda-light', portraitX: 0.56 },
-  { id: 'cosmic-web', atSec: 49, name: 'The cosmic web, computed', factId: 'cosmic-web-map', portraitX: 0.27 },
+  { id: 'cosmic-web', atSec: 49, name: 'The cosmic web, derived', factId: 'cosmic-web-map', portraitX: 0.27 },
   { id: 'surveys', atSec: 55, name: 'The galaxy surveys', factId: 'survey-gaps' },
   { id: 'universe', atSec: 65.5,name: 'The observable universe', factId: 'observable-edge', portraitZoom: 0.4 },
 ];

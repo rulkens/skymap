@@ -38,7 +38,7 @@ export const DATA_CREDITS: readonly Credit[] = [
   {
     name: 'Gaia, an ESA mission processed by the Gaia DPAC',
     href: 'https://www.cosmos.esa.int/gaia',
-    licence: 'Gaia Data Licence',
+    licence: 'CC BY-NC 3.0 IGO',
     licenceHref: 'https://www.cosmos.esa.int/web/gaia-users/license',
   },
   {

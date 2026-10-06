@@ -10,15 +10,16 @@ import { siteShot } from '../data/siteShot';
 import { sitePath } from '../utils/sitePath';
 ---
 
-<Base title="Page not found: skymap" description="This address is not on the map. The way back to skymap starts here.">
+<Base title="Page not found: skymap" description="This address is not on the map. Start again from the skymap home page.">
   <!-- The void's ring is in the middle of the frame: zoomed, it stands beside the words, not under them. -->
   <PictureBand id="void-bootes" gap="none" zoom={1.45} eager>
     <h1>There is nothing here</h1>
     <p class="say">
-      This address is not on the map. The picture is the Boötes Void, found in 1981 and described as a
-      million cubic megaparsecs of very little. You are in suitable company.
+      This address is not on the map. The picture is the Boötes Void, reported in 1981 as “a million cubic megaparsec
+      void”: the volume of a ball about 400 million light-years across, with very little in it. You are in suitable
+      company.
     </p>
-    <ObjLink hang size="big" href={sitePath('/')}>Back to the start</ObjLink>
+    <ObjLink hang size="big" href={sitePath('/')}>skymap home page</ObjLink>
     <ViewLink hang href={appLink(siteShot('void-bootes').link)}>The Boötes Void</ViewLink>
     <ShotCaption id="void-bootes" open={false} />
   </PictureBand>

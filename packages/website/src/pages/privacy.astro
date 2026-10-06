@@ -63,7 +63,7 @@ const checked = formatDate(fact('privacy-site-requests').checked);
 
   <section class="wrap section" id="website">
     <SectionHead title="This website" narrow>
-      <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, and this one.</p>
+      <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, the about page and this one.</p>
     </SectionHead>
     <Claims items={SITE} />
     <Remark text="Your browser fetched every file on this page from skymap’s own addresses." live="files-fetched" />
@@ -112,14 +112,14 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     <Caveat title={CONTACT_ENDPOINT ? 'What happens to a message' : 'The plan, not yet in effect'}>
       <p>
         {CONTACT_ENDPOINT ? 'When you send the form' : 'When the form opens'}, your message will go to a small program
-        of ours on Cloudflare, which forwards the four fields to us as an email. Cloudflare Turnstile, a spam check, will run
-        before the message is accepted: it is a script that your browser loads from challenges.cloudflare.com, on the
-        domes page only and only when the form comes into view, so that is a request to Cloudflare. The program keeps
+        of ours on Cloudflare, which forwards the four fields (name, organisation, email address and message) to us as
+        an email. A spam check, Cloudflare Turnstile, will run before a message is accepted. Your browser will load
+        its script from challenges.cloudflare.com, on the domes page only, and only when the form comes into view. The program keeps
         nothing of its own. We will keep the email for as long as the conversation needs it.
       </p>
       <Note flow>
         This paragraph describes a design, not a running system. We will rewrite this section when the form opens,
-        and the date at the foot of the page will change with it.
+        and the date at the top of the page will change with it.
       </Note>
     </Caveat>
   </section>
@@ -132,19 +132,18 @@ const checked = formatDate(fact('privacy-site-requests').checked);
     </SectionHead>
     <Prose>
       <p>
-        To ask what we hold about you, or to have it removed, open an issue. Today the honest answer is short: the
-        counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
+        To ask what we hold about you, or to have it removed, open an issue on GitHub that says only that you have
+        a privacy request, and we will reply with an address. Today the answer is short: the counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
       </p>
     </Prose>
     <LinkRow>
       <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
-      <ObjLink hang size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
+      <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
     </LinkRow>
-    <Note>This page was last checked against the code on {checked}.</Note>
   </section>
 
   <div class="wrap section last">
-    <Sources ids={factIds} all label="Sources for the statements on this page" />
+    <Sources ids={factIds} all />
   </div>
 </Base>
 

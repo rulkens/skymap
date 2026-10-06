@@ -11,7 +11,7 @@ import { listedSources } from '../utils/listedSources';
 
 type Props = { ids: readonly string[]; label?: string; all?: boolean };
 
-const { ids, label = 'Sources for the numbers on this page', all = false } = Astro.props;
+const { ids, label = 'Sources for this page', all = false } = Astro.props;
 const rows = listedSources([...new Set(ids)].map(fact), all);
 ---
 

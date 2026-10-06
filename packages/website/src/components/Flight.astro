@@ -20,9 +20,21 @@ import type { FlightStill } from '../@types/FlightStill';
 type Props = { stills: FlightStill[]; videoUrl: string };
 
 const { stills, videoUrl } = Astro.props;
-// Shown at the end of the flight; the Milky Way and the web glow are the two drawn things a viewer has seen by then.
+// Shown at the end of the flight; the web glow (derived) and the Milky Way (drawn) are the two things a viewer has seen by then that are not catalogue points.
 const closing =
-  'The stars and galaxies in this flight sit where the catalogues put them. The Milky Way’s disc and the glow of the web are drawn, and the flight says so.';
+  'The stars and galaxies in this flight sit where the catalogues put them. The glow of the web is computed from those positions, and the Milky Way’s disc is drawn. Each stop says which.';
+// What each still shows, by stop id: written from the frames, so re-read them after `npm run site:media`.
+const ALT: Record<string, string> = {
+  earth: 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.',
+  'moon-orbit': 'The Moon’s orbit as a thin ring around a small Earth, against labelled stars.',
+  'outer-planets': 'The orbits of the planets as nested rings around the Sun, against the stars.',
+  'nearby-stars': 'A dense field of stars, some with name labels.',
+  'milky-way': 'A spiral galaxy seen from outside under the label You are here, with two small companion galaxies below it.',
+  'local-group': 'A pale disc labelled Local Group among other labelled discs, on a field of points.',
+  'cosmic-web': 'A purple and gold glow across one corner of a field of galaxies, with pale discs marking clusters.',
+  surveys: 'A bright knot of points with dark gaps cut into it, thinning outwards.',
+  universe: 'A thin blue sphere enclosing a small cloud of galaxies in two fans.',
+};
 const timeline = flightTimeline(
   FLIGHT_STOPS.map((stop) => stop.atSec),
   HERO_MEDIA.outSec - HERO_MEDIA.inSec,
@@ -86,11 +98,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
                   src={stop.still.landscape.src}
                   width={stop.still.landscape.width}
                   height={stop.still.landscape.height}
-                  alt={
-                    i === 0
-                      ? 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.'
-                      : `${stop.name}, as skymap draws it at this point in the flight.`
-                  }
+                  alt={ALT[stop.id]}
                   loading={i === 0 ? 'eager' : 'lazy'}
                   fetchpriority={i === 0 ? 'high' : undefined}
                   decoding="async"

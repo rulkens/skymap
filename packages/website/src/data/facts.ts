@@ -110,15 +110,15 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'voyager1-to-proxima',
-    text: 'At its speed of 17.0 km/s relative to the Sun, Voyager 1 would take about 75,000 years to travel the 4.25 light-years to Proxima Centauri. It is not headed there.',
+    text: 'At its speed of 17.0 km/s relative to the Sun, Voyager 1 would take about 75,000 years to travel the 4.25 light-years to Proxima Centauri. It is not heading there.',
     source: 'https://science.nasa.gov/mission/voyager/voyager-1/',
     sourceLabel: 'NASA, Voyager 1',
     checked: CHECKED,
-    short: 'At 17 km/s Voyager 1 would need about 75,000 years to reach Proxima Centauri, the nearest star. It is not heading there.',
+    short: 'Voyager 1 would need about 75,000 years to reach Proxima Centauri, the nearest star. It is not heading there.',
   },
   {
     id: 'galactic-centre-light',
-    text: 'Light from the Milky Way’s centre left about 26,700 years ago. The ice sheets of the last glacial maximum were at their greatest extent from 26.5 to 19–20 thousand years ago.',
+    text: 'The ice sheets of the last glacial maximum were at their greatest extent from about 26,500 years ago to between 19,000 and 20,000 years ago.',
     source: 'https://doi.org/10.1126/science.1172873',
     sourceLabel: 'Clark et al. 2009, last glacial maximum',
     checked: CHECKED,
@@ -126,7 +126,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'andromeda-light',
-    text: 'Light from Andromeda left about 2.5 million years ago. Fossils from Jebel Irhoud, Morocco, are among the oldest assigned to Homo sapiens: the heated flint tools found with them date to 315,000 years ago, plus or minus 34,000.',
+    text: 'Fossils from Jebel Irhoud, Morocco, are among the oldest assigned to Homo sapiens: the heated flint tools found with them date to 315,000 years ago, plus or minus 34,000.',
     source: 'https://doi.org/10.1038/nature22335',
     sourceLabel: 'Richter et al. 2017, dating Jebel Irhoud',
     checked: CHECKED,
@@ -142,11 +142,11 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'survey-gaps',
-    text: 'SDSS took spectra over about a quarter of the sky (9,376 square degrees), so galaxies far out sit in wedges.',
+    text: 'SDSS took spectra over about a quarter of the sky (9,376 square degrees), so galaxies far out sit in two fans.',
     source: 'https://www.sdss4.org/dr17/scope/',
     sourceLabel: 'SDSS DR17 scope',
     checked: CHECKED,
-    short: 'Dark areas are directions the surveys did not observe, the dust of our own galaxy, or distances too faint for them.',
+    short: 'A dark area is not an empty one. The surveys did not look there, our galaxy’s dust hides it, or its galaxies are too faint.',
   },
   {
     id: '2mrs-coverage',
@@ -161,10 +161,11 @@ export const FACTS: readonly Fact[] = [
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck 2018, cosmological parameters',
     checked: CHECKED,
-    short: 'The sphere is drawn: a model of the edge, about 46 billion light-years out. Galaxy catalogues fill only a small part of it.',
+    short: 'The sphere is drawn where a model puts the edge, about 46 billion (46 thousand million) light-years out. The catalogues fill little of it.',
   },
   {
     id: 'sondermarken-flyout',
+    about: 'app',
     text: 'The “Søndermarken to the Edge” clip opens over Søndermarken, a park in Copenhagen, about 46 metres above the sphere of 6,371 kilometres radius that skymap uses for Earth’s surface, and pulls back in one continuous move to the edge of the observable universe.',
     source: `${REPO_BLOB}/src/data/animation/clips/sondermarkenFlyout.ts`,
     sourceLabel: 'the clip, in the skymap repository',
@@ -172,6 +173,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'geodanmark-orthophoto',
+    about: 'app',
     text: 'The aerial photography of Søndermarken in skymap is a GeoDanmark orthophoto at 10 centimetres per pixel, taken in spring 2025 and published under CC BY 4.0.',
     source: `${REPO_BLOB}/data/raw/geodanmark/README.md`,
     sourceLabel: 'the harvest record, in the skymap repository',
@@ -218,6 +220,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'flight-camera-path',
+    about: 'app',
     text: 'The camera distance shown beside the flight is computed from the path the film was recorded on: from 19,140 kilometres from Earth’s centre to 29,500 megaparsecs in 70 seconds, eased at both ends. Earth’s radius of 6,371 kilometres is subtracted, and far out it is a distance in the map, not a light-travel time.',
     source: `${REPO_BLOB}/src/data/animation/clips/makers/makeEarthLoop.ts`,
     sourceLabel: 'the flight’s camera path, in the skymap repository',
@@ -225,7 +228,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'bootes-void',
-    text: 'The Boötes Void was reported in 1981 by Kirshner, Oemler, Schechter and Shectman, in a paper titled “A million cubic megaparsec void in Boötes”.',
+    text: 'The Boötes Void was reported in 1981 by Kirshner, Oemler, Schechter and Shectman, in a paper titled “A million cubic megaparsec void in Boötes”. A ball of that volume is about 400 million light-years across.',
     source: 'https://doi.org/10.1086/183623',
     sourceLabel: 'Kirshner et al. 1981, a void in Boötes',
     checked: CHECKED,
@@ -242,6 +245,7 @@ export const FACTS: readonly Fact[] = [
     id: 'link-pose',
     about: 'app',
     text: 'An address can also carry the exact camera position (pose). The app reads it but does not write it into the address bar by itself, so a link you copy opens on the app’s standard view of the object.',
+    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose), which the app reads but does not write.',
     source: `${REPO_BLOB}/src/utils/url/decodeFramedPose.ts`,
     sourceLabel: 'the camera-position parameter, in the skymap repository',
     checked: CHECKED,
@@ -274,6 +278,7 @@ export const FACTS: readonly Fact[] = [
     id: 'app-browser-advice',
     about: 'app',
     text: 'The app’s own advice to a browser that cannot run it is a recent version of Chrome or Edge on a desktop computer.',
+    short: 'Where it does not run, the app itself advises a recent Chrome or Edge on a desktop computer.',
     source: `${REPO_BLOB}/src/unsupportedPage.ts`,
     sourceLabel: 'the page shown without WebGPU, in the skymap repository',
     checked: CHECKED,
@@ -281,7 +286,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'phone-data-size',
     about: 'app',
-    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sets, which holds fewer stars and galaxies. A wider screen starts with the middle one.',
+    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A wider screen starts with the middle one.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: 'how the data size is chosen, in the skymap repository',
     checked: CHECKED,
@@ -298,6 +303,7 @@ export const FACTS: readonly Fact[] = [
     id: 'exhibits',
     about: 'app',
     text: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a framed view with its own notes and sources, and each opens from its own address.',
+    short: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
     source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
     sourceLabel: 'the exhibits, in the skymap repository',
     checked: CHECKED,
@@ -305,7 +311,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'wisdome-showing',
     about: 'app',
-    text: 'We showed skymap in the dome at Wisdome Malmö in September 2026. This is our own account: the venue has published nothing about it. What the repository shows is that the film recorder’s fulldome preset was written for that dome.',
+    text: 'We showed skymap in the dome at Wisdome Malmö in September 2026, and the film recorder’s fulldome preset was written for that dome. The showing is our own account: the venue has published nothing about it.',
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: 'the recorder’s fulldome notes, in the skymap repository',
     checked: CHECKED,
@@ -313,6 +319,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'wisdome-venue',
     text: 'Wisdome Malmö is a visualisation dome at Malmö museum, one of five in a Swedish national collaboration.',
+    short: 'It is one of five visualisation domes in a Swedish national collaboration, at Malmö museum.',
     source: 'https://malmo.se/Uppleva-och-gora/Konst-och-museer/Malmo-museum/Wisdome-Malmo/Om-Wisdome-Malmo.html',
     sourceLabel: 'City of Malmö, about Wisdome Malmö (in Swedish)',
     checked: CHECKED,
@@ -320,6 +327,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'wisdome-dome',
     text: 'The screen in the dome at Wisdome Malmö is 11.5 metres across and the theatre holds 58 visitors. It opened on 22 and 23 April 2023.',
+    short: 'Its screen is 11.5 metres across.',
     source:
       'https://www.mynewsdesk.com/se/malmo/pressreleases/snart-oeppnar-wisdome-malmoe-360-graders-filmduk-paa-plats-i-domteatern-3236947',
     sourceLabel: 'City of Malmö press release, 2 March 2023 (in Swedish)',
@@ -368,7 +376,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'dome-rig',
     about: 'app',
-    text: 'In dome mode the app renders five views and resamples them into one fisheye disc on the one canvas. Labels are not drawn and objects cannot be selected by clicking.',
+    text: 'In dome mode the app draws five views and joins them into one fisheye disc. Labels are not drawn and objects cannot be selected by clicking.',
     source: `${REPO_BLOB}/src/data/rendering/viewRigs.ts`,
     sourceLabel: 'the dome view, in the skymap repository',
     checked: CHECKED,
@@ -384,7 +392,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'film-recorder',
     about: 'app',
-    text: 'The recorder plays a tour or a camera move frame by frame and encodes it as H.264 in an MP4 file. A flat film is 3,840 by 2,160 pixels at 60 frames per second unless another size is asked for, with the tour’s captions in the picture. The fulldome preset writes an equidistant fisheye disc of 4,096 by 4,096 pixels at 30 frames per second, or 60.',
+    text: 'The recorder plays a tour or a camera move frame by frame and encodes it as H.264 in an MP4 file. A flat film is 3,840 by 2,160 pixels at 60 frames per second unless another size is asked for, with the tour’s captions in the picture. The fulldome preset writes a fisheye disc with equal angles per pixel (equidistant), 4,096 by 4,096 pixels, at 30 frames per second, or 60.',
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: 'the recorder’s manual, in the skymap repository',
     checked: CHECKED,
@@ -392,7 +400,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'film-silent',
     about: 'app',
-    text: 'The recorder writes pictures only. A film from it has no sound track.',
+    text: 'The recorder writes pictures only. A film from it has no soundtrack.',
     source: `${REPO_BLOB}/tools/utils/record/buildFfmpegArgs.ts`,
     sourceLabel: 'the recorder’s encoder settings, in the skymap repository',
     checked: CHECKED,
@@ -417,6 +425,7 @@ export const FACTS: readonly Fact[] = [
     id: 'grand-tour-steps',
     about: 'app',
     text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
+    short: '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the skymap repository',
     checked: CHECKED,

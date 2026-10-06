@@ -42,7 +42,7 @@ const DERIVED = [
   { term: 'Galaxy distances', id: 'sci-galaxy-distance' },
   { term: 'The Hubble constant', id: 'sci-h0-range' },
   { term: 'Nearby galaxies', id: 'sci-local-volume' },
-  { term: 'Two kinds of redshift', id: 'sci-photometric-share' },
+  { term: 'Two kinds of redshift', id: 'sci-two-redshifts' },
   { term: 'Star distances', id: 'sci-star-distance' },
   { term: 'Planets and moons', id: 'sci-ephemeris' },
   { term: 'Density field', id: 'sci-density-field' },
@@ -117,6 +117,7 @@ const factIds = [
   'sci-cite-skymap',
   'sci-cite-file',
   'astronomical-unit',
+  'megaparsec-length',
 ];
 const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 ---
@@ -137,25 +138,23 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
 
   <SectionNav
     items={[
-      { href: '#sources', label: 'What is in it', icon: 'sources', note: 'The sources behind everything you see.' },
+      { href: '#sources', label: 'The sources', icon: 'sources' },
       {
         href: '#bins',
         label: 'Measured, derived, drawn',
         icon: 'method',
-        note: 'Three words, and what each one means here.',
       },
       {
         href: '#simplifications',
         label: 'Known simplifications',
         icon: 'simplified',
-        note: 'Where the scene departs from the sky.',
       },
-      { href: '#cite', label: 'How to cite', icon: 'cite', note: 'skymap for the pictures, the catalogues for the data.' },
+      { href: '#cite', label: 'How to cite', icon: 'cite' },
     ]}
   />
 
   <section class="wrap section" id="sources">
-    <SectionHead title="What is in it">
+    <SectionHead title="The sources">
       <p>
         The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name links to the
         catalogue or its paper. “Our record” links to the file in our repository that says which release we use.
@@ -167,7 +166,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
         <a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a>
       </p>
       <p>
-        “In the file” is the size of the table or query we read. “We draw” is smaller because rows without a usable
+        “Rows we read” is the size of the table or query. “We draw” is smaller because rows without a usable
         redshift are dropped, overlapping catalogues are merged, and SDSS is cut to about 500,000 of its most
         luminous galaxies. An empty cell means neither our build nor the
         source’s own record gives a number we can stand behind.
@@ -184,8 +183,8 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <section class="wrap section" id="bins">
     <SectionHead title="Measured, derived, drawn">
       <p>
-        Three words, each with one meaning on this site. A point in the scene is usually all three at once: a
-        measured direction, a derived distance and a drawn dot.
+        Each word has one meaning on this site. A point in the scene is usually all three at once: a measured
+        direction, a derived distance and a drawn dot.
       </p>
     </SectionHead>
 
@@ -195,9 +194,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     </Group>
 
     <Group title="Derived" big>
-      <p slot="lede">
-        Computed from measurements by a method we can name. The method and its assumptions matter as much as the data.
-      </p>
+      <p slot="lede">Computed from measurements by a method we can name.</p>
       <div class="pair">
         <Figure id="science-web-points" sizes="(max-width: 900px) 100vw, 36rem" />
         <Figure id="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
@@ -235,8 +232,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
       ))
     }
     <Note>
-      Found one we missed? <a href={`${REPO_URL}/issues`}>Open an issue in the repository</a>. Corrections from people
-      who work with these data are the ones we want most.
+      If you find one we missed, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.
     </Note>
   </section>
 
@@ -257,13 +253,13 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   </section>
 
   <section class="wrap section" id="onward">
-    <h2>Go deeper</h2>
+    <h2>Further reading</h2>
     <LinkRow>
       <ObjLink hang href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
       <ObjLink hang href={sitePath('/docs/science/')}>The methods in full</ObjLink>
-      <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications in the docs</ObjLink>
+      <ObjLink hang href={sitePath('/docs/simplifications/')}>Known simplifications, in full</ObjLink>
       <ObjLink hang href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
-      <ObjLink hang href={sitePath('/classroom/')}>Use it in the classroom</ObjLink>
+      <ObjLink hang href={sitePath('/classroom/')}>Use skymap in the classroom</ObjLink>
       <ObjLink hang href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </LinkRow>
     <Onward>
@@ -272,7 +268,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   </section>
 
   <div class="wrap section last">
-    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

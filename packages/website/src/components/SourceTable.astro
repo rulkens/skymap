@@ -17,7 +17,7 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     <tr role="row">
       <th role="columnheader" scope="col">Source and what it gives</th>
       <th role="columnheader" scope="col">Release we read</th>
-      <th role="columnheader" scope="col" class="num">In the file</th>
+      <th role="columnheader" scope="col" class="num">Rows we read</th>
       <th role="columnheader" scope="col" class="num">We draw</th>
       <th role="columnheader" scope="col">Licence</th>
     </tr>
@@ -39,7 +39,7 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
             <td role="cell" data-label="Release we read">
               {row.release}
             </td>
-            <td role="cell" data-label="In the file" class:list={['num', !row.rows && 'none']}>
+            <td role="cell" data-label="Rows we read" class:list={['num', !row.rows && 'none']}>
               {row.rows ?? <span class="sr">not counted</span>}
             </td>
             <td role="cell" data-label="We draw" class:list={['num', !row.drawn && 'none']}>

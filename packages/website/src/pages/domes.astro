@@ -21,9 +21,9 @@ import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
 
-const title = 'skymap for planetariums, domes and museums | skymap';
+const title = 'Domes and museums | skymap';
 const description =
-  'We showed skymap in the dome at Wisdome Malmö in September 2026. What we can deliver: live fisheye, a fulldome or 4K film, an exhibit build. How to ask us.';
+  'We showed skymap in the dome at Wisdome Malmö in September 2026. We can deliver a live fisheye picture, a dome or 4K film, or a screen built around one exhibit.';
 
 // Every fact row the page prints, so the Sources list cannot drift from the copy.
 const factIds = [
@@ -71,14 +71,11 @@ const STEPS = [
     <h1>Domes and museums</h1>
     <p class="say proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
     <p>
-      {fact('wisdome-venue').text}{' '}
-      {fact('wisdome-dome').text}
+      {fact('wisdome-dome').short} {fact('wisdome-venue').short} We can do three things for a dome or a gallery: a
+      live fisheye picture from the app, a rendered film, or a screen built around one exhibit.
     </p>
-    <Note flow>
-      The showing is our own account: the venue has published nothing about it. The facts about the venue are the
-      venue’s.
-    </Note>
-    <ObjLink hang href="#contact">Ask about a commission</ObjLink>
+    <Note flow>The showing is our own account: the venue has published nothing about it.</Note>
+    <ObjLink hang href="#contact">How to reach us</ObjLink>
     <p slot="note" class="small">
       This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
       are 4,096.
@@ -87,7 +84,7 @@ const STEPS = [
 
   <section class="wrap section" id="deliver">
     <SectionHead title="What we can deliver">
-      <p>Three things. For each: what the code does today, and what would be work done for you.</p>
+      <p>For each: what the code does today, and what would be work for you.</p>
     </SectionHead>
 
     <Offer title="Live fisheye from the app">
@@ -103,7 +100,7 @@ const STEPS = [
       </ViewLink>
     </Offer>
 
-    <Offer title="A rendered film, fulldome or flat" wide>
+    <Offer title="A rendered film, for a dome or a flat screen" wide>
       <Figure slot="picture" id="tour-cosmic-web" sizes="(max-width: 1300px) 100vw, 72rem" open={false} />
       <p>
         A flight written for your show and rendered ahead of time, so the picture does not depend on the computer in
@@ -115,7 +112,7 @@ const STEPS = [
         or from someone you choose.
       </Fragment>
       <ViewLink slot="link" hang href={appLink(siteShot('tour-cosmic-web').link)}>
-        Start the tour the frame is from
+        Start the tour
       </ViewLink>
     </Offer>
 
@@ -159,7 +156,7 @@ const STEPS = [
           The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
           signs anything.
         </p>
-        <ObjLink hang size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
+        <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
       </div>
     </Columns>
     <Remark text={fact('earth-rotation').short!} live="dome-turn" />
@@ -183,17 +180,16 @@ const STEPS = [
       <div>
         <h2>Write to us</h2>
         <p>
-          One message is enough to start. If you teach, the <a href={sitePath('/classroom/')}>classroom page</a> has
-          links you can use today without asking anyone.
+          If you teach, <a href={sitePath('/classroom/')}>Use skymap in the classroom</a> has links you can use today
+          without asking anyone.
         </p>
-        <ObjLink hang size="small" href={sitePath('/')}>Back to the start</ObjLink>
       </div>
       <ContactForm />
     </Beside>
   </section>
 
   <div class="wrap section last">
-    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Sources ids={factIds} />
     <Credits />
   </div>
 </Base>

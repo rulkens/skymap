@@ -40,9 +40,12 @@ const shot = siteShot(id);
               <dd>{shot.credit}.</dd>
             </dl>
           )}
-          {open && (
-            <ViewLink href={appLink(shot.link, shot.query)} />
-          )}
+          {open &&
+            (shot.link.startsWith('tour=') ? (
+              <ViewLink href={appLink(shot.link, shot.query)}>Start the tour</ViewLink>
+            ) : (
+              <ViewLink href={appLink(shot.link, shot.query)} />
+            ))}
         </div>
       )
     }
