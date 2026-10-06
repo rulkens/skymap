@@ -1,8 +1,9 @@
 import type { ContactCheck } from '../../@types/worker/ContactCheck';
 import { CONTACT_LIMITS } from '../../data/worker/contactConfig';
 
-// Line breaks and other control characters in a one-line field are how a header gets injected into the mail; reject, never repair.
-const CONTROL = /[\u{0}-\u{1f}\u{7f}\u{2028}\u{2029}]/u;
+// Line breaks and other control characters in a one-line field are how a header gets injected into the mail, and a
+// direction override reorders what the owner reads in the subject; reject, never repair.
+const CONTROL = /[\u{0}-\u{1f}\u{7f}\u{85}\u{2028}-\u{202e}\u{2066}-\u{2069}]/u;
 // Deliberately loose: one @, a dot in the domain, nothing that could end an address or start a second one. The provider is the real check.
 const EMAIL = /^[^\s@<>()[\]\\,;:"']+@[^\s@<>()[\]\\,;:"']+\.[^\s@<>()[\]\\,;:"']+$/;
 const MESSAGE_CONTROL = /[\u{0}-\u{8}\u{b}\u{c}\u{e}-\u{1f}\u{7f}]/gu;

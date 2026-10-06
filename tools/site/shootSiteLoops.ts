@@ -2,13 +2,11 @@
  * Record every film in the website's loop manifest from a running app: open
  * the manifest picture it starts from, then move the camera or the clock one
  * step per frame and read the canvas back, so the film is exact however slow
- * a frame is to draw. Each is written as H.264 into the site's committed
- * assets.
+ * a frame is to draw. Each is written as H.264 into the site's committed assets.
  *
  *   npm run site:loops -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *
- * The frames are kept as PNGs in `data/shots/site/loops/<id>/` (gitignored);
- * `--from-masters` re-encodes from those without visiting the app.
+ * `--from-masters` re-encodes from the PNG frames kept in `data/shots/site/loops/<id>/` (gitignored).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';

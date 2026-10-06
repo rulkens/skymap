@@ -1,11 +1,9 @@
 /*
  * site.css — the website's type, spacing and page rules.
- *
  * The one cross-package import: the palette is the app's own tokens, shared by
  * path rather than copied, so a palette change reaches the site. The tokens
  * file carries no page rules (that is why it was split out of the app's
  * global.css).
- *
  * Type floors: Jost 300 only at 20px and above, 400 below; the display face
  * never below 20px, so small controls keep the ring and take a Jost label.
  */

@@ -1,14 +1,10 @@
 ---
 /*
- * ObjLink — a link dressed as the site's one control, the ring plus a label
- * (styles/site.css `.ring`, shared with the menu's summary and real buttons).
- * A drawing that says where the link goes takes the marker's place, and the
- * ring is drawn around it when the link is pointed at, focused or the current
- * page: the destination page's own icon, or the mark of a link that leaves the
- * site (utils/linkIcon.ts), unless `icon` names another. A jump within the
- * page keeps the plain marker. `hang`
- * puts the marker or drawing in the margin so the label starts at the text
- * edge: for a link under text, in a column with room to its left.
+ * ObjLink — a link dressed as the site's one control (styles/site.css `.ring`).
+ * A drawing of where it goes takes the marker's place: the destination page's
+ * icon or the mark of a link that leaves (utils/linkIcon.ts), unless `icon`
+ * names another; a jump within the page keeps the plain marker. `hang` puts the
+ * marker in the margin so the label starts at the text edge.
  */
 import type { HTMLAttributes } from 'astro/types';
 

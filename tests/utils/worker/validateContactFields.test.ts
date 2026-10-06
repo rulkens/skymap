@@ -45,6 +45,13 @@ describe('validateContactFields', () => {
     },
   );
 
+  it.each(['\u0085', '\u202e', '\u2066'])('rejects %j in a one-line field', (character) => {
+    expect(validateContactFields({ ...good, name: `Ada${character}Lovelace` })).toEqual({
+      kind: 'invalid',
+      field: 'name',
+    });
+  });
+
   it.each([
     ['name', CONTACT_LIMITS.name],
     ['organisation', CONTACT_LIMITS.organisation],
@@ -81,6 +88,13 @@ describe('validateContactFields', () => {
       });
     },
   );
+
+  it.each(['\u0085', '\u202e', '\u2066'])('rejects %j in a one-line field', (character) => {
+    expect(validateContactFields({ ...good, name: `Ada${character}Lovelace` })).toEqual({
+      kind: 'invalid',
+      field: 'name',
+    });
+  });
 
   it('keeps line breaks in the message, normalised, and drops other control characters', () => {
     const check = validateContactFields({ ...good, message: 'one\r\ntwo\u0000\u0007' });

@@ -1,12 +1,6 @@
 import type { HonestyItem } from '../@types/HonestyItem';
 import { REPO_BLOB } from './siteIdentity';
 
-type Honesty = {
-  measured: readonly HonestyItem[];
-  derived: readonly HonestyItem[];
-  drawn: readonly HonestyItem[];
-};
-
 /**
  * "What is measured, what is derived, what is drawn" on Home, after docs/science.md
  * ("Measured, derived, or modelled") and ATTRIBUTIONS.md. Measured: an instrument
@@ -16,7 +10,7 @@ type Honesty = {
  * behind the line; the figures (H0, the GLADE share, the 30 Mpc cut, the 1,000 km
  * ephemeris bound) are the ones in the code and docs/DATA.md.
  */
-export const HONESTY: Honesty = {
+export const HONESTY: Record<'measured' | 'derived' | 'drawn', readonly HonestyItem[]> = {
   measured: [
     {
       text: 'Where each star is and how far it shifts through the year (its parallax), from Gaia',

@@ -1,18 +1,13 @@
 ---
 /*
- * Places — nine places to start from, nearest first, hung on one hairline
- * that runs out from Earth: each a disc that grows with its distance, its name
- * and how far away it is. Disc, name and distance are one link (the one view
- * link that is not a ViewLink, because the picture is part of the target), so
- * the view mark follows the name. Pointed at or focused, a disc gets the
- * ring of the site drawn round it and plays its film (scripts/initPlaceFilms.ts),
- * with a mark going round the ring once per loop. Scrolling draws the line
- * and drifts the discs a few pixels at different depths (scripts/initPlaceDrift.ts).
- *
- * Every position and size is in units of the width of the field (cqw), so the
- * composition scales as one drawing and the line, an SVG in the same units,
- * always passes through the disc centres. Two compositions: `TALL` zigzags
- * down an upright screen, `WIDE` wanders across a wide one.
+ * Places — nine places to start from, nearest first, hung on one hairline out
+ * from Earth: each a disc that grows with its distance, its name and how far
+ * away it is, all one link (not a ViewLink: the picture is part of the target).
+ * Pointed at or focused, a disc gets the site's ring and plays its film
+ * (scripts/initPlaceFilms.ts); scrolling draws the line and drifts the discs
+ * (scripts/initPlaceDrift.ts). Every position and size is in widths of the
+ * field (cqw), so the line, an SVG in the same units, always passes through
+ * the disc centres. `TALL` zigzags down an upright screen, `WIDE` across a wide one.
  */
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';

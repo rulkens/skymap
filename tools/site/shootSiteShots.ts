@@ -6,8 +6,7 @@
  *
  *   npm run site:shots -- --url http://localhost:5178 [--only id,id] [--from-masters]
  *
- * The full-size PNG of each row is kept in `data/shots/site/` (gitignored);
- * `--from-masters` re-encodes from those without visiting the app.
+ * `--from-masters` re-encodes from the full-size PNGs kept in `data/shots/site/` (gitignored).
  */
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

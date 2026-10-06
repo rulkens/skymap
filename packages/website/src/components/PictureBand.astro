@@ -1,16 +1,13 @@
 ---
 /*
  * PictureBand — a section whose ground is one picture, with the words on its
- * dark side (`words`). Wide, the picture fills the band and fades into the
- * page; narrow, it comes first and the words follow under it. The picture's
- * label (a ShotCaption among the words) leaves the words and is set against
- * the picture: along the band's foot when wide, straight under it when narrow.
+ * dark side (`words`). Wide, the picture fills the band and its label (a ShotCaption
+ * among the words) runs along the foot; narrow, picture, label and words follow in turn.
  * `gap="none"` makes it a page's opening section: it fits the first screen, and
  * narrow its title and lead come before the picture. `zoom` enlarges a wide
  * picture past the right edge, to bring a centred subject out from under the words.
- * With `views` in place of `id` the band is a gallery: the pictures share the
- * ground and one shows at a time (scripts/initGallery.ts), the words carry a
- * CaptionGallery as the label and a `.view-words` block for anything else that follows the view.
+ * With `views` the band is a gallery (scripts/initGallery.ts): the words carry a
+ * CaptionGallery and a `.view-words` block for anything else that follows the view.
  */
 import type { GalleryView } from '../@types/GalleryView';
 import { shotSources } from '../utils/shotSources';
