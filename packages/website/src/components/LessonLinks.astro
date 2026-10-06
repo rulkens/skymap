@@ -1,0 +1,118 @@
+---
+/*
+ * LessonLinks — the ready-made lesson links as a ledger: the topic in the
+ * margin, its links beside it. Each link is its picture, a ring that opens
+ * it, what the class sees, one question, and the address to copy.
+ */
+import AddressStrip from './AddressStrip.astro';
+import ObjLink from './ObjLink.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+import { appLink } from '../data/appLink';
+import { LESSON_TOPICS } from '../data/lessons';
+---
+
+{
+  LESSON_TOPICS.map((topic) => (
+    <section class="topic" aria-labelledby={`topic-${topic.id}`}>
+      <h3 id={`topic-${topic.id}`}>{topic.title}</h3>
+      <ul>
+        {topic.lessons.map((lesson) => (
+          <li>
+            <figure>
+              <a href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
+                <Shot id={lesson.shot} sizes="(max-width: 900px) 60vw, 28rem" alt="" />
+              </a>
+              <figcaption>
+                <ShotCaption id={lesson.shot} open={false} />
+              </figcaption>
+            </figure>
+            <ObjLink href={appLink(lesson.hash)}>{lesson.title}</ObjLink>
+            <dl>
+              <dt>The class sees</dt>
+              <dd>{lesson.sees}</dd>
+              <dt>Ask</dt>
+              <dd>{lesson.ask}</dd>
+            </dl>
+            <AddressStrip hash={lesson.hash} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))
+}
+
+<style>
+  .topic {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 1.5rem 3.75rem;
+    padding-block: 2.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  h3 {
+    position: sticky;
+    top: calc(var(--nav-height) + 1.5rem);
+    align-self: start;
+    margin: 0;
+    font-size: var(--text-lead);
+  }
+
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3rem 3.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    min-width: 0;
+  }
+
+  figure {
+    margin: 0 0 0.75rem;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+
+  dl {
+    margin: 0.25rem 0 0;
+  }
+
+  dt {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+  }
+
+  @media (max-width: 900px) {
+    .topic {
+      grid-template-columns: 1fr;
+      padding-block: 2rem;
+    }
+
+    h3 {
+      position: static;
+    }
+
+    ul {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
