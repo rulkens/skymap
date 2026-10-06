@@ -21,7 +21,7 @@ import { LESSON_TOPICS } from '../data/lessons';
           <li class:list={{ solo: topic.lessons.length === 1 }}>
             <figure>
               <a href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
-                <Shot id={lesson.shot} sizes="(max-width: 900px) 92vw, 28rem" alt="" />
+                <Shot id={lesson.shot} sizes="(max-width: 600px) 92vw, (max-width: 900px) 46vw, 28rem" alt="" />
               </a>
               <figcaption>
                 <ShotCaption id={lesson.shot} open={false} />
@@ -126,7 +126,10 @@ import { LESSON_TOPICS } from '../data/lessons';
     h3 {
       position: static;
     }
+  }
 
+  /* A tablet and a phone held sideways keep two links to a row; only an upright phone stacks them. */
+  @media (max-width: 600px) {
     ul {
       grid-template-columns: 1fr;
     }
