@@ -105,7 +105,9 @@ const checked = formatDate(fact('privacy-site-requests').checked);
       <p>
         {CONTACT_ENDPOINT ? 'When you send the form' : 'When the form opens'}, your message will go to a small program
         of ours on Cloudflare, which forwards the four fields to us as an email. Cloudflare Turnstile, a spam check, will run
-        before the message is accepted. We will keep the email for as long as the conversation needs it.
+        before the message is accepted: it is a script that your browser loads from challenges.cloudflare.com, on the
+        domes page only and only when the form comes into view, so that is a request to Cloudflare. The program keeps
+        nothing of its own. We will keep the email for as long as the conversation needs it.
       </p>
       <p class="small">
         This paragraph describes a design, not a running system. We will rewrite this section when the form opens,

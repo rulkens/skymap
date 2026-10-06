@@ -1,13 +1,15 @@
 ---
 /*
- * ContactForm — the commission enquiry. With no endpoint configured
- * (data/contact.ts) it prints a plain message in place of the form. With one,
- * it posts four fields as JSON; the script only reports what the server
- * answered, so "sent" is never shown for a message that was not accepted.
- * Without script the browser posts the form itself, with its own validation.
+ * ContactForm — the commission enquiry. With no endpoint and site key
+ * configured (data/contact.ts) it prints a plain message in place of the form.
+ * With them, it posts four fields and a Turnstile token as JSON; the script only
+ * reports what the server answered, so "sent" is never shown for a message that
+ * was not accepted. The Turnstile script, a third-party request, loads only when
+ * the form scrolls into view, and this component is on no other page. The spam
+ * check needs script, so without it the form says so and points to GitHub.
  */
 import ObjLink from './ObjLink.astro';
-import { CONTACT_ENDPOINT, ISSUES_URL } from '../data/contact';
+import { CONTACT_ENDPOINT, ISSUES_URL, TURNSTILE_SITE_KEY } from '../data/contact';
 import { sitePath } from '../utils/sitePath';
 
 const FIELDS = [
@@ -32,7 +34,7 @@ const FIELDS = [
 
 {
   CONTACT_ENDPOINT ? (
-    <form class="form" method="post" action={CONTACT_ENDPOINT} data-contact>
+    <form class="form" method="post" action={CONTACT_ENDPOINT} data-contact data-sitekey={TURNSTILE_SITE_KEY}>
       <div class="summary" role="alert" tabindex="-1" data-summary hidden />
       <p class="note small">All four fields are needed.</p>
       {FIELDS.map((field) => (
@@ -79,6 +81,13 @@ const FIELDS = [
         Sending this gives us these four fields as an email. We use them to answer you and for nothing else. What we
         keep, and for how long, is on the <a href={sitePath('/privacy/')}>privacy page</a>.
       </p>
+      <div class="check" data-turnstile></div>
+      <noscript>
+        <p class="note small">
+          The spam check needs JavaScript, so this form cannot send without it. The
+          <a href={ISSUES_URL}>issue list on GitHub</a> is public.
+        </p>
+      </noscript>
       <button class="ring" type="submit">Send the message</button>
       <p class="status" role="status" data-status />
     </form>
@@ -111,6 +120,39 @@ const FIELDS = [
     // Our own messages replace the browser's bubbles, which screen readers announce unevenly.
     form.noValidate = true;
 
+    // The widget is a request to Cloudflare, so it waits until the form is on screen. A token is single-use: reset after every attempt.
+    type TurnstileApi = {
+      render(el: HTMLElement, options: Record<string, unknown>): string;
+      reset(id: string): void;
+    };
+    const turnstile = () => (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+    let token = '';
+    let widgetId: string | undefined;
+    const loadWidget = () => {
+      const script = Object.assign(document.createElement('script'), {
+        src: 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
+        async: true,
+        onload: () => {
+          widgetId = turnstile()?.render(form.querySelector<HTMLElement>('[data-turnstile]')!, {
+            sitekey: form.dataset.sitekey,
+            theme: 'dark',
+            callback: (value: string) => (token = value),
+            'expired-callback': () => (token = ''),
+            'error-callback': () => (token = ''),
+          });
+        },
+      });
+      document.head.append(script);
+    };
+    new IntersectionObserver(
+      (entries, observer) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        loadWidget();
+      },
+      { rootMargin: '300px' },
+    ).observe(form);
+
     const check = (field: HTMLInputElement | HTMLTextAreaElement): string => {
       const empty = field.value.trim() === '';
       const message = empty || !field.validity.valid ? field.dataset.missing! : '';
@@ -141,22 +183,31 @@ const FIELDS = [
         summary.focus();
         return;
       }
+      if (!token) {
+        status.textContent = 'The spam check has not finished. Wait a moment, then send again.';
+        return;
+      }
       const button = form.querySelector('button')!;
       button.disabled = true;
       status.textContent = 'Sending.';
       try {
+        const { 'cf-turnstile-response': _widget, ...fields } = Object.fromEntries(new FormData(form));
         const response = await fetch(form.action, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+          body: JSON.stringify({ ...fields, token }),
         });
         if (!response.ok) throw new Error(String(response.status));
         form.reset();
         status.textContent = 'Your message has been sent.';
-      } catch {
+      } catch (failure) {
         status.textContent =
-          'The message was not sent. What you wrote is still in the form. Try again in a few minutes.';
+          failure instanceof Error && failure.message === '403'
+            ? 'The spam check did not pass. What you wrote is still in the form. Send it again.'
+            : 'The message was not sent. What you wrote is still in the form. Try again in a few minutes.';
       } finally {
+        token = '';
+        if (widgetId) turnstile()?.reset(widgetId);
         button.disabled = false;
       }
     });
@@ -234,6 +285,12 @@ const FIELDS = [
     display: block;
     padding-block: 0.5rem;
     color: #ffb4a6;
+  }
+
+  /* The widget is 65px tall; the space is kept so it does not push the button down when it appears. */
+  .check {
+    min-height: 65px;
+    margin-bottom: 1.5rem;
   }
 
   .leave {
