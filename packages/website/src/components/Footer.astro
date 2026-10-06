@@ -109,6 +109,8 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
     max-width: none;
     height: auto;
     transform: translate(-50%, 55%);
+    /* The sphere's rim comes up out of the dark, so the label that crosses it keeps its contrast. */
+    mask-image: linear-gradient(180deg, transparent 6%, #000 30%);
   }
 
   .inner {
