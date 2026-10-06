@@ -43,15 +43,7 @@ const { ids } = Astro.props;
     width: 100%;
   }
 
-  /* The foot ShotCaption draws for one label, drawn once here so it holds still while the labels change. */
-  .views::before {
-    content: var(--caption-foot, none);
-    position: absolute;
-    z-index: -1;
-    inset: 0 calc(50% - 50vw) -2rem;
-    background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
-  }
-
+  /* The foot (`.caption::before` in styles/site.css) is drawn once, here, so it holds still while the labels change. */
   .labels {
     --caption-foot: none;
   }

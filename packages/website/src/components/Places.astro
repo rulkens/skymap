@@ -89,7 +89,7 @@ const vars = (p: (typeof places)[number]) =>
             <a class="thing" href={appLink(p.place.hash)} data-film-src={p.film}>
               <span class="disc">
                 <span class="screen" data-screen>
-                  <Shot id={p.place.shot} sizes="(min-width: 900px) 15vw, 45vw" alt="" />
+                  <Shot id={p.place.shot} sizes="(min-width: 901px) 15vw, 45vw" alt="" />
                 </span>
                 <svg class="orbit" aria-hidden="true">
                   <circle cx="50%" cy="50%" r="50%"></circle>
@@ -385,7 +385,7 @@ const vars = (p: (typeof places)[number]) =>
     color: var(--site-text-dim);
   }
 
-  @media (min-width: 900px) {
+  @media (min-width: 901px) {
     .field {
       max-width: none;
       aspect-ratio: 1000 / var(--wide-height);

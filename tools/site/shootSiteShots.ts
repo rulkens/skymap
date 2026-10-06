@@ -14,15 +14,11 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 import { SITE_SHOTS } from '../../packages/website/src/data/siteShots';
-import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
-import { bootHookedPage } from '../utils/browser/bootHookedPage';
-import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
-import { siteShotActions } from './utils/siteShotActions';
-import { siteShotUrl } from './utils/siteShotUrl';
+import { openSiteShot } from './utils/openSiteShot';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
@@ -30,6 +26,9 @@ const DPR = 2;
 // Measured on these frames: AVIF 50 holds a star field, and WebP needs 76 to match it.
 const AVIF = { quality: 50, effort: 9 };
 const WEBP = { quality: 76, effort: 6 };
+// Typed as a person types, then long enough for the palette's results to land.
+const KEY_DELAY_MS = 60;
+const RESULTS_SETTLE_MS = 1200;
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -60,21 +59,13 @@ try {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
       try {
         const page = await context.newPage();
-        await bootHookedPage(page, siteShotUrl(base!, shot));
+        await openSiteShot(page, base!, shot);
         if (warnCheckout) await warnIfWrongCheckout(page);
         warnCheckout = false;
-        await dispatchActions(page, siteShotActions(shot));
-        const settled = () =>
-          page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
-        await settled();
-        if (shot.settings?.settleMs) {
-          await page.waitForTimeout(shot.settings.settleMs);
-          await settled();
-        }
         if (shot.settings?.searchFor !== undefined) {
           await page.keyboard.press('/');
-          await page.keyboard.type(shot.settings.searchFor, { delay: 60 });
-          await page.waitForTimeout(1200);
+          await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
+          await page.waitForTimeout(RESULTS_SETTLE_MS);
         }
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
         writeFileSync(

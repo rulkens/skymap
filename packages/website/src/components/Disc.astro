@@ -3,7 +3,7 @@
  * Disc — a fisheye frame from the app's dome mode, shown round with a ring
  * about it. The frame is a disc inscribed
  * in a square, so the round mask trims only its black corners. It is as wide
- * as the box it is put in; the ring stands 1.1875rem outside that, which the
+ * as the box it is put in; the ring stands `--disc-ring` outside that, which the
  * host leaves room for.
  */
 import Shot from './Shot.astro';
@@ -26,7 +26,7 @@ const { id, sizes, eager = false } = Astro.props;
     box-shadow:
       0 0 0 1px rgb(232 238 255 / 0.5),
       0 0 0 1.125rem #000,
-      0 0 0 1.1875rem rgb(232 238 255 / 0.18);
+      0 0 0 var(--disc-ring) rgb(232 238 255 / 0.18);
   }
 
   .disc :global(img) {

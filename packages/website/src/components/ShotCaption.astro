@@ -63,20 +63,6 @@ const shot = siteShot(id);
     text-align: left;
   }
 
-  /*
-   * For a host that lays the label along the foot of a full-width picture (PictureBand, Tour, the 404 page): it
-   * sets `--caption-foot: ''` and a top padding of `--caption-rise` (4rem unless it sets one), and the picture
-   * then ends at the label, black from the rule down across the whole window. The host clips the overflow and
-   * keeps 2rem under the label.
-   */
-  .caption::before {
-    content: var(--caption-foot, none);
-    position: absolute;
-    z-index: -1;
-    inset: 0 calc(50% - 50vw) -2rem;
-    background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
-  }
-
   /* The rule is as faint as the page's dividers; the label stands where its picture has faded to black. */
   .plate {
     --rule: rgb(232 238 255 / 0.2);

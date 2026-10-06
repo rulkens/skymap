@@ -20,15 +20,13 @@ import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
 import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraSlice';
 import { setSimDays } from '../../src/state/time/timeSlice';
 import { absoluteArm } from '../../src/utils/camera/absoluteArm';
-import { bootHookedPage } from '../utils/browser/bootHookedPage';
 import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { SITE_LOOP_PLAN } from './siteLoopPlan';
 import { loopVideoArgs } from './utils/loopVideoArgs';
 import { loopYaw } from './utils/loopYaw';
-import { siteShotActions } from './utils/siteShotActions';
-import { siteShotUrl } from './utils/siteShotUrl';
+import { openSiteShot } from './utils/openSiteShot';
 
 const MASTERS_DIR = 'data/shots/site/loops';
 const OUT_DIR = 'packages/website/src/assets/loops';
@@ -65,15 +63,7 @@ try {
       const context = await browser.newContext({ viewport: shot.size, deviceScaleFactor: DPR });
       try {
         const page = await context.newPage();
-        await bootHookedPage(page, siteShotUrl(base!, shot));
-        await dispatchActions(page, siteShotActions(shot));
-        const settled = () =>
-          page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
-        await settled();
-        if (shot.settings?.settleMs) {
-          await page.waitForTimeout(shot.settings.settleMs);
-          await settled();
-        }
+        await openSiteShot(page, base!, shot);
         const start = await page.evaluate(() => {
           const state = (window as unknown as SkymapWindow).__skymap!.getState();
           return { camera: state.camera.base, simDays: state.time.anchor.simDays };

@@ -57,6 +57,8 @@
   --stack: 1.5rem;
   --nav-height: 4.5rem;
   --tap: 2.75rem;
+  /* How far the ring about a dome frame (Disc) stands outside it; its host leaves that room. */
+  --disc-ring: 1.1875rem;
 
   /*
    * A page's opening section (`data-opening`) fits the first screen under the top bar, label included;
@@ -296,6 +298,20 @@ img {
   min-width: 0;
 }
 
+/*
+ * A picture's label (ShotCaption, CaptionGallery) along the foot of a full-width picture: the host (PictureBand,
+ * Tour, the 404 page) sets `--caption-foot: ''` and a top padding of `--caption-rise` (4rem unless it sets one),
+ * and the picture then ends at the label, black from the rule down across the whole window. The host clips the
+ * overflow and keeps 2rem under the label.
+ */
+.caption::before {
+  content: var(--caption-foot, none);
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw) -2rem;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
+}
+
 /* One gap above every section of a page; the page's last block closes it. */
 .section {
   padding-top: var(--section-space);
@@ -430,9 +446,13 @@ img {
 }
 
 .ring > .glyph {
-  box-sizing: content-box;
   width: var(--mark);
   height: var(--mark);
+}
+
+/* `.glyph-ring` is a link that is not a ring control but selects its drawing the same way (SectionNav). */
+:is(.ring, .glyph-ring) > .glyph {
+  box-sizing: content-box;
   margin: -0.4375rem;
   padding: 0.375rem;
   border: 1px solid transparent;
@@ -448,8 +468,8 @@ img {
     stroke 0.25s ease;
 }
 
-.ring:hover > .glyph,
-.ring:focus-visible > .glyph,
+:is(.ring, .glyph-ring):hover > .glyph,
+:is(.ring, .glyph-ring):focus-visible > .glyph,
 .ring[aria-current='page'] > .glyph {
   border-color: var(--color-accent);
   stroke: var(--color-accent);

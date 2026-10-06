@@ -22,7 +22,7 @@ const headingId = 'section-nav-label';
     {
       items.map((item) => (
         <li>
-          <a href={item.href}>
+          <a class="glyph-ring" href={item.href}>
             <Icon name={item.icon} />
             <span class="name">{item.label}</span>
           </a>
@@ -79,22 +79,6 @@ const headingId = 'section-nav-label';
     outline-offset: -2px;
   }
 
-  /* The ring costs no room: its padding and border are taken back by the margin. */
-  a :global(.glyph) {
-    box-sizing: content-box;
-    margin: -0.4375rem;
-    padding: 0.375rem;
-    border: 1px solid transparent;
-    border-radius: 50%;
-    stroke: var(--color-accent);
-    transition: border-color 0.25s ease;
-  }
-
-  a:hover :global(.glyph),
-  a:focus-visible :global(.glyph) {
-    border-color: var(--color-accent);
-  }
-
   .name {
     font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
     letter-spacing: -0.015em;
@@ -142,9 +126,4 @@ const headingId = 'section-nav-label';
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    a :global(.glyph) {
-      transition: none;
-    }
-  }
 </style>

@@ -47,7 +47,7 @@ const { id, sizes, open = true, disc = false } = Astro.props;
   /* The margin is the room the disc's ring stands in. */
   .ringed {
     max-width: min(26rem, 78svh);
-    margin: 1.1875rem auto;
+    margin: var(--disc-ring) auto;
   }
 
   @media (max-width: 900px) {

@@ -92,7 +92,7 @@ const { id } = Astro.props;
 
   /* The largest disc the room holds, less the ring that stands outside it. */
   .fit {
-    width: calc(min(100cqw, 100cqh, 46.375rem) - 2.375rem);
+    width: calc(min(100cqw, 100cqh, 46.375rem) - 2 * var(--disc-ring));
   }
 
   figcaption {
