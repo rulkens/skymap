@@ -1,15 +1,64 @@
 ---
 /*
- * Places — nine places to start from, each a whole-row link: its picture in a
- * disc, its name and how far away it is. A card has no margin to hang the
- * launch drawing in, so it follows the name. The one view link that is not a
- * ViewLink, because the picture is part of the target.
+ * Places — nine places to start from, nearest first, hung on one hairline
+ * that runs out from Earth: each a disc that grows with its distance, its name
+ * and how far away it is. Disc, name and distance are one link (the one view
+ * link that is not a ViewLink, because the picture is part of the target), so
+ * the launch drawing follows the name.
+ *
+ * Every position and size is in units of the field's own width (cqw), so the
+ * composition scales as one drawing and the line, an SVG in the same units,
+ * always passes through the disc centres. Two compositions: `TALL` zigzags
+ * down an upright screen, `WIDE` wanders across a wide one.
  */
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
 import { PLACES } from '../data/places';
+import { smoothPath } from '../utils/smoothPath';
 import Icon from './Icon.astro';
 import Shot from './Shot.astro';
+
+// Disc diameters, nearest first, in units of a field 100 wide.
+const TALL_SIZES = [30, 32, 34, 36, 38, 41, 44, 47, 52];
+// How far a disc stands in from its edge of the field, so the zigzag is not a ruler's.
+const TALL_INSET = [0, 3, 5, 0, 2, 4, 0, 2, 0];
+// Room between one disc's centre line and the next, on top of their radii: a label's height.
+const TALL_STEP = 19;
+const TALL_GAP = 5;
+
+let tallY = TALL_SIZES[0]! / 2;
+const tall = TALL_SIZES.map((d, i) => {
+  if (i > 0) tallY += (TALL_SIZES[i - 1]! + d) / 4 + TALL_STEP;
+  const left = i % 2 === 0;
+  const x = left ? TALL_INSET[i]! + d / 2 : 100 - TALL_INSET[i]! - d / 2;
+  return { x, y: tallY, d, side: left ? 'left' : 'right', room: 100 - d - TALL_INSET[i]! - TALL_GAP };
+});
+const tallHeight = tallY + TALL_SIZES.at(-1)! / 2;
+
+// Centre x, centre y and diameter in units of a field 1000 wide. The upper row carries its labels above and
+// the lower row below, so the line between the rows never crosses a word; `hang` is how a label sits on its disc.
+const WIDE_HEIGHT = 655;
+const wide = [
+  { x: 42, y: 201, d: 84, row: 'upper', hang: 'start' },
+  { x: 146, y: 417, d: 92, row: 'lower', hang: 'center' },
+  { x: 250, y: 137, d: 102, row: 'upper', hang: 'center' },
+  { x: 356, y: 461, d: 112, row: 'lower', hang: 'center' },
+  { x: 462, y: 179, d: 124, row: 'upper', hang: 'center' },
+  { x: 572, y: 427, d: 136, row: 'lower', hang: 'center' },
+  { x: 682, y: 151, d: 150, row: 'upper', hang: 'center' },
+  { x: 796, y: 465, d: 164, row: 'lower', hang: 'center' },
+  { x: 908, y: 197, d: 184, row: 'upper', hang: 'end' },
+];
+
+// The launch drawing stays on the line of the name's last word.
+const places = PLACES.map((place, i) => {
+  const words = place.name.split(' ');
+  const name = { head: words.slice(0, -1).join(' '), last: words.at(-1)! };
+  return { place, name, tall: tall[i]!, wide: wide[i]! };
+});
+const vars = (p: (typeof places)[number]) =>
+  `--tx:${p.tall.x};--ty:${p.tall.y.toFixed(2)};--td:${p.tall.d};--room:${p.tall.room};` +
+  `--wx:${p.wide.x};--wy:${p.wide.y};--wd:${p.wide.d}`;
 ---
 
 <section class="wrap places" id="places">
@@ -17,26 +66,37 @@ import Shot from './Shot.astro';
     <h2>Pick somewhere to start</h2>
     <p>Nine places, nearest first. A light-second is how far light goes in one second.</p>
   </div>
-  <ol class="things">
-    {
-      PLACES.map((place) => (
-        <li>
-          <a class="thing" href={appLink(place.hash)}>
-            <span class="disc">
-              <Shot id={place.shot} sizes="(min-width: 900px) 7.5rem, 5rem" alt="" />
-            </span>
-            <span class="text">
-              <b>
-                {place.name}
-                <Icon name="launch" />
-              </b>
-              <span class="far small">{place.factId ? fact(place.factId).short : place.note}</span>
-            </span>
-          </a>
-        </li>
-      ))
-    }
-  </ol>
+  <div class="field" style={`--tall-height:${tallHeight.toFixed(2)};--wide-height:${WIDE_HEIGHT}`}>
+    <svg class="thread tall" viewBox={`0 0 100 ${tallHeight.toFixed(2)}`} aria-hidden="true">
+      <path d={smoothPath(tall.map((p) => [p.x, p.y]), 0.9)} pathLength="1"></path>
+    </svg>
+    <svg class="thread wide" viewBox={`0 0 1000 ${WIDE_HEIGHT}`} aria-hidden="true">
+      <path d={smoothPath(wide.map((p) => [p.x, p.y]), 0.9)} pathLength="1"></path>
+    </svg>
+    <ol>
+      {
+        places.map((p) => (
+          <li style={vars(p)} data-side={p.tall.side} data-hang={p.wide.hang} data-row={p.wide.row}>
+            <a class="thing" href={appLink(p.place.hash)}>
+              <span class="disc">
+                <Shot id={p.place.shot} sizes="(min-width: 900px) 15vw, 45vw" alt="" />
+              </span>
+              <span class="text">
+                <b>
+                  {p.name.head}{' '}
+                  <span class="last">
+                    {p.name.last}
+                    <Icon name="launch" />
+                  </span>
+                </b>
+                <span class="far small">{p.place.factId ? fact(p.place.factId).short : p.place.note}</span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
 </section>
 
 <style>
@@ -51,7 +111,7 @@ import Shot from './Shot.astro';
     align-items: end;
     justify-content: space-between;
     gap: 1rem 2rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2.5rem;
   }
 
   .head h2,
@@ -59,32 +119,66 @@ import Shot from './Shot.astro';
     margin: 0;
   }
 
-  /* Phone: a list, one place a row, the whole row the target. */
-  .things {
+  .field {
+    --hairline: rgb(168 208 255 / 0.3);
+    position: relative;
+    container-type: inline-size;
+    /* A tablet held upright keeps the phone's composition at a phone's size. */
+    max-width: 30rem;
+    aspect-ratio: 100 / var(--tall-height);
+  }
+
+  .thread {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .thread path {
+    fill: none;
+    stroke: var(--hairline);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .thread.wide {
+    display: none;
+  }
+
+  ol {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  li {
+    --u: 1cqw;
+    --x: var(--tx);
+    --y: var(--ty);
+    --d: var(--td);
+    position: absolute;
+    left: calc((var(--x) - var(--d) / 2) * var(--u));
+    top: calc((var(--y) - var(--d) / 2) * var(--u));
+    width: calc(var(--d) * var(--u));
+  }
+
   .thing {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding-block: 0.75rem;
+    display: block;
     text-decoration: none;
   }
 
+  /* The ground colour behind the picture hides the line where it passes under a disc. */
   .disc {
-    flex: none;
     display: block;
-    width: 5rem;
     aspect-ratio: 1;
-    padding: 0.3125rem;
-    border: 1px solid rgb(168 208 255 / 0.45);
+    padding: 6%;
+    border: 1px solid var(--hairline);
     border-radius: 50%;
-    transition:
-      padding 0.3s ease,
-      border-color 0.3s ease;
+    background: var(--color-bg);
+    transition: border-color 0.3s ease;
   }
 
   .disc :global(img) {
@@ -97,14 +191,60 @@ import Shot from './Shot.astro';
 
   .thing:hover .disc,
   .thing:focus-visible .disc {
-    padding: 0.125rem;
     border-color: var(--color-accent);
   }
 
+  /* The label is outside the link's box, so the focus ring goes round the disc. */
+  .thing:focus-visible {
+    outline: none;
+  }
+
+  .thing:focus-visible .disc {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  /*
+   * The label hangs off the disc on a short tick, as a label is pinned to its
+   * object in the app. Its padding spans the gap, so the pointer stays on the
+   * link all the way from picture to words.
+   */
   .text {
+    --gap: calc(var(--tall-gap, 5) * var(--u));
+    position: absolute;
+    top: 50%;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+    width: calc((var(--room) + 5) * var(--u));
+    transform: translateY(-50%);
+  }
+
+  .text::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(var(--gap) - 0.5rem);
+    border-top: 1px solid var(--hairline);
+  }
+
+  [data-side='left'] .text {
+    left: 100%;
+    padding-left: var(--gap);
+  }
+
+  [data-side='left'] .text::before {
+    left: 0;
+  }
+
+  [data-side='right'] .text {
+    right: 100%;
+    padding-right: var(--gap);
+    text-align: right;
+  }
+
+  [data-side='right'] .text::before {
+    right: 0;
   }
 
   b {
@@ -112,11 +252,12 @@ import Shot from './Shot.astro';
     color: var(--color-fg);
   }
 
+  .last {
+    white-space: nowrap;
+  }
+
   b :global(.glyph) {
-    width: 1.25rem;
-    height: 1.25rem;
-    margin-left: 0.375rem;
-    stroke: var(--color-accent);
+    margin-left: 0.25rem;
   }
 
   .far {
@@ -124,21 +265,79 @@ import Shot from './Shot.astro';
     color: var(--site-text-dim);
   }
 
-  /* Wide: the same rows, three by three, still read nearest first. */
   @media (min-width: 900px) {
-    .things {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem clamp(1.5rem, 3vw, 3rem);
+    .field {
+      max-width: none;
+      aspect-ratio: 1000 / var(--wide-height);
     }
 
-    .disc {
-      width: clamp(5rem, 8vw, 7.5rem);
-      padding: 0.4375rem;
+    .thread.tall {
+      display: none;
     }
 
-    .thing {
-      gap: clamp(1rem, 2vw, 1.75rem);
+    .thread.wide {
+      display: block;
+    }
+
+    li {
+      --u: 0.1cqw;
+      --x: var(--wx);
+      --y: var(--wy);
+      --d: var(--wd);
+    }
+
+    li[data-row] .text {
+      --gap: 1.5rem;
+      --width: max(200 * var(--u), 12rem);
+      top: 100%;
+      right: auto;
+      left: calc(50% - var(--width) / 2);
+      width: var(--width);
+      padding: var(--gap) 0 0;
+      text-align: center;
+      transform: none;
+    }
+
+    li[data-row='upper'] .text {
+      top: auto;
+      bottom: 100%;
+      padding: 0 0 var(--gap);
+    }
+
+    li[data-row] .text::before {
+      top: 0.375rem;
+      right: auto;
+      left: 50%;
+      width: 0;
+      height: calc(var(--gap) - 0.75rem);
+      border-top: 0;
+      border-left: 1px solid var(--hairline);
+    }
+
+    li[data-row='upper'] .text::before {
+      top: auto;
+      bottom: 0.375rem;
+    }
+
+    /* At the field's two ends the label keeps to the column edge the disc sits on. */
+    li[data-row][data-hang='start'] .text {
+      left: 0;
+      text-align: left;
+    }
+
+    li[data-row][data-hang='end'] .text {
+      right: 0;
+      left: auto;
+      text-align: right;
+    }
+
+    li[data-row][data-hang='start'] .text::before {
+      left: calc(var(--d) * var(--u) / 2);
+    }
+
+    li[data-row][data-hang='end'] .text::before {
+      right: calc(var(--d) * var(--u) / 2);
+      left: auto;
     }
   }
 
