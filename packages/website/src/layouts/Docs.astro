@@ -12,6 +12,7 @@ import type { MarkdownHeading } from 'astro';
 import Base from './Base.astro';
 import DocBody from '../components/DocBody.astro';
 import DocsNav from '../components/DocsNav.astro';
+import FigureSheet from '../components/FigureSheet.astro';
 import ObjLink from '../components/ObjLink.astro';
 import Sources from '../components/Sources.astro';
 import { DOCS_TREE } from '../data/docsTree';
@@ -94,7 +95,7 @@ const turns = [
 
     {
       sections.length >= TOC_FROM && (
-        <nav class="toc small" aria-labelledby="toc-label" data-pagefind-ignore>
+        <nav class="toc small" aria-labelledby="toc-label" data-toc data-pagefind-ignore>
           <p id="toc-label">On this page</p>
           <ol>
             {sections.map((section) => (
@@ -107,7 +108,16 @@ const turns = [
       )
     }
   </div>
+  <FigureSheet />
 </Base>
+
+<script>
+  import { initTocYield } from '../scripts/initTocYield';
+
+  const toc = document.querySelector<HTMLElement>('[data-toc]');
+  const pictures = [...document.querySelectorAll<HTMLElement>('[data-wide] > a')];
+  if (toc && pictures.length > 0) initTocYield(toc, pictures);
+</script>
 
 <style>
   .page {
@@ -210,6 +220,15 @@ const turns = [
       padding-block: 3.625rem 3rem;
       overflow-y: auto;
       line-height: 1.3;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s;
+    }
+
+    /* A wide picture is passing through these columns (scripts/initTocYield.ts). */
+    .toc[data-under] {
+      opacity: 0;
+      visibility: hidden;
     }
   }
 

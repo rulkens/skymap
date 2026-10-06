@@ -1,10 +1,80 @@
 ---
-/* DocFigure — `<Figure id="…" />` on a docs page: a picture from the shot manifest at the text column's width, with its label and "Open this view". */
-import Figure from './Figure.astro';
+/*
+ * DocFigure — `<Figure id="…" />` on a docs page: a picture from the shot
+ * manifest with its label and "Open this view". A picture of the app's
+ * interface runs past the text column to the page's right edge, nine columns,
+ * so its text can be read; `wide` and `column` overrule that. A phone gets the
+ * manifest's `<id>-phone` row where there is one, edge to edge either way. The
+ * picture is a link to its largest file, which FigureSheet opens over the page.
+ */
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+import { siteShot } from '../data/siteShot';
+import { SITE_SHOTS } from '../data/siteShots';
+import { docFigureWide } from '../utils/docFigureWide';
+import { shotSources } from '../utils/shotSources';
 
-type Props = { id: string };
+type Props = { id: string; wide?: boolean; column?: boolean };
 
-const { id } = Astro.props;
+const { id, wide: asWide = false, column = false } = Astro.props;
+const shot = siteShot(id);
+const wide = asWide || (!column && docFigureWide(shot));
+const phone = SITE_SHOTS.find((row) => row.id === `${id}-phone`)?.id;
+const { full, width, height } = shotSources(id);
+// The picture's box at each layout of layouts/Docs.astro: nine columns of the page grid, or the text's seven and then six.
+const sizes = wide
+  ? '(max-width: 900px) 100vw, (max-width: 1239px) calc(75vw - 4.875rem), 53.25rem'
+  : '(max-width: 900px) 100vw, (max-width: 1199px) calc(58.33vw - 4.46rem), (max-width: 1239px) calc(50vw - 4.25rem), 34.5rem';
 ---
 
-<Figure id={id} sizes="(max-width: 900px) 100vw, 40rem" />
+<figure class:list={{ wide }} data-wide={wide || undefined}>
+  <a href={full} data-enlarge={shot.title} data-width={width} data-height={height} data-file-width={Math.max(...shot.widths)}>
+    <Shot id={id} tall={phone} sizes={sizes} />
+    <span class="unseen" data-pagefind-ignore>Open this picture larger</span>
+  </a>
+  <figcaption>
+    <ShotCaption id={id} />
+  </figcaption>
+</figure>
+
+<style>
+  a {
+    display: block;
+    cursor: zoom-in;
+  }
+
+  a :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+
+  /* Narrow, the picture runs to the screen's edges; its label keeps the text edge. */
+  @media (max-width: 900px) {
+    a {
+      margin-inline: calc(-1 * var(--gutter));
+    }
+  }
+
+  /*
+   * Wide: the picture runs out to the right by the page grid's columns the text does not use (twelve less the
+   * contents' three and the text's own), so its right edge is the page's. The label stays under the text.
+   */
+  @media (min-width: 901px) {
+    .wide a {
+      margin-right: calc((var(--cols) - 9) * ((100% - (var(--cols) - 1) * var(--col-gap)) / var(--cols) + var(--col-gap)));
+    }
+  }
+
+  /* The page's own headings stand in those columns and step aside (scripts/initTocYield.ts); without script the picture passes over them. */
+  @media (min-width: 1200px) {
+    .wide a {
+      position: relative;
+      z-index: 1;
+    }
+  }
+</style>
