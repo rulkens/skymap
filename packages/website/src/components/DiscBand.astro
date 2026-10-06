@@ -21,7 +21,7 @@ const { id } = Astro.props;
   <figure>
     <div class="room">
       <div class="fit">
-        <Disc id={id} sizes="(max-width: 900px) 85vw, 44rem" eager />
+        <Disc id={id} sizes="(max-width: 900px) 85vw, min(44rem, 62vh)" eager />
       </div>
     </div>
     <figcaption>
@@ -67,6 +67,7 @@ const { id } = Astro.props;
   /* Shorter still, the paragraphs under the lead are set small: at 16px Jost is 400. */
   @media (min-width: 901px) and (max-height: 720px) {
     .words > :global(p:not(.say)) {
+      max-width: 34rem;
       font-size: var(--text-small);
       font-weight: var(--weight-small);
       line-height: 1.5;

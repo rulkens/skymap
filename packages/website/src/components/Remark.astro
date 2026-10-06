@@ -46,6 +46,11 @@ const { text, live } = Astro.props;
     background: linear-gradient(var(--color-accent), var(--color-accent)) left top / 2.5rem 1px no-repeat;
   }
 
+  /* The figure worked out in the browser makes a longer sentence: room for its four lines, so the swap moves nothing. */
+  .remark[data-remark] {
+    min-height: calc(4lh + 1.25rem);
+  }
+
   @media (max-width: 900px) {
     .remark {
       margin: 3rem 0 0 auto;

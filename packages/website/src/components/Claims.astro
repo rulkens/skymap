@@ -48,7 +48,8 @@ const { items, narrow = false } = Astro.props;
 
   dd {
     grid-column: 4 / -1;
-    max-width: 68ch;
+    /* About 75 characters of the small text. */
+    max-width: 34rem;
     margin: 0;
     color: var(--site-text-muted);
   }
@@ -61,18 +62,12 @@ const { items, narrow = false } = Astro.props;
     grid-column: 3 / -1;
   }
 
-  /* The source reads as a reference, not as part of the sentence: its own line, dimmer, still 44px tall to the thumb. */
+  /* The source reads as a reference, not as part of the sentence: its own line, still 44px tall to the thumb. */
   a {
     display: block;
     width: fit-content;
     padding-block: 0.625rem;
     margin-bottom: -0.625rem;
-    color: var(--site-text-dim);
-  }
-
-  a:hover,
-  a:focus-visible {
-    color: var(--color-accent);
   }
 
   @media (max-width: 900px) {

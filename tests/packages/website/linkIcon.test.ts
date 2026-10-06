@@ -18,9 +18,12 @@ describe('linkIcon', () => {
     expect(linkIcon(href, '/home/')).toBe(icon);
   });
 
-  it.each(['#contact', '/home/_astro/saturn-1920.abc.webp', '/app/'])('%s keeps the plain marker', (href) => {
-    expect(linkIcon(href, '/home/')).toBeUndefined();
-  });
+  it.each(['#contact', '/home/_astro/saturn-1920.abc.webp', '/app/'])(
+    '%s keeps the plain marker',
+    (href) => {
+      expect(linkIcon(href, '/home/')).toBeUndefined();
+    },
+  );
 
   it('reads the same pages at the root', () => {
     expect(linkIcon('/science/', '/')).toBe('science');

@@ -5,8 +5,8 @@ import CaptionGallery from '../components/CaptionGallery.astro';
 import Columns from '../components/Columns.astro';
 import Credits from '../components/Credits.astro';
 import Feature from '../components/Feature.astro';
-import Honesty from '../components/Honesty.astro';
 import LessonLinks from '../components/LessonLinks.astro';
+import LinkRow from '../components/LinkRow.astro';
 import ObjLink from '../components/ObjLink.astro';
 import Onward from '../components/Onward.astro';
 import OpenApp from '../components/OpenApp.astro';
@@ -22,6 +22,7 @@ import { CLASS_FEATURES } from '../data/classFeatures';
 import { CLASS_VIEWS } from '../data/classViews';
 import { fact } from '../data/fact';
 import { HOME_LINKS } from '../data/homeLinks';
+import { HONESTY_BINS } from '../data/honestyBins';
 import { LESSON_TOPICS } from '../data/lessons';
 import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
@@ -124,11 +125,15 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
       </Step>
       <Step title="Copy the address">
         <p>{says('lesson-link')}</p>
-        <AddressStrip hash={HOME_LINKS.classroom} />
-        <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
-        <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
       </Step>
     </Steps>
+    <Columns count={2}>
+      <AddressStrip hash={HOME_LINKS.classroom} />
+      <div>
+        <p>Paste it into a lesson plan or a slide. {says('link-pose')}</p>
+        <ObjLink size="small" hang href={sitePath('/docs/guide/sharing/')}>Sharing a view, in the docs</ObjLink>
+      </div>
+    </Columns>
   </section>
 
   <section class="wrap section" id="runs">
@@ -166,17 +171,31 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     </Columns>
   </section>
 
-  <Honesty title="What is accurate enough to teach from">
-    <p>
-      Some of the scene is data, some is derived from data, and some is a choice of ours. It makes a lesson in how we know
-      things: of anything on screen, ask which of the three it is.
-    </p>
-  </Honesty>
+  <section class="wrap section" id="honest">
+    <SectionHead title="What is accurate enough to teach from">
+      <p>
+        Some of the scene is data, some is derived from data, and some is a choice of ours. It makes a lesson in how we
+        know things: of anything on screen, ask which of the three it is.
+      </p>
+    </SectionHead>
+    <Columns count={3}>
+      {
+        HONESTY_BINS.map((bin) => (
+          <div>
+            <h3>{bin.title}</h3>
+            <p>{bin.gloss}</p>
+          </div>
+        ))
+      }
+    </Columns>
+    <LinkRow>
+      <ObjLink hang href={sitePath('/science/#bins')}>The science behind skymap</ObjLink>
+    </LinkRow>
+  </section>
 
   <div class="wrap section">
     <Onward>
       <OpenApp />
-      <ObjLink href={sitePath('/science/')}>The science behind skymap</ObjLink>
       <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
     </Onward>
   </div>

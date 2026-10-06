@@ -67,6 +67,8 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
       ).matches;
       var touchTablet = matchMedia("(pointer: coarse)").matches && innerWidth < 1100;
       root.setAttribute("data-live", "");
+      // The top bar's ground stays clear over the stage (components/Nav.astro); initFlight brings it back.
+      document.documentElement.style.setProperty("--nav-ground", "0");
       if (wide && !slow && !touchTablet) root.setAttribute("data-film", "");
     })();
   </script>
@@ -149,7 +151,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 <style>
   .flight {
     position: relative;
-    /* Above the nav's ground layer (components/Nav.astro), so the bar floats on the picture. */
+    /* A layer of its own, under the nav's ground (components/Nav.astro), which is clear while the stage is pinned. */
     z-index: 2;
     background: #000;
   }
@@ -165,7 +167,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
   .word {
     margin: 0 0 0.08em -0.04em;
-    font-size: clamp(4.5rem, 22vw, 8rem);
+    font-size: min(clamp(4.5rem, 22vw, 8rem), 27vw);
     line-height: 1;
   }
 
@@ -545,8 +547,9 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
       inset: -11rem 0 0;
     }
 
+    /* Never wider than the window, whatever the reader's text size. */
     .flight[data-live] .word {
-      font-size: clamp(4.5rem, 24vw, 7rem);
+      font-size: min(clamp(4.5rem, 24vw, 7rem), 27vw);
     }
 
     .flight[data-live] .start {

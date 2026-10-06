@@ -1,15 +1,21 @@
 ---
 /*
- * SourceTable — every data source in one table. Wide, it is a table to read
- * across, its rows laid on the page grid so its columns are the page's. Narrow,
- * each row becomes a block with its column names repeated beside the values,
- * so nothing scrolls sideways. The ARIA roles keep it a table to a screen
- * reader, since CSS has taken the table display away at every width. The
+ * SourceTable — every data source, twice in the page and once on screen. Wide,
+ * it is a table to read across, its rows laid on the page grid so its columns
+ * are the page's; the ARIA roles keep it a table to a screen reader, since CSS
+ * has taken the table display away. Narrow, the table is gone and the same
+ * rows are a list of closed disclosures, a source's name and what it gives
+ * showing: two dozen stacked tables were eleven phone screens. No script. The
  * slot is for notes on how to read it, set under a rule at its foot.
  */
+import ObjLink from './ObjLink.astro';
 import { DATA_SOURCES } from '../data/dataSources';
 
-const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
+const groups = [...new Set(DATA_SOURCES.map((row) => row.group))].map((name) => ({
+  name,
+  rows: DATA_SOURCES.filter((row) => row.group === name),
+}));
+const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We draw', licence: 'Licence' } as const;
 ---
 
 <table role="table" class="small">
@@ -17,10 +23,10 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
   <thead role="rowgroup">
     <tr role="row">
       <th role="columnheader" scope="col">Source and what it gives</th>
-      <th role="columnheader" scope="col">Release we read</th>
-      <th role="columnheader" scope="col" class="num">Rows we read</th>
-      <th role="columnheader" scope="col" class="num">We draw</th>
-      <th role="columnheader" scope="col">Licence</th>
+      <th role="columnheader" scope="col">{COLUMNS.release}</th>
+      <th role="columnheader" scope="col" class="num">{COLUMNS.rows}</th>
+      <th role="columnheader" scope="col" class="num">{COLUMNS.drawn}</th>
+      <th role="columnheader" scope="col">{COLUMNS.licence}</th>
     </tr>
   </thead>
   {
@@ -28,25 +34,23 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
       <tbody role="rowgroup">
         <tr role="row" class="group">
           <th role="columnheader" scope="rowgroup" colspan="5">
-            {group}
+            {group.name}
           </th>
         </tr>
-        {DATA_SOURCES.filter((row) => row.group === group).map((row) => (
+        {group.rows.map((row) => (
           <tr role="row">
             <th role="rowheader" scope="row">
               <a href={row.href}>{row.name}</a>
               <span class="gives">{row.gives}</span>
             </th>
-            <td role="cell" data-label="Release we read">
-              {row.release}
-            </td>
-            <td role="cell" data-label="Rows we read" class:list={['num', !row.rows && 'none']}>
+            <td role="cell">{row.release}</td>
+            <td role="cell" class="num">
               {row.rows ?? <span class="sr">not counted</span>}
             </td>
-            <td role="cell" data-label="We draw" class:list={['num', !row.drawn && 'none']}>
+            <td role="cell" class="num">
               {row.drawn ?? <span class="sr">not counted</span>}
             </td>
-            <td role="cell" data-label="Licence">
+            <td role="cell">
               {row.licence} <a class="evidence" href={row.evidence}>Our record</a>
             </td>
           </tr>
@@ -55,6 +59,45 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     ))
   }
 </table>
+
+<div class="list small">
+  {
+    groups.map((group) => (
+      <section>
+        <h3>{group.name}</h3>
+        {group.rows.map((row) => (
+          <details>
+            <summary class="ring small">
+              <span>
+                <b>{row.name}</b>
+                <span class="gives">{row.gives}</span>
+              </span>
+            </summary>
+            <dl>
+              {(['release', 'rows', 'drawn', 'licence'] as const).map(
+                (key) =>
+                  row[key] && (
+                    <div>
+                      <dt>{COLUMNS[key]}</dt>
+                      <dd>{row[key]}</dd>
+                    </div>
+                  ),
+              )}
+            </dl>
+            <p class="links">
+              <ObjLink size="small" href={row.href}>
+                {row.name}
+              </ObjLink>
+              <ObjLink size="small" href={row.evidence}>
+                Our record
+              </ObjLink>
+            </p>
+          </details>
+        ))}
+      </section>
+    ))
+  }
+</div>
 {Astro.slots.has('default') && <div class="notes small tap-links"><slot /></div>}
 
 <style>
@@ -70,44 +113,48 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     font-variant-numeric: tabular-nums;
   }
 
-  /* Three columns of the page grid for the source, three for the release, two and one for the counts, three for the licence. */
-  @media (min-width: 901px) {
-    tr {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      column-gap: var(--col-gap);
-      border-top: 1px solid var(--border-divider);
-    }
-
-    tr > * {
-      grid-column: span 3;
-    }
-
-    tr > :nth-child(3) {
-      grid-column: span 2;
-    }
-
-    /* A count is wider than one column and is set from its right edge: a flex line, so it runs back into the gap. */
-    tr > :nth-child(4) {
-      grid-column: span 1;
-    }
-
-    tr > .num {
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    tr.group,
-    thead tr {
-      border-top: 0;
-    }
-
-    tr.group > * {
-      grid-column: 1 / -1;
-    }
+  .list {
+    display: none;
   }
 
-  caption {
+  /* Three columns of the page grid for the source, three for the release, two and one for the counts, three for the licence. */
+  tr {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    border-top: 1px solid var(--border-divider);
+  }
+
+  tr > * {
+    grid-column: span 3;
+  }
+
+  tr > :nth-child(3) {
+    grid-column: span 2;
+  }
+
+  /* A count is wider than one column and is set from its right edge: a flex line, so it runs back into the gap. */
+  tr > :nth-child(4) {
+    grid-column: span 1;
+  }
+
+  tr > .num {
+    display: flex;
+    justify-content: flex-end;
+    white-space: nowrap;
+  }
+
+  tr.group,
+  thead tr {
+    border-top: 0;
+  }
+
+  tr.group > * {
+    grid-column: 1 / -1;
+  }
+
+  caption,
+  .sr {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -128,7 +175,8 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     color: var(--site-text-dim);
   }
 
-  .group th {
+  .group th,
+  h3 {
     padding-top: 2.5rem;
     font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
     color: var(--color-fg);
@@ -147,22 +195,8 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     margin-top: 0.25rem;
   }
 
-  .num {
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
   .evidence {
     white-space: nowrap;
-    color: var(--site-text-dim);
   }
 
   .notes {
@@ -172,64 +206,79 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
   }
 
   .notes :global(p) {
-    max-width: 68ch;
+    max-width: 34rem;
     margin-bottom: 0.75rem;
     color: var(--site-text-dim);
   }
 
-  /* Narrow: one source per block, each value under its column's name. */
+  /* Narrow: the list in the table's place. */
   @media (max-width: 900px) {
-    thead {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    tbody tr:not(.group) {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem 1.25rem;
-      padding-block: 1.25rem;
-      border-top: 1px solid var(--border-divider);
-    }
-
-    th,
-    td {
-      padding: 0;
-    }
-
-    th[scope='row'],
-    td:nth-child(2),
-    td:last-child {
-      grid-column: 1 / -1;
-    }
-
-    .num {
-      text-align: left;
-      white-space: normal;
-    }
-
-    td.none {
+    table {
       display: none;
     }
 
-    td::before {
-      content: attr(data-label);
+    .list {
       display: block;
+      font-variant-numeric: tabular-nums;
+    }
+
+    h3 {
+      margin: 0;
+      padding-bottom: 0.75rem;
+    }
+
+    section:first-child h3 {
+      padding-top: 0;
+    }
+
+    details {
+      border-top: 1px solid var(--border-divider);
+    }
+
+    /* The whole row opens it; the ring is filled while it is open (styles/site.css). */
+    summary {
+      display: flex;
+      align-items: baseline;
+      width: 100%;
+      padding-block: 0.875rem;
+      list-style: none;
+      color: var(--site-text-muted);
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary b {
+      font-weight: inherit;
+      color: var(--color-fg);
+    }
+
+    dl {
+      margin: 0;
+      padding-left: 1.3125rem;
+    }
+
+    dl > div {
+      padding-bottom: 0.625rem;
+    }
+
+    dt {
       color: var(--site-text-dim);
     }
 
-    th[scope='row'] a,
-    .evidence {
-      display: inline-block;
-      padding-block: 0.6rem;
-      margin-block: -0.6rem;
+    dd {
+      margin: 0;
+      color: var(--site-text-muted);
     }
 
-    .group th {
-      padding: 2.5rem 0 0.75rem;
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 2rem;
+      max-width: none;
+      margin: 0 0 0.75rem;
+      padding-left: 1.3125rem;
     }
   }
 </style>

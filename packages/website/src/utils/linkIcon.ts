@@ -2,7 +2,9 @@ import type { IconName } from '../@types/IconName';
 import { FOOTER_GROUPS } from '../data/nav';
 
 // Every page of the site with its icon, deepest path first, so `/docs/cite/` is found before `/docs/`.
-const PAGES = FOOTER_GROUPS.flatMap((group) => group.items).sort((a, b) => b.path.length - a.path.length);
+const PAGES = FOOTER_GROUPS.flatMap((group) => group.items).sort(
+  (a, b) => b.path.length - a.path.length,
+);
 
 /**
  * The drawing a ring link carries, from where it goes: a page of the site has
@@ -18,5 +20,6 @@ export function linkIcon(href: string, base: string): IconName | undefined {
   const root = base.replace(/\/$/, '');
   if (!href.startsWith(`${root}/`)) return undefined;
   const path = href.slice(root.length).split('#')[0]!;
-  return PAGES.find((page) => (page.path === '/' ? path === '/' : path.startsWith(page.path)))?.icon;
+  return PAGES.find((page) => (page.path === '/' ? path === '/' : path.startsWith(page.path)))
+    ?.icon;
 }

@@ -3,34 +3,22 @@ import ObjLink from './ObjLink.astro';
 import Shot from './Shot.astro';
 import ShotCaption from './ShotCaption.astro';
 import { HONESTY } from '../data/honesty';
+import { HONESTY_BINS } from '../data/honestyBins';
 import { sitePath } from '../utils/sitePath';
-
-// A page may ask the same three bins its own question: its heading, and a sentence under it (the slot).
-type Props = { title?: string };
-
-const { title = 'What is measured, derived and drawn' } = Astro.props;
-
-// The three words keep one meaning across the site (08, house style).
-const BINS = [
-  { id: 'measured', shot: 'galaxies-measured', title: 'Measured', gloss: 'An instrument recorded it.' },
-  { id: 'derived', shot: 'filaments-derived', title: 'Derived', gloss: 'Computed from measurements by a stated method.' },
-  { id: 'drawn', shot: 'milky-way-drawn', title: 'Drawn', gloss: 'A model or a choice of ours, with no measurement behind each object.' },
-] as const;
 ---
 
 <section class="wrap section honest grid" id="honest">
   <div class="intro grid">
-    <h2>{title}</h2>
+    <h2>What is measured, derived and drawn</h2>
     <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
   </div>
-  {Astro.slots.has('default') && <div class="say"><slot /></div>}
   {
-    BINS.map((bin) => (
+    HONESTY_BINS.map((bin) => (
       <div class="bin">
         <h3>{bin.title}</h3>
         <p class="gloss small">{bin.gloss}</p>
         <figure>
-          <Shot id={bin.shot} sizes="(max-width: 900px) 50vw, 24rem" />
+          <Shot id={bin.shot} sizes="(max-width: 900px) calc(100vw - 2.5rem), (max-width: 1239px) calc(33.4vw - 3.75rem), 22rem" />
           <figcaption>
             <ShotCaption id={bin.shot} />
           </figcaption>
@@ -75,10 +63,6 @@ const BINS = [
       grid-column: 9 / -1;
       justify-self: start;
     }
-  }
-
-  .say :global(p) {
-    margin-bottom: 0;
   }
 
   /* One picture heads each list: an example of the word, with its own address. */

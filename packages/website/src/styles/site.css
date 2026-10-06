@@ -40,7 +40,8 @@
   --text-body: 1.25rem;
   --text-lead: 1.5rem;
   --text-h3: 1.5rem;
-  --text-h2: clamp(2.5rem, 5.2vw, 5.25rem);
+  /* Capped by a short window, so an opening section's title still fits it and no heading under it is larger. */
+  --text-h2: min(clamp(2.5rem, 5.2vw, 5.25rem), 9svh);
   --text-ring-big: clamp(1.875rem, 3.4vw, 3rem);
   --leading-body: 1.6;
   --leading-display: 1.05;
@@ -74,7 +75,8 @@
     --weight-body: 400;
     --text-lead: 1.25rem;
     --gutter: 1.25rem;
-    --col-gap: 1.25rem;
+    /* Eleven gaps must fit a phone even with the reader's text size doubled, so the gap also follows the window. */
+    --col-gap: min(1.25rem, 3.6vw);
     --section-space: 5rem;
     --nav-height: 3.75rem;
   }
@@ -99,6 +101,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* A word too long for its line (an address, a file name, any word at a doubled text size) breaks; the page never scrolls sideways. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -138,6 +142,10 @@ small,
 a {
   color: var(--color-accent);
   text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
 }
 
 :focus-visible {
@@ -220,11 +228,11 @@ img {
 }
 
 /*
- * An opening section's title and its lead (`.say`), the same on every page. Both shrink with a short window so
- * the section still fits it: the lead stops at 20px, the floor for Jost 300.
+ * An opening section's title and its lead (`.say`), the same on every page. The title has a section heading's
+ * size, the largest on its page; the lead shrinks with a short window and stops at 20px, the floor for Jost 300.
  */
 [data-opening] h1 {
-  font-size: min(var(--text-h2), 9svh);
+  font-size: var(--text-h2);
 }
 
 [data-opening] .say {
@@ -296,6 +304,8 @@ img {
   text-decoration: none;
   color: var(--color-fg);
   font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+  /* `anywhere`, so the label may also shrink below its longest word inside the flex line. */
+  overflow-wrap: anywhere;
 }
 
 .ring::before {

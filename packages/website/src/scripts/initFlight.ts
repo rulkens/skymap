@@ -19,9 +19,13 @@ const FILM_QUERY =
 const PULL_BACK = 0.12;
 // As shares of a leg: a stop's caption starts to leave here, and the next one's starts to
 // arrive once it has gone, so two captions never share the corner they are both set in.
-const CAPTION_LEAVES = 0.3;
+// The change is short, so wherever the page stops a caption is nearly always at full strength.
+const CAPTION_LEAVES = 0.44;
 const CAPTION_ARRIVES = 0.5;
-const CAPTION_FADE = 0.2;
+const CAPTION_FADE = 0.06;
+// Pixels of scroll before the pinned stage lets go, over which the top bar's ground comes back:
+// the closing words and the spine then scroll up under a bar that has its ground.
+const GROUND_RETURN_PX = 160;
 // Half a film frame, so a seek to a stop's time lands on that frame and not the one before.
 const HALF_FRAME = 1 / 48;
 // Per second: the picture settles on a new scroll position in about a quarter of a second.
@@ -60,6 +64,7 @@ export function initFlight(root: HTMLElement): void {
   let last = 0;
   let current = -1;
   let fetched = -1;
+  let ground = -1;
 
   function attach(): void {
     if (video.src || !root.hasAttribute('data-film')) return;
@@ -143,7 +148,17 @@ export function initFlight(root: HTMLElement): void {
 
   const range = (): number => track.offsetHeight - innerHeight;
 
+  // From the page's own position, not the eased one: the ground must be back when the stage moves.
+  function showGround(): void {
+    const left = range() + track.getBoundingClientRect().top;
+    const next = Math.round(unit(1 - left / GROUND_RETURN_PX) * 100) / 100;
+    if (next === ground) return;
+    ground = next;
+    document.documentElement.style.setProperty('--nav-ground', String(next));
+  }
+
   function frame(now: number): void {
+    showGround();
     if (!visible) {
       running = false;
       return;
@@ -174,6 +189,7 @@ export function initFlight(root: HTMLElement): void {
   new IntersectionObserver(
     ([entry]) => {
       visible = entry!.isIntersecting;
+      showGround();
       start();
     },
     { rootMargin: '10% 0px' },
