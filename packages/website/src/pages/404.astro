@@ -17,11 +17,11 @@ import { sitePath } from '../utils/sitePath';
     <div class="wrap copy">
       <h1>There is nothing here</h1>
       <p class="say">
-        This address is not on the map. The picture is the Boötes Void, found in 1981 and described then as a
+        This address is not on the map. The picture is the Boötes Void, found in 1981 and described as a
         million cubic megaparsecs of very little. You are in suitable company.
       </p>
-      <ObjLink size="big" href={sitePath('/')}>Back to the start</ObjLink>
-      <ObjLink href={appLink(siteShot('void-bootes').link)}>Or go and see the void</ObjLink>
+      <ObjLink hang size="big" href={sitePath('/')}>Back to the start</ObjLink>
+      <ObjLink hang href={appLink(siteShot('void-bootes').link)}>Or go and see the void</ObjLink>
       <ShotCaption id="void-bootes" open={false} />
       <Sources ids={['bootes-void']} />
     </div>
@@ -34,6 +34,7 @@ import { sitePath } from '../utils/sitePath';
     display: grid;
     align-items: center;
     min-height: calc(100svh - var(--nav-height));
+    overflow-x: clip;
     background: #000;
   }
 
@@ -59,10 +60,18 @@ import { sitePath } from '../utils/sitePath';
     background: linear-gradient(90deg, rgb(0 0 0 / 0.8) 0%, rgb(0 0 0 / 0) 55%);
   }
 
+  /* A column, so the picture's label can leave the words for the picture's foot, as in a PictureBand. */
   .copy {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
     width: 100%;
-    padding-block: 4rem;
+    padding-block: 4rem 2rem;
+  }
+
+  .copy > :global(:first-child) {
+    margin-top: auto;
   }
 
   h1 {
@@ -79,8 +88,11 @@ import { sitePath } from '../utils/sitePath';
     width: fit-content;
   }
 
-  .copy :global(.caption) {
-    margin-block: 2rem 1rem;
+  .copy > :global(.caption) {
+    --caption-foot: '';
+    order: 1;
+    margin-top: auto;
+    padding-top: 4rem;
   }
 
   /* Narrow: the ring above, the words under it. */
@@ -104,6 +116,17 @@ import { sitePath } from '../utils/sitePath';
 
     .copy {
       padding-block: 40svh 3rem;
+    }
+
+    .copy > :global(:first-child) {
+      margin-top: 0;
+    }
+
+    .copy > :global(.caption) {
+      --caption-foot: none;
+      order: -1;
+      margin-bottom: 2rem;
+      padding-top: 0;
     }
   }
 </style>

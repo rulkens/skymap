@@ -1,9 +1,13 @@
 ---
 /*
- * ShotCaption — the line under a picture: what is data and what is drawn, the
- * credit where third-party imagery is in frame, and the address the picture
- * was taken at. Every picture being an address is the site's honesty device.
+ * ShotCaption — a picture's label, set as a museum sets an object's: a rule
+ * with an arm that rises to the picture, the title, one sentence, then what is
+ * data and what is drawn, the credit for third-party imagery in frame, and the
+ * address the picture was taken at. Every picture being an address is the
+ * site's honesty device. It lays itself out by the room it is given: stacked
+ * under a narrow picture, in columns along the foot of a wide one.
  */
+import ObjLink from './ObjLink.astro';
 import { appLink } from '../data/appLink';
 import { siteShot } from '../data/siteShot';
 
@@ -13,28 +17,139 @@ const { id, open = true } = Astro.props;
 const shot = siteShot(id);
 ---
 
-<p class="caption small">
-  {shot.caption}
-  {shot.credit && <span class="credit">{shot.credit}.</span>}
-  {open && <a href={appLink(shot.link, shot.query)}>Open this view</a>}
-</p>
+<div class="caption small">
+  <div class="plate">
+    <p class="what">
+      <strong>{shot.title}</strong>
+      {shot.caption && <span>{shot.caption}</span>}
+    </p>
+    {
+      shot.drawn && (
+        <dl class="drawn">
+          <dt>Data and drawing</dt>
+          <dd>{shot.drawn}</dd>
+        </dl>
+      )
+    }
+    {
+      (shot.credit || open) && (
+        <div class="end">
+          {shot.credit && (
+            <dl>
+              <dt>Credit</dt>
+              <dd>{shot.credit}.</dd>
+            </dl>
+          )}
+          {open && (
+            <ObjLink size="small" icon="launch" href={appLink(shot.link, shot.query)}>
+              Open this view
+            </ObjLink>
+          )}
+        </div>
+      )
+    }
+  </div>
+</div>
 
 <style>
   .caption {
-    max-width: 60ch;
+    position: relative;
+    z-index: 0;
+    container-type: inline-size;
+    width: 100%;
     margin: 0;
+    text-align: left;
+  }
+
+  /*
+   * For a host that lays the label along the foot of a full-width picture (PictureBand, Tour, the 404 page): it
+   * sets `--caption-foot: ''` and a top padding of 4rem, and the picture then ends at the label, black from the
+   * rule down across the whole window. The host clips the overflow and keeps 2rem under the label.
+   */
+  .caption::before {
+    content: var(--caption-foot, none);
+    position: absolute;
+    z-index: -1;
+    inset: 0 calc(50% - 50vw) -2rem;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 4rem);
+  }
+
+  /* 0.34 is the faintest the rule can be and still read as a line over a starfield. */
+  .plate {
+    --rule: rgb(232 238 255 / 0.34);
+    position: relative;
+    display: grid;
+    gap: 0.5rem 2.5rem;
+    max-width: 34rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* The arm: the rule turns up at its left end and reaches for the picture above it. */
+  .plate::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    height: 0.875rem;
+    border-left: 1px solid var(--rule);
+  }
+
+  p,
+  dl,
+  dd {
+    max-width: none;
+    margin: 0;
+  }
+
+  strong {
+    display: block;
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .what,
+  dd {
+    color: var(--site-text-muted);
+  }
+
+  dt {
     color: var(--site-text-dim);
   }
 
-  .credit::before {
-    content: ' ';
+  /* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */
+  .end :global(.ring) {
+    margin-block: 0 -0.625rem;
   }
 
-  a {
-    display: inline-block;
-    margin-left: 0.25em;
-    padding-block: 0.625rem;
-    margin-block: -0.625rem;
-    white-space: nowrap;
+  @container (min-width: 34rem) {
+    .plate {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+      max-width: 52rem;
+    }
+
+    .what {
+      grid-row: 1 / span 2;
+    }
+
+    .drawn,
+    .end {
+      grid-column: 2;
+    }
+  }
+
+  @container (min-width: 58rem) {
+    .plate {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr);
+      max-width: none;
+    }
+
+    .what {
+      grid-row: auto;
+    }
+
+    .end {
+      grid-column: 3;
+    }
   }
 </style>

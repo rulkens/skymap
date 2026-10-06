@@ -29,8 +29,19 @@ describe('shot manifest', () => {
 
   it('a picture the pages show has words for it; a thumbnail has its place name instead', () => {
     for (const shot of SITE_SHOTS.filter((s) => !s.id.startsWith('place-'))) {
-      expect(shot.caption, shot.id).not.toBe('');
+      expect(shot.title, shot.id).not.toBe('');
       expect(shot.alt, shot.id).not.toBe('');
+    }
+  });
+
+  // The label prints the title as a heading and adds the credit's full stop itself; the sentences bring their own.
+  it('label parts carry the punctuation the label expects', () => {
+    for (const shot of SITE_SHOTS) {
+      expect(shot.title, shot.id).not.toMatch(/\.$/);
+      if (shot.credit !== undefined) expect(shot.credit, shot.id).toMatch(/[^.]$/);
+      for (const sentence of [shot.caption, shot.drawn]) {
+        if (sentence !== undefined) expect(sentence, shot.id).toMatch(/\.$/);
+      }
     }
   });
 });
