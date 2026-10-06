@@ -301,20 +301,26 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     opacity: 1;
   }
 
-  .flight[data-live] .cap,
-  /* One line of fixed height under the nav; tabular figures so the number does not jitter as it changes. */
+  /* A quiet footnote in the captions' bottom padding; tabular figures so the number does not jitter as it changes. */
   .flight[data-live] .scale {
     display: block;
     position: absolute;
     z-index: 3;
-    top: calc(var(--nav-height) + 0.75rem);
     left: var(--gutter);
+    bottom: 1.25rem;
+    max-width: none;
     margin: 0;
-    color: var(--site-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: var(--site-text-dim);
     font-variant-numeric: tabular-nums;
     text-shadow: 0 0 0.5rem #000, 0 0 0.25rem #000;
+    opacity: 0;
+    pointer-events: none;
   }
 
+  /* Every caption is set in the bottom left corner; only the script's opacity tells them apart. */
+  .flight[data-live] .cap,
   .flight[data-live] .arrive {
     position: absolute;
     z-index: 3;
@@ -504,7 +510,11 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     }
 
     .flight[data-live] .cap {
-      padding: 0 var(--gutter) 2.25rem;
+      padding: 0 var(--gutter) 2.75rem;
+    }
+
+    .flight[data-live] .scale {
+      bottom: 0.875rem;
     }
 
     .flight[data-live] .cap::before {
@@ -514,7 +524,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
     .flight[data-live] .arrive {
       align-items: flex-start;
-      padding-bottom: 2.25rem;
+      padding-bottom: 2.75rem;
       text-align: left;
     }
 
@@ -560,7 +570,11 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
     .flight[data-live] .cap {
       max-width: 62%;
-      padding-bottom: 1.25rem;
+      padding-bottom: 2rem;
+    }
+
+    .flight[data-live] .scale {
+      bottom: 0.625rem;
     }
 
     .name {

@@ -103,13 +103,13 @@ export function initFlight(root: HTMLElement): void {
       el.style.transform = `scale(${(1 + (PULL_BACK * (k + 1 - at)) / 2).toFixed(4)})`;
     });
 
+    const leaving = snap
+      ? Math.round(pose.travel)
+      : unit((pose.travel - CAPTION_LEAVES) / CAPTION_FADE);
+    const arriving = snap
+      ? Math.round(pose.travel)
+      : unit((pose.travel - CAPTION_ARRIVES) / CAPTION_FADE);
     words.forEach((el, k) => {
-      const leaving = snap
-        ? Math.round(pose.travel)
-        : unit((pose.travel - CAPTION_LEAVES) / CAPTION_FADE);
-      const arriving = snap
-        ? Math.round(pose.travel)
-        : unit((pose.travel - CAPTION_ARRIVES) / CAPTION_FADE);
       const opacity = k === pose.index ? 1 - leaving : k === pose.index + 1 ? arriving : 0;
       el.style.opacity = String(opacity);
       // An invisible control must not take focus or clicks.
@@ -118,6 +118,8 @@ export function initFlight(root: HTMLElement): void {
         el.style.pointerEvents = opacity < 0.5 ? 'none' : 'auto';
       }
     });
+    // The readout shares the bottom edge with the wordmark block's hint, so it waits for that block to leave.
+    scale.style.opacity = String(pose.index === 0 ? leaving : 1);
 
     const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
     if (scale.textContent !== readout) scale.textContent = readout;
