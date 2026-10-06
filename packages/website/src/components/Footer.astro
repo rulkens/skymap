@@ -1,22 +1,79 @@
 ---
+/*
+ * Footer — the end of every page, set as a place rather than a strip: the
+ * name, what skymap is and the way in; every page under three headings; then
+ * the small print. Its ground is the app's widest view, the sphere at the edge
+ * of the observable universe, of which only the top rises into the page, so
+ * each page ends at the edge of the map. The picture carries its label like
+ * any other on the site.
+ */
 import ObjLink from './ObjLink.astro';
+import OpenApp from './OpenApp.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
 import pkg from '../../../../package.json';
 import { fact } from '../data/fact';
-import { FOOTER_ITEMS } from '../data/nav';
+import { FOOTER_GROUPS } from '../data/nav';
 import { MAKER_NAME, REPO_BLOB, REPO_URL } from '../data/siteIdentity';
 import { sitePath } from '../utils/sitePath';
+
+const GROUND = 'lesson-universe';
+const groups = FOOTER_GROUPS.map((group) => ({
+  heading: group.heading,
+  links: group.items.map((item) => ({ label: item.label, icon: item.icon, href: sitePath(item.path) })),
+}));
+// The repository is the one link here that leaves the site, so it is not a row of the site's own pages.
+groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 ---
 
-<footer class="wrap footer small">
-  <p>
-    skymap is made by {MAKER_NAME}. The code is open source under the <a href={`${REPO_BLOB}/LICENSE`}>{pkg.license} licence</a>.
-    Version {pkg.version}.
-  </p>
-  <p class="light" data-light>{fact('speed-of-light').short}</p>
-  <nav aria-label="Footer">
-    {FOOTER_ITEMS.map((item) => <ObjLink size="small" icon={item.icon} href={sitePath(item.path)}>{item.label}</ObjLink>)}
-    <ObjLink size="small" icon="code" href={REPO_URL}>GitHub</ObjLink>
-  </nav>
+<footer class="footer">
+  <div class="ground" aria-hidden="true">
+    <Shot id={GROUND} sizes="(max-width: 700px) 210px, 1120px" alt="" />
+  </div>
+
+  <div class="wrap inner">
+    <div class="top">
+      <div class="brand">
+        <a class="mark" href={sitePath('/')}>skymap</a>
+        <p class="say">A free, open-source web app that draws the mapped universe in three dimensions at true scale.</p>
+        <OpenApp />
+      </div>
+
+      <nav class="groups" aria-label="Footer">
+        {
+          groups.map((group) => (
+            <div>
+              <h2>{group.heading}</h2>
+              <ul>
+                {group.links.map((link) => (
+                  <li>
+                    <ObjLink
+                      size="small"
+                      icon={link.icon}
+                      href={link.href}
+                      aria-current={Astro.url.pathname === link.href ? 'page' : undefined}
+                    >
+                      {link.label}
+                    </ObjLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </div>
+
+    <ShotCaption id={GROUND} />
+
+    <div class="end">
+      <p class="light" data-light>{fact('speed-of-light').short}</p>
+      <p class="fine small">
+        skymap is made by {MAKER_NAME}. The code is open source under the <a href={`${REPO_BLOB}/LICENSE`}>{pkg.license} licence</a>.
+        Version {pkg.version}.
+      </p>
+    </div>
+  </div>
 </footer>
 
 <script>
@@ -32,33 +89,128 @@ import { sitePath } from '../utils/sitePath';
 </script>
 
 <style>
-  /* Room for the longer line (three lines on a narrow phone), so the swap moves nothing. */
+  .footer {
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid var(--border-divider);
+    background: #000;
+  }
+
+  /*
+   * The sphere starts 3% down its picture and the cloud of galaxies 30% down. Pushed 55% below the foot,
+   * the picture shows the sphere's top and the top of the cloud, which rises into the room the bottom
+   * padding leaves under the small print. No wider than 80rem: the file is 1120px.
+   */
+  .ground :global(img) {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: clamp(64rem, 75vw, 80rem);
+    max-width: none;
+    height: auto;
+    transform: translate(-50%, 55%);
+  }
+
+  .inner {
+    position: relative;
+    display: grid;
+    gap: 5rem;
+    padding-block: 6rem 11rem;
+  }
+
+  .top {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 4rem;
+    align-items: start;
+  }
+
+  .brand {
+    display: grid;
+    justify-items: start;
+    gap: 1.5rem;
+  }
+
+  .mark {
+    font: var(--weight-display) clamp(3.5rem, 6vw, 5.5rem) / 0.9 var(--font-family-display);
+    letter-spacing: -0.02em;
+    color: var(--color-fg);
+    text-decoration: none;
+  }
+
+  .say {
+    max-width: 26rem;
+    margin: 0 0 0.5rem;
+    text-wrap: balance;
+  }
+
+  .groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 2.5rem 2rem;
+    /* The headings' cap line meets the top of the name beside them. */
+    padding-top: 0.75rem;
+  }
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: var(--text-h3);
+    line-height: 1.1;
+    letter-spacing: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The ring is drawn outside the icon's box; the inset keeps it off the gutter. */
+  li {
+    padding-left: 0.4375rem;
+  }
+
+  .end p {
+    max-width: none;
+    margin: 0;
+  }
+
+  /* The page's last sentence, at reading size: the small print under it is the only dim text here.
+     Room for the longer line, so the swap moves nothing. */
   .light {
-    min-height: 1.5em;
+    min-height: calc(1em * var(--leading-body));
+    color: var(--site-text);
     font-variant-numeric: tabular-nums;
   }
 
-  @media (max-width: 900px) {
-    .light {
-      min-height: 4.5em;
-    }
-  }
-
-  .footer {
-    padding-block: 2rem 4rem;
-    border-top: 1px solid var(--border-divider);
+  .end .fine {
+    margin-top: 1rem;
     color: var(--site-text-dim);
   }
 
-  p {
-    max-width: none;
-    margin: 0 0 0.5rem;
-    color: inherit;
+  @media (max-width: 1100px) {
+    .top {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .groups {
+      padding-top: 0;
+    }
+
+    .light {
+      min-height: calc(2em * var(--leading-body));
+    }
   }
 
-  nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2rem;
+  @media (max-width: 900px) {
+    .inner {
+      gap: 3.5rem;
+      padding-block: 4rem 8rem;
+    }
+
+    /* Three lines on a narrow phone. */
+    .light {
+      min-height: calc(3em * var(--leading-body));
+    }
   }
 </style>
