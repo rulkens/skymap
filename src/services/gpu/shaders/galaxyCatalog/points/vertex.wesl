@@ -35,6 +35,7 @@ import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -336,7 +337,7 @@ fn vs(
   // pass binds the live focus buffer (the visual pass and pick share it);
   // at rest blend == 0 makes focusMult 1.0 for everything, so picking is
   // unaffected.
-  if (inPickPass && focusMult < 1.0) {
+  if (inPickPass && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

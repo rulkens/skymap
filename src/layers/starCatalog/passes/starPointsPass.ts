@@ -100,6 +100,8 @@ import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../data/famousStarPickRadiusPx
 import { regionById } from '../../../utils/regions/regionById';
 import { regionOfBody } from '../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
+import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';
+import { FOCUS_PICK_EXCLUDE_BELOW } from '../../../data/focusPickExcludeBelow';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
@@ -182,19 +184,19 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       // the hdr→swap composite runs `blend: 'replace'` (`preserveAlpha 0`,
       // `compositor.ts` BLEND_TABLE), which discards the fragment's unscaled alpha
       // channel — so multiplying rgb here is the whole story.
-      const rebasedPoints = points.map((star) => ({
-        ...star,
-        positionMpc: [
-          star.positionMpc[0] - camPos[0],
-          star.positionMpc[1] - camPos[1],
-          star.positionMpc[2] - camPos[2],
-        ] as Vec3,
-        color: [
-          star.color[0] * backdropFade,
-          star.color[1] * backdropFade,
-          star.color[2] * backdropFade,
-        ] as Vec3,
-      }));
+      const rebasedPoints = points.map((star) => {
+        // Stars outside a focused structure's sphere recede with the survey.
+        const fade = backdropFade * focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus);
+        return {
+          ...star,
+          positionMpc: [
+            star.positionMpc[0] - camPos[0],
+            star.positionMpc[1] - camPos[1],
+            star.positionMpc[2] - camPos[2],
+          ] as Vec3,
+          color: [star.color[0] * fade, star.color[1] * fade, star.color[2] * fade] as Vec3,
+        };
+      });
       runtime.starPointRenderer.setStars(rebasedPoints, ctx.viewSlot);
 
       // Fold the eye offset into the vp so it pairs with the camera-relative
@@ -290,6 +292,10 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
       );
 
       for (const star of points) {
+        // A star dimmed out by the focus is not aimable, as for the survey.
+        if (focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus) < FOCUS_PICK_EXCLUDE_BELOW) {
+          continue;
+        }
         const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
         const posRelCamMpc = relToCam(star.positionMpc);
         // A satellite inside its anchor's click target is not separately

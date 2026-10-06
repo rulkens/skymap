@@ -11,10 +11,9 @@
 // FOCUS_CORE_FRACTION) so the smoothstep never sees a degenerate
 // edge0 == edge1, even when the two radii are equal (SC/void).
 //
-// Clusters, superclusters and voids all behave identically: the focused
-// structure's interior galaxies stay bright, the rest recede. (Voids are
-// underdense, so focusing one isolates the few galaxies that sit inside
-// its radius — same rule, no inversion.)
+// Every focusable structure behaves identically: what lies inside its sphere
+// stays bright, the rest recedes. (Voids are underdense, so focusing one
+// isolates the few galaxies inside its radius — same rule, no inversion.)
 //
 // The @group/@binding decoration is declared by each consuming shader, not
 // here: points parks it at @group(3) (its lower slots hold Uniforms / Fade /
@@ -48,6 +47,11 @@ struct FocusUniforms {
 // the inner edge at 60% of the apparent radius guarantees a soft fade band
 // (>= 40% of the radius) for every category.
 const FOCUS_CORE_FRACTION: f32 = 0.6;
+
+// A multiplier below this takes the instance out of the pick pass: the
+// multiplier is exactly 1.0 for members and at rest, so the cut lands on what
+// the visual pass fades away. Mirrored in TS (data/focusPickExcludeBelow.ts).
+const FOCUS_PICK_EXCLUDE_BELOW: f32 = 1.0;
 
 // Per-vertex focus alpha multiplier. Galaxies inside the core (the smaller
 // of physicalRadiusMpc and 60% of the apparent radius) keep alpha 1.0;

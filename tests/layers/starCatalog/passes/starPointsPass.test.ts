@@ -47,6 +47,8 @@ import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -129,11 +131,11 @@ const PASS_STUB = {
 // 720-px viewport, 60° fovY, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(camPos: Readonly<Vec3>): FrameView {
+function makeCtx(camPos: Readonly<Vec3>, focus: FocusUniformsValue = ZERO_FOCUS): FrameView {
   return {
     // The instant the star layers resolve their positions at; a star anchor is
     // static, so any instant gives the same roster.
-    snapshot: { simDays: CONST_J2000 },
+    snapshot: { simDays: CONST_J2000, focus },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -449,6 +451,30 @@ describe('starPointsPass.draw', () => {
     expect(uploadedProxima.color).not.toEqual([...PROXIMA.color]);
   });
 
+  it('dims stars outside the focus sphere and leaves the focused one at full strength', () => {
+    const camDistMpc =
+      (SCALE_FADE_BANDS.starBackdrop.fullAt + SCALE_FADE_BANDS.starBackdrop.goneAt) / 2;
+    const backdropFade = fadeBand(SCALE_FADE_BANDS.starBackdrop, camDistMpc);
+    const camPos: Vec3 = [0, 0, camDistMpc];
+    const focus: FocusUniformsValue = {
+      center: PROXIMA.positionMpc,
+      apparentRadiusMpc: 1e-6,
+      physicalRadiusMpc: 1e-7,
+      blend: 1,
+    };
+    const renderer = makeRenderer();
+    starPointsPass(makeRuntime(renderer)).draw!(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(camPos, focus),
+      makeState(MAP_AND_SUN),
+    );
+    const uploaded = renderer.setStars.mock.calls[0]![0];
+    const colorOf = (id: string) => uploaded.find((star) => star.id === id)!.color;
+    expect(colorOf(PROXIMA.id)[0]).toBeCloseTo(PROXIMA.color[0] * backdropFade, 12);
+    expect(colorOf(SIRIUS.id)[0]).toBeCloseTo(SIRIUS.color[0] * backdropFade * 0.08, 12);
+  });
+
   it('hands the renderer the sizePx slider and brightness × exposure-ramp factor', () => {
     // Camera parked mid-band so the roster uploads and the exposure ramp is a
     // genuine non-trivial factor. The layer must forward `starCatalogs.sizePx`
@@ -580,6 +606,31 @@ describe('the Galactic Centre footprint exclusion', () => {
       makeProjectedView(INSIDE_THE_CLUSTER),
     );
     expect(sStarIdsIn(zoomedIn).length).toBeGreaterThan(0);
+  });
+
+  it('does not stamp a star the focus has dimmed, and still stamps the focused one', () => {
+    const focus: FocusUniformsValue = {
+      center: PROXIMA.positionMpc,
+      apparentRadiusMpc: 1e-6,
+      physicalRadiusMpc: 1e-7,
+      blend: 1,
+    };
+    const camPos: Vec3 = [0, 0, 5e-3];
+    const state = makeState(MAP_AND_SUN);
+    starPointsPass(makeRuntime(makeRenderer())).drawPick!(
+      PASS_STUB,
+      makeNear0View(camPos),
+      makeCtx(camPos, focus),
+      state,
+    );
+    const renderer = state.gpu.bodyPickRenderer as unknown as {
+      drawPoints: ReturnType<typeof vi.fn>;
+    };
+    const { points } = renderer.drawPoints.mock.calls[0]![1] as { points: { packedId: number }[] };
+    const stamped = points.map((point) => point.packedId);
+    expect(stamped).toContain(packedIdOf(PROXIMA));
+    expect(stamped).not.toContain(packedIdOf(SIRIUS));
+    expect(stamped).not.toContain(packedIdOf(SUN));
   });
 
   it('leaves a famous star that merely lines up with the anchor clickable', () => {
