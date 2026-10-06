@@ -208,6 +208,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'lesson-link',
+    about: 'app',
     text: 'An address written by skymap names the object the camera is on (focus) and, once the clock has been paused or set, the instant (t). A link with an instant opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: 'the address parameters, in the skymap repository',
@@ -215,6 +216,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'link-pose',
+    about: 'app',
     text: 'An address can also carry the exact camera position (pose). The app reads it but does not write it into the address bar by itself, so a link you copy opens on the app’s standard view of the object.',
     source: `${REPO_BLOB}/src/utils/url/decodeFramedPose.ts`,
     sourceLabel: 'the camera-position parameter, in the skymap repository',
@@ -222,6 +224,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'no-account',
+    about: 'app',
     text: 'skymap has no accounts. The one thing it keeps in your browser is a note that you have seen the welcome screen.',
     source: `${REPO_BLOB}/src/state/persistedValues.ts`,
     sourceLabel: 'what skymap stores in the browser, in the skymap repository',
@@ -229,6 +232,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'webgpu-required',
+    about: 'app',
     text: 'skymap draws with WebGPU. A browser without it is shown a short page that says so and links to a table of browsers that have it; nothing else is loaded.',
     source: `${REPO_BLOB}/src/main.tsx`,
     sourceLabel: 'the WebGPU check, in the skymap repository',
@@ -236,6 +240,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'webgpu-browsers',
+    about: 'app',
     text: 'As of 6 October 2026, WebGPU is switched on by default in Chrome 113 and later on Windows, macOS and ChromeOS, in Chrome 121 and later on Android 12 and later, in Safari 26 on Mac, iPhone and iPad, and in Firefox 141 and later on Windows (147 on Macs with Apple silicon). On Linux it depends on the graphics card and driver.',
     source: 'https://github.com/gpuweb/gpuweb/wiki/Implementation-Status',
     sourceLabel: 'WebGPU implementation status, from the group that writes the standard',
@@ -243,6 +248,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'app-browser-advice',
+    about: 'app',
     text: 'The app’s own advice to a browser that cannot run it is a recent version of Chrome or Edge on a desktop computer.',
     source: `${REPO_BLOB}/src/unsupportedPage.ts`,
     sourceLabel: 'the page shown without WebGPU, in the skymap repository',
@@ -250,6 +256,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'phone-data-size',
+    about: 'app',
     text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sets, which holds fewer stars and galaxies. A wider screen starts with the middle one.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: 'how the data size is chosen, in the skymap repository',
@@ -257,6 +264,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'english-only',
+    about: 'app',
     text: 'The app’s interface, its tour captions and its exhibit notes are written in English only.',
     source: `${REPO_BLOB}/src/components/Splash/Splash.constants.ts`,
     sourceLabel: 'the app’s welcome text, in the skymap repository',
@@ -264,6 +272,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'exhibits',
+    about: 'app',
     text: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a framed view with its own notes and sources, and each opens from its own address.',
     source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
     sourceLabel: 'the exhibits, in the skymap repository',
@@ -271,6 +280,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'wisdome-showing',
+    about: 'app',
     text: 'We showed skymap in the dome at Wisdome Malmö in September 2026. This is our own account: the venue has published nothing about it. What the repository shows is that the film recorder’s fulldome preset was written for that dome.',
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: 'the recorder’s fulldome notes, in the skymap repository',
@@ -293,6 +303,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'search-key',
+    about: 'app',
     text: 'The / key opens the app’s search, as Ctrl+K and Cmd+K do.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: 'the keyboard shortcuts, in the skymap repository',
@@ -300,6 +311,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'double-click-focus',
+    about: 'app',
     text: 'A double-click on an object in the scene puts the camera on it. So does a double-tap on a touch screen.',
     source: `${REPO_BLOB}/src/services/engine/phases/wireInput.ts`,
     sourceLabel: 'the pointer handling, in the skymap repository',
@@ -307,6 +319,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'date-entry-utc',
+    about: 'app',
     text: 'The date field on the app’s clock is read in UTC, not in the computer’s local time.',
     source: `${REPO_BLOB}/src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx`,
     sourceLabel: 'the date field, in the skymap repository',
@@ -314,6 +327,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'date-entry-paused',
+    about: 'app',
     text: 'Setting a date leaves the clock paused on that instant.',
     source: `${REPO_BLOB}/src/components/containers/TimeBarContainer.tsx`,
     sourceLabel: 'the clock’s controls, in the skymap repository',
@@ -321,6 +335,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'dome-flag',
+    about: 'app',
     text: 'With ?dome in its address the app starts in dome mode and draws a fisheye disc, the round picture a dome projector takes.',
     source: `${REPO_BLOB}/src/services/engine/engine.ts`,
     sourceLabel: 'where the app reads the dome flag, in the skymap repository',
@@ -328,6 +343,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'dome-rig',
+    about: 'app',
     text: 'In dome mode the app renders five views and resamples them into one fisheye disc on the one canvas. Labels are not drawn and objects cannot be selected by clicking.',
     source: `${REPO_BLOB}/src/data/rendering/viewRigs.ts`,
     sourceLabel: 'the dome view, in the skymap repository',
@@ -335,6 +351,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'dome-tilt',
+    about: 'app',
     text: 'The top of the dome sits 60 degrees above the direction the camera looks. The angle is one constant in the code, not a setting.',
     source: `${REPO_BLOB}/src/data/rendering/domeParams.ts`,
     sourceLabel: 'the dome constants, in the skymap repository',
@@ -342,6 +359,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'film-recorder',
+    about: 'app',
     text: 'The recorder plays a tour or a camera move frame by frame and encodes it as H.264 in an MP4 file. A flat film is 3,840 by 2,160 pixels at 60 frames per second unless another size is asked for, with the tour’s captions in the picture. The fulldome preset writes an equidistant fisheye disc of 4,096 by 4,096 pixels at 30 frames per second, or 60.',
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: 'the recorder’s manual, in the skymap repository',
@@ -349,6 +367,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'film-silent',
+    about: 'app',
     text: 'The recorder writes pictures only. A film from it has no sound track.',
     source: `${REPO_BLOB}/tools/utils/record/buildFfmpegArgs.ts`,
     sourceLabel: 'the recorder’s encoder settings, in the skymap repository',
@@ -356,6 +375,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'kiosk-planned',
+    about: 'app',
     text: 'A kiosk mode with an attract loop and a reset after idle time is on the list of planned work. It is not built.',
     source: `${REPO_BLOB}/docs/BACKLOG.md`,
     sourceLabel: 'the backlog, in the skymap repository',
@@ -363,6 +383,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'imagery-licences',
+    about: 'app',
     text: 'Some imagery in skymap is licensed for non-commercial use: the cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0 and is used with EOX’s written permission.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: 'the attributions file, in the skymap repository',
@@ -370,6 +391,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'grand-tour-steps',
+    about: 'app',
     text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the skymap repository',

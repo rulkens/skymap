@@ -345,6 +345,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   // Counts and citation
   {
     id: 'sci-built-counts',
+    about: 'app',
     text: 'The counts in the “we draw” column are for the largest data size as published on 6 October 2026. Each galaxy file is a 16-byte header and 64 bytes per object, so a count is the file size minus 16, divided by 64.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest',
@@ -352,6 +353,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-cite-skymap',
+    about: 'app',
     text: 'skymap is archived on Zenodo. The DOI 10.5281/zenodo.20037028 always points to the newest version; version 0.5.0, released on 31 August 2026, has its own DOI, 10.5281/zenodo.22209203.',
     source: 'https://doi.org/10.5281/zenodo.20037028',
     sourceLabel: 'skymap on Zenodo',
@@ -359,6 +361,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-cite-file',
+    about: 'app',
     text: 'The repository carries a CITATION.cff file with the same details, which GitHub and reference managers read.',
     source: `${REPO_BLOB}/CITATION.cff`,
     sourceLabel: `the citation file, ${IN_REPO}`,

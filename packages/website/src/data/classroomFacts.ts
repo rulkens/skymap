@@ -13,6 +13,7 @@ const IN_REPO = 'in the skymap repository';
 export const CLASSROOM_FACTS: readonly Fact[] = [
   {
     id: 'tour-length',
+    about: 'app',
     text: 'Left to play, “The Long Way Out” takes a little over 5 minutes.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: `the tour’s timings, ${IN_REPO}`,
@@ -20,6 +21,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'tour-keys',
+    about: 'app',
     text: 'While a tour plays, the right and left arrow keys go to the next and the previous step, Space pauses it and Esc leaves it. The same controls are on screen.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the keyboard shortcuts, ${IN_REPO}`,
@@ -28,6 +30,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'exhibit-notes',
+    about: 'app',
     text: 'An exhibit prints its notes beside the view: a headline, what you are seeing, a few figures, and links to its sources.',
     source: `${REPO_BLOB}/src/components/ExhibitOverlay/ExhibitOverlay.tsx`,
     sourceLabel: `the exhibit’s layout, ${IN_REPO}`,
@@ -35,6 +38,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'clock-speeds',
+    about: 'app',
     text: 'The app’s clock has 15 speeds, from real time to 10 years of the scene for each second you wait.',
     source: `${REPO_BLOB}/src/data/time/rateLadder.ts`,
     sourceLabel: `the clock’s speeds, ${IN_REPO}`,
@@ -43,6 +47,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'clock-keys',
+    about: 'app',
     text: 'The ] key makes the clock faster, the [ key makes it slower, and the \\ key pauses or resumes it.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the keyboard shortcuts, ${IN_REPO}`,
@@ -66,6 +71,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'search-scope',
+    about: 'app',
     text: 'The search finds planets, moons, spacecraft, named stars, galaxies by name or catalogue number, clusters and voids, places on Earth, and the exhibits and tours.',
     source: `${REPO_BLOB}/src/components/CommandPalette/utils/rankPaletteMatches.ts`,
     sourceLabel: `what the search matches, ${IN_REPO}`,
@@ -73,6 +79,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'search-tabs',
+    about: 'app',
     text: 'Before anything is typed, the search shows picture cards in seven tabs: Highlights, Solar System, Missions, Milky Way, Galaxies, Deep Space and Tours. A card flies the camera to its object.',
     source: `${REPO_BLOB}/src/data/palette/featuredTabs.ts`,
     sourceLabel: `the search’s cards, ${IN_REPO}`,
@@ -81,6 +88,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'card-on-click',
+    about: 'app',
     text: 'A click or a tap on an object pins its card. The view does not move.',
     source: `${REPO_BLOB}/src/services/engine/phases/wireInput.ts`,
     sourceLabel: `the pointer handling, ${IN_REPO}`,
@@ -88,6 +96,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'body-card',
+    about: 'app',
     text: 'A planet’s card lists its radius, mass, surface gravity, day and year length, distance from the Sun, mean temperature, number of moons, axial tilt and atmosphere. All but the radius come from a fact sheet typed into the app by hand. The sheet names no source of its own; the card links to Wikipedia.',
     source: `${REPO_BLOB}/data/seeds/planet_facts.seed.json`,
     sourceLabel: `the planets’ fact sheet, ${IN_REPO}`,
@@ -96,6 +105,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   },
   {
     id: 'card-tooltips',
+    about: 'app',
     text: 'Underlined words on a card, such as “Gravity” and “Axial tilt”, open a short explanation when pointed at or focused.',
     source: `${REPO_BLOB}/src/components/InfoCard/tooltips.tsx`,
     sourceLabel: `the cards’ explanations, ${IN_REPO}`,
