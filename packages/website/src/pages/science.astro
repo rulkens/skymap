@@ -207,8 +207,8 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
         A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside the
         Milky Way, so its portrait from outside has to be drawn.
       </p>
-      <div class="one">
-        <Figure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
+      <div class="one grid">
+        <div class="statements"><Figure id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" /></div>
       </div>
       <Claims items={DRAWN} />
     </Group>
@@ -279,30 +279,28 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem 0.25rem;
+  }
+
+  .pair,
+  .one {
     margin-bottom: 2.5rem;
   }
 
-  .pair :global(figcaption) {
-    padding-right: 1.5rem;
-  }
+  /* The frames meet in the middle of a gap of the page grid; their labels keep to its columns either side. */
+  @media (min-width: 901px) {
+    .pair :global(figcaption) {
+      padding-right: calc(var(--col-gap) / 2 - 0.125rem);
+      --cols: 6;
+    }
 
-  /* The one picture stands over the statements of the list under it: 14rem is that list's name column and gap. */
-  .one {
-    max-width: 40rem;
-    margin: 0 0 2.5rem 14rem;
+    .pair > :global(:nth-child(2) figcaption) {
+      padding-inline: calc(var(--col-gap) / 2 - 0.125rem) 0;
+    }
   }
 
   @media (max-width: 900px) {
     .pair {
       grid-template-columns: 1fr;
-    }
-
-    .pair :global(figcaption) {
-      padding-right: 0;
-    }
-
-    .one {
-      margin-left: 0;
     }
   }
 </style>

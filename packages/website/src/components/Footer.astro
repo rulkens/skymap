@@ -32,14 +32,14 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   </div>
 
   <div class="wrap inner">
-    <div class="top">
+    <div class="top grid">
       <div class="brand">
         <a class="mark" href={sitePath('/')}>skymap</a>
         <p class="say">A free, open-source web app that draws the mapped universe in three dimensions at true scale.</p>
         <OpenApp />
       </div>
 
-      <nav class="groups" aria-label="Footer">
+      <nav class="groups grid" aria-label="Footer">
         {
           groups.map((group) => (
             <div>
@@ -117,10 +117,34 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   }
 
   .top {
-    display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-    gap: 4rem;
+    row-gap: 4rem;
     align-items: start;
+  }
+
+  /* Four columns of the page grid for the name; the three lists start on its fifth, eighth and eleventh lines. */
+  @media (min-width: 1101px) {
+    .brand {
+      grid-column: span 4;
+    }
+
+    .groups {
+      grid-column: 5 / -1;
+      --cols: 8;
+    }
+
+    .groups > div {
+      grid-column: span 3;
+    }
+
+    .groups > div:last-child {
+      grid-column: span 2;
+    }
+  }
+
+  @media (min-width: 561px) and (max-width: 1100px) {
+    .groups > div {
+      grid-column: span 4;
+    }
   }
 
   .brand {
@@ -143,9 +167,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   }
 
   .groups {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-    gap: 2.5rem 2rem;
+    row-gap: 2.5rem;
     /* The headings' cap line meets the top of the name beside them. */
     padding-top: 0.75rem;
   }
@@ -187,10 +209,6 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   }
 
   @media (max-width: 1100px) {
-    .top {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
     .groups {
       padding-top: 0;
     }

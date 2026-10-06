@@ -1,32 +1,21 @@
 ---
 /*
- * Columns — its children side by side in equal columns when wide, stacked when
- * narrow. Each child is one column: a heading and what belongs under it.
- * As many columns as fit at 18rem each, unless `count` fixes their number:
- * those stack at the 900px breakpoint.
+ * Columns — its children side by side in `count` equal columns of the page
+ * grid when wide, stacked when narrow. Each child is one column: a heading and
+ * what belongs under it.
  */
-type Props = { count?: 2 | 3 };
+type Props = { count: 2 | 3 };
 
 const { count } = Astro.props;
 ---
 
-<div class:list={['columns', { fixed: count }]} style={count && `--count:${count}`}>
+<div class:list={['columns grid', count === 2 ? 'halves' : 'thirds']}>
   <slot />
 </div>
 
 <style>
   .columns {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 2.5rem 3.75rem;
-  }
-
-  .fixed {
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
-  }
-
-  .columns > :global(*) {
-    min-width: 0;
+    row-gap: 2.5rem;
   }
 
   .columns :global(h3) {
@@ -35,11 +24,5 @@ const { count } = Astro.props;
 
   .columns :global(p:last-child) {
     margin-bottom: 0;
-  }
-
-  @media (max-width: 900px) {
-    .fixed {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

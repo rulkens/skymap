@@ -2,8 +2,8 @@
 /*
  * Claims — a list of sourced statements, each a short name beside the fact
  * row's own words and the link that backs them. Wide, names run down a left
- * column so the list scans; narrow, each name sits over its statement.
- * `narrow` shortens the name column, for a list in half the page's width.
+ * column so the list scans: three columns of the page grid, or two in a list
+ * that has half the page (`narrow`). Narrow, each name sits over its statement.
  */
 import { fact } from '../data/fact';
 
@@ -35,25 +35,30 @@ const { items, narrow = false } = Astro.props;
 
   .claims > div {
     display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
-    gap: 0.25rem 2rem;
+    grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+    gap: 0.25rem var(--col-gap);
     padding-block: 1rem;
     border-top: 1px solid var(--border-divider);
   }
 
-  .narrow > div {
-    grid-template-columns: 6.5rem minmax(0, 1fr);
-    column-gap: 1.5rem;
-  }
-
   dt {
+    grid-column: span 3;
     color: var(--color-fg);
   }
 
   dd {
+    grid-column: 4 / -1;
     max-width: 68ch;
     margin: 0;
     color: var(--site-text-muted);
+  }
+
+  .narrow dt {
+    grid-column: span 2;
+  }
+
+  .narrow dd {
+    grid-column: 3 / -1;
   }
 
   /* The source reads as a reference, not as part of the sentence: its own line, dimmer, still 44px tall to the thumb. */
@@ -71,8 +76,9 @@ const { items, narrow = false } = Astro.props;
   }
 
   @media (max-width: 900px) {
-    .claims > div {
-      grid-template-columns: 1fr;
+    .claims dt,
+    .claims dd {
+      grid-column: 1 / -1;
     }
   }
 </style>

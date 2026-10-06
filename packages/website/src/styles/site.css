@@ -47,6 +47,8 @@
 
   /* One gap between sections; inside a section nothing exceeds half of it. */
   --gutter: 2.75rem;
+  /* The one gap between columns of the page grid (`.grid`, below). */
+  --col-gap: 3rem;
   --wrap-max: 77.5rem;
   --section-space: 9.375rem;
   --stack: 1.5rem;
@@ -70,6 +72,7 @@
     --weight-body: 400;
     --text-lead: 1.25rem;
     --gutter: 1.25rem;
+    --col-gap: 1.25rem;
     --section-space: 5rem;
     --nav-height: 3.75rem;
   }
@@ -171,6 +174,47 @@ img {
   max-width: var(--wrap-max);
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/*
+ * The page grid: twelve columns and one gap across the text column (`.wrap`). Every part that sets things side by
+ * side is a `.grid` and gives its children a span, so a column edge in one section is a line the sections above
+ * and below also use. A child that spans N columns says so in `--cols`, and a grid inside it then has those N
+ * columns: the same lines, not new ones. Unplaced children take the whole row, which is also the narrow layout.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+  column-gap: var(--col-gap);
+}
+
+:where(.grid) > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* Named spans for children that come from a slot: equal columns by their count. */
+@media (min-width: 901px) {
+  .grid.halves > * {
+    grid-column: span 6;
+    --cols: 6;
+  }
+
+  .grid.thirds > * {
+    grid-column: span 4;
+    --cols: 4;
+  }
+
+  .grid.quarters > * {
+    grid-column: span 3;
+    --cols: 3;
+  }
+
+  /* Over the statements of a Claims list, clear of its three columns of names. */
+  .grid > .statements {
+    grid-column: 4 / span 7;
+    --cols: 7;
+  }
 }
 
 /*

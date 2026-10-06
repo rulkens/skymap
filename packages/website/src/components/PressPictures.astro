@@ -1,6 +1,6 @@
 ---
 /*
- * PressPictures — the pictures offered for reuse, two to a row: each with its
+ * PressPictures — the pictures offered for reuse, in halves of the page grid: each with its
  * name, what it shows, the credit to print, the terms, and links to the view
  * and to the widest file the site holds. The cards share their rows (subgrid),
  * so the same line of two cards sits at the same height whatever its length.
@@ -20,7 +20,7 @@ const press = PRESS_PICTURES.map((row) => {
 });
 ---
 
-<ul>
+<ul class="grid halves">
   {
     press.map((row) => (
       <li>
@@ -64,9 +64,6 @@ const press = PRESS_PICTURES.map((row) => {
 
 <style>
   ul {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 3.75rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -101,11 +98,20 @@ const press = PRESS_PICTURES.map((row) => {
     margin: 0;
   }
 
+  /* The names take two of the card's six columns, so the statements start on a line of the page grid. */
   dl > div {
-    grid-template-columns: 8.5rem minmax(0, 1fr);
-    column-gap: 1.5rem;
+    grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+    column-gap: var(--col-gap);
     padding-block: 0.75rem;
     border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    grid-column: span 2;
+  }
+
+  dd {
+    grid-column: 3 / -1;
   }
 
   dt {
@@ -133,15 +139,23 @@ const press = PRESS_PICTURES.map((row) => {
   }
 
   @media (max-width: 900px) {
-    ul {
-      grid-template-columns: 1fr;
+    dt {
+      grid-column: span 4;
+    }
+
+    dd {
+      grid-column: 5 / -1;
     }
   }
 
   @media (max-width: 480px) {
     dl > div {
-      grid-template-columns: 1fr;
       row-gap: 0.25rem;
+    }
+
+    dt,
+    dd {
+      grid-column: 1 / -1;
     }
   }
 </style>

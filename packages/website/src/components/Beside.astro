@@ -1,37 +1,44 @@
 ---
 /*
- * Beside — two blocks side by side, the second a little the wider, stacked
- * when narrow. `picture` says the first block is a picture and how wide it
- * may be: the words are then centred on it. `wordsFirst` puts the second
- * block first when they stack, so a name comes before its picture.
+ * Beside — two blocks side by side on the page grid, five columns and six with
+ * an empty one between, stacked when narrow. `picture` says the first block is
+ * a picture and how wide it may be when stacked: wide, the words are centred
+ * on it. `wordsFirst` puts the second block first when they stack, so a name
+ * comes before its picture.
  */
 type Props = { picture?: string; wordsFirst?: boolean };
 
 const { picture, wordsFirst = false } = Astro.props;
 ---
 
-<div class:list={['beside', { picture, flip: wordsFirst }]} style={picture && `--picture:${picture}`}>
+<div class:list={['beside grid', { picture, flip: wordsFirst }]} style={picture && `--picture:${picture}`}>
   <slot />
 </div>
 
 <style>
   .beside {
-    display: grid;
-    grid-template-columns: 5fr 6fr;
-    gap: 2.5rem 5rem;
+    row-gap: 2.5rem;
     align-items: start;
   }
 
   .picture {
-    grid-template-columns: minmax(0, var(--picture)) minmax(0, 1fr);
     align-items: center;
   }
 
-  @media (max-width: 900px) {
-    .beside {
-      grid-template-columns: 1fr;
+  @media (min-width: 901px) {
+    .beside > :global(:first-child) {
+      grid-column: span 5;
+      --cols: 5;
     }
 
+    /* By position: a component's own script may follow the second block. */
+    .beside > :global(:nth-child(2)) {
+      grid-column: 7 / -1;
+      --cols: 6;
+    }
+  }
+
+  @media (max-width: 900px) {
     .picture > :global(:first-child) {
       max-width: var(--picture);
     }

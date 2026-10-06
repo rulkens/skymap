@@ -1,6 +1,6 @@
 ---
 /*
- * LessonLinks — the ready-made lesson links as one grid of small cards: the
+ * LessonLinks — the ready-made lesson links as small cards on the page grid: the
  * picture, its topic, its name, one question, what in the picture is data and
  * what is drawn, and the same Open this view link every picture label has.
  * Four to a row when wide; on an upright phone each is a row with its picture
@@ -16,7 +16,7 @@ import { siteShot } from '../data/siteShot';
 const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${siteShot(id).credit}.`].filter(Boolean).join(' ');
 ---
 
-<ul>
+<ul class="grid quarters">
   {
     LESSON_TOPICS.flatMap((topic) =>
       topic.lessons.map((lesson) => (
@@ -39,16 +39,10 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
 
 <style>
   ul {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 3rem 2.5rem;
+    row-gap: 3rem;
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-
-  li {
-    min-width: 0;
   }
 
   .picture {
@@ -81,16 +75,15 @@ const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${sit
     color: var(--site-text-dim);
   }
 
-  @media (max-width: 1100px) {
-    ul {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (min-width: 601px) and (max-width: 1100px) {
+    ul > li {
+      grid-column: span 6;
     }
   }
 
   @media (max-width: 600px) {
     ul {
-      grid-template-columns: 1fr;
-      gap: 0;
+      row-gap: 0;
     }
 
     li {

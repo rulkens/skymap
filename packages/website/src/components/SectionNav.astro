@@ -2,7 +2,8 @@
 /*
  * SectionNav — the sections of a long page, as a contents row under its
  * opening: a quiet heading that says what the row is, then one cell per
- * section with a drawing, the section's name and what it answers. Plain
+ * section, in equal columns of the page grid, with a drawing, the section's
+ * name and what it answers. Plain
  * anchors, no script. The ring around the drawing is the top bar's selection
  * (styles/site.css `.ring > .glyph`); hairlines and a dim heading keep this
  * second navigation quieter than the bar.
@@ -22,7 +23,7 @@ const headingId = 'section-nav-label';
 
 <nav class="wrap" aria-labelledby={headingId}>
   <p class="heading small" id={headingId}>{label}</p>
-  <ol style={`--count: ${items.length}`}>
+  <ol class="grid" style={`--span: ${12 / items.length}`}>
     {
       items.map((item) => (
         <li>
@@ -51,15 +52,22 @@ const headingId = 'section-nav-label';
   }
 
   ol {
-    display: grid;
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
     border-block: 1px solid var(--border-divider);
   }
 
-  li + li {
+  li {
+    position: relative;
+    grid-column: span var(--span);
+  }
+
+  /* The divider stands in the middle of the gap, so each cell's words start on a line of the page grid. */
+  li + li::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 calc(var(--col-gap) / -2);
     border-left: 1px solid var(--border-divider);
   }
 
@@ -69,13 +77,9 @@ const headingId = 'section-nav-label';
     gap: 1.25rem;
     height: 100%;
     min-height: var(--tap);
-    padding: 1.75rem 1.5rem;
+    padding: 1.75rem 0;
     color: var(--color-fg);
     text-decoration: none;
-  }
-
-  li:first-child a {
-    padding-left: 0;
   }
 
   /* The focus outline would be cut by the neighbouring cell's edge if it stood off. */
@@ -129,30 +133,23 @@ const headingId = 'section-nav-label';
     }
 
     ol {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
       border-top: 0;
     }
 
-    li,
-    li + li {
-      border-left: 0;
+    li {
+      grid-column: span 6;
       border-top: 1px solid var(--border-divider);
     }
 
-    li:nth-child(even) {
-      border-left: 1px solid var(--border-divider);
+    li:nth-child(odd)::before {
+      content: none;
     }
 
-    a,
-    li:first-child a {
+    a {
       flex-direction: row;
       align-items: flex-start;
       gap: 1.25rem;
-      padding: 1.25rem 1.25rem 1.25rem 0.4375rem;
-    }
-
-    li:nth-child(even) a {
-      padding-left: 1.6875rem;
+      padding: 1.25rem 0 1.25rem 0.4375rem;
     }
 
     .name {
@@ -161,16 +158,12 @@ const headingId = 'section-nav-label';
   }
 
   @media (max-width: 560px) {
-    ol {
-      grid-template-columns: 1fr;
+    li {
+      grid-column: 1 / -1;
     }
 
-    li:nth-child(even) {
-      border-left: 0;
-    }
-
-    li:nth-child(even) a {
-      padding-left: 0.4375rem;
+    li::before {
+      content: none;
     }
   }
 

@@ -18,8 +18,8 @@ const BINS = [
 ] as const;
 ---
 
-<section class="wrap section honest" id="honest">
-  <div class="intro">
+<section class="wrap section honest grid" id="honest">
+  <div class="intro grid">
     <h2>{title}</h2>
     <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
   </div>
@@ -49,26 +49,32 @@ const BINS = [
 
 <style>
   .honest {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2.5rem 3.75rem;
+    row-gap: 2.5rem;
   }
 
   .intro {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 0 2rem;
   }
 
   h2 {
     margin-bottom: 0;
   }
 
-  .say {
-    grid-column: 1 / -1;
+  /* Thirds of the page grid; the link beside the heading stands over the third. */
+  @media (min-width: 901px) {
+    .bin {
+      grid-column: span 4;
+      --cols: 4;
+    }
+
+    h2 {
+      grid-column: span 8;
+    }
+
+    .intro > :global(a) {
+      grid-column: 9 / -1;
+      justify-self: start;
+    }
   }
 
   .say :global(p) {
@@ -110,8 +116,8 @@ const BINS = [
   }
 
   @media (max-width: 900px) {
-    .honest {
-      grid-template-columns: 1fr;
+    .intro > :global(a) {
+      justify-self: start;
     }
 
     .gloss,

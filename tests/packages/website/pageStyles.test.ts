@@ -16,7 +16,7 @@ const ALLOWED: Record<string, number> = {
   'about.astro': 11,
   // An address inside a sentence that may break anywhere.
   'privacy.astro': 5,
-  // Two frames edge to edge, and one picture set over a list's statements column.
+  // Two frames edge to edge, their labels on the page grid either side of the seam.
   'science.astro': 26,
 };
 

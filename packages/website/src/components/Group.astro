@@ -3,8 +3,8 @@
  * Group — a named part of a section: its heading, then what belongs under it
  * (the slot), usually a Claims list. `big` sets the name at the big ring's
  * size, for a part that is a subject of its own. A sentence in the `lede`
- * slot stands beside the name, over the list's statements: the 12rem name
- * column is Claims' term column.
+ * slot stands beside the name, over the list's statements: the name has
+ * Claims' three columns of the page grid.
  */
 type Props = { title: string; big?: boolean };
 
@@ -12,7 +12,7 @@ const { title, big = false } = Astro.props;
 ---
 
 <div class:list={['group', { big }]}>
-  <div class:list={['name', { lede: Astro.slots.has('lede') }]}>
+  <div class:list={['name', { 'lede grid': Astro.slots.has('lede') }]}>
     <h3>{title}</h3>
     <slot name="lede" />
   </div>
@@ -38,10 +38,18 @@ const { title, big = false } = Astro.props;
   }
 
   .lede {
-    display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
-    gap: 0.5rem 2rem;
+    row-gap: 0.5rem;
     align-items: baseline;
+  }
+
+  @media (min-width: 901px) {
+    .lede h3 {
+      grid-column: span 3;
+    }
+
+    .lede > :global(p) {
+      grid-column: 4 / -1;
+    }
   }
 
   h3 {
@@ -60,10 +68,6 @@ const { title, big = false } = Astro.props;
   @media (max-width: 900px) {
     .big {
       margin-top: 3.5rem;
-    }
-
-    .lede {
-      grid-template-columns: 1fr;
     }
   }
 </style>

@@ -1,9 +1,10 @@
 ---
 /*
  * SourceTable — every data source in one table. Wide, it is a table to read
- * across. Narrow, each row becomes a block with its column names repeated
- * beside the values, so nothing scrolls sideways; the ARIA roles keep it a
- * table to a screen reader once CSS has taken the table display away. The
+ * across, its rows laid on the page grid so its columns are the page's. Narrow,
+ * each row becomes a block with its column names repeated beside the values,
+ * so nothing scrolls sideways. The ARIA roles keep it a table to a screen
+ * reader, since CSS has taken the table display away at every width. The
  * slot is for notes on how to read it, set under a rule at its foot.
  */
 import { DATA_SOURCES } from '../data/dataSources';
@@ -57,10 +58,53 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
 {Astro.slots.has('default') && <div class="notes small tap-links"><slot /></div>}
 
 <style>
+  table,
+  thead,
+  tbody,
+  th,
+  td {
+    display: block;
+  }
+
   table {
-    width: 100%;
-    border-collapse: collapse;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Three columns of the page grid for the source, three for the release, two and one for the counts, three for the licence. */
+  @media (min-width: 901px) {
+    tr {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--col-gap);
+      border-top: 1px solid var(--border-divider);
+    }
+
+    tr > * {
+      grid-column: span 3;
+    }
+
+    tr > :nth-child(3) {
+      grid-column: span 2;
+    }
+
+    /* A count is wider than one column and is set from its right edge: a flex line, so it runs back into the gap. */
+    tr > :nth-child(4) {
+      grid-column: span 1;
+    }
+
+    tr > .num {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    tr.group,
+    thead tr {
+      border-top: 0;
+    }
+
+    tr.group > * {
+      grid-column: 1 / -1;
+    }
   }
 
   caption {
@@ -74,37 +118,24 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
 
   th,
   td {
-    padding: 0.875rem 1.5rem 0.875rem 0;
-    border-top: 1px solid var(--border-divider);
+    padding-block: 0.875rem;
     text-align: left;
-    vertical-align: top;
     font-weight: var(--weight-small);
     color: var(--site-text-muted);
   }
 
-  th:last-child,
-  td:last-child {
-    padding-right: 0;
-  }
-
   thead th {
-    border-top: 0;
     color: var(--site-text-dim);
   }
 
   .group th {
     padding-top: 2.5rem;
-    border-top: 0;
     font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
     color: var(--color-fg);
   }
 
   tbody:first-of-type .group th {
     padding-top: 1rem;
-  }
-
-  th[scope='row'] {
-    width: 34%;
   }
 
   th[scope='row'] a {
@@ -129,10 +160,6 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     clip-path: inset(50%);
   }
 
-  td:nth-child(2) {
-    width: 24%;
-  }
-
   .evidence {
     white-space: nowrap;
     color: var(--site-text-dim);
@@ -152,14 +179,6 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
 
   /* Narrow: one source per block, each value under its column's name. */
   @media (max-width: 900px) {
-    table,
-    tbody,
-    tr,
-    th,
-    td {
-      display: block;
-    }
-
     thead {
       position: absolute;
       width: 1px;
@@ -177,12 +196,8 @@ const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
     }
 
     th,
-    td,
-    th[scope='row'],
-    td:nth-child(2) {
-      width: auto;
+    td {
       padding: 0;
-      border: 0;
     }
 
     th[scope='row'],

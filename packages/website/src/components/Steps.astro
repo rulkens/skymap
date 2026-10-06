@@ -1,25 +1,22 @@
 ---
 /*
- * Steps — a numbered procedure, its steps side by side when wide and stacked
- * when narrow. Each child is a Step, which takes its number from the counter
- * this list starts. As many columns as fit at 18rem each, unless `count`
- * fixes their number for a row of short steps: Step then sets its numeral
- * large, and the row folds to two columns, then one.
+ * Steps — a numbered procedure, its steps side by side on the page grid when
+ * wide and stacked when narrow. Each child is a Step, which takes its number
+ * from the counter this list starts. Three columns, unless `count` says four
+ * for a row of short steps: Step then sets its numeral large, and the row
+ * folds to two columns, then one.
  */
-type Props = { count?: number };
+type Props = { count?: 4 };
 
 const { count } = Astro.props;
 ---
 
-<ol class:list={[{ fixed: count }]} style={count && `--count:${count}`}>
+<ol class:list={['grid', count ? 'quarters fixed' : 'thirds']}>
   <slot />
 </ol>
 
 <style>
   ol {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 0 3.75rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -27,19 +24,12 @@ const { count } = Astro.props;
   }
 
   .fixed {
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
-    gap: 2rem 3rem;
+    row-gap: 2rem;
   }
 
-  @media (max-width: 900px) {
-    .fixed {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 480px) {
-    .fixed {
-      grid-template-columns: 1fr;
+  @media (min-width: 481px) and (max-width: 900px) {
+    .fixed > :global(*) {
+      grid-column: span 6;
     }
   }
 </style>

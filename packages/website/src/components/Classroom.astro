@@ -7,7 +7,7 @@ import { HOME_LINKS } from '../data/homeLinks';
 import { sitePath } from '../utils/sitePath';
 ---
 
-<section class="wrap section row" id="classroom">
+<section class="wrap section row grid" id="classroom">
   <div class="frame">
     <Shot id="classroom-jupiter" sizes="(max-width: 900px) 60vw, 55vw" />
     <!-- The example address is built from the same hash the deep-link test parses. -->
@@ -26,10 +26,20 @@ import { sitePath } from '../utils/sitePath';
 
 <style>
   .row {
-    display: grid;
-    grid-template-columns: 6fr 5fr;
-    gap: 5rem;
+    row-gap: 2.5rem;
     align-items: center;
+  }
+
+  /* Six columns of the page grid and five, with an empty one between. */
+  @media (min-width: 901px) {
+    .frame {
+      grid-column: span 6;
+      --cols: 6;
+    }
+
+    .copy {
+      grid-column: 8 / -1;
+    }
   }
 
   .frame :global(img) {
@@ -40,12 +50,5 @@ import { sitePath } from '../utils/sitePath';
 
   .frame :global(.caption) {
     margin-top: 0.5rem;
-  }
-
-  @media (max-width: 900px) {
-    .row {
-      grid-template-columns: 1fr;
-      gap: 2.5rem;
-    }
   }
 </style>

@@ -1,8 +1,8 @@
 ---
 /*
  * SectionHead — a section's name with, optionally, a sentence or two beside it
- * (the slot): name left and words right when wide, stacked when narrow.
- * `narrow` breaks a short name over two lines and gives the words the lead's
+ * (the slot): the name in the left half and the words in the right half of the
+ * page grid when wide, stacked when narrow. `narrow` breaks a short name over two lines and gives the words the lead's
  * measure, for a page whose sections open on a full sentence.
  */
 type Props = { title: string; narrow?: boolean };
@@ -10,24 +10,30 @@ type Props = { title: string; narrow?: boolean };
 const { title, narrow = false } = Astro.props;
 ---
 
-<div class:list={['head', { narrow }]}>
+<div class:list={['head grid', { narrow }]}>
   <h2>{title}</h2>
   {Astro.slots.has('default') && <div class="lead"><slot /></div>}
 </div>
 
 <style>
   .head {
-    display: flex;
-    flex-wrap: wrap;
     align-items: end;
-    justify-content: space-between;
-    gap: 1rem 3rem;
+    row-gap: 1rem;
     margin-bottom: 2.5rem;
   }
 
   h2 {
     max-width: 20ch;
     margin: 0;
+  }
+
+  /* The words start on the page's middle line, where a section in two columns starts its second. */
+  @media (min-width: 901px) {
+    h2:not(:only-child),
+    .lead {
+      grid-column: span 6;
+      --cols: 6;
+    }
   }
 
   .lead :global(p:last-child) {

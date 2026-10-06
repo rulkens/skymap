@@ -5,7 +5,7 @@ import ShotCaption from './ShotCaption.astro';
 import { sitePath } from '../utils/sitePath';
 ---
 
-<section class="wrap section row" id="dome">
+<section class="wrap section row grid" id="dome">
   <figure>
     <div class="dome">
       <Disc id="dome-saturn" sizes="(max-width: 900px) 60vw, 40vw" />
@@ -25,14 +25,24 @@ import { sitePath } from '../utils/sitePath';
 
 <style>
   .row {
-    display: grid;
-    grid-template-columns: 5fr 6fr;
-    gap: 5rem;
+    row-gap: 3.5rem;
     align-items: center;
   }
 
   figure {
     margin: 0;
+  }
+
+  /* Five columns of the page grid and six, with an empty one between. */
+  @media (min-width: 901px) {
+    figure {
+      grid-column: span 5;
+      --cols: 5;
+    }
+
+    .copy {
+      grid-column: 7 / -1;
+    }
   }
 
   figcaption {
@@ -50,11 +60,6 @@ import { sitePath } from '../utils/sitePath';
   }
 
   @media (max-width: 900px) {
-    .row {
-      grid-template-columns: 1fr;
-      gap: 3.5rem;
-    }
-
     .dome {
       max-width: 85%;
     }

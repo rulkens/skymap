@@ -124,34 +124,39 @@ const shot = siteShot(id);
     margin-block: 0 -0.625rem;
   }
 
+  /*
+   * In columns, the label takes the page grid's: `--cols` is how many of them its place spans (styles/site.css),
+   * and the title has five twelfths of those, to the nearest line.
+   */
   @container (min-width: 34rem) {
     .plate {
-      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-      max-width: 52rem;
-    }
-
-    .what {
-      grid-row: 1 / span 2;
-    }
-
-    .drawn,
-    .end {
-      grid-column: 2;
-    }
-  }
-
-  @container (min-width: 58rem) {
-    .plate {
-      grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr);
+      --what: calc(var(--cols, 12) * 5 / 12);
+      grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
+      column-gap: var(--col-gap);
       max-width: none;
     }
 
     .what {
-      grid-row: auto;
+      grid-area: 1 / 1 / span 2 / span var(--what);
+    }
+
+    .drawn,
+    .end {
+      grid-column: calc(var(--what) + 1) / -1;
+    }
+  }
+
+  @container (min-width: 58rem) {
+    .what {
+      grid-area: auto / 1 / auto / span 4;
+    }
+
+    .drawn {
+      grid-column: 5 / span 5;
     }
 
     .end {
-      grid-column: 3;
+      grid-column: 10 / -1;
     }
   }
 </style>

@@ -14,7 +14,7 @@ type Props = { id: string };
 const { id } = Astro.props;
 ---
 
-<section class="wrap band" data-opening>
+<section class="wrap band grid" data-opening>
   <div class="words">
     <slot />
   </div>
@@ -33,19 +33,30 @@ const { id } = Astro.props;
 
 <style>
   .band {
-    display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     grid-template-rows: 1fr auto;
-    column-gap: 5rem;
     min-height: var(--first-screen);
     padding-block: var(--open-top) 2rem;
   }
 
+  /* Halves of the page grid: the words, and the disc. */
+  @media (min-width: 901px) {
+    .words {
+      grid-column: span 6;
+    }
+
+    .room {
+      grid-column: 7 / -1;
+    }
+  }
+
   /* On a short window the disc is small whatever its column, so the words take the width it cannot use. */
-  @media (max-height: 800px) {
-    .band {
-      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-      column-gap: 3rem;
+  @media (min-width: 901px) and (max-height: 800px) {
+    .words {
+      grid-column: span 7;
+    }
+
+    .room {
+      grid-column: 8 / -1;
     }
 
     .words > :global(*) {
@@ -98,7 +109,6 @@ const { id } = Astro.props;
 
   @media (max-width: 900px) {
     .band {
-      grid-template-columns: minmax(0, 1fr);
       grid-template-rows: none;
       min-height: 0;
       padding-block: 2rem 0;
@@ -106,6 +116,12 @@ const { id } = Astro.props;
 
     .words {
       display: contents;
+    }
+
+    /* With the words and the figure dissolved, their parts are the grid's own items: each takes the row. */
+    .words > :global(*),
+    .room {
+      grid-column: 1 / -1;
     }
 
     .words > :global(*) {

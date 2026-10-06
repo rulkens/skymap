@@ -201,8 +201,9 @@ const first = views[0]!;
     align-self: flex-start;
   }
 
+  /* The eighth line of the page grid. */
   .words-right .copy > :global(*) {
-    margin-left: 58%;
+    margin-left: calc((100% + var(--col-gap)) * 7 / 12);
   }
 
   .band .copy > :global(.caption) {

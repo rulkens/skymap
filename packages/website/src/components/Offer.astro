@@ -3,8 +3,9 @@
  * Offer — one thing we can deliver, as a ledger row: its picture (slot
  * `picture`) beside its name, a sentence or two (the slot), what the code does
  * today and what would be work done for the client (slots `today`, `work`),
- * then one link (slot `link`). `wide` runs the picture across the row and
- * sets the words in a row under it. Narrow, the name comes first, then the
+ * then one link (slot `link`), in halves of the page grid. `wide` runs the
+ * picture across the row and sets the words in a row under it, in thirds:
+ * the name, today, the work. Narrow, the name comes first, then the
  * picture, then the rest.
  */
 type Props = { title: string; wide?: boolean };
@@ -12,7 +13,7 @@ type Props = { title: string; wide?: boolean };
 const { title, wide = false } = Astro.props;
 ---
 
-<article class:list={['offer', { wide }]}>
+<article class:list={['offer grid halves', { wide }]}>
   <slot name="picture" />
   <div>
     <h3>{title}</h3>
@@ -29,9 +30,7 @@ const { title, wide = false } = Astro.props;
 
 <style>
   .offer {
-    display: grid;
-    grid-template-columns: 6fr 5fr;
-    gap: 1.5rem 3.75rem;
+    row-gap: 1.5rem;
     align-items: center;
     padding-block: 3rem;
     border-top: 1px solid var(--border-divider);
@@ -42,27 +41,44 @@ const { title, wide = false } = Astro.props;
   }
 
   @media (min-width: 901px) {
-    .wide {
-      grid-template-columns: 1fr;
+    .offer.wide > :global(*) {
+      grid-column: 1 / -1;
+      --cols: 12;
     }
 
-    .wide > div {
+    .wide > div,
+    .wide dl {
       display: grid;
-      grid-template-columns: 5fr 7fr;
-      column-gap: 3.75rem;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+      column-gap: var(--col-gap);
       align-items: start;
     }
 
+    /* The list beside them is the taller: the room it leaves goes under the link, not between the words. */
+    .wide > div {
+      grid-template-rows: auto auto 1fr;
+    }
+
     .wide > div > :global(*) {
-      grid-column: 1;
+      grid-column: 1 / span 4;
     }
 
     .wide dl {
-      grid-area: 1 / 2 / span 3;
-      display: grid;
-      grid-auto-flow: column;
+      grid-area: 1 / 5 / span 3 / -1;
       grid-template-rows: auto 1fr;
-      gap: 0 2.5rem;
+      --cols: 8;
+    }
+
+    .wide dl > :nth-of-type(1) {
+      grid-column: 1 / span 4;
+    }
+
+    .wide dl > :nth-of-type(2) {
+      grid-column: 5 / span 4;
+    }
+
+    .wide dd {
+      grid-row: 2;
     }
 
     .wide dt {
@@ -92,12 +108,15 @@ const { title, wide = false } = Astro.props;
 
   @media (max-width: 900px) {
     .offer {
-      grid-template-columns: 1fr;
       row-gap: 0;
     }
 
     .offer > div {
       display: contents;
+    }
+
+    .offer > div > :global(*) {
+      grid-column: 1 / -1;
     }
 
     h3 {
