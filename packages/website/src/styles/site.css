@@ -360,6 +360,17 @@ img {
   --gap: 0.875rem;
 }
 
+.ring.big:has(> .glyph) {
+  --mark: 2rem;
+  --gap: 1.375rem;
+}
+
+/* The view mark recurs under every picture, so it is set small and dim; pointing at its link lights it. */
+.ring.small:has(> [data-icon='view']) {
+  --mark: 1rem;
+  --gap: 0.75rem;
+}
+
 .ring:has(> .glyph)::before {
   content: none;
 }
@@ -387,10 +398,18 @@ img {
   transition: border-color 0.25s ease;
 }
 
+.ring > .glyph[data-icon='view'] {
+  stroke: var(--site-text-dim);
+  transition:
+    border-color 0.25s ease,
+    stroke 0.25s ease;
+}
+
 .ring:hover > .glyph,
 .ring:focus-visible > .glyph,
 .ring[aria-current='page'] > .glyph {
   border-color: var(--color-accent);
+  stroke: var(--color-accent);
 }
 
 /*

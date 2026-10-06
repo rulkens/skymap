@@ -5,6 +5,9 @@ import type { IconName } from '../@types/IconName';
  * with round caps and no fill (components/Icon.astro). Each is shown at 20px,
  * so separate strokes keep about 3 units between their centre lines.
  */
+const VIEW =
+  'M3.5 8.5V5a1.5 1.5 0 0 1 1.5-1.5h3.5M15.5 3.5H19A1.5 1.5 0 0 1 20.5 5v3.5M20.5 15.5V19a1.5 1.5 0 0 1-1.5 1.5h-3.5M8.5 20.5H5A1.5 1.5 0 0 1 3.5 19v-3.5M9.75 12a2.25 2.25 0 1 0 4.5 0a2.25 2.25 0 1 0-4.5 0';
+
 export const ICONS: Record<IconName, string> = {
   // A star as the eye sees it, with its four rays: somebody looking up.
   visitor: 'M12 3c.6 4.8 4.2 8.4 9 9-4.8.6-8.4 4.2-9 9-.6-4.8-4.2-8.4-9-9 4.8-.6 8.4-4.2 9-9z',
@@ -16,8 +19,14 @@ export const ICONS: Record<IconName, string> = {
   science: 'M12 20.5L4.5 6.4M12 20.5l7.5-14.1M6.85 10.8A11 11 0 0 1 17.15 10.8M3.2 4A19 19 0 0 1 20.8 4',
   // An open book.
   docs: 'M12 7v13M12 7C9.8 5.4 6.6 4.8 3 5.2v13c3.6-.4 6.8.2 9 1.8M12 7c2.2-1.6 5.4-2.2 9-1.8v13c-3.6-.4-6.8.2-9 1.8',
-  // A flight path leaving a body.
-  launch: 'M3 17.5a3 3 0 1 0 6 0a3 3 0 1 0-6 0M9.5 14C11 9.5 15 6.5 21 5M17 3.6l4 1.4-2.3 3.6',
+  // The app: a window with its bar, and a star in it.
+  app: 'M4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5v-13A1.5 1.5 0 0 1 4.5 4zM3 7.75h18M12 10.75c.3 2.1 1.4 3.2 3.5 3.5-2.1.3-3.2 1.4-3.5 3.5-.3-2.1-1.4-3.2-3.5-3.5 2.1-.3 3.2-1.4 3.5-3.5z',
+  // One exact view: a viewfinder's corners about the point it is aimed at. Drawn to be shown at 16px.
+  view: VIEW,
+  // Places asks for the view mark by this name.
+  launch: VIEW,
+  // A link that leaves the site: an arrow out of a frame.
+  outbound: 'M10.5 5.5h-4A1.5 1.5 0 0 0 5 7v10.5A1.5 1.5 0 0 0 6.5 19H17a1.5 1.5 0 0 0 1.5-1.5v-4M14.5 4H20v5.5M20 4l-8.5 8.5',
   // A picture and the credit line under it.
   credits:
     'M4.5 3.5h15a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1zM3.5 13L8 8.5l4 4 3-3 5.5 5.5M11 20h9.5',

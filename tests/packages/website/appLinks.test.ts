@@ -1,8 +1,8 @@
 /**
  * Three kinds of link, each with one look: the bare app is OpenApp's button, a
- * view in the app is a ViewLink (the launch drawing), a page of the site is the
- * plain ring. Read from the source, so a new page cannot hand an app address to
- * a plain ring or grow a second launch control.
+ * view in the app is a ViewLink (the view mark), a page of the site is the
+ * ring under that page's icon. Read from the source, so a new page cannot hand
+ * an app address to a page's ring or grow a second launch control.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -52,8 +52,8 @@ describe('app links', () => {
     expect(other).toEqual(OTHER_USES);
   });
 
-  it('only ViewLink puts the launch drawing on a ring', () => {
-    const launch = files.filter((file) => /icon="launch"/.test(file.text)).map((file) => file.name);
-    expect(launch).toEqual(['components/ViewLink.astro']);
+  it('only ViewLink puts the view mark on a ring', () => {
+    const marked = files.filter((file) => /icon="(view|launch)"/.test(file.text)).map((file) => file.name);
+    expect(marked).toEqual(['components/ViewLink.astro']);
   });
 });

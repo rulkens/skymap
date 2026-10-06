@@ -16,7 +16,7 @@ const { size = 'default', class: extra, ...rest } = Astro.props;
 ---
 
 <a class:list={['open-app', size === 'small' && 'small', extra]} href={appLink()} {...rest}>
-  <Icon name="launch" />{OPEN_APP_LABEL}
+  <Icon name="app" />{OPEN_APP_LABEL}
 </a>
 
 <style>
