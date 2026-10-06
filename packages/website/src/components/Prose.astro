@@ -1,0 +1,17 @@
+---
+/*
+ * Prose — running paragraphs of a section (the slot), set at the lead's
+ * measure, which is wider than a column's. A link inside a sentence keeps
+ * 44px for the thumb (`.tap-links` in styles/site.css).
+ */
+---
+
+<div class="prose tap-links">
+  <slot />
+</div>
+
+<style>
+  .prose :global(p) {
+    max-width: var(--measure-lead);
+  }
+</style>

@@ -1,9 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
+import Caveat from '../components/Caveat.astro';
 import Claims from '../components/Claims.astro';
+import Group from '../components/Group.astro';
+import LinkRow from '../components/LinkRow.astro';
+import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
 import PictureBand from '../components/PictureBand.astro';
+import Prose from '../components/Prose.astro';
 import Remark from '../components/Remark.astro';
+import SectionHead from '../components/SectionHead.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import { OPEN_APP_LABEL } from '../data/appLink';
@@ -51,28 +57,26 @@ const checked = formatDate(fact('privacy-site-requests').checked);
       This website collects nothing about you. The app counts visits without cookies and keeps one note in your
       browser.
     </p>
-    <p class="small when">Each statement below was read from the code on <span class="date">{checked}</span>.</p>
+    <Note flow>Each statement below was read from the code on <span class="date">{checked}</span>.</Note>
     <ShotCaption id="privacy-far-side" />
   </PictureBand>
 
   <section class="wrap section" id="website">
-    <div class="head">
-      <h2>This website</h2>
+    <SectionHead title="This website" narrow>
       <p>The pages you are reading now: the home page, the pages for classrooms, domes and science, and this one.</p>
-    </div>
+    </SectionHead>
     <Claims items={SITE} />
     <Remark text="Your browser fetched every file on this page from skymap’s own addresses." live="files-fetched" />
   </section>
 
   <section class="wrap section" id="app">
-    <div class="head">
-      <h2>The app</h2>
+    <SectionHead title="The app" narrow>
       <p>The map itself, which opens when you choose “{OPEN_APP_LABEL}”. It does more than the pages do, so there is more to say.</p>
-    </div>
-    <h3>The visit counter</h3>
-    <Claims items={COUNTER} />
-    <div class="short">
-      <h3>Where this falls short</h3>
+    </SectionHead>
+    <Group title="The visit counter">
+      <Claims items={COUNTER} />
+    </Group>
+    <Caveat title="Where this falls short">
       <p>
         The counter starts without asking you, and the app does not mention it. We have not set a limit of our own on
         how long its rows are kept, so treat them as kept with no fixed end date until this page says otherwise.
@@ -81,30 +85,31 @@ const checked = formatDate(fact('privacy-site-requests').checked);
         A content blocker that stops requests to <span class="host">counterscale.rulkens.workers.dev</span> stops the
         counter. The app works the same without it.
       </p>
-    </div>
-    <h3>Everything else</h3>
-    <Claims items={APP} />
-    <p class="small after">
+    </Caveat>
+    <Group title="Everything else">
+      <Claims items={APP} />
+    </Group>
+    <Note>
       The app’s data files come from the same host as this website, described above. Links in the app to outside
       catalogues, such as NED and Aladin, open those sites only when you choose them.
-    </p>
+    </Note>
   </section>
 
   <section class="wrap section" id="form">
-    <div class="head">
-      <h2>The contact form</h2>
+    <SectionHead title="The contact form" narrow>
       <p>{CONTACT_ENDPOINT ? 'The form on the domes page is open.' : fact('privacy-form-closed').text}</p>
-    </div>
+    </SectionHead>
     {
       !CONTACT_ENDPOINT && (
-        <p>
-          Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is public,
-          it carries your GitHub name, and GitHub’s own privacy statement applies to it.
-        </p>
+        <Prose>
+          <p>
+            Until it opens, the way to reach us is the <a href={ISSUES_URL}>issue list on GitHub</a>. An issue is
+            public, it carries your GitHub name, and GitHub’s own privacy statement applies to it.
+          </p>
+        </Prose>
       )
     }
-    <div class="plan">
-      <h3>{CONTACT_ENDPOINT ? 'What happens to a message' : 'The plan, not yet in effect'}</h3>
+    <Caveat title={CONTACT_ENDPOINT ? 'What happens to a message' : 'The plan, not yet in effect'}>
       <p>
         {CONTACT_ENDPOINT ? 'When you send the form' : 'When the form opens'}, your message will go to a small program
         of ours on Cloudflare, which forwards the four fields to us as an email. Cloudflare Turnstile, a spam check, will run
@@ -112,29 +117,30 @@ const checked = formatDate(fact('privacy-site-requests').checked);
         domes page only and only when the form comes into view, so that is a request to Cloudflare. The program keeps
         nothing of its own. We will keep the email for as long as the conversation needs it.
       </p>
-      <p class="small">
+      <Note flow>
         This paragraph describes a design, not a running system. We will rewrite this section when the form opens,
         and the date at the foot of the page will change with it.
-      </p>
-    </div>
+      </Note>
+    </Caveat>
   </section>
 
   <section class="wrap section" id="responsible">
-    <div class="head">
-      <h2>Who is responsible</h2>
+    <SectionHead title="Who is responsible" narrow>
       <p>
         {MAKER_NAME}, who makes skymap, decides what the site and the app load and keep.
       </p>
-    </div>
-    <p>
-      To ask what we hold about you, or to have it removed, open an issue. Today the honest answer is short: the
-      counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
-    </p>
-    <div class="links">
+    </SectionHead>
+    <Prose>
+      <p>
+        To ask what we hold about you, or to have it removed, open an issue. Today the honest answer is short: the
+        counter’s rows carry no name, no IP address and no identifier, so we cannot find yours among them.
+      </p>
+    </Prose>
+    <LinkRow>
       <ObjLink hang size="small" href={ISSUES_URL}>The issue list on GitHub</ObjLink>
       <ObjLink hang size="small" href={sitePath('/about/')}>Who makes skymap</ObjLink>
-    </div>
-    <p class="small checked">This page was last checked against the code on {checked}.</p>
+    </LinkRow>
+    <Note>This page was last checked against the code on {checked}.</Note>
   </section>
 
   <div class="wrap section last">
@@ -143,109 +149,9 @@ const checked = formatDate(fact('privacy-site-requests').checked);
 </Base>
 
 <style>
-  h1 {
-    font-size: var(--text-h2);
-  }
-
-  .say {
-    font-size: var(--text-lead);
-  }
-
-  .when,
-  .after,
-  .checked {
-    color: var(--site-text-dim);
-  }
-
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem 3rem;
-    margin-bottom: 2.5rem;
-  }
-
-  .head h2,
-  .head p {
-    margin: 0;
-  }
-
-  .head h2 {
-    max-width: 12ch;
-  }
-
-  .head p {
-    max-width: var(--measure-lead);
-  }
-
-  h3 {
-    margin: 3.5rem 0 1.5rem;
-  }
-
-  .head + h3 {
-    margin-top: 0;
-  }
-
-  /* The page's one admission: set apart by a rule in the accent, not by a box. */
-  .short,
-  .plan {
-    max-width: 46rem;
-    margin-top: 3.5rem;
-    padding-left: 1.5rem;
-    border-left: 1px solid var(--color-accent);
-  }
-
-  .short h3,
-  .plan h3 {
-    margin: 0 0 1rem;
-  }
-
-  .short p,
-  .plan p {
-    max-width: none;
-  }
-
-  .short p:last-child,
-  .plan p:last-child {
-    margin-bottom: 0;
-  }
-
-  .plan .small {
-    color: var(--site-text-dim);
-  }
-
-  .date {
-    white-space: nowrap;
-  }
-
+  /* An address inside a sentence: it may break anywhere, or it pushes a phone's page sideways. */
   .host {
     overflow-wrap: anywhere;
     color: var(--color-fg);
-  }
-
-  .after {
-    max-width: 68ch;
-    margin-top: 2rem;
-  }
-
-  section > p {
-    max-width: var(--measure-lead);
-  }
-
-  section > p a {
-    display: inline-block;
-    padding-block: 0.625rem;
-    margin-block: -0.625rem;
-  }
-
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2.5rem;
-  }
-
-  .checked {
-    margin-top: 2rem;
   }
 </style>

@@ -1,0 +1,20 @@
+---
+/*
+ * LinkRow — ring links side by side under the text they follow, wrapping to
+ * further rows when there are many. A row that carries the launch button is
+ * Onward's.
+ */
+---
+
+<div class="links">
+  <slot />
+</div>
+
+<style>
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    margin-top: 1.5rem;
+  }
+</style>

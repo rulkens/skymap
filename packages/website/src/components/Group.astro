@@ -1,0 +1,69 @@
+---
+/*
+ * Group — a named part of a section: its heading, then what belongs under it
+ * (the slot), usually a Claims list. `big` sets the name at the big ring's
+ * size, for a part that is a subject of its own. A sentence in the `lede`
+ * slot stands beside the name, over the list's statements: the 12rem name
+ * column is Claims' term column.
+ */
+type Props = { title: string; big?: boolean };
+
+const { title, big = false } = Astro.props;
+---
+
+<div class:list={['group', { big }]}>
+  <div class:list={['name', { lede: Astro.slots.has('lede') }]}>
+    <h3>{title}</h3>
+    <slot name="lede" />
+  </div>
+  <slot />
+</div>
+
+<style>
+  .group {
+    margin-top: 3.5rem;
+  }
+
+  .big {
+    margin-top: 4.5rem;
+  }
+
+  /* The first part follows the section's own head, which has left its gap. */
+  :global(.head) + .group {
+    margin-top: 0;
+  }
+
+  .name {
+    margin-bottom: 1.5rem;
+  }
+
+  .lede {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: 0.5rem 2rem;
+    align-items: baseline;
+  }
+
+  h3 {
+    margin: 0;
+  }
+
+  .big h3 {
+    font-size: var(--text-ring-big);
+  }
+
+  .name :global(p) {
+    max-width: var(--measure-lead);
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    .big {
+      margin-top: 3.5rem;
+    }
+
+    .lede {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

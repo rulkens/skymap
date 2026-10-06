@@ -144,6 +144,21 @@ img {
   max-width: 100%;
 }
 
+/* A date is one word: it never breaks across two lines. */
+.date {
+  white-space: nowrap;
+}
+
+/*
+ * A link inside a sentence, where a component asks for it: 44px tall to the thumb, and the margin takes the
+ * padding back so the lines around it stay where they were.
+ */
+.tap-links a {
+  display: inline-block;
+  padding-block: 0.625rem;
+  margin-block: -0.625rem;
+}
+
 .wrap {
   max-width: var(--wrap-max);
   margin-inline: auto;
