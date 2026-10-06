@@ -1,0 +1,72 @@
+---
+/*
+ * Claims — a list of sourced statements, each a short name beside the fact
+ * row's own words and the link that backs them. Wide, names run down a left
+ * column so the list scans; narrow, each name sits over its statement.
+ */
+import { fact } from '../data/fact';
+
+type Props = { items: readonly { term: string; id: string }[] };
+
+const { items } = Astro.props;
+---
+
+<dl class="claims small">
+  {
+    items.map(({ term, id }) => {
+      const row = fact(id);
+      return (
+        <div>
+          <dt>{term}</dt>
+          <dd>
+            {row.text} <a href={row.source}>Source: {row.sourceLabel}</a>
+          </dd>
+        </div>
+      );
+    })
+  }
+</dl>
+
+<style>
+  .claims {
+    margin: 0;
+  }
+
+  .claims > div {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: 0.25rem 2rem;
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    color: var(--color-fg);
+  }
+
+  dd {
+    max-width: 68ch;
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  /* The source reads as a reference, not as part of the sentence: its own line, dimmer, still 44px tall to the thumb. */
+  a {
+    display: block;
+    width: fit-content;
+    padding-block: 0.6rem;
+    margin-bottom: -0.6rem;
+    color: var(--site-text-dim);
+  }
+
+  a:hover,
+  a:focus-visible {
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 900px) {
+    .claims > div {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

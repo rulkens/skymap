@@ -9,11 +9,12 @@
 export const NOT_YET_BUILT: readonly string[] = [
   '/about/', // site/02-landing-pages (maker, how to reach us, press images)
   '/privacy/', // site/02-landing-pages (what the contact form stores)
-  '/science/', // site/02-landing-pages T4
   '/docs/', // site/03-docs-guide T1
   '/docs/start/browsers/', // site/03-docs-guide T2 (will it run on school machines)
   '/docs/guide/sharing/', // site/03-docs-guide T2 (make a lesson link)
   '/docs/guide/screens-and-domes/', // site/03-docs-guide T2
+  '/docs/data/', // site/05-docs-data (all sources at a glance)
+  '/docs/science/', // site/06-docs-rendering-science (measured, derived, modelled, drawn)
   '/docs/simplifications/', // site/06-docs-rendering-science
   '/docs/credits/', // site/05-docs-data
   '/docs/cite/', // site/05-docs-data

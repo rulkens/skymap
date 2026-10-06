@@ -1,0 +1,206 @@
+---
+/*
+ * SourceTable — every data source in one table. Wide, it is a table to read
+ * across. Narrow, each row becomes a block with its column names repeated
+ * beside the values, so nothing scrolls sideways; the ARIA roles keep it a
+ * table to a screen reader once CSS has taken the table display away.
+ */
+import { DATA_SOURCES } from '../data/dataSources';
+
+const groups = [...new Set(DATA_SOURCES.map((row) => row.group))];
+---
+
+<table role="table" class="small">
+  <caption>Data sources in skymap, as the code read them on 6 October 2026</caption>
+  <thead role="rowgroup">
+    <tr role="row">
+      <th role="columnheader" scope="col">Source and what it gives</th>
+      <th role="columnheader" scope="col">Release we read</th>
+      <th role="columnheader" scope="col" class="num">In the file</th>
+      <th role="columnheader" scope="col" class="num">We draw</th>
+      <th role="columnheader" scope="col">Licence</th>
+    </tr>
+  </thead>
+  {
+    groups.map((group) => (
+      <tbody role="rowgroup">
+        <tr role="row" class="group">
+          <th role="columnheader" scope="rowgroup" colspan="5">
+            {group}
+          </th>
+        </tr>
+        {DATA_SOURCES.filter((row) => row.group === group).map((row) => (
+          <tr role="row">
+            <th role="rowheader" scope="row">
+              <a href={row.href}>{row.name}</a>
+              <span class="gives">{row.gives}</span>
+            </th>
+            <td role="cell" data-label="Release we read">
+              {row.release}
+            </td>
+            <td role="cell" data-label="In the file" class:list={['num', !row.rows && 'none']}>
+              {row.rows ?? <span class="sr">not counted</span>}
+            </td>
+            <td role="cell" data-label="We draw" class:list={['num', !row.drawn && 'none']}>
+              {row.drawn ?? <span class="sr">not counted</span>}
+            </td>
+            <td role="cell" data-label="Licence">
+              {row.licence} <a class="evidence" href={row.evidence}>Our record</a>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    ))
+  }
+</table>
+
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  th,
+  td {
+    padding: 0.875rem 1.5rem 0.875rem 0;
+    border-top: 1px solid var(--border-divider);
+    text-align: left;
+    vertical-align: top;
+    font-weight: var(--weight-small);
+    color: var(--site-text-muted);
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 0;
+  }
+
+  thead th {
+    border-top: 0;
+    color: var(--site-text-dim);
+  }
+
+  .group th {
+    padding-top: 2.5rem;
+    border-top: 0;
+    font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  tbody:first-of-type .group th {
+    padding-top: 1rem;
+  }
+
+  th[scope='row'] {
+    width: 34%;
+  }
+
+  th[scope='row'] a {
+    color: var(--color-fg);
+  }
+
+  .gives {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  td:nth-child(2) {
+    width: 24%;
+  }
+
+  .evidence {
+    white-space: nowrap;
+    color: var(--site-text-dim);
+  }
+
+  /* Narrow: one source per block, each value under its column's name. */
+  @media (max-width: 900px) {
+    table,
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    tbody tr:not(.group) {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 1.25rem;
+      padding-block: 1.25rem;
+      border-top: 1px solid var(--border-divider);
+    }
+
+    th,
+    td,
+    th[scope='row'],
+    td:nth-child(2) {
+      width: auto;
+      padding: 0;
+      border: 0;
+    }
+
+    th[scope='row'],
+    td:nth-child(2),
+    td:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .num {
+      text-align: left;
+      white-space: normal;
+    }
+
+    td.none {
+      display: none;
+    }
+
+    td::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--site-text-dim);
+    }
+
+    th[scope='row'] a,
+    .evidence {
+      display: inline-block;
+      padding-block: 0.6rem;
+      margin-block: -0.6rem;
+    }
+
+    .group th {
+      padding: 2.5rem 0 0.75rem;
+    }
+  }
+</style>

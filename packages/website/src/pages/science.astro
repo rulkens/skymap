@@ -1,0 +1,525 @@
+---
+import Base from '../layouts/Base.astro';
+import Claims from '../components/Claims.astro';
+import Credits from '../components/Credits.astro';
+import FullFigure from '../components/FullFigure.astro';
+import ObjLink from '../components/ObjLink.astro';
+import PictureBand from '../components/PictureBand.astro';
+import Shot from '../components/Shot.astro';
+import ShotCaption from '../components/ShotCaption.astro';
+import Sources from '../components/Sources.astro';
+import SourceTable from '../components/SourceTable.astro';
+import { appLink } from '../data/appLink';
+import { CITATION } from '../data/citation';
+import { DATA_SOURCES } from '../data/dataSources';
+import { fact } from '../data/fact';
+import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { formatDate } from '../utils/formatDate';
+import { sitePath } from '../utils/sitePath';
+
+const title = 'The science behind skymap: data, methods, limits';
+const description =
+  'Where skymap’s numbers come from, how we turn catalogues into pixels, and where we simplify. Each claim links to its source.';
+
+const MEASURED = [
+  { term: 'Directions', id: 'sci-directions' },
+  { term: 'Redshifts', id: 'sci-redshifts' },
+  { term: 'Stars', id: 'sci-star-observables' },
+  { term: 'Galaxy brightness', id: 'sci-magnitudes' },
+  { term: 'Surfaces', id: 'sci-surfaces' },
+];
+const DERIVED = [
+  { term: 'Galaxy distances', id: 'sci-galaxy-distance' },
+  { term: 'The Hubble constant', id: 'sci-h0-range' },
+  { term: 'Nearby galaxies', id: 'sci-local-volume' },
+  { term: 'Two kinds of redshift', id: 'sci-photometric-share' },
+  { term: 'Star distances', id: 'sci-star-distance' },
+  { term: 'Planets and moons', id: 'sci-ephemeris' },
+  { term: 'Density field', id: 'sci-density-field' },
+  { term: 'Filaments', id: 'sci-filaments' },
+  { term: 'Flows', id: 'sci-flows' },
+  { term: 'Galaxy colour', id: 'sci-colour' },
+  { term: 'Clusters', id: 'sci-structures' },
+];
+const DRAWN = [
+  { term: 'The Milky Way', id: 'sci-milky-way' },
+  { term: 'Its stars', id: 'sci-milky-way-points' },
+  { term: 'The edge sphere', id: 'sci-horizon-shell' },
+  { term: 'How far the data go', id: 'sci-deepest' },
+  { term: 'Atmospheres', id: 'sci-atmospheres' },
+  { term: 'Earth’s clouds', id: 'sci-earth-clouds' },
+  { term: 'Galaxy discs', id: 'sci-galaxy-discs' },
+  { term: 'Galaxy tilt', id: 'sci-galaxy-tilt' },
+  { term: 'DESI brightness', id: 'sci-desi-brightness' },
+  { term: 'The black hole', id: 'sci-black-hole' },
+  { term: 'Zone of Avoidance band', id: 'sci-zoa-band' },
+  { term: 'Structure markers', id: 'sci-markers' },
+  { term: 'Glow and tone', id: 'sci-tone' },
+];
+const SIMPLIFIED = [
+  {
+    title: 'Distance',
+    items: [
+      { term: 'Redshift space', id: 'sim-redshift-space' },
+      { term: 'Reference frame', id: 'sim-frames' },
+      { term: 'Two expansion rates', id: 'sim-horizon-h0' },
+      { term: 'A step at 30 megaparsecs', id: 'sim-scale-step' },
+      { term: 'Estimated redshifts', id: 'sci-photometric-share' },
+    ],
+  },
+  {
+    title: 'Coverage',
+    items: [
+      { term: 'SDSS footprint', id: 'survey-gaps' },
+      { term: '2MRS footprint', id: '2mrs-coverage' },
+      { term: 'Zone of Avoidance', id: 'sim-zone' },
+      { term: 'DESI', id: 'sim-desi-patches' },
+      { term: 'Flux limits', id: 'sim-flux-limits' },
+      { term: 'Our own dimming', id: 'sim-reweight' },
+      { term: 'Data sizes', id: 'sim-data-sizes' },
+      { term: 'Duplicates', id: 'sim-duplicates' },
+    ],
+  },
+  {
+    title: 'Stars, planets and time',
+    items: [
+      { term: 'Stars stand still', id: 'sim-star-epoch' },
+      { term: 'Which stars', id: 'sim-star-coverage' },
+      { term: 'Outside 1900 to 2100', id: 'sim-ephemeris-span' },
+    ],
+  },
+  {
+    title: 'Size and brightness',
+    items: [
+      { term: 'Exposure', id: 'sim-exposure' },
+      { term: 'Quasars', id: 'sim-quasar-boost' },
+      { term: 'Galaxy points', id: 'sim-point-floor' },
+      { term: 'Planets and stars', id: 'sim-true-size' },
+    ],
+  },
+];
+
+const asks = DATA_SOURCES.filter((row) => row.ask);
+const year = CITATION.released.slice(0, 4);
+const [given, family] = MAKER_NAME.split(' ');
+const doiUrl = `https://doi.org/${CITATION.versionDoi}`;
+const bibtex = `@software{skymap,
+  author  = {${family}, ${given}},
+  title   = {${CITATION.title}},
+  version = {${CITATION.version}},
+  year    = {${year}},
+  doi     = {${CITATION.versionDoi}},
+  url     = {${REPO_URL}}
+}`;
+
+// Every fact row the page prints, so the Sources list cannot drift from the copy.
+const factIds = [
+  ...[...MEASURED, ...DERIVED, ...DRAWN, ...SIMPLIFIED.flatMap((group) => group.items)].map((item) => item.id),
+  'sci-built-counts',
+  'sci-cite-skymap',
+  'sci-cite-file',
+];
+const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
+---
+
+<Base
+  title={title}
+  description={description}
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Science', path: '/science/' }])]}
+>
+  <PictureBand id="science-wedges" gap="none" eager>
+    <h1>Where the numbers come from</h1>
+    <p class="say">
+      skymap places catalogued stars, galaxies and quasars in three dimensions. This page names every source, says
+      what is measured, what is computed and what is drawn, and lists where we simplify.
+    </p>
+    <ShotCaption id="science-wedges" />
+  </PictureBand>
+
+  <nav class="wrap jump" aria-label="On this page">
+    <ObjLink size="small" href="#sources">What is in it</ObjLink>
+    <ObjLink size="small" href="#bins">Measured, derived, drawn</ObjLink>
+    <ObjLink size="small" href="#simplifications">Known simplifications</ObjLink>
+    <ObjLink size="small" href="#cite">How to cite</ObjLink>
+  </nav>
+
+  <section class="wrap section" id="sources">
+    <div class="head">
+      <h2>What is in it</h2>
+      <p>
+        {DATA_SOURCES.length} sources place or light something in the scene. Each name links to the catalogue or
+        its paper, and “Our record” links to the file in our repository where the release is written down.
+      </p>
+    </div>
+    <SourceTable />
+    <div class="notes small">
+      <p>
+        {fact('sci-built-counts').text}{' '}
+        <a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a>
+      </p>
+      <p>
+        “In the file” is the size of the table or query we read. “We draw” is smaller because rows without a usable
+        redshift are dropped and overlapping catalogues are merged. An empty cell means neither our build nor the
+        source’s own record gives a number we can stand behind.
+      </p>
+      <p>
+        Terrain heights, the Mars rover sites, 3D models and the constellation lines are recorded source by source in
+        the repository’s <a href={`${REPO_URL}/tree/main/data/raw`}>data records</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap section" id="bins">
+    <div class="head">
+      <h2>Measured, derived, drawn</h2>
+      <p>
+        Three words, each with one meaning on this site. A point in the scene is usually all three at once: a
+        measured direction, a derived distance and a drawn dot.
+      </p>
+    </div>
+
+    <div class="bin">
+      <div class="lede">
+        <h3>Measured</h3>
+        <p>An instrument recorded it. We pass it on unchanged.</p>
+      </div>
+      <Claims items={MEASURED} />
+    </div>
+
+    <div class="bin">
+      <div class="lede">
+        <h3>Derived</h3>
+        <p>
+          Computed from measurements by a method we can name. The method and its assumptions matter as much as the
+          data.
+        </p>
+      </div>
+      <div class="pair">
+        <figure>
+          <Shot id="science-web-points" sizes="(max-width: 900px) 100vw, 36rem" />
+          <figcaption><ShotCaption id="science-web-points" /></figcaption>
+        </figure>
+        <figure>
+          <Shot id="science-web-density" sizes="(max-width: 900px) 100vw, 36rem" />
+          <figcaption><ShotCaption id="science-web-density" /></figcaption>
+        </figure>
+      </div>
+      <Claims items={DERIVED} />
+    </div>
+
+    <div class="bin">
+      <div class="lede">
+        <h3>Drawn</h3>
+        <p>
+          A model or a choice of ours, with no measurement behind each object. Every camera we have is still inside
+          the Milky Way, so its portrait from outside has to be drawn.
+        </p>
+      </div>
+      <figure class="one">
+        <Shot id="milky-way-drawn" sizes="(max-width: 900px) 100vw, 40rem" />
+        <figcaption><ShotCaption id="milky-way-drawn" /></figcaption>
+      </figure>
+      <Claims items={DRAWN} />
+    </div>
+  </section>
+
+  <FullFigure id="science-zoa" />
+
+  <section class="wrap section" id="simplifications">
+    <div class="head">
+      <h2>Known simplifications</h2>
+      <p>
+        {count} places where the scene departs from the sky, or from what a careful analysis would do. Each was
+        checked against the code on {formatDate(fact('sim-frames').checked)}.
+      </p>
+    </div>
+    {
+      SIMPLIFIED.map((group) => (
+        <div class="group">
+          <h3>{group.title}</h3>
+          <Claims items={group.items} />
+        </div>
+      ))
+    }
+    <p class="more small">
+      Found one we missed? <a href={`${REPO_URL}/issues`}>Open an issue in the repository</a>. Corrections from people
+      who work with these data are the ones we want most.
+    </p>
+  </section>
+
+  <section class="wrap section" id="cite">
+    <div class="head">
+      <h2>How to cite</h2>
+      <p>Cite skymap for the pictures, and the catalogues for the data in them.</p>
+    </div>
+    <div class="cite">
+      <div>
+        <h3>skymap</h3>
+        <p class="reference small">
+          {family}, {given.charAt(0)}. ({year}). <i>{CITATION.title}</i> (version {CITATION.version}). Zenodo.{' '}
+          <a href={doiUrl}>{doiUrl}</a>
+        </p>
+        <div class="code" tabindex="0" role="group" aria-label="BibTeX entry for skymap">
+          <pre>{bibtex}</pre>
+        </div>
+        <p class="small">
+          {fact('sci-cite-skymap').text}{' '}
+          {fact('sci-cite-file').text}{' '}
+          <a href={fact('sci-cite-file').source}>CITATION.cff</a>
+        </p>
+      </div>
+      <div>
+        <h3>The catalogues</h3>
+        <p class="small">
+          Every source in the table asks to be cited, and its row links to the paper or page to cite. Four also ask
+          for a set text. For SDSS and DESI we print only its opening: take the full, current wording from the linked
+          page.
+        </p>
+        <ul class="asks small">
+          {
+            asks.map((row) => (
+              <li>
+                <b>{row.id === '2mass-xsc' ? 'Catalogues read through VizieR' : row.name}</b>
+                <blockquote>{row.ask}</blockquote>
+                <a href={row.askHref}>Acknowledgement page for {row.id === '2mass-xsc' ? 'VizieR' : row.name.split(',')[0]}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section" id="onward">
+    <h2>Go deeper</h2>
+    <div class="onward">
+      <ObjLink href={sitePath('/docs/data/')}>Data sources, one page each</ObjLink>
+      <ObjLink href={sitePath('/docs/science/')}>The methods in full</ObjLink>
+      <ObjLink href={sitePath('/docs/simplifications/')}>Known simplifications in the docs</ObjLink>
+      <ObjLink href={sitePath('/docs/cite/')}>Cite skymap</ObjLink>
+      <ObjLink href={sitePath('/classroom/')}>Use it in a classroom</ObjLink>
+      <ObjLink href={sitePath('/domes/')}>Domes and museums</ObjLink>
+      <ObjLink href={appLink()}>Fly it yourself</ObjLink>
+    </div>
+  </section>
+
+  <div class="wrap section last">
+    <Sources ids={factIds} label="Sources for the claims on this page" />
+    <Credits />
+  </div>
+</Base>
+
+<style>
+  h1 {
+    max-width: 12ch;
+    font-size: var(--text-h2);
+  }
+
+  .say {
+    font-size: var(--text-lead);
+  }
+
+  .jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    padding-top: 2rem;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 3rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .head h2,
+  .head p {
+    margin: 0;
+  }
+
+  .head h2 {
+    max-width: 16ch;
+  }
+
+  .notes {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .notes p,
+  .more {
+    max-width: 68ch;
+    margin-bottom: 0.75rem;
+    color: var(--site-text-dim);
+  }
+
+  .bin,
+  .group {
+    margin-top: 4.5rem;
+  }
+
+  .head + .bin,
+  .head + .group {
+    margin-top: 0;
+  }
+
+  .lede {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: 0.5rem 2rem;
+    align-items: baseline;
+    margin-bottom: 1.5rem;
+  }
+
+  .lede h3,
+  .group h3 {
+    margin: 0;
+    font-size: var(--text-ring-big);
+  }
+
+  .lede p {
+    margin: 0;
+    max-width: var(--measure-lead);
+  }
+
+  .group h3 {
+    margin-bottom: 1.5rem;
+  }
+
+  figure {
+    margin: 0;
+  }
+
+  figure :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+
+  /* One camera, two layers: the frames sit edge to edge so the eye carries a place across. */
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 0.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .pair figcaption {
+    padding-right: 1.5rem;
+  }
+
+  .one {
+    max-width: 40rem;
+    margin: 0 0 2.5rem 14rem;
+  }
+
+  .more {
+    margin-top: 2rem;
+  }
+
+  .cite {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3rem 3.75rem;
+  }
+
+  .cite > div {
+    min-width: 0;
+  }
+
+  .cite p {
+    max-width: 60ch;
+  }
+
+  .reference {
+    color: var(--site-text);
+  }
+
+  .reference a {
+    overflow-wrap: anywhere;
+  }
+
+  /* The entry is wider than a phone; it scrolls inside its own box, never the page. */
+  .code {
+    overflow-x: auto;
+    margin-bottom: var(--stack);
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border-divider);
+  }
+
+  pre {
+    margin: 0;
+    font: 400 0.875rem/1.6 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color: var(--site-text-muted);
+  }
+
+  .asks {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .asks li {
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .asks b {
+    font-weight: 400;
+    color: var(--color-fg);
+  }
+
+  blockquote {
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    border-left: 1px solid var(--site-text-dim);
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .asks a,
+  .notes a,
+  .more a,
+  .cite p a {
+    display: inline-block;
+    padding-block: 0.6rem;
+    margin-block: -0.6rem;
+  }
+
+  .onward {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    margin-top: 1.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .lede,
+    .pair,
+    .cite {
+      grid-template-columns: 1fr;
+    }
+
+    .pair figcaption {
+      padding-right: 0;
+    }
+
+    .one {
+      margin-left: 0;
+    }
+
+    .bin,
+    .group {
+      margin-top: 3.5rem;
+    }
+  }
+</style>

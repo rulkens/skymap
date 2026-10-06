@@ -17,6 +17,12 @@ const CARD_WIDTHS = [1120, 640];
 const UI = { width: 960, height: 640 };
 const UI_WIDTHS = [1280, 720];
 const DOME = { width: 1024, height: 1024 };
+// The Science page's two-up comparison: one camera, two layers, so the frames must share a size.
+const PAIR = { width: 800, height: 800 };
+const PAIR_WIDTHS = [1120, 640];
+// Aimed 250 Mpc out towards Coma, inside the volume the density map covers, so both layers fill the frame.
+const WEB_POSE = 'pose=a,-211,-56,116,2.1,0.35,420,0';
+const POINTS_ONLY: SiteShotSettings = { hideLabels: true, hideStructures: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
 
 /**
  * Every picture of the app the site publishes, apart from the flight's stills
@@ -312,6 +318,46 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: CARD_WIDTHS,
     caption: 'The sphere is drawn from a cosmological model. The pale cloud inside it is every galaxy and quasar in the catalogues.',
     alt: 'A thin blue sphere on black with a small pale two-lobed cloud of points at its centre.',
+  },
+  {
+    id: 'science-wedges',
+    link: 'pose=a,0,0,0,0.9,0.55,1500,0',
+    settings: { ...POINTS_ONLY, settleMs: 3000 },
+    size: WIDE,
+    widths: [1920, 1280],
+    caption:
+      'Every galaxy and quasar in the catalogues, from far outside them. Each point is one catalogued object. The two fans follow the sky SDSS covered; the dark wedges are directions it did not.',
+    alt: 'A glowing cloud of points shaped like two fans joined at a bright centre, with dark wedges between them.',
+  },
+  {
+    id: 'science-zoa',
+    link: 'exhibit=zoneOfAvoidance',
+    settings: { settleMs: 8000 },
+    size: WIDE,
+    widths: [1600, 960],
+    caption:
+      'The Zone of Avoidance exhibit, from 1.2 megaparsecs out. The thinning of galaxies along the band is in the catalogues; the blue band, its lettering and the cluster rings are drawn by us.',
+    alt: 'A field of galaxies crossed by a wide blue band labelled Zone of Avoidance, with fewer points inside the band.',
+  },
+  {
+    id: 'science-web-points',
+    link: WEB_POSE,
+    settings: { ...POINTS_ONLY, settleMs: 4000 },
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    caption:
+      'Catalogued galaxies around a spot 250 megaparsecs away, one point each. Direction is observed; distance is computed from redshift.',
+    alt: 'A dense field of points, with brighter clumps and threads towards the lower left.',
+  },
+  {
+    id: 'science-web-density',
+    link: WEB_POSE,
+    settings: { hideLabels: true, hideStructures: true, hideZoneOfAvoidance: true, hideGalaxyField: true, settleMs: 6000 },
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    caption:
+      'The same camera with the points off and the density map on. Its gold knots sit where the points crowd. The map exists only inside the volume its SDSS galaxies fill, which is why it stops at the lower left.',
+    alt: 'A purple web of threads across the frame, with gold knots towards the lower left where it ends.',
   },
   {
     id: 'make-search',
