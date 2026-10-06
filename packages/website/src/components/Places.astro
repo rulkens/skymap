@@ -4,9 +4,12 @@
  * that runs out from Earth: each a disc that grows with its distance, its name
  * and how far away it is. Disc, name and distance are one link (the one view
  * link that is not a ViewLink, because the picture is part of the target), so
- * the launch drawing follows the name.
+ * the launch drawing follows the name. Pointed at or focused, a disc gets the
+ * ring of the site drawn round it and plays its film (scripts/initPlaceFilms.ts),
+ * with a mark going round the ring once per loop. Scrolling draws the line
+ * and drifts the discs a few pixels at different depths (scripts/initPlaceDrift.ts).
  *
- * Every position and size is in units of the field's own width (cqw), so the
+ * Every position and size is in units of the width of the field (cqw), so the
  * composition scales as one drawing and the line, an SVG in the same units,
  * always passes through the disc centres. Two compositions: `TALL` zigzags
  * down an upright screen, `WIDE` wanders across a wide one.
@@ -14,26 +17,28 @@
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
 import { PLACES } from '../data/places';
+import { loopSources } from '../utils/loopSources';
 import { smoothPath } from '../utils/smoothPath';
 import Icon from './Icon.astro';
 import Shot from './Shot.astro';
 
 // Disc diameters, nearest first, in units of a field 100 wide.
 const TALL_SIZES = [30, 32, 34, 36, 38, 41, 44, 47, 52];
-// How far a disc stands in from its edge of the field, so the zigzag is not a ruler's.
-const TALL_INSET = [0, 3, 5, 0, 2, 4, 0, 2, 0];
-// Room between one disc's centre line and the next, on top of their radii: a label's height.
-const TALL_STEP = 19;
+// How far a disc stands in from its edge of the field, so the zigzag is not ruled.
+const TALL_INSET = [0, 3, 5, 0, 0, 0, 2, 3, 0];
+// Room between a disc and the one before it, on top of half their radii: the height of the labels that meet there.
+const TALL_STEP = [0, 19, 19, 19, 21, 28, 25, 21, 22];
 const TALL_GAP = 5;
 
-let tallY = TALL_SIZES[0]! / 2;
+// Multiplied, not divided: a slash after `!` reads as the start of a pattern to `astro check`.
+let tallY = TALL_SIZES[0]! * 0.5;
 const tall = TALL_SIZES.map((d, i) => {
-  if (i > 0) tallY += (TALL_SIZES[i - 1]! + d) / 4 + TALL_STEP;
+  if (i > 0) tallY += (TALL_SIZES[i - 1]! + d) * 0.25 + TALL_STEP[i]!;
   const left = i % 2 === 0;
-  const x = left ? TALL_INSET[i]! + d / 2 : 100 - TALL_INSET[i]! - d / 2;
+  const x = left ? TALL_INSET[i]! + d * 0.5 : 100 - TALL_INSET[i]! - d * 0.5;
   return { x, y: tallY, d, side: left ? 'left' : 'right', room: 100 - d - TALL_INSET[i]! - TALL_GAP };
 });
-const tallHeight = tallY + TALL_SIZES.at(-1)! / 2;
+const tallHeight = tallY + TALL_SIZES.at(-1)! * 0.5;
 
 // Centre x, centre y and diameter in units of a field 1000 wide. The upper row carries its labels above and
 // the lower row below, so the line between the rows never crosses a word; `hang` is how a label sits on its disc.
@@ -50,15 +55,19 @@ const wide = [
   { x: 908, y: 197, d: 184, row: 'upper', hang: 'end' },
 ];
 
-// The launch drawing stays on the line of the name's last word.
+// How many pixels each disc drifts, up or down, while the field crosses the screen.
+const DEPTHS = [-8, 12, -16, 9, -13, 18, -9, 14, -18];
+
+// The launch drawing stays on the line of the last word of the name.
 const places = PLACES.map((place, i) => {
   const words = place.name.split(' ');
   const name = { head: words.slice(0, -1).join(' '), last: words.at(-1)! };
-  return { place, name, tall: tall[i]!, wide: wide[i]! };
+  const film = place.loop ? loopSources(place.loop) : undefined;
+  return { place, name, film, tall: tall[i]!, wide: wide[i]!, depth: DEPTHS[i]! };
 });
 const vars = (p: (typeof places)[number]) =>
   `--tx:${p.tall.x};--ty:${p.tall.y.toFixed(2)};--td:${p.tall.d};--room:${p.tall.room};` +
-  `--wx:${p.wide.x};--wy:${p.wide.y};--wd:${p.wide.d}`;
+  `--wx:${p.wide.x};--wy:${p.wide.y};--wd:${p.wide.d};--depth:${p.depth}`;
 ---
 
 <section class="wrap places" id="places">
@@ -66,7 +75,7 @@ const vars = (p: (typeof places)[number]) =>
     <h2>Pick somewhere to start</h2>
     <p>Nine places, nearest first. A light-second is how far light goes in one second.</p>
   </div>
-  <div class="field" style={`--tall-height:${tallHeight.toFixed(2)};--wide-height:${WIDE_HEIGHT}`}>
+  <div class="field" data-field style={`--tall-height:${tallHeight.toFixed(2)};--wide-height:${WIDE_HEIGHT}`}>
     <svg class="thread tall" viewBox={`0 0 100 ${tallHeight.toFixed(2)}`} aria-hidden="true">
       <path d={smoothPath(tall.map((p) => [p.x, p.y]), 0.9)} pathLength="1"></path>
     </svg>
@@ -77,9 +86,15 @@ const vars = (p: (typeof places)[number]) =>
       {
         places.map((p) => (
           <li style={vars(p)} data-side={p.tall.side} data-hang={p.wide.hang} data-row={p.wide.row}>
-            <a class="thing" href={appLink(p.place.hash)}>
+            <a class="thing" href={appLink(p.place.hash)} data-webm={p.film?.webm} data-mp4={p.film?.mp4}>
               <span class="disc">
-                <Shot id={p.place.shot} sizes="(min-width: 900px) 15vw, 45vw" alt="" />
+                <span class="screen" data-screen>
+                  <Shot id={p.place.shot} sizes="(min-width: 900px) 15vw, 45vw" alt="" />
+                </span>
+                <svg class="orbit" aria-hidden="true">
+                  <circle cx="50%" cy="50%" r="50%"></circle>
+                </svg>
+                <i class="mark"></i>
               </span>
               <span class="text">
                 <b>
@@ -98,6 +113,16 @@ const vars = (p: (typeof places)[number]) =>
     </ol>
   </div>
 </section>
+
+<script>
+  import { initPlaceDrift } from '../scripts/initPlaceDrift';
+  import { initPlaceFilms } from '../scripts/initPlaceFilms';
+
+  const places = document.querySelector<HTMLElement>('#places');
+  const field = places?.querySelector<HTMLElement>('[data-field]');
+  if (places) initPlaceFilms(places);
+  if (field) initPlaceDrift(field);
+</script>
 
 <style>
   /* Half a section gap: this continues the lead above it. */
@@ -137,11 +162,21 @@ const vars = (p: (typeof places)[number]) =>
     pointer-events: none;
   }
 
+  /* Drawn out from Earth as far as the scroll has come (`--drawn`); whole without script. */
   .thread path {
     fill: none;
     stroke: var(--hairline);
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
+    stroke-dasharray: 1;
+    stroke-dashoffset: calc(1 - var(--drawn, 1));
+  }
+
+  /* Stroke widths are in each drawing's own units and come to about a pixel. */
+  .thread.tall path {
+    stroke-width: 0.28;
+  }
+
+  .thread.wide path {
+    stroke-width: 0.9;
   }
 
   .thread.wide {
@@ -163,6 +198,7 @@ const vars = (p: (typeof places)[number]) =>
     left: calc((var(--x) - var(--d) / 2) * var(--u));
     top: calc((var(--y) - var(--d) / 2) * var(--u));
     width: calc(var(--d) * var(--u));
+    transform: translate3d(0, calc(var(--drift, 0) * var(--depth) * 1px), 0);
   }
 
   .thing {
@@ -172,26 +208,100 @@ const vars = (p: (typeof places)[number]) =>
 
   /* The ground colour behind the picture hides the line where it passes under a disc. */
   .disc {
+    position: relative;
     display: block;
     aspect-ratio: 1;
     padding: 6%;
     border: 1px solid var(--hairline);
     border-radius: 50%;
     background: var(--color-bg);
-    transition: border-color 0.3s ease;
   }
 
-  .disc :global(img) {
+  .screen {
+    position: relative;
+    display: block;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+
+  .screen :global(img),
+  .screen :global(video) {
     display: block;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
     object-fit: cover;
   }
 
-  .thing:hover .disc,
-  .thing:focus-visible .disc {
-    border-color: var(--color-accent);
+  /* The film lies over its own first frame and appears once it is playing. */
+  .screen :global(video) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  [data-film] .screen :global(video) {
+    opacity: 1;
+  }
+
+  /*
+   * The site's ring, drawn round the disc from the top when it is pointed at,
+   * focused or playing; it lies exactly over the resting border.
+   */
+  .orbit,
+  .mark {
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+  }
+
+  .orbit {
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+    overflow: visible;
+    transform: rotate(-90deg);
+  }
+
+  /* No viewBox, so the dash is in pixels: a little over the circumference of a disc `--d` units across. */
+  .orbit circle {
+    --round: calc(3.2 * var(--d) * var(--u));
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 1.5;
+    stroke-dasharray: var(--round);
+    stroke-dashoffset: var(--round);
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.3, 0, 0.2, 1);
+  }
+
+  .thing:hover .orbit circle,
+  .thing:focus-visible .orbit circle,
+  [data-playing] .orbit circle {
+    stroke-dashoffset: 0;
+  }
+
+  /* A small body on that ring: once round for each loop of the film. */
+  .mark {
+    transform: rotate(calc(var(--turn, 0) * 1turn));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .mark::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin: -0.21875rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 0.1875rem var(--color-bg);
+  }
+
+  [data-playing][data-film] .mark {
+    opacity: 1;
   }
 
   /* The label is outside the link's box, so the focus ring goes round the disc. */
@@ -201,7 +311,7 @@ const vars = (p: (typeof places)[number]) =>
 
   .thing:focus-visible .disc {
     outline: 2px solid var(--color-accent);
-    outline-offset: 4px;
+    outline-offset: 5px;
   }
 
   /*
@@ -342,7 +452,7 @@ const vars = (p: (typeof places)[number]) =>
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .disc {
+    .orbit circle {
       transition: none;
     }
   }
