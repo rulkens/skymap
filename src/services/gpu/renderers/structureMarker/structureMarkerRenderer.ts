@@ -135,6 +135,12 @@ export function createStructureMarkerRenderer(
    * slabs differ, and a mismatch invalidates the whole pick encoder.
    */
   pickDepthFormat: GPUTextureFormat,
+  /**
+   * `true` ranks the ring pick in a fixed band below every star (NEAR0, whose pick
+   * depths are importance-ordered); `false` keeps true depth (COSMO, where rings
+   * compete with galaxies by real depth).
+   */
+  pickInStarBand: boolean,
   /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
   categories: readonly StructureId[],
   initialCapacity = 64,
@@ -338,7 +344,7 @@ export function createStructureMarkerRenderer(
       vertex: { module: ringPickVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
         module: ringPickFs,
-        entryPoint: 'fsRingPick',
+        entryPoint: pickInStarBand ? 'fsRingPickBanded' : 'fsRingPick',
         targets: [{ format: 'r32uint' }],
       },
       primitive: { topology: 'triangle-list' },

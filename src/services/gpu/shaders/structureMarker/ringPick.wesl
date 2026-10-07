@@ -54,6 +54,7 @@ import package::structureMarker::io::VsOut;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
+import package::lib::pickDepthBands::PICK_BAND_STRUCTURE_RING_EPS;
 
 // Re-declare the per-source binding here so this module is self-
 // contained.  WESL has no global state — '@group(N) @binding(M)' is
@@ -71,8 +72,8 @@ import package::lib::selectionEncoding::SELECTION_SOURCE_SHIFT;
 // visual pipeline's, even though this fragment only reads @group(2).
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
-@fragment
-fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
+// The packed identity, or a discard outside the hit disc / on a faded ring.
+fn ringPickId(in: VsOut) -> vec4<u32> {
   // 'in.uv' is in [-MARGIN, +MARGIN]^2 over the padded quad emitted by
   // ring.wesl's vertex stage (the MARGIN constant lives there).  At
   // |uv| == 1 we're exactly at the world-space ring radius; the padded
@@ -103,4 +104,23 @@ fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
   // pick fragment can read from one interpolant set.
   let packed: u32 = (source.sourceCode << SELECTION_SOURCE_SHIFT) | (in.structureIndex + PICK_SENTINEL_OFFSET);
   return vec4<u32>(packed, 0u, 0u, 0u);
+}
+
+// COSMO slab: the ring competes with galaxies by its true depth.
+@fragment
+fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
+  return ringPickId(in);
+}
+
+struct BandedPickOut {
+  @location(0) id: vec4<u32>,
+  @builtin(frag_depth) depth: f32,
+}
+
+// NEAR0 slab: ranks by importance, not distance (see lib/pickDepthBands.wesl).
+// For 'z = w * eps' the rasteriser's z/w is exactly eps, so the band is written
+// as the fragment depth directly; the vertex stage stays shared with the visible ring.
+@fragment
+fn fsRingPickBanded(in: VsOut) -> BandedPickOut {
+  return BandedPickOut(ringPickId(in), PICK_BAND_STRUCTURE_RING_EPS);
 }

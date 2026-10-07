@@ -29,11 +29,12 @@
 //   moon glint band    eps = 4.00e-4  → z/w = 0.00040
 //   scene-star band    eps = 1.00e-4  → z/w = 0.00010
 //   survey-star band   eps = 0.50e-4  → z/w = 0.00005
+//   structure-ring band eps = 0.375e-4 → z/w = 0.0000375
 //   backdrop band      eps = 0.25e-4  → z/w = 0.000025  (lowest, loses)
 //
 // So at any pixel where the classes overlap: the Earth glint beats a planet
-// glint beats a moon glint beats scene/famous stars beat survey stars beat the
-// Milky Way backdrop — pure importance, independent of true distance. (Classes
+// glint beats a moon glint beats scene/famous stars beat survey stars beat a
+// structure ring beats the Milky Way backdrop — pure importance, independent of true distance. (Classes
 // that keep TRUE depth — resolved spheres, and within-far scene stars — sit in
 // front of every band automatically because their z/w is well above 0.00050 at
 // foreground range (reversed-Z: nearer = larger z); that is the resolved-sphere +
@@ -60,12 +61,12 @@
 // ordering and admitting no ties. Nearness cannot invert them (all three force
 // their band regardless of true depth), and draw order is irrelevant.
 //
-// ## Why these six values are safe to distinguish
+// ## Why these seven values are safe to distinguish
 //
-// All six stay strictly above the 0.0 clear (positive z/w), so a banded fragment
+// All seven stay strictly above the 0.0 clear (positive z/w), so a banded fragment
 // always survives the clip test (the same clip-survival property the visual
 // clamp needs). depth32float resolves far finer than 6e-8 near the 0.0 clear, and
-// the tightest gap here is 0.25e-4 = 2.5e-5 — a vast number of resolvable steps —
+// the tightest gap here is 0.125e-4 = 1.25e-5 — a vast number of resolvable steps —
 // so the bands never collapse into one another through float rounding. The three
 // glint bands sit HIGHEST in the true-depth headroom (0.00040–0.00050), which is
 // deliberate: a resolved sphere must rise above the highest glint band to
@@ -88,6 +89,11 @@
 //                                per-instance glint CLASS band (earth / planet /
 //                                moon eps below) so importance, not nearness,
 //                                decides among glints.
+//   - structureMarker/ringPick.wesl — 'fsRingPickBanded' (the NEAR0 instance)
+//                                writes frag_depth = PICK_BAND_STRUCTURE_RING_EPS,
+//                                z/w being exactly eps for 'z = w * eps': a ring
+//                                is the fallback for its area, so any star inside
+//                                it keeps its click.
 //   - milkyWay/pick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
@@ -120,6 +126,11 @@ const PICK_BAND_SCENE_STAR_EPS: f32 = 1e-4;
 // a contested pixel to a scene/famous star, glint, or sphere. Half the scene
 // eps.
 const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
+
+// Near structure rings (filled pick discs) — below every star band (the survey
+// band's lowest rank sits at its eps, 0.5e-4), above only the backdrop: stars
+// are the specific target, the ring is the click fallback for its area.
+const PICK_BAND_STRUCTURE_RING_EPS: f32 = 0.375e-4;
 
 // Milky Way impostor backdrop — the deepest band, the ultimate fallback: any
 // resolvable Gaia dot overlapping the galaxy backdrop now wins the click over
