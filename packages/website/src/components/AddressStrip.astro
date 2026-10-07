@@ -3,32 +3,36 @@
  * AddressStrip — an app address shown as a browser's address field, which is
  * also the link, with a copy icon at its end as a browser has. The one boxed
  * element on the site: it depicts a real field. Lines break only between parameters.
+ * `plain` is the address among a docs page's text (Example): no box, and
+ * words to read, the link being the control under it. `query` is a flag
+ * before the `#`; `shown` prints a shorter address than the one copied.
  */
 import { APP_BASE, appLink } from '../data/appLink';
 
-type Props = { hash: string };
+type Props = { hash: string; query?: string; shown?: string; plain?: boolean };
 
-const { hash } = Astro.props;
+const { hash, query, shown = hash, plain = false } = Astro.props;
 const origin = new URL(Astro.site!).origin;
 const host = new URL(Astro.site!).host;
-const copy = origin + appLink(hash);
-const params = hash.split('&').map((pair) => {
+const copy = origin + appLink(hash, query);
+const Address = plain ? 'span' : 'a';
+const params = shown.split('&').map((pair) => {
   const at = pair.indexOf('=');
   // A long value (a pose) may break after a comma, never inside a number.
   return { key: pair.slice(0, at), parts: pair.slice(at + 1).split(',') };
 });
 ---
 
-<div class="strip">
+<div class:list={['strip', { plain }]}>
   <div class="field">
-    <a class="address" href={appLink(hash)}>
-      {host}{APP_BASE}#{params.map((param, i) => (
+    <Address class="address" href={plain ? undefined : appLink(hash, query)}>
+      {host}{APP_BASE}{query && `?${query}`}#{params.map((param, i) => (
         <span>
           {i > 0 && '&'}
           {param.key}=<b>{param.parts.map((part, k) => <>{k > 0 && <>,<wbr /></>}{part}</>)}</b>
         </span>
       ))}
-    </a>
+    </Address>
     <button class="icon" type="button" data-copy={copy} aria-label="Copy the address" title="Copy the address">
       <svg class="sheets" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="9" y="9" width="11" height="11" rx="1.5" />
@@ -103,6 +107,18 @@ const params = hash.split('&').map((pair) => {
   .address b {
     font-weight: 400;
     color: var(--color-fg);
+  }
+
+  .plain {
+    margin-top: 0;
+  }
+
+  .plain .field {
+    border: 0;
+  }
+
+  .plain .address {
+    padding: 0.6875rem 0;
   }
 
   /* 44 px square: the smallest target a finger hits reliably. */

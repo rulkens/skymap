@@ -18,7 +18,8 @@ export function initFigureSheet(sheet: HTMLDialogElement): void {
     opener = link;
     const { enlarge, width, height, fileWidth } = link.dataset;
     name.textContent = enlarge!;
-    picture.alt = link.querySelector('img')!.alt;
+    // "Enlarge" under a figure is the same link without the picture inside it.
+    picture.alt = link.closest('figure')!.querySelector('img')!.alt;
     picture.width = Number(width);
     picture.height = Number(height);
     picture.style.setProperty('--own', `${width}px`);
@@ -26,7 +27,13 @@ export function initFigureSheet(sheet: HTMLDialogElement): void {
     picture.style.setProperty('--shape', `${Number(width) / Number(height)}`);
     picture.src = link.href;
     sheet.showModal();
-    picture.parentElement!.scrollTo(0, 0);
+    const room = picture.parentElement!;
+    sheet.toggleAttribute('data-pan', room.clientWidth < Number(width));
+    // A panned picture opens on its middle, where its subject is, not on its top left corner.
+    room.scrollTo(
+      (room.scrollWidth - room.clientWidth) / 2,
+      (room.scrollHeight - room.clientHeight) / 2,
+    );
   });
 
   // Anywhere but the picture closes: the Close control, the bar and the room around the picture.

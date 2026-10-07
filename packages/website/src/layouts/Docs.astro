@@ -3,9 +3,10 @@
  * Docs — one docs page on the site's twelve columns: the docs' contents in
  * the first three, the text in the next six (seven until the window has room
  * for the third part), and the page's own headings in the last three when it
- * has four or more. Narrow, the contents fold away above the text. The page's
- * place comes from its row in data/docsTree.ts: the group over its title,
- * previous and next within the group, and the landing page it links back up to.
+ * has four or more. Narrow, the contents are a bar that stays under the top
+ * bar, with those headings at the head of its list. The page's place comes
+ * from its row in data/docsTree.ts: the group over its title, previous and
+ * next within the group, and the landing page it links back up to.
  */
 import type { MarkdownHeading } from 'astro';
 
@@ -14,6 +15,7 @@ import DocBody from '../components/DocBody.astro';
 import DocsNav from '../components/DocsNav.astro';
 import FigureSheet from '../components/FigureSheet.astro';
 import ObjLink from '../components/ObjLink.astro';
+import PageSections from '../components/PageSections.astro';
 import Sources from '../components/Sources.astro';
 import { DOCS_TREE } from '../data/docsTree';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
@@ -35,7 +37,8 @@ const TOC_FROM = 4;
 const { path, title, description, headings, factIds } = Astro.props;
 const { group, page, previous, next } = docsPlace(DOCS_TREE, path);
 const up = page.up ?? group.up;
-const sections = headings.filter((heading) => heading.depth === 2);
+const all = headings.filter((heading) => heading.depth === 2);
+const sections = all.length >= TOC_FROM ? all : [];
 const turns = [
   { page: previous, rel: 'prev', label: `Before this, in ${group.name}` },
   { page: next, rel: 'next', label: `After this, in ${group.name}` },
@@ -45,6 +48,7 @@ const turns = [
 <Base
   title={`${title} | skymap docs`}
   description={description}
+  skipTo="page"
   jsonLd={[
     breadcrumbJsonLd(Astro.site!, [
       { name: 'Docs', path: '/docs/' },
@@ -53,9 +57,9 @@ const turns = [
   ]}
 >
   <div class="wrap grid docs">
-    <DocsNav current={path} />
+    <DocsNav current={path} sections={sections} />
 
-    <article class="page" data-pagefind-meta={`group:${group.name}`}>
+    <article class="page" id="page" data-pagefind-meta={`group:${group.name}`}>
       <header data-opening>
         <p class="where small" data-pagefind-ignore>
           <a href={sitePath('/docs/')}>Docs</a>
@@ -94,16 +98,10 @@ const turns = [
     </article>
 
     {
-      sections.length >= TOC_FROM && (
-        <nav class="toc small" aria-labelledby="toc-label" data-toc data-pagefind-ignore>
+      sections.length > 0 && (
+        <nav class="toc small" aria-labelledby="toc-label" data-pagefind-ignore>
           <p id="toc-label">On this page</p>
-          <ol>
-            {sections.map((section) => (
-              <li>
-                <a href={`#${section.slug}`}>{section.text}</a>
-              </li>
-            ))}
-          </ol>
+          <PageSections sections={sections} />
         </nav>
       )
     }
@@ -112,14 +110,36 @@ const turns = [
 </Base>
 
 <script>
-  import { initTocYield } from '../scripts/initTocYield';
+  import { initSectionMark } from '../scripts/initSectionMark';
 
-  const toc = document.querySelector<HTMLElement>('[data-toc]');
-  const pictures = [...document.querySelectorAll<HTMLElement>('[data-wide] > a')];
-  if (toc && pictures.length > 0) initTocYield(toc, pictures);
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-sections] a')];
+  if (links.length > 0) initSectionMark(links);
 </script>
 
 <style>
+  /* A layer of its own under the top bar's: what stands in front of what below (the contents' bar, a wide figure over the list) stays in here. */
+  .docs {
+    position: relative;
+    z-index: 0;
+    --docs-bar: 0rem;
+  }
+
+  /* A jump lands under the bars that stay, not behind them. */
+  @media (max-width: 900px) {
+    .docs {
+      --docs-bar: 3.75rem;
+    }
+
+    :global(html:has(.docs)) {
+      scroll-padding-top: calc(var(--nav-height) + 3.75rem);
+    }
+
+    /* Where the window would set the line, the text's own measure does (DocBody has the same). */
+    header .say {
+      max-width: 36rem;
+    }
+  }
+
   .page {
     padding-block: 2rem 5rem;
   }
@@ -149,7 +169,7 @@ const turns = [
   /* A reading page's title: the largest type on it, and well under a landing page's, whose title has a picture to hold. */
   header h1 {
     margin-bottom: 1.25rem;
-    font-size: clamp(2.5rem, 4.2vw, 3.5rem);
+    font-size: var(--text-doc-title);
   }
 
   header .say {
@@ -201,6 +221,11 @@ const turns = [
     .turns p {
       grid-column: span 3;
     }
+
+    /* A next page with no previous one keeps the right half, where next always is. */
+    .turns p:only-child:has([rel='next']) {
+      grid-column-start: 4;
+    }
   }
 
   /* Room for the third part: the text gives up a column and the page's headings stand beside it. */
@@ -218,40 +243,21 @@ const turns = [
       align-self: start;
       max-height: calc(100svh - var(--nav-height));
       padding-block: 3.625rem 3rem;
+      /* Room for the mark of the section being read, which hangs left of the text edge. */
+      margin-left: -1rem;
+      padding-left: 1rem;
       overflow-y: auto;
       line-height: 1.3;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s;
     }
 
-    /* A wide picture is passing through these columns (scripts/initTocYield.ts). */
-    .toc[data-under] {
-      opacity: 0;
-      visibility: hidden;
+    /* A wide figure passes in front of the list (components/DocFigure.astro); the keyboard brings it back to the front. */
+    .toc:focus-within {
+      z-index: 2;
     }
   }
 
   .toc p {
     margin: 0 0 0.5rem;
     color: var(--site-text-dim);
-  }
-
-  .toc ol {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .toc a {
-    display: block;
-    padding-block: 0.375rem;
-    color: var(--site-text-muted);
-    text-decoration: none;
-  }
-
-  .toc a:hover {
-    color: var(--color-fg);
-    text-decoration: underline;
   }
 </style>

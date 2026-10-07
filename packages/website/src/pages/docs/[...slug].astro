@@ -11,9 +11,12 @@ import Caveat from '../../components/Caveat.astro';
 import DocFigure from '../../components/DocFigure.astro';
 import DocLink from '../../components/DocLink.astro';
 import DocTable from '../../components/DocTable.astro';
+import Example from '../../components/Example.astro';
 import FactText from '../../components/FactText.astro';
 import Keys from '../../components/Keys.astro';
+import Links from '../../components/Links.astro';
 import Note from '../../components/Note.astro';
+import View from '../../components/View.astro';
 import Docs from '../../layouts/Docs.astro';
 
 export async function getStaticPaths() {
@@ -23,7 +26,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
-const printed = [...(entry.body ?? '').matchAll(/<Fact\s+id="([^"]+)"/g)].map((match) => match[1]!);
+const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)].map((match) => match[1]!);
 ---
 
 <Docs
@@ -34,6 +37,18 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\s+id="([^"]+)"/g)].map((m
   factIds={[...printed, ...entry.data.facts]}
 >
   <Content
-    components={{ a: DocLink, table: DocTable, Figure: DocFigure, Fact: FactText, Keys, Note, Caveat }}
+    components={{
+      a: DocLink,
+      table: DocTable,
+      Table: DocTable,
+      Figure: DocFigure,
+      Fact: FactText,
+      Example,
+      View,
+      Links,
+      Keys,
+      Note,
+      Caveat,
+    }}
   />
 </Docs>

@@ -6,10 +6,6 @@ order: 2
 facts: [takeover-links, dome-flag]
 ---
 
-import AddressStrip from '../../../components/AddressStrip.astro';
-import DocTable from '../../../components/DocTable.astro';
-import ViewLink from '../../../components/ViewLink.astro';
-import { appLink } from '../../../data/appLink';
 import {
   DOCS_BODY_NAMES,
   DOCS_CLIP_IDS,
@@ -21,27 +17,6 @@ import {
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../data/docsUrlParams';
-
-export const Table = ({ head, rows }) => (
-  <DocTable>
-    <thead>
-      <tr>
-        {head.map((label) => (
-          <th>{label}</th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {rows.map((cells) => (
-        <tr>
-          {cells.map((cell) => (
-            <td>{cell}</td>
-          ))}
-        </tr>
-      ))}
-    </tbody>
-  </DocTable>
-);
 
 export const Codes = ({ of }) => (
   <>
@@ -78,21 +53,19 @@ A link to skymap is the app’s address with parameters added to it. [Use skymap
 These go after the `#`.
 
 <Table
-  head={['Parameter', 'Value, and an example', 'What it does']}
+  cols="stack"
+  head={['Parameter', 'Value', 'What it does']}
   rows={HASH.map((param) => [
-    <code>{param.name}</code>,
-    <>
-      {param.value}
-      <br />
-      <code>{param.example}</code>
-    </>,
+    { code: param.name },
+    { text: param.value, code: param.example },
     param.does,
   ])}
 />
 
 <Table
+  cols="stack"
   head={['Parameter', 'Does the app write it?', 'A value the app does not know']}
-  rows={HASH.map((param) => [<code>{param.name}</code>, param.written, param.unknown])}
+  rows={HASH.map((param) => [{ code: param.name }, param.written, param.unknown])}
 />
 
 <Fact id="lesson-link" />
@@ -108,9 +81,9 @@ These go after the `?`, before the `#`.
 <Table
   head={['Flag', 'Value', 'Example', 'What it does']}
   rows={FLAGS.map((param) => [
-    <code>{param.name}</code>,
+    { code: param.name },
     param.value,
-    <code>{param.example}</code>,
+    { code: param.example },
     param.does,
   ])}
 />
@@ -126,10 +99,11 @@ Dome mode is described under [Screens, quality and domes](/docs/guide/screens-an
 The value of `focus` is the id of one object.
 
 <Table
+  cols="stack"
   head={['Form', 'Example', 'What it names']}
   rows={DOCS_FOCUS_IDS.map((row) => [
-    <code>{row.form}</code>,
-    <code>{`focus=${row.example}`}</code>,
+    { code: row.form },
+    { code: `focus=${row.example}` },
     row.names,
   ])}
 />
@@ -177,8 +151,9 @@ The years the positions of the planets hold for are under [Time](/docs/guide/tim
 ## Orientations
 
 <Table
+  cols="3 3"
   head={['Value', 'What lies flat']}
-  rows={DOCS_ORIENTATIONS.map((row) => [<code>{`orientation=${row.id}`}</code>, row.flat])}
+  rows={DOCS_ORIENTATIONS.map((row) => [{ code: `orientation=${row.id}` }, row.flat])}
 />
 
 The same choice is Orientation, under Display in the [Settings](/docs/guide/settings/) panel.
@@ -186,10 +161,11 @@ The same choice is Orientation, under Display in the [Settings](/docs/guide/sett
 ## Exhibits, tours and clips
 
 <Table
+  cols="3 3"
   head={['Value', 'Opens']}
   rows={[
-    ...DOCS_EXHIBIT_IDS.map((row) => [<code>{`exhibit=${row.id}`}</code>, `The exhibit ${row.name}`]),
-    ...DOCS_TOUR_IDS.map((row) => [<code>{`tour=${row.id}`}</code>, `The tour “${row.name}”`]),
+    ...DOCS_EXHIBIT_IDS.map((row) => [{ code: `exhibit=${row.id}` }, `The exhibit ${row.name}`]),
+    ...DOCS_TOUR_IDS.map((row) => [{ code: `tour=${row.id}` }, `The tour “${row.name}”`]),
   ]}
 />
 
@@ -260,52 +236,53 @@ The second table [above](#the-parameters) has a line for each parameter. Togethe
 
 ## Example links
 
-Each of these opens what it says. The first is Saturn.
+Each of these opens what it says.
 
-<AddressStrip hash="focus=body-saturn" />
+<Example to="focus=body-saturn" address label="Open Saturn">
+  Saturn.
+</Example>
 
-Jupiter on the evening of 21 December 2020, with the clock paused:
+<Example to="focus=body-jupiter&t=2020-12-21T18:00:00Z" address label="Open Jupiter on that evening">
+  Jupiter on the evening of 21 December 2020, with the clock paused.
+</Example>
 
-<AddressStrip hash="focus=body-jupiter&t=2020-12-21T18:00:00Z" />
+<Example to="exhibit=solarSystem&t=2020-12-21T18:00:00Z" address label="Open the exhibit at that instant">
+  The Solar System exhibit at the same instant.
+</Example>
 
-The Solar System exhibit at the same instant:
+<Example to="focus=m31&orientation=galactic" address label="Open the Andromeda galaxy">
+  The Andromeda galaxy, with the plane of the Milky Way laid flat.
+</Example>
 
-<AddressStrip hash="exhibit=solarSystem&t=2020-12-21T18:00:00Z" />
+<Example to="focus=cluster-virgo-m87" address label="Open the Virgo Cluster">
+  The Virgo Cluster.
+</Example>
 
-The Andromeda galaxy, with the plane of the Milky Way laid flat:
+<Example to="pose=a,0,0,0,2.1,0.35,260,0" address>
+  A camera 260 megaparsecs from the Sun, with nothing selected.
+</Example>
 
-<AddressStrip hash="focus=m31&orientation=galactic" />
+<Example to="pose=s,perseverance,0.5,0.3,50" address label="Open the rover’s site">
+  The Perseverance rover from 50 metres.
+</Example>
 
-The Virgo Cluster:
+<Example to="tour=webShowcase" address label="Start the tour">
+  The tour “Named Cosmic Web”.
+</Example>
 
-<AddressStrip hash="focus=cluster-virgo-m87" />
-
-A camera 260 megaparsecs from the Sun, with nothing selected:
-
-<AddressStrip hash="pose=a,0,0,0,2.1,0.35,260,0" />
-
-The Perseverance rover from 50 metres:
-
-<AddressStrip hash="pose=s,perseverance,0.5,0.3,50" />
-
-The tour “Named Cosmic Web”:
-
-<AddressStrip hash="tour=webShowcase" />
-
-Saturn in dome mode, which is written `?dome#focus=body-saturn`:
-
-<p>
-  <ViewLink href={appLink('focus=body-saturn', 'dome')}>Saturn as a fisheye disc</ViewLink>
-</p>
+<Example to="focus=body-saturn" query="dome" address label="Open Saturn as a fisheye disc">
+  Saturn in dome mode.
+</Example>
 
 ## For development
 
 These flags are for the people who build skymap. They work in the published app, so a link you are sent may carry one.
 
 <Table
+  cols="detail"
   head={['Flag', 'What it does', 'Skips the welcome screen']}
   rows={DEV_FLAGS.map((param) => [
-    <code>{param.example}</code>,
+    { code: param.example },
     param.does,
     param.skipsWelcome ? 'Yes' : 'No',
   ])}

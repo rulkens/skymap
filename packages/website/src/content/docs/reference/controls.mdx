@@ -6,41 +6,19 @@ order: 1
 facts: [ref-keys-camera, ref-keys-search, ref-keys-clock, ref-keys-tours, ref-keys-interface, ref-keys-development]
 ---
 
-import DocTable from '../../../components/DocTable.astro';
-import Keys from '../../../components/Keys.astro';
 import { DOCS_CONTROLS } from '../../../data/docsControls';
 
-export const ControlTable = ({ id }) => {
+export const controls = (id) => {
   const group = DOCS_CONTROLS.find((candidate) => candidate.id === id);
-  return (
-    <DocTable>
-      <thead>
-        <tr>
-          <th>{group.kind === 'keys' ? 'Key' : 'What you do'}</th>
-          <th>What it does</th>
-          <th>Where it applies</th>
-        </tr>
-      </thead>
-      <tbody>
-        {group.rows.map((row) => (
-          <tr>
-            <td>
-              {group.kind === 'keys'
-                ? row.input.map((key, i) => (
-                    <>
-                      {i > 0 && (i === row.input.length - 1 ? ' or ' : ', ')}
-                      <Keys of={key} />
-                    </>
-                  ))
-                : row.input[0]}
-            </td>
-            <td>{row.does}</td>
-            <td>{row.where}</td>
-          </tr>
-        ))}
-      </tbody>
-    </DocTable>
-  );
+  return {
+    cols: 'detail',
+    head: [group.kind === 'keys' ? 'Key' : 'What you do', 'What it does', 'Where it applies'],
+    rows: group.rows.map((row) => [
+      group.kind === 'keys' ? { keys: row.input } : row.input[0],
+      row.does,
+      row.where,
+    ]),
+  };
 };
 
 This page is for looking a control up. The Guide explains the same controls by what you want to do, starting with [Moving around](/docs/guide/moving/), and [Use skymap in the classroom](/classroom/) has views that need no steering at all.
@@ -61,7 +39,7 @@ The last column of each table uses these words.
 
 ### Camera and selection
 
-<ControlTable id="keys-camera" />
+<Table {...controls('keys-camera')} />
 
 <Fact id="one-camera" />
 
@@ -71,11 +49,11 @@ What the focus is, and what the camera does once it has one, is under [Moving ar
 
 To open the search:
 
-<ControlTable id="keys-search" />
+<Table {...controls('keys-search')} />
 
 Once it is open:
 
-<ControlTable id="keys-search-open" />
+<Table {...controls('keys-search-open')} />
 
 <Fact id="ref-keys-search-open" />
 
@@ -83,13 +61,13 @@ What the search finds is under [Finding things](/docs/guide/finding/).
 
 ### Clock
 
-<ControlTable id="keys-clock" />
+<Table {...controls('keys-clock')} />
 
 <Fact id="clock-hidden" />
 
 The clock’s two boxes take keys of their own while they are open:
 
-<ControlTable id="keys-clock-boxes" />
+<Table {...controls('keys-clock-boxes')} />
 
 <Fact id="ref-keys-clock-boxes" />
 
@@ -97,13 +75,13 @@ The speeds, and what the clock moves, are under [Time](/docs/guide/time/).
 
 ### Tours and exhibits
 
-<ControlTable id="keys-tours" />
+<Table {...controls('keys-tours')} />
 
 An exhibit has no keys of its own but Esc. The same controls are on screen as buttons, described under [Tours and exhibits](/docs/guide/tours/).
 
 ### Interface
 
-<ControlTable id="keys-interface" />
+<Table {...controls('keys-interface')} />
 
 <Fact id="ref-keys-welcome" />
 
@@ -113,7 +91,7 @@ An exhibit has no keys of its own but Esc. The same controls are on screen as bu
 
 The sliders of the Settings panel take these keys once one of them has the keyboard:
 
-<ControlTable id="keys-sliders" />
+<Table {...controls('keys-sliders')} />
 
 <Fact id="ref-keys-sliders" />
 
@@ -123,13 +101,13 @@ The panel itself is under [Settings](/docs/guide/settings/).
 
 <Fact id="ref-keys-development" />
 
-<ControlTable id="keys-development" />
+<Table {...controls('keys-development')} />
 
 The link that <Keys of="L" /> prints is the one way to get a camera position out of the app: see [Camera positions](/docs/reference/url-parameters/#camera-positions). The debug panel is described under [Debug panel and flags](/docs/developers/debug/).
 
 ## Mouse
 
-<ControlTable id="mouse" />
+<Table {...controls('mouse')} />
 
 <Fact id="ref-mouse" />
 
@@ -145,13 +123,13 @@ Which way the wheel zooms follows the scroll direction set on your computer. The
 
 ## Trackpad
 
-<ControlTable id="trackpad" />
+<Table {...controls('trackpad')} />
 
 <Fact id="ref-trackpad" />
 
 ## Touch screen
 
-<ControlTable id="touch" />
+<Table {...controls('touch')} />
 
 <Fact id="ref-touch" />
 

@@ -5,23 +5,38 @@
  * planned one is its name, dimmer and inert, so the tree shows its whole shape
  * from the first page on. The page you are on carries the app's selection
  * mark, a filled point with a ring about it, hung left of the text edge.
- * Narrow, the list folds behind a disclosure at the top of the page, with
- * search beside it.
+ * Narrow, it is a bar that stays under the top bar: "Contents" and search.
+ * The list opens over the page, not in it, with the page's own sections first.
  */
+import type { MarkdownHeading } from 'astro';
+
 import DocsSearch from './DocsSearch.astro';
+import PageSections from './PageSections.astro';
 import { DOCS_TREE } from '../data/docsTree';
 import { sitePath } from '../utils/sitePath';
 
-type Props = { current: string };
+type Props = { current: string; sections: readonly MarkdownHeading[] };
 
-const { current } = Astro.props;
+const { current, sections } = Astro.props;
 ---
 
 <nav class="docs-nav small" aria-label="Docs" data-pagefind-ignore>
   <DocsSearch />
   <details open data-docs-menu>
-    <summary class="ring small">All docs pages</summary>
+    <summary class="ring small">Contents</summary>
     <div class="tree">
+      {
+        sections.length > 0 && (
+          <div class="here">
+            <p class="group" id="docs-nav-here">
+              On this page
+            </p>
+            <nav aria-labelledby="docs-nav-here">
+              <PageSections sections={sections} />
+            </nav>
+          </div>
+        )
+      }
       {
         DOCS_TREE.map((group) => (
           <>
@@ -67,6 +82,12 @@ const { current } = Astro.props;
       menu.open = false;
       menu.querySelector('summary')?.focus();
     });
+    // The open list lies over the page: a jump within the page, or a tap on the page, puts it away.
+    document.addEventListener('click', (event) => {
+      if (!narrow.matches || !menu.open) return;
+      const target = event.target as Element;
+      if (!menu.contains(target) || target.closest('a[href^="#"]')) menu.open = false;
+    });
   }
 </script>
 
@@ -87,11 +108,17 @@ const { current } = Astro.props;
     display: none;
   }
 
+  /* 20px at every width: the display face's floor, which the phone's body size is under. */
   .group {
     max-width: none;
     margin: 1.75rem 0 0.375rem;
-    font: var(--weight-display) var(--text-body) / 1.1 var(--font-family-display);
+    font: var(--weight-display) 1.25rem / 1.1 var(--font-family-display);
     color: var(--color-fg);
+  }
+
+  /* Wide, the page's own sections stand beside the text or are left out (layouts/Docs.astro). */
+  .here {
+    display: none;
   }
 
   ul {
@@ -184,13 +211,25 @@ const { current } = Astro.props;
     }
   }
 
-  /* Narrow: one row, the list's disclosure on the left and search on the right, the open list under both. */
+  /*
+   * Narrow: one row that stays under the top bar, the list's disclosure on the left and search on the right. The
+   * open list hangs from the row over the page and scrolls by itself, so opening it moves nothing.
+   */
   @media (max-width: 900px) {
     .docs-nav {
+      position: sticky;
+      top: var(--nav-height);
+      z-index: 3;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      padding-block: 0.5rem;
+      margin-inline: calc(-1 * var(--gutter));
+      padding: 0.5rem var(--gutter);
       border-bottom: 1px solid var(--border-divider);
+      background: var(--color-bg);
+    }
+
+    .here {
+      display: block;
     }
 
     /* Over the list's own row, which is as wide as the page so that the open list is. */
@@ -210,7 +249,14 @@ const { current } = Astro.props;
     }
 
     .tree {
-      padding: 0 0 1.5rem var(--hang);
+      position: absolute;
+      inset: 100% 0 auto;
+      max-height: calc(100svh - var(--nav-height) - var(--docs-bar));
+      padding: 0 var(--gutter) 1.5rem calc(var(--gutter) + var(--hang));
+      border-bottom: 1px solid var(--border-divider);
+      background: var(--color-bg);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .group {

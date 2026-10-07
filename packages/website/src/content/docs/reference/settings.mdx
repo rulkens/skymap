@@ -6,68 +6,25 @@ order: 3
 facts: [ref-settings-panel, privacy-app-storage]
 ---
 
-import DocTable from '../../../components/DocTable.astro';
 import { DOCS_SETTINGS } from '../../../data/docsSettings';
 import { DOCS_SETTING_SIZES } from '../../../data/docsSettingSizes';
 
-export const SettingsTable = ({ id }) => {
-  const group = DOCS_SETTINGS.find((candidate) => candidate.id === id);
-  return (
-    <DocTable>
-      <thead>
-        <tr>
-          <th>Setting</th>
-          <th>What it does</th>
-          <th>Values</th>
-          <th>At first</th>
-        </tr>
-      </thead>
-      <tbody>
-        {group.rows.map((row) => (
-          <tr>
-            <td>
-              {row.name}
-              <br />
-              <small>{row.control}</small>
-            </td>
-            <td>{row.does}</td>
-            <td>{row.values}</td>
-            <td>{row.first}</td>
-          </tr>
-        ))}
-      </tbody>
-    </DocTable>
-  );
-};
-
-export const SizesTable = () => (
-  <DocTable>
-    <thead>
-      <tr>
-        <th>What is loaded</th>
-        <th>Small</th>
-        <th>Medium</th>
-        <th>Large</th>
-      </tr>
-    </thead>
-    <tbody>
-      {DOCS_SETTING_SIZES.map((row) => (
-        <tr>
-          <td>{row.what}</td>
-          <td>{row.small}</td>
-          <td>{row.medium}</td>
-          <td>{row.large}</td>
-        </tr>
-      ))}
-    </tbody>
-  </DocTable>
-);
+export const settings = (id) => ({
+  cols: 'detail',
+  head: ['Setting', 'What it does', 'Values', 'At first'],
+  rows: DOCS_SETTINGS.find((group) => group.id === id).rows.map((row) => [
+    { text: row.name, sub: row.control },
+    row.does,
+    row.values,
+    row.first,
+  ]),
+});
 
 This page is for looking a setting up. [Settings](/docs/guide/settings/) in the Guide goes through the same panel by what you want to change, and [Controls](/docs/reference/controls/) lists the keys and gestures.
 
 {/* Below 700 px the figure shows the manifest row 'ref-settings-phone', which it finds by name. */}
 
-<Figure id="ref-settings" />
+<Figure id="ref-settings" eager />
 
 ## Where the settings are
 
@@ -99,7 +56,7 @@ The `orientation` parameter is under [URL parameters](/docs/reference/url-parame
 
 The control marked Tier, in the panel’s title strip.
 
-<SettingsTable id="data-size" />
+<Table {...settings('data-size')} />
 
 <Fact id="phone-data-size" />
 
@@ -107,7 +64,10 @@ The control marked Tier, in the panel’s title strip.
 
 What each size holds, as the panel counts it:
 
-<SizesTable />
+<Table
+  head={['What is loaded', 'Small', 'Medium', 'Large']}
+  rows={DOCS_SETTING_SIZES.map((row) => [row.what, row.small, row.medium, row.large])}
+/>
 
 <Fact id="ref-settings-sizes" />
 
@@ -115,11 +75,11 @@ What each size holds, as the panel counts it:
 
 ## Galaxies
 
-<SettingsTable id="galaxies" />
+<Table {...settings('galaxies')} />
 
 ### Galaxy catalogs
 
-<SettingsTable id="galaxy-catalogs" />
+<Table {...settings('galaxy-catalogs')} />
 
 <Fact id="sim-desi-patches" />
 
@@ -129,7 +89,7 @@ Each catalogue is described under [The sources](/science/#sources) on the Scienc
 
 The second heading under Galaxies, folded at first.
 
-<SettingsTable id="galaxies-advanced" />
+<Table {...settings('galaxies-advanced')} />
 
 <Fact id="sim-reweight" />
 
@@ -137,47 +97,47 @@ The second heading under Galaxies, folded at first.
 
 ## Stars
 
-<SettingsTable id="stars" />
+<Table {...settings('stars')} />
 
 ### Star catalogs
 
-<SettingsTable id="star-catalogs" />
+<Table {...settings('star-catalogs')} />
 
 ### Advanced
 
 The second heading under Stars, folded at first.
 
-<SettingsTable id="stars-advanced" />
+<Table {...settings('stars-advanced')} />
 
 <Fact id="sim-exposure" />
 
 ## Cosmic web density
 
-<SettingsTable id="cosmic-web-density" />
+<Table {...settings('cosmic-web-density')} />
 
 <Fact id="sci-density-field" />
 
 ## Cosmic web filaments
 
-<SettingsTable id="cosmic-web-filaments" />
+<Table {...settings('cosmic-web-filaments')} />
 
 <Fact id="sci-filaments" />
 
 ## Flow
 
-<SettingsTable id="flow" />
+<Table {...settings('flow')} />
 
 <Fact id="sci-flows" />
 
 ## Structures
 
-<SettingsTable id="structures" />
+<Table {...settings('structures')} />
 
 <Fact id="sci-markers" />
 
 ## Labels & Guides
 
-<SettingsTable id="labels-and-guides" />
+<Table {...settings('labels-and-guides')} />
 
 <Fact id="ref-settings-labels" />
 
@@ -185,7 +145,7 @@ Names in the scene, and what a click on one does, are under [Finding things](/do
 
 ## Display
 
-<SettingsTable id="display" />
+<Table {...settings('display')} />
 
 <Fact id="ref-settings-orientation" />
 
@@ -193,15 +153,15 @@ Names in the scene, and what a click on one does, are under [Finding things](/do
 
 ### Bloom
 
-<SettingsTable id="bloom" />
+<Table {...settings('bloom')} />
 
 ### HDR
 
-<SettingsTable id="hdr" />
+<Table {...settings('hdr')} />
 
 ### Earth
 
-<SettingsTable id="earth" />
+<Table {...settings('earth')} />
 
 <Fact id="ref-settings-earth" />
 

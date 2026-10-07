@@ -41,6 +41,8 @@
   /* Capped by a short window, so an opening section's title still fits it and no heading under it is larger. */
   --text-h2: min(clamp(2.5rem, 5.2vw, 5.25rem), 9svh);
   --text-ring-big: clamp(1.875rem, 3.4vw, 3rem);
+  /* The title of a docs page, and of the docs' front page: a reading page's, well under a landing page's. */
+  --text-doc-title: clamp(2.5rem, 4.2vw, 3.5rem);
   --leading-body: 1.6;
   --leading-display: 1.05;
   --measure: 44ch;
@@ -332,6 +334,23 @@ kbd {
   background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
 }
 
+/*
+ * A sheet over the page (DocsSearch, FigureSheet): a modal dialog with none of the browser's own box. The page
+ * behind does not scroll while one is open.
+ */
+dialog.sheet {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  background: var(--color-bg);
+  color: inherit;
+}
+
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 /* One gap above every section of a page; the page's last block closes it. */
 .section {
   padding-top: var(--section-space);
@@ -517,9 +536,11 @@ kbd {
   }
 }
 
+/* As specific as the rules that set the transitions, or it would lose to them. */
 @media (prefers-reduced-motion: reduce) {
   .ring::before,
-  .glyph {
+  :is(.ring, .glyph-ring) > .glyph,
+  .ring > .glyph[data-icon='view'] {
     transition: none;
   }
 }

@@ -2,16 +2,19 @@
 /*
  * FigureSheet — the sheet a docs picture opens in when it is clicked: the
  * whole window, the picture's name and Close in a bar, and under it the
- * picture as large as the window shows whole, never smaller than the app drew
- * it. A window too small for that scrolls, and a touch screen may pinch. One
- * per page, filled by scripts/initFigureSheet.ts from the picture clicked. It
+ * picture as large as the window shows whole. A window narrower than the app
+ * drew it shows it at the app's size, starting at its middle, and scrolls;
+ * a touch screen may pinch. One per page, filled by scripts/initFigureSheet.ts from the picture clicked. It
  * is the search sheet's kind of dialog (DocsSearch.astro).
  */
 ---
 
 <dialog class="sheet" data-figure-sheet aria-labelledby="figure-name">
   <div class="wrap bar">
-    <p class="small" id="figure-name" data-figure-name></p>
+    <p class="small" id="figure-name">
+      <span data-figure-name></span>
+      <span class="pan">Drag to see the rest of it.</span>
+    </p>
     <button class="ring small" type="button">Close</button>
   </div>
   <div class="room"><img alt="" decoding="async" /></div>
@@ -28,15 +31,9 @@
   .sheet {
     --bar: 3.75rem;
     inset: 0;
-    width: 100%;
-    max-width: none;
     height: 100dvh;
     max-height: none;
-    margin: 0;
     padding: 0;
-    border: 0;
-    background: var(--color-bg);
-    color: inherit;
   }
 
   /* Only while open: a closed dialog given a display of its own would show. */
@@ -71,20 +68,28 @@
   }
 
   /*
-   * As wide as the window shows the whole picture, between the size the app drew it at (`--own`) and its file's
-   * pixels. The auto margin centres it and, unlike `justify-content`, leaves an overflowing picture's start in reach.
+   * As large as the window shows the whole picture, up to its file's pixels. The auto margin centres it and,
+   * unlike `justify-content`, leaves an overflowing picture's start in reach.
    */
   img {
     flex: none;
-    width: clamp(var(--own), min(100%, (100dvh - var(--bar)) * var(--shape)), var(--file));
+    width: min(100%, (100dvh - var(--bar)) * var(--shape), var(--file));
     max-width: none;
     height: auto;
     margin: auto;
     cursor: auto;
   }
 
-  /* The page behind must not scroll while the sheet covers it. */
-  :global(html:has(dialog[data-figure-sheet][open])) {
-    overflow: hidden;
+  /* A window narrower than the app drew the picture (`--own`) shows it at that size and pans (scripts/initFigureSheet.ts). */
+  [data-pan] img {
+    width: var(--own);
+  }
+
+  .pan {
+    display: none;
+  }
+
+  [data-pan] .pan {
+    display: inline;
   }
 </style>
