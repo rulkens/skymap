@@ -61,7 +61,7 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
   {
     id: 'pipe-draw',
     about: 'app',
-    text: 'The bytes of a galaxy file go to the graphics processor almost as they are: 56 bytes a galaxy, with the values that never change, such as its tilt and its luminosity, worked out once on arrival. Each galaxy is then one small square that always faces the camera, and the program that colours it runs on the graphics processor for every frame.',
+    text: 'The bytes of a galaxy file go to the graphics processor almost as they are: 56 bytes a galaxy, with the values that never change, such as its tilt and its luminosity, worked out once on arrival. Each galaxy is then one small triangle that always faces the camera, of which only the dot inside it is coloured, and the program that colours it runs on the graphics processor for every frame.',
     source: `${REPO_BLOB}/docs/RENDERER.md`,
     sourceLabel: `the renderer notes, ${IN_REPO}`,
     checked: CHECKED,
