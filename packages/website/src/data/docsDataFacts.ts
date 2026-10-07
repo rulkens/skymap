@@ -29,7 +29,7 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
   },
   {
     id: 'pipe-star-budgets',
-    text: 'The star file of each data size is cut to fit a compressed download of 10, 30 or 75 megabytes: stars are dropped from the faintest up until the file fits. The faint stars that come only from the Gaia Catalogue of Nearby Stars are not dropped for being faint. They are thinned at random from 70 parsecs outwards and gone at 100, so that the neighbourhood of the Sun does not end at a visible shell.',
+    text: 'The star file of each data size is cut to fit a compressed download of 10, 30 or 75 megabytes: stars are dropped from the faintest up until the file fits. The faint stars that come only from the Gaia Catalogue of Nearby Stars are not dropped for being faint. They are thinned from 70 parsecs outwards, more of them the farther out, and gone at 100, so that the neighbourhood of the Sun does not end at a visible shell. Which ones go is fixed by each star’s Gaia number, so every build drops the same stars.',
     source: `${REPO_BLOB}/tools/stars/buildStars.ts`,
     sourceLabel: `the star build, ${IN_REPO}`,
     checked: CHECKED,
@@ -53,7 +53,7 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
   {
     id: 'pipe-manifest',
     about: 'app',
-    text: 'Every data file carries the first 8 characters of a hash of its own bytes in its name, and one list, the manifest, maps each plain name to the hashed one. The manifest is written last, after every file it names, and the app fetches it first, uncached, so a page load never pairs a new file with an old one.',
+    text: 'Every data file the build tracks carries the first 8 characters of a hash of its own bytes in its name, and one list, the manifest, maps each plain name to the hashed one. Pictures and the surface tiles are outside it and keep plain names. The manifest is written last, after every file it names, and the app fetches it first, uncached, so a page load never pairs a new file with an old one.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,

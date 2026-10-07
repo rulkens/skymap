@@ -303,7 +303,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-duplicates',
-    text: 'The catalogues overlap. Two rows within 5 arcseconds on the sky and 1 per cent in redshift are treated as one galaxy, kept from SDSS first, then 2MRS, then GLADE, then DESI. Milliquas quasars skip this step.',
+    text: 'The catalogues overlap. Two rows within 5 arcseconds on the sky whose redshifts differ by less than about 0.01 are treated as one galaxy, kept from SDSS first, then 2MRS, then GLADE, then DESI. Milliquas quasars skip this step.',
     source: `${REPO_BLOB}/tools/catalog/crossMatch.ts`,
     sourceLabel: `the cross-match, ${IN_REPO}`,
     checked: CHECKED,
