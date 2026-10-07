@@ -201,6 +201,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     see: ['mcpm'],
   },
   {
+    id: 'depth-buffer',
+    term: 'Depth buffer',
+    text: 'An image that keeps, for each pixel, how far away the nearest thing drawn there is, so that a nearer surface hides a farther one whatever order they are drawn in.',
+    facts: ['gloss-pass', 'render-depth-range'],
+    more: { label: 'Precision across scales', path: '/docs/rendering/precision/' },
+  },
+  {
     id: 'derived',
     term: 'Derived',
     text: `${gloss('derived')} A galaxy’s distance, worked out from its redshift, is derived. One of the site’s three sorting words.`,
@@ -237,6 +244,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     text: 'The app drawing a round fisheye picture for a dome projector. A link turns it on with ?dome.',
     facts: ['dome-flag'],
     more: { label: 'Screens, quality and domes', path: '/docs/guide/screens-and-domes/' },
+  },
+  {
+    id: 'draw-call',
+    term: 'Draw call',
+    text: 'One command to the graphics processor to draw a number of corners a number of times. The app draws a whole catalogue of galaxies with one.',
+    facts: ['gloss-draw-call', 'render-galaxy-triangle'],
+    more: { label: 'Performance', path: '/docs/rendering/performance/' },
   },
   {
     id: 'drawn',
@@ -294,6 +308,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     facts: ['sim-redshift-space'],
     more: SIMPLE,
     see: ['peculiar-velocity'],
+  },
+  {
+    id: 'floating-point-number',
+    term: 'Floating-point number',
+    text: 'A number stored as a fixed count of digits and a place for the point. In 32 bits, which is what a graphics processor works in, about seven decimal digits are kept.',
+    facts: ['gloss-float'],
+    more: { label: 'Precision across scales', path: '/docs/rendering/precision/' },
   },
   {
     id: 'flux-limit',
@@ -599,6 +620,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     see: ['observable-universe'],
   },
   {
+    id: 'pass',
+    term: 'Pass',
+    text: 'One run of commands on the graphics processor: a render pass draws into a set of images, a compute pass works something out and draws nothing.',
+    facts: ['gloss-pass'],
+    more: { label: 'The frame', path: '/docs/rendering/' },
+    see: ['draw-call'],
+  },
+  {
     id: 'peculiar-velocity',
     term: 'Peculiar velocity',
     text: 'A galaxy’s own motion, apart from the expansion of space. It adds to or takes from the redshift, so a distance computed from redshift is off by it: 300 km/s is about 4 megaparsecs.',
@@ -694,6 +723,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     see: ['footprint'],
   },
   {
+    id: 'shader',
+    term: 'Shader',
+    text: 'A program that runs on the graphics processor: it places the corners of what is drawn, colours its pixels, or computes without drawing.',
+    facts: ['gloss-shader'],
+    more: { label: 'The frame', path: '/docs/rendering/' },
+    see: ['webgpu'],
+  },
+  {
     id: 'solstice',
     term: 'Solstice',
     text: 'One of the two days a year when the Sun stands furthest north or south in the sky. In 2026 they fall on 21 June and 21 December.',
@@ -720,6 +757,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     text: 'A flattened structure in the distribution of the galaxies around us, part of the nearby cosmic web. The app’s Supergalactic orientation keeps it level.',
     facts: ['gloss-supergalactic', 'orientation-setting'],
     see: ['orientation'],
+  },
+  {
+    id: 'texture',
+    term: 'Texture',
+    text: 'An image, or a block of numbers in one to three dimensions, held on the graphics processor for a shader to read or to draw into.',
+    facts: ['gloss-texture'],
+    more: { label: 'The frame', path: '/docs/rendering/' },
+    see: ['shader'],
   },
   {
     id: 'tone-curve',

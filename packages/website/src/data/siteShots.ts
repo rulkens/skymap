@@ -958,7 +958,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [1920, 1280, 640],
     title: 'Andromeda from 12 kiloparsecs off its centre',
-    caption: 'The straight edge is the near limit of the galaxies’ range of depth, 10 kiloparsecs in front of the camera.',
+    caption: 'The straight edge is the near limit of the galaxies’ range of depth, 10 kiloparsecs in front of the camera. Zoom out and the edge moves off the galaxy.',
     drawn: 'The cut is the renderer’s, not the galaxy’s. The blue band is the Zone of Avoidance guide, far behind.',
     alt: 'A bright orange-white sheet crossing the frame from upper left to lower right and ending along a ruler-straight edge, with a field of points beyond it.',
     credit: 'Photograph: Brody Wesner, CC0',

@@ -126,7 +126,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-rings',
-    text: 'Saturn’s rings are lit as a thin layer of scattering particles, by the single-scattering formulas of Chandrasekhar that the ring photometry of Voyager used, with particles that send most light back the way it came. The unlit face shows the light that comes through. The planet’s shadow falls on the rings and the rings’ shadow on the planet.',
+    text: 'Saturn’s rings are lit as a thin layer of scattering particles that send most light back the way it came. The unlit face shows the light that comes through. The planet’s shadow falls on the rings and the rings’ shadow on the planet.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/bodies/ring/fragment.wesl`,
     sourceLabel: `the ring shading, ${IN_REPO}`,
     checked: CHECKED,
@@ -195,7 +195,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-labels',
     about: 'app',
-    text: 'Names are set from a texture that stores, for each letter, the distance to its outline in three colour channels, so a letter stays sharp at any size and its corners stay corners. Labels are drawn after the picture has been brought into screen range, and one behind a planet is dimmed by how opaque the planet’s pixels are.',
+    text: 'Names are set from a texture that stores, for each letter, the distance to its outline in three colour channels, so a letter stays sharp at any size and its corners stay corners. Names are drawn after the picture has been brought into screen range, and one behind a planet is dimmed by how opaque the planet’s pixels are.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/msdf.wesl`,
     sourceLabel: `the label shading, ${IN_REPO}`,
     checked: CHECKED,
@@ -236,7 +236,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-slabs',
     about: 'app',
-    text: 'The scene is cut into ranges of distance, each with its own near and far limit, units and projection. The galaxies have a fixed range from 10 kiloparsecs to 50 gigaparsecs, in megaparsecs. The stars and the Milky Way have one that follows the camera, from a ten-thousandth of its height above the thing it circles. Each planet or moon in view has one in metres, centred on the eye, with no far limit; a model on or beside a body shares that body’s.',
+    text: 'The scene is cut into ranges of distance, each with its own near and far limit, units and projection: one for the galaxies, one for the stars and the Milky Way, and one for each planet or moon in view. A model on or beside a body shares that body’s.',
     source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
     sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -252,7 +252,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-double-then-single',
     about: 'app',
-    text: 'The graphics processor works in 32-bit numbers, good for about seven digits. Positions are therefore subtracted from the camera’s on the processor, in 64-bit numbers, while both are still large, and only the small difference is converted to metres and handed over. One function does that conversion, and a test fails if a second one appears.',
+    text: 'The graphics processor works in 32-bit numbers. Positions are therefore subtracted from the camera’s on the processor, in 64-bit numbers, while both are still large, and only the small difference is converted to metres and handed over. One function does that conversion, and a test fails if a second one appears.',
     source: `${REPO_BLOB}/src/services/engine/camera/bodyRelativePose.ts`,
     sourceLabel: `the step from megaparsecs to metres, ${IN_REPO}`,
     checked: CHECKED,
@@ -260,7 +260,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-local-origins',
     about: 'app',
-    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the eye and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 10-bit steps inside the box.',
+    text: 'Two kinds of thing carry their own origin. A ground tile is sent as its corner’s offset from the camera and four angles, from which the graphics processor builds the patch. A box of stars is sent as its corner’s offset from the camera, and its stars as 10-bit steps inside the box.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/bodies/surfaceTile/io.wesl`,
     sourceLabel: `what a ground patch is sent as, ${IN_REPO}`,
     checked: CHECKED,
@@ -268,7 +268,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-clip-floor',
     about: 'app',
-    text: 'Labels and the selection ring are placed in megaparsecs from the eye. A thing 31 metres away is then 0.000000000000000000001 of a unit off, which is below the smallest value a graphics processor keeps for the division that gives perspective, and its label shrank towards the middle of the screen. The app multiplies those matrices up to metres before it sends them.',
+    text: 'Names and the selection ring are placed in megaparsecs from the camera. A thing 31 metres away is then 0.000000000000000000001 of a unit off, which is below the smallest value a graphics processor keeps for the division that gives perspective. The app therefore multiplies those matrices up to metres before it sends them.',
     source: `${REPO_BLOB}/src/services/engine/frame/near0OverlayClipScale.ts`,
     sourceLabel: `the label scale, ${IN_REPO}`,
     checked: CHECKED,
@@ -276,20 +276,12 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-floors',
     about: 'app',
-    text: 'The camera stops just above the surface of the body it circles, about 15 metres over Earth, and never within 3 centimetres of a body’s centre. Round a thing with no surface, such as a galaxy, it stops about 300 kilometres away.',
+    text: 'The camera stops just above the surface of its focus, about 15 metres over Earth, and never within 3 centimetres of a body’s centre. Round a focus with no surface, such as a galaxy, it stops about 300 kilometres away.',
     source: `${REPO_BLOB}/src/services/engine/camera/pivotRadiusMpc.ts`,
     sourceLabel: `the camera’s limits, ${IN_REPO}`,
     checked: CHECKED,
   },
 
-  {
-    id: 'render-units',
-    about: 'app',
-    text: 'Each range has the unit that keeps its numbers of a middling size: megaparsecs for galaxies, parsecs inside a file of stars, metres around a planet. The atmosphere’s tables are in kilometres. Every conversion between them is a named constant in one file.',
-    source: `${REPO_BLOB}/src/data/scaleUnits.ts`,
-    sourceLabel: `the unit conversions, ${IN_REPO}`,
-    checked: CHECKED,
-  },
   {
     id: 'render-time',
     about: 'app',
@@ -354,6 +346,43 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
     text: 'The processor does not touch every galaxy in a frame. To find those large enough for a disc or a picture it looks at an eighth of each catalogue per frame, compares squared distances so that most rows cost no square root, and takes at most 2,048 rows in one frame.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts`,
     sourceLabel: `the search for large galaxies, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+
+  // Terms of the glossary the Rendering pages link to.
+  {
+    id: 'gloss-shader',
+    text: 'A shader is a program that runs on the graphics processor. WebGPU’s are written in a language of its own, WGSL.',
+    source: 'https://www.w3.org/TR/WGSL/',
+    sourceLabel: 'the WebGPU Shading Language specification, W3C',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-texture',
+    text: 'A texture is an array of data in one, two or three dimensions, such as an image, that the graphics processor reads from or draws into.',
+    source: 'https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API',
+    sourceLabel: 'MDN, WebGPU API',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-pass',
+    text: 'A render pass is one run of drawing commands into a named set of images, with or without an image of depth to write to and test against.',
+    source: 'https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandEncoder/beginRenderPass',
+    sourceLabel: 'MDN, GPUCommandEncoder: beginRenderPass()',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-draw-call',
+    text: 'A draw call is one command that draws a given number of corners a given number of times.',
+    source: 'https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder/draw',
+    sourceLabel: 'MDN, GPURenderPassEncoder: draw()',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-float',
+    text: 'A 32-bit floating-point number is rounded at the 23rd binary digit after its first, which is about seven decimal digits. JavaScript’s own numbers are 64-bit.',
+    source: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/fround',
+    sourceLabel: 'MDN, Math.fround()',
     checked: CHECKED,
   },
 ];
