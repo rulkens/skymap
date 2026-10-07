@@ -1,0 +1,90 @@
+---
+title: Object catalogue
+description: Every thing in skymap that has a name of its own, each with its other names, the id a link uses and a link that opens it in the app.
+group: Reference
+order: 4
+facts: [search-catalogue-galaxies, search-scope]
+---
+
+import ObjectFinder from '../../../components/ObjectFinder.astro';
+import ObjectList from '../../../components/ObjectList.astro';
+
+<Fact id="ref-objects-rows" inline /> Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. To link to a row of this page, put the same id after the page’s address: `#body-saturn`.
+
+The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a GLADE or 2MRS galaxy by its designation, as [Finding things](/docs/guide/finding/) describes, and any object you have selected has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
+
+<ObjectFinder />
+
+## Sun, planets and dwarf planets
+
+<Fact id="ref-objects-bodies" />
+
+<ObjectList section="sun-planets-and-dwarf-planets" />
+
+## Moons
+
+<ObjectList section="moons" />
+
+## Spacecraft
+
+The name after a spacecraft is the body it orbits or stands on.
+
+<ObjectList section="spacecraft" />
+
+## Other models
+
+<ObjectList section="other-models" />
+
+## Places on Earth
+
+<Fact id="ref-objects-places" />
+
+<ObjectList section="places-on-earth" />
+
+## Named stars
+
+<Fact id="ref-objects-stars" />
+
+<ObjectList section="named-stars" />
+
+## Stars at the centre of the Milky Way
+
+<ObjectList section="stars-at-the-centre-of-the-milky-way" />
+
+## The Milky Way and its black hole
+
+<ObjectList section="the-milky-way-and-its-black-hole" />
+
+## Named galaxies
+
+<Fact id="ref-objects-galaxies" />
+
+<ObjectList section="named-galaxies" />
+
+## Galaxy groups
+
+<Fact id="ref-objects-structures" />
+
+<ObjectList section="galaxy-groups" />
+
+## Galaxy clusters
+
+<ObjectList section="galaxy-clusters" />
+
+## Superclusters
+
+<ObjectList section="superclusters" />
+
+## Voids
+
+<ObjectList section="voids" />
+
+## Exhibits
+
+<Fact id="ref-objects-takeovers" />
+
+<ObjectList section="exhibits" />
+
+## Tours
+
+<ObjectList section="tours" />

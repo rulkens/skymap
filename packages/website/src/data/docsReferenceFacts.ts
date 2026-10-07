@@ -1,5 +1,9 @@
 import type { Fact } from '../@types/Fact';
+import type { ObjectKind } from '../@types/ObjectKind';
+import { OBJECT_ROWS } from './objectCatalogue';
 import { REPO_BLOB } from './siteIdentity';
+
+const objects = (kind: ObjectKind) => OBJECT_ROWS.filter((row) => row.kind === kind).length;
 
 const CHECKED = '2026-10-07';
 const IN_REPO = 'in the skymap repository';
@@ -583,6 +587,64 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     text: 'The app draws the scene in layers, among them the galaxy catalogues, the stars, the cosmic web density, the filaments, the flow, the Zone of Avoidance, the Local Bubble, the constellations and the Milky Way. Most have a switch in the Settings panel.',
     source: `${REPO_BLOB}/src/compositions/app.ts`,
     sourceLabel: `the app’s layers, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+
+  // Object catalogue: every count is taken from the list the page prints
+  {
+    id: 'ref-objects-rows',
+    about: 'app',
+    text: `This page lists ${OBJECT_ROWS.length} named things, read from the app’s own tables when the site is built, and ${OBJECT_ROWS.filter((row) => row.link).length} of them have a link. Every link was opened in the app on 7 October 2026 and opened the object its row names.`,
+    source: `${REPO_BLOB}/packages/website/src/data/objectCatalogue.ts`,
+    sourceLabel: `the list this page is built from, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-bodies',
+    about: 'app',
+    text: `The app’s tables of bodies hold the Sun, ${objects('planet')} planets and dwarf planets, ${objects('moon')} moons, ${objects('spacecraft')} spacecraft and ${objects('model')} other models. Earth is the view the app opens on.`,
+    source: `${REPO_BLOB}/src/data/bodies/sceneBodies.ts`,
+    sourceLabel: `the app’s bodies, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-places',
+    about: 'app',
+    text: `The app’s search knows ${objects('place')} places on Earth. A place has no id and no link: the app flies there and writes nothing into its address.`,
+    source: `${REPO_BLOB}/src/data/palette/earthPlaces.ts`,
+    sourceLabel: `the places the search knows, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-stars',
+    about: 'app',
+    text: `${objects('star')} stars have a name and an id in the app, and so do ${objects('sStar')} stars in orbit round the black hole at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.`,
+    source: `${REPO_BLOB}/src/data/bodies/seededStarCatalogs.ts`,
+    sourceLabel: `the app’s named stars, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-galaxies',
+    about: 'app',
+    text: `${objects('galaxy')} galaxies have a name and a short id in the app, most of them a Messier or a Caldwell number.`,
+    source: `${REPO_BLOB}/data/seeds/famous_galaxies.seed.json`,
+    sourceLabel: `the named galaxies, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-structures',
+    about: 'app',
+    text: `The app’s list of named structures has ${objects('group')} galaxy groups, ${objects('cluster')} clusters, ${objects('supercluster')} superclusters and ${objects('void')} voids. The app also draws X-ray clusters and superclusters taken from catalogues, which come with its data files and are not listed on this page.`,
+    source: `${REPO_BLOB}/data/seeds/structure_anchors.seed.json`,
+    sourceLabel: `the named structures, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-objects-takeovers',
+    about: 'app',
+    text: `The app’s search lists ${objects('exhibit')} exhibits and ${objects('tour')} tours. The Zone of Avoidance is an exhibit only: the band itself has no id.`,
+    source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
+    sourceLabel: `the exhibits, ${IN_REPO}`,
     checked: CHECKED,
   },
 ];
