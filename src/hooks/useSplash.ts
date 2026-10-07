@@ -31,9 +31,6 @@
  * minutes on a slow mobile connection — while the opening view (Earth) needs
  * none of them: the sky fills in behind the visitor, and the HUD's loading bar
  * takes over from the splash's. Both buttons activate together.
- *
- * `status` is read from the Redux engine slice via `useAppSelector` rather
- * than threaded in as a prop.
  */
 
 import { useCallback, useMemo } from 'react';
