@@ -7,8 +7,7 @@ const IN_REPO = 'in the skymap repository';
 /**
  * What the Guide pages of the docs say the app does, spread into FACTS. Each
  * row was read from the file it cites and, where a key, a mouse or a touch
- * gesture can show it, tried in the app. The light-years of `zoom-limit` are
- * 60,000 megaparsecs at 3.2616 million light-years each.
+ * gesture can show it, tried in the app.
  */
 export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
@@ -30,25 +29,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'zoom-inputs',
     about: 'app',
-    text: 'The mouse wheel, a pinch on a trackpad and a two-finger pinch on a touch screen move the camera towards its target or away from it. A trackpad pinch counts eight times as much as the same amount of scrolling.',
+    text: 'The mouse wheel, a scroll or a pinch on a trackpad and a two-finger pinch on a touch screen move the camera towards its focus or away from it.',
     source: `${REPO_BLOB}/src/services/camera/orbitControls.ts`,
     sourceLabel: `the pointer and wheel handling, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'zoom-altitude',
-    about: 'app',
-    text: 'Near a planet or a moon one step of zoom is a share of the camera’s height above the surface, so the steps shrink as it comes down.',
-    source: `${REPO_BLOB}/src/utils/camera/zoomedDistance.ts`,
-    sourceLabel: `the zoom step, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'zoom-limit',
-    about: 'app',
-    text: 'The camera pulls back to 60,000 megaparsecs from its target, about 196 billion (196 thousand million) light-years, and no further.',
-    source: `${REPO_BLOB}/src/utils/camera/clampDistance.ts`,
-    sourceLabel: `the camera’s distance limits, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -62,7 +45,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'surface-controls',
     about: 'app',
-    text: 'When the camera comes lower over the planet or moon it is focused on than about 0.45 of that body’s radius, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button tilts the view towards the horizon and turns it. Above about 0.9 of a radius the ordinary controls return.',
+    text: 'When the camera comes down to less than about half the body’s radius above the planet or moon it is focused on, the controls change. A drag that starts on the ground slides the ground under the pointer, a drag that starts on the sky looks around, and a drag with the right or the middle button tilts the view towards the horizon and turns it.',
     source: `${REPO_BLOB}/src/utils/camera/latchSurfaceGesture.ts`,
     sourceLabel: `the controls near a surface, ${IN_REPO}`,
     checked: CHECKED,
@@ -126,7 +109,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'auto-rotate',
     about: 'app',
-    text: 'The play button in the top bar turns the camera slowly round its target until the button is pressed again. It has no key.',
+    text: 'The Auto-rotate button in the top bar turns the camera slowly round its focus until the button is pressed again. It has no key.',
     source: `${REPO_BLOB}/src/components/AutoRotateToggle/AutoRotateToggle.tsx`,
     sourceLabel: `the auto-rotate button, ${IN_REPO}`,
     checked: CHECKED,
@@ -142,7 +125,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'one-camera',
     about: 'app',
-    text: 'The camera always turns about a target. The keyboard does not fly it, and there is no second camera mode to switch to.',
+    text: 'The camera always turns about its focus. The keyboard does not fly it, and there is no second camera mode to switch to.',
     source: `${REPO_BLOB}/src/services/engine/camera/controlSchemes.ts`,
     sourceLabel: `the app’s one control scheme, ${IN_REPO}`,
     checked: CHECKED,

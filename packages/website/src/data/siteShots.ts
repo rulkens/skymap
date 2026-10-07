@@ -652,7 +652,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: FEATURE_WIDTHS,
     title: 'The top bar and the Navigation panel',
-    caption: 'Cut from a wider window. From the left, the bar holds the search, Home, auto-rotate and the welcome screen.',
+    caption: 'From the left, the bar holds the search box and the Home, Auto-rotate and About buttons.',
     drawn: 'The white ring marks the selected object, here Earth.',
     alt: 'A search box and three round buttons above Earth, and on the left a panel headed Navigation that lists drag, wheel, H, F, Esc and the search keys.',
     credit: 'Earth: NASA Blue Marble',
