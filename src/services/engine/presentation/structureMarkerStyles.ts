@@ -241,3 +241,6 @@ export const SIG_MIN_ALPHA = 0.25;
  * the HDR target has the headroom to show a colour above 1.
  */
 export const SELECTED_RING_BRIGHTEN = 1.6;
+
+/** The hover gain on a structure ring: a softer cue than the selected one, which outranks it. */
+export const HOVERED_RING_BRIGHTEN = 1.3;

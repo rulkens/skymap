@@ -18,6 +18,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import {
   STRUCTURE_MARKER_STYLES,
   SELECTED_RING_BRIGHTEN,
+  HOVERED_RING_BRIGHTEN,
 } from '../../../../src/services/engine/presentation/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -281,5 +282,30 @@ describe('produceStructureMarkers', () => {
       ['in', true],
       ['out', false],
     ]);
+  });
+
+  it('a hovered ring is brightened by HOVERED_RING_BRIGHTEN; a ring both hovered and selected by SELECTED_RING_BRIGHTEN', () => {
+    const hoverOn = (state: TestState, id: string) => {
+      state.selection = { ...state.selection, hover: { type: 'structure', id } };
+      return state;
+    };
+    const build = (state: TestState) => {
+      state.data.structures.setGroup('anchors', [
+        rec('a', 'cluster', { significance: 0 }),
+        rec('b', 'cluster', { significance: 0 }),
+      ]);
+      return produceStructureMarkers(state, makeCtx());
+    };
+    const plain = build(makeState()).find((m) => m.id === 'a')!;
+
+    const hovered = build(hoverOn(makeState(), 'a')).find((m) => m.id === 'a')!;
+    expect(hovered.ringColor[0]).toBeCloseTo(plain.ringColor[0] * HOVERED_RING_BRIGHTEN, 6);
+    expect(hovered.ringColor[3]).toBeCloseTo(plain.ringColor[3], 6);
+    // The neighbour is untouched.
+    const other = build(hoverOn(makeState(), 'a')).find((m) => m.id === 'b')!;
+    expect(other.ringColor[0]).toBeCloseTo(plain.ringColor[0], 6);
+
+    const both = build(hoverOn(makeState('a', 'a'), 'a')).find((m) => m.id === 'a')!;
+    expect(both.ringColor[0]).toBeCloseTo(plain.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
   });
 });

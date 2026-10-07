@@ -37,6 +37,7 @@ import {
   STRUCTURE_MARKER_STYLES,
   SIG_MIN_ALPHA,
   SELECTED_RING_BRIGHTEN,
+  HOVERED_RING_BRIGHTEN,
 } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -57,6 +58,7 @@ export function produceStructureMarkers(
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
   const selectedStructureId = structureIdOf(state.selection.select);
+  const hoveredStructureId = structureIdOf(state.selection.hover);
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Per-category marker opacity (the category toggle's fade) lives in the
@@ -159,9 +161,14 @@ export function produceStructureMarkers(
       style.haloColor[3] * weightedFade * recession * bandFade,
     ];
 
-    // Ring: same fade bake plus selection. The selected ring is brightened and
+    // Ring: same fade bake plus selection/hover. The selected ring is brightened and
     // recession-free; every other ring is scaled by the focus recession.
-    const ringGain = isSelected ? SELECTED_RING_BRIGHTEN : 1;
+    // Hover is the weaker cue and does not exempt the ring from recession.
+    const ringGain = isSelected
+      ? SELECTED_RING_BRIGHTEN
+      : p.id === hoveredStructureId
+        ? HOVERED_RING_BRIGHTEN
+        : 1;
     const ringColor: Vec4 = [
       style.ringColor[0] * ringGain,
       style.ringColor[1] * ringGain,
