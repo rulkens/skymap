@@ -1021,4 +1021,16 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A bright orange-white sheet crossing the frame from upper left to lower right and ending along a ruler-straight edge, with a field of points beyond it.',
     credit: 'Photograph: Brody Wesner, CC0',
   },
+  {
+    id: 'dev-debug-panel',
+    link: 'pose=a,0,0,0,2.1,0.35,260,0',
+    query: 'gpuTimings',
+    settings: { ui: true, debugPanel: true, settleMs: 6000, crop: { left: 500, top: 0, width: 700, height: 750 } },
+    size: FEATURE,
+    widths: [1400, 700],
+    title: 'The debug panel, 260 megaparsecs from the Sun',
+    caption: 'Opened with the D key, with the gpuTimings flag in the address. Cut from a wider window.',
+    drawn: 'The times are measured on the machine that took the picture and differ on every other.',
+    alt: 'A column of green text on black over a field of galaxies: asset loading, a frame rate, a list of drawing steps with a time in milliseconds beside each, then a list of folded headings.',
+  },
 ];

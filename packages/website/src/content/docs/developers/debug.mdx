@@ -1,0 +1,70 @@
+---
+description: The debug panel behind the D key, the flags an address can carry and the hooks our own tools use. All are for development and may change without notice.
+facts: [ref-settings-debug]
+---
+
+import { DOCS_DEBUG_SECTIONS } from '../../../data/docsDebugSections';
+import { DOCS_URL_PARAMS } from '../../../data/docsUrlParams';
+import { REPO_BLOB } from '../../../data/siteIdentity';
+
+export const DEV_FLAGS = DOCS_URL_PARAMS.filter((param) => param.development);
+
+Everything here works in the published app, so you can try it without a copy of the repository. None of it is needed to use skymap, and none of it is kept stable: a heading, a flag or a hook may be renamed or removed in any release.
+
+## The debug panel
+
+<Fact id="debug-open" />
+
+<Figure id="dev-debug-panel" />
+
+A heading with a triangle unfolds. <Fact id="debug-not-kept" inline /> The sliders reach values the [Settings panel](/docs/reference/settings/) does not offer.
+
+<Table
+  cols="detail"
+  head={['Heading', 'What it shows', 'Drawn by']}
+  rows={DOCS_DEBUG_SECTIONS.map((section) => [
+    section.heading,
+    section.shows,
+    { href: `${REPO_BLOB}/${section.file}`, label: section.file.split('/').at(-1) },
+  ])}
+/>
+
+## A link that holds the camera
+
+<Fact id="share-camera-link" />
+
+<Fact id="ref-pose-from-app" inline /> What the numbers of a pose mean is under [Camera positions](/docs/reference/url-parameters/#camera-positions).
+
+## Flags
+
+A flag goes after a `?` in the address, before the `#`. <Fact id="ref-params-query" inline />
+
+<Table
+  cols="detail"
+  head={['Flag', 'What it does', 'Skips the welcome screen']}
+  rows={DEV_FLAGS.map((param) => [
+    { code: param.example },
+    param.does,
+    param.skipsWelcome ? 'Yes' : 'No',
+  ])}
+/>
+
+<Example to="pose=a,0,0,0,2.1,0.35,260,0" query="gpuTimings" address label="Open this view with timings">
+  The view of the picture above. Press D once it has opened.
+</Example>
+
+After the `#`, `clip` plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the home page of this site opens. The flag `dome` and every other parameter are in [URL parameters](/docs/reference/url-parameters/).
+
+## Timings
+
+<Fact id="debug-timings" />
+
+Each row under GPU Timings is one drawing step of the frame, grouped as the frame is drawn; [The frame](/docs/rendering/) says what the steps are. The same numbers, taken at fixed views and written to a table, are what [`npm run perf`](/docs/developers/cli/#measuring) reports.
+
+## Hooks for scripts
+
+<Fact id="debug-hook" />
+
+<Fact id="debug-hook-modes" />
+
+They are how `npm run shot`, the speed test, the film recorder and the pictures of this site drive the app. The two development keys, <Keys of="D" /> and <Keys of="L" />, are in the [Controls](/docs/reference/controls/#for-development) tables.

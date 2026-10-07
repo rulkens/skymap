@@ -115,7 +115,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       {
         title: 'Debug panel and flags',
         path: '/docs/developers/debug/',
-        status: 'planned',
+        status: 'live',
       },
     ],
   },

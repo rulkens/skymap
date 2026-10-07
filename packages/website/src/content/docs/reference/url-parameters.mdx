@@ -243,16 +243,6 @@ A pose with the wrong number of values, a value that is not a number or a name t
 
 ## For development
 
-These flags are for the people who build skymap. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline />
-
-<Table
-  cols="detail"
-  head={['Flag', 'What it does', 'Skips the welcome screen']}
-  rows={DEV_FLAGS.map((param) => [
-    { code: param.example },
-    param.does,
-    param.skipsWelcome ? 'Yes' : 'No',
-  ])}
-/>
+Four flags are for the people who build skymap: <Codes of={DEV_FLAGS.map((param) => param.example)} />. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline /> What each does is on [Debug panel and flags](/docs/developers/debug/#flags).
 
 Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the home page of this site opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.
