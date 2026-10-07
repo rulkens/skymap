@@ -19,6 +19,7 @@ import Links from '../../components/Links.astro';
 import Note from '../../components/Note.astro';
 import RepoLink from '../../components/RepoLink.astro';
 import SourceLink from '../../components/SourceLink.astro';
+import Spans from '../../components/Spans.astro';
 import View from '../../components/View.astro';
 import Docs from '../../layouts/Docs.astro';
 
@@ -53,6 +54,7 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       Caveat,
       Source: SourceLink,
       Flow,
+      Spans,
       Repo: RepoLink,
     }}
   />

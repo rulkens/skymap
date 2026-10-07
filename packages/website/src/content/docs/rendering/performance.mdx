@@ -1,0 +1,52 @@
+---
+description: What a frame of skymap costs, what the cost grows with, how the repository measures it and what the renderer does to keep it down.
+facts: [screens-no-quality-setting, screens-dome-cost, sim-true-size]
+---
+
+There are no frame times on this page. A time is true of one graphics processor, one browser and one window, and we would sooner give you the tool than a number from our desk. What follows is what the cost grows with, which holds on any machine. To make the app run more smoothly on yours, see [When it stutters](/docs/guide/screens-and-domes/#when-it-stutters). [The frame](/docs/rendering/) names the steps that are timed here, and the [Science](/science/) page is the way back up.
+
+## Two kinds of work
+
+Nearly everything in a frame costs in one of two ways.
+
+**By the number of things.** A galaxy or a star is a few corners that the graphics processor must place, however small it ends up on screen. This work grows with the [data size](/docs/reference/glossary/#data-size) and does not care how large the window is.
+
+<Fact id="settings-size-totals" />
+
+<Fact id="render-galaxy-triangle" />
+
+Stars do not follow the count in the file as galaxies do: the choice of boxes on [Techniques](/docs/rendering/techniques/#stars) spends a fixed budget of stars each frame, so a larger file gives a sharper near field for about the same work.
+
+**By the number of pixels.** A glow, an atmosphere or the cosmic web costs for every pixel it covers, and many glows over the same pixel cost many times. This work grows with the window and does not care how many galaxies are loaded.
+
+<Fact id="render-reduced-targets" />
+
+The costliest pixel in the app is one of the cosmic web: 128 steps through the density cube. Bloom is ten more steps over the whole frame, most of them on small images. Dome mode draws the scene five times.
+
+## What the renderer does about it
+
+- **Nothing, when nothing changes.** <Fact id="screens-draws-on-change" inline />
+- **Work done once.** A galaxy’s tilt, luminosity and its weight in the density correction are worked out when its file arrives and stored with it. The two fixed tables of each atmosphere are made as the app starts.
+- **One call for many things.** A catalogue of galaxies is one draw call, a file of stars is two (its single stars and its summed boxes), and all the ground patches in view are one.
+- **Not drawing what cannot be seen.** Boxes of stars outside the view are dropped with everything inside them. Ground tiles behind the horizon or outside the view are never fetched. A planet too small to fill a pixel is one point.
+- **Smooth things at reduced size**, as above.
+- **Tables for sums.** The sky of an atmosphere and the bending of light round the black hole are looked up for each pixel, not worked out for it.
+- **A light hand on the processor.** <Fact id="render-cpu-galaxies" inline />
+
+On the smallest data size the sky table of each atmosphere is a ninth of its usual size as well: on a phone we tested, filling the full table was what made frames near a planet slow.
+
+## How it is measured
+
+<Fact id="render-perf-harness" />
+
+<Fact id="render-perf-timed" />
+
+<Fact id="render-perf-sweep" />
+
+The same times can be read live in the app’s debug panel: see [Debug panel and flags](/docs/developers/debug/). The tool also reports how much memory the app has asked the graphics processor for, by owner, and can run each place at all three data sizes in turn.
+
+To measure your own machine, run the app from the repository and then the tool against it; its <Repo path="tools/perf/README.md">notes</Repo> say how to read the report. The numbers are yours: another machine, browser or window size gives others.
+
+## Where this lives
+
+The tool is <Repo path="tools/perf" />; the timing inside the app is <Repo path="src/services/gpu/timing" />; the places it flies to are in <Repo path="tools/perf/perfScenarios.ts" />.

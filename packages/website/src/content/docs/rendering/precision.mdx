@@ -1,0 +1,75 @@
+---
+description: A graphics processor counts in numbers good for seven digits, and the scene needs more than twenty. What skymap does about that, and where it still shows.
+facts: [astronomical-unit, megaparsec-length, sci-horizon-shell]
+---
+
+You can stand in a park in Copenhagen and fly without a cut to where the map of galaxies ends. The graphics processor that draws both works in 32-bit floating-point numbers, which hold about seven digits. A position written in [megaparsecs](/docs/reference/glossary/#megaparsec) that is exact to a metre would need more than twenty. Two things break first: depth, which decides what is in front of what, and position, which begins to jump from one representable number to the next. [The frame](/docs/rendering/) is the page above this one; the [Science](/science/) page says what the scene holds.
+
+## Depth: one scene, several ranges
+
+<Fact id="render-depth-range" />
+
+<Fact id="render-slabs" />
+
+<Spans
+  label="The three kinds of range a frame is cut into, on a scale of distance from the camera"
+  min={-3}
+  max={27.2}
+  ticks={[
+    { at: 0, label: '1 metre' },
+    { at: 7, label: '10,000 km' },
+    { at: 11.17, label: 'Earth to the Sun' },
+    { at: 16.49, label: '1 parsec' },
+    { at: 22.49, label: '1 megaparsec' },
+    { at: 27.2, label: '50 gigaparsecs' },
+  ]}
+  spans={[
+    { name: 'Each planet, moon and model', from: -3, text: 'In metres, centred on the eye. It begins at the body’s near face, or at a ten-thousandth of the camera’s height above the body when the camera is close, and has no far limit.' },
+    { name: 'Stars and the Milky Way', from: 0.8, text: 'In megaparsecs from the Sun. It begins at a ten-thousandth of the camera’s height above what it circles, never under 6 metres, and has no far limit.' },
+    { name: 'Galaxies and beyond', from: 20.49, to: 27.19, text: 'In megaparsecs. Fixed, from 10 kiloparsecs to 50 gigaparsecs.' },
+  ]}
+/>
+
+The ranges are drawn from the farthest to the nearest, each over the last, so a planet covers the stars behind it without any comparison of depth between the two. Inside the galaxies’ range nothing hides anything (it is all light added to light), so that range has no depth buffer at all: its limits only say where drawing stops. The depth buffer belongs to the bodies, and each body in view clears it and uses the whole of it for itself.
+
+<Fact id="render-reversed-z" />
+
+N. Reed’s [“Visualizing Depth Precision”](https://developer.nvidia.com/blog/visualizing-depth-precision/) shows why with pictures. We came to it by a fault: before the change, the Sun seen from near Earth flickered against the far limit of its range, because one range had to begin close to the camera and still hold the orbit of Jupiter. The <Repo path="docs/superpowers/specs/completed/2026-07-20-reversed-z-near0-depth.md">design note</Repo> has the arithmetic.
+
+## Position: subtract first, then shrink
+
+<Fact id="render-double-then-single" />
+
+Earth is about 0.000000000005 megaparsecs from the Sun, and so is a camera above it. At that size, neighbouring 32-bit numbers are about 13 kilometres apart, so the two positions are the same number or a jump apart. Neighbouring 64-bit numbers are a fortieth of a millimetre apart. The difference of the two, taken in 64 bits, is small enough for 32 bits to hold well, and it is all the graphics processor needs.
+
+<Fact id="render-local-origins" />
+
+<Fact id="render-units" />
+
+One direction of this is a trap worth naming. To turn megaparsecs into metres you multiply by a number of 23 digits. Do that to the camera and to the planet and then subtract, and the rounding error of each has been multiplied too. The app subtracts in megaparsecs and multiplies the remainder.
+
+## Time
+
+<Fact id="render-time" />
+
+## Where it still shows
+
+<Fact id="render-near-cut" />
+
+<Figure id="render-near-cut" />
+
+<Example to="focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.012,0" label="Open Andromeda from 12 kiloparsecs">The view in the picture. Zoom out and the edge moves off the galaxy.</Example>
+
+The Milky Way’s own disc was cut the same way on the flight in to the Sun, which is why it is drawn in the near range now. Other galaxies are still in the far one.
+
+<Fact id="render-painter" />
+
+<Fact id="render-trail-edge" />
+
+<Fact id="render-clip-floor" />
+
+<Fact id="render-floors" />
+
+## Where this lives
+
+The ranges are derived each frame in <Repo path="src/services/engine/frame/slabs.ts" />, the step from megaparsecs to metres is <Repo path="src/services/engine/camera/bodyRelativePose.ts" />, and the decision to give every object its own origin is recorded in <Repo path="docs/adrs/0010-continuous-floating-origin-for-free-zoom.md">a design record</Repo>.

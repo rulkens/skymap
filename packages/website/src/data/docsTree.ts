@@ -87,7 +87,12 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     name: 'Rendering',
     purpose: 'How one frame is drawn, from catalogue rows to pixels.',
     up: '/science/',
-    pages: [{ title: 'The frame', path: '/docs/rendering/', status: 'planned' }],
+    pages: [
+      { title: 'The frame', path: '/docs/rendering/', status: 'live' },
+      { title: 'Techniques', path: '/docs/rendering/techniques/', status: 'live' },
+      { title: 'Precision across scales', path: '/docs/rendering/precision/', status: 'live' },
+      { title: 'Performance', path: '/docs/rendering/performance/', status: 'live' },
+    ],
   },
   {
     name: 'Project',

@@ -1,0 +1,160 @@
+---
+description: How skymap draws each kind of thing, from a galaxy that is one triangle to a black hole that bends the sky, with the paper each method comes from.
+facts: [sci-tone, sci-surfaces, sci-planet-maps, sim-true-size, sim-point-floor]
+---
+
+Each section says what the problem is, what the app does about it, where the method comes from and where ours departs from it. The order in which these are drawn is on [The frame](/docs/rendering/); what each stands for, and how far to trust it, is on the [Science](/science/) page. Only what the app draws today is here.
+
+## Galaxies
+
+The catalogues hold up to about three million galaxies, and from far out nearly all of them are smaller than a pixel. Up close, one galaxy can fill the window. No single way of drawing does both.
+
+<Fact id="render-galaxy-triangle" />
+
+<Fact id="sci-galaxy-discs" />
+
+<Figure id="render-lod" />
+
+<Fact id="render-galaxy-fades" />
+
+<Fact id="render-galaxy-disc" />
+
+The pictures are fetched as a galaxy grows on screen, from <Source id="sdss-images">SDSS</Source> or the <Source id="dss">Digitized Sky Survey</Source>. The black sky of a survey picture is made clear by its own darkness, so the galaxy sits on the points behind it without a square edge.
+
+<Fact id="render-galaxy-atlas" />
+
+Where this lives: <Repo path="src/layers/galaxyCatalog" /> and <Repo path="src/services/gpu/shaders/galaxyCatalog" />.
+
+## Stars
+
+Stars pose the galaxies’ problem with two additions: there are four times as many, and the camera flies among them, so the ones worth drawing change with every move.
+
+<Fact id="render-star-tree" />
+
+<Figure id="render-stars" />
+
+<Fact id="render-star-knee" />
+
+<Fact id="sim-exposure" />
+
+The data is <Source id="gaia">Gaia</Source>’s; [From catalogue to pixels](/docs/data/pipeline/#stars) says how the tree is built. A star the camera comes close to is drawn as a sphere of its true size, and so is the Sun.
+
+Where this lives: <Repo path="src/layers/starCatalog" /> and <Repo path="src/services/gpu/shaders/starCatalog" />.
+
+## Planets, moons and rings
+
+<Fact id="render-sphere" />
+
+<Fact id="render-body-light" />
+
+The law is from M. Minnaert, [“The reciprocity principle in lunar photometry”](https://doi.org/10.1086/144279) (The Astrophysical Journal 93, 1941). It was written for the Moon. We use it for decks of cloud and haze, and leave the Moon and the other airless bodies on the plain cosine. Where a body has a map of its relief, the direction each point of the surface faces is taken from it, so craters and ridges catch the light without being modelled.
+
+<Fact id="render-earth" />
+
+<Fact id="render-rings" />
+
+<Figure id="saturn" />
+
+The formulas are those of S. Chandrasekhar’s “Radiative Transfer” (1960), as used by L. Dones, J. N. Cuzzi and M. R. Showalter in [“Voyager Photometry of Saturn’s A Ring”](https://doi.org/10.1006/icar.1993.1118) (Icarus 105, 1993). Ours keeps single scattering only and a simpler rule for the direction particles scatter in, and takes the rings’ density from the map of them, not from a measurement.
+
+Where this lives: <Repo path="src/services/gpu/shaders/bodies" /> and <Repo path="src/services/gpu/shaders/lib" />.
+
+## Atmospheres
+
+Sky colour, the red of a sunset and the thin blue line at the edge of a planet all come from one thing: sunlight scattered on its way through air. Working it out exactly means following light along every line of sight, for every pixel, in every frame.
+
+<Fact id="sci-atmospheres" />
+
+<Figure id="render-limb" />
+
+<Fact id="render-atmosphere-tables" />
+
+The first to make this fast was E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (Computer Graphics Forum 27, 2008): do the sums once and keep the answers in tables, one of them of four dimensions. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (Computer Graphics Forum 39, 2020), did away with the large table by treating light that has scattered more than once as the same in every direction. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire. What we add is the air of other worlds: each body has its own list of up to four gases and hazes, each with a colour, a spread over height and a way of scattering.
+
+<Fact id="render-aerial" />
+
+Where this lives: <Repo path="src/services/gpu/shaders/atmosphere" /> and <Repo path="src/data/bodies/atmosphereParams.ts" />.
+
+## The ground on Earth and Mars
+
+A map of all Earth sharp enough for a park would not fit in any graphics processor’s memory, and almost none of it would be in view.
+
+<Fact id="pipe-earth-tiles" />
+
+<Fact id="render-terrain" />
+
+<Figure id="guide-surface" />
+
+<Fact id="render-terrain-fallback" />
+
+This is the family of methods called virtual texturing: the picture is far larger than memory, and only the parts in view, at the sharpness the screen can show, are held. The usual form keeps a table on the graphics processor that says where each part is. Ours has none: the one walk on the processor that decides what to fetch also says, for each patch, which square of the shared texture to read. Heights are stored as colours, one height to a pixel, and the patch’s slope is worked out from its neighbours’ heights for every pixel, at the full detail of the height tile and not that of the mesh.
+
+Earth’s tiles are <Source id="nasa-blue-marble">Blue Marble</Source>, <Source id="eox">EOxCloudless</Source> and the <Source id="geodanmark">GeoDanmark orthophoto</Source> over heights from <Source id="etopo">ETOPO 2022</Source>, the <Source id="skadi">skadi tiles</Source> and <Source id="dhm">Denmark’s height model</Source>; Mars is the <Source id="viking">Viking mosaic</Source> over <Source id="mola">MOLA</Source>.
+
+Where this lives: <Repo path="src/utils/surfaceTiles" /> and <Repo path="src/services/gpu/shaders/bodies/surfaceTile" />.
+
+## 3D models
+
+<Fact id="render-mesh" />
+
+<Figure id="hubble" />
+
+The way of reading the surroundings from a cube blurred by roughness is from B. Karis, [“Real Shading in Unreal Engine 4”](https://blog.selfshadow.com/publications/s2013-shading-course/) (SIGGRAPH 2013 course). Ours has one light, the Sun, and no fill light: the dark side of a spacecraft is lit only by what the cube holds.
+
+Where this lives: <Repo path="src/services/gpu/shaders/bodies/meshBody" />.
+
+## The Milky Way
+
+<Fact id="sci-milky-way" />
+
+<Fact id="sci-milky-way-points" />
+
+<Figure id="milky-way-drawn" />
+
+<Fact id="render-milky-way-dust" />
+
+Where this lives: <Repo path="src/layers/milkyWay" /> and <Repo path="src/services/gpu/shaders/milkyWay/sprites" />.
+
+## The cosmic web
+
+<Fact id="sci-density-field" />
+
+<Fact id="render-density-march" />
+
+The cube is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s, made with the Monte Carlo Physarum Machine of J. N. Burchett and others, [“Revealing the Dark Threads of the Cosmic Web”](https://arxiv.org/abs/2003.04393) (2020), and O. Elek and others, [“Polyphorm”](https://arxiv.org/abs/2009.02441) (2020). The app does not run the simulation; it draws the result. <Source id="polyphorm">Polyphorm</Source> is the program the method was first built into. The colour ramp is <Source id="colormaps">inferno</Source>. Each pixel starts its steps at a slightly different depth, which trades the bands a regular march leaves for a fine grain.
+
+<Fact id="sci-filaments" />
+
+<Fact id="render-lines" />
+
+<Figure id="filaments-derived" />
+
+Where this lives: <Repo path="src/layers/cosmicWebDensity" />, <Repo path="src/services/gpu/shaders/scalarVolume" /> and <Repo path="src/layers/cosmicWebFilaments" />.
+
+## The black hole
+
+<Fact id="sci-black-hole" />
+
+<Fact id="render-lens" />
+
+<Figure id="render-black-hole" />
+
+The approach is that of E. Bruneton, [“Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735) (2020), which finds where each bent ray meets the scene from precomputed tables. We use none of its code. Our one table holds the bending alone, and the disc is found by a short march along each ray.
+
+Where this lives: <Repo path="src/layers/blackHoles" /> and <Repo path="src/services/gpu/shaders/bodies/blackHoleLensing" />.
+
+## Names
+
+<Fact id="render-labels" />
+
+The method is that of [msdfgen](https://github.com/Chlumsky/msdfgen), by V. Chlumský, which also makes our texture, once, when the app is built. The typeface is <Source id="font-cormorant">Cormorant</Source>.
+
+Where this lives: <Repo path="src/services/gpu/shaders/labels" /> and <Repo path="src/services/gpu/labelLayout" />.
+
+## Bloom, tone curves and HDR
+
+[The frame](/docs/rendering/#light-to-screen) says where these run. Bloom follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six.
+
+Three of the five tone curves have a source. Reinhard is from E. Reinhard, M. Stark, P. Shirley and J. Ferwerda, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (ACM Transactions on Graphics 21, 2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004), written for colour pictures of the sky that must show faint things beside bright ones. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
+
+<Fact id="settings-hdr" />
