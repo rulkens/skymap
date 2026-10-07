@@ -266,8 +266,8 @@ seed-only category does not.
 
 - **Stage specific paths** — never `git add -A`/`.` (the repo has unrelated
   gitignored build artifacts). Format **only** touched files.
-- Branch + PR; commit under the user's git identity with the
-  `Co-Authored-By: Claude …` trailer (project rules).
+- Branch + PR; commit under the user's git identity, with no
+  `Co-Authored-By` trailer.
 - A seed-only category (like `group` or the Milky Way ones) ships no `.bin` — code + seed only. A new
   survey or a category with a bulk `.ccat` also needs `build-tiers` +
   `sync-r2-secure` **from the main checkout** (worktrees have throwaway
