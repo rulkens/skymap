@@ -64,7 +64,10 @@ describe('roadmap', () => {
     const unbacked = items.filter(
       (item) =>
         (item.state === 'in progress') !==
-        (item.built !== undefined && existsSync(join(ROOT, item.built))),
+        // Code, not a manual: a README can describe what is not built.
+        (item.built !== undefined &&
+          !item.built.endsWith('.md') &&
+          existsSync(join(ROOT, item.built))),
     );
     expect(unbacked.map((item) => item.id)).toEqual([]);
   });

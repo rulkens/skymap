@@ -74,6 +74,25 @@ describe('Developer workbenches page', () => {
     );
   });
 
+  // The two tests above compare sets, which two tools with their ports swapped would pass.
+  it('gives each tool the port and the path its own Vite config names', () => {
+    const served = WORKBENCHES.filter((bench) => bench.port !== undefined);
+    const fromConfig = served.map((bench) => {
+      const script = pkg.scripts[bench.script as keyof typeof pkg.scripts];
+      const config = read(/--config (\S+)/.exec(script)![1]!);
+      const port = /DEV_PORTS\.(\w+)/.exec(config)![1] as keyof typeof DEV_PORTS;
+      const page = /\{toolPages\.(\w+)\}/.exec(config)?.[1] as keyof typeof toolPages | undefined;
+      return {
+        id: bench.id,
+        port: DEV_PORTS[port],
+        publicPath: page && `/${toolPages[page]}/`,
+      };
+    });
+    expect(fromConfig).toEqual(
+      served.map(({ id, port, publicPath }) => ({ id, port, publicPath })),
+    );
+  });
+
   it('names a script and a manual that exist', () => {
     expect(
       WORKBENCHES.filter(
