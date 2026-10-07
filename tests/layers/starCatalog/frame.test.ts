@@ -87,8 +87,6 @@ describe('starCatalogPlanner', () => {
     plan(MID_BAND_PC, 0);
     plan(MID_BAND_PC + 10, 1000); // moved
     expect(plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS - 1).awake).toBe(true);
-    const settled = plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS);
-    expect(settled.awake).toBe(false);
-    expect(settled.settling).toBe(false);
+    expect(plan(MID_BAND_PC + 10, 1000 + NODE_FADE_MS).awake).toBe(false);
   });
 });

@@ -43,6 +43,11 @@ export const AGG_DRAW_BYTE_OFFSET = DRAW_RECORD_WORDS * WORD_BYTES;
 /** Each record's vertex count: one circumscribing triangle per instance. */
 const BILLBOARD_VERTEX_COUNT = 3;
 
+/** `CUT_BINS_PER_OCTAVE`, `MIN_DIST_SQ` and `HALF_DIAGONAL` in `cut.wesl`. */
+export const CUT_BINS_PER_OCTAVE = 64;
+export const MIN_DIST_SQ = 1e-15;
+export const HALF_DIAGONAL = 0.8660254;
+
 /** `struct CutStream`: one u32 padded to a uniform's 16 bytes. */
 export const CUT_STREAM_BYTES = 16;
 

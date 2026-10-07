@@ -77,6 +77,8 @@ describe('starAggregatesPass', () => {
     const args = drawCut.mock.calls[0]![1];
     expect(args.stream).toBe('aggregate');
     expect(args.viewportPx).toEqual([640, 360]);
+    // Half the rows over the same frustum: half the pixels per radian.
+    expect(args.pxPerRad).toBe(300);
     // One SlabView is shared by every layer in the render step.
     expect(view.viewportPx).toEqual([1280, 720]);
   });
@@ -85,6 +87,7 @@ describe('starAggregatesPass', () => {
     const { runtime, drawCut } = makeRuntime();
     starAggregatesPass(runtime).draw!(PASS_STUB, makeNear0View(), makeCtx(true), STATE);
     expect(drawCut.mock.calls[0]![1].viewportPx).toEqual([256, 256]);
+    expect(drawCut.mock.calls[0]![1].pxPerRad).toBe(600);
   });
 
   // `star-upsample` knees the summed half-res field; a capture face has no

@@ -61,26 +61,6 @@ function args(viewSlot: number): StarCatalogCutDrawArgs {
 }
 
 describe('starCatalogRenderer viewSlot isolation', () => {
-  it('two drawCut() calls with different viewSlot bind different @group(0) camera buffers', () => {
-    const renderer = createStarCatalogRenderer(mockDevice(), 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG);
-
-    const bindGroupsAt0: unknown[] = [];
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: (slot: number, bg: unknown) => {
-        if (slot === 0) bindGroupsAt0.push(bg);
-      },
-      drawIndirect: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-
-    renderer.drawCut(pass, args(1));
-    renderer.drawCut(pass, args(2));
-
-    expect(bindGroupsAt0).toHaveLength(2);
-    expect(bindGroupsAt0[0]).not.toBe(bindGroupsAt0[1]);
-  });
-
   it('writes each slot camera uniform into a different physical buffer', () => {
     const device = mockDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');

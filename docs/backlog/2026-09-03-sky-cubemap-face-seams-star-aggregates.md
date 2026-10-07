@@ -11,9 +11,18 @@ In the lensed view, the cube-face boundaries of the sky cubemap are visible as
 seams wherever the Gaia star-aggregate gaussians are drawn. Point content
 (galaxy sprites, resolved catalog stars) crosses the same boundaries cleanly.
 
+## Status 2026-10-07
+
+Capture faces draw a cut with no frustum cull at all (`starCutGpu.ts`, the
+capture state passes no planes), which is fix candidate 3 below. That removes
+the first two mechanisms by construction; the third (parallax from the bake
+eye while strafing) is untouched. Not yet re-checked by eye in the lens band:
+if the seams are gone, delete this item; if they remain, only the third
+candidate is left.
+
 ## Mechanism (hypothesis, unverified)
 
-Each capture face is a 90° frustum. The star-catalog renderer frustum-culls
+Each capture face was a 90° frustum. The star-catalog renderer frustum-culls
 octree nodes per face against a bounding sphere
 (`starCatalogRenderer.ts`, the `cullRadius` branch): for aggregate nodes the
 sphere is the box half-diagonal scaled by `spread`, with no angular floor — the
