@@ -12,9 +12,9 @@ const { label } = Astro.props;
 
 const W = 360;
 const ROW = 84;
-const CENTRE = 236;
+const CENTRE = 214;
 const RADIUS = 20;
-const STRETCH = 4.4;
+const STRETCH = 6.5;
 
 // Mulberry32: the dots must be the same on every build, and the same in both rows.
 let seed = 20261007;
@@ -33,8 +33,8 @@ const dots = Array.from({ length: 46 }, () => {
   return { x: r * Math.cos(angle), y: r * Math.sin(angle), shift: velocity * RADIUS * STRETCH };
 });
 const rows = [
-  { name: 'In space', y: ROW / 2, at: (dot: (typeof dots)[number]) => dot.x },
-  { name: 'In a map made from redshifts', y: ROW * 1.5, at: (dot: (typeof dots)[number]) => dot.x + dot.shift },
+  { y: ROW / 2, at: (dot: (typeof dots)[number]) => dot.x },
+  { y: ROW * 1.5, at: (dot: (typeof dots)[number]) => dot.x + dot.shift },
 ];
 ---
 

@@ -11,7 +11,7 @@ type Props = { say: string };
 const { say } = Astro.props;
 ---
 
-<p class="formula" data-embed role="math" aria-label={say}><slot /></p>
+<div class="formula" data-embed role="math" aria-label={say}><slot /></div>
 
 <style>
   .formula {
@@ -23,5 +23,11 @@ const { say } = Astro.props;
     font-variant-numeric: normal;
     line-height: 1.7;
     overflow-wrap: anywhere;
+  }
+
+  /* MDX sets the equation in a paragraph of its own; the rules are the block's, not that paragraph's. */
+  .formula :global(p) {
+    margin: 0;
+    color: inherit;
   }
 </style>
