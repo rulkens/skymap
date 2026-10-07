@@ -14,8 +14,11 @@ import {
   DOCS_COMMANDS_UNLISTED,
 } from '../../../packages/website/src/data/docsCommands';
 import { DOCS_DEBUG_SECTIONS } from '../../../packages/website/src/data/docsDebugSections';
+import { WORKBENCHES } from '../../../packages/website/src/data/workbenches';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
 import { layerUiContents } from '../../../src/utils/layer/layerUiContents';
+import { DEV_PORTS } from '../../../tools/utils/io/devPorts';
+import { toolPages } from '../../../tools/utils/io/toolPages';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const sorted = (names: readonly string[]) => [...names].sort();
@@ -52,5 +55,30 @@ describe('Debug page', () => {
       );
     });
     expect(missing.map((section) => section.heading)).toEqual([]);
+  });
+});
+
+describe('Developer workbenches page', () => {
+  // The app and this site have rows in both tables and are not workbenches.
+  it('lists every page built beside the app, at its path', () => {
+    const published = Object.entries(toolPages).filter(([name]) => name !== 'website');
+    expect(sorted(WORKBENCHES.flatMap((bench) => bench.publicPath ?? []))).toEqual(
+      sorted(published.map(([, folder]) => `/${folder}/`)),
+    );
+  });
+
+  it('lists every tool that has a port, on its port', () => {
+    const ports = Object.entries(DEV_PORTS).filter(([name]) => !['main', 'website'].includes(name));
+    expect(sorted(WORKBENCHES.flatMap((bench) => (bench.port ? String(bench.port) : [])))).toEqual(
+      sorted(ports.map(([, port]) => String(port))),
+    );
+  });
+
+  it('names a script and a manual that exist', () => {
+    expect(
+      WORKBENCHES.filter(
+        (bench) => !(bench.script in pkg.scripts) || !existsSync(join(ROOT, bench.manual)),
+      ),
+    ).toEqual([]);
   });
 });

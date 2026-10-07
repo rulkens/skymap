@@ -105,7 +105,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       {
         title: 'Developer workbenches',
         path: '/docs/developers/workbenches/',
-        status: 'planned',
+        status: 'live',
       },
       {
         title: 'Command-line tools',

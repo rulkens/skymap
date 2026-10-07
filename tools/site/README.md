@@ -44,6 +44,14 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - What costs bytes is every pixel changing: a full orbit of a dense field of points (Laniakea) is 1.8 MB at the starting CRF, a sway of 5 degrees fits the cap. Choose the motion before raising the cap.
 - Look at each film after a run: a camera orbit passes the night side of a planet, which is true and dark.
 
+## Workbench pictures
+
+`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest.
+
+- The three published ones are taken from the published site (`https://skymap.rulkens.com/galaxy/`); the scene workbench and the curator from their own dev servers; the structure audit from the file `npm run structure-audit` writes (`file://…/tools/structure-audit/out/structureAudit.html`).
+- A tool's dev server shares the app's dependency cache (`node_modules/.vite`) and re-optimises it. Beside a running app server, give the tool a `cacheDir` of its own.
+- `--settle <ms>` is the wait before the shot (12 s if left out): the scene workbench needs about 25 s to stream its splats.
+
 ## Link check
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. The only pages a link may point at before they exist are the `planned` rows of the docs tree (`packages/website/src/data/docsTree.ts`); such links are reported as pending. The check fails if a planned page now exists, so the PR that writes a page sets its row to `live`.

@@ -1,0 +1,135 @@
+---
+/*
+ * WorkbenchFigure — `<WorkbenchFigure id="galaxy" />` on a docs page: the
+ * picture of one workbench (data/workbenches.ts) with its label. A workbench
+ * is not a view of the app, so it is not a row of the shot manifest and its
+ * label has no "Open this view"; like an interface shot it runs nine columns
+ * wide, and opens larger in the page's FigureSheet.
+ */
+import { WORKBENCHES, WORKBENCH_WIDTHS, WORKBENCH_WINDOW } from '../data/workbenches';
+
+type Props = { id: string };
+
+const { id } = Astro.props;
+const row = WORKBENCHES.find((workbench) => workbench.id === id);
+if (!row) throw new Error(`Unknown workbench "${id}" (see src/data/workbenches.ts)`);
+
+const FILES = import.meta.glob<string>('../assets/workbenches/*.{avif,webp}', {
+  eager: true,
+  query: '?url&no-inline',
+  import: 'default',
+});
+const url = (width: number, ext: string) => {
+  const file = FILES[`../assets/workbenches/${id}-${width}.${ext}`];
+  if (!file) throw new Error(`No ${ext} at ${width}px for workbench "${id}": run tools/site/shootWorkbench.ts`);
+  return file;
+};
+const srcset = (ext: string) => WORKBENCH_WIDTHS.map((width) => `${url(width, ext)} ${width}w`).join(', ');
+const widest = Math.max(...WORKBENCH_WIDTHS);
+// As DocFigure's wide figure: nine columns of the page grid, then the text's seven, then the screen.
+const sizes = '(max-width: 900px) 100vw, (max-width: 1239px) calc(75vw - 4.875rem), 53.25rem';
+const sheet = {
+  href: url(widest, 'webp'),
+  'data-enlarge': row.picture.title,
+  'data-width': WORKBENCH_WINDOW.width,
+  'data-height': WORKBENCH_WINDOW.height,
+  'data-file-width': widest,
+};
+---
+
+<figure data-embed>
+  <a class="picture" tabindex="-1" {...sheet}>
+    <picture>
+      <source type="image/avif" srcset={srcset('avif')} sizes={sizes} width={WORKBENCH_WINDOW.width} height={WORKBENCH_WINDOW.height} />
+      <img
+        src={url(Math.min(...WORKBENCH_WIDTHS), 'webp')}
+        srcset={srcset('webp')}
+        sizes={sizes}
+        width={WORKBENCH_WINDOW.width}
+        height={WORKBENCH_WINDOW.height}
+        alt={row.picture.alt}
+        loading="lazy"
+        decoding="async"
+      />
+    </picture>
+    <span class="unseen" data-pagefind-ignore>Open this picture larger</span>
+  </a>
+  <figcaption class="small">
+    <p>
+      <strong>{row.picture.title}</strong>
+      {row.picture.caption}
+      {row.picture.credit && ` Credit: ${row.picture.credit}.`}
+    </p>
+    <a class="ring small" data-pagefind-ignore {...sheet}>Enlarge</a>
+  </figcaption>
+</figure>
+
+<style>
+  .picture {
+    display: block;
+    cursor: zoom-in;
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* The label of a manifest picture (ShotCaption): a faint rule, the title a step brighter than its sentence. */
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.5rem;
+    align-items: start;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgb(232 238 255 / 0.2);
+    line-height: 1.4;
+  }
+
+  p {
+    max-width: 34rem;
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  strong {
+    display: block;
+    font-weight: inherit;
+    color: var(--site-text-muted);
+  }
+
+  .ring {
+    color: var(--site-text-dim);
+  }
+
+  @media (max-width: 900px) {
+    .picture {
+      margin-inline: calc(-1 * var(--gutter));
+    }
+  }
+
+  /* Out to the page's right edge and in front of the page's own headings, as DocFigure's wide figure is. */
+  @media (min-width: 901px) {
+    figure {
+      --figure-out: calc((var(--cols) - 9) * ((100% - (var(--cols) - 1) * var(--col-gap)) / var(--cols) + var(--col-gap)));
+    }
+  }
+
+  @media (min-width: 1200px) {
+    figure {
+      position: relative;
+      z-index: 1;
+    }
+
+    figure::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      inset: -2.5rem 0;
+      background: linear-gradient(rgb(0 0 0 / 0), var(--color-bg) 2.5rem, var(--color-bg) calc(100% - 2.5rem), rgb(0 0 0 / 0));
+    }
+  }
+</style>
