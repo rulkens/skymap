@@ -3,7 +3,7 @@
  * Recorded — a passage of the repository's licence record set apart from the
  * page's own words as a quotation: behind a rule, under a line that says
  * whose words they are and the day the holder's pages were read. `read` is
- * the rest of the entry's Checked bullet, printed where it names an address.
+ * the rest of the entry's Checked bullet: the pages opened, or why none was.
  * Inside it a holder's own words stand behind a second, brighter rule.
  */
 import RecordText from './RecordText.astro';
@@ -18,9 +18,9 @@ const { checked, read = '' } = Astro.props;
   <p class="small">From our licence record, as read on {formatDate(checked)}</p>
   <slot />
   {
-    /https?:/.test(read) && (
+    read && (
       <p class="small">
-        Pages read: <RecordText text={read} phrase />
+        Read that day: <RecordText text={read} phrase />
       </p>
     )
   }
