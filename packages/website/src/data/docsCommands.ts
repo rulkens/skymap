@@ -22,7 +22,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
     rows: [
       {
         scripts: ['fetch-data'],
-        does: 'Downloads the built data files of the published app into public/data/, so that a fresh copy of the repository has something to draw.',
+        does: 'Downloads the published app’s built data files into public/data/, so that a fresh copy of the repository has something to draw.',
         manual: DATA,
       },
       {
@@ -37,7 +37,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['preview'],
-        does: 'Serves what build wrote.',
+        does: 'Serves what the build wrote.',
         manual: DEPLOY,
       },
     ],
@@ -63,7 +63,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-structures',
           'fetch-textures',
         ],
-        does: 'Each downloads raw files into data/raw/: one source each, except fetch-structures, which fetches both cluster catalogues. fetch-dhm and fetch-skraafoto need an API key.',
+        family: 'fetch-<source>',
+        does: 'One for each source, downloading its raw files into data/raw/: <sources>. The one for structures fetches both cluster catalogues; those for dhm and skraafoto need an API key.',
         manual: DATA,
       },
       {
@@ -73,7 +74,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-stars-rs', 'build-stars'],
-        does: 'Write the star files at each data size. The first is the Rust build, which the published files come from; the second is the reference build in TypeScript.',
+        does: 'Write the star files at each data size: the first in Rust, which the published files come from, the second the reference build in TypeScript.',
         manual: 'tools/stars-rs/README.md',
       },
       {
@@ -155,7 +156,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['record-tour', 'record-clip'],
-        does: 'Record a tour, or one flight of the camera, frame by frame into an MP4 film. A slow frame costs time and never smoothness.',
+        does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time and never smoothness.',
         manual: RECORD,
       },
       {
@@ -197,7 +198,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
     rows: [
       {
         scripts: ['typecheck', 'typecheck:fast'],
-        does: 'Check the types of the app, the tools and this site. The second uses the preview of the TypeScript 7 compiler and is faster; the first is the one a pull request has to pass.',
+        does: 'Check the types of the app, the tools and this site. The second uses the preview of the TypeScript 7 compiler and is faster; a pull request has to pass the first.',
         manual: CONTRIBUTING,
       },
       {
@@ -217,7 +218,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['move-files', 'refactor'],
-        does: 'Move or rename files and rewrite every import that names them; refactor also renames, extracts, inlines and deletes a symbol across the repository.',
+        does: 'Move or rename files and rewrite every import that names them; the second also renames, extracts, inlines and deletes a symbol across the repository.',
         manual: '.claude/skills/refactor/SKILL.md',
       },
     ],
@@ -268,8 +269,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
 ];
 
 /**
- * Scripts of the root package.json that the page leaves out, with the reason
- * the page gives for each kind.
+ * Scripts of the root package.json that the page leaves out, by the reason:
+ * the page says the kinds in one sentence and names none of them.
  */
 export const DOCS_COMMANDS_UNLISTED: readonly { why: string; scripts: readonly string[] }[] = [
   {

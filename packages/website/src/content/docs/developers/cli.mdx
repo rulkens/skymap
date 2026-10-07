@@ -1,48 +1,31 @@
 ---
-description: The npm run commands of the skymap repository, by task, each with what it does in one line and the file that documents it.
-facts: [cli-unlisted-deploy]
+description: The npm run commands a developer types in the skymap repository, by task.
+facts: [cli-scripts, cli-arguments, cli-running-app, cli-unlisted-deploy]
 ---
 
-import { DOCS_COMMANDS, DOCS_COMMANDS_UNLISTED } from '../../../data/docsCommands';
+import pkg from '../../../../../../package.json';
+import { DOCS_COMMANDS } from '../../../data/docsCommands';
 import { REPO_BLOB } from '../../../data/siteIdentity';
 
+export const NODE = pkg.engines.node.replace('>=', '');
+
+export const members = (row) =>
+  row.does.replace('<sources>', row.scripts.map((name) => name.slice(row.family.indexOf('<'))).join(', '));
+
 export const commands = (id) => ({
-  cols: 'detail',
-  head: ['Command', 'What it does', 'Manual'],
+  head: ['Command', 'What it does', 'Read'],
   rows: DOCS_COMMANDS.find((group) => group.id === id).rows.map((row) => [
-    { codes: row.scripts },
-    row.does,
+    { codes: row.family ? [row.family] : row.scripts },
+    row.family ? members(row) : row.does,
     { href: `${REPO_BLOB}/${row.manual}`, label: row.manual },
   ]),
 });
 
-export const Unlisted = () => (
-  <ul>
-    {DOCS_COMMANDS_UNLISTED.map((kind) => (
-      <li>
-        {kind.scripts.map((name, i) => (
-          <>
-            {i > 0 && ', '}
-            <code>{name}</code>
-          </>
-        ))}
-        : {kind.why}.
-      </li>
-    ))}
-  </ul>
-);
-
-<Fact id="cli-scripts" />
+Each is a script in the `package.json` at the root of the repository and needs Node {NODE} or later. Everything after a bare `--` is handed to the tool:
 
 ```
 npm run shot -- 'focus=body-saturn' --url http://localhost:5173
 ```
-
-<p>
-  <Fact id="cli-arguments" inline /> <Fact id="cli-running-app" inline />
-</p>
-
-How the data is built, and in what order to run the data commands, is in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>; [From catalogue to pixels](/docs/data/pipeline/) tells the same story without the flags. The renderer has its own notes, <Repo path="docs/RENDERER.md" />.
 
 ## Run and build
 
@@ -50,11 +33,13 @@ How the data is built, and in what order to run the data commands, is in the rep
 
 ## Data
 
-Most of these read raw files that are not in the repository. `fetch-data` is the only one needed to run the app with its data.
+Most read raw files that are not in the repository; only `fetch-data`, above, is needed to run the app with its data. Their order is in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>, and [From catalogue to pixels](/docs/data/pipeline/) tells the same story without the flags.
 
 <Table {...commands('data')} />
 
 ## Pictures and films
+
+`capture-featured`, `site:shots` and `site:loops` drive an app that is already running and take its address after `--url`, as `perf` does; so do `record-tour` and `record-clip` unless they are given `--serve`. `shot` starts an app itself when it is given no address.
 
 <Table {...commands('pictures-and-films')} />
 
@@ -78,8 +63,4 @@ What each one is for is on [Developer workbenches](/docs/developers/workbenches/
 
 ## Left out
 
-The tables leave out these scripts of `package.json`:
-
-<Unlisted />
-
-The steps of publishing are in the repository’s <Repo path="docs/DEPLOY.md">deployment notes</Repo>.
+The tables leave out scripts that publish (their steps are in the <Repo path="docs/DEPLOY.md">deployment notes</Repo>), scripts another command runs for you, and probes written for one question.
