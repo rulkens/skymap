@@ -61,7 +61,7 @@ const turns = [
 
     <article class="page" id="page" data-pagefind-meta={`group:${group.name}`}>
       <header data-opening>
-        <p class="where small" data-pagefind-ignore>
+        <p class="where small tap-links" data-pagefind-ignore>
           <a href={sitePath('/docs/')}>Docs</a>
           <span aria-hidden="true">/</span>
           <a href={`${sitePath('/docs/')}#${group.name.toLowerCase()}`}>
@@ -124,19 +124,15 @@ const turns = [
     --docs-bar: 0rem;
   }
 
-  /* A jump lands under the bars that stay, not behind them. */
+  /* `--docs-bar` is the height of the contents' bar where it stays under the top bar (components/DocsNav.astro). */
   @media (max-width: 900px) {
     .docs {
       --docs-bar: 3.75rem;
     }
 
-    :global(html:has(.docs)) {
-      scroll-padding-top: calc(var(--nav-height) + 3.75rem);
-    }
-
     /* Where the window would set the line, the text's own measure does (DocBody has the same). */
     header .say {
-      max-width: 36rem;
+      max-width: 35rem;
     }
   }
 

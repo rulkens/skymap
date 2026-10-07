@@ -36,7 +36,7 @@ const lists = objectSubLists(section, rows);
             <li id={row.anchor} data-object>
               <span class="name">
                 <b>{row.name}</b>{' '}
-                {row.aliases && <span class="also">{row.aliases.join(' · ')}</span>}
+                {row.aliases && <span class="also">{row.aliases.join(', ')}</span>}
                 {!section.split && row.parent && <span class="also">{row.parent}</span>}
                 {row.note && <span class="also">{row.note}</span>}
               </span>{' '}
@@ -83,7 +83,7 @@ const lists = objectSubLists(section, rows);
     border-top: 1px solid var(--border-divider);
     font-size: var(--text-small);
     line-height: 1.35;
-    scroll-margin-top: calc(var(--nav-height) + 1rem);
+    scroll-margin-top: calc(1.5rem + var(--docs-bar));
   }
 
   /* The grid above would show a row that ObjectFinder has hidden. */
@@ -111,8 +111,9 @@ const lists = objectSubLists(section, rows);
     color: var(--site-text-dim);
   }
 
-  .doc-body div.objects .also + .also::before {
-    content: '· ';
+  /* A parent or a note after the other names: set apart by room, not by a mark. */
+  .doc-body div.objects .also + .also {
+    margin-left: 0.625rem;
   }
 
   .doc-body div.objects code {
@@ -120,7 +121,11 @@ const lists = objectSubLists(section, rows);
     overflow-wrap: anywhere;
   }
 
+  /* As tall as the link it stands in for, so every row of a list has one height. */
   .doc-body div.objects .none {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
     color: var(--site-text-dim);
   }
 

@@ -23,11 +23,9 @@ function hit(page: PagefindPage, query: string): HTMLLIElement {
   const title = link.appendChild(document.createElement('span'));
   title.className = 'title';
   title.textContent = page.meta.title ?? page.url;
-  if (page.meta.group) {
-    const where = link.appendChild(document.createElement('span'));
-    where.className = 'where';
-    where.textContent = `Docs, ${page.meta.group}`;
-  }
+  const where = link.appendChild(document.createElement('span'));
+  where.className = 'where';
+  where.textContent = page.meta.group ? `Docs, ${page.meta.group}` : 'Outside the docs';
   const excerpt = link.appendChild(document.createElement('span'));
   excerpt.className = 'excerpt';
   // Pagefind's own markup: escaped page text with `<mark>` about the matched words.
@@ -103,6 +101,8 @@ export function initDocsSearch(sheet: SearchSheet, opener: HTMLElement): void {
     if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
     const target = event.target as HTMLElement;
     if (target.closest('input, textarea, select, [contenteditable]')) return;
+    // Another sheet (a picture, enlarged) has the page: the key is not for this one.
+    if (document.querySelector('dialog[open]')) return;
     event.preventDefault();
     open();
   });

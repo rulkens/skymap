@@ -29,7 +29,11 @@ export function initObjectFinder(finder: HTMLElement): void {
       before = before.previousElementSibling as HTMLElement | null;
     }
     if (before) parts.push(before);
-    return { block, parts };
+    const count = block.querySelector<HTMLElement>('.count');
+    const jumps = before
+      ? document.querySelectorAll(`[data-sections] a[href="#${before.id}"]`)
+      : [];
+    return { block, parts, count, jumps };
   });
 
   const narrow = () => {
@@ -41,9 +45,12 @@ export function initObjectFinder(finder: HTMLElement): void {
     }
     for (const sub of document.querySelectorAll<HTMLElement>('[data-object-sub]'))
       sub.hidden = !sub.querySelector('[data-object]:not([hidden])');
-    for (const { block, parts } of sections) {
+    for (const { block, parts, count, jumps } of sections) {
       const empty = !block.querySelector('[data-object]:not([hidden])');
       for (const part of parts) part.hidden = empty;
+      // The count is of the whole section, and a jump to a hidden heading goes nowhere.
+      if (count) count.hidden = query !== '';
+      for (const jump of jumps) jump.toggleAttribute('aria-disabled', empty);
     }
     jump.hidden = query !== '';
     status.textContent =

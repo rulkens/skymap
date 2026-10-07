@@ -26,7 +26,7 @@ const { big = false } = Astro.props;
   <div class="wrap grid">
     <div class="ask">
       <label class="small" id="search-label" for="search-field">Search the docs</label>
-      <input id="search-field" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" />
+      <input id="search-field" type="text" inputmode="search" autocomplete="off" spellcheck="false" enterkeyhint="search" />
     </div>
     <button class="ring small shut" type="button" data-search-close>Close</button>
     <p class="status small" role="status"></p>
@@ -68,15 +68,9 @@ const { big = false } = Astro.props;
   /* A sheet let down from the top of the window over the dimmed page; a phone gives it the whole screen. */
   .sheet {
     inset: 0 0 auto;
-    width: 100%;
-    max-width: none;
     max-height: 100dvh;
-    margin: 0;
     padding: 2.5rem 0 3.5rem;
-    border: 0;
     border-bottom: 1px solid var(--border-divider);
-    background: var(--color-bg);
-    color: inherit;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -106,10 +100,6 @@ const { big = false } = Astro.props;
     color: var(--color-fg);
     font: var(--weight-display) 2rem / 1.2 var(--font-family-display);
     appearance: none;
-  }
-
-  input::-webkit-search-cancel-button {
-    display: none;
   }
 
   input:focus-visible {
@@ -170,6 +160,11 @@ const { big = false } = Astro.props;
 
   ol :global(a:focus-visible::before) {
     background: var(--color-accent);
+  }
+
+  /* The marker alone is easy to lose among eight results. */
+  ol :global(a:focus-visible .title) {
+    color: var(--color-accent);
   }
 
   ol :global(.title) {

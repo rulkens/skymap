@@ -5,8 +5,8 @@
  * to the line; headings in the display face, never under 20px; a list's
  * bullets are the site's ring, small. The rules reach into the slot because
  * compiled Markdown carries no component scope, and they stop at `data-embed`:
- * a component set into the text (a figure, a table, an example, the catalogue)
- * marks its root with it and keeps its own look, here as on a landing page.
+ * a component set into the text (a figure, a table, an example) marks its
+ * root with it and keeps its own look. The stop adds no weight (`:where`).
  */
 ---
 
@@ -24,7 +24,7 @@
     margin-top: 0;
   }
 
-  .doc-body :global(:is(p, li, dd):not([data-embed] *)) {
+  .doc-body :global(:is(p, li, dd):where(:not([data-embed] *))) {
     max-width: var(--doc-measure);
     text-wrap: pretty;
   }
@@ -36,7 +36,7 @@
     line-height: 1.1;
   }
 
-  .doc-body :global(h3:not([data-embed] *)) {
+  .doc-body :global(h3:where(:not([data-embed] *))) {
     margin: 2.5rem 0 0.75rem;
   }
 
@@ -46,23 +46,26 @@
     color: var(--color-fg);
   }
 
-  /* A heading or a term a link landed on stands clear of the bars above it (layouts/Docs.astro sets the room). */
+  /*
+   * A heading or a term a link landed on stands clear of the bars above it. The contents' bar is counted here and
+   * not in the page's scroll padding, which would move the page whenever the bar itself took the keyboard.
+   */
   .doc-body :global(:is(h2, h3, h4, dt)) {
-    scroll-margin-top: 1.5rem;
+    scroll-margin-top: calc(1.5rem + var(--docs-bar));
   }
 
-  .doc-body :global(strong:not([data-embed] *)) {
+  .doc-body :global(strong:where(:not([data-embed] *))) {
     font-weight: 500;
     color: var(--color-fg);
   }
 
-  .doc-body :global(:is(ul, ol):not([data-embed] *)) {
+  .doc-body :global(:is(ul, ol):where(:not([data-embed] *))) {
     margin: 0 0 var(--stack);
     padding-left: 1.5rem;
     color: var(--site-text-muted);
   }
 
-  .doc-body :global(li:not([data-embed] *)) {
+  .doc-body :global(li:where(:not([data-embed] *))) {
     margin-block: 0.5rem;
   }
 
@@ -70,15 +73,15 @@
     margin-bottom: 0;
   }
 
-  .doc-body :global(ul:not([data-embed] *)) {
+  .doc-body :global(ul:where(:not([data-embed] *))) {
     list-style: none;
   }
 
-  .doc-body :global(ul:not([data-embed] *) > li) {
+  .doc-body :global(ul:where(:not([data-embed] *)) > li) {
     position: relative;
   }
 
-  .doc-body :global(ul:not([data-embed] *) > li::before) {
+  .doc-body :global(ul:where(:not([data-embed] *)) > li::before) {
     content: '';
     position: absolute;
     left: -1.25rem;
@@ -126,11 +129,11 @@
     margin-bottom: 0;
   }
 
-  .doc-body :global(dl:not([data-embed] *)) {
+  .doc-body :global(dl:where(:not([data-embed] *))) {
     margin: 0 0 var(--stack);
   }
 
-  .doc-body :global(dt:not([data-embed] *)) {
+  .doc-body :global(dt:where(:not([data-embed] *))) {
     padding-top: 0.75rem;
     border-top: 1px solid var(--border-divider);
     color: var(--color-fg);
@@ -141,7 +144,7 @@
     border-top-color: var(--color-accent);
   }
 
-  .doc-body :global(dd:not([data-embed] *)) {
+  .doc-body :global(dd:where(:not([data-embed] *))) {
     margin: 0 0 0.75rem;
     color: var(--site-text-muted);
   }
@@ -177,14 +180,14 @@
   }
 
   /* In a cell or a sentence the ring keeps its 44px and the line keeps its height. */
-  .doc-body :global(:is(td, th, li, p:not(.link-row)) > a.ring) {
+  .doc-body :global(:is(td, th, p:not(.link-row)) > a.ring) {
     margin-block: -0.75rem;
     vertical-align: middle;
   }
 
   @media (max-width: 900px) {
     .doc-body {
-      --doc-measure: 36rem;
+      --doc-measure: 35rem;
     }
 
     .doc-body > :global(:is(pre, .caveat, .example)) {
