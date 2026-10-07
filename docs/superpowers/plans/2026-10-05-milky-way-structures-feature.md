@@ -233,7 +233,8 @@ Not a subagent task. With the dev server up and all rows in, tune and commit:
 **Files:** `.claude/skills/add-data-source/SKILL.md` (modify), `docs/DATA.md` (modify if Task 2 left gaps)
 
 - [x] Rewrite the skill's Path B table against the files this PR actually touched for a new structure category (Task 1's file list is the truth), and fix the sentinel width (6-bit, sentinel 63).
-- [ ] Perf: `npm run perf -- --url http://localhost:<this worktree's port>` on the `local-group` and a Sun-neighbourhood scenario, before (main) and after. The `local-group` total is bimodal on this machine (about 9.9 or 10.9 ms run to run), so compare several runs each side before reading a 1 ms difference as real.
+- [x] Perf: `npm run perf -- --url http://localhost:<this worktree's port>` on the `local-group` and a Sun-neighbourhood scenario, before (main) and after. The `local-group` total is bimodal on this machine (about 9.9 or 10.9 ms run to run), so compare several runs each side before reading a 1 ms difference as real.
+  - Measured 2026-10-07, main (`73caca15d`) against this branch, three alternating runs each, 60 frames, merged total ms. `solar-system` 14.5 / 15.5 / 14.9 vs 16.2 / 15.1 / 17.8; `star-field` 17.1 / 15.2 / 14.7 vs 13.9 / 13.3 / 16.4; `milky-way` 16.8 / 16.6 / 17.0 vs 16.9 / 17.0 / 16.8; `galactic-centre` 11.2 / 10.8 / 10.7 vs 11.6 / 10.4 / 11.6; `local-group` 8.7 / 8.2 / 8.7 vs 7.8 / 8.3 / 8.5. The `hdr·NEAR0` slot, where the near rings draw, is unchanged in every scene. No attributable cost: the differences sit inside the run-to-run spread and go both ways.
 - [ ] Commit.
 
 ---
