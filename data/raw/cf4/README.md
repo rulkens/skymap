@@ -48,9 +48,10 @@ The runtime artefact is `public/data/flowfield.scfd` (RGBA16F, ~4 MB),
 produced from the two `.npy` slices via `npm run build-flow-field`. That
 `.scfd` is also synced to R2 and is what the browser fetches at runtime.
 
-License: CF-4 data is free for research and visualisation use; cite
-Courtois et al. 2025 (A&A, arXiv:2502.01308) and Tully et al. 2023 (CF-4
-catalog) in any derived work.
+Licence: the project's page states none. Of each download it says "If you
+use this data cite the article above": Courtois et al. 2025
+(arXiv:2502.01308), with Tully et al. 2023 for the CF-4 catalogue
+(<https://projets.ip2i.in2p3.fr/cosmicflows/>, read 2026-10-07).
 
 ### npz keys
 

@@ -1,275 +1,610 @@
 # Attributions
 
-Skymap's source code is MIT-licensed (see [LICENSE](LICENSE)). This file
-enumerates the third-party data, imagery, and software that the project
-depends on, together with their licences and the references their authors
-ask be cited. It is the project's good-faith effort to give credit where
-credit is due — if anything is missing or mis-attributed, please open an
-issue.
+Skymap's source code is MIT-licensed (see [LICENSE](LICENSE)); the TypeScript,
+WGSL and React source under `src/`, `tools/` and `tests/` is © Alexander
+Rulkens. This file lists the data, imagery, models, fonts and code of others
+that skymap ships, fetches or was built from, with the terms each rights holder
+states. If something is missing or wrong, please open an issue.
 
----
+## How to read and extend this file
 
-## Source code
+Every third-party thing is one `###` entry with the same bullets:
 
-The TypeScript / WGSL / React source under `src/`, `tools/`, and `tests/`
-is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
+- **What** it is, **By** whom, the **Licence** or terms, the **Attribution**
+  asked for, the **Upstream** link, where it **Enters skymap**, and whether
+  skymap **Modified** it.
+- **Checked** gives the date on which the pages listed after it were opened and
+  the licence and attribution lines compared with them. Where a rights holder
+  states no licence the entry says so; none is inferred. An optional
+  **Not verified** bullet names what could not be opened that day.
+- The comment under each heading (`<!-- attribution: id=…; keys=…; hosts=… -->`)
+  ties the entry to keys of
+  [`rawDataRegistry.ts`](tools/utils/io/rawDataRegistry.ts) (`*` ends a prefix)
+  and to outside hosts named in the app's code.
+
+[`parseAttributions.ts`](tools/utils/io/parseAttributions.ts) reads the entries
+back as rows, and
+[`attributionCoverage.test.ts`](tests/tools/utils/io/attributionCoverage.test.ts)
+fails when a registry key or a host in `src/`, `index.html` or
+`.env.production` has no entry here. Adding a source therefore means adding its
+entry, with the page you read and the date.
+
+The entries state terms; they are not legal advice.
 
 ## Catalogue data
 
-### SDSS — Sloan Digital Sky Survey
+Several catalogues below reach skymap through CDS (VizieR or its FTP mirror).
+CDS states its own terms for what it serves, quoted once here and referred to
+as "the CDS terms" in the entries: "The data retrieved with VizieR are free of
+usage in a scientific context; however, as it is the usage in scientific
+publication, the original authors and publication references including the
+publisher have to be explicitely cited", "The commercial usage of the data is
+subject to rules depending of the origin", "Tabular data, spectra or images
+coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under CC-BY-NC licence",
+"Tabular data, spectra or images coming from A&A (J/A+A) are free for a
+scientific usage", and for other catalogues "Please refer to the ReadMe file
+associated to the catalogue to verify if a 'copyright' exists. Else, see the
+policy section of the journals."
+(<https://cds.unistra.fr/vizier-org/licences_vizier.html>, read 2026-10-07; the
+link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 
-- **Use:** Spectroscopic galaxy positions, redshifts, and `ugriz` photometry,
-  exported via SDSS SkyServer SQL queries. Reference catalog file lives
-  under `data/` (gitignored).
-- **Licence / citation:** SDSS data products are publicly released; the
-  collaboration asks that publications using SDSS cite Abdurro'uf et al.
-  2022 (DR17) or the DR18 release paper as appropriate. See
-  <https://www.sdss.org/collaboration/citing-sdss/>.
+### SDSS, the Sloan Digital Sky Survey (DR17 spectra and photometry)
 
-### 2MRS — 2MASS Redshift Survey
+<!-- attribution: id=sdss; keys=sdss.*; hosts=www.sdss.org,www.sdss4.org -->
 
-- **Use:** All-sky near-IR-selected redshift catalogue (J/H/Ks photometry +
-  cz), parsed from the public ASCII release.
-- **Reference:** Huchra et al. 2012, ApJS 199, 26.
-- **Licence:** Publicly released; cite the paper above.
+- **What:** Sky positions, spectroscopic redshifts, `ugriz` magnitudes and
+  shapes of galaxies: our own query of `SpecObj` joined to `PhotoObjAll`.
+- **By:** The SDSS collaboration (SDSS-IV for DR17).
+- **Licence:** "All SDSS data released in our public data releases is
+  considered in the public domain."
+- **Attribution:** SDSS asks that papers using its data carry the
+  acknowledgement of the survey phase and cite the release paper (DR17:
+  Abdurro'uf et al. 2022). The SDSS-IV acknowledgement opens:
+  "Funding for the Sloan Digital Sky Survey IV has been provided by the Alfred
+  P. Sloan Foundation, the U.S. Department of Energy Office of Science, and
+  the Participating Institutions. SDSS-IV acknowledges support and resources
+  from the Center for High Performance Computing at the University of Utah.
+  The SDSS website is www.sdss4.org." The full text, with the list of
+  institutions, is on the page under Checked.
+- **Upstream:** <https://www.sdss4.org/dr17/>, queried through SkyServer /
+  CasJobs.
+- **Enters skymap:** `data/raw/sdss/Skyserver_*.csv` → `tools/parsers/sdssCsv.ts`
+  → `public/data/galaxy-catalog/`.
+- **Modified:** Yes. Filtered by our SQL, cross-matched, cut to the most
+  luminous rows per data size and re-encoded.
+- **Checked:** 2026-10-07: <https://www.sdss4.org/collaboration/#image-use>,
+  <https://www.sdss4.org/collaboration/citing-sdss/>,
+  <https://www.sdss.org/collaboration/citing-sdss/>
 
-### GLADE v2.3 — Galaxy List for the Advanced Detector Era
+### 2MRS, the 2MASS Redshift Survey
 
-- **Use:** Compilation of nearby galaxies for gravitational-wave electromagnetic
-  follow-up, with cross-matched B-band photometry, distances, and PGC IDs.
-- **Reference:** Dálya et al. 2018, MNRAS 479, 2374.
-- **Licence:** CC-BY 4.0 / publicly released; cite the paper above.
+<!-- attribution: id=2mrs; keys=2mrs.table3,2mrs.readme; hosts=lambda.gsfc.nasa.gov -->
 
-### HyperLEDA — Lyon-Meudon Extragalactic Database
-
-- **Use:** Per-galaxy axis-ratio, position-angle, and isophotal-diameter data
-  fetched via the `fG.cgi` JSON-ish endpoint at
-  <http://atlas.obs-hp.fr/hyperleda/>. Used for both the GLADE orientation
-  enrichment cache (`data/raw/hyperleda_pa.csv`) and the famous-galaxy
-  catalog metadata (`data/seeds/famous_galaxies.seed.json`).
-- **Reference:** Paturel et al. 2003, A&A 412, 45; Makarov et al. 2014, A&A
-  570, A13.
-- **Licence:** Publicly released; cite the papers above.
+- **What:** Positions, velocities and J/H/K magnitudes of 44,599 nearby
+  galaxies (table 3).
+- **By:** Huchra et al. 2012, ApJS 199, 26.
+- **Licence:** Not stated on the survey's own page, and the VizieR ReadMe
+  (J/ApJS/199/26) carries no copyright section. The CDS terms above apply to
+  the copy served by CDS, which they class as AAS-journal data.
+- **Attribution:** Cite Huchra et al. 2012. 2MASS, on which the survey rests,
+  asks for: "This publication makes use of data products from the Two Micron
+  All Sky Survey, which is a joint project of the University of Massachusetts
+  and the Infrared Processing and Analysis Center/California Institute of
+  Technology, funded by the National Aeronautics and Space Administration and
+  the National Science Foundation."
+- **Upstream:** <http://tdc-www.harvard.edu/2mrs/>;
+  <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26>
+- **Enters skymap:** `data/raw/2mrs/2mrs_table3.dat` → `tools/parsers/twoMrs.ts`.
+- **Modified:** Yes. Cross-matched, given distances and re-encoded.
+- **Checked:** 2026-10-07: <http://tdc-www.harvard.edu/2mrs/>,
+  <https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html>,
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
 
 ### 2MASS Extended Source Catalog (XSC)
 
-- **Use:** Per-galaxy super-coadd shape data (`sup_phi`, `sup_ba`) fetched via
-  Vizier `VII/233/xsc`, used to enrich 2MRS rows with photometric
-  orientation.
-- **Reference:** Jarrett et al. 2000, AJ 119, 2498.
-- **Licence:** Publicly released; cite the paper above.
+<!-- attribution: id=2mass-xsc; keys=2mrs.xsc-pa -->
 
-### DESI DR1 — Dark Energy Spectroscopic Instrument
+- **What:** Position angle and axis ratio (`sup_phi`, `sup_ba`) of 2MRS
+  galaxies, from VizieR `VII/233/xsc`.
+- **By:** Jarrett et al. 2000, AJ 119, 2498; the 2MASS project (University of
+  Massachusetts and IPAC/Caltech).
+- **Licence:** Not stated for the catalogue on the 2MASS page read. The CDS
+  terms above apply to the copy served by CDS.
+- **Attribution:** The 2MASS acknowledgement quoted under 2MRS, and the VizieR
+  acknowledgement (see VizieR below).
+- **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/233>
+- **Enters skymap:** `tools/fetch/fetch2massXsc.ts` → `data/raw/2mrs/2mass_xsc_pa.csv`.
+- **Modified:** Yes. Two columns kept, joined to 2MRS by 2MASS id.
+- **Checked:** 2026-10-07: <https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html>,
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
 
-- **Use:** DR1 large-scale-structure clustering catalogs (the four NGC tracer
-  files `BGS_BRIGHT`, `LRG`, `ELG_LOPnotqso`, `QSO`), cone-filtered at build
-  time to a narrow 2.5° deep cone around Corona Borealis. Positions +
-  redshifts feed the point cloud; only `BGS_BRIGHT` carries photometry.
-- **Reference:** DESI Collaboration et al. (2026), "Data Release 1 of the
-  Dark Energy Spectroscopic Instrument", AJ 171, 285
-  (ads: [2026AJ....171..285D](https://ui.adsabs.harvard.edu/abs/2026AJ....171..285D)).
-- **Licence:** CC BY 4.0.
-- **Required acknowledgment** (verbatim, per
-  <https://data.desi.lbl.gov/doc/acknowledgments/>):
+### GLADE v2.3, the Galaxy List for the Advanced Detector Era
 
-  > This research used data obtained with the Dark Energy Spectroscopic Instrument (DESI). DESI construction and operations is managed by the Lawrence Berkeley National Laboratory. This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of High-Energy Physics, under Contract No. DE–AC02–05CH11231, and by the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility under the same contract. Additional support for DESI was provided by the U.S. National Science Foundation (NSF), Division of Astronomical Sciences under Contract No. AST-0950945 to the NSF's National Optical-Infrared Astronomy Research Laboratory; the Science and Technology Facilities Council of the United Kingdom; the Gordon and Betty Moore Foundation; the Heising-Simons Foundation; the French Alternative Energies and Atomic Energy Commission (CEA); the National Council of Humanities, Science and Technology of Mexico (CONAHCYT); the Ministry of Science and Innovation of Spain (MICINN), and by the DESI Member Institutions.
+<!-- attribution: id=glade; keys=glade.*; hosts=glade.elte.hu -->
 
-### Gaia DR3 — ESA Gaia mission
+- **What:** An all-sky compilation of galaxies with spectroscopic and
+  photometric redshifts, B-band photometry and PGC numbers.
+- **By:** Dálya et al. 2018, MNRAS 479, 2374.
+- **Licence:** Not stated. The catalogue's page carries "© Copyright Gergely
+  Dálya" and no licence; the VizieR ReadMe (VII/281) has no copyright section.
+  The CDS terms above apply to the copy served by CDS.
+- **Attribution:** Cite the paper. (The page asks this in words for GLADE+,
+  "Please cite this paper when using GLADE+ data", and names the 2018 paper as
+  the description of v2.3.)
+- **Upstream:** <https://glade.elte.hu/>;
+  <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281>
+- **Enters skymap:** `data/raw/glade/glade2.3.dat` → `tools/parsers/glade.ts`.
+- **Modified:** Yes. Deduplicated against SDSS and 2MRS, subsampled, re-encoded.
+- **Checked:** 2026-10-07: <https://glade.elte.hu/>,
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
 
-- **Use:** The G<14 slice of the `gaiadr3.gaia_source_lite` main catalog
-  (positions, `G` magnitude, `BP−RP` colour) — the bright-star raw input to
-  skymap's star bin, fetched via the ESA Gaia TAP service by
-  `npm run fetch-gaia`. Provenance + column contract in `data/raw/gaia/README.md`.
-- **Reference:** Gaia Collaboration, Vallenari et al. 2023, A&A 674, A1 (Gaia DR3).
-- **Licence:** Gaia data are publicly released under the Gaia Data Licence
-  (<https://www.cosmos.esa.int/web/gaia-users/license>); cite the paper above.
-- **Required acknowledgment** (verbatim, per ESA's canonical credit page
-  <https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/>,
-  fetched 2026-07-14 — this is the canonical in-repo copy):
+### HyperLEDA
+
+<!-- attribution: id=hyperleda; keys=hyperleda.* -->
+
+- **What:** Position angle, axis ratio and diameter of GLADE galaxies; the
+  `mod0` distance modulus used inside 30 Mpc; names and designations for the
+  famous-galaxy list and the search aliases.
+- **By:** Makarov et al. 2014, A&A 570, A13; Paturel et al. 2003, A&A 412, 45.
+- **Licence:** Not stated on the database's page.
+- **Attribution:** "If HyperLeda was helpful to your research an
+  acknowledgment would be appreciated"; cite Makarov et al. 2014.
+- **Upstream:** <http://atlas.obs-hp.fr/hyperleda/>
+- **Enters skymap:** `tools/fetch/fetchHyperLeda.ts`, `tools/fetch/buildPgcAliases.ts`
+  → `data/raw/hyperleda/`; a gzipped copy of the orientation cache is hosted
+  on R2 for contributors.
+- **Modified:** Yes. Selected columns, cached per PGC.
+- **Checked:** 2026-10-07: <http://atlas.obs-hp.fr/hyperleda/>
+
+### Milliquas v8, the Million Quasars catalogue
+
+<!-- attribution: id=milliquas; keys=milliquas.*; hosts=heasarc.gsfc.nasa.gov -->
+
+- **What:** Positions and redshifts of 1,021,800 quasars and active galactic
+  nuclei.
+- **By:** Eric W. Flesch. Flesch 2023, OJAp 6, 49
+  ([arXiv:2308.01505](https://arxiv.org/abs/2308.01505)).
+- **Licence:** Not stated, on the catalogue's page or in its ReadMe.
+- **Attribution:** "Please cite as Milliquas v8, Flesch, E.W. 2023,OJAp,6,49.
+  (arXiv:2308.01505)" (the ReadMe). HEASARC's copy adds: "If you use this
+  catalog in published research, the author requests that you please cite it."
+- **Upstream:** <https://quasars.org/milliquas.htm>
+- **Enters skymap:** `npm run fetch-milliquas` → `data/raw/milliquas/milliquas.txt`
+  → `tools/parsers/milliquas.ts` → `public/data/galaxy-catalog/milliquas-*.bin`.
+- **Modified:** Yes. Rows with a usable redshift kept, placed by redshift,
+  subsampled, re-encoded.
+- **Checked:** 2026-10-07: <https://quasars.org/milliquas.htm>,
+  <https://quasars.org/Milliquas-ReadMe.txt>,
+  <https://heasarc.gsfc.nasa.gov/W3Browse/all/milliquas.html>
+
+### DESI DR1, the Dark Energy Spectroscopic Instrument
+
+<!-- attribution: id=desi; keys=desi.*; hosts=data.desi.lbl.gov -->
+
+- **What:** DR1 large-scale-structure clustering catalogues v1.5 (the four
+  northern tracer files `BGS_BRIGHT`, `LRG`, `ELG_LOPnotqso`, `QSO`), cut to
+  three regions.
+- **By:** The DESI Collaboration. DESI Collaboration et al. 2026, "Data Release
+  1 of the Dark Energy Spectroscopic Instrument", AJ 171, 285.
+- **Licence:** CC BY 4.0. DESI's conditions: cite the data release paper,
+  "Indicate if any changes are made (if re-distributing DESI data)", and
+  "Include the following acknowledgments text in any publications or derived
+  works."
+- **Attribution:** The acknowledgement, verbatim:
+
+  > This research used data obtained with the Dark Energy Spectroscopic Instrument (DESI). DESI construction and operations is managed by the Lawrence Berkeley National Laboratory. This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of High-Energy Physics, under Contract No. DE–AC02–05CH11231, and by the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility under the same contract. Additional support for DESI was provided by the U.S. National Science Foundation (NSF), Division of Astronomical Sciences under Contract No. AST-0950945 to the NSF’s National Optical-Infrared Astronomy Research Laboratory; the Science and Technology Facilities Council of the United Kingdom; the Gordon and Betty Moore Foundation; the Heising-Simons Foundation; the French Alternative Energies and Atomic Energy Commission (CEA); the National Council of Humanities, Science and Technology of Mexico (CONAHCYT); the Ministry of Science and Innovation of Spain (MICINN), and by the DESI Member Institutions: www.desi.lbl.gov/collaborating-institutions. The DESI collaboration is honored to be permitted to conduct scientific research on I’oligam Du’ag (Kitt Peak), a mountain with particular significance to the Tohono O’odham Nation. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the U.S. National Science Foundation, the U.S. Department of Energy, or any of the listed funding agencies.
+
+- **Upstream:** <https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/>
+- **Enters skymap:** `npm run fetch-desi` → `data/raw/desi/*.fits` →
+  `tools/parsers/desiFits.ts` → `desi-{deep,wedge,sgw}.bin`.
+- **Modified:** Yes. Cut to three regions (`tools/catalog/desiPatches.ts`),
+  deduplicated against the other surveys, re-encoded.
+- **Checked:** 2026-10-07: <https://data.desi.lbl.gov/doc/acknowledgments/>
+
+### Cosmicflows-4 distances
+
+<!-- attribution: id=cf4-distances; keys=cf4.table2,cf4.readme,cf4.sha256 -->
+
+- **What:** Distances measured without redshift for 55,877 galaxies (table 2),
+  used for galaxies inside 30 Mpc.
+- **By:** Tully et al. 2023, ApJ 944, 94
+  ([arXiv:2209.11238](https://arxiv.org/abs/2209.11238)).
+- **Licence:** The VizieR ReadMe (J/ApJ/944/94) carries no copyright section.
+  The CDS terms above apply; they class the table as AAS-journal data.
+- **Attribution:** Cite Tully et al. 2023.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/>
+- **Enters skymap:** `npm run fetch-cf4` → `data/raw/cf4/table2.dat` →
+  `tools/parsers/cosmicflows4.ts` → `tools/catalog/catalogDistanceFor.ts`.
+- **Modified:** Yes. One distance per PGC number is read; it moves a galaxy's
+  position.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
+### Gaia DR3
+
+<!-- attribution: id=gaia; keys=gaia.dir,gaia.readme,gaia.sha256; hosts=www.cosmos.esa.int -->
+
+- **What:** Positions, `G` magnitude and `BP−RP` colour of the stars brighter
+  than G = 14, from `gaiadr3.gaia_source_lite`.
+- **By:** ESA and the Gaia Data Processing and Analysis Consortium (DPAC).
+  Gaia Collaboration, Vallenari et al. 2023, A&A 674, A1.
+- **Licence:** "Gaia data are distributed under the CC BY-NC 3.0 IGO license.
+  For details and guidelines concerning commercial use of the Gaia data, please
+  see the Terms and Conditions for the use of data in the ESA space science
+  archives."
+- **Attribution:** The acknowledgement, verbatim:
 
   > This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
 
-### Bailer-Jones geometric / photogeometric distances
+- **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync> (the Gaia
+  archive's TAP service).
+- **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/gaia_page_*.csv` →
+  `npm run build-stars` → `public/data/star-catalog/`.
+- **Modified:** Yes. Selected, given distances, deduplicated, quantised into an
+  octree.
+- **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>,
+  <https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/>
 
-- **Use:** Per-star geometric (`r_med_geo`) and photogeometric
-  (`r_med_photogeo`) distance estimates from `external.gaiaedr3_distance`,
-  joined onto the Gaia DR3 main-catalog rows on `source_id` to place bright
-  stars in 3D.
-- **Reference:** Bailer-Jones et al. 2021, AJ 161, 147.
-- **Licence:** Publicly released via the Gaia archive; cite the paper above.
+### Bailer-Jones distances (Gaia EDR3)
 
-### GCNS — Gaia Catalogue of Nearby Stars
+<!-- attribution: id=bailer-jones -->
 
-- **Use:** The `external.gaiaedr3_gcns_main_1` 100 pc supplement (parallax +
-  photometric distance for 331,312 nearby stars), filling in the local
-  volume below the G<14 main-catalog cut.
-- **Reference:** Gaia Collaboration, Smart et al. 2021, A&A 649, A6.
-- **Licence:** Publicly released via the Gaia archive; cite the paper above.
-  The Gaia mission acknowledgment under **Gaia DR3** applies to this table as well.
+- **What:** Geometric and photogeometric distance estimates per star
+  (`external.gaiaedr3_distance`), joined to the Gaia rows by `source_id`.
+- **By:** Bailer-Jones et al. 2021, AJ 161, 147.
+- **Licence:** No separate licence found; the table is served by the Gaia
+  archive, whose data licence is quoted under Gaia DR3.
+- **Attribution:** Cite Bailer-Jones et al. 2021, with the Gaia acknowledgement.
+- **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync>
+- **Enters skymap:** the same `fetch-gaia` query; `tools/stars/resolveStarDistancePc.ts`.
+- **Modified:** Yes. One distance per star is chosen and sets its position.
+- **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>
 
-### Gillessen et al. 2017 — Galactic-Centre S-star orbits
+### GCNS, the Gaia Catalogue of Nearby Stars
 
-- **Use:** The 39 bound S-star orbits drawn around Sagittarius A\*. Two
-  different tables, both hand-transcribed into the repository rather than
-  fetched at build time (they are 39 and ~100 rows, not a catalogue):
-  - `J/ApJ/837/30/table3` — the fitted orbital elements (semi-major axis,
-    eccentricity, inclination, node, argument of pericentre, pericentre
-    epoch, period), plus the K magnitude and early/late spectral flag that
-    set each star's colour and size. Transcribed to
-    `src/data/bodies/sStarElements.ts`, one verbatim source line per row.
-    The 40th published row, S111, is excluded as unbound (e = 1.092).
-  - `J/ApJ/837/30/table5` — the astrometric measurements. ~34 epochs each
-    for S2, S12 and S38 are held as a test fixture
-    (`tests/fixtures/sStarAstrometry.json`) and used as the acceptance
-    oracle for the sky-frame conversion; they are never rendered.
-- **Reference:** Gillessen, Plewa, Eisenhauer, Sari, Waisberg, Habibi,
-  Pfuhl, George, Dexter, von Fellenberg, Ott & Genzel 2017, ApJ 837, 30
-  (ads: [2017ApJ...837...30G](https://ui.adsabs.harvard.edu/abs/2017ApJ...837...30G)).
-- **Licence:** Publicly released via CDS VizieR; cite the paper above.
-- **Related:** table5's coordinate origin is a best estimate of Sgr A\*'s
-  radio position (±0.2 mas at epoch 2009.0), per **Plewa et al. 2015,
-  MNRAS 453, 3234** — the floor on the fixture's residuals, and the reason
-  the acceptance test allows a few sigma rather than exact closure.
+<!-- attribution: id=gcns; keys=gaia.gcns -->
 
-### Abd El Dayem et al. 2026 — S301
+- **What:** The 331,312 stars within 100 pc (`external.gaiaedr3_gcns_main_1`).
+- **By:** Gaia Collaboration, Smart et al. 2021, A&A 649, A6.
+- **Licence:** No separate licence found; served by the Gaia archive, whose
+  data licence is quoted under Gaia DR3.
+- **Attribution:** Cite Smart et al. 2021, with the Gaia acknowledgement.
+- **Upstream:** <https://gea.esac.esa.int/tap-server/tap/sync>
+- **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/gcns_main.csv`.
+- **Modified:** Yes. Merged into the star set.
+- **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>
 
-- **Use:** One additional row in `src/data/bodies/sStarElements.ts`, the
-  40th bound orbit rendered around Sagittarius A\*. The paper's Extended
-  Data Table 2 gives two degenerate orbital solutions for this star; the
-  transcribed row uses Solution A (the headline values quoted in the
-  paper's abstract), with Solution B recorded in the row's comment.
-- **Reference:** Abd El Dayem, K., Abuter, R., Aimar, N., et al. (GRAVITY
-  Collaboration) 2026, "Discovery of a star sensitive to the spin of
-  Sgr A\*", Nature, doi:10.1038/s41586-026-10894-w
-  ([arXiv:2607.12664](https://arxiv.org/abs/2607.12664)).
-- **Licence:** Published paper; cite it above.
+### Hipparcos, the 2007 re-reduction
 
-### GRAVITY Collaboration — the Galactic-Centre distance and black-hole mass
+<!-- attribution: id=hipparcos; keys=gaia.hipparcos,gaia.hipparcos-readme,gaia.hip-xmatch; hosts=cdsarc.cds.unistra.fr -->
 
-- **Use:** R₀ = 8178 pc, which sets the angular-to-linear scale for every
-  S-star orbit (1″ = 8178 AU) and places Sgr A\* — and with it the Milky Way
-  impostor's hub — in the scene. The same source's M = 4.297 × 10⁶ M☉ gives
-  the Schwarzschild radius the InfoCard quotes pericentres against.
-- **Reference:** GRAVITY Collaboration (Abuter et al.) 2019, A&A 625, L10.
-- **Licence:** Publicly released; cite the paper above.
+- **What:** The bright stars that saturate Gaia (`hip2.dat`, VizieR I/311), and
+  the Gaia archive's Hipparcos cross-match table.
+- **By:** van Leeuwen 2007, A&A 474, 653.
+- **Licence:** The ReadMe (I/311) carries no copyright section. The CDS terms
+  above apply.
+- **Attribution:** Cite van Leeuwen 2007.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>
+- **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/hip2.dat` →
+  `tools/parsers/hipparcos2.ts`.
+- **Modified:** Yes. Merged into the star set in place of the matching Gaia rows.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
 
-### Pecaut & Mamajek 2013 — main-sequence temperature/radius scale
+### Stars orbiting Sagittarius A\* (Gillessen et al. 2017)
 
-- **Use:** The representative effective temperatures and radii assigned to
-  S-stars by brightness and spectral class (`src/data/bodies/sStarAppearance.ts`).
-  Gillessen's table carries neither, so each class is a small
-  brightness-ordered table spot-checked against this scale — a
-  representative appearance, not a measurement.
-- **Reference:** Pecaut & Mamajek 2013, ApJS 208, 9.
-- **Licence:** Publicly released; cite the paper above.
+<!-- attribution: id=s-stars -->
 
-### JPL Solar System Dynamics — planetary and satellite mean elements
+- **What:** Orbital elements of 39 bound S-stars (`J/ApJ/837/30/table3`), and
+  astrometry of S2, S12 and S38 (`table5`) held as a test fixture only.
+- **By:** Gillessen et al. 2017, ApJ 837, 30. The fixture's origin follows
+  Plewa et al. 2015, MNRAS 453, 3234.
+- **Licence:** The CDS terms above apply; they class the tables as AAS-journal
+  data.
+- **Attribution:** Cite Gillessen et al. 2017.
+- **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJ/837/30>
+- **Enters skymap:** typed by hand into `src/data/bodies/sStarElements.ts`
+  (one source line per row) and `tests/fixtures/sStarAstrometry.json`.
+- **Modified:** No values changed. The 40th published row, S111, is left out as
+  unbound.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
 
-- **Use:** The J2000 Keplerian element table (`src/data/bodies/orbitalElements.ts`)
-  that positions every solar-system body AND draws its orbit trail: the eight
-  major planets from "Keplerian Elements for Approximate Positions of the Major
-  Planets" (<https://ssd.jpl.nasa.gov/planets/approx_pos.html>), each with its
-  per-Julian-century rates; the Moon and thirteen planetary satellites from
-  "Planetary Satellite Mean Orbital Parameters"
-  (<https://ssd.jpl.nasa.gov/sats/elem/>), each with its own Laplace-plane pole.
-- **Reference:** JPL Solar System Dynamics group, NASA/Caltech. The planetary
-  fit is Standish's; see the approximate-positions page above for its stated
-  validity interval and residuals.
-- **Licence:** Public domain (US Government work). Credit: "NASA/JPL-Caltech".
+### S301 (GRAVITY Collaboration 2026)
 
-### Hipparcos-2 — the re-reduced Hipparcos catalogue
+<!-- attribution: id=s301 -->
 
-- **Use:** The `hip2.dat` bright-star table (VizieR I/311), cross-matched to
-  Gaia via `gaiadr3.hipparcos2_best_neighbour`, to supply the naked-eye bright
-  stars that saturate or fall outside Gaia's faint-limited photometry.
-- **Reference:** van Leeuwen 2007, A&A 474, 653 (VizieR I/311).
-- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+- **What:** One more orbit around Sagittarius A\*, Solution A of the paper's
+  Extended Data Table 2.
+- **By:** Abd El Dayem et al. (GRAVITY Collaboration) 2026, "Discovery of a
+  star sensitive to the spin of Sgr A\*", Nature,
+  doi:10.1038/s41586-026-10894-w.
+- **Licence:** A published paper; seven numbers are transcribed. The journal's
+  terms were not read.
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/2607.12664>
+- **Enters skymap:** one row of `src/data/bodies/sStarElements.ts`.
+- **Modified:** No.
+- **Checked:** 2026-10-07: no page opened; the reference is as recorded in the
+  repository.
+- **Not verified:** the paper itself.
 
-### MCXC — Meta-Catalogue of X-ray galaxy Clusters
+### The distance and mass of Sagittarius A\* (GRAVITY Collaboration 2019)
 
-- **Use:** Cluster positions, redshifts, and X-ray-derived mass/radius
-  (VizieR J/A+A/534/A109), feeding the structure catalog
-  (`tools/structures/buildStructures.ts` → `public/data/structure-catalog/`).
-- **Reference:** Piffaretti et al. 2011, A&A 534, A109.
-- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+<!-- attribution: id=gravity-r0 -->
 
-### MSCC — Main SuperCluster Catalogue
+- **What:** R₀ = 8178 pc and M = 4.297 × 10⁶ M☉.
+- **By:** GRAVITY Collaboration (Abuter et al.) 2019, A&A 625, L10.
+- **Licence:** A published paper; two numbers are used.
+- **Attribution:** Cite the paper.
+- **Upstream:** A&A 625, L10 (the journal; no link is recorded in the repository).
+- **Enters skymap:** `src/data/milkyWay/galacticCenter.ts` and the S-star scale.
+- **Modified:** No.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** the paper itself.
 
-- **Use:** Friends-of-Friends supercluster groupings of Abell/ACO clusters
-  (VizieR J/MNRAS/445/4073), feeding the structure catalog
-  (`tools/structures/buildStructures.ts` → `public/data/structure-catalog/`).
-- **Reference:** Chow-Martínez et al. 2014, MNRAS 445, 4073.
-- **Licence:** Publicly released via CDS VizieR; cite the paper above.
+### Main-sequence temperatures and radii (Pecaut & Mamajek 2013)
 
-## Volume reconstructions
+<!-- attribution: id=pecaut-mamajek -->
 
-The scalar-field overlays drawn underneath the point cloud (CF-4 DM density,
-MCPM Cosmic Web, and the Edenhofer dust volume) are derived from third-party
-scientific reconstructions that carry their own citation requirements.
+- **What:** The scale against which the S-stars' representative temperatures
+  and radii were spot-checked.
+- **By:** Pecaut & Mamajek 2013, ApJS 208, 9.
+- **Licence:** A published paper; used as a reference scale.
+- **Attribution:** Cite the paper.
+- **Upstream:** ApJS 208, 9 (the journal; no link is recorded in the repository).
+- **Enters skymap:** `src/data/bodies/sStarAppearance.ts`.
+- **Modified:** The values in the file are our own representative table, not
+  the paper's.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** the paper itself.
 
-### CF-4 / CF4++ — Cosmicflows-4 dark-matter density reconstruction
+### JPL Solar System Dynamics: orbital elements
 
-- **Use:** A 128³ Bayesian dark-matter density reconstruction in a
-  1000 Mpc supergalactic-Cartesian box, derived from the CF-4 peculiar-
-  velocity catalog. Skymap consumes only the `d_mean_CF4pp` mean-density
-  array (mean across 10 000 HMC posterior samples); the per-cell standard
-  deviation is also published in the upstream `.npz` and is the natural
-  future input for an uncertainty-aware overlay.
-- **Source:** Courtois et al. 2025 ensemble release at
-  <https://projets.ip2i.in2p3.fr/cosmicflows/>.
-- **References:**
-  - Courtois et al. 2025, A&A (CF4++ ensemble),
-    [arXiv:2502.01308](https://arxiv.org/abs/2502.01308).
-  - Tully et al. 2023, ApJ (CF-4 distance catalog),
-    [arXiv:2209.11238](https://arxiv.org/abs/2209.11238).
-- **Licence:** CF-4 data products are publicly released for research and
-  visualisation use; cite both papers above in any derived work. If a
-  future Skymap revision swaps in the Valade et al. 2024 HAMLET cube
-  (Nature Astronomy, [arXiv:2409.17261](https://arxiv.org/abs/2409.17261)),
-  add that citation as well.
+<!-- attribution: id=jpl-elements; hosts=ssd.jpl.nasa.gov -->
 
-### MCPM SDSS Cosmic Slime VAC — Monte Carlo Physarum Machine trace density
+- **What:** Keplerian elements of the eight planets ("Keplerian Elements for
+  Approximate Positions of the Major Planets") and mean elements of the Moon
+  and the planetary satellites.
+- **By:** The JPL Solar System Dynamics group. The planets page says of
+  itself: "This content is from an article written by E.M. Standish and J.G.
+  Williams in 1992. It has been published here with permission from the
+  author".
+- **Licence:** Not stated for the tables. JPL's image-use policy (for images
+  and video on JPL sites) allows use "for any purpose without prior
+  permission", with the credit line "Courtesy NASA/JPL-Caltech".
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “Solar System Dynamics. (Downloaded Year,
+  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
+  <https://ssd.jpl.nasa.gov/sats/elem/>
+- **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
+- **Modified:** No values changed; corrections fitted to Horizons are added on
+  top (next entry).
+- **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
+  <https://ssd.jpl.nasa.gov/about/>, <https://www.jpl.nasa.gov/jpl-image-use-policy/>
 
-- **Use:** A 712×1200×728 trace-density cube produced by fitting the
-  Monte Carlo Physarum Machine (slime-mould) algorithm to SDSS DR17
-  galaxies. Skymap downsamples it to three tiers
-  (`mcpm_sdss_d{2,4,8}.npy`) at build time and renders the tier matching
-  the user's data-tier selection.
-- **Source:** SDSS DR17 Cosmic Slime Value-Added Catalog
-  `SDSS_z_44-476mpc`, distributed at
-  <https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold>
-  via the upstream `trace.bin.bz2` blob on the SDSS SAS.
-- **References:**
-  - Wilde et al. 2023 (SDSS Cosmic Slime VAC release paper),
-    [arXiv:2301.02719](https://arxiv.org/abs/2301.02719).
-  - Elek et al. 2021 (Polyphorm / MCPM algorithm + visualisation
-    convention), [arXiv:2009.02441](https://arxiv.org/abs/2009.02441).
-  - Burchett et al. 2020 (original MCPM-on-galaxies application that
-    motivated the VAC), [arXiv:1910.05344](https://arxiv.org/abs/1910.05344).
-- **Licence:** SDSS Value-Added Catalogs are publicly released under the
-  collaboration's standard data-release terms; cite the references above
-  in any derived work, plus the SDSS DR17 paper (Abdurro'uf et al. 2022)
-  alongside the standard SDSS catalog acknowledgement listed in the
-  Catalogue data → SDSS section.
-- **Software dependency:** the maintainer extraction step uses
-  [pyslime](https://github.com/jnburchett/pyslime) (Burchett, MIT) to
-  decode the upstream `trace.bin` into a NumPy array. pyslime is a
-  research-grade reader, not a runtime dependency of Skymap; the runtime
-  consumes its f16-quantised SCFD output, not pyslime directly.
+### JPL Horizons
 
-### Edenhofer et al. 2024 — parsec-scale Galactic 3D dust map
+<!-- attribution: id=horizons; keys=horizons,horizons.readme -->
 
-- **Use:** A continuous local-neighbourhood extinction-density
-  reconstruction out to 1.25 kpc from the Sun. Skymap rebakes the upstream
-  mean reconstruction into three tiered `.scfd` volumes
-  (`edenhofer-dust-{small,medium,large}.scfd`, tracked by `allowDataFile`)
-  and redistributes them from `public/data/scalar-field/`.
-- **Reference:** Edenhofer et al. 2024, "A parsec-scale Galactic 3D dust map
-  out to 1.25 kpc from the Sun", A&A 685, A82
-  (DOI [10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628)).
-- **Source:** Zenodo [10.5281/zenodo.8187943](https://doi.org/10.5281/zenodo.8187943)
-  (`mean_and_std_healpix.fits`), fetched by `data/raw/edenhofer/fetch_edenhofer.sh`.
-- **Licence:** CC BY 4.0; cite the paper above.
+- **What:** Position vectors of 8 planets and 18 moons, 1900 to 2100, to which
+  our orbits are fitted.
+- **By:** The JPL Solar System Dynamics group (the Horizons system).
+- **Licence:** Not stated for the service's output on the pages read.
+- **Attribution:** The SSD citation quoted in the entry above.
+- **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
+- **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
+  `npm run build-ephemeris-corrections` →
+  `src/data/bodies/ephemerisCorrections.generated.ts`. Also the orbit rows of
+  the spacecraft bodies (see each model's README).
+- **Modified:** Yes. Only fitted correction series are shipped, not the vectors.
+- **Checked:** 2026-10-07: <https://ssd.jpl.nasa.gov/about/>
+
+### MCXC, the Meta-Catalogue of X-ray detected Clusters
+
+<!-- attribution: id=mcxc; keys=mcxc.* -->
+
+- **What:** Positions, redshifts, masses and radii of 1,743 galaxy clusters
+  (VizieR J/A+A/534/A109).
+- **By:** Piffaretti et al. 2011, A&A 534, A109.
+- **Licence:** The ReadMe carries no copyright section. The CDS terms above
+  apply: data from A&A "are free for a scientific usage".
+- **Attribution:** Cite Piffaretti et al. 2011.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/>
+- **Enters skymap:** `npm run fetch-structures` → `data/raw/mcxc/mcxc.dat` →
+  `tools/structures/buildStructures.ts` → `public/data/structure-catalog/`.
+- **Modified:** Yes. Filtered by mass; hand-placed anchors win over catalogue
+  rows near them.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
+### MSCC, the Main SuperCluster Catalogue
+
+<!-- attribution: id=mscc; keys=mscc.* -->
+
+- **What:** 601 superclusters of Abell/ACO clusters (VizieR J/MNRAS/445/4073).
+- **By:** Chow-Martínez et al. 2014, MNRAS 445, 4073.
+- **Licence:** The ReadMe carries no copyright section. The CDS terms above
+  refer to the journal's policy for MNRAS catalogues, which was not read.
+- **Attribution:** Cite Chow-Martínez et al. 2014.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/>
+- **Enters skymap:** `npm run fetch-structures` → `data/raw/mscc/mscc.dat` →
+  `tools/structures/buildStructures.ts`.
+- **Modified:** Yes. Filtered by richness.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Not verified:** the MNRAS policy on catalogues.
+
+### Constellation lines (d3-celestial)
+
+<!-- attribution: id=d3-celestial; keys=constellations.* -->
+
+- **What:** Stick-figure vertices of the 88 constellations
+  (`data/constellations.lines.json`, pinned commit in the README).
+- **By:** Olaf Frohn.
+- **Licence:** BSD 3-Clause. "Copyright (c) 2015, Olaf Frohn. All rights
+  reserved."
+- **Attribution:** The licence asks that redistributions keep the copyright
+  notice, the conditions and the disclaimer; they are in
+  `data/raw/constellations/README.md`.
+- **Upstream:** <https://github.com/ofrohn/d3-celestial>
+- **Enters skymap:** vendored at `data/raw/constellations/constellations.lines.json`
+  → `tools/stars-rs` → `public/data/constellations.json`.
+- **Modified:** Yes. Each vertex is resolved to a catalogued star's 3D position.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/ofrohn/d3-celestial/master/LICENSE>
+
+### VizieR and the CDS services
+
+<!-- attribution: id=vizier -->
+
+- **What:** The catalogue service through which 2MASS XSC, Cosmicflows-4,
+  Hipparcos, MCXC, MSCC and the S-star tables were fetched.
+- **By:** CDS, Strasbourg. Ochsenbein, Bauer & Marcout 2000, A&AS 143, 23.
+- **Licence:** The CDS terms quoted at the head of this section.
+- **Attribution:** "This research has made use of the VizieR catalogue access
+  tool, CDS, Strasbourg, France (DOI : 10.26093/cds/vizier). The original
+  description of the VizieR service was published in 2000, A&AS 143, 23"
+- **Upstream:** <https://vizier.cds.unistra.fr/>
+- **Enters skymap:** `tools/fetch/fetch2massXsc.ts`, `fetchCosmicflows4.ts`,
+  `fetchStructureCatalogs.ts`, `fetchGaia.ts` (build time only).
+- **Modified:** Not applicable (a service).
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
+## Fields, volumes and structures
+
+### CF4++ density and velocity grids (Cosmicflows-4)
+
+<!-- attribution: id=cf4pp; keys=cf4.density-mean,cf4.vfield-mean,cf4.vfield-npz,cf4.dir; hosts=projets.ip2i.in2p3.fr -->
+
+- **What:** Mean velocity and density on a 128³ grid in a 1000 Mpc box
+  (`CF4pp_mean_std_grids.npz`), drawn as the flow field.
+- **By:** Courtois et al. 2025 ([arXiv:2502.01308](https://arxiv.org/abs/2502.01308)),
+  built on the Cosmicflows-4 distances of Tully et al. 2023.
+- **Licence:** Not stated on the project's page.
+- **Attribution:** "If you use this data cite the article above" (the page, of
+  each download).
+- **Upstream:** <https://projets.ip2i.in2p3.fr/cosmicflows/>
+- **Enters skymap:** `data/raw/cf4/CF4pp_mean_std_grids.npz` (the two mean
+  arrays are also hosted on R2 for contributors) → `npm run build-flow-field` →
+  `public/data/scalar-field/v3/flowfield.scfd`.
+- **Modified:** Yes. Two of the six arrays are packed to 16-bit floats.
+- **Checked:** 2026-10-07: <https://projets.ip2i.in2p3.fr/cosmicflows/>
+
+### SDSS Cosmic Slime value-added catalogue (MCPM density)
+
+<!-- attribution: id=mcpm-vac; keys=mcpm.dir -->
+
+- **What:** A 712×1200×728 density cube fitted to SDSS galaxies by the Monte
+  Carlo Physarum Machine (`SDSS_z_44-476mpc`), drawn as the cosmic web glow.
+- **By:** Wilde et al. 2023 ([arXiv:2301.02719](https://arxiv.org/abs/2301.02719));
+  method: Burchett et al. 2020, Elek et al. 2021.
+- **Licence:** It is an SDSS DR17 data product; SDSS states: "All SDSS data
+  released in our public data releases is considered in the public domain."
+- **Attribution:** Cite the papers above and SDSS DR17, with the SDSS-IV
+  acknowledgement (see SDSS).
+- **Upstream:** <https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold>
+- **Enters skymap:** `tools/volumes/extractMcpmCube.py` (with pyslime) →
+  `data/raw/mcpm/mcpm_sdss_d{2,4,8}.npy` (hosted on R2 for contributors) →
+  `npm run build-mcpm` → `public/data/scalar-field/v3/mcpm-*.scfd`.
+- **Modified:** Yes. Downsampled to three sizes, log-normalised, 16-bit.
+- **Checked:** 2026-10-07: <https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold>,
+  <https://www.sdss4.org/collaboration/#image-use>
+
+### pyslime
+
+<!-- attribution: id=pyslime -->
+
+- **What:** The reader that decodes the catalogue's `trace.bin`; a maintainer
+  step, not shipped.
+- **By:** J. N. Burchett and contributors.
+- **Licence:** BSD 3-Clause. "Copyright (c) 2017, J. Xavier Prochaska".
+- **Attribution:** The licence's notice, for redistributions of the code;
+  skymap redistributes none of it.
+- **Upstream:** <https://github.com/jnburchett/pyslime>
+- **Enters skymap:** imported by `tools/volumes/extractMcpmCube.py`.
+- **Modified:** No.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/jnburchett/pyslime/master/LICENSE>
+
+### Polyphorm and the Monte Carlo Physarum Machine
+
+<!-- attribution: id=polyphorm; keys=polyphorm.dir,mcpm-workbench.* -->
+
+- **What:** The software and method behind the density cubes. Three things in
+  skymap descend from it: (1) the simulation kernels in
+  `src/services/gpu/shaders/mcpm/`, which their own headers describe as a port
+  of Polyphorm's D3D11 kernels ("the algorithm verbatim"), served on the
+  `/mcpm/` workbench page; (2) five colour ramps in
+  `src/data/volume/scalarFieldPalettes.ts`, sampled from Polyphorm's
+  `palette_*.tga` files; (3) the hidden "Polyphorm (2MRS)" volume, a run of
+  the software over 2MRS made by us, and cubes exported from the workbench.
+- **By:** Oskar Elek, Joseph N. Burchett, J. Xavier Prochaska and Angus G.
+  Forbes (Creative Coding Lab, UC Santa Cruz). Elek et al. 2021
+  ([arXiv:2009.02441](https://arxiv.org/abs/2009.02441)); Burchett et al. 2020
+  ([arXiv:1910.05344](https://arxiv.org/abs/1910.05344)).
+- **Licence:** Not stated. The Polyphorm repository has no licence file and
+  GitHub reports none for it. (PolyPhy, its successor, is MIT-licensed; the
+  export format `polyphy-trace` read by `tools/parsers/polyphyTraceSidecar.ts`
+  comes from a fork of it.)
+- **Attribution:** None is asked in the repository's README; the app's Cosmic
+  Web exhibit cites the two papers and links the repository.
+- **Upstream:** <https://github.com/CreativeCodingLab/Polyphorm>
+- **Enters skymap:** as listed under What; the 2MRS run through
+  `tools/volumes/extractPolyphormExport.py` → `data/raw/polyphorm/` →
+  `buildRhizomeVolume.ts`; workbench exports through
+  `npm run promote-mcpm-workbench`.
+- **Modified:** Yes. Kernels translated from HLSL to WGSL with storage buffers
+  in place of 3D textures; ramps resampled to 12 anchors.
+- **Checked:** 2026-10-07: <https://api.github.com/repos/CreativeCodingLab/Polyphorm>,
+  <https://raw.githubusercontent.com/CreativeCodingLab/Polyphorm/master/README.md>,
+  <https://api.github.com/repos/PolyPhyHub/PolyPhy>
+
+### Edenhofer et al. 2024: 3D dust map
+
+<!-- attribution: id=edenhofer; keys=edenhofer.* -->
+
+- **What:** Dust extinction density out to 1.25 kpc from the Sun
+  (`mean_and_std_healpix.fits`).
+- **By:** Edenhofer, Zucker, Frank, Saydjari, Speagle, Finkbeiner & Enßlin
+  2024, A&A 685, A82.
+- **Licence:** Creative Commons Attribution 4.0 International (the Zenodo
+  record).
+- **Attribution:** Cite the paper and the dataset, doi:10.5281/zenodo.8187943.
+- **Upstream:** <https://zenodo.org/records/8187943>
+- **Enters skymap:** `data/raw/edenhofer/fetch_edenhofer.sh` →
+  `tools/volumes/extractDustCube.py` → `buildDustVolume.ts` →
+  `public/data/scalar-field/v3/edenhofer-dust-*.scfd` (shipped, with no layer
+  drawing it yet).
+- **Modified:** Yes. Resampled to a box at three sizes, de-biased, 16-bit.
+- **Checked:** 2026-10-07: <https://zenodo.org/records/8187943>
+
+### The Local Bubble shell (O'Neill et al. 2024)
+
+<!-- attribution: id=local-bubble; keys=localbubble.* -->
+
+- **What:** The surface of the Local Bubble, one radius per HEALPix direction
+  (`ONeill2024_LocalBubble_ShellProperties_A0.5.fits`).
+- **By:** O'Neill, Zucker, Goodman & Edenhofer 2024, "The Local Bubble is a
+  Local Chimney" ([arXiv:2403.04961](https://arxiv.org/abs/2403.04961)).
+- **Licence:** CC0 1.0 (the Harvard Dataverse record).
+- **Attribution:** None required by CC0; cite the paper.
+- **Upstream:** <https://doi.org/10.7910/DVN/INB1RB>
+- **Enters skymap:** `npm run fetch-local-bubble` → `data/raw/localbubble/` →
+  `public/data/local-bubble/v1/local-bubble.shell`.
+- **Modified:** Yes. Baked to a triangle mesh with normals.
+- **Checked:** 2026-10-07: <https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/INB1RB>
+
+### Filaments (DisPerSE)
+
+<!-- attribution: id=disperse; keys=filaments.cache-dir -->
+
+- **What:** The filament skeleton is computed by us from the 2MRS and GLADE
+  galaxies with DisPerSE, run offline; the program is not shipped.
+- **By:** Thierry Sousbie. Sousbie 2011 (as cited in `docs/DATA.md`).
+- **Licence:** GitHub reports a licence it does not recognise for the
+  repository ("Other"); its text was not read.
+- **Attribution:** Cite Sousbie 2011.
+- **Upstream:** <https://github.com/thierry-sousbie/DisPerSE>
+- **Enters skymap:** `npm run build-filaments` → `data/raw/filaments/` →
+  `public/data/filament/v1/filaments.bin`.
+- **Modified:** Not applicable: the output is our own derived product.
+- **Checked:** 2026-10-07: <https://api.github.com/repos/thierry-sousbie/DisPerSE>
+- **Not verified:** DisPerSE's licence text.
 
 ## Imagery
 
