@@ -91,9 +91,18 @@ const kin = DOCS_TREE.flatMap((group) => group.pages).filter((page) => family &&
       <p class="legend" aria-hidden="true">The dimmer pages are not written yet.</p>
     </div>
   </details>
-  <!-- Before the first paint, so a phone never shows the list open and then folds it. Without script it stays open. -->
+  <!--
+    Before the first paint, so a phone never shows the list open and then folds it; without script it stays open.
+    Wide, the list scrolls by itself: the row of the page you are on is brought to its middle, and nothing else moves.
+  -->
   <script is:inline>
-    if (matchMedia('(max-width: 900px)').matches) document.currentScript.previousElementSibling.open = false;
+    {
+      const menu = document.currentScript.previousElementSibling;
+      const nav = menu.parentElement;
+      const here = menu.querySelector('[aria-current]');
+      if (matchMedia('(max-width: 900px)').matches) menu.open = false;
+      else if (here) nav.scrollTop = here.offsetTop - nav.clientHeight / 2;
+    }
   </script>
 </nav>
 
@@ -103,6 +112,12 @@ const kin = DOCS_TREE.flatMap((group) => group.pages).filter((page) => family &&
   const narrow = matchMedia('(max-width: 900px)');
   if (menu) {
     narrow.addEventListener('change', () => (menu.open = !narrow.matches));
+    // Narrow, the list is a sheet with its own scroll: opened, it shows the row of the page you are on.
+    menu.addEventListener('toggle', () => {
+      const tree = menu.querySelector<HTMLElement>('.tree');
+      const here = menu.querySelector<HTMLElement>('[aria-current]');
+      if (menu.open && narrow.matches && tree && here) tree.scrollTop = here.offsetTop - tree.clientHeight / 2;
+    });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' || !narrow.matches || !menu.open) return;
       menu.open = false;

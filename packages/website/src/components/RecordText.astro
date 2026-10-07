@@ -1,28 +1,61 @@
 ---
 /*
  * RecordText — words of the repository's licence record (ATTRIBUTIONS.md) on
- * a docs page, printed as the record has them. `lift` sets each long
- * quotation apart as a block, so a text a rights holder asks for stands as
- * theirs; `phrase` prints one run with no paragraph, for a sentence.
+ * a docs page, printed as the record has them. `lift` sets a holder's own
+ * words apart as block quotes (utils/liftQuotes.ts has the rules) and `copy`
+ * gives each of those a control that copies it; `phrase` prints one run with
+ * no paragraph, for a heading or a sentence. A pointer to another entry is a
+ * link to that entry's page.
  */
+import CopyButton from './CopyButton.astro';
+import { dataEntry } from '../data/dataPages';
 import { REPO_BLOB } from '../data/siteIdentity';
 import { liftQuotes } from '../utils/liftQuotes';
+import { linkEntryPointers } from '../utils/linkEntryPointers';
+import { plainText } from '../utils/plainText';
 import { recordHtml } from '../utils/recordHtml';
+import { recordParagraphs } from '../utils/recordParagraphs';
+import { sitePath } from '../utils/sitePath';
 
-type Props = { text: string; lift?: boolean; phrase?: boolean };
+type Props = { text: string; lift?: boolean; copy?: boolean; phrase?: boolean };
 
-const { text, lift = false, phrase = false } = Astro.props;
-const html = recordHtml(lift ? liftQuotes(text) : text, REPO_BLOB, phrase);
+const { text, lift = false, copy = false, phrase = false } = Astro.props;
+const linked = linkEntryPointers(text, (id) => ({ href: sitePath(dataEntry(id).href), title: dataEntry(id).title }));
+// The record starts some bullets in lower case, as the rest of a sentence its label began.
+const whole = recordParagraphs(linked).replace(/^[a-z]/, (first) => first.toUpperCase());
+const blocks = (lift ? liftQuotes(whole) : whole)
+  .split(/\n{2,}/)
+  .filter((block) => block.trim())
+  .map((block) => ({ quote: block.startsWith('>'), text: block.replace(/^>\s?/gm, '') }));
 ---
 
-{phrase ? <Fragment set:html={html} /> : <div class="record" data-embed set:html={html} />}
+{
+  phrase ? (
+    <Fragment set:html={recordHtml(linked, REPO_BLOB)} />
+  ) : (
+    <div class="record" data-embed>
+      {blocks.map((block) =>
+        block.quote ? (
+          <div class="quote">
+            <blockquote>
+              <p set:html={recordHtml(block.text, REPO_BLOB)} />
+            </blockquote>
+            {copy && <CopyButton text={plainText(block.text)} label="Copy this text" />}
+          </div>
+        ) : (
+          <p set:html={recordHtml(block.text, REPO_BLOB)} />
+        ),
+      )}
+    </div>
+  )
+}
 
 <style>
   .record {
     margin: 0 0 var(--stack);
   }
 
-  .record :global(p) {
+  p {
     max-width: var(--doc-measure);
     margin: 0 0 0.75rem;
     color: var(--site-text-muted);
@@ -30,18 +63,43 @@ const html = recordHtml(lift ? liftQuotes(text) : text, REPO_BLOB, phrase);
     text-wrap: pretty;
   }
 
-  /* A quotation is the holder's text: behind a rule, in the page's brightest words. */
-  .record :global(blockquote) {
+  /* A quotation is the holder's text: behind a rule, in the page's brightest words, its copy control at its first line. */
+  .quote {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
     margin: 0 0 0.75rem;
-    padding-left: 1rem;
+  }
+
+  blockquote {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding-left: 1.5rem;
     border-left: 1px solid var(--site-text-dim);
   }
 
-  .record :global(blockquote p) {
+  blockquote p {
+    margin: 0;
     color: var(--color-fg);
   }
 
-  .record :global(:last-child) {
+  .quote :global(button) {
+    margin-block: -0.5rem;
+  }
+
+  .record > :last-child {
     margin-bottom: 0;
+  }
+
+  .record :global(strong) {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .record :global(a) {
+    display: inline-block;
+    padding-block: 0.625rem;
+    margin-block: -0.625rem;
   }
 </style>

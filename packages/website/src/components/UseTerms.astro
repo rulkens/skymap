@@ -1,0 +1,53 @@
+---
+/*
+ * UseTerms — what may be done with a source, in the fixed terms of its `Use`
+ * bullet in the licence record, one term a line. A term that limits use, or
+ * says that nothing was granted, has a filled mark and heavier type; a free
+ * one an open mark. The difference is in shape and weight, so it does not
+ * rest on colour. Which terms limit is tools/utils/io/attributionUses.ts.
+ */
+import type { AttributionUse } from '../../../../tools/@types/io/AttributionUse';
+import { ATTRIBUTION_USES } from '../../../../tools/utils/io/attributionUses';
+
+type Props = { use: readonly AttributionUse[] };
+
+const { use } = Astro.props;
+---
+
+{
+  use.map((term) => (
+    <span class:list={['use small', { limits: ATTRIBUTION_USES[term] === 'restricted' }]}>
+      {term}
+      {ATTRIBUTION_USES[term] === 'restricted' && <span class="unseen"> (limits use)</span>}{' '}
+    </span>
+  ))
+}
+
+<style>
+  .use {
+    position: relative;
+    display: block;
+    padding-left: 1.125rem;
+    color: var(--site-text-muted);
+  }
+
+  .use::before {
+    content: '';
+    position: absolute;
+    left: 0.125rem;
+    top: 0.55em;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border: 1px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .limits {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .limits::before {
+    background: currentColor;
+  }
+</style>

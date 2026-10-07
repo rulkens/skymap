@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import pkg from '../../../package.json';
-import { ATTRIBUTIONS } from '../../../packages/website/src/data/attributions';
+import { DATA_ENTRIES, dataEntry } from '../../../packages/website/src/data/dataPages';
 import { CITATION } from '../../../packages/website/src/data/citation';
 import { CITE_REFS } from '../../../packages/website/src/data/citeRefs';
 import { citationBibtex } from '../../../packages/website/src/utils/citationBibtex';
@@ -64,15 +64,15 @@ describe('references for the data', () => {
   );
 
   it('every key names an entry of the licence record', () => {
-    const ids = ATTRIBUTIONS.map((entry) => entry.id);
+    const ids = DATA_ENTRIES.map((entry) => entry.id);
     expect(Object.keys(CITE_REFS).filter((id) => !ids.includes(id))).toEqual([]);
   });
 
   it.each(rows)(
     '$id: $reference.authors $reference.year is named by its entry',
     ({ id, reference }) => {
-      const entry = ATTRIBUTIONS.find((row) => row.id === id)!;
-      const named = plain(`${entry.fields.By} ${entry.fields.Attribution}`);
+      const { fields } = dataEntry(id).record;
+      const named = plain(`${fields.By} ${fields.Attribution}`);
       const lead = plain(reference.authors.split(/, /)[0]!);
       expect(named).toContain(lead);
       // A dataset is named by its DOI where the entry gives no year for it.

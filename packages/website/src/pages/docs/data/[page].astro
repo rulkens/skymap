@@ -11,8 +11,8 @@ import RecordText from '../../../components/RecordText.astro';
 import Recorded from '../../../components/Recorded.astro';
 import { DATA_PAGES } from '../../../data/dataPages';
 import { DATA_SOURCE_NOTES } from '../../../data/dataSourceNotes';
-import { REPO_BLOB } from '../../../data/siteIdentity';
 import Docs from '../../../layouts/Docs.astro';
+import { formatDate } from '../../../utils/formatDate';
 import { plainText } from '../../../utils/plainText';
 
 export function getStaticPaths() {
@@ -21,16 +21,17 @@ export function getStaticPaths() {
 
 const { page } = Astro.props;
 const shared = page.family.pages === 'one';
-const notes = [...new Set(page.entries.flatMap((entry) => entry.record.notes))];
-const checked = page.entries.map((entry) => entry.checked).sort().at(-1)!;
+const [first] = page.entries;
+const notes = [...new Set(page.entries.flatMap((entry) => entry.record.sectionNotes))];
+const checked = page.entries.map((entry) => entry.record.checked).sort().at(-1)!;
 const headings = shared
   ? page.entries.map((entry) => ({ depth: 2, slug: entry.id, text: plainText(entry.record.heading) }))
   : [
       { depth: 2, slug: 'licence', text: 'Licence and terms' },
-      { depth: 2, slug: 'credit', text: 'Credit to give' },
-      { depth: 2, slug: 'pipeline', text: 'Where it enters skymap' },
-      ...(DATA_SOURCE_NOTES[page.slug]?.shows ? [{ depth: 2, slug: 'in-the-app', text: 'What it becomes in the app' }] : []),
+      { depth: 2, slug: 'about', text: 'What it is and who made it' },
+      { depth: 2, slug: 'build', text: 'In the build' },
     ];
+const recorded = plainText(first!.record.heading);
 ---
 
 <Docs
@@ -43,18 +44,13 @@ const headings = shared
     shared ? (
       <>
         <p>
-          The {page.entries.length} entries of this page are small, so they share it. Each has an address of its own: this page’s, with
-          the entry’s name in the record after a <code>#</code>.
-        </p>
-        <p>
-          Everything set between two rules is the text of the repository’s <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>attributions file</a>
-          , with the day the rights holder’s pages were read. It states terms and is not legal advice.{' '}
+          {page.entries.length} small sources on one page. The terms are as stated on {formatDate(checked)}, not legal advice.{' '}
           <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists every other source.
         </p>
         {notes.length > 0 && (
           <Recorded checked={checked}>
             {notes.map((text) => (
-              <RecordText text={text} />
+              <RecordText text={text} lift />
             ))}
           </Recorded>
         )}
@@ -69,11 +65,16 @@ const headings = shared
       </>
     ) : (
       <>
-        <DataEntryRecord entry={page.entries[0]!} level={2} />
+        <DataEntryRecord entry={first!} level={2} />
         <p>
-          The record’s name for this entry is “<RecordText text={page.entries[0]!.record.heading} phrase />”. Everything set between two
-          rules above is the text of the repository’s <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>attributions file</a>. It states terms and
-          is not legal advice. <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists the rest.
+          Terms as stated on {formatDate(checked)}, not legal advice.
+          {recorded !== page.title && (
+            <>
+              {' '}
+              Its name in our licence record: <RecordText text={first!.record.heading} phrase />.
+            </>
+          )}{' '}
+          <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists the rest.
         </p>
       </>
     )

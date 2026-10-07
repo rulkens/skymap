@@ -1828,7 +1828,7 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
   the usage guidelines." GitHub reports no licence file for that
   repository.
 - **Use:** Conditions apply
-- **Attribution:** Ours: "NASA, "Hubble Space Telescope (A)" — NASA 3D
+- **Attribution:** Ours: "NASA, “Hubble Space Telescope (A)” — NASA 3D
   Resources".
 - **Upstream:** <https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)>
 - **Enters skymap:** downloaded by hand → `npm run import-mesh -- hubble`,

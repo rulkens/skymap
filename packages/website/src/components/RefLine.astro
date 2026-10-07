@@ -1,5 +1,5 @@
 ---
-/* RefLine — one paper or dataset as a reference list prints it, with its DOI and arXiv links, from a row of data/citeRefs.ts. */
+/* RefLine — one paper or dataset as a reference list prints it, with its DOI and arXiv links, from a row of data/citeRefs.ts. The title is in quotation marks: the text face has no italic. */
 import type { CiteRef } from '../@types/CiteRef';
 
 type Props = { reference: CiteRef };
@@ -7,7 +7,7 @@ type Props = { reference: CiteRef };
 const { reference } = Astro.props;
 ---
 
-{reference.authors} ({reference.year}). <i>{reference.title}</i>. {reference.journal}.{' '}
+{reference.authors} ({reference.year}). “{reference.title}”. {reference.journal}.{' '}
 {reference.doi && <a class="id" href={`https://doi.org/${reference.doi}`}>doi:{reference.doi}</a>}{' '}
 {reference.arxiv && <a class="id" href={`https://arxiv.org/abs/${reference.arxiv}`}>arXiv:{reference.arxiv}</a>}
 

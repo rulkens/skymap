@@ -1,27 +1,22 @@
+import { parseAttributionUses } from '../../../../tools/utils/io/parseAttributionUses';
 import { parseAttributions } from '../../../../tools/utils/io/parseAttributions';
 import { RAW_DATA, type RawDataEntry } from '../../../../tools/utils/io/rawDataRegistry';
 import type { DataEntry } from '../@types/DataEntry';
 import type { DataFamily } from '../@types/DataFamily';
 import type { DataPage } from '../@types/DataPage';
-import { attributionRecords } from '../utils/attributionRecords';
 import { attributionsMarkdown } from '../utils/attributionsMarkdown';
-import { fitText } from '../utils/fitText';
 import { plainText } from '../utils/plainText';
 import { shortTitle } from '../utils/shortTitle';
 import { DATA_FAMILIES } from './dataFamilies';
 import { DATA_SOURCE_NOTES } from './dataSourceNotes';
 
 const ROOT = '/docs/data/';
-const DESCRIPTION_MAX = 155;
 const REGISTRY: Readonly<Record<string, RawDataEntry>> = RAW_DATA;
 
 const markdown = attributionsMarkdown();
-const parsed = parseAttributions(markdown);
-const { records, terms } = attributionRecords(markdown);
+const records = parseAttributions(markdown);
 
 const slug = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-/** The name an entry is called by in another entry's text: its heading up to the first comma, bracket or colon. */
-const calledBy = (heading: string): string => heading.split(/,| \(|:/)[0]!.trim();
 
 function familyOf(id: string, section: string, families: readonly DataFamily[]): DataFamily {
   return (
@@ -44,35 +39,25 @@ function familyOf(id: string, section: string, families: readonly DataFamily[]):
  * the index and a page (or a section of its family's page) with no edit here.
  * This module reads files, so it is for pages and build tools only.
  */
-export const DATA_TERMS = terms;
+export const DATA_USES = parseAttributionUses(markdown);
 
-export const DATA_ENTRIES: readonly DataEntry[] = records.map((record, at) => {
-  const entry = parsed.find((row) => row.id === record.id);
-  if (!entry) throw new Error(`ATTRIBUTIONS.md: no parsed entry for "${record.heading}"`);
+export const DATA_ENTRIES: readonly DataEntry[] = records.map((record) => {
   const family = familyOf(record.id, record.section, DATA_FAMILIES);
   const path = `${ROOT}${family.pages === 'one' ? family.id : record.id}/`;
-  const said = plainText(`${record.bullets.Licence ?? ''} ${record.bullets.Attribution ?? ''}`);
+  const note = DATA_SOURCE_NOTES[record.id];
   return {
     id: record.id,
-    title: DATA_SOURCE_NOTES[record.id]?.title ?? shortTitle(record.heading),
+    title: note?.title ?? shortTitle(record.heading),
+    description: note?.description ?? plainText(record.bullets.What ?? ''),
     family: family.id,
     path,
     href: family.pages === 'one' ? `${path}#${record.id}` : path,
-    checked: entry.checked,
     record,
     files: Object.entries(REGISTRY)
       .filter(([key]) =>
-        entry.keys.some((pattern) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : pattern === key)),
+        record.keys.some((pattern) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : pattern === key)),
       )
       .map(([key, file]) => ({ key, path: file.path, kept: file.source, fetcher: file.fetcher })),
-    names: records
-      .filter(
-        (other, i) =>
-          other.id !== record.id &&
-          ((i === at - 1 && said.includes('the entry above')) ||
-            new RegExp(`(^|[^\\w-])${calledBy(other.heading).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\w-])`).test(said)),
-      )
-      .map((other) => other.id),
   };
 });
 
@@ -101,7 +86,7 @@ export const DATA_PAGES: readonly DataPage[] = DATA_FAMILIES_USED.flatMap((famil
     slug: entry.id,
     path: entry.path,
     title: entry.title,
-    description: fitText(plainText(entry.record.bullets.What ?? ''), DESCRIPTION_MAX),
+    description: entry.description,
     family,
     entries: [entry],
   }));

@@ -8,15 +8,15 @@
  * the citation, so the example cannot fall behind any of them.
  */
 import { APP_BASE } from '../data/appLink';
-import { CREDIT_GROUPS } from '../data/attributions';
 import { CITATION } from '../data/citation';
 import { CITE_REFS } from '../data/citeRefs';
+import { dataEntry } from '../data/dataPages';
 import { PRESS_PICTURES } from '../data/pressPictures';
 import { siteShot } from '../data/siteShot';
 import { asksAcknowledgement } from '../utils/asksAcknowledgement';
 import { citationText } from '../utils/citationText';
-import { sitePath } from '../utils/sitePath';
-import RecordText from './RecordText.astro';
+import CopyButton from './CopyButton.astro';
+import DocLink from './DocLink.astro';
 import RefLine from './RefLine.astro';
 
 type Props = { picture: string; cite: readonly string[] };
@@ -25,9 +25,8 @@ const { picture, cite } = Astro.props;
 const press = PRESS_PICTURES.find((row) => row.shot === picture);
 if (!press) throw new Error(`No press picture "${picture}" (see src/data/pressPictures.ts)`);
 const entries = cite.map((id) => {
-  const entry = CREDIT_GROUPS.flatMap((group) => group.entries).find((row) => row.id === id);
-  if (!entry || !CITE_REFS[id]) throw new Error(`No reference for "${id}" (see src/data/citeRefs.ts)`);
-  return { ...entry, references: CITE_REFS[id] };
+  if (!CITE_REFS[id]) throw new Error(`No reference for "${id}" (see src/data/citeRefs.ts)`);
+  return { ...dataEntry(id), references: CITE_REFS[id] };
 });
 // Two sources can ask for the same paper (the Gaia mission paper); it is listed once.
 const references = [...new Set(entries.flatMap((entry) => entry.references))];
@@ -38,15 +37,19 @@ const view = siteShot(picture)
   .join('&');
 const address = `${new URL(Astro.site!).host}${APP_BASE}#${view}`;
 const cited = `${CITATION.authors[0]!.family} ${CITATION.released.slice(0, 4)}`;
-const asking = entries.filter((entry) => asksAcknowledgement(entry.asks));
+const asking = entries.filter((entry) => asksAcknowledgement(entry.record.fields.Attribution ?? ''));
+const caption = `${siteShot(picture).title}. ${press.credit}. Made with skymap ${CITATION.version} (${cited}), from the view at ${address}.`;
 ---
 
 <div class="sample" data-embed>
   <h3>Under the picture</h3>
-  <p>
-    {siteShot(picture).title}. {press.credit}. Made with skymap {CITATION.version} ({cited}), from the view at{' '}
-    <span class="address">{address}</span>.
-  </p>
+  <div class="row">
+    <p>
+      {caption.replace(`${address}.`, '')}
+      <span class="address">{address}</span>.
+    </p>
+    <CopyButton text={caption} label="Copy the caption" />
+  </div>
   <h3>In the reference list</h3>
   <p>{citationText(CITATION)}</p>
   {
@@ -62,8 +65,7 @@ const asking = entries.filter((entry) => asksAcknowledgement(entry.asks));
         <h3>In the acknowledgements</h3>
         {asking.map((entry) => (
           <p>
-            The text <RecordText text={entry.name} phrase /> asks for, which is{' '}
-            <a href={`${sitePath('/docs/credits/')}#${entry.id}`}>on the credits page</a>.
+            The text {entry.title} asks for, which is <DocLink href={`/docs/credits/#${entry.id}`}>on the credits page</DocLink>.
           </p>
         ))}
       </>
@@ -75,8 +77,23 @@ const asking = entries.filter((entry) => asksAcknowledgement(entry.asks));
   /* What a reader would print, set apart from the page's own words as a quotation is. */
   .sample {
     margin: 0 0 var(--stack);
-    padding-left: 1rem;
+    padding-left: 1.5rem;
     border-left: 1px solid var(--site-text-dim);
+  }
+
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .row p {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .row :global(button) {
+    margin-block: -0.5rem;
   }
 
   h3 {

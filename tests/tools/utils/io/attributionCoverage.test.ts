@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ATTRIBUTION_USES } from '../../../../tools/utils/io/attributionUses';
 import { parseAttributions } from '../../../../tools/utils/io/parseAttributions';
+import { parseAttributionUses } from '../../../../tools/utils/io/parseAttributionUses';
 import { RAW_DATA, type RawDataEntry } from '../../../../tools/utils/io/rawDataRegistry';
 
 const ROOT = resolve(__dirname, '../../../..');
@@ -89,6 +90,19 @@ describe('parseAttributions', () => {
     ).toThrow(/"host"/);
   });
 
+  it('keeps a bullet’s lines, block quotes and all, and gives it joined on one line as well', () => {
+    const [row] = parseAttributions(
+      '## Part\n\nA note.\n\n' +
+        entry(
+          '<!-- attribution: id=thing -->',
+          '- **Attribution:** Say:\n\n  > A text\n  > of theirs.\n\nNot the bullet.\n',
+        ),
+    );
+    expect(row!.bullets.Attribution).toBe('Say:\n\n> A text\n> of theirs.');
+    expect(row!.fields.Attribution).toBe('Say: > A text > of theirs.');
+    expect([row!.heading, row!.section, row!.sectionNotes]).toEqual(['Thing', 'Part', ['A note.']]);
+  });
+
   it('refuses a second bullet of the same label', () => {
     expect(() =>
       parseAttributions(entry('<!-- attribution: id=thing -->', '- **Licence:** GPL\n')),
@@ -122,10 +136,10 @@ describe('the Use bullet', () => {
   });
 
   it('is defined, term by term, at the head of the file', () => {
-    const head = MARKDOWN.slice(0, MARKDOWN.indexOf('\n## Catalogue data'));
-    expect(
-      Object.keys(ATTRIBUTION_USES).filter((term) => !head.includes(`- \`${term}\`:`)),
-    ).toEqual([]);
+    expect(Object.keys(parseAttributionUses(MARKDOWN))).toEqual(Object.keys(ATTRIBUTION_USES));
+    expect(() => parseAttributionUses(MARKDOWN.replace('- `Per item`:', '- `Per thing`:'))).toThrow(
+      /no definition of the Use term "Per item"/,
+    );
   });
 
   it('is never only free terms where the Licence text speaks of non-commercial use or permission', () => {

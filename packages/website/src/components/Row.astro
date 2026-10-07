@@ -1,0 +1,55 @@
+---
+/*
+ * Row — one labelled row of a `<dl data-embed>` on a docs page: the label in
+ * the first two of the text's columns, as a docs table's names are, and what
+ * it labels in the rest, with one rule over the row. Under 700px the label
+ * stands over its words. The summary of a source, an entry of the credits
+ * and the list of `Use` terms are all rows of this kind.
+ */
+type Props = { label?: string };
+
+const { label } = Astro.props;
+---
+
+<div class="row">
+  <dt class="small"><slot name="label">{label}</slot></dt>
+  <dd><slot /></dd>
+</div>
+
+<style>
+  .row {
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+    color: var(--site-text-muted);
+  }
+
+  dd > :global(:last-child) {
+    margin-bottom: 0;
+  }
+
+  @media (min-width: 700px) {
+    .row {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+      column-gap: var(--col-gap);
+    }
+
+    dt {
+      grid-column: 1 / span 2;
+      padding-top: 0.125rem;
+    }
+
+    dd {
+      grid-column: 3 / -1;
+    }
+  }
+</style>

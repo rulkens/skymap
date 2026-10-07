@@ -1,36 +1,52 @@
 ---
 /*
  * Recorded — a passage of the repository's licence record set apart from the
- * page's own words: between two rules, with the day its holder's pages were
- * read under it. What stands inside (the slot) is the record's text, printed
- * as it is; the `foot` slot adds to the dated line, for the pages that were
- * read. A reader must be able to tell at a glance which words are ours.
+ * page's own words as a quotation: behind a rule, under a line that says
+ * whose words they are and the day the holder's pages were read. `read` is
+ * the rest of the entry's Checked bullet, printed where it names an address.
+ * Inside it a holder's own words stand behind a second, brighter rule.
  */
+import RecordText from './RecordText.astro';
 import { formatDate } from '../utils/formatDate';
 
-type Props = { checked: string };
+type Props = { checked: string; read?: string };
 
-const { checked } = Astro.props;
+const { checked, read = '' } = Astro.props;
 ---
 
 <div class="recorded" data-embed>
+  <p class="small">From our licence record, as read on {formatDate(checked)}</p>
   <slot />
-  <p class="when small tap-links">
-    From our licence record, as read on {formatDate(checked)}.<slot name="foot" />
-  </p>
+  {
+    /https?:/.test(read) && (
+      <p class="small">
+        Pages read: <RecordText text={read} phrase />
+      </p>
+    )
+  }
 </div>
 
 <style>
   .recorded {
     margin: 0 0 var(--stack);
-    padding-block: 1.25rem 1rem;
-    border-block: 1px solid var(--border-divider);
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--border-divider);
   }
 
-  .when {
+  .small {
     max-width: var(--doc-measure);
-    margin: 1rem 0 0;
+    margin: 0 0 0.75rem;
     color: var(--site-text-dim);
     overflow-wrap: anywhere;
+  }
+
+  .small:last-child {
+    margin: 0.75rem 0 0;
+  }
+
+  .small :global(a) {
+    display: inline-block;
+    padding-block: 0.625rem;
+    margin-block: -0.625rem;
   }
 </style>

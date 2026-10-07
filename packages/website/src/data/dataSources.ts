@@ -184,7 +184,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'The bright stars that saturate Gaia’s detectors',
     release: 'The 2007 re-reduction, van Leeuwen (VizieR I/311)',
     rows: '117,955 stars',
-    licence: CDS_COPY,
+    licence: `${CDS_COPY} The table that matches it to Gaia comes from the Gaia archive, whose data are CC BY-NC 3.0 IGO (non-commercial).`,
     href: `${VIZIER}I/311`,
     evidence: GAIA_RECORD,
   },

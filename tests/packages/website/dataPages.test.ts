@@ -12,39 +12,24 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FAMILIES } from '../../../packages/website/src/data/dataFamilies';
-import { DATA_ENTRIES, DATA_PAGES, DATA_TERMS } from '../../../packages/website/src/data/dataPages';
+import { DATA_ENTRIES, DATA_PAGES, DATA_USES } from '../../../packages/website/src/data/dataPages';
 import { DATA_SOURCE_NOTES } from '../../../packages/website/src/data/dataSourceNotes';
 import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
-import { DOCS_TREE } from '../../../packages/website/src/data/docsTree';
 import { FACTS } from '../../../packages/website/src/data/facts';
 import { SITE_SHOTS } from '../../../packages/website/src/data/siteShots';
-import { fitText } from '../../../packages/website/src/utils/fitText';
-import { licenceLead } from '../../../packages/website/src/utils/licenceLead';
 import { plainText } from '../../../packages/website/src/utils/plainText';
-import { recordParagraphs } from '../../../packages/website/src/utils/recordParagraphs';
 import { shortTitle } from '../../../packages/website/src/utils/shortTitle';
-import { parseAttributions } from '../../../tools/utils/io/parseAttributions';
+import { ATTRIBUTION_USES } from '../../../tools/utils/io/attributionUses';
+import { licenceNames, unsaidLimits } from './licenceClaims';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const SITE = resolve(ROOT, 'packages/website/src');
-const PARSED = parseAttributions(readFileSync(resolve(ROOT, 'ATTRIBUTIONS.md'), 'utf8'));
-/** A text's words, with spacing and the signs of a list or a quotation taken away. */
-const words = (text: string) => text.replace(/(^|\s)[->](?=\s)/g, ' ').replace(/\s+/g, '');
-/** One spelling for each licence the record or a holder writes in more than one way. */
-const sameNames = (licence: string) =>
-  licence
-    .replace(/CC-BY/g, 'CC BY')
-    .replace(/Attribution-NonCommercial-ShareAlike (\d\.\d) International/g, 'CC BY-NC-SA $1')
-    .replace(/Attribution (\d\.\d) International/g, 'CC BY $1');
-const named = (licence: string) => [
-  ...(sameNames(licence).match(/CC BY(?:-[A-Z]{2})*(?: \d\.\d)?(?: IGO)?|CC0/g) ?? []),
-  ...(/public domain/i.test(licence) ? ['public domain'] : []),
-];
 
 describe('data pages', () => {
   it('print every entry of the record on exactly one page', () => {
     const printed = DATA_PAGES.flatMap((page) => page.entries.map((entry) => entry.id));
-    expect([...printed].sort()).toEqual(PARSED.map((entry) => entry.id).sort());
+    expect([...printed].sort()).toEqual(DATA_ENTRIES.map((entry) => entry.id).sort());
+    expect(DATA_ENTRIES.length).toBeGreaterThan(90);
     for (const entry of DATA_ENTRIES) {
       const page = DATA_PAGES.filter((row) => row.entries.includes(entry));
       expect(
@@ -52,19 +37,6 @@ describe('data pages', () => {
         entry.id,
       ).toEqual([entry.path]);
       expect(entry.href.startsWith(entry.path), entry.id).toBe(true);
-    }
-  });
-
-  it('read each bullet of the record whole', () => {
-    for (const entry of DATA_ENTRIES) {
-      const flat = PARSED.find((row) => row.id === entry.id)!.fields;
-      expect(Object.keys(entry.record.bullets), entry.id).toEqual(Object.keys(flat));
-      for (const [label, text] of Object.entries(flat)) {
-        expect(words(entry.record.bullets[label]!), `${entry.id} ${label}`).toBe(words(text));
-        expect(words(recordParagraphs(entry.record.bullets[label]!)), `${entry.id} ${label}`).toBe(
-          words(text),
-        );
-      }
     }
   });
 
@@ -81,25 +53,28 @@ describe('data pages', () => {
         (page) => page.slug,
       ),
     ).toEqual([]);
+    // Nothing a page opens on is a cut text, and a page of one source opens on a sentence written for it.
+    expect(
+      DATA_ENTRIES.filter((entry) => /…$|\.\.\.$/.test(entry.description)).map((entry) => entry.id),
+    ).toEqual([]);
+    expect(
+      DATA_ENTRIES.filter((entry) => !DATA_SOURCE_NOTES[entry.id]?.description).map(
+        (entry) => entry.id,
+      ),
+    ).toEqual([]);
+    const descriptions = DATA_ENTRIES.map((entry) => entry.description);
+    expect(descriptions.filter((text, i) => descriptions.indexOf(text) !== i)).toEqual([]);
+    expect(
+      DATA_ENTRIES.filter(
+        (entry) => entry.description.length > 155 || !/[.!?]$/.test(entry.description),
+      ).map((entry) => entry.id),
+    ).toEqual([]);
     const slugs = DATA_PAGES.map((page) => page.slug);
     expect(
       slugs.filter(
         (slug, i) => slug === 'pipeline' || !/^[a-z0-9-]+$/.test(slug) || slugs.indexOf(slug) !== i,
       ),
     ).toEqual([]);
-  });
-
-  it('are the rows of the docs tree that have a family, and no others', () => {
-    const rows = DOCS_TREE.flatMap((group) => group.pages).filter((page) => page.family);
-    expect(rows.map((row) => `${row.path} ${row.title} ${row.status}`)).toEqual(
-      DATA_PAGES.map((page) => `${page.path} ${page.title} live`),
-    );
-  });
-
-  it('print the text an entry points at by name', () => {
-    expect(DATA_TERMS.map((term) => term.term)).toEqual(
-      expect.arrayContaining(['the CDS terms', "NASA's media guidelines"]),
-    );
   });
 });
 
@@ -122,6 +97,15 @@ describe('what is written by hand for the data pages', () => {
     ).toEqual([]);
   });
 
+  // A thumbnail drawn at a column's width is a blur with no label: the Voyager page had one.
+  it('shows only pictures made for a column, with a title and words for a screen reader', () => {
+    const poor = Object.entries(DATA_SOURCE_NOTES).filter(([, note]) => {
+      const shot = SITE_SHOTS.find((row) => row.id === note.figure);
+      return shot && (Math.max(...shot.widths) < 1000 || !shot.title || !shot.alt);
+    });
+    expect(poor.map(([id]) => id)).toEqual([]);
+  });
+
   // A planet, moon or rover site opened with no date is lit or dark by the hour of the click.
   it('pins the date and time of every view of a body', () => {
     const unpinned = Object.entries(DATA_SOURCE_NOTES)
@@ -141,6 +125,10 @@ describe('what is written by hand for the data pages', () => {
       'components/DataEntryRecord.astro',
       'components/Recorded.astro',
       'components/SourceLink.astro',
+      'components/CreditEntry.astro',
+      'components/UseLegend.astro',
+      'components/UseTerms.astro',
+      'pages/docs/credits.astro',
       'pages/docs/data/index.astro',
       'pages/docs/data/[page].astro',
     ];
@@ -155,32 +143,36 @@ describe('what is written by hand for the data pages', () => {
     }
   });
 
-  it('gives the Science page’s table rows entries that exist, and no licence their entries do not state', () => {
+  it('gives the Science page’s table rows entries that exist, no licence their entries do not state, and no freer a reading than their Use', () => {
     for (const row of DATA_SOURCES) {
       expect(row.entries.length, row.id).toBeGreaterThan(0);
       expect(
         row.entries.filter((id) => !ids.has(id)),
         row.id,
       ).toEqual([]);
-      const entries = row.entries.map((id) => DATA_ENTRIES.find((entry) => entry.id === id)!);
-      // An entry may state its terms by pointing at another's ("quoted under Gaia DR3").
-      const stated = [
-        ...entries,
-        ...entries.flatMap((entry) =>
-          entry.names.map((id) => DATA_ENTRIES.find((e) => e.id === id)!),
-        ),
-      ]
-        .map((entry) => plainText(entry.record.bullets.Licence ?? ''))
-        .join(' ');
+      const entries = DATA_ENTRIES.filter((entry) => row.entries.includes(entry.id));
+      const stated = licenceNames(
+        entries.map((entry) => plainText(entry.record.bullets.Licence ?? '')).join(' '),
+      );
       expect(
-        named(row.licence).filter((name) => !named(stated).includes(name)),
+        licenceNames(row.licence).filter((name) => !stated.includes(name)),
         row.id,
       ).toEqual([]);
-      if (/^No licence stated/.test(row.licence))
-        expect(stated, row.id).toMatch(
-          /Not stated|state none|states no|None stated|No separate licence|no copyright section|authors: none/i,
-        );
+      expect(
+        unsaidLimits(
+          row.licence,
+          entries.flatMap((entry) => entry.record.use),
+        ),
+        row.id,
+      ).toEqual([]);
     }
+  });
+});
+
+describe('the Use terms', () => {
+  it('each have the record’s own one-line meaning, for the legend', () => {
+    expect(Object.keys(DATA_USES)).toEqual(Object.keys(ATTRIBUTION_USES));
+    for (const meaning of Object.values(DATA_USES)) expect(meaning).toMatch(/^[a-z].{20,}\.$/);
   });
 });
 
@@ -208,40 +200,5 @@ describe('shortTitle', () => {
     expect(
       shortTitle('One two three four five six seven eight nine ten eleven twelve').length,
     ).toBeLessThanOrEqual(46);
-  });
-});
-
-describe('fitText and licenceLead', () => {
-  it('end at a sentence where one ends in time, and say so where they cut', () => {
-    expect(fitText('One. Two is longer.', 12)).toBe('One.');
-    expect(fitText('A clause, then a second clause that runs on', 30)).toBe(
-      'A clause, then a second …',
-    );
-    expect(fitText('He said "a long thing that will not fit here at all" and left', 30)).toBe(
-      'He said "a long thing that …"',
-    );
-  });
-
-  it('give the opening of a licence line and never an open quotation', () => {
-    expect(licenceLead('Not stated. The page carries "© Somebody" and no licence.')).toBe(
-      'Not stated.',
-    );
-    expect(licenceLead('CC BY 4.0 ("License: CC Attribution", linking the deed). More.')).toBe(
-      'CC BY 4.0 ("License: CC Attribution", linking the deed).',
-    );
-    expect(
-      licenceLead('"Data are under licence X. For details see the terms." Those terms: more.'),
-    ).toBe('"Data are under licence X …"');
-    for (const entry of DATA_ENTRIES) {
-      const lead = licenceLead(entry.record.bullets.Licence!);
-      expect(lead.length, entry.id).toBeLessThanOrEqual(120);
-      expect((lead.match(/"/g)?.length ?? 0) % 2, entry.id).toBe(0);
-      // Every word of the lead is the record's, in the record's order.
-      const source = plainText(entry.record.bullets.Licence!);
-      expect(
-        source.startsWith(lead.replace(/ …"?$|\.$/, '').replace(/\.$/, '')),
-        `${entry.id}: ${lead}`,
-      ).toBe(true);
-    }
   });
 });
