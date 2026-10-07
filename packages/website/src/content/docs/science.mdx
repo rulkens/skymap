@@ -5,7 +5,7 @@ facts: [gloss-honesty-words, depart-relative-brightness, depart-default-size, de
 
 import Formula from '../../components/Formula.astro';
 
-[The science behind skymap](/science/) is the one-screen summary and uses three words. Here the third is split in two, [modelled](/docs/reference/glossary/#modelled) and drawn, so that a model with published numbers is not confused with a choice of ours.
+[The science behind skymap](/science/) is the one-screen summary and uses three words. Here the third is split in two, [modelled](/docs/reference/glossary/#modelled) and drawn, so that a physical model is not confused with a choice of how to draw.
 
 <Table
   cols="2 4"
@@ -13,7 +13,7 @@ import Formula from '../../components/Formula.astro';
   rows={[
     ['Measured', 'Taken from a catalogue or an image as published. An instrument recorded it.'],
     ['Derived', 'Computed from measured values, object by object, by a rule stated below.'],
-    ['Modelled', 'Generated from a model whose numbers come from the literature. No object in it was measured one by one. On the summary page this counts as drawn.'],
+    ['Modelled', 'Generated from a physical model, not measured object by object. The model’s numbers are from the literature where a reference is given, and ours where the page says so. On the summary page this counts as drawn.'],
     ['Drawn', 'Placed, shaped or coloured by us, to make the picture readable.'],
   ]}
 />
@@ -33,7 +33,7 @@ Everything shares one frame: <Fact id="sci-directions" inline /> Positions are k
     ['Distance', 'Derived from the redshift beyond 30 megaparsecs. Measured by other means inside.'],
     ['Brightness', 'Derived from a catalogued magnitude, the distance and the size.'],
     ['Colour', 'Derived from two catalogued magnitudes.'],
-    ['Size', 'Measured for SDSS and most of 2MRS, derived from luminosity for GLADE, assumed for the rest.'],
+    ['Size', 'Derived from a measured angle and the distance for SDSS and most of 2MRS, from luminosity for GLADE; assumed for the rest.'],
     ['Tilt', 'Measured where a catalogue has it; otherwise drawn.'],
     ['Shape of the disc', 'Drawn, until a photograph replaces it.'],
   ]}
@@ -112,6 +112,8 @@ On the way to the screen that light is changed again, by distance and by the den
 
 <Fact id="depart-default-size" />
 
+The distance in that sum is not the one that belongs there: see [Sizes](/docs/simplifications/#sizes).
+
 <Fact id="sci-galaxy-tilt" />
 
 The measured tilts are SDSS’s own, the <Source id="2mass-xsc">2MASS Extended Source Catalog</Source>’s for 2MRS and <Source id="hyperleda">HyperLEDA</Source>’s for GLADE. A card says which a galaxy has: see [Info cards](/docs/guide/info-cards/).
@@ -125,7 +127,7 @@ The measured tilts are SDSS’s own, the <Source id="2mass-xsc">2MASS Extended S
   head={['Quantity', 'How it is obtained']}
   rows={[
     ['Direction', 'Measured by Gaia, as it was at the start of 2016.'],
-    ['Distance', 'Derived: a statistical estimate from the parallax.'],
+    ['Distance', 'Derived: a statistical estimate from the parallax and, where there is one, the star’s colour and brightness.'],
     ['Brightness', 'Derived from Gaia’s magnitude and the distance.'],
     ['Colour', 'Measured as a colour index; the colour on screen is drawn from it.'],
     ['Temperature, luminosity, radius', 'Derived, for a card only. Rough.'],
@@ -202,7 +204,7 @@ The other maps are spacecraft mosaics, each with its own page under [Imagery and
 
 <Fact id="method-atmosphere-earth" />
 
-The method is that of [Bruneton and Neyret (2008)](https://github.com/ebruneton/precomputed_atmospheric_scattering), who compute once how much light the air passes and scatters and look the answer up for every pixel, with the cheaper treatment of light scattered many times from [Hillaire (2020)](https://sebh.github.io/publications/). We wrote our own code for both.
+The method is that of [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x), who compute once how much light the air passes and scatters and look the answer up for every pixel, with the cheaper treatment of light scattered many times from [Hillaire (2020)](https://doi.org/10.1111/cgf.14050). We wrote our own code for both.
 
 <View to="focus=body-titan&t=2026-10-05T12:00:00Z">Open Titan, where the haze is all there is to see</View>
 
@@ -221,6 +223,14 @@ Modelled.
 <Fact id="sci-milky-way-points" />
 
 The references are [Freudenreich 1998](https://arxiv.org/abs/astro-ph/9707340), a model of the disc and bar fitted to the COBE satellite’s infrared maps, and [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593), who measured the bar’s angle as 27 ± 2 degrees. Freudenreich’s own bar stands at 14 degrees; we took the later figure. The Gaia stars near the Sun are a separate, measured layer that the model does not replace.
+
+### The Local Bubble
+
+Derived.
+
+<Fact id="method-local-bubble" />
+
+The table is <Source id="local-bubble">O’Neill and others’</Source>; the [Local Bubble](/docs/reference/glossary/#local-bubble) is in the glossary.
 
 ## The black hole at the centre
 
@@ -243,7 +253,7 @@ The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rota
     ['Density glow', 'Derived by a published algorithm from SDSS galaxy positions.'],
     ['Filaments', 'Derived by a published algorithm, which we run ourselves.'],
     ['Flow ribbons', 'Derived: a published reconstruction of how galaxies move.'],
-    ['Cluster and supercluster markers', 'Position and radius measured, from two catalogues; the ring is drawn.'],
+    ['Cluster and supercluster markers', 'Position measured, from two catalogues; radius derived from theirs by the rule below; the ring is drawn.'],
     ['Voids and groups', 'Drawn: placed by hand.'],
   ]}
 />

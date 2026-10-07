@@ -289,7 +289,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-reweight',
-    text: 'Unless you change the setting, we also dim galaxies in directions a catalogue sampled more densely than its median, so that uneven coverage does not read as structure. This changes brightness, never position.',
+    text: 'Unless you change the setting, we also dim galaxies in directions a catalogue sampled more densely than its median, and brighten a little those it sampled more thinly, so that uneven coverage does not read as structure. This changes brightness, never position.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/bias/initialState.ts`,
     sourceLabel: `the default bias setting, ${IN_REPO}`,
     checked: CHECKED,
