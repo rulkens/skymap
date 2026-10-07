@@ -25,7 +25,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-hdr-target',
     about: 'app',
-    text: 'The scene is added up in one image that holds four 16-bit floating-point numbers for each pixel, in linear light with no upper limit. It is brought into the range of a screen once, by one curve, at the end of the frame.',
+    text: 'The scene is accumulated in one image of four 16-bit floating-point numbers per pixel, in linear light with no upper limit. It is tone-mapped once, by one curve, at the end of the frame.',
     source: `${REPO_BLOB}/src/services/gpu/renderTargets.ts`,
     sourceLabel: `the images a frame is drawn into, ${IN_REPO}`,
     checked: CHECKED,
@@ -33,7 +33,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-reduced-targets',
     about: 'app',
-    text: 'Four soft glows are drawn into smaller images and stretched back over the frame: the cosmic web at a third of the window’s width and height, the Zone of Avoidance band at a fifth, the summed light of distant stars at a half and the Milky Way’s points of light at a sixth. The cost of a glow goes with the number of pixels it covers, so a third of the width is a ninth of the work.',
+    text: 'Four soft glows are drawn into smaller images and upsampled to the frame: the cosmic web at a third of the window’s width and height, the Zone of Avoidance band at a fifth, the summed light of distant stars at a half and the Milky Way’s points of light at a sixth. A glow costs per pixel it covers, so a third of the width is a ninth of the work.',
     source: `${REPO_BLOB}/src/layers/cosmicWebDensity/layer.ts`,
     sourceLabel: `the cosmic web’s image, one of the four, ${IN_REPO}`,
     checked: CHECKED,
@@ -41,7 +41,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-one-submit',
     about: 'app',
-    text: 'A frame of the flat view is one list of commands, handed to the graphics processor in one piece, apart from the cube faces of Capture, which go ahead of it. A value written to a buffer takes effect at once and the list runs later, so of two values written between two draws both draws see the second. What differs between draws is therefore stored with each object.',
+    text: 'A frame of the flat view is one command buffer, submitted to the graphics processor once; the cube faces of Capture are submitted ahead of it. A value written to a buffer takes effect at once and the commands run later, so of two values written between two draws both draws see the second. What differs between draws is therefore stored per object.',
     source: `${REPO_BLOB}/src/services/engine/frame/renderFrame.ts`,
     sourceLabel: `how a frame is handed over, ${IN_REPO}`,
     checked: CHECKED,
@@ -49,7 +49,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-pick',
     about: 'app',
-    text: 'Finding what is under the pointer is not part of the frame. When the pointer moves or clicks, the things that can be selected are drawn again into an image of 32-bit numbers, 6 bits for the catalogue and 26 for the row, and the app reads back the pixel under the pointer.',
+    text: 'Picking runs outside the frame. When the pointer moves or clicks, the things that can be selected are drawn again into an image of 32-bit numbers, 6 bits for the catalogue and 26 for the row, and the app reads back the pixel under the pointer.',
     source: `${REPO_BLOB}/src/services/engine/frame/pickProgram.ts`,
     sourceLabel: `the selection pass, ${IN_REPO}`,
     checked: CHECKED,
@@ -59,7 +59,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-galaxy-triangle',
     about: 'app',
-    text: 'A galaxy as a point is one triangle that faces the camera, large enough to hold a round dot, and a whole catalogue is one draw call. A triangle has half the corners of the two that make a square, and with millions of galaxies it is the corners that cost. The dots add their light to what is behind them.',
+    text: 'A galaxy as a point is one camera-facing triangle, large enough to hold a round dot, and a whole catalogue is one draw call. A triangle has half the vertices of the two that make a quad, and with millions of galaxies it is the vertices that cost. The dots are blended additively.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/billboard.wesl`,
     sourceLabel: `the shared billboard code, ${IN_REPO}`,
     checked: CHECKED,
@@ -82,14 +82,14 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-star-tree',
     about: 'app',
-    text: 'The stars of a file are sorted into a tree of boxes, 6 bytes a star. Every frame the app chooses which boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one draws a single glow with the summed light of everything inside it.',
+    text: 'The stars of a file are sorted into an octree, 6 bytes a star. Every frame the app chooses which of its boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one draws a single glow with the summed light of everything inside it.',
     source: `${REPO_BLOB}/src/utils/star/walkStarOctreeCut.ts`,
     sourceLabel: `the choice of star boxes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'render-star-knee',
-    text: 'A star’s light on screen follows the inverse square of its distance from the camera. Before it is multiplied by the star’s colour the brightness is bent over smoothly towards a ceiling, so that a very bright star keeps its colour and does not burn out to white one colour channel at a time.',
+    text: 'A star’s light on screen follows the inverse square of its distance from the camera. Before it is multiplied by the star’s colour the brightness is rolled off smoothly towards a ceiling, so that a very bright star keeps its colour where clipping would burn it out to white one channel at a time.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/starKnee.wesl`,
     sourceLabel: `the star brightness curve, ${IN_REPO}`,
     checked: CHECKED,
@@ -111,7 +111,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-sphere',
     about: 'app',
-    text: 'A planet or moon other than Earth is not a mesh of flat faces. The app draws a coarse shell around it and, for every pixel of the shell, works out where the line of sight meets a perfect sphere: the edge of the disc is exact at any size, and so is the direction the surface faces.',
+    text: 'A planet or moon other than Earth is a ray-traced sphere. The app draws a coarse shell around it and, for every pixel of the shell, intersects the line of sight with a perfect sphere: the edge of the disc is exact at any size, and so is the surface normal.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/analyticSphere.wesl`,
     sourceLabel: `the ray-traced sphere, ${IN_REPO}`,
     checked: CHECKED,
@@ -126,7 +126,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-atmosphere-tables',
     about: 'app',
-    text: 'For each atmosphere the app keeps three small tables. Two are computed once, as the app starts: how much sunlight survives a path through the air (256 by 64 values) and how much light has scattered more than once (32 by 32). The third, the brightness of the sky in every direction from where the camera is, is computed again every frame at 192 by 108, or 64 by 36 at the small data size.',
+    text: 'For each atmosphere the app keeps three small lookup tables. Two are computed once, as the app starts: how much sunlight survives a path through the air (256 by 64 values) and how much light has scattered more than once (32 by 32). The third, the brightness of the sky in every direction from where the camera is, is recomputed every frame at 192 by 108, or 64 by 36 at the small data size.',
     source: `${REPO_BLOB}/src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
@@ -134,7 +134,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-aerial',
     about: 'app',
-    text: 'With the camera inside an atmosphere, the haze between it and the ground is computed every frame in a block of 32 by 32 by 64 cells that fills the view, one layer every 4 kilometres. A pixel reads the haze at its own distance from the block; beyond the last layer it takes the answer of the sky tables.',
+    text: 'With the camera inside an atmosphere, the haze between it and the ground is computed every frame in a block of 32 by 32 by 64 cells that fills the view, one layer every 4 kilometres. A pixel reads the haze at its own distance from the block; beyond the last layer it falls back to the sky tables.',
     source: `${REPO_BLOB}/src/data/atmosphere/froxelVolume.ts`,
     sourceLabel: `the haze volume, ${IN_REPO}`,
     checked: CHECKED,
@@ -142,7 +142,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-terrain',
     about: 'app',
-    text: 'Close to Earth or Mars the app walks a tree of ground tiles every frame, on the processor, and keeps those that are in view, this side of the horizon and fine enough for the screen. Each kept tile is a patch of 64 by 64 cells, lifted by a height tile of 129 by 129 posts, and all patches are one draw call. Every patch hangs a skirt from its four edges to hide the step where it meets a coarser neighbour.',
+    text: 'Close to Earth or Mars the app walks a tree of ground tiles every frame, on the processor, culls those outside the view or beyond the horizon, and stops at the level fine enough for the screen. Each kept tile is a patch of 64 by 64 cells, displaced by a height tile of 129 by 129 posts, and all patches are one draw call. Every patch hangs a skirt from its four edges to hide the step where it meets a coarser neighbour.',
     source: `${REPO_BLOB}/src/utils/surfaceTiles/cutSurfaceTiles.ts`,
     sourceLabel: `the choice of ground tiles, ${IN_REPO}`,
     checked: CHECKED,
@@ -150,21 +150,21 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-terrain-fallback',
     about: 'app',
-    text: 'A tile that has not arrived is drawn from the nearest coarser tile that has, and where none has, the whole-globe map shows through. The tiles’ pictures live in a shared texture with room for 256 of them and their heights in one with room for 1,024.',
+    text: 'A tile that has not arrived is drawn from the nearest coarser tile that has, and where none has, the whole-globe map shows through. The tiles’ pictures live in a shared texture atlas with room for 256 of them and their heights in one with room for 1,024.',
     source: `${REPO_BLOB}/src/data/bodies/surfaceTileParams.ts`,
     sourceLabel: `the ground tile sizes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'render-milky-way-dust',
-    text: 'The Milky Way model is not loaded from a file. The graphics processor makes it: each point of light and each patch of dust gets its place from a formula of its own number. Dust adds no light. It multiplies what is behind it by less than one, more in blue than in red, as real dust dims and reddens.',
+    text: 'The Milky Way model is generated on the graphics processor: each point of light and each patch of dust gets its place from a formula of its own index. Dust multiplies what is behind it by less than one, more in blue than in red, as real dust dims and reddens.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/milkyWay/sprites/dust.wesl`,
     sourceLabel: `the Milky Way’s dust, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'render-density-march',
-    text: 'The cosmic web glow is drawn by stepping along the line of sight through the density cube, 128 steps for each pixel, and adding up colour from a ramp: the denser a cell, the further along the ramp and the more opaque. The thinnest cells are left fully clear.',
+    text: 'The cosmic web glow is ray-marched: 128 steps along the line of sight through the density cube for each pixel, accumulating colour from a ramp. The denser a cell, the further along the ramp and the more opaque; the thinnest cells are fully transparent.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/scalarVolume/fragment.wesl`,
     sourceLabel: `the density march, ${IN_REPO}`,
     checked: CHECKED,
@@ -172,14 +172,14 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-lines',
     about: 'app',
-    text: 'WebGPU draws lines one pixel wide and no wider. Filaments, constellation figures and marker rings are therefore rows of thin rectangles, each stretched between two points of a line and widened on screen.',
+    text: 'WebGPU draws lines one pixel wide. Filaments, constellation figures and marker rings are therefore rows of thin quads, each spanning one segment of a line and widened in screen space.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/segmentQuad.wesl`,
     sourceLabel: `the thick-line code, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'render-lens',
-    text: 'For 512 light paths that pass a black hole that does not rotate at different distances, the app works out by how much each is bent, and keeps the answers in a table. Near Sagittarius A* the sky around the camera is drawn into the six faces of a cube. A pixel whose path falls in is black; any other looks its bending up in the table and takes its colour from the cube in the bent direction. The glowing disc is stepped through 48 times along the path.',
+    text: 'For 512 rays that pass a non-rotating black hole at different distances, the app computes the deflection of each and keeps them in a lookup table. Near Sagittarius A* the sky around the camera is drawn into the six faces of a cube map. A pixel whose ray falls in is black; any other looks its deflection up and samples the cube in the bent direction. The glowing disc is ray-marched in 48 steps.',
     source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the table of bent light, ${IN_REPO}`,
     checked: CHECKED,
@@ -187,7 +187,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-labels',
     about: 'app',
-    text: 'Names are set from a texture that stores, for each letter, the distance to its outline in three colour channels, so a letter stays sharp at any size and its corners stay corners. Names are drawn after the picture has been brought into screen range, and one behind a planet is dimmed by how opaque the planet’s pixels are.',
+    text: 'Names are set from a multi-channel distance field: a texture that stores, for each letter, the distance to its outline in three colour channels, so a letter and its corners stay sharp at any size. Names are drawn after tone mapping, and one behind a planet is dimmed by the planet’s opacity there.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/msdf.wesl`,
     sourceLabel: `the label shading, ${IN_REPO}`,
     checked: CHECKED,
@@ -195,7 +195,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-bloom',
     about: 'app',
-    text: 'Bloom takes the part of the picture brighter than a threshold at half size, halves that four times more, then adds the five copies back up from the smallest to the largest: ten steps in all. The first halving weighs each pixel down by its own brightness, so one very bright pixel does not flicker as the camera moves.',
+    text: 'Bloom extracts the part of the picture brighter than a threshold at half size, downsamples that four times more, then upsamples and adds the five levels from the smallest to the largest: ten steps in all. The first downsample weights each pixel down by its own brightness, so one very bright pixel does not flicker as the camera moves.',
     source: `${REPO_BLOB}/src/services/engine/frame/runBloom.ts`,
     sourceLabel: `the bloom steps, ${IN_REPO}`,
     checked: CHECKED,
@@ -210,7 +210,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-mesh',
-    text: 'The 3D models are lit by the Sun as a disc of its true size and by a small picture of their own surroundings, taken from where the model is, which stands in for light from every other direction. Rougher surfaces read a blurrier copy of it.',
+    text: 'The 3D models are lit by the Sun as a disc of its true size and by a small environment map, a cube captured from where the model is, which stands in for light from every other direction. Rougher surfaces read a blurrier level of it.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/pbr.wesl`,
     sourceLabel: `the shading of models, ${IN_REPO}`,
     checked: CHECKED,
@@ -236,7 +236,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-reversed-z',
     about: 'app',
-    text: 'The two near ranges store depth upside down, 1 at the near limit and 0 infinitely far away, in 32-bit floating point. Floating-point numbers are densest near zero, which then lies where a depth buffer is otherwise coarsest.',
+    text: 'The two near ranges store depth reversed, 1 at the near limit and 0 at infinity, in 32-bit floating point. Floating-point numbers are densest near zero, which then lies where a depth buffer is otherwise coarsest.',
     source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
     sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -260,7 +260,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-clip-floor',
     about: 'app',
-    text: 'Names and the selection ring are placed in megaparsecs from the camera. A thing 31 metres away is then 0.000000000000000000001 of a unit off, which is below the smallest value a graphics processor keeps for the division that gives perspective. The app therefore multiplies those matrices up to metres before it sends them.',
+    text: 'Names and the selection ring are placed in megaparsecs from the camera. A thing 31 metres away is then 0.000000000000000000001 of a unit off, which is below the smallest value a graphics processor keeps for the perspective divide. The app therefore multiplies those matrices up to metres before it sends them.',
     source: `${REPO_BLOB}/src/services/engine/frame/near0OverlayClipScale.ts`,
     sourceLabel: `the label scale, ${IN_REPO}`,
     checked: CHECKED,
@@ -277,7 +277,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-time',
     about: 'app',
-    text: 'The clock is a 64-bit number of days. It is not added to frame by frame: each frame works it out afresh from the moment the speed was last changed, so no error builds up however long the app runs.',
+    text: 'The clock is a 64-bit number of days. Each frame recomputes it from the moment the speed was last changed, so no error accumulates however long the app runs.',
     source: `${REPO_BLOB}/src/utils/time/deriveSimDays.ts`,
     sourceLabel: `how the clock’s time is worked out, ${IN_REPO}`,
     checked: CHECKED,
@@ -285,7 +285,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-near-cut',
     about: 'app',
-    text: 'The galaxies’ range begins 10 kiloparsecs in front of the camera. A galaxy’s picture that comes nearer is cut along a straight edge, and a galaxy drawn as a point goes out.',
+    text: 'The galaxies’ range begins 10 kiloparsecs in front of the camera. A galaxy’s picture that comes nearer is clipped along a straight edge, and a galaxy drawn as a point is no longer drawn.',
     source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
     sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -293,7 +293,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-painter',
     about: 'app',
-    text: 'Bodies hide one another by the order they are drawn in, farthest first, and that order is by distance to each body as a whole. Two bodies that overlap on screen while their distances overlap too can be drawn in the wrong order.',
+    text: 'Bodies are drawn back to front, sorted by the distance to each body as a whole. Two bodies that overlap on screen while their ranges of distance overlap too can be drawn in the wrong order.',
     source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
     sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -301,7 +301,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-trail-edge',
     about: 'app',
-    text: 'An orbit’s line tests for itself whether a body is in front of it, against a sphere that lies just inside the body’s lowest ground. Where ground stands higher than that, a sliver of the line can show through at the body’s edge.',
+    text: 'An orbit’s line does its own occlusion test, against a sphere that lies just inside the body’s lowest ground. Where ground stands higher than that, a sliver of the line can show through at the body’s edge.',
     source: `${REPO_BLOB}/docs/RENDERER.md`,
     sourceLabel: `the renderer notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -311,7 +311,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-perf-harness',
     about: 'app',
-    text: 'The repository has a tool, npm run perf, that opens the app in a browser without a window, flies the camera to eleven fixed places from Earth’s surface to the whole survey, and reads from the graphics processor how long each step of the frame took. It measures the graphics processor only: not the processor’s share of a frame, and not the wait for the screen.',
+    text: 'The repository has a tool, npm run perf, that opens the app in a headless browser, flies the camera to eleven fixed places from Earth’s surface to the whole survey, and reads from the graphics processor how long each step of the frame took. It measures graphics-processor time only; the processor’s share of a frame and the wait for the display are outside it.',
     source: `${REPO_BLOB}/tools/perf/README.md`,
     sourceLabel: `the measuring tool’s notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -327,7 +327,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-perf-sweep',
     about: 'app',
-    text: 'To tell whether a step is limited by pixels or by the number of things drawn, the tool times it at four window sizes. A step whose time grows with the pixels will be helped by a smaller window; one whose time does not will not.',
+    text: 'To tell whether a step is limited by pixels or by the number of things drawn, the tool times it at four window sizes. A step whose time grows with the pixels is helped by a smaller window; the others are bound by the number of things.',
     source: `${REPO_BLOB}/tools/perf/README.md`,
     sourceLabel: `the measuring tool’s notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -335,7 +335,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-cpu-galaxies',
     about: 'app',
-    text: 'The processor does not touch every galaxy in a frame. To find those large enough for a disc or a picture it looks at an eighth of each catalogue per frame, compares squared distances so that most rows cost no square root, and takes at most 2,048 rows in one frame.',
+    text: 'To find the galaxies large enough for a disc or a picture, the processor scans an eighth of each catalogue per frame, compares squared distances so that most rows cost no square root, and takes at most 2,048 rows in one frame.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts`,
     sourceLabel: `the search for large galaxies, ${IN_REPO}`,
     checked: CHECKED,
