@@ -32,6 +32,8 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { FadeId } from '../../../../src/@types/animation/FadeId';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -53,6 +55,7 @@ function makeState(
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
+    lastFocus?: FocusUniformsValue;
     compositor?: unknown;
     texturedDisks?: unknown;
     enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
@@ -85,6 +88,7 @@ function makeState(
       texturedDisks,
       // Fully faded by default; pick mask is driven by `enabled` alone anyway.
       fades: { opacityOf: (id: FadeId) => (id.kind === 'galaxyCatalog' ? 0 : 0) },
+      structureFocus: { lastFocusUniforms: () => overrides.lastFocus ?? ZERO_FOCUS },
     },
     settings: {
       galaxyCatalogs: { items },
@@ -191,5 +195,17 @@ describe('pickFrameContext', () => {
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
     expect(ctx.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
+  });
+
+  it('carries the drawn frame’s focus, so a pick excludes what that frame dimmed', () => {
+    const lastFocus: FocusUniformsValue = {
+      center: [1, 2, 3],
+      apparentRadiusMpc: 1e-5,
+      physicalRadiusMpc: 3e-6,
+      blend: 1,
+    };
+    const ctx = pickFrameContext(makeState({ lastFocus }), makeCanvas());
+    expect(ctx?.snapshot.focus).toBe(lastFocus);
+    expect(ctx?.snapshot.focusBlend).toBe(1);
   });
 });

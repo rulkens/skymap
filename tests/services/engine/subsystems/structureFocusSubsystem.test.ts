@@ -34,6 +34,16 @@ describe('structureFocusSubsystem', () => {
     expect(settled.physicalRadiusMpc).toBe(7);
   });
 
+  it('lastFocusUniforms returns the produced value without advancing the fade', () => {
+    const sub = makeStructureFocus(0);
+    expect(sub.lastFocusUniforms().blend).toBe(0);
+    sub.update(makeCluster(), 0);
+    const mid = sub.produceFocusUniforms(200);
+    expect(sub.lastFocusUniforms()).toBe(mid);
+    // A later read is still the drawn frame's value, not a newer one.
+    expect(sub.lastFocusUniforms().blend).toBe(mid.blend);
+  });
+
   it('a category without galaxy members still drives the focus blend', () => {
     const sub = makeStructureFocus(0);
     sub.update(makeCluster({ category: 'open-cluster', physicalRadiusMpc: 1e-5 }), 0);

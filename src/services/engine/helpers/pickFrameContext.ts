@@ -2,7 +2,7 @@
  * pickFrameContext — the pick camera as a value, so a pick can run between
  * frames. Returns `null` until the engine has bootstrapped; safe to call
  * speculatively — `deriveFrameContext` advances no clock and no fade
- * controller.
+ * controller, and the focus is read back, not produced.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -42,6 +42,10 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   // header), so the default `renderedTargets` is fine here.
   const snapshot = deriveFrameContext(state, input);
   if (!snapshot.isReady) return null;
+  // The drawn frame's focus, not a fresh one: a pick must exclude exactly what
+  // that frame dimmed, and producing a new value would tick the focus fade.
+  snapshot.focus = state.subsystems.structureFocus.lastFocusUniforms();
+  snapshot.focusBlend = snapshot.focus.blend;
   return deriveView(
     snapshot,
     cam,

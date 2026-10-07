@@ -69,6 +69,7 @@ export function createStructureFocusSubsystem(
   let active: ActiveFocus | null = null;
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
+  let lastProduced: FocusUniformsValue = ZERO_FOCUS;
 
   function update(structure: StructureInfo | null, nowMs: number): void {
     // null drives a fade-out. Groups share the same fade band mechanic as
@@ -110,13 +111,16 @@ export function createStructureFocusSubsystem(
     if (active !== null && blend === 0 && !fade.isAnimating(nowMs)) {
       active = null;
     }
-    if (active === null) return ZERO_FOCUS;
-    return {
-      center: active.center,
-      apparentRadiusMpc: active.apparentRadiusMpc,
-      physicalRadiusMpc: active.physicalRadiusMpc,
-      blend,
-    };
+    lastProduced =
+      active === null
+        ? ZERO_FOCUS
+        : {
+            center: active.center,
+            apparentRadiusMpc: active.apparentRadiusMpc,
+            physicalRadiusMpc: active.physicalRadiusMpc,
+            blend,
+          };
+    return lastProduced;
   }
 
   function isAwake(nowMs: number): boolean {
@@ -127,10 +131,12 @@ export function createStructureFocusSubsystem(
     id: 'structureFocus',
     update,
     produceFocusUniforms,
+    lastFocusUniforms: () => lastProduced,
     isAwake,
     destroy(): void {
       active = null;
       focusedId = null;
+      lastProduced = ZERO_FOCUS;
     },
   };
 }
