@@ -51,7 +51,7 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../data/structureLabelAboveGapPx';
