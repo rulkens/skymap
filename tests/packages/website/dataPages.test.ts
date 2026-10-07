@@ -122,6 +122,16 @@ describe('what is written by hand for the data pages', () => {
     ).toEqual([]);
   });
 
+  // A planet, moon or rover site opened with no date is lit or dark by the hour of the click.
+  it('pins the date and time of every view of a body', () => {
+    const unpinned = Object.entries(DATA_SOURCE_NOTES)
+      .filter(
+        ([, note]) => note.view?.to.startsWith('focus=body-') && !/&t=\d{4}-/.test(note.view.to),
+      )
+      .map(([id]) => id);
+    expect(unpinned).toEqual([]);
+  });
+
   // The licence of a source is the record's to state. A name of one in these files would be a second copy.
   it('holds no licence name', () => {
     const files = [
