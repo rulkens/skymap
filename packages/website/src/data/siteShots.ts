@@ -950,7 +950,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The Milky Way model and its dust',
     caption: 'The brown patches round the bar are dust, dimming and reddening the light behind them.',
     drawn: 'A model. Every camera we have is inside it.',
-    alt: 'A spiral galaxy filling the frame at a slant: a bright yellow-white bar ringed by brown blotches, grey-white arms winding out from it, and a few soft orange dots around.',
+    alt: 'A spiral galaxy seen at a slant, right of the middle of the frame: a bright yellow-white bar ringed by brown blotches, grey-white arms winding out from it, and a few soft orange dots around.',
   },
   {
     id: 'render-limb',
