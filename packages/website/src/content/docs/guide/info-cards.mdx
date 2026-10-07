@@ -1,0 +1,183 @@
+---
+title: Info cards
+description: A card is the panel of figures the app shows for one object. This page covers how to get a card, what it lists for each kind of object, where each figure comes from, the units, and what a card leaves out.
+group: Guide
+order: 6
+---
+
+import ViewLink from '../../../components/ViewLink.astro';
+import { appLink } from '../../../data/appLink';
+
+If you are preparing a lesson, [Use skymap in the classroom](/classroom/) shows a card in use. This page is for reading one closely, and for knowing which of its figures you can quote.
+
+## Get a card
+
+| | A small card | The full card | Close it |
+| --- | --- | --- | --- |
+| Mouse or trackpad | Rest the pointer on the object | Click it | The cross, or a click on empty space |
+| Touch screen | None | Tap it | The cross, or a tap on empty space |
+| Keyboard | None | <Keys of="/" />, type a name, <Keys of="Enter" /> | <Keys of="Esc" /> |
+
+<Fact id="hover-card" />
+
+<Fact id="card-hover-lines" />
+
+<Fact id="card-on-click" />
+
+<Fact id="card-from-search" />
+
+[Finding things](/docs/guide/finding/) covers the search and clicking in the scene, and [Sharing a view](/docs/guide/sharing/) the links.
+
+## The parts of a card
+
+<Figure id="class-card" />
+
+<Fact id="pinned-card" />
+
+<Fact id="card-kinds" />
+
+The Focus button flies the camera to the object, as <Keys of="F" /> does. [Moving around](/docs/guide/moving/#go-somewhere-else) explains the focus.
+
+<Fact id="card-one-pinned" />
+
+<Fact id="card-text-fold" />
+
+<Fact id="esc-clears" />
+
+<Fact id="card-phone-sheet" />
+
+## Underlined words
+
+<Fact id="card-tooltips" />
+
+<Fact id="card-tooltip-count" />
+
+They are the quickest way to find out what a row means. The [Glossary](/docs/reference/glossary/) defines the terms these docs use.
+
+## Planets and moons
+
+<Fact id="body-card" />
+
+<Fact id="card-body-distance" />
+
+<Fact id="card-moon-rows" />
+
+<Figure id="guide-card-moon" />
+
+<Fact id="card-fact-sheet" />
+
+<Fact id="card-moon-count" />
+
+The radius is the one figure on these cards the scene itself uses: it is the size the body is drawn at. The positions of the planets and moons are computed, not typed in, and how is on the [Science page](/science/).
+
+<ViewLink href={appLink('focus=body-moon')}>Open the Moon</ViewLink>
+
+## Spacecraft
+
+<Fact id="card-spacecraft" />
+
+<Fact id="scene-probe-orbits" />
+
+So the scene and the card can differ: set the clock to another year and the Voyagers move along their paths, while the distance on the card stays as typed. [Time](/docs/guide/time/#the-years-the-positions-hold-for) says how far those paths can be trusted.
+
+<ViewLink href={appLink('focus=body-voyager1')}>Open Voyager 1</ViewLink>
+
+## Stars
+
+<Fact id="card-star-named" />
+
+<Figure id="guide-card-star" />
+
+<Fact id="card-star-survey" />
+
+<Fact id="sci-star-observables" />
+
+<Fact id="sci-star-distance" />
+
+<Fact id="card-s-star" />
+
+<ViewLink href={appLink('focus=star-betelgeuse')}>Open Betelgeuse</ViewLink>
+
+<ViewLink href={appLink('focus=star-s2')}>Open S2, a star that orbits the black hole</ViewLink>
+
+## Galaxies
+
+<Fact id="card-galaxy-rows" />
+
+<Figure id="guide-card-galaxy" />
+
+<Fact id="card-galaxy-derived" />
+
+<Fact id="sci-galaxy-distance" />
+
+Nearer galaxies are placed by other means, set out on the [Science page](/science/), and each catalogue is listed under [All sources at a glance](/docs/data/).
+
+<Fact id="card-galaxy-era" />
+
+<Fact id="card-galaxy-provenance" />
+
+<Fact id="card-galaxy-links" />
+
+<ViewLink href={appLink('focus=m31')}>Open the Andromeda Galaxy</ViewLink>
+
+### The picture on a galaxy’s card
+
+<Fact id="card-galaxy-picture" />
+
+<Fact id="privacy-thumbnails" />
+
+The [privacy page](/privacy/) lists every request the app and this website make.
+
+<Fact id="card-own-pictures" />
+
+## Clusters and other structures
+
+<Fact id="card-structure" />
+
+<Figure id="guide-card-structure" />
+
+<Fact id="sci-structures" />
+
+<ViewLink href={appLink('focus=cluster-virgo-m87')}>Open the Virgo cluster</ViewLink>
+
+## The Milky Way and its black hole
+
+<Fact id="card-milky-way" />
+
+<Fact id="card-black-hole" />
+
+<ViewLink href={appLink('focus=milkyWay')}>Open the Milky Way</ViewLink>
+
+<ViewLink href={appLink('focus=blackhole-sgr-a-star')}>Open Sagittarius A*</ViewLink>
+
+## Places on Earth, and the band
+
+<Fact id="search-places" />
+
+Whatever card was pinned before stays where it was.
+
+<Fact id="band-no-flight" />
+
+Its card has a paragraph of text and a link to Wikipedia, and no Focus button.
+
+## Units and distances
+
+<Fact id="card-units" />
+
+<Fact id="card-distance-from-sun" />
+
+A planet, a moon or a spacecraft is the exception: the Distance line at the top of its card is measured from the camera, as described under [Planets and moons](#planets-and-moons).
+
+Other units appear on the cards. M⊕ is the mass of Earth, and g is the pull of gravity at Earth’s surface. M☉, L☉ and R☉ are the mass, the light output and the radius of the Sun. Gyr and Myr are billions and millions of years. Magnitudes run backwards: a smaller number is a brighter object. Each of these is explained by its row’s underlined word.
+
+## What a card gets wrong or leaves out
+
+- **Typed figures do not move with the clock.** Only the Distance line of a body in focus changes. The Voyagers’ distance from the Sun and the rovers’ positions are dated in their text.
+- **The planets’ fact sheet names no source.** Check a figure against another source before you quote it; the card’s Wikipedia link is a start.
+- **A zero can mean “not known”.** <Fact id="card-galaxy-no-redshift" inline />
+- **“fallback” means a stand-in.** A diameter or an orientation marked that way is not a survey’s measurement of that galaxy.
+- **Estimates look like measurements.** The temperature, luminosity and radius of a field star are estimates from two numbers, and a galaxy’s type is a guess from its colour unless the galaxy has a name of its own.
+- **Counts have a date and a limit.** The Galaxies row of a structure counts the points the app has loaded, and the Moons row of a planet is the count on the day the sheet was typed.
+- **No uncertainties.** No figure on any card carries an error bar.
+
+Each simplification the app makes is listed with the others under [Known simplifications](/docs/simplifications/).
