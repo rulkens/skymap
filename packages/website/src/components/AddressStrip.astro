@@ -1,13 +1,14 @@
 ---
 /*
  * AddressStrip — an app address shown as a browser's address field, which is
- * also the link, with a copy icon at its end as a browser has. The one boxed
+ * also the link, with a copy control (CopyButton) at its end as a browser has. The one boxed
  * element on the site: it depicts a real field. Lines break only between parameters.
  * `plain` is the address among a docs page's text (Example): no box, and
  * words to read, the link being the control under it. `query` is a flag
  * before the `#`; `shown` prints a shorter address than the one copied.
  */
 import { APP_BASE, appLink } from '../data/appLink';
+import CopyButton from './CopyButton.astro';
 
 type Props = { hash: string; query?: string; shown?: string; plain?: boolean };
 
@@ -33,38 +34,9 @@ const params = shown.split('&').map((pair) => {
         </span>
       ))}
     </Address>
-    <button class="icon" type="button" data-copy={copy} aria-label="Copy the address" title="Copy the address">
-      <svg class="sheets" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="9" y="9" width="11" height="11" rx="1.5" />
-        <path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" />
-      </svg>
-      <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 12.5l4.5 4.5L19 7.5" />
-      </svg>
-    </button>
+    <CopyButton text={copy} label="Copy the address" />
   </div>
 </div>
-
-<script>
-  // The control changes in place instead of anything appearing, so nothing shifts; it reverts so it can be used again.
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
-    const label = button.getAttribute('aria-label')!;
-    const say = (text: string): void => {
-      button.setAttribute('aria-label', text);
-      button.toggleAttribute('data-copied', text !== label);
-    };
-    // No clipboard on plain http, and a permission can be refused: then the label stays as it was.
-    button.addEventListener('click', () => {
-      void navigator.clipboard?.writeText(button.dataset.copy!).then(
-        () => {
-          say('Copied');
-          setTimeout(() => say(label), 2000);
-        },
-        () => {},
-      );
-    });
-  }
-</script>
 
 <style>
   /* The wrapper centres the field in a column taller than it (the classroom page's row under its steps). */
@@ -119,45 +91,5 @@ const params = shown.split('&').map((pair) => {
 
   .plain .address {
     padding: 0.6875rem 0;
-  }
-
-  /* 44 px square: the smallest target a finger hits reliably. */
-  .icon {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 2.75rem;
-    min-height: 2.75rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--site-text-dim);
-    cursor: pointer;
-  }
-
-  .icon:hover,
-  .icon:focus-visible,
-  .icon[data-copied] {
-    color: var(--color-accent);
-  }
-
-  .icon svg {
-    grid-area: 1 / 1;
-    width: 1.125rem;
-    height: 1.125rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .icon .tick,
-  .icon[data-copied] .sheets {
-    visibility: hidden;
-  }
-
-  .icon[data-copied] .tick {
-    visibility: visible;
   }
 </style>

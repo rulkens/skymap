@@ -96,7 +96,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     pages: [
       { title: 'Roadmap', path: '/docs/roadmap/', status: 'planned' },
       { title: 'Credits', path: '/docs/credits/', status: 'live', up: '/domes/' },
-      { title: 'Cite', path: '/docs/cite/', status: 'planned', up: '/science/' },
+      { title: 'Cite', path: '/docs/cite/', status: 'live', up: '/science/' },
       {
         title: 'Developer workbenches',
         path: '/docs/developers/workbenches/',

@@ -1,0 +1,67 @@
+---
+/*
+ * CiteRefs — the papers to cite for the data, source by source: the sources
+ * of data/citeRefs.ts under the sections of the licence record, each with its
+ * references and, where its holder asks for an acknowledgement as well, the
+ * way to that text on the credits page. Nothing is restated here.
+ */
+import { CREDIT_GROUPS } from '../data/attributions';
+import { CITE_REFS } from '../data/citeRefs';
+import { asksAcknowledgement } from '../utils/asksAcknowledgement';
+import { dataPagePath } from '../utils/dataPagePath';
+import { sitePath } from '../utils/sitePath';
+import RecordText from './RecordText.astro';
+import RefLine from './RefLine.astro';
+
+const groups = CREDIT_GROUPS.map((group) => ({
+  title: group.title,
+  entries: group.entries.filter((entry) => entry.id in CITE_REFS),
+})).filter((group) => group.entries.length > 0);
+---
+
+{
+  groups.map((group) => (
+    <>
+      <h3>{group.title}</h3>
+      <dl>
+        {group.entries.map((entry) => {
+          const plain = entry.name.replace(/[`\\]/g, '');
+          return (
+            <>
+              <dt id={`cite-${entry.id}`}>
+                <RecordText text={entry.name} phrase />
+              </dt>
+              {CITE_REFS[entry.id]!.map((reference) => (
+                <dd>
+                  <RefLine reference={reference} />
+                </dd>
+              ))}
+              <dd class="more">
+                {asksAcknowledgement(entry.asks) && (
+                  <>
+                    Its makers also ask for an acknowledgement:{' '}
+                    <a href={`${sitePath('/docs/credits/')}#${entry.id}`} aria-label={`The text on the credits page: ${plain}`}>
+                      the text on the credits page
+                    </a>
+                    .{' '}
+                  </>
+                )}
+                <a href={sitePath(dataPagePath(entry.id))} aria-label={`Its data page: ${plain}`}>
+                  Its data page
+                </a>{' '}
+                says what skymap takes from it.
+              </dd>
+            </>
+          );
+        })}
+      </dl>
+    </>
+  ))
+}
+
+<style>
+  .more {
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+</style>

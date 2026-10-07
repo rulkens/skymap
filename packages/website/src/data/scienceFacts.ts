@@ -1,5 +1,7 @@
 import type { Fact } from '../@types/Fact';
+import { CITATION } from './citation';
 import { REPO_BLOB } from './siteIdentity';
+import { formatDate } from '../utils/formatDate';
 
 const CHECKED = '2026-10-06';
 const IN_REPO = 'in the skymap repository';
@@ -368,8 +370,8 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-cite-skymap',
     about: 'app',
-    text: 'skymap is archived on Zenodo. The DOI 10.5281/zenodo.20037028 always points to the newest version; version 0.5.0, released on 31 August 2026, has its own DOI, 10.5281/zenodo.22209203.',
-    source: 'https://doi.org/10.5281/zenodo.20037028',
+    text: `skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, has its own DOI, ${CITATION.versionDoi}.`,
+    source: `https://doi.org/${CITATION.conceptDoi}`,
     sourceLabel: 'skymap on Zenodo',
     checked: CHECKED,
   },

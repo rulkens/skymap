@@ -1,0 +1,76 @@
+---
+description: How to cite skymap, one view in it, and the catalogues a picture or a statement made with it rests on, with the paper for each.
+---
+
+import Citation from '../../components/Citation.astro';
+import CiteCaption from '../../components/CiteCaption.astro';
+import CiteRefs from '../../components/CiteRefs.astro';
+import { CITE_REFS } from '../../data/citeRefs';
+import { PRESS_PICTURES } from '../../data/pressPictures';
+import { formatDate } from '../../utils/formatDate';
+
+export const REFERENCES = Object.values(CITE_REFS).flat();
+export const PAPERS = new Set(REFERENCES.map((reference) => reference.doi ?? reference.arxiv)).size;
+export const CHECKED = formatDate(
+  REFERENCES.map((reference) => reference.checked)
+    .sort()
+    .at(-1),
+);
+export const SATURN = PRESS_PICTURES.find((row) => row.shot === 'saturn');
+
+A picture or a number that comes out of skymap rests on two things: the program that drew it, and the catalogues it drew from. Cite both. Where a survey asks for an acknowledgement as well, this page says so, and [Credits](/docs/credits/) has the text.
+
+## Cite skymap
+
+<Citation full />
+
+<Fact id="sci-cite-skymap" />
+
+The version’s DOI names the release that drew your picture. The other one names the project, whichever release is newest.
+
+## Cite one view
+
+The address is the citation. Every view has one, and it holds what the view shows: the object the camera is on, and the instant on the app’s clock.
+
+<Example to="focus=body-jupiter&t=2020-12-21T18:00:00Z" address label="Open this view">
+  Jupiter and Saturn on the evening of 21 December 2020.
+</Example>
+
+- `focus=body-jupiter` is the object.
+- `t=2020-12-21T18:00:00Z` is the instant, in UTC.
+
+<Fact id="lesson-link" />
+
+Give the address with the day you opened it, as you would for any web page, and name the version of skymap beside it: a later release may draw the same address differently.
+
+<Fact id="share-settings" />
+
+So if a catalogue you switched on matters to your point, say so in words. [Sharing a view](/docs/guide/sharing/) shows how to get an address out of the app, and [URL parameters](/docs/reference/url-parameters/) lists everything one can carry.
+
+## Cite the data, not only the tool
+
+skymap draws other people’s measurements. A distance, a redshift or a position read from it is a catalogue’s figure, and the catalogue’s paper is what to cite for it. These are the papers, source by source.
+
+<CiteRefs />
+
+<Note flow>
+  {PAPERS} papers and datasets for {Object.keys(CITE_REFS).length} sources. We opened each at its DOI or its arXiv record on {CHECKED}, and the authors, year, title and journal here are as that record gives them: three authors, then “et al.”.
+</Note>
+
+Maps, terrain, 3D models, fonts and code are credited on [Credits](/docs/credits/), with a citation where their makers ask for one.
+
+## A worked example
+
+This picture of Saturn is on the About page. Its planet is a texture, and the stars behind it come from two catalogues.
+
+<Figure id="saturn" />
+
+Here is what we would print with it.
+
+<CiteCaption picture="saturn" cite={['gaia', 'hipparcos']} />
+
+A picture made with skymap carries the terms of everything in the frame. For this one: {SATURN.terms}
+
+<Fact id="about-picture-licence" />
+
+[Pictures and their terms](/about/#press) on the About page has the same for its other pictures, and asks you to write to us before you reuse one.

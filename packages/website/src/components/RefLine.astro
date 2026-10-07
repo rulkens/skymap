@@ -1,0 +1,19 @@
+---
+/* RefLine — one paper or dataset as a reference list prints it, with its DOI and arXiv links, from a row of data/citeRefs.ts. */
+import type { CiteRef } from '../@types/CiteRef';
+
+type Props = { reference: CiteRef };
+
+const { reference } = Astro.props;
+---
+
+{reference.authors} ({reference.year}). <i>{reference.title}</i>. {reference.journal}.{' '}
+{reference.doi && <a class="id" href={`https://doi.org/${reference.doi}`}>doi:{reference.doi}</a>}{' '}
+{reference.arxiv && <a class="id" href={`https://arxiv.org/abs/${reference.arxiv}`}>arXiv:{reference.arxiv}</a>}
+
+<style>
+  /* An identifier is one long word. */
+  .id {
+    overflow-wrap: anywhere;
+  }
+</style>
