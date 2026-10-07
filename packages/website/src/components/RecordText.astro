@@ -97,9 +97,8 @@ const blocks = (lift ? liftQuotes(whole) : whole)
     color: var(--color-fg);
   }
 
+  /* 44px to the thumb without a box of its own, so the comma after a link stays on the link's line. */
   .record :global(a) {
-    display: inline-block;
     padding-block: 0.625rem;
-    margin-block: -0.625rem;
   }
 </style>

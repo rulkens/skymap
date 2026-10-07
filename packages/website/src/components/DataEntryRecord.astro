@@ -1,13 +1,13 @@
 ---
 /*
  * DataEntryRecord — one source as a data page prints it, in the order a
- * reader asks: may I use it, what do I print, what is it in the app (a
- * summary of rows); then its licence and terms as a quotation of the record;
- * who made it and where it comes from; and where its files enter the build,
- * the registry's rows folded away. The licence, credit, makers and files are
- * the record's text or the registry's; the rest is data/dataSourceNotes.ts.
- * `level` is the depth of its headings: 2 on a page of its own, 3 where it is
- * one section of its family's page, whose rows hold what a page gives a section.
+ * reader asks: may I use it, what is it in the app, what do I print (rows of
+ * a summary, the credit last because it can be long); its licence and terms
+ * as a quotation of the record; what it is, with a picture, and who made it;
+ * where its files enter the build, the registry's rows folded away. Licence,
+ * credit, makers and files are the record's or the registry's; the rest is
+ * data/dataSourceNotes.ts. `level` is the depth of its headings: 2 on a page
+ * of its own, 3 as a section of its family's page, where rows stand for sections.
  */
 import type { DataEntry } from '../@types/DataEntry';
 import { DATA_FAMILIES_USED, DATA_USES } from '../data/dataPages';
@@ -47,8 +47,6 @@ const about = [
 const byHand = entry.files.filter((file) => !file.fetcher).length;
 ---
 
-{level === 2 && note?.figure && <DocFigure id={note.figure} eager />}
-
 <dl data-embed>
   <Row label="Use">
     {
@@ -62,7 +60,6 @@ const byHand = entry.files.filter((file) => !file.fetcher).length;
       ))
     }
   </Row>
-  <Row label="Credit"><RecordText text={bullets.Attribution ?? ''} lift copy /></Row>
   {
     note?.shows && (
       <Row label="In the app">
@@ -84,6 +81,7 @@ const byHand = entry.files.filter((file) => !file.fetcher).length;
       </Row>
     )
   }
+  <Row label="Credit"><RecordText text={bullets.Attribution ?? ''} lift copy /></Row>
   {
     level === 3 && (
       <>
@@ -117,6 +115,7 @@ const byHand = entry.files.filter((file) => !file.fetcher).length;
   level === 2 && (
     <>
       <h2 id="about">What it is and who made it</h2>
+      {note?.figure && <DocFigure id={note.figure} />}
       {note?.about && <p>{note.about}</p>}
       {note?.facts?.map((id) => <FactText id={id} />)}
       <dl data-embed>

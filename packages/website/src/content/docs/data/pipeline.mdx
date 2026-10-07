@@ -10,14 +10,15 @@ Every source named here has a page with its licence and its files: [All sources 
 <Flow
   label="The steps from a survey’s file to a drawn galaxy"
   steps={[
-    { name: 'Fetch', href: '#fetch', text: 'A survey’s published table goes into the repository’s data folder, with a record of where it came from.' },
-    { name: 'Parse', href: '#parse', text: 'Each table becomes rows of one shape: a direction, a redshift, brightness, and a tilt where there is one.' },
-    { name: 'Cross-match', href: '#cross-match-and-de-duplicate', text: 'Rows of two surveys that are one galaxy become one row.' },
-    { name: 'Data sizes', href: '#data-sizes', text: 'The rows are cut three times over, for a phone, a laptop and a large screen.' },
-    { name: 'Distances', href: '#distances', text: 'A direction and a redshift, or a measured distance, become a position in space.' },
-    { name: 'Encode', href: '#the-binary-format', text: 'Positions and brightness are packed into one file a catalogue and size.' },
-    { name: 'Load', href: '#load', text: 'The app fetches the files of the size it chose and passes them to the graphics processor.' },
-    { name: 'Draw', href: '#draw', text: 'Every frame, each galaxy in view is drawn as a point or a disc.' },
+    { name: 'Fetch', href: '#fetch', text: 'In: a survey’s published table. Out: the same file in our data folder, with a note of where it came from.' },
+    { name: 'Parse', href: '#parse', text: 'Out: rows of one shape, each a direction, a redshift, brightness, and a tilt where there is one.' },
+    { name: 'Cross-match and de-duplicate', href: '#cross-match-and-de-duplicate', text: 'Two rows within 5 arcseconds whose redshifts differ by less than about 0.01 become one.' },
+    { name: 'Data sizes', href: '#data-sizes', text: 'Three cuts of the same rows: SDSS at none, 156,000 and 500,000 of its most luminous galaxies.' },
+    { name: 'Distances', href: '#distances', text: 'Beyond 30 megaparsecs a distance from the redshift; inside, a measured one. Out: a position in space.' },
+    { name: 'The binary format', href: '#the-binary-format', text: '64 bytes for each galaxy, in one file for each catalogue at each data size.' },
+    { name: 'Load', href: '#load', text: 'The app fetches the files of one size: the smallest on a screen narrower than 768 pixels.' },
+    { name: 'Draw', href: '#draw', text: 'Every frame, each galaxy in view is one small square that faces the camera.' },
+    { name: 'Other roads', href: '#stars', text: 'Stars, structures and fields, planets, imagery and 3D models go through other tools, in the sections after Draw.' },
   ]}
 />
 
@@ -33,7 +34,9 @@ You do not need any of this to run the app from the repository: `npm run fetch-d
 
 ## Parse
 
-One parser a catalogue, in <Repo path="tools/parsers" />, turns its table into rows of a common shape. <Source id="2mrs">2MRS</Source> and <Source id="glade">GLADE</Source> are fixed-width text read by byte position, SDSS is a table read by its column names, <Source id="desi">DESI</Source> is binary tables, and <Source id="milliquas">Milliquas</Source> is text again.
+One parser per catalogue, in <Repo path="tools/parsers" />, turns its table into rows of a common shape. <Source id="2mrs">2MRS</Source> and <Source id="glade">GLADE</Source> are fixed-width text read by byte position, SDSS is a table read by its column names, <Source id="desi">DESI</Source> is binary tables, and <Source id="milliquas">Milliquas</Source> is text again.
+
+<Figure id="science-wedges" />
 
 <Fact id="sci-redshifts" />
 
@@ -45,7 +48,7 @@ One parser a catalogue, in <Repo path="tools/parsers" />, turns its table into r
 
 ## Cross-match and de-duplicate
 
-The surveys overlap, so the same galaxy can arrive two or three times. <Repo path="tools/catalog/crossMatch.ts" /> takes the surveys in a fixed order and accepts a row unless a row already accepted is the same galaxy.
+<Repo path="tools/catalog/crossMatch.ts" /> takes the surveys in a fixed order and accepts a row unless a row already accepted is the same galaxy.
 
 <Fact id="sim-duplicates" />
 
@@ -59,7 +62,11 @@ The three DESI regions come last and are compared with the surveys before them, 
 
 <Fact id="pipe-galaxy-caps" />
 
-The cut is by luminosity, not by apparent brightness, and it is made over the whole catalogue at once (<Repo path="tools/catalog/selectTierRecords.ts" />). That keeps the large-scale structure at every size and puts no edge into the map. Its cost falls on the nearest galaxies, which are mostly small and faint, and the magnitude 15 rule is there to bring them back. A rule of the form “keep everything within so many megaparsecs” would have drawn a shell at that distance.
+The cut is by luminosity, not by apparent brightness, over the whole catalogue at once (<Repo path="tools/catalog/selectTierRecords.ts" />). That keeps the large-scale structure at every size and puts no edge into the map. A rule of the form “keep everything within so many megaparsecs” would have drawn a shell at that distance.
+
+<Figure id="guide-size-small" />
+
+<Figure id="guide-size-large" />
 
 <Fact id="sim-flux-limits" />
 
@@ -71,7 +78,7 @@ Until this step a galaxy is a direction and a redshift. <Repo path="tools/catalo
 
 <Fact id="sci-local-volume" />
 
-The short list is our own, the <Source id="seed-local-volume">local-volume distances</Source>; the second is <Source id="cf4-distances">Cosmicflows-4</Source> and the third HyperLEDA. A distance from one of them is used only if it is under 30 megaparsecs. The published redshift is kept in the file beside the position, so a galaxy’s card still shows it.
+The short list is our own <Source id="seed-local-volume">local-volume distances</Source>; <Source id="cf4-distances">Cosmicflows-4</Source> and <Source id="hyperleda">HyperLEDA</Source> have pages too. A distance from any of the three is used only if it is under 30 megaparsecs. The published redshift is kept in the file beside the position, so a galaxy’s card still shows it.
 
 <Fact id="pipe-blueshift" />
 
@@ -120,6 +127,10 @@ Cluster and supercluster markers are built by <Repo path="tools/structures/build
 <Fact id="sci-structures" />
 
 The glow of the cosmic web is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as a cube of numbers with a header that says what the cube spans.
+
+<Figure id="science-web-points" />
+
+<Figure id="science-web-density" />
 
 <Fact id="sci-filaments" />
 

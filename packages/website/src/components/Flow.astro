@@ -11,7 +11,7 @@ type Props = { label: string; steps: readonly { name: string; text: string; href
 const { label, steps } = Astro.props;
 ---
 
-<ol class="flow" data-embed aria-label={label}>
+<ol class="flow tap-links" data-embed aria-label={label}>
   {
     steps.map((step) => (
       <li>

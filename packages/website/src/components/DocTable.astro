@@ -73,7 +73,9 @@ const SPACE = ' ';
                     <UseTerms use={cell.use} />
                   ) : 'href' in cell ? (
                     <>
-                      <DocLink href={cell.href}>{cell.label}</DocLink>
+                      <span class="tap-links">
+                        <DocLink href={cell.href}>{cell.label}</DocLink>
+                      </span>
                       {SPACE}
                       {cell.sub && <small>{cell.sub}</small>}
                     </>

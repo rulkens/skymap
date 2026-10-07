@@ -65,6 +65,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'stars',
     setting: 'star-catalogs',
     view: { to: 'focus=star-betelgeuse', label: 'Open Betelgeuse' },
+    figure: 'guide-card-star',
   },
   's-stars': {
     description:
@@ -112,6 +113,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The galaxy points switched by “2MRS” under Galaxy catalogs: the nearby universe over nearly the whole sky. Together with GLADE it is also what the filaments are traced from.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
+    figure: 'guide-card-galaxy',
   },
   '2mass-xsc': {
     description:
@@ -130,6 +132,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The galaxy points switched by “GLADE” under Galaxy catalogs: the largest set of galaxy points in the scene. The search finds a GLADE galaxy by a catalogue name it has, such as its NGC, IC or UGC number.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
+    figure: 'guide-density-corrected',
   },
   hyperleda: {
     description:
@@ -150,6 +153,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The points switched by “Milliquas” under Galaxy catalogs: the most distant objects in the scene.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
+    figure: 'lesson-universe',
   },
   desi: {
     description:
@@ -180,6 +184,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
     view: { to: 'focus=m31', label: 'Open Andromeda' },
+    figure: 'lesson-andromeda',
   },
   'seed-local-volume': {
     description:
@@ -237,6 +242,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'A second density field, from our own run of the program on 2MRS: “Polyphorm (2MRS)” under Cosmic web density, which is off at first.',
     scene: 'filaments-and-the-cosmic-web',
     setting: 'cosmic-web-density',
+    figure: 'lesson-cosmic-web',
   },
   cf4pp: {
     description:
@@ -247,6 +253,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The flow ribbons switched by “Flow” in the Settings panel. The Cosmic Flows exhibit draws them.',
     setting: 'flow',
     view: { to: 'exhibit=cosmicFlows', label: 'Open the Cosmic Flows exhibit' },
+    figure: 'dome-exhibit',
   },
 
   // Solar System
@@ -269,6 +276,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
     shows: 'No switch of its own: it is why a planet stands within 1,000 kilometres of where JPL puts it, and each of 18 moons that close to its place beside its planet, between 1900 and 2100.',
     scene: 'planets-and-their-moons',
+    figure: 'guide-conjunction',
   },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
@@ -277,6 +285,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The figures and the paragraph on the card of each planet, moon and spacecraft.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-saturn&t=2026-10-07T12:00:00Z', label: 'Open Saturn and its card' },
+    figure: 'class-card',
   },
 
   // Imagery
@@ -286,6 +295,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The photograph on a named galaxy: in the scene when you are close, and on its card.',
     scene: 'nearby-galaxies',
     view: { to: 'focus=m31', label: 'Open Andromeda' },
+    figure: 'class-tour',
   },
   wikipedia: {
     description:
@@ -380,6 +390,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'Closer to the ground than Blue Marble reaches, in regions we chose, Earth is EOxCloudless: a cloud-free mosaic of Sentinel-2 satellite imagery. We re-tile it at levels 8 to 13 and match its colour to Blue Marble, separately for land and water, so the join between the two holds.',
     shows: 'Earth’s surface in the chosen regions as you come down. Outside them the surface stays Blue Marble.',
     scene: 'earth-and-its-surface',
+    figure: 'guide-surface',
   },
   geodanmark: {
     description:
@@ -408,6 +419,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',
     scene: 'earth-and-its-surface',
+    figure: 'guide-surface',
   },
   dhm: {
     description:
@@ -620,6 +632,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   pcg4d: {
     description:
       'An integer hash that seeds the stars and clouds of the drawn Milky Way.',
+    figure: 'milky-way-drawn',
   },
   colormaps: {
     description:
@@ -652,6 +665,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   disperse: {
     description:
       'The program that computes the filaments from the 2MRS and GLADE galaxies. We run it and do not ship it.',
+    figure: 'filaments-derived',
   },
   pyslime: {
     description:
