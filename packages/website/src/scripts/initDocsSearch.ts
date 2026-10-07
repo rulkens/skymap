@@ -2,22 +2,24 @@
  * initDocsSearch — the search sheet (components/DocsSearch.astro). Pagefind's
  * module and index are fetched the first time the sheet opens, never with the
  * page. The development server has no index (it is cut from a build), and the
- * sheet says so. Arrow keys walk from the field through the results and back;
+ * sheet says so. A result opens at the place on its page that holds the words
+ * (utils/searchLanding.ts). Arrow keys walk from the field through the results and back;
  * Enter in the field opens the first result.
  */
 import type { PagefindApi } from '../@types/PagefindApi';
 import type { PagefindPage } from '../@types/PagefindPage';
 import type { SearchSheet } from '../@types/SearchSheet';
+import { searchLanding } from '../utils/searchLanding';
 
 const SHOWN = 8;
 const NO_INDEX = import.meta.env.DEV
   ? 'Search reads an index that is cut when the site is built. This is the development server, which has none.'
   : 'The search index did not load. Reload the page to try again.';
 
-function hit(page: PagefindPage): HTMLLIElement {
+function hit(page: PagefindPage, query: string): HTMLLIElement {
   const item = document.createElement('li');
   const link = item.appendChild(document.createElement('a'));
-  link.href = page.url;
+  link.href = searchLanding(page, query);
   const title = link.appendChild(document.createElement('span'));
   title.className = 'title';
   title.textContent = page.meta.title ?? page.url;
@@ -62,7 +64,7 @@ export function initDocsSearch(sheet: SearchSheet, opener: HTMLElement): void {
     if (!found || query !== field.value.trim()) return;
     const pages = await Promise.all(found.results.slice(0, SHOWN).map((result) => result.data()));
     if (query !== field.value.trim()) return;
-    list.replaceChildren(...pages.map(hit));
+    list.replaceChildren(...pages.map((page) => hit(page, query)));
     const total = found.results.length;
     status.textContent =
       total === 0
@@ -75,6 +77,10 @@ export function initDocsSearch(sheet: SearchSheet, opener: HTMLElement): void {
   opener.addEventListener('click', open);
   field.addEventListener('input', () => void search());
   sheet.querySelector('[data-search-close]')!.addEventListener('click', () => sheet.close());
+  // A result on the page that is open only moves the page, so the sheet has to get out of the way itself.
+  list.addEventListener('click', (event) => {
+    if ((event.target as HTMLElement).closest('a')) sheet.close();
+  });
   // A click on the dimmed page behind the sheet lands on the dialog element itself.
   sheet.addEventListener('click', (event) => {
     if (event.target === sheet) sheet.close();
