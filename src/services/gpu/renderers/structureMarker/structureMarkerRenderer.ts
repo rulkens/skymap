@@ -188,16 +188,11 @@ export function createStructureMarkerRenderer(
   let ringPickPipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
-  let fadeBuffer: GPUBuffer | null = null;
-  let fadeBindGroup: GPUBindGroup | null = null;
-  // Dummy zeroed FadeUniforms for the pick pipeline.  Same pattern as
-  // galaxyPickRenderer.ts's dummy fade group: the pick fragment
-  // doesn't read fade.opacity (the pick texture is integer + has no
-  // observable alpha), but the pipeline layout still declares the
-  // canonical fadeBgl at @group(1) so other passes' bound fade
-  // groups remain layout-compatible across the encoder boundary.
-  let pickDummyFadeBuffer: GPUBuffer | null = null;
-  let pickDummyFadeBindGroup: GPUBindGroup | null = null;
+  // Inert FadeUniforms bound at @group(1) by the draw and the pick alike: no shader
+  // here reads it, but the layout lists the canonical fadeBgl at that slot so other
+  // passes' bound fade groups stay layout-compatible across the encoder boundary.
+  let dummyFadeBuffer: GPUBuffer | null = null;
+  let dummyFadeBindGroup: GPUBindGroup | null = null;
   // The pick path's OWN @group(0) camera — never the draw-time
   // `uniformBuffer`, which holds the last VISUAL frame's camera and would hand
   // the ring vertex stage a stale snapshot of the pose being picked.
@@ -228,8 +223,8 @@ export function createStructureMarkerRenderer(
         },
       ],
     });
-    // @group(1) FadeUniforms slot — the structure-marker shaders DO NOT
-    // reference this slot (alpha rides on the per-descriptor fields the
+    // @group(1) FadeUniforms slot — the structure-marker shaders do not
+    // reference it (alpha rides on the per-descriptor fields the
     // CPU bakes in produceMarkers), but we MUST list the canonical
     // shared fadeBgl in the layout at slot 1.
     //
@@ -242,7 +237,7 @@ export function createStructureMarkerRenderer(
     // didn't match the fadeBgl would trip "BindGroupLayout … does not
     // match layout … set at group index 1".  Listing fadeBgl here keeps
     // the pipeline layout-compatible with whatever the prior pass
-    // bound.  We never create a BindGroup against it ourselves.
+    // bound; the draw and the pick bind an inert group against it.
     const pipelineLayout = device.createPipelineLayout({
       label: 'structure-marker-pipeline-layout',
       bindGroupLayouts: [cameraBgl, fadeBgl, sourceBgl],
@@ -355,15 +350,9 @@ export function createStructureMarkerRenderer(
       },
     });
 
-    // 16-byte zeroed FadeUniforms buffer — the pick fragment ignores
-    // fade.opacity, but the pipeline layout still lists fadeBgl at
-    // @group(1) for symmetry with the visible pipelines, so we MUST
-    // bind a layout-compatible group there.  Allocated GPUBufferUsage.
-    // UNIFORM only (no COPY_DST): we never write to it, the default-
-    // zero contents are what we want.
-    const pickDummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker-pick');
-    pickDummyFadeBuffer = pickDummyFade.buffer;
-    pickDummyFadeBindGroup = pickDummyFade.bindGroup;
+    const dummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker');
+    dummyFadeBuffer = dummyFade.buffer;
+    dummyFadeBindGroup = dummyFade.bindGroup;
 
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
@@ -392,21 +381,6 @@ export function createStructureMarkerRenderer(
       label: 'structure-marker-camera-bg',
       layout: cameraBgl,
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-    });
-
-    // @group(1) FadeUniforms — 16-byte buffer pinned at opacity 1: the
-    // shaders still apply it, but visibility rides each descriptor's alpha
-    // (per-category bands), so there is no layer-wide scalar to upload.
-    fadeBuffer = device.createBuffer({
-      label: 'structure-marker-fade-uniform',
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    device.queue.writeBuffer(fadeBuffer, 0, new Float32Array([1, 0, 0, 0]));
-    fadeBindGroup = device.createBindGroup({
-      label: 'structure-marker-fade-bg',
-      layout: fadeBgl,
-      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
     // Per-category SourceUniforms — written once at construction.
@@ -532,8 +506,7 @@ export function createStructureMarkerRenderer(
       !uniformBuffer ||
       !instanceBuffer ||
       !cameraBindGroup ||
-      !fadeBuffer ||
-      !fadeBindGroup
+      !dummyFadeBindGroup
     )
       return;
     if (currentMarkerCount === 0) return;
@@ -545,7 +518,7 @@ export function createStructureMarkerRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setBindGroup(0, cameraBindGroup);
-    pass.setBindGroup(1, fadeBindGroup);
+    pass.setBindGroup(1, dummyFadeBindGroup);
 
     // Halo passes first (additive) — voids skip; see spec §2.1.  We
     // could check bucket-level halo presence by inspecting each
@@ -615,7 +588,7 @@ export function createStructureMarkerRenderer(
     viewportPx: Vec2,
     pxPerRad: number,
   ): void {
-    if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
+    if (!device || !ringPickPipeline || !instanceBuffer || !dummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
     // Same prefix write as `draw`, into the pick buffer.
@@ -624,7 +597,7 @@ export function createStructureMarkerRenderer(
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);
-    passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
+    passEncoder.setBindGroup(1, dummyFadeBindGroup);
     for (const cat of categories) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -642,8 +615,7 @@ export function createStructureMarkerRenderer(
   function destroy(): void {
     uniformBuffer?.destroy();
     instanceBuffer?.destroy();
-    fadeBuffer?.destroy();
-    pickDummyFadeBuffer?.destroy();
+    dummyFadeBuffer?.destroy();
     pickCameraBuffer?.destroy();
     for (const cat of categories) {
       sourceBuffers[cat]?.destroy();

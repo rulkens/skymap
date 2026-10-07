@@ -47,7 +47,6 @@ export type StructureFocusSubsystem = {
    */
   produceFocusUniforms(nowMs: number): FocusUniformsValue;
 
-  /** True only while the fade is animating (drives render-on-demand). */
   /**
    * The value the last `produceFocusUniforms` returned, without ticking the
    * fade: what a pick between frames must test against, since it hit-tests the
@@ -55,5 +54,6 @@ export type StructureFocusSubsystem = {
    */
   lastFocusUniforms(): FocusUniformsValue;
 
+  /** True only while the fade is animating (drives render-on-demand). */
   isAwake(nowMs: number): boolean;
 } & Destroyable;

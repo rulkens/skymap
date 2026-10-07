@@ -24,9 +24,9 @@ export function drawStarCut(
   // About the CUT's origin, not this view's eye: identical for every source,
   // the only safe use of the renderer's one camera uniform per view slot.
   const vp = narrowMat4(rebaseViewProj(view.slab.vp, inputs.cut.originMpc));
+  const focus = starFocusRelCam(ctx.snapshot.focus, inputs.cut.originMpc);
   // This view's own pixels per radian, scaled to a target spanning the same
   // frustum in fewer rows (the aggregate stream's half-res offscreen).
-  const focus = starFocusRelCam(ctx.snapshot.focus, inputs.cut.originMpc);
   const pxPerRad = ctx.drawPxPerRad * (view.viewportPx[1] / ctx.canvasSize.height);
   for (const { source } of inputs.cut.sources) {
     renderer.drawCut(pass, {
