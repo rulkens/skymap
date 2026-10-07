@@ -1,19 +1,29 @@
 ---
 title: URL parameters
-description: Every parameter skymap reads from its address, each with the form of its value, a worked example, what it does, whether the app writes it back and what a wrong value does.
+description: The parameters a link to skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
 group: Reference
 order: 2
-facts: [takeover-links, dome-flag]
+facts:
+  [
+    takeover-links,
+    dome-flag,
+    lesson-link,
+    link-pose,
+    link-time-write,
+    ref-focus-places,
+    ref-pose-forms,
+    ref-params-unknown-wait,
+    ref-tour-link-writes,
+    sondermarken-flyout,
+  ]
 ---
 
 import {
   DOCS_BODY_NAMES,
-  DOCS_CLIP_IDS,
   DOCS_EXHIBIT_IDS,
   DOCS_FOCUS_IDS,
   DOCS_ORIENTATIONS,
   DOCS_POSE_SITES,
-  DOCS_TOUR_CLIP_IDS,
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../data/docsUrlParams';
@@ -32,8 +42,9 @@ export const Codes = ({ of }) => (
 export const HASH = DOCS_URL_PARAMS.filter((param) => param.part === 'hash');
 export const FLAGS = DOCS_URL_PARAMS.filter((param) => param.part === 'query' && !param.development);
 export const DEV_FLAGS = DOCS_URL_PARAMS.filter((param) => param.development);
+export const TOURS = DOCS_TOUR_IDS.filter((row) => row.id !== 'demo');
 
-A link to skymap is the app’s address with parameters added to it. [Use skymap in the classroom](/classroom/) has links that are ready to hand out, and [Sharing a view](/docs/guide/sharing/) is about copying one from the app. This page is for writing one by hand.
+A link to skymap is the app’s address with parameters added to it. [Sharing a view](/docs/guide/sharing/) is about copying one from the app; this page is for writing one by hand.
 
 ## The parts of an address
 
@@ -41,12 +52,14 @@ A link to skymap is the app’s address with parameters added to it. [Use skymap
 /?dome#focus=body-saturn&t=2017-10-15T12:00:00Z
 ```
 
-- `?dome` is a flag. Flags come first, after a `?`, and there is one a visitor needs.
+- `?dome` is a flag. Flags come first, after a `?`.
 - `#` begins the parameters. Nothing after it is sent to the server: the app reads it in your browser.
 - `focus=body-saturn` is one parameter, a name and a value with `=` between them.
 - `&` joins one parameter to the next.
 
 <Fact id="ref-params-spelling" />
+
+<Figure id="guide-share-pose" />
 
 ## The parameters
 
@@ -54,23 +67,14 @@ These go after the `#`.
 
 <Table
   cols="stack"
-  head={['Parameter', 'Value', 'What it does']}
+  head={['Parameter', 'Value', 'What it does', 'Does the app write it?']}
   rows={HASH.map((param) => [
     { code: param.name },
     { text: param.value, code: param.example },
     param.does,
+    param.written,
   ])}
 />
-
-<Table
-  cols="stack"
-  head={['Parameter', 'Does the app write it?', 'A value the app does not know']}
-  rows={HASH.map((param) => [{ code: param.name }, param.written, param.unknown])}
-/>
-
-<Fact id="lesson-link" />
-
-<Fact id="link-pose" />
 
 <Fact id="ref-params-welcome" />
 
@@ -79,20 +83,12 @@ These go after the `#`.
 These go after the `?`, before the `#`.
 
 <Table
-  head={['Flag', 'Value', 'Example', 'What it does']}
-  rows={FLAGS.map((param) => [
-    { code: param.name },
-    param.value,
-    { code: param.example },
-    param.does,
-  ])}
+  cols="detail"
+  head={['Flag', 'What it does', 'Does the app write it?']}
+  rows={FLAGS.map((param) => [{ code: param.example }, param.does, param.written])}
 />
 
-<Fact id="ref-dome-spelling" />
-
-<Fact id="dome-rig" />
-
-Dome mode is described under [Screens, quality and domes](/docs/guide/screens-and-domes/), and four more flags are listed [at the foot of this page](#for-development).
+<Fact id="ref-dome-spelling" inline /> See [Screens, quality and domes](/docs/guide/screens-and-domes/) for dome mode. Four more flags are [at the foot of this page](#for-development).
 
 ## Object ids
 
@@ -114,25 +110,15 @@ The names that follow `body-` are: <Codes of={DOCS_BODY_NAMES} />.
 
 ### Where to find an id
 
-Select the object in the app, from the search or with a double-click, and read `focus=` in the address bar. The app writes the id it would read. The [Object catalogue](/docs/reference/objects/) lists the named objects.
+Go to the object in the app, from the search or with a double-click, and read `focus=` in the address bar. The app writes the id it would read. The [Object catalogue](/docs/reference/objects/) has the id of every named object.
 
-<Fact id="ref-focus-galaxy-ids" />
+<Fact id="ref-focus-galaxy-ids" inline /> <Fact id="ref-focus-pos-famous" inline />
 
-<Fact id="ref-focus-pos-famous" />
-
-<Fact id="band-no-flight" />
-
-It has no id either.
-
-### Places on Earth
-
-<Fact id="ref-focus-places" />
-
-How to get one is under [Camera positions](#camera-positions).
+The band of the Zone of Avoidance has no id: it is a direction on the sky, so the camera cannot fly to it. A place on Earth has none either; a link to a place is a [camera position](#camera-positions).
 
 ## Instants
 
-The value of `t` is an instant.
+The value of `t` is an instant, a date and time.
 
 | Written as | Read as |
 | --- | --- |
@@ -142,11 +128,9 @@ The value of `t` is an instant.
 | `t=2020` | Midnight UTC at the start of 1 January 2020 |
 | `t=2020-12-21T18:00` | 18:00 on the clock of the computer that opens the link |
 
-<Fact id="ref-time-forms" />
+Always end a time in `Z`. <Fact id="ref-time-forms" inline />
 
-<Fact id="link-time-write" />
-
-The years the positions of the planets hold for are under [Time](/docs/guide/time/).
+When the app writes `t`, and the years the positions of the planets hold for, are under [Sharing a view](/docs/guide/sharing/) and [Time](/docs/guide/time/).
 
 ## Orientations
 
@@ -156,40 +140,34 @@ The years the positions of the planets hold for are under [Time](/docs/guide/tim
   rows={DOCS_ORIENTATIONS.map((row) => [{ code: `orientation=${row.id}` }, row.flat])}
 />
 
-The same choice is Orientation, under Display in the [Settings](/docs/guide/settings/) panel.
+The same choice is Orientation, under Display in the Settings panel; see [All settings](/docs/reference/settings/#display).
 
-## Exhibits, tours and clips
+## Exhibits and tours
 
 <Table
   cols="3 3"
   head={['Value', 'Opens']}
   rows={[
     ...DOCS_EXHIBIT_IDS.map((row) => [{ code: `exhibit=${row.id}` }, `The exhibit ${row.name}`]),
-    ...DOCS_TOUR_IDS.map((row) => [{ code: `tour=${row.id}` }, `The tour “${row.name}”`]),
+    ...TOURS.map((row) => [{ code: `tour=${row.id}` }, `The tour “${row.name}”`]),
   ]}
 />
 
-“Demo Tour” has three steps, the Milky Way, the Virgo Cluster and Laniakea. It is not in the search and opens from a link only. The others are described under [Tours and exhibits](/docs/guide/tours/).
-
-<Fact id="ref-tour-link-writes" />
-
-<Fact id="ref-clip-what" />
-
-The clips of their own are <Codes of={DOCS_CLIP_IDS} />. The ones that make up the tour are, in its order, <Codes of={DOCS_TOUR_CLIP_IDS} />.
-
-The first of them is the flight the home page of this site opens. <Fact id="sondermarken-flyout" inline />
+A link copied during a tour starts the tour from its first step. See [Tours and exhibits](/docs/guide/tours/) for what each one shows.
 
 ## Camera positions
 
-The value of `pose` is an exact camera position.
+The value of `pose` is an exact camera position. <Fact id="link-pose" inline />
 
-<Fact id="ref-pose-forms" />
-
-| Form | Values after the letter | Example |
-| --- | --- | --- |
-| `a` | Seven numbers, or nine | `pose=a,0,0,0,2.1,0.35,260,0` |
-| `b` | The name of a body and 15 numbers | Take it from the app |
-| `s` | The name of a site and three numbers | `pose=s,perseverance,0.5,0.3,50` |
+<Table
+  cols="detail"
+  head={['Form', 'What it is', 'Example']}
+  rows={[
+    [{ code: 'a' }, 'A view about a point in space: the letter and seven numbers, or nine.', { code: 'pose=a,0,0,0,2.1,0.35,260,0' }],
+    [{ code: 's' }, 'A view round a rover or Søndermarken: the letter, the name of a site and three numbers.', { code: 'pose=s,perseverance,0.5,0.3,50' }],
+    [{ code: 'b' }, 'A view fixed to a planet or a moon as it turns, which is how a view close to a surface is written: the letter, the name of a body and 15 numbers.', 'Take it from the app'],
+  ]}
+/>
 
 The seven numbers of the `a` form are, in order:
 
@@ -198,35 +176,23 @@ The seven numbers of the `a` form are, in order:
 3. The distance from that point to the camera, in megaparsecs. It has to be more than zero.
 4. The roll of the picture, in radians. Write 0.
 
-The two more that may follow turn the view away from that point, in radians, so that the target sits off-centre.
-
-<Fact id="ref-pose-with-focus" />
+The two more that may follow turn the view away from that point, in radians, so that the focus sits off-centre. <Fact id="ref-pose-with-focus" inline />
 
 The three numbers of the `s` form are the direction the camera stands in and its height above the horizon, both in radians, and its distance from the site in metres, which has to be more than zero. The sites are <Codes of={DOCS_POSE_SITES} />.
 
-The `b` form holds a position and a full set of axes in the body’s own turning frame, in metres. It is what a view close to a surface is written as, and it is not meant to be written by hand.
+<Fact id="ref-pose-from-app" inline /> The key is in the [Controls](/docs/reference/controls/#for-development) tables. <Fact id="ref-pose-body-focus" inline />
 
-<Fact id="ref-pose-from-app" />
-
-The key is in the [Controls](/docs/reference/controls/#for-development) tables.
-
-<Fact id="ref-pose-body-focus" />
+A pose with the wrong number of values, a value that is not a number or a name the app does not know is ignored whole.
 
 ## How parameters combine
 
 <Fact id="ref-params-combine" />
 
-<Fact id="ref-params-hash" />
-
-<Fact id="exhibit-link-time" />
+<Fact id="ref-params-hash" inline /> <Fact id="exhibit-link-time" inline />
 
 ## Values the app does not know
 
-The second table [above](#the-parameters) has a line for each parameter. Together they come to this:
-
-<Fact id="ref-params-unknown" />
-
-<Fact id="ref-params-unknown-wait" />
+<Fact id="ref-params-unknown" inline /> <Fact id="ref-params-unknown-wait" inline />
 
 ## In a running app
 
@@ -235,8 +201,6 @@ The second table [above](#the-parameters) has a line for each parameter. Togethe
 <Fact id="ref-params-history" />
 
 ## Example links
-
-Each of these opens what it says.
 
 <Example to="focus=body-saturn" address label="Open Saturn">
   Saturn.
@@ -276,7 +240,7 @@ Each of these opens what it says.
 
 ## For development
 
-These flags are for the people who build skymap. They work in the published app, so a link you are sent may carry one.
+These flags are for the people who build skymap. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline />
 
 <Table
   cols="detail"
@@ -288,6 +252,4 @@ These flags are for the people who build skymap. They work in the published app,
   ])}
 />
 
-<Fact id="ref-params-query" />
-
-The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables, and the panel they open is under [Debug panel and flags](/docs/developers/debug/).
+Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the home page of this site opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.

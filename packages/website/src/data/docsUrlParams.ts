@@ -29,7 +29,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
   {
     name: 't',
     part: 'hash',
-    value: 'An instant as a date, or a date and a time',
+    value: 'An instant: a date, or a date and a time',
     example: 't=2020-12-21T18:00:00Z',
     does: 'Sets the clock to that instant and pauses it, at the speed 1 s/s.',
     written:
@@ -43,7 +43,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     value: 'One of four words',
     example: 'orientation=galactic',
     does: 'Chooses which way is up.',
-    written: 'Yes, while it is not ecliptic. Ecliptic is the default and is written as no parameter.',
+    written: 'Yes, while it is not ecliptic. Ecliptic is where the app starts and is written as no parameter.',
     unknown: 'Ignored: up stays as it was. The parameter is taken out of the address.',
     skipsWelcome: false,
   },
@@ -92,11 +92,11 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
   {
     name: 'dome',
     part: 'query',
-    value: 'None. Any value, or none, switches it on.',
+    value: 'None',
     example: '?dome',
     does: 'Starts the app in dome mode, drawing a fisheye disc.',
     written: NOT_WRITTEN,
-    unknown: 'There is none: ?dome=0 switches dome mode on as well.',
+    unknown: 'There is none.',
     skipsWelcome: false,
   },
   {
@@ -147,7 +147,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
 
 /** The values of `orientation`, with the plane each one lays flat. */
 export const DOCS_ORIENTATIONS: readonly { id: string; flat: string }[] = [
-  { id: 'ecliptic', flat: 'The plane of the solar system. The default.' },
+  { id: 'ecliptic', flat: 'The plane of the solar system. The app starts with it.' },
   { id: 'equatorial', flat: 'Earth’s equator, so that Polaris is up.' },
   { id: 'galactic', flat: 'The plane of the Milky Way.' },
   { id: 'supergalactic', flat: 'The plane of the local superclusters.' },
@@ -230,14 +230,14 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     form: 'm<number>, c<number> or another short name',
     example: 'm31',
     names:
-      'One of the 81 famous galaxies, by its Messier or Caldwell number in small letters where it has one.',
+      'One of the 81 named galaxies, by its Messier or Caldwell number in small letters where it has one.',
   },
   {
     form: 'pgc-<number>',
     prefix: 'pgc-',
     example: 'pgc-2',
     names:
-      'A galaxy of the GLADE or 2MRS catalogue, by its number in the Principal Galaxies Catalogue.',
+      'A galaxy of the GLADE or 2MRS catalogue, by its number in the Catalogue of Principal Galaxies (PGC).',
   },
   {
     form: 'sdss-<number>',
