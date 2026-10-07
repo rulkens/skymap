@@ -55,7 +55,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-local',
     about: 'app',
-    text: 'The scene workbench and the named-galaxy curator are not published. Each runs from a copy of the repository, on a port of its own, and reads and writes files on that machine.',
+    text: 'The scene workbench and the named-galaxy curator run only from a copy of the repository, each on a port of its own, and read and write files on that machine.',
     source: `${REPO_BLOB}/tools/utils/io/devPorts.ts`,
     sourceLabel: `the table of ports, ${IN_REPO}`,
     checked: CHECKED,
@@ -63,7 +63,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-not-app',
     about: 'app',
-    text: 'A workbench is a small app of its own: none of its code is in what a visitor to skymap downloads.',
+    text: 'A workbench is a small app of its own, built apart from what a visitor to skymap downloads.',
     source: `${REPO_BLOB}/tools/galaxy-renderer/README.md`,
     sourceLabel: `the galaxy renderer’s manual, ${IN_REPO}`,
     checked: CHECKED,
@@ -71,7 +71,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-galaxy-unused',
     about: 'app',
-    text: 'The app does not draw any galaxy with the galaxy renderer’s model yet. Drawing the Milky Way with it is on the list of planned work.',
+    text: 'The galaxy renderer’s model is not in the app yet; drawing the Milky Way with it is planned.',
     source: BACKLOG,
     sourceLabel: BACKLOG_LABEL,
     checked: CHECKED,
@@ -113,7 +113,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'debug-open',
     about: 'app',
-    text: 'The D key opens a panel headed “Skymap Debug” at the right of the window, and closes it. It is in the published app and needs no flag. No button opens it, so it needs a keyboard. It does not show while the welcome screen, a tour or an exhibit is up or the interface is hidden, nor with cinema in the address.',
+    text: 'The D key opens a panel headed “Skymap Debug” at the right of the window, and closes it. It is in the published app, with no flag and no button, so it needs a keyboard. It stays hidden while the welcome screen, a tour or an exhibit is up or the interface is hidden, and with cinema in the address.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the keyboard shortcuts, ${IN_REPO}`,
     checked: CHECKED,

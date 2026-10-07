@@ -58,7 +58,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'relief',
         title: 'Relief on moons',
-        text: 'Craters and ridges that change the outline of a small moon, not only its shading.',
+        text: 'Craters and ridges that change the outline of a small moon as well as its shading.',
         state: 'planned',
         backlog: 'Real relief displacement for near-spherical bodies',
       },
@@ -155,7 +155,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'openspace-controls',
         title: 'Controls like OpenSpace',
-        text: 'A second set of mouse controls that behaves as OpenSpace does, for people who run a planetarium with it. The groundwork is in the app; the second set is not.',
+        text: 'A second set of mouse controls that behaves as OpenSpace does, for people who run a planetarium with it. The groundwork is in the app.',
         state: 'in progress',
         spec: `${SPECS}/2026-09-29-openspace-camera-mode-design.md`,
         built: 'src/services/engine/camera/controlSchemes.ts',
@@ -163,7 +163,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'structure-shapes',
         title: 'Superclusters with their own shape',
-        text: 'A supercluster or a wall picked out by its real extent, not by a sphere round it.',
+        text: 'A supercluster or a wall picked out by its real extent.',
         state: 'planned',
         backlog: 'Supercluster/wall shape in focus',
       },
@@ -190,7 +190,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'mars-air',
         title: 'The right thickness of air at the Mars rover sites',
-        text: 'The atmosphere measured from the planet’s reference surface and not from its lowest ground.',
+        text: 'The atmosphere measured from the planet’s reference surface.',
         state: 'planned',
         backlog: 'Atmosphere density altitude-zero is the relief floor',
       },
@@ -280,7 +280,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'smooth-zoom',
         title: 'A smoother wheel and a coasting flick',
-        text: 'Zoom that eases between steps of the wheel, and a view that goes on turning for a moment after a quick drag. Not decided: the app was designed without it.',
+        text: 'Zoom that eases between steps of the wheel, and a view that goes on turning for a moment after a quick drag. The app was designed without it.',
         state: 'idea',
         backlog: 'Camera smooth wheel zoom + flick coast',
       },
@@ -293,7 +293,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desktop-app',
         title: 'A desktop app that runs offline',
-        text: 'skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written; nothing is built.',
+        text: 'skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written.',
         state: 'planned',
         spec: `${SPECS}/2026-09-19-desktop-offline-app-design.md`,
       },

@@ -84,7 +84,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-filaments', 'build-filaments-sdss', 'build-filaments-small'],
-        does: 'Trace the filament skeleton of the cosmic web with DisPerSE from the built galaxy files: 2MRS and GLADE together (SDSS is left out on purpose), SDSS alone as a test, or a sparser skeleton at a higher threshold.',
+        does: 'Trace the filament skeleton of the cosmic web with DisPerSE from the built galaxy files: 2MRS and GLADE together, SDSS alone as a test, or a sparser skeleton at a higher threshold.',
         manual: DATA,
       },
       {
@@ -146,7 +146,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
     rows: [
       {
         scripts: ['shot'],
-        does: 'Takes a picture of any link into the app, in a browser without a window, and prints the file’s path.',
+        does: 'Takes a picture of any link into the app, in a headless browser, and prints the file’s path.',
         manual: 'tools/shot/README.md',
       },
       {
@@ -156,7 +156,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['record-tour', 'record-clip'],
-        does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time and never smoothness.',
+        does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,
       },
       {
@@ -177,7 +177,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
     rows: [
       {
         scripts: ['perf'],
-        does: 'Flies the camera to fixed views in a browser without a window and reports how long the graphics processor takes over each part of a frame.',
+        does: 'Flies the camera to fixed views in a headless browser and reports how long the graphics processor takes over each part of a frame.',
         manual: 'tools/perf/README.md',
       },
       {
