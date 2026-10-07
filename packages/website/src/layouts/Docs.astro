@@ -220,7 +220,7 @@ const turns = [
 
     /* A next page with no previous one keeps the right half, where next always is. */
     .turns p:only-child:has([rel='next']) {
-      grid-column-start: 4;
+      grid-column: 4 / span 3;
     }
   }
 
