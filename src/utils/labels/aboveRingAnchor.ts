@@ -1,7 +1,7 @@
 /**
  * aboveRingAnchor — the point a label hangs from when it sits just above a
- * camera-facing ring: the ring centre, lifted along the screen-up axis by the
- * ring radius plus a clearance gap.
+ * camera-facing ring: the ring centre, lifted along `up` (see `ringUpDirection`)
+ * by the ring radius plus a clearance gap.
  *
  * The lift is a direction times a length, so it adds identically to absolute
  * and camera-relative centres.

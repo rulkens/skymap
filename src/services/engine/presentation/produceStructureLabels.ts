@@ -56,6 +56,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../data/structureLabelAboveGapPx';
 import { aboveRingAnchor } from '../../../utils/labels/aboveRingAnchor';
+import { ringUpDirection } from '../../../utils/labels/ringUpDirection';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
@@ -110,9 +111,11 @@ export function produceStructureLabels(
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
   const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
-  // Screen-up in world axes; the same direction applies in both frames.
-  const forward = orbitForwardOf(ctx.cam);
-  const screenUp = imagePlaneBasis(forward, ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up;
+  // Screen-up in world axes; the same direction applies in both frames. Only the
+  // 'above' categories lift along it.
+  const screenUp = slabIds.some((id) => STRUCTURE_MARKER_STYLES[id].labelPlacement === 'above')
+    ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
+    : null;
   for (const p of structures.all()) {
     if (!slabIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
@@ -213,7 +216,7 @@ export function produceStructureLabels(
 
     // Rings that stay on screen at large sizes would sit under a centred
     // label, so those labels hang just above the ring's drawn top instead.
-    const above = style.labelPlacement === 'above';
+    const above = screenUp !== null && style.labelPlacement === 'above';
 
     labels.push({
       id: p.id,
@@ -227,7 +230,7 @@ export function produceStructureLabels(
       worldPos: above
         ? aboveRingAnchor(
             [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
-            screenUp,
+            ringUpDirection(screenUp, [dx, dy, dz]),
             markerRadiusMpc * MARKER_RADIUS_RETUNE,
             (STRUCTURE_LABEL_ABOVE_GAP_PX * distanceMpc) / pxPerRad,
           )
