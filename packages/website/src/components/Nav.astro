@@ -208,9 +208,12 @@ const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page
       text-shadow: none;
     }
 
+    /* The same face as the bar's links on a wide screen, a size up for the thumb. */
     .menu li :global(.ring) {
       width: 100%;
       min-height: 3.5rem;
+      font: var(--weight-body) var(--text-body) / 1.2 var(--font-body);
+      letter-spacing: 0.01em;
     }
 
     /* The open list needs the bar's ground even over a hero. */
