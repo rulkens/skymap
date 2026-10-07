@@ -149,7 +149,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'survey-gaps',
-    text: 'SDSS took spectra over about a quarter of the sky (9,376 square degrees), so galaxies far out sit in two fans.',
+    text: 'SDSS took spectra over about a quarter of the sky (9,376 square degrees), so its distant galaxies lie in two fans.',
     source: 'https://www.sdss4.org/dr17/scope/',
     sourceLabel: 'SDSS DR17 scope',
     checked: CHECKED,

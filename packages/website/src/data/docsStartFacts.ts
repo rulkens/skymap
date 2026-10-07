@@ -107,7 +107,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-constellations',
     about: 'app',
-    text: 'Lines for the 88 constellations join the stars at their catalogued distances, so the figures come apart as the camera leaves the Sun. They are off at first.',
+    text: 'Lines for the 88 constellations join the stars at their catalogued distances, so the figures distort as the camera moves away from the Sun. They are off at first.',
     source: `${REPO_BLOB}/src/layers/constellations/layer.ts`,
     sourceLabel: `the constellation lines, ${IN_REPO}`,
     checked: CHECKED,

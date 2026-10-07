@@ -372,7 +372,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1920, 1280, 640],
     title: 'Every galaxy and quasar in the catalogues',
     caption: 'From far outside them.',
-    drawn: 'Each point is one catalogued object. The two fans follow the sky SDSS covered; the dark gaps are directions it did not.',
+    drawn: 'Each point is one catalogued object. The two fans are the sky SDSS covered; the dark gaps are directions it did not cover.',
     alt: 'A glowing cloud of points shaped like two fans joined at a bright centre, with dark gaps between them.',
   },
   {
