@@ -111,10 +111,18 @@ export const ABOUT_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
+    id: 'about-picture-reuse',
+    about: 'app',
+    text: 'No picture made with skymap can be offered for unrestricted reuse today. Every frame with stars carries Gaia data, which is licensed for non-commercial use, and every picture below holds at least one source that states no licence at all. So ask us before you reuse one, and we will tell you whose terms apply and whom to ask.',
+    source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
+    sourceLabel: `the attributions file, ${IN_REPO}`,
+    checked: '2026-10-07',
+  },
+  {
     id: 'gaia-licence',
-    text: 'Gaia data are distributed under CC BY-NC 3.0 IGO, a non-commercial licence: credit ESA/Gaia/DPAC. For commercial use, ESA’s licence page points to its terms and conditions for the science archives.',
+    text: 'Gaia data are distributed under CC BY-NC 3.0 IGO, a non-commercial licence: credit ESA/Gaia/DPAC. For commercial use, ESA’s licence page points to its terms and conditions for the science archives, which ask for a request to ESA before any use that brings a financial gain, directly or indirectly.',
     source: 'https://www.cosmos.esa.int/web/gaia-users/license',
     sourceLabel: 'ESA, the Gaia data licence',
-    checked: CHECKED,
+    checked: '2026-10-07',
   },
 ];

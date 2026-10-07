@@ -449,10 +449,10 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'imagery-licences',
-    text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in skymap with EOX’s written permission. Paul Schenk’s maps of five moons of Uranus state no licence.',
+    text: 'The cloud-free Earth mosaic by EOX is CC BY-NC-SA 4.0, also a non-commercial licence, and is used in skymap with EOX’s written permission. Galaxy pictures fetched from the Digitized Sky Survey are copyrighted, and commercial use needs the holders’ written permission. Paul Schenk’s maps of five moons of Uranus state no licence. Three catalogues (2MRS, the Cosmicflows-4 distances and the orbits of the stars around Sagittarius A*) state no licence of their own and reach us through CDS, which classes them as non-commercial. GLADE, Milliquas, HyperLEDA and the supercluster catalogue state no licence at all.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: 'the attributions file, in the skymap repository',
-    checked: CHECKED,
+    checked: '2026-10-07',
   },
   {
     id: 'grand-tour-steps',

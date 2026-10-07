@@ -666,7 +666,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: 'The Grand Canyon from a few kilometres up, tilted towards the horizon',
     drawn: 'Satellite photography laid over measured terrain heights.',
     alt: 'Red and ochre canyon walls receding towards the top of the frame, with a dark forested plateau and a few roads in the foreground.',
-    credit: 'Earth: EOxCloudless by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2025',
+    credit: 'Earth: EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)',
   },
   {
     id: 'guide-far',
@@ -782,7 +782,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'The redshift is the catalogue’s. The distance, the light-travel time and the speed are computed from it.',
     drawn: 'The small picture is a cutout of the Digitized Sky Survey, fetched from the CDS in Strasbourg.',
     alt: 'A card headed PGC 2 and tagged 2MRS, with a small photograph beside four lines, a link to NED, a redshift of 0.0167 and a diameter of 46.0 kiloparsecs marked 2MRS Riso.',
-    credit: 'Photograph: Digitized Sky Survey 2, through CDS hips2fits',
+    credit: 'Photograph: Digitized Sky Survey - STScI/NASA, Colored & Healpixed by CDS. Copyrighted; commercial use needs the holders’ written permission',
   },
   {
     id: 'guide-card-structure',

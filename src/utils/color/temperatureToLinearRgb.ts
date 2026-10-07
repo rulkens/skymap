@@ -30,7 +30,8 @@
  * Tanner Helland's widely-used piecewise polynomial fit to the Planckian
  * locus (valid ~1000–40000 K), which approximates the CIE-derived curve
  * with cheap `log`/`pow` terms. See
- * http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+ * https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html
+ * (©2020 Tanner Helland; the page's text, pseudocode included, is CC BY-SA 4.0).
  * The fit yields 0–255 sRGB channels; we scale to [0,1], undo sRGB gamma,
  * then max-normalise.
  *

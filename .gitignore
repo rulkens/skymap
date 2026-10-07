@@ -106,6 +106,7 @@ pnpm-debug.log*
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf
+!/data/raw/fonts/OFL.txt
 # Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
 !/data/geo3d/**/*.outline.json
 # Vendored d3-celestial constellation line data — a committed raw JSON the

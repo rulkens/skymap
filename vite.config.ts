@@ -74,5 +74,5 @@ export default defineConfig(({ command }) => ({
     __SKYMAP_PROJECT_ROOT__: JSON.stringify(command === 'serve' ? import.meta.dirname : ''),
   },
   assetsInclude: ['**/*.wgsl'],
-  build: { outDir: distDir },
+  build: { outDir: distDir, license: { fileName: 'third-party-licenses.md' } },
 }));

@@ -8,7 +8,7 @@ Global height source for Mars's surface-tile `height` product (z3–z7).
 | Upstream | <https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif> (302 → `asc-pds-services` S3)                          |
 | Fetched  | 2026-09-15, by hand (no fetcher)                                                                                                        |
 | Baked    | `Mars_MGS_MOLA_DEM_mosaic_global_463m_f32_cog.tif` (781,973,165 B), converted 2026-09-17                                                |
-| Licence  | Public domain (US government work). Cite: Fergason, Hare & Laura (2018), _Mars MGS MOLA DEM 463m v2_, USGS Astrogeology Science Center. |
+| Licence  | "CC0 (public domain)" in its USGS record. Cite: Fergason, Hare & Laura (2018), _Mars MGS MOLA DEM 463m v2_, USGS Astrogeology Science Center. |
 
 ## Grid
 
