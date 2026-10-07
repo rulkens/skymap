@@ -1,0 +1,102 @@
+---
+/*
+ * CreditEntry — one entry of the licence record on the credits page: its
+ * name, who made it, what its holder asks a user to print (quotations set
+ * apart), and the first sentence of its licence with a link to the source's
+ * data page for the rest. Labels stand in the first two of the text's
+ * columns, as a docs table's names do; under 700px each stands over its words.
+ */
+import type { CreditEntry } from '../@types/CreditEntry';
+import { dataPagePath } from '../utils/dataPagePath';
+import { firstSentence } from '../utils/firstSentence';
+import { sitePath } from '../utils/sitePath';
+import RecordText from './RecordText.astro';
+
+type Props = { entry: CreditEntry };
+
+const { entry } = Astro.props;
+// The heading without its Markdown, for a link's accessible name.
+const plain = entry.name.replace(/[`\\]/g, '');
+---
+
+<section class="credit" data-embed>
+  <h3 id={entry.id}><RecordText text={entry.name} phrase /></h3>
+  <dl>
+    <div>
+      <dt>By</dt>
+      <dd><RecordText text={entry.by} /></dd>
+    </div>
+    <div>
+      <dt>Asks for</dt>
+      <dd><RecordText text={entry.asks} lift /></dd>
+    </div>
+    <div>
+      <dt>Licence</dt>
+      <dd>
+        <RecordText text={firstSentence(entry.licence)} />
+        <p class="more">
+          <a href={sitePath(dataPagePath(entry.id))} aria-label={`Its data page: ${plain}`}>Its data page</a> has the terms in full and
+          what skymap does with it.
+        </p>
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<style>
+  .credit {
+    margin: 0 0 2.5rem;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  dl {
+    margin: 0;
+  }
+
+  dl > div {
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  dt {
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+
+  dd {
+    min-width: 0;
+    margin: 0;
+  }
+
+  dd :global(.record) {
+    margin-bottom: 0;
+  }
+
+  .more {
+    max-width: var(--doc-measure);
+    margin: 0.5rem 0 0;
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+
+  @media (min-width: 700px) {
+    dl > div {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+      column-gap: var(--col-gap);
+    }
+
+    dt {
+      grid-column: 1 / span 2;
+      padding-top: 0.125rem;
+    }
+
+    dd {
+      grid-column: 3 / -1;
+    }
+  }
+</style>

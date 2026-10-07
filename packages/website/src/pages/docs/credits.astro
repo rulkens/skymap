@@ -1,0 +1,88 @@
+---
+/*
+ * The credits: a page made from the repository's licence record
+ * (data/attributions.ts) and not written as text, so every name, maker,
+ * acknowledgement and licence on it is the record's own. Only the opening
+ * and the two closing sections are written here.
+ */
+import CreditEntry from '../../components/CreditEntry.astro';
+import DocLink from '../../components/DocLink.astro';
+import FactText from '../../components/FactText.astro';
+import RecordText from '../../components/RecordText.astro';
+import { ATTRIBUTIONS, CREDIT_GROUPS } from '../../data/attributions';
+import { ISSUES_URL } from '../../data/contact';
+import { REPO_BLOB } from '../../data/siteIdentity';
+import Docs from '../../layouts/Docs.astro';
+import { formatDate } from '../../utils/formatDate';
+
+const slug = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+const OURS = 'skymap itself';
+const REPORT = 'A missing or wrong credit';
+const groups = CREDIT_GROUPS.map((group) => ({
+  ...group,
+  slug: slug(group.title),
+  // Of a section's opening text, the paragraphs that quote a holder's terms; the rest is about the repository's files.
+  notes: group.notes.filter((note) => /"[^"]{100,}"/.test(note)),
+}));
+const headings = [
+  ...groups.map((group) => ({ depth: 2, slug: group.slug, text: group.title })),
+  { depth: 2, slug: 'skymap-itself', text: OURS },
+  { depth: 2, slug: 'report', text: REPORT },
+];
+const checked = ATTRIBUTIONS.map((entry) => entry.checked).sort().at(-1)!;
+---
+
+<Docs
+  path="/docs/credits/"
+  description="Everyone whose data, imagery, models, fonts and code skymap uses, with the acknowledgement each asks for and the licence each states."
+  headings={headings}
+  factIds={[]}
+>
+  <p>
+    skymap is built from the work of others. This page names all {ATTRIBUTIONS.length} sources: who made each, what its makers ask a
+    user to print, and the licence it states. A text a rights holder asks for word for word is set apart behind a rule, as a quotation.
+  </p>
+  <p>
+    Every word under a name comes from the repository’s <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>attributions file</a>, where each
+    entry was compared with its holder’s own pages, most recently on {formatDate(checked)}. Where that file holds only the opening of a
+    long text it says so, and the holder’s own page has the whole. “Ours” is the credit line skymap itself prints. The page
+    states terms. It is not legal advice.
+  </p>
+  <p>
+    To credit a picture or a paper made with skymap, see <DocLink href="/docs/cite/">Cite</DocLink>.
+  </p>
+
+  {
+    groups.map((group) => (
+      <>
+        <h2 id={group.slug}>{group.title}</h2>
+        {group.notes.map((note) => (
+          <RecordText text={note} lift />
+        ))}
+        {group.entries.map((entry) => (
+          <CreditEntry entry={entry} />
+        ))}
+      </>
+    ))
+  }
+
+  <h2 id="skymap-itself">{OURS}</h2>
+  <FactText id="about-maker" />
+  <FactText id="about-licence" />
+  <FactText id="about-ai" />
+  <p>
+    Everyone else whose work is in skymap is named above, under what they made. The repository keeps no other list of thanks, so
+    this page adds none.
+  </p>
+
+  <h2 id="report">{REPORT}</h2>
+  <p>
+    If your work is here without the credit you ask for, with a wrong licence, or is missing, <a href={ISSUES_URL}
+      >open an issue in the repository</a
+    >. We correct the attributions file first, and this page follows it at the next build.
+  </p>
+</Docs>

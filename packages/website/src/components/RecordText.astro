@@ -1,0 +1,47 @@
+---
+/*
+ * RecordText — words of the repository's licence record (ATTRIBUTIONS.md) on
+ * a docs page, printed as the record has them. `lift` sets each long
+ * quotation apart as a block, so a text a rights holder asks for stands as
+ * theirs; `phrase` prints one run with no paragraph, for a sentence.
+ */
+import { REPO_BLOB } from '../data/siteIdentity';
+import { liftQuotes } from '../utils/liftQuotes';
+import { recordHtml } from '../utils/recordHtml';
+
+type Props = { text: string; lift?: boolean; phrase?: boolean };
+
+const { text, lift = false, phrase = false } = Astro.props;
+const html = recordHtml(lift ? liftQuotes(text) : text, REPO_BLOB, phrase);
+---
+
+{phrase ? <Fragment set:html={html} /> : <div class="record" data-embed set:html={html} />}
+
+<style>
+  .record {
+    margin: 0 0 var(--stack);
+  }
+
+  .record :global(p) {
+    max-width: var(--doc-measure);
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  /* A quotation is the holder's text: behind a rule, in the page's brightest words. */
+  .record :global(blockquote) {
+    margin: 0 0 0.75rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--site-text-dim);
+  }
+
+  .record :global(blockquote p) {
+    color: var(--color-fg);
+  }
+
+  .record :global(:last-child) {
+    margin-bottom: 0;
+  }
+</style>
