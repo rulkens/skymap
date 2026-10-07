@@ -3,6 +3,7 @@ import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../@types/StarCatalogRenderer';
 import type { StarDrawStream } from '../../@types/StarDrawStream';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { starFocusRelCam } from './starFocusRelCam';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
 /**
@@ -25,6 +26,7 @@ export function drawStarCut(
   const vp = narrowMat4(rebaseViewProj(view.slab.vp, inputs.cut.originMpc));
   // This view's own pixels per radian, scaled to a target spanning the same
   // frustum in fewer rows (the aggregate stream's half-res offscreen).
+  const focus = starFocusRelCam(ctx.snapshot.focus, inputs.cut.originMpc);
   const pxPerRad = ctx.drawPxPerRad * (view.viewportPx[1] / ctx.canvasSize.height);
   for (const { source } of inputs.cut.sources) {
     renderer.drawCut(pass, {
@@ -38,6 +40,7 @@ export function drawStarCut(
       brightness: inputs.brightness,
       glowOverlap: inputs.glowOverlap,
       aggregateIntensityCap: inputs.aggregateIntensityCap,
+      focus,
       viewSlot: ctx.viewSlot,
     });
   }

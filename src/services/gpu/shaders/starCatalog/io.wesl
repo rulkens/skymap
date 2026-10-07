@@ -11,7 +11,11 @@
 //   offset  92  pickPass               u32  0 = visual, 1 = pick
 //   offset  96  aggregateIntensityCap  f32  peak ceiling for aggregates
 //   offset 100  pxPerRad               f32  target px per radian, for toRefPx
-//   size 112 (rounded to the prefix's 16 B alignment; 104..111 pad)
+//   offset 112  focusCenterRelCam      vec3<f32>  focus centre - camera, Mpc (align 16)
+//   offset 124  focusApparentRadiusMpc f32  rides the vec3's 4th lane
+//   offset 128  focusPhysicalRadiusMpc f32
+//   offset 132  focusBlend             f32  0 = no focus; the multiplier is 1
+//   size 144 (rounded to the prefix's 16 B alignment; 104..111 and 136..143 pad)
 //
 // pickPass is written only by the pick pipeline, into its OWN uniform buffer;
 // the visual draw leaves it zero-init. One flag rather than a second vertex
@@ -28,6 +32,11 @@ struct StarUniforms {
   pickPass: u32,
   aggregateIntensityCap: f32,
   pxPerRad: f32,
+  // Subtracted from the camera in f64 on the CPU, so the shader never has to.
+  focusCenterRelCam: vec3<f32>,
+  focusApparentRadiusMpc: f32,
+  focusPhysicalRadiusMpc: f32,
+  focusBlend: f32,
 };
 
 struct VSOut {

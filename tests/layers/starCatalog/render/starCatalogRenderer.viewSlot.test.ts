@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/render/starCatalogRenderer';
 import { Source } from '../../../../src/data/sources';
+import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 
@@ -46,6 +47,7 @@ const CATALOG = { records: new Uint8Array(2 * 6) } as unknown as StarCatalog;
 function args(viewSlot: number): StarCatalogCutDrawArgs {
   return {
     source: Source.GaiaStars,
+    focus: STAR_FOCUS_AT_REST,
     stream: 'leaf',
     capture: false,
     vp: new Float32Array(16),

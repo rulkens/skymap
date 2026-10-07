@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
 import { Source } from '../../../../src/data/source';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -25,6 +26,7 @@ function makeCtx(capture = false): FrameView {
   return {
     snapshot: {
       nowMs: 0,
+      focus: ZERO_FOCUS,
       renderTargets: {
         sizeOf: (id: string) => {
           if (id === 'star-aggregates') return { width: 640, height: 360 };

@@ -6,16 +6,28 @@
  *   byte  0  CameraUniforms prefix (80 B)
  *   byte 80  sizePx f32 · 84 brightness f32 · 88 glowOverlap f32 · 92 pickPass u32
  *   byte 96  aggregateIntensityCap f32 · 100 pxPerRad f32 · 104..111 pad
+ *   byte 112 focusCenterRelCam vec3 · 124 focusApparentRadiusMpc f32
+ *   byte 128 focusPhysicalRadiusMpc f32 · 132 focusBlend f32 · 136..143 pad
  *
  * @module
  */
 
 import { CAMERA_UNIFORM_BYTES } from '../../../services/gpu/lib/cameraUniforms';
 import { roundUpToMultiple } from '../../../utils/math/roundUpToMultiple';
+import type { StarFocusSphere } from '../@types/StarFocusSphere';
 
 const WORD_BYTES = 4;
-/** Six scalars follow the prefix; the struct rounds up to the prefix's 16-byte alignment. */
-export const STAR_UNIFORM_BYTES = roundUpToMultiple(CAMERA_UNIFORM_BYTES + 6 * WORD_BYTES, 16);
+/** Six scalars follow the prefix; the focus sphere's vec3 then aligns to 16. */
+const SCALARS_BEFORE_FOCUS = 6;
+const FOCUS_CENTER_BYTE_OFFSET = roundUpToMultiple(
+  CAMERA_UNIFORM_BYTES + SCALARS_BEFORE_FOCUS * WORD_BYTES,
+  16,
+);
+/** The three f32 after the centre: the first rides the vec3's 4th lane. */
+const FOCUS_APPARENT_BYTE_OFFSET = FOCUS_CENTER_BYTE_OFFSET + 3 * WORD_BYTES;
+const FOCUS_PHYSICAL_BYTE_OFFSET = FOCUS_APPARENT_BYTE_OFFSET + WORD_BYTES;
+const FOCUS_BLEND_BYTE_OFFSET = FOCUS_PHYSICAL_BYTE_OFFSET + WORD_BYTES;
+export const STAR_UNIFORM_BYTES = roundUpToMultiple(FOCUS_BLEND_BYTE_OFFSET + WORD_BYTES, 16);
 
 const scalarIndex = (slot: number) => (CAMERA_UNIFORM_BYTES + slot * WORD_BYTES) / WORD_BYTES;
 
@@ -32,3 +44,20 @@ export const PICK_PASS_U32_INDEX = scalarIndex(3);
 export const AGG_INTENSITY_CAP_FLOAT_INDEX = scalarIndex(4);
 /** The drawn target's pixels per radian (`toRefPx`); the pick draw leaves it zero. */
 export const PX_PER_RAD_FLOAT_INDEX = scalarIndex(5);
+
+export const FOCUS_CENTER_FLOAT_INDEX = FOCUS_CENTER_BYTE_OFFSET / WORD_BYTES;
+export const FOCUS_APPARENT_FLOAT_INDEX = FOCUS_APPARENT_BYTE_OFFSET / WORD_BYTES;
+export const FOCUS_PHYSICAL_FLOAT_INDEX = FOCUS_PHYSICAL_BYTE_OFFSET / WORD_BYTES;
+export const FOCUS_BLEND_FLOAT_INDEX = FOCUS_BLEND_BYTE_OFFSET / WORD_BYTES;
+
+/**
+ * Write the focus sphere into a `StarUniforms` scratch. Both star renderers
+ * call it on every draw: the shader's focus smoothstep has no safe zero state
+ * (equal radii give NaN), so a scratch that skipped it would not be neutral.
+ */
+export function writeStarFocus(scratch: Float32Array, focus: StarFocusSphere): void {
+  scratch.set(focus.centerRelCamMpc, FOCUS_CENTER_FLOAT_INDEX);
+  scratch[FOCUS_APPARENT_FLOAT_INDEX] = focus.apparentRadiusMpc;
+  scratch[FOCUS_PHYSICAL_FLOAT_INDEX] = focus.physicalRadiusMpc;
+  scratch[FOCUS_BLEND_FLOAT_INDEX] = focus.blend;
+}

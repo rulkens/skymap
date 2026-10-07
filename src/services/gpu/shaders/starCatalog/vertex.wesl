@@ -108,6 +108,9 @@ import package::lib::starPhotometry::MIN_D2_MPC2;
 import package::lib::starPhotometry::starPeakIntensity;
 import package::lib::starPhotometry::toRefPx;
 import package::lib::pickDepthBands::PICK_BAND_SURVEY_STAR_EPS;
+import package::lib::focusUniforms::FocusUniforms;
+import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
 @group(1) @binding(0) var<uniform> cut: CutUniforms;
@@ -238,6 +241,18 @@ fn vs(
     isAgg
   );
 
+  // Focus dim: stars outside a focused structure's sphere recede by the rule the
+  // survey galaxies use, at this record's own position (an aggregate dims by its
+  // box record, so the half-res glow dims too). Exactly 1.0 at rest.
+  let focus = FocusUniforms(
+    vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
+    u.focusBlend,
+    u.focusPhysicalRadiusMpc,
+    0.0,
+    0.0,
+  );
+  let focusMult = focusAlphaMultiplier(worldRelCam, focus);
+
   // Near-sprite dissolve (constants above). It fades ANY near record, not just
   // the focused star's: the swim is a property of proximity, so a distance-keyed
   // fade targets exactly the set that swims and needs no per-focus uniform. A
@@ -286,12 +301,17 @@ fn vs(
   let pickZ = out.clip.w * PICK_BAND_SURVEY_STAR_EPS * (1.0 + pickRank);
   out.clip.z = select(out.clip.z, pickZ, u.pickPass == 1u);
 
+  // A star the focus dims is not hit-testable, as for the survey galaxies.
+  if (u.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
+    out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  }
+
   out.uv = corner;
 
   let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
   out.color = starTint(bpRp);
   out.opacity = nodeOpacity;
-  out.intensity = intensity;
+  out.intensity = intensity * focusMult;
   out.recordIdx = base;
   return out;
 }
