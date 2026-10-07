@@ -36,6 +36,7 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
     Everything in skymap that somebody else made: catalogues, pictures, height maps, 3D models, typefaces, ported code and the services
     the app calls. {DATA_ENTRIES.length} sources in {families.length} families.
   </p>
+  <DocFigure id="galaxies-measured" eager />
   <p>
     Each row gives a source’s name, what it is and how it may be used. The name opens its page: the terms in the holder’s own words,
     the credit to print, and what it becomes in the app. We read every holder’s pages on {formatDate(checked)}; for {unverified} sources
@@ -48,7 +49,6 @@ const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => A
       href="/docs/data/pipeline/">From catalogue to pixels</DocLink
     >.
   </p>
-  <DocFigure id="galaxies-measured" />
 
   <h2 id="use">{BY_USE}</h2>
   <p>

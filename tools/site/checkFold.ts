@@ -29,15 +29,20 @@ if (!base) {
 }
 
 // A file with a bracket in its name is a pattern, not a page: the docs pages it makes come from the tree.
-const routes = readdirSync(PAGES_DIR, { recursive: true, encoding: 'utf8' })
-  .filter((name) => name.endsWith('.astro') && !name.includes('['))
-  .map((name) => name.replace(/(index)?\.astro$/, ''))
-  .map((name) => (name === '' || name.endsWith('/') ? name : `${name}/`))
-  .concat(
-    DOCS_TREE.flatMap((group) => group.pages)
-      .filter((page) => page.status === 'live')
-      .map((page) => page.path.slice(1)),
-  );
+// A docs page with a file of its own (Credits, the list of sources) is in both lists: once is enough.
+const routes = [
+  ...new Set(
+    readdirSync(PAGES_DIR, { recursive: true, encoding: 'utf8' })
+      .filter((name) => name.endsWith('.astro') && !name.includes('['))
+      .map((name) => name.replace(/(index)?\.astro$/, ''))
+      .map((name) => (name === '' || name.endsWith('/') ? name : `${name}/`))
+      .concat(
+        DOCS_TREE.flatMap((group) => group.pages)
+          .filter((page) => page.status === 'live')
+          .map((page) => page.path.slice(1)),
+      ),
+  ),
+];
 
 const failures: string[] = [];
 const browser = await launchChromium();

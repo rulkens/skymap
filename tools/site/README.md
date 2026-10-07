@@ -70,7 +70,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## First-screen check
 
-`npm run site:fold -- --url http://localhost:<port>/home/` opens every page of a running website (`npm run dev --workspace @skymap/website`) in the windows of `foldSizes.ts` and fails when a page's opening section does not fit the first screen. Run it after changing a header, its copy or its picture; it needs a browser and a server, so CI does not run it.
+`npm run site:fold -- --url http://localhost:<port>/home/` opens every page of a running website (`npm run dev --workspace @skymap/website`) in the windows of `foldSizes.ts` and fails when a page's opening section does not fit the first screen. A served build works as well, and is steadier than a dev server that reloads under the run; its server must answer an unknown address with the build's `404.html`, as a host does, or the 404 page is reported as having no opening. Run it after changing a header, its copy or its picture; it needs a browser and a server, so CI does not run it.
 
 - The opening section is the one element marked `data-opening`. `PictureBand` (with `gap="none"`), `DiscBand` and the Home flight set it; a docs page has no picture, and its title block is its opening section (the Docs layout and `DocsMap` set it). A page without one fails.
 - Docs pages are made by one pattern file, so the check takes them from the docs tree's `live` rows.

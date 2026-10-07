@@ -42,6 +42,12 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
     skymap is built from other people’s work. Here are all {DATA_ENTRIES.length} sources: who made each, the credit its makers ask for,
     and how it may be used. A holder’s own words are set apart as a quotation, with a control that copies them.
   </p>
+
+  <p>
+    One frame can hold several of them. Here the telescope is a model of NASA’s, Earth is satellite imagery, and the stars behind
+    both are a catalogue’s.
+  </p>
+  <DocFigure id="hubble" eager />
   <p>
     Everything under a name comes from our licence record, the file <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>ATTRIBUTIONS.md</a> in the
     repository, last compared with the holders’ own pages on {formatDate(checked)}. “Ours” leads into a credit line skymap itself
@@ -50,12 +56,6 @@ const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!
   <p>
     To credit a picture or a paper made with skymap, see <DocLink href="/docs/cite/">Cite</DocLink>.
   </p>
-
-  <p>
-    One frame can hold several of them. Here the telescope is a model of NASA’s, Earth is satellite imagery, and the stars behind
-    both are a catalogue’s.
-  </p>
-  <DocFigure id="hubble" />
 
   <h2 id="use">{USE}</h2>
   <p>

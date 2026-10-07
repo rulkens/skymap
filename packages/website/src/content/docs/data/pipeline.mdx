@@ -5,8 +5,6 @@ facts: [sci-directions, sci-magnitudes]
 
 A set of build tools in the repository reads each survey’s files once, on our machine, and writes small binary files that a browser can fetch and hand to the graphics processor. This page follows a galaxy through that build, and then says where stars, structures, planets and imagery take a different road.
 
-Every source named here has a page with its licence and its files: [All sources at a glance](/docs/data/) lists them. What the build leaves out or simplifies is under [Known simplifications](/science/#simplifications) on the Science page. The commands, flags and file layouts are in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>.
-
 <Flow
   label="The steps from a survey’s file to a drawn galaxy"
   steps={[
@@ -21,6 +19,8 @@ Every source named here has a page with its licence and its files: [All sources 
     { name: 'Other roads', href: '#stars', text: 'Stars, structures and fields, planets, imagery and 3D models go through other tools, in the sections after Draw.' },
   ]}
 />
+
+Every source named here has a page with its licence and its files: [All sources at a glance](/docs/data/) lists them. What the build leaves out or simplifies is under [Known simplifications](/science/#simplifications) on the Science page. The commands, flags and file layouts are in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>.
 
 ## Fetch
 
