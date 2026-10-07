@@ -21,9 +21,10 @@ const { id, label, open = true } = Astro.props;
 const row = id === undefined ? undefined : siteShot(id);
 const shot: Pick<SiteShot, 'title' | 'caption' | 'drawn' | 'credit'> | undefined = row ?? label;
 if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
-const link = row && open ? appLink(row.link, row.query) : undefined;
+// The view a manifest picture was taken at, where the label is to open it.
+const view = row && open ? row : undefined;
 // Whether the title and its sentence have the label to themselves.
-const alone = !shot.drawn && !shot.credit && !link;
+const alone = !shot.drawn && !shot.credit && !view;
 ---
 
 <div class="caption small">
@@ -41,7 +42,7 @@ const alone = !shot.drawn && !shot.credit && !link;
       )
     }
     {
-      (shot.credit || link || !row) && (
+      (shot.credit || view || !row) && (
         <div class="end">
           {shot.credit && (
             <dl>
@@ -49,7 +50,12 @@ const alone = !shot.drawn && !shot.credit && !link;
               <dd>{shot.credit}.</dd>
             </dl>
           )}
-          {link && (row!.link.startsWith('tour=') ? <ViewLink href={link}>Start the tour</ViewLink> : <ViewLink href={link} />)}
+          {view &&
+            (view.link.startsWith('tour=') ? (
+              <ViewLink href={appLink(view.link, view.query)}>Start the tour</ViewLink>
+            ) : (
+              <ViewLink href={appLink(view.link, view.query)} />
+            ))}
           {!row && <div class="room" />}
         </div>
       )
