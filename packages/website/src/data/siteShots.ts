@@ -686,7 +686,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: [1200, 800],
     title: 'The search with “coma” typed in',
-    caption: 'Cut from a wider window. Galaxies come first, then clusters; the Leo Cluster is listed because its description mentions Coma.',
+    caption: 'Galaxies come first, then clusters; the Leo Cluster is listed because its description mentions Coma.',
     drawn: 'Each row’s tag says what kind of thing it is.',
     alt: 'A search box holding the word coma above a list of results: several galaxies with NGC numbers, then Coma tagged Cluster, Coma Supercluster tagged Supercluster and Leo Cluster tagged Cluster.',
   },

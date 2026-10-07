@@ -369,7 +369,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'search-key',
     about: 'app',
-    text: 'The / key opens the app’s search, as Ctrl+K and Cmd+K do.',
+    text: 'The / key opens the app’s search, as Ctrl + K and Cmd + K do.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: 'the keyboard shortcuts, in the skymap repository',
     checked: CHECKED,

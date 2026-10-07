@@ -147,14 +147,6 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'search-button',
-    about: 'app',
-    text: 'The search also opens from the bar at the top of the app that reads “Search the universe…”.',
-    source: `${REPO_BLOB}/src/components/SearchTrigger/SearchTrigger.tsx`,
-    sourceLabel: `the search bar, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'search-cards',
     about: 'app',
     text: 'The seven tabs hold 75 cards between them. A card flies to an object, opens an exhibit or starts a tour; the two tours are on the Tours tab.',
@@ -171,27 +163,11 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'search-keys',
-    about: 'app',
-    text: 'With the search open and nothing typed, the arrow keys move across the cards, Enter opens the highlighted one, and Alt with the left or the right arrow changes tab. Once something is typed, the up and down arrows move through the results and Enter goes to the highlighted one. Esc closes the search, as a click outside it does.',
-    source: `${REPO_BLOB}/src/components/CommandPalette/usePaletteSearch.ts`,
-    sourceLabel: `the search’s keys, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'search-match',
     about: 'app',
-    text: 'The search ignores capitals. A name equal to what was typed scores highest, then a name that begins with it, then a name that contains it. The famous galaxies and the clusters, superclusters, voids and groups are also found by a word in their description.',
+    text: 'The search ignores capitals and puts the best match first. The named galaxies and the clusters, superclusters, voids and groups are also found by a word in their description.',
     source: `${REPO_BLOB}/src/components/CommandPalette/utils/scoreFamousMatch.ts`,
     sourceLabel: `how a name is scored, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'search-order',
-    about: 'app',
-    text: 'Results come in this order: the Milky Way, then the named objects (famous galaxies, planets, moons, spacecraft, stars, places, exhibits and tours) by score, then catalogue galaxies, then clusters and the other large structures. At most 50 catalogue galaxies and 50 structures are listed.',
-    source: `${REPO_BLOB}/src/components/CommandPalette/utils/rankPaletteMatches.ts`,
-    sourceLabel: `what the search matches, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -213,7 +189,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'search-star-names',
     about: 'app',
-    text: 'A named star is also found by its Bayer designation and by its HD and HIP numbers: “Alpha Canis Majoris” finds Sirius. Spacecraft answer to their short names too: “Percy” finds Perseverance.',
+    text: 'A named star is also found by its Bayer designation, a Greek letter with the constellation, and by its numbers in the HD and Hipparcos (HIP) catalogues: “Alpha Canis Majoris” finds Sirius. Spacecraft answer to their short names too: “Percy” finds Perseverance.',
     source: `${REPO_BLOB}/src/data/bodies/bodySearchNames.ts`,
     sourceLabel: `the other names of stars and spacecraft, ${IN_REPO}`,
     checked: CHECKED,
@@ -221,7 +197,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'search-places',
     about: 'app',
-    text: 'The search knows 18 places on Earth, among them Paris, Tokyo, the Grand Canyon and Mount Everest. Choosing one brings the camera down to between 1.5 and 12 kilometres above it. No card is pinned: a place is a point on Earth, not an object.',
+    text: 'The search knows 18 places on Earth, among them Paris, Tokyo, the Grand Canyon and Mount Everest. Choosing one brings the camera down to between 1.5 and 12 kilometres above it. A place is a point on Earth, so no card is pinned for it, and a card that was already pinned stays.',
     source: `${REPO_BLOB}/src/data/palette/earthPlaces.ts`,
     sourceLabel: `the places on Earth, ${IN_REPO}`,
     checked: CHECKED,
@@ -237,7 +213,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'hover-card',
     about: 'app',
-    text: 'Resting the mouse pointer on an object shows a small card that names it. A touch screen has no pointer to rest, so it shows none.',
+    text: 'Resting the mouse pointer on an object shows a hover card that names it. A touch screen has no pointer to rest, so it shows none.',
     source: `${REPO_BLOB}/src/services/engine/interaction/inputBindings.ts`,
     sourceLabel: `the pointer events the app listens to, ${IN_REPO}`,
     checked: CHECKED,
@@ -277,7 +253,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'scale-bar',
     about: 'app',
-    text: 'The scale bar at the lower right of the app gives the length its line spans at the distance of the camera’s target, or of the ground when the target is a planet, a moon or a star. Its unit changes with the scale, from metres to gigaparsecs.',
+    text: 'The scale bar at the lower right of the app gives the length its line spans at the distance of the camera’s focus, or of the ground when the focus is a planet, a moon or a star. Its unit changes with the scale, from metres to gigaparsecs.',
     source: `${REPO_BLOB}/src/services/engine/helpers/scaleBar.ts`,
     sourceLabel: `the scale bar, ${IN_REPO}`,
     checked: CHECKED,
@@ -309,7 +285,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'band-no-flight',
     about: 'app',
-    text: 'The Zone of Avoidance band can be selected, but the camera cannot fly to it: it is a direction on the sky, not a place.',
+    text: 'The Zone of Avoidance band can be selected, but it is a direction on the sky, so the camera cannot fly to it.',
     source: `${REPO_BLOB}/src/services/engine/helpers/rowFocusable.ts`,
     sourceLabel: `which selections the camera can fly to, ${IN_REPO}`,
     checked: CHECKED,
