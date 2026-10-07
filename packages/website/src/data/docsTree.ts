@@ -55,7 +55,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       { title: 'URL parameters', path: '/docs/reference/url-parameters/', status: 'live' },
       { title: 'Settings', path: '/docs/reference/settings/', status: 'live' },
       { title: 'Object catalogue', path: '/docs/reference/objects/', status: 'planned' },
-      { title: 'Glossary', path: '/docs/reference/glossary/', status: 'planned' },
+      { title: 'Glossary', path: '/docs/reference/glossary/', status: 'live' },
     ],
   },
   {

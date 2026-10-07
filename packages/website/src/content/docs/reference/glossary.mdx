@@ -1,0 +1,191 @@
+---
+title: Glossary
+description: The terms you meet on this site and in skymap, each in a sentence or two, with the units of distance, the catalogues and the app’s own words.
+group: Reference
+order: 5
+facts:
+  [
+    2mrs-coverage, gloss-magnitude, gloss-active-nucleus, gloss-quasar, gloss-arcsecond, sim-duplicates,
+    astronomical-unit, gloss-light-units, sci-star-distance, sci-ephemeris, gloss-black-hole, sci-black-hole,
+    sci-tone, sci-earth-clouds, hover-card, card-on-click, sci-flows, ref-clip-what,
+    gloss-galaxy-cluster, sci-structures, scene-structure-kinds, sci-colour, sci-galaxy-distance, great-conjunction-2020,
+    gloss-constellation, scene-constellations, gloss-cmb, sci-horizon-shell, gloss-supergalactic, cosmic-web-map,
+    sci-filaments, sci-local-volume, sim-scale-step, phone-data-size, app-data-size-choice, sci-directions,
+    sci-density-field, gloss-honesty-words, sim-desi-patches, scene-desi-off, search-catalogue-galaxies, dome-flag,
+    sci-milky-way, gloss-dwarf-planet, gloss-ecliptic, orientation-setting, sim-star-epoch, exhibit-what,
+    exhibits, sim-exposure, scene-filaments-off, sim-redshift-space, sim-flux-limits, focus-meaning,
+    survey-gaps, sci-star-observables, sim-star-coverage, sgr-a-distance, megaparsec-length, sci-photometric-share,
+    sim-frames, sci-h0-range, observable-edge, laniakea-home, gloss-layer, speed-of-light,
+    moon-orbit-light, card-galaxy-derived, gloss-light-year, gloss-local-bubble, gloss-local-group, sci-redshifts,
+    virgo-distance, gloss-messier, sci-deepest, sim-ephemeris-span, proxima-distance, pinned-card,
+    link-pose, scene-s-stars, scale-bar, solstices-2026, tour-what, date-entry-utc,
+    gloss-vizier, bootes-void, sci-markers, webgpu-what, webgpu-required, start-welcome,
+    sim-zone, sci-zoa-band,
+  ]
+---
+
+import DocLink from '../../../components/DocLink.astro';
+import { DATA_SOURCES } from '../../../data/dataSources';
+import { GLOSSARY } from '../../../data/glossary';
+
+export const Terms = ({ letter }) => (
+  <dl>
+    {GLOSSARY.filter((term) => term.term[0].toUpperCase() === letter).map((term) => {
+      const source = DATA_SOURCES.find((row) => row.id === term.source);
+      return (
+        <>
+          <dt id={term.id}>{term.term}</dt>
+          <dd>
+            {term.text}
+            {source && (
+              <>
+                {' '}
+                <a href={source.href}>Its own site or paper</a>, and its row under{' '}
+                <DocLink href="/science/#sources">The sources</DocLink> on the Science page.
+              </>
+            )}
+            {term.more && (
+              <>
+                {' '}
+                More: <DocLink href={term.more.path}>{term.more.label}</DocLink>.
+              </>
+            )}
+            {term.see && (
+              <>
+                {' '}
+                See also{' '}
+                {term.see.map((id, i) => (
+                  <>
+                    {i > 0 && ', '}
+                    <a href={`#${id}`}>{GLOSSARY.find((other) => other.id === id).term}</a>
+                  </>
+                ))}
+                .
+              </>
+            )}
+          </dd>
+        </>
+      );
+    })}
+  </dl>
+);
+
+This page defines {GLOSSARY.length} terms in the order of the alphabet. Each has an address of its own: `/docs/reference/glossary/#redshift` opens at Redshift. The numbers in a definition come from the sources listed at the foot of the page.
+
+Three words have one fixed meaning across the site: [measured](#measured), [derived](#derived) and [drawn](#drawn). The [Science page](/science/#bins) sorts everything the app shows under them.
+
+## Units of distance
+
+| Unit | In smaller units | In kilometres |
+| --- | --- | --- |
+| Light-second | | 299,792.458 |
+| Light-minute | 60 light-seconds | about 18 million |
+| Astronomical unit (AU) | 8.3 light-minutes | about 150 million |
+| Light-day | 173 AU | about 25.9 thousand million |
+| Light-year (ly) | 63,241 AU | about 9.46 million million |
+| Parsec (pc) | 3.26 light-years, or 206,265 AU | about 30.9 million million |
+| Kiloparsec (kpc) | 1,000 parsecs | |
+| Megaparsec (Mpc) | 1,000 kiloparsecs, or 3.26 million light-years | |
+| Gigaparsec (Gpc) | 1,000 megaparsecs, or 3.26 thousand million light-years | |
+
+<Fact id="gloss-light-units" />
+
+<Fact id="astronomical-unit" />
+
+<Fact id="megaparsec-length" />
+
+## 2
+
+<Terms letter="2" />
+
+## A
+
+<Terms letter="A" />
+
+## B
+
+<Terms letter="B" />
+
+## C
+
+<Terms letter="C" />
+
+## D
+
+<Terms letter="D" />
+
+## E
+
+<Terms letter="E" />
+
+## F
+
+<Terms letter="F" />
+
+## G
+
+<Terms letter="G" />
+
+## H
+
+<Terms letter="H" />
+
+## I
+
+<Terms letter="I" />
+
+## J
+
+<Terms letter="J" />
+
+## K
+
+<Terms letter="K" />
+
+## L
+
+<Terms letter="L" />
+
+## M
+
+<Terms letter="M" />
+
+## O
+
+<Terms letter="O" />
+
+## P
+
+<Terms letter="P" />
+
+## Q
+
+<Terms letter="Q" />
+
+## R
+
+<Terms letter="R" />
+
+## S
+
+<Terms letter="S" />
+
+## T
+
+<Terms letter="T" />
+
+## U
+
+<Terms letter="U" />
+
+## V
+
+<Terms letter="V" />
+
+## W
+
+<Terms letter="W" />
+
+## Z
+
+<Terms letter="Z" />

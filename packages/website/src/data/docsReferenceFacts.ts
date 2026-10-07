@@ -10,6 +10,8 @@ const HASH = `${REPO_BLOB}/src/state/url/hashParamSources.ts`;
 const HASH_LABEL = `the address parameters, ${IN_REPO}`;
 const SETTINGS_PANEL = `${REPO_BLOB}/src/components/SettingsPanel/SettingsPanel.tsx`;
 const SETTINGS_PANEL_LABEL = `the Settings panel, ${IN_REPO}`;
+const NASA_GLOSSARY = 'https://science.nasa.gov/universe/glossary/';
+const NASA_GLOSSARY_LABEL = 'NASA Science, Universe glossary';
 
 /**
  * What the two Reference pages of the docs rest on, spread into FACTS: one row
@@ -439,6 +441,148 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     text: 'The app’s settings hold more values than the Settings panel shows, among them the colours and contrast of the cosmic web, the shape of the Zone of Avoidance band, the Milky Way model and the disc round Sagittarius A*. They are changed in the debug panel, which the D key opens and which is made for the people who build the app. They are not kept over a reload either.',
     source: `${REPO_BLOB}/src/state/settings/initialSettings.ts`,
     sourceLabel: `the app’s starting settings, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+
+  // Glossary: science rows, each from a source opened on the check date
+  {
+    id: 'gloss-light-year',
+    text: 'A light-year is the distance light travels in one year, about 9.46 million million kilometres.',
+    source: 'https://science.nasa.gov/exoplanets/what-is-a-light-year/',
+    sourceLabel: 'NASA, What is a light-year?',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-light-units',
+    text: 'At 299,792.458 kilometres a second, light covers about 18 million kilometres in a minute and about 25.9 thousand million in a day, which is 173 astronomical units. It crosses one astronomical unit, the distance from the Sun to Earth, in 499 seconds, or 8.3 minutes. A light-year of 365.25 days is 63,241 astronomical units, and a parsec is 3.26 light-years, or 206,265 astronomical units, or about 30.9 million million kilometres.',
+    source: 'https://www.bipm.org/en/publications/si-brochure',
+    sourceLabel: 'BIPM, the SI brochure, for the speed of light; the lengths are worked out from it',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-magnitude',
+    text: 'On the magnitude scale a lower number is a brighter object, and a difference of five magnitudes is a factor of 100 in brightness. Apparent magnitude is how bright an object appears in the sky. Absolute magnitude is how bright it would appear from a standard distance of 10 parsecs, about 32.6 light-years.',
+    source: 'https://wwwastro.msfc.nasa.gov/solar/AIMS/activities/star_bright_student.html',
+    sourceLabel: 'NASA Marshall Space Flight Center, star brightness student sheet',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-arcsecond',
+    text: 'An arcsecond is an angle of 1/3,600 of a degree, or 1/60 of an arcminute.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-ecliptic',
+    text: 'The ecliptic is the great circle on the sky that marks the Sun’s apparent path over a year. Eclipses of the Sun or the Moon happen only when the Moon is close to it, which gave it its name.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-galaxy-cluster',
+    text: 'A galaxy group is the smallest collection of galaxies held together by their own gravity, with a few to a few dozen members. A galaxy cluster holds hundreds to thousands. A supercluster is a collection of clusters and groups that can span hundreds of millions of light-years.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-local-group',
+    text: 'The Milky Way is part of the Local Group, which includes two other large spiral galaxies, Andromeda and Triangulum.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-constellation',
+    text: 'A constellation is one of the 88 regions into which the sky is divided, an arrangement made formal in 1930.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-dwarf-planet',
+    text: 'A dwarf planet is a body of the solar system that orbits the Sun directly and has enough mass to be round or nearly round, as a planet does.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-active-nucleus',
+    text: 'An active galactic nucleus is the central region of a galaxy that appears much brighter than that of an ordinary galaxy and gives off unusually large amounts of X-rays, ultraviolet light and other radiation.',
+    source: NASA_GLOSSARY,
+    sourceLabel: NASA_GLOSSARY_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-quasar',
+    text: 'A quasar is an extremely active and luminous kind of active galactic nucleus. Every quasar is an active galactic nucleus, but not every active galactic nucleus is a quasar.',
+    source: 'https://esahubble.org/wordbank/quasar/',
+    sourceLabel: 'ESA/Hubble word bank, quasar',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-black-hole',
+    text: 'A black hole is so dense that the gravity just inside its event horizon lets nothing out, not even light. The one at the centre of the Milky Way, Sagittarius A*, has 4 million times the mass of the Sun.',
+    source: 'https://science.nasa.gov/universe/black-holes/',
+    sourceLabel: 'NASA, Black holes',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-cmb',
+    text: 'The cosmic microwave background is radiation left over from the Big Bang that fills the whole universe. It formed about 380,000 years after the Big Bang.',
+    source:
+      'https://www.esa.int/Science_Exploration/Space_Science/Planck/Planck_and_the_cosmic_microwave_background',
+    sourceLabel: 'ESA, Planck and the cosmic microwave background',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-local-bubble',
+    text: 'The Local Bubble is the cavity around the Sun that supernovae blew in the gas and dust between the stars. Its dusty surface lies 170 parsecs from the Sun on average, and from 70 to more than 600 depending on the direction.',
+    source: 'https://arxiv.org/abs/2403.04961',
+    sourceLabel: 'O’Neill et al. 2024, the Local Bubble',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-supergalactic',
+    text: 'The supergalactic plane is a flattened structure in the distribution of nearby galaxies. A study of it describes it as part of a web of filaments and sheets, not a pancake standing alone.',
+    source: 'https://arxiv.org/abs/astro-ph/9809343',
+    sourceLabel: 'Lahav et al. 2000, the supergalactic plane',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-messier',
+    text: 'The Messier catalogue was begun by the astronomer Charles Messier in the 18th century and has 110 objects.',
+    source:
+      'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/',
+    sourceLabel: 'NASA, Hubble’s Messier catalogue',
+    checked: CHECKED,
+  },
+
+  // Glossary: the app's and the site's own words
+  {
+    id: 'gloss-honesty-words',
+    about: 'app',
+    text: 'The site sorts everything the app shows under three words, each with one meaning. Measured: an instrument recorded it. Derived: computed from measurements by a stated method. Drawn: a model or a choice of ours, with no measurement behind each object.',
+    source: `${REPO_BLOB}/packages/website/src/data/honestyBins.ts`,
+    sourceLabel: `the three words, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-vizier',
+    about: 'app',
+    text: 'skymap downloads 2MRS, GLADE, Cosmicflows-4, MCXC and MSCC from VizieR, the catalogue service of the Centre de Données astronomiques de Strasbourg (CDS).',
+    source: `${REPO_BLOB}/tools/utils/io/rawDataRegistry.ts`,
+    sourceLabel: `the raw data registry, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-layer',
+    about: 'app',
+    text: 'The app draws the scene in layers, among them the galaxy catalogues, the stars, the cosmic web density, the filaments, the flow, the Zone of Avoidance, the Local Bubble, the constellations and the Milky Way. Most have a switch in the Settings panel.',
+    source: `${REPO_BLOB}/src/compositions/app.ts`,
+    sourceLabel: `the app’s layers, ${IN_REPO}`,
     checked: CHECKED,
   },
 ];
