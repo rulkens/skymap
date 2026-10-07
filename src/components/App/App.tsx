@@ -31,7 +31,7 @@
  * feeds, not App.
  */
 
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -42,6 +42,10 @@ import NavigationPanelContainer from '../containers/NavigationPanelContainer';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import SplashContainer from '../containers/SplashContainer';
+import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
+import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
+import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
+import LazyDebugPanel from '../DebugPanel/LazyDebugPanel';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
@@ -58,13 +62,6 @@ import {
   selectDebugPanelOpen,
   selectSplashVisible,
 } from '../../state/ui/selectors';
-
-// Split out of the entry chunk: none is needed for the first paint, and between
-// them they pull in every Layer's render code and a markdown parser.
-const InfoCardContainer = lazy(() => import('../containers/InfoCardContainer'));
-const SettingsPanelContainer = lazy(() => import('../containers/SettingsPanelContainer'));
-const CommandPaletteContainer = lazy(() => import('../containers/CommandPaletteContainer'));
-const DebugPanel = lazy(() => import('../DebugPanel/DebugPanel'));
 
 export function App(): React.ReactElement {
   const { canvasRef, handleRef } = useEngine();
@@ -157,7 +154,7 @@ export function App(): React.ReactElement {
         <LoadingBarContainer />
         <StatusBarContainer />
         <Suspense>
-          <InfoCardContainer />
+          <LazyInfoCardContainer />
         </Suspense>
         <ScaleBarContainer />
         {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
@@ -167,18 +164,18 @@ export function App(): React.ReactElement {
         <div className={appStyles.leftStack}>
           <NavigationPanelContainer />
           <Suspense>
-            <SettingsPanelContainer />
+            <LazySettingsPanelContainer />
           </Suspense>
         </div>
         <TopBarContainer />
         <Suspense>
-          <CommandPaletteContainer />
+          <LazyCommandPaletteContainer />
         </Suspense>
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
           <Suspense>
-            <DebugPanel
+            <LazyDebugPanel
               slots={handleRef.current.debug.assetSlots}
               timingService={handleRef.current.debug.timingService}
               frameStats={handleRef.current.debug.frameStats}
