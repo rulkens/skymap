@@ -9,7 +9,7 @@ The order these are drawn in is on [The frame](/docs/rendering/); what each stan
 
 <Figure id="render-lod" />
 
-The catalogues hold up to about three million galaxies, and from far out nearly all of them are smaller than a pixel. Up close, one galaxy can fill the window. No single way of drawing does both.
+The catalogues hold up to about three million galaxies, and from far out nearly all of them are smaller than a pixel. Up close, one galaxy can fill the window, so a galaxy is drawn in three ways.
 
 <Fact id="render-galaxy-triangle" />
 
@@ -17,7 +17,7 @@ The catalogues hold up to about three million galaxies, and from far out nearly 
 
 <Fact id="render-galaxy-disc" />
 
-The pictures are fetched as a galaxy grows on screen, from <Source id="sdss-images">SDSS</Source> or the <Source id="dss">Digitized Sky Survey</Source>; [Size, tilt and shape](/docs/science/#size-tilt-and-shape) says which galaxies carry a photograph of our choosing. The black sky of a survey picture is made clear by its own darkness, so the galaxy has no square edge.
+The pictures are fetched as a galaxy grows on screen, from <Source id="sdss-images">SDSS</Source> or the <Source id="dss">Digitized Sky Survey</Source>; [Size, tilt and shape](/docs/science/#size-tilt-and-shape) says which galaxies carry a photograph of our choosing. A survey picture’s opacity is its own brightness, so its black sky is transparent and the galaxy has no square edge.
 
 <Note>Code: <Repo path="src/layers/galaxyCatalog" /> and <Repo path="src/services/gpu/shaders/galaxyCatalog" />.</Note>
 
@@ -41,7 +41,7 @@ The exposure of the stars also rises as the camera pulls back, by an amount give
 
 <Fact id="render-body-light" />
 
-The law is from M. Minnaert, [“The reciprocity principle in lunar photometry”](https://doi.org/10.1086/144279) (1941). It was written for the Moon; we use it for decks of cloud and haze, and leave airless bodies on the plain cosine. Where a body has a map of its relief, the direction each point of the surface faces is taken from it, so craters and ridges catch the light without being built as shapes.
+The law is from M. Minnaert, [“The reciprocity principle in lunar photometry”](https://doi.org/10.1086/144279) (1941). It was written for the Moon; we use it for decks of cloud and haze, and leave airless bodies on the plain cosine. Where a body has a normal map, the surface normal is taken from it, so craters and ridges catch the light with no geometry of their own.
 
 <Fact id="render-earth" />
 
@@ -49,19 +49,19 @@ The law is from M. Minnaert, [“The reciprocity principle in lunar photometry�
 
 <Figure id="saturn" />
 
-The formulas are the single-scattering ones of S. Chandrasekhar’s “Radiative Transfer” (1960), as used by L. Dones, J. N. Cuzzi and M. R. Showalter in [“Voyager Photometry of Saturn’s A Ring”](https://doi.org/10.1006/icar.1993.1118) (1993). Ours has a simpler rule for the direction particles scatter in, takes the rings’ density from the map of them, and makes the particles three times as bright as the map’s colour, a factor we set by eye.
+The formulas are the single-scattering ones of S. Chandrasekhar’s “Radiative Transfer” (1960), as used by L. Dones, J. N. Cuzzi and M. R. Showalter in [“Voyager Photometry of Saturn’s A Ring”](https://doi.org/10.1006/icar.1993.1118) (1993). Ours has a simpler phase function, takes the rings’ density from the map of them, and makes the particles three times as bright as the map’s colour, a factor we set by eye.
 
 <Note>Code: <Repo path="src/services/gpu/shaders/bodies" /> and <Repo path="src/services/gpu/shaders/lib" />.</Note>
 
 ## Atmospheres
 
-Sky colour, the red of a sunset and the thin blue line at the edge of a planet all come from sunlight scattered on its way through air. Working it out exactly means following light along every line of sight, for every pixel, in every frame. [Atmospheres](/docs/science/#atmospheres) says which bodies have such air.
+Sky colour, the red of a sunset and the thin blue line at the edge of a planet all come from sunlight scattered on its way through air. Computing it exactly means integrating along every line of sight, for every pixel, in every frame. [Atmospheres](/docs/science/#atmospheres) says which bodies have such air.
 
 <Figure id="render-limb" />
 
 <Fact id="render-atmosphere-tables" />
 
-E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (2008), made this fast: do the sums once and keep the answers in tables, one of them of four dimensions. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (2020), did away with the large table: the sky is worked out afresh each frame into small ones, and light scattered more than once is treated as the same in every direction. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire, and adds the air of other worlds: each body has its own list of up to four gases and hazes. Earth’s numbers are the papers’; the others mix published values, values worked out from them and values chosen for the look, and the file marks which is which.
+E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (2008), made this fast: precompute the integrals and keep them in lookup tables, one of them four-dimensional. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (2020), removed the large table: the sky is recomputed each frame into small ones, and light scattered more than once is treated as isotropic. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire, and adds the air of other worlds: each body has its own list of up to four gases and hazes. Earth’s numbers are the papers’; the others mix published values, values derived from them and values chosen for the look, and the file marks which is which.
 
 <Fact id="render-aerial" />
 
@@ -77,7 +77,7 @@ A map of all Earth sharp enough for a park would not fit in any graphics process
 
 <Fact id="render-terrain-fallback" />
 
-This is virtual texturing: the picture is far larger than memory, and only the parts in view, at the sharpness the screen can show, are held. The usual form keeps a table on the graphics processor that says where each part is. Ours has none: the walk that decides what to fetch also says, for each patch, which square of the shared [texture](/docs/reference/glossary/#texture) to read. Heights are stored as colours, and a patch’s slope is worked out from them for every pixel, at the full detail of the height tile.
+This is virtual texturing: the picture is far larger than memory, and only the parts in view, at the resolution the screen can show, are held. The usual form keeps a page table on the graphics processor. Ours has none: the walk that decides what to fetch also gives each patch its square of the shared [texture](/docs/reference/glossary/#texture). Heights are stored as colours, and a patch’s normal is computed from them per pixel, at the full detail of the height tile.
 
 Which imagery and heights fill which levels, on Earth and on Mars, is under [Imagery and terrain](/docs/data/pipeline/#imagery-and-terrain).
 
@@ -89,7 +89,7 @@ Which imagery and heights fill which levels, on Earth and on Mars, is under [Ima
 
 <Figure id="hubble" />
 
-The way of reading the surroundings from a cube blurred by roughness is from B. Karis, [“Real Shading in Unreal Engine 4”](https://blog.selfshadow.com/publications/s2013-shading-course/) (SIGGRAPH 2013 course). Ours has one light, the Sun, and no fill light: the dark side of a spacecraft is lit only by what the cube holds.
+The way of reading the surroundings from a cube blurred by roughness is from B. Karis, [“Real Shading in Unreal Engine 4”](https://blog.selfshadow.com/publications/s2013-shading-course/) (SIGGRAPH 2013 course). Ours has one light, the Sun: the dark side of a spacecraft is lit only by what the cube holds.
 
 <Note>Code: <Repo path="src/services/gpu/shaders/bodies/meshBody" />.</Note>
 
@@ -109,9 +109,9 @@ The glow of the cosmic web is a cube of densities, described under [Density, fil
 
 <Fact id="render-density-march" />
 
-The cube is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s, made with the [Monte Carlo Physarum Machine](/docs/reference/glossary/#mcpm) of J. N. Burchett and others, [“Revealing the Dark Threads of the Cosmic Web”](https://arxiv.org/abs/2003.04393) (2020), and O. Elek and others, [“Polyphorm”](https://arxiv.org/abs/2009.02441) (2020), the <Source id="polyphorm">program</Source> the method was first built into. The app draws the result and does not run the simulation. The colour ramp is <Source id="colormaps">inferno</Source>. Each pixel starts its steps at a slightly different depth, which trades the bands a regular march leaves for a fine grain.
+The cube is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s, made with the [Monte Carlo Physarum Machine](/docs/reference/glossary/#mcpm) of J. N. Burchett and others, [“Revealing the Dark Threads of the Cosmic Web”](https://arxiv.org/abs/2003.04393) (2020), and O. Elek and others, [“Polyphorm”](https://arxiv.org/abs/2009.02441) (2020), the <Source id="polyphorm">program</Source> the method was first built into. The app loads the finished cube. The colour ramp is <Source id="colormaps">inferno</Source>. Each pixel’s march is jittered in depth, which trades banding for a fine grain.
 
-The filaments are traced by [DisPerSE](/docs/reference/glossary/#disperse), as [Structures, fields and filaments](/docs/data/pipeline/#structures-fields-and-filaments) describes; the app only draws the lines.
+The filaments are traced by [DisPerSE](/docs/reference/glossary/#disperse), as [Structures, fields and filaments](/docs/data/pipeline/#structures-fields-and-filaments) describes.
 
 <Fact id="render-lines" />
 
@@ -125,7 +125,7 @@ The filaments are traced by [DisPerSE](/docs/reference/glossary/#disperse), as [
 
 <Figure id="render-black-hole" />
 
-The approach is that of E. Bruneton, [“Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735) (2020), which finds where each bent ray meets the scene from precomputed tables. We use none of its code. Our one table holds the bending alone, and the disc is found by a short march along each ray. What is computed here and what is invented is under [The black hole at the centre](/docs/science/#the-black-hole-at-the-centre).
+The approach is that of E. Bruneton, [“Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735) (2020), which finds where each bent ray meets the scene from precomputed tables. The code is our own: one table holds the deflection alone, and the disc is found by a short march along each ray. What is computed here and what is invented is under [The black hole at the centre](/docs/science/#the-black-hole-at-the-centre).
 
 <Note>Code: <Repo path="src/layers/blackHoles" /> and <Repo path="src/services/gpu/shaders/bodies/blackHoleLensing" />.</Note>
 
@@ -141,6 +141,6 @@ The method is that of [msdfgen](https://github.com/Chlumsky/msdfgen), by V. Chlu
 
 [The frame](/docs/rendering/#light-to-screen) says where these run. Bloom follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six, and a threshold that is a setting.
 
-Three of the five tone curves have a source. Reinhard is from E. Reinhard and others, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004). Both papers bend a pixel’s brightness and keep its colour; ours bends red, green and blue separately, so a bright pixel also moves towards white. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
+Three of the five tone curves have a source. Reinhard is from E. Reinhard and others, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004). Both papers map a pixel’s luminance and keep its colour; ours maps red, green and blue separately, so a bright pixel also desaturates towards white. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
 
 HDR, for a display that reports a high dynamic range, is a switch under [Make it brighter or calmer](/docs/guide/settings/#make-it-brighter-or-calmer).
