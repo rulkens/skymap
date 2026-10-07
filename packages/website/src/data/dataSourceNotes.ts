@@ -38,7 +38,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The 331,312 stars within 100 parsecs of the Sun, from Gaia’s own list of nearby stars.',
     facts: ['sim-star-coverage'],
-    shows: 'The faint stars within 100 parsecs of the Sun, part of “Gaia Stars”. Every data size keeps them, however faint; from 70 parsecs outwards they are thinned, so that they do not end at a visible shell.',
+    shows: 'The faint stars within 100 parsecs of the Sun, part of “Gaia Stars”. Every data size keeps them, however faint; from 70 parsecs outwards they are thinned, so that they fade out gradually.',
     scene: 'stars',
     setting: 'star-catalogs',
   },
@@ -95,7 +95,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The Sloan Digital Sky Survey: positions, measured redshifts, brightness and shapes of about 970,000 galaxies, by our own query.',
     about:
-      'SDSS gives a galaxy a spectrum, and with it a measured redshift. We run one query of our own against its seventeenth data release, which returns about 970,000 galaxies with their positions, redshifts, brightness in five bands and shapes. Why we do not run it on SkyServer’s own search page is under Fetch on From catalogue to pixels; the query itself is in the repository’s data pipeline notes.',
+      'SDSS gives a galaxy a spectrum, and with it a measured redshift. We run one query of our own against its seventeenth data release, which returns about 970,000 galaxies with their positions, redshifts, brightness in five bands and shapes. Why we run it in CasJobs is under Fetch on From catalogue to pixels; the query itself is in the repository’s data pipeline notes.',
     facts: ['survey-gaps', 'sci-redshifts', 'sim-flux-limits', 'sim-data-sizes'],
     shows:
       'The galaxy points switched by “SDSS” under Galaxy catalogs. Far out they stand in two fans. The smallest data size loads none of them.',
@@ -159,7 +159,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Three regions cut from the first data release of DESI, the Dark Energy Spectroscopic Instrument.',
     about:
-      'From DESI’s first data release we read the large-scale-structure catalogues of four classes of target and cut three regions out of them. They are samples, one of them a deep cone that shows how much farther DESI reaches than the older surveys; they are not a map of the sky.',
+      'From DESI’s first data release we read the large-scale-structure catalogues of four classes of target and cut three regions out of them. They are samples, one of them a deep cone that shows how much farther DESI reaches than the older surveys.',
     facts: ['sim-desi-patches', 'sci-desi-brightness'],
     shows:
       'Three switches under Galaxy catalogs, all off at first: “DESI Deep Field”, “DESI Wedge” and “Sloan Great Wall”. Each file is fetched the first time its switch goes on.',
@@ -229,7 +229,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'A density field computed from the positions of SDSS galaxies: the glow of the cosmic web.',
     about:
-      'The glow of the cosmic web is not an image. It is a density field that the catalogue’s authors computed from the positions of SDSS galaxies, which we reduce to three sizes and draw as light.',
+      'The glow of the cosmic web is a density field that the catalogue’s authors computed from the positions of SDSS galaxies, which we reduce to three sizes and draw as light.',
     facts: ['sci-density-field'],
     shows: 'The purple and orange glow, switched by “MCPM Cosmic Web” under Cosmic web density.',
     scene: 'filaments-and-the-cosmic-web',
@@ -272,7 +272,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'JPL’s positions for 8 planets and 18 moons from 1900 to 2100, which our orbits are corrected to.',
     about:
-      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship the corrections, not the positions. The orbits of the Voyagers and of Hubble are also copied from it.',
+      'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it.',
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
     shows: 'No switch of its own: it is why a planet stands within 1,000 kilometres of where JPL puts it, and each of 18 moons that close to its place beside its planet, between 1900 and 2100.',
     scene: 'planets-and-their-moons',
@@ -376,7 +376,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights, clouds and water.',
     about:
-      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights, the clouds and the water are separate NASA maps, not of that month. The same month is also the coarse levels of the tiles the app fetches as you come down, so the two never show different seasons side by side.',
+      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights, the clouds and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
     facts: ['sci-earth-clouds', 'sci-surfaces'],
     shows: 'Earth’s surface from far away and down to tile level 7, its night side and its clouds.',
     scene: 'earth-and-its-surface',

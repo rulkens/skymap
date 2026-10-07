@@ -3,9 +3,9 @@ description: How the raw catalogue files become what the app loads and draws, st
 facts: [sci-directions, sci-magnitudes]
 ---
 
-The app does not read a survey’s own files. A set of build tools in the repository reads them once, on our machine, and writes small binary files that a browser can fetch and hand to the graphics processor. This page follows a galaxy through that build, and then says where stars, structures, planets and imagery take a different road.
+A set of build tools in the repository reads each survey’s files once, on our machine, and writes small binary files that a browser can fetch and hand to the graphics processor. This page follows a galaxy through that build, and then says where stars, structures, planets and imagery take a different road.
 
-Every source named here has a page with its licence and its files: [All sources at a glance](/docs/data/) lists them. What the build leaves out or gets wrong on purpose is under [Known simplifications](/science/#simplifications) on the Science page. The commands, flags and file layouts are in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>.
+Every source named here has a page with its licence and its files: [All sources at a glance](/docs/data/) lists them. What the build leaves out or simplifies is under [Known simplifications](/science/#simplifications) on the Science page. The commands, flags and file layouts are in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>.
 
 <Flow
   label="The steps from a survey’s file to a drawn galaxy"
@@ -30,7 +30,7 @@ Not every source has a fetch tool. <Source id="sdss">SDSS</Source> is a query we
 
 <Fact id="pipe-sdss-query" />
 
-You do not need any of this to run the app from the repository: `npm run fetch-data` downloads the built files that the published app uses.
+To run the app from the repository you can skip all of this: `npm run fetch-data` downloads the built files that the published app uses.
 
 ## Parse
 
@@ -54,7 +54,7 @@ One parser per catalogue, in <Repo path="tools/parsers" />, turns its table into
 
 Both tests must hold. Position alone would merge a nearby galaxy with a far one that happens to lie behind it. The redshift test is a wide one: the difference allowed, about 0.01, is some 3,000 km/s. Two members of one cluster rarely differ by that much, so where two of them lie within 5 arcseconds of each other on the sky they are, as a rule, merged into one row. It is also narrower than the error of an estimated redshift, which is near 0.015: a galaxy that one survey measured and GLADE only estimated can fail the test, and then it stays in the map twice, at two distances along one line of sight.
 
-The three DESI regions come last and are compared with the surveys before them, not with one another, since two of them overlap on purpose. Milliquas is not compared at all: a quasar and the galaxy it sits in are two things at one position. After this step the 81 named galaxies are taken out of the surveys, because the app draws those from a list of their own.
+The three DESI regions come last and are compared only with the surveys before them, since two of them overlap on purpose. Milliquas is not compared at all: a quasar and the galaxy it sits in are two things at one position. After this step the 81 named galaxies are taken out of the surveys, because the app draws those from a list of their own.
 
 ## Data sizes
 
@@ -62,7 +62,7 @@ The three DESI regions come last and are compared with the surveys before them, 
 
 <Fact id="pipe-galaxy-caps" />
 
-The cut is by luminosity, not by apparent brightness, over the whole catalogue at once (<Repo path="tools/catalog/selectTierRecords.ts" />). That keeps the large-scale structure at every size and puts no edge into the map. A rule of the form “keep everything within so many megaparsecs” would have drawn a shell at that distance.
+The cut is by luminosity, over the whole catalogue at once (<Repo path="tools/catalog/selectTierRecords.ts" />). That keeps the large-scale structure at every size. A rule of the form “keep everything within so many megaparsecs” would have drawn a shell at that distance.
 
 <Figure id="guide-size-small" />
 
@@ -136,7 +136,7 @@ The glow of the cosmic web is the <Source id="mcpm-vac">SDSS Cosmic Slime catalo
 
 ## Planets, moons and their positions
 
-The app fetches no file for a planet’s position. The orbits are <Source id="jpl-elements">JPL’s published elements</Source>, typed into the app. The build does fetch: `npm run fetch-horizons` downloads positions from <Source id="horizons">JPL Horizons</Source>, <Repo path="data/raw/horizons/README.md">`npm run build-ephemeris-corrections`</Repo> fits a correction against them, and the correction, not the positions, is compiled into the app with the elements.
+A planet’s position needs no file. The orbits are <Source id="jpl-elements">JPL’s published elements</Source>, written into the app. For the build, `npm run fetch-horizons` downloads positions from <Source id="horizons">JPL Horizons</Source>, <Repo path="data/raw/horizons/README.md">`npm run build-ephemeris-corrections`</Repo> fits a correction against them, and the correction is compiled into the app with the elements.
 
 <Fact id="sci-ephemeris" />
 
@@ -146,7 +146,7 @@ The maps of the planets and moons are downsampled to three sizes by `npm run bui
 
 <Fact id="pipe-earth-tiles" />
 
-Earth’s imagery is <Source id="nasa-blue-marble">Blue Marble</Source>, <Source id="eox">EOxCloudless</Source> and the <Source id="geodanmark">GeoDanmark orthophoto</Source>; its heights are <Source id="etopo">ETOPO 2022</Source>, the <Source id="skadi">skadi terrain tiles</Source> and <Source id="dhm">Denmark’s height model</Source>. Mars is <Source id="mola">MOLA</Source> heights and the <Source id="viking">Viking mosaic</Source>, with HiRISE close-ups at the four rover sites. The tiles are not in the manifest: the app reads a list of its own for them, and falls back to the whole-globe map where a tile is missing.
+Earth’s imagery is <Source id="nasa-blue-marble">Blue Marble</Source>, <Source id="eox">EOxCloudless</Source> and the <Source id="geodanmark">GeoDanmark orthophoto</Source>; its heights are <Source id="etopo">ETOPO 2022</Source>, the <Source id="skadi">skadi terrain tiles</Source> and <Source id="dhm">Denmark’s height model</Source>. Mars is <Source id="mola">MOLA</Source> heights and the <Source id="viking">Viking mosaic</Source>, with HiRISE close-ups at the four rover sites. The tiles have a list of their own, outside the manifest, and the app falls back to the whole-globe map where a tile is missing.
 
 ## 3D models
 
