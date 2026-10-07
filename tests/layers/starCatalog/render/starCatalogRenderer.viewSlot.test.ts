@@ -36,7 +36,7 @@ function mockDevice(): GPUDevice {
     createBindGroupLayout: vi.fn(() => ({})),
     createBindGroup: vi.fn(() => ({})),
     createPipelineLayout: vi.fn(() => ({})),
-    createRenderPipeline: vi.fn(() => ({})),
+    createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => ({ label: desc.label })),
     queue: { writeBuffer: vi.fn() },
   } as unknown as GPUDevice;
 }
@@ -48,7 +48,6 @@ function args(viewSlot: number): StarCatalogCutDrawArgs {
     source: Source.GaiaStars,
     stream: 'leaf',
     capture: false,
-    knee: true,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
     pxPerRad: 623.5,
@@ -101,5 +100,28 @@ describe('starCatalogRenderer viewSlot isolation', () => {
     );
     expect(cameraWrites).toHaveLength(2);
     expect(cameraWrites[0]![0]).not.toBe(cameraWrites[1]![0]);
+  });
+
+  // Aggregates draw linear for `star-upsample` to knee; a capture face has no upsample.
+  it('picks the kneed pipeline for leaves and capture aggregates, linear for real-view aggregates', () => {
+    const renderer = createStarCatalogRenderer(mockDevice(), 'rgba16float');
+    renderer.upload(Source.GaiaStars, CATALOG);
+    const setPipeline = vi.fn();
+    const pass = {
+      setPipeline,
+      setBindGroup: vi.fn(),
+      drawIndirect: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.drawCut(pass, args(0));
+    renderer.drawCut(pass, { ...args(0), stream: 'aggregate' });
+    renderer.drawCut(pass, { ...args(0), stream: 'aggregate', capture: true });
+
+    const labels = setPipeline.mock.calls.map(([p]) => (p as { label: string }).label);
+    expect(labels).toEqual([
+      'star-catalog-kneed-pipeline',
+      'star-catalog-linear-pipeline',
+      'star-catalog-kneed-pipeline',
+    ]);
   });
 });

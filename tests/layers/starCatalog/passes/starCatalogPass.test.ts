@@ -121,7 +121,6 @@ describe('starCatalogPass.draw', () => {
     expect(drawCut).toHaveBeenCalledTimes(2);
     const [a, b] = drawCut.mock.calls.map((c) => c[1]);
     expect(a!.stream).toBe('leaf');
-    expect(a!.knee).toBe(true);
     expect(a!.vp).toBe(b!.vp);
     expect(a!.vp).not.toBe(view.vp);
   });

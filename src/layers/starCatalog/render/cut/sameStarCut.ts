@@ -1,6 +1,5 @@
 import type { StarCutSpec } from '../../@types/StarCutSpec';
 import { EYE_SLACK_MPC, PLANE_SLACK } from '../../../../data/starNodeFade';
-import { sameStructure } from '../../../../utils/object/sameStructure';
 
 /**
  * Whether two cut specs ask the GPU for the same cut. Eye and frustum planes
@@ -14,6 +13,7 @@ export function sameStarCut(a: StarCutSpec, b: StarCutSpec): boolean {
     Math.hypot(eyeA[0] - eyeB[0], eyeA[1] - eyeB[1], eyeA[2] - eyeB[2]) <= EYE_SLACK_MPC &&
     planesA.length === planesB.length &&
     planesA.every((v, i) => Math.abs(v - planesB[i]!) <= PLANE_SLACK) &&
-    sameStructure(restA, restB)
+    // Whatever fields the spec has, so a later one is covered; the rest is four scalars and source rows.
+    JSON.stringify(restA) === JSON.stringify(restB)
   );
 }

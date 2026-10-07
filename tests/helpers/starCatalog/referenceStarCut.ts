@@ -6,7 +6,7 @@
  * is nondeterministic, this one is node order.
  */
 
-import type { ReferenceStarCut } from '../../@types/ReferenceStarCut';
+import type { ReferenceStarCut } from './@types/ReferenceStarCut';
 import {
   BUDGET_TYPICAL_U32_INDEX,
   CAM_CELL_INT_INDEX,
@@ -33,7 +33,7 @@ import {
   REFINE_THRESHOLD_SQ_FLOAT_INDEX,
   VIEW_COUNT_U32_INDEX,
   WORLD_SPREAD_FLOAT_INDEX,
-} from '../starCutLayout';
+} from '../../../src/layers/starCatalog/render/starCutLayout';
 
 export function referenceStarCut(
   nodes: Uint32Array,

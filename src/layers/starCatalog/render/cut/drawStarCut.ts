@@ -8,9 +8,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 /**
  * Draw one stream of the frame's GPU cut into a view. A sky-cubemap face
  * shares the frame's eye and scalars but reads the capture cut (every
- * direction, no fade), and knees its own aggregates: no `star-upsample` pass
- * follows a face to carry the knee, so a captured glow would otherwise read
- * brighter than the same star in the direct view beside it.
+ * direction, no fade).
  */
 export function drawStarCut(
   renderer: StarCatalogRenderer,
@@ -33,7 +31,6 @@ export function drawStarCut(
       source,
       stream,
       capture,
-      knee: stream === 'leaf' || capture,
       vp,
       viewportPx: view.viewportPx,
       pxPerRad,

@@ -1,7 +1,7 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
  * offscreen. The cut is taken on the GPU; here we pin the pass's own choices:
- * the stream tag, the destination-sized viewport, and linear-vs-kneed.
+ * the stream tag and the destination-sized viewport.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -88,16 +88,5 @@ describe('starAggregatesPass', () => {
     starAggregatesPass(runtime).draw!(PASS_STUB, makeNear0View(), makeCtx(true), STATE);
     expect(drawCut.mock.calls[0]![1].viewportPx).toEqual([256, 256]);
     expect(drawCut.mock.calls[0]![1].pxPerRad).toBe(600);
-  });
-
-  // `star-upsample` knees the summed half-res field; a capture face has no
-  // upsample behind it, so an un-kneed capture would out-glow the direct view.
-  it('draws linear into the offscreen but kneed into a sky-cubemap face', () => {
-    const { runtime, drawCut } = makeRuntime();
-    const pass = starAggregatesPass(runtime);
-    pass.draw!(PASS_STUB, makeNear0View(), makeCtx(), STATE);
-    pass.draw!(PASS_STUB, makeNear0View(), makeCtx(true), STATE);
-    expect(drawCut.mock.calls[0]![1].knee).toBe(false);
-    expect(drawCut.mock.calls[1]![1].knee).toBe(true);
   });
 });

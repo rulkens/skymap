@@ -100,9 +100,7 @@ export function createStarCatalogRenderer(
       // NO depthStencil: neither the hdr nor the star-aggregates target has depth.
     });
   }
-  // Keyed by COMPRESSION, not by stream: the aggregate stream takes the
-  // knee'd pipeline when it draws somewhere the knee'd upsample can't follow
-  // it (a sky-cubemap capture face — see `StarCatalogCutDrawArgs.knee`).
+  // Keyed by COMPRESSION, not by stream (see the pick in `drawCut`).
   const pipelines = {
     kneed: makePipeline('star-catalog-kneed-pipeline', 'fs'),
     linear: makePipeline('star-catalog-linear-pipeline', 'fsLinear'),
@@ -176,7 +174,10 @@ export function createStarCatalogRenderer(
     const cameraRing = cameraRings[args.stream];
     cameraRing.writeSlot(args.viewSlot, cameraScratch);
 
-    pass.setPipeline(args.knee ? pipelines.kneed : pipelines.linear);
+    // Aggregates draw linear for `star-upsample` to knee; a capture face has no
+    // upsample pass, so its aggregates take the knee'd pipeline.
+    const knee = args.stream === 'leaf' || args.capture;
+    pass.setPipeline(knee ? pipelines.kneed : pipelines.linear);
     pass.setBindGroup(0, cameraRing.bindGroupOf(args.viewSlot));
     pass.setBindGroup(1, cutDraw.bindGroup);
     pass.setBindGroup(2, entry.recordsBindGroup);

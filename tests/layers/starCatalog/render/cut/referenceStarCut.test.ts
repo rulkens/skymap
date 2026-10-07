@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 
-import { referenceStarCut } from '../../../../../src/layers/starCatalog/render/cut/referenceStarCut';
+import { referenceStarCut } from '../../../../helpers/starCatalog/referenceStarCut';
 import {
   CUT_UNIFORM_BYTES,
   CUT_NODE_WORDS,

@@ -12,12 +12,6 @@ export type StarCatalogCutDrawArgs = {
   readonly stream: StarDrawStream;
   /** A sky-cubemap face: reads the capture cut, not the frame's. */
   readonly capture: boolean;
-  /**
-   * `fs` (per-glow knee) or `fsLinear`. Leaves always knee; aggregates draw
-   * linear for the `star-upsample` composite to knee — except on a capture
-   * face, which no upsample follows.
-   */
-  readonly knee: boolean;
   /** Rebased about the cut's origin, not this view's eye. */
   readonly vp: Float32Array;
   readonly viewportPx: Vec2;
