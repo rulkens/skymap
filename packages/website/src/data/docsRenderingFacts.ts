@@ -80,14 +80,6 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'render-galaxy-atlas',
-    about: 'app',
-    text: 'Survey pictures of galaxies share one texture of 2,048 pixels a side, cut into 256 squares of 128. When all are taken, the picture that has gone longest unused gives up its square.',
-    source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem.ts`,
-    sourceLabel: `the galaxy picture atlas, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'render-star-tree',
     about: 'app',
     text: 'The stars of a file are sorted into a tree of boxes, 6 bytes a star. Every frame the app chooses which boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one draws a single glow with the summed light of everything inside it.',
