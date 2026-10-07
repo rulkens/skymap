@@ -79,7 +79,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'What is measured, what is derived, what is modelled and what is drawn.',
     up: '/science/',
     pages: [
-      { title: 'Measured, derived, modelled, drawn', path: '/docs/science/', status: 'planned' },
+      { title: 'Measured, derived, modelled, drawn', path: '/docs/science/', status: 'live' },
       { title: 'Known simplifications', path: '/docs/simplifications/', status: 'planned' },
     ],
   },

@@ -1,0 +1,27 @@
+---
+/*
+ * Formula — `<Formula say="…">d = (c / H₀) · ∫ …</Formula>` on a docs page: a
+ * short equation in plain characters between two rules. It is text, so it
+ * keeps the page's sizes, wraps on a narrow screen where a block of code would
+ * scroll, and can be copied. `say` is the equation in words, for a screen
+ * reader, which does not read ∫ or a subscript the same way twice.
+ */
+type Props = { say: string };
+
+const { say } = Astro.props;
+---
+
+<p class="formula" data-embed role="math" aria-label={say}><slot /></p>
+
+<style>
+  .formula {
+    max-width: var(--doc-measure);
+    margin: 0 0 var(--stack);
+    padding-block: 0.875rem;
+    border-block: 1px solid var(--border-divider);
+    color: var(--color-fg);
+    font-variant-numeric: normal;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+</style>
