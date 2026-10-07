@@ -3,18 +3,21 @@
  * RedshiftSpace — the diagram of a "finger of God": one cluster twice, as it
  * lies in space and as a map made from redshifts places it. The same dots are
  * drawn in both rows; in the second each is moved along the line of sight by
- * its own velocity, which is all the effect is. Labels are text outside the
- * drawing, so they keep the page's sizes at every width.
+ * its own velocity, which is all the effect is. The rows' names and the
+ * label are text outside the drawing, so they keep the page's sizes at every
+ * width.
  */
 type Props = { label: string };
 
 const { label } = Astro.props;
 
 const W = 360;
-const ROW = 84;
+const ROW = 96;
 const CENTRE = 214;
 const RADIUS = 20;
 const STRETCH = 6.5;
+// The ring's left edge is the text's.
+const SUN = 5;
 
 // Mulberry32: the dots must be the same on every build, and the same in both rows.
 let seed = 20261007;
@@ -33,18 +36,20 @@ const dots = Array.from({ length: 46 }, () => {
   return { x: r * Math.cos(angle), y: r * Math.sin(angle), shift: velocity * RADIUS * STRETCH };
 });
 const rows = [
-  { y: ROW / 2, at: (dot: (typeof dots)[number]) => dot.x },
-  { y: ROW * 1.5, at: (dot: (typeof dots)[number]) => dot.x + dot.shift },
+  { name: 'In space', y: ROW / 2, at: (dot: (typeof dots)[number]) => dot.x },
+  { name: 'In a map made from redshifts', y: ROW * 1.5, at: (dot: (typeof dots)[number]) => dot.x + dot.shift },
 ];
 ---
 
 <figure class="diagram" data-embed>
+  <div class="rows">
+  {rows.map((row, i) => <span class="row small" style={`top:${(i * 100) / rows.length}%`}>{row.name}</span>)}
   <svg viewBox={`0 0 ${W} ${ROW * 2}`} role="img" aria-label={label}>
     {
       rows.map((row) => (
         <g>
-          <line class="sight" x1="14" y1={row.y} x2={W - 6} y2={row.y} />
-          <circle class="us" cx="14" cy={row.y} r="4.5" />
+          <line class="sight" x1={SUN + 4.5} y1={row.y} x2={W} y2={row.y} />
+          <circle class="us" cx={SUN} cy={row.y} r="4.5" />
           {dots.map((dot) => (
             <circle class="dot" cx={(CENTRE + row.at(dot)).toFixed(1)} cy={(row.y + dot.y).toFixed(1)} r="1.6" />
           ))}
@@ -52,12 +57,25 @@ const rows = [
       ))
     }
   </svg>
+  </div>
   <figcaption class="small"><slot /></figcaption>
 </figure>
 
 <style>
   .diagram {
     max-width: var(--doc-measure);
+  }
+
+  .rows {
+    position: relative;
+  }
+
+  /* At the head of its row, over the line of sight. */
+  .row {
+    position: absolute;
+    left: 0;
+    color: var(--site-text-dim);
+    line-height: 1.2;
   }
 
   svg {
@@ -67,9 +85,10 @@ const rows = [
   }
 
   .sight {
-    stroke: var(--border-divider);
+    stroke: var(--site-text-faint);
     stroke-width: 1;
     stroke-dasharray: 2 4;
+    vector-effect: non-scaling-stroke;
   }
 
   .us {

@@ -1,11 +1,12 @@
 ---
 /*
  * Spans — `<Spans ticks={[…]} spans={[…]} />` on a docs page: stretches of
- * one scale, each a bar on a common axis with its name and a sentence under
- * it. `from`, `to` and a tick's `at` are in the axis's own units (powers of
- * ten on a logarithmic one); a span with no `to` has no end and runs off the
- * edge as a dashed line. The words are text, not part of the drawing, so
- * they keep the page's sizes at every width.
+ * one scale, each a line on a common axis with a ring at each end, its name
+ * and a sentence under it. `from`, `to` and a tick's `at` are in the axis's
+ * own units (powers of ten on a logarithmic one); a span with no `to` has no
+ * end: it runs off the edge dashed, and the label under the scale says so.
+ * The slot is the rest of that label. The words are text, not part of the
+ * drawing, so they keep the page's sizes at every width.
  */
 type Props = {
   label: string;
@@ -17,6 +18,11 @@ type Props = {
 
 const { label, min, max, ticks, spans } = Astro.props;
 const x = (value: number) => ((value - min) / (max - min)) * 100;
+// Where an endless span turns from a line into dashes.
+const OPEN_FROM = 88;
+// A phone has room for three marks: the two ends of the scale and the one nearest its middle.
+const middle = Math.floor((ticks.length - 1) / 2);
+const open = spans.some((span) => span.to === undefined);
 ---
 
 <figure class="spans" data-embed role="group" aria-label={label}>
@@ -24,13 +30,10 @@ const x = (value: number) => ((value - min) / (max - min)) * 100;
     {
       spans.map((span) => (
         <li>
-          <svg viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
-            <line class="axis" x1="0" y1="2" x2="100" y2="2" />
-            <line class="bar" x1={x(span.from)} y1="2" x2={x(span.to ?? max - (max - min) * 0.12)} y2="2" />
-            {span.to === undefined && (
-              <line class="bar open" x1={x(max - (max - min) * 0.12)} y1="2" x2="100" y2="2" />
-            )}
-          </svg>
+          <div class="axis" aria-hidden="true">
+            <i class="bar" style={`left:${x(span.from)}%;right:${100 - (span.to === undefined ? OPEN_FROM : x(span.to))}%`} />
+            {span.to === undefined && <i class="bar open" style={`left:${OPEN_FROM}%;right:0`} />}
+          </div>
           <b>{span.name}</b>
           <span class="small">{span.text}</span>
         </li>
@@ -38,8 +41,16 @@ const x = (value: number) => ((value - min) / (max - min)) * 100;
     }
   </ol>
   <div class="ticks small" aria-hidden="true">
-    {ticks.map((tick) => <span style={`left:${x(tick.at)}%`}>{tick.label}</span>)}
+    {ticks.map((tick, i) => <span class:list={{ middle: i === middle }} style={`left:${x(tick.at)}%`}>{tick.label}</span>)}
   </div>
+  {
+    (open || Astro.slots.has('default')) && (
+      <figcaption class="small">
+        <slot />
+        {open && ' A dashed end has no far limit.'}
+      </figcaption>
+    )
+  }
 </figure>
 
 <style>
@@ -58,29 +69,45 @@ const x = (value: number) => ((value - min) / (max - min)) * 100;
     padding-bottom: 1.25rem;
   }
 
-  svg {
-    width: 100%;
-    height: 0.75rem;
-    margin-bottom: 0.25rem;
-    fill: none;
-  }
-
-  line {
-    vector-effect: non-scaling-stroke;
-  }
-
+  /* The scale as a faint line, and on it the span: the site's 1px line, a ring where it ends. */
   .axis {
-    stroke: var(--border-divider);
-    stroke-width: 1;
+    position: relative;
+    height: 0.4375rem;
+    margin-block: 0.25rem 0.5rem;
+    background: linear-gradient(var(--border-divider), var(--border-divider)) center / 100% 1px no-repeat;
   }
 
   .bar {
-    stroke: var(--color-accent);
-    stroke-width: 5;
+    position: absolute;
+    top: 50%;
+    border-top: 1px solid var(--color-accent);
+    transform: translateY(-50%);
   }
 
-  .open {
-    stroke-dasharray: 3 4;
+  .bar::before,
+  .bar:not(.open, :has(+ .open))::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -0.25rem;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background: var(--color-bg);
+  }
+
+  .bar::after {
+    left: auto;
+    right: 0;
+  }
+
+  .bar.open {
+    border-top-style: dashed;
+  }
+
+  .bar.open::before {
+    content: none;
   }
 
   b {
@@ -135,9 +162,14 @@ const x = (value: number) => ((value - min) / (max - min)) * 100;
     left: 100%;
   }
 
-  /* A phone has room for every other mark. */
+  figcaption {
+    max-width: var(--doc-measure);
+    color: var(--site-text-dim);
+    line-height: 1.45;
+  }
+
   @media (max-width: 699px) {
-    .ticks span:nth-child(even) {
+    .ticks span:not(:first-child, :last-child, .middle) {
       display: none;
     }
   }
