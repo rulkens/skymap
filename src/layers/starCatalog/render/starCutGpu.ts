@@ -20,9 +20,10 @@ import type { StarCutGpu } from '../@types/StarCutGpu';
 import type { StarCutState } from '../@types/StarCutState';
 import type { StarCutSource } from '../@types/StarCutSource';
 import type { StarCutFrame } from '../@types/StarCutFrame';
+import type { StarCutFrameSource } from '../@types/StarCutFrameSource';
 import cutCode from '../../../services/gpu/shaders/starCatalog/cut.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
-import { NODE_FADE_MS } from '../../../data/starNodeFade';
+import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../data/starNodeFade';
 import {
   AGG_DRAW_BYTE_OFFSET,
   CUT_DRAWS_WORDS,
@@ -34,6 +35,8 @@ import {
   packStarCutNodes,
   writeStarCutUniforms,
 } from './starCutLayout';
+
+const NO_PLANES = new Float32Array(0);
 
 export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   const storage = (binding: number, type: GPUBufferBindingType): GPUBindGroupLayoutEntry => ({
@@ -178,9 +181,9 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   }
 
   function upload(source: SourceType, catalog: StarCatalog): void {
+    const packed = catalog.records.length === 0 ? null : packStarCutNodes(catalog);
     release(source);
-    if (catalog.records.length === 0) return;
-    const packed = packStarCutNodes(catalog);
+    if (packed === null) return;
     const nodes = device.createBuffer({
       label: `star-cut-nodes-${source}`,
       size: packed.byteLength,
@@ -201,8 +204,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     catalog: StarCatalog,
     state: StarCutState,
     frame: StarCutFrame,
-    row: StarCutFrame['sources'][number],
-    view: { readonly fadeStep: number; readonly viewCount: number },
+    row: StarCutFrameSource,
+    view: { readonly fadeStep: number; readonly planes: Float32Array },
   ): void {
     writeStarCutUniforms(uniformScratch, catalog, frame.originMpc, {
       refineThreshold: frame.refineThreshold,
@@ -211,8 +214,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       worldSpread: frame.worldSpread,
       leafMarginRad: frame.leafMarginRad,
       opacity: row.opacity,
-      planes: frame.planes,
-      viewCount: view.viewCount,
+      planes: view.planes,
     });
     device.queue.writeBuffer(state.uniforms, 0, uniformScratch);
     state.lastMs = frame.nowMs;
@@ -246,10 +248,13 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       const pass = encoder.beginComputePass({ label: 'star-cut', ...claimTimestampWrites() });
       for (const { row, entry } of live) {
         const { lastMs } = entry.frame;
-        const dtMs = lastMs === null ? Infinity : Math.max(0, frame.nowMs - lastMs);
+        const dtMs =
+          lastMs === null || frame.nowMs < lastMs
+            ? Infinity
+            : Math.min(frame.nowMs - lastMs, NODE_FADE_MAX_DT_MS);
         dispatch(pass, entry.catalog, entry.frame, frame, row, {
           fadeStep: Math.min(1, dtMs / NODE_FADE_MS),
-          viewCount: frame.viewCount,
+          planes: frame.planes,
         });
       }
       pass.end();
@@ -265,7 +270,10 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       for (const { row, entry } of live) {
         entry.capture ??= createState(`${row.source}-capture`, entry.catalog, entry.nodes);
         // No frustum (six faces see every direction) and no fade (one static frame).
-        dispatch(pass, entry.catalog, entry.capture, frame, row, { fadeStep: 1, viewCount: 0 });
+        dispatch(pass, entry.catalog, entry.capture, frame, row, {
+          fadeStep: 1,
+          planes: NO_PLANES,
+        });
       }
       pass.end();
       device.queue.submit([encoder.finish()]);

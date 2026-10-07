@@ -103,13 +103,16 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
 async function collectCpu(engine: EngineHandle, frames: number): Promise<Record<string, number>[]> {
   const out: Record<string, number>[] = [];
   cpuSpans.on = true;
-  for (let i = 0; i < PERF_WARMUP_FRAMES + frames; i++) {
-    cpuSpans.ms.clear();
-    engine.debug.requestRender();
-    await engine.nextFrame();
-    if (i >= PERF_WARMUP_FRAMES) out.push(Object.fromEntries(cpuSpans.ms));
+  try {
+    for (let i = 0; i < PERF_WARMUP_FRAMES + frames; i++) {
+      cpuSpans.ms.clear();
+      engine.debug.requestRender();
+      await engine.nextFrame();
+      if (i >= PERF_WARMUP_FRAMES) out.push(Object.fromEntries(cpuSpans.ms));
+    }
+  } finally {
+    cpuSpans.on = false;
   }
-  cpuSpans.on = false;
   return out;
 }
 

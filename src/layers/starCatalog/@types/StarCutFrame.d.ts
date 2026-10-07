@@ -5,27 +5,21 @@
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCutFrameSource } from './StarCutFrameSource';
 
 export type StarCutFrame = {
   /** The eye the cut is taken from; draws rebase their vp about THIS. */
   readonly originMpc: Readonly<Vec3>;
   /** Stamps each source's fade step. */
   readonly nowMs: number;
-  /** Six unit planes per view, rebased about `originMpc`, in Mpc. */
+  /** Six unit planes per view, rebased about `originMpc`, in Mpc; empty means no prune. */
   readonly planes: Float32Array;
-  readonly viewCount: number;
   readonly refineThreshold: number;
   /** Aggregate cull slack: its glow's spread past the box (world). */
   readonly worldSpread: number;
   /** Leaf cull slack: its dot's radius, radians per unit distance. */
   readonly leafMarginRad: number;
-  readonly sources: readonly {
-    readonly source: SourceType;
-    /** The source's distance crossfade. */
-    readonly opacity: number;
-    readonly budgetTypical: number;
-  }[];
+  readonly sources: readonly StarCutFrameSource[];
   readonly sizePx: number;
   readonly brightness: number;
   readonly glowOverlap: number;

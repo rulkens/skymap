@@ -26,6 +26,7 @@ export function starCatalogPlanner(
     plan(_snapshot: ReadyFrameContext, views: readonly FrameView[], state: PassState) {
       const frame = starCutFrame(runtime, state.settings.starCatalogs, views);
       const nowMs = views[0]!.snapshot.nowMs;
+      if (nowMs < changedAtMs) changedAtMs = nowMs;
       if (!sameStarCut(frame, runtime.renderer.getFrameCut())) changedAtMs = nowMs;
       runtime.renderer.setFrameCut(frame);
       const awake = frame !== null && nowMs - changedAtMs < NODE_FADE_MS;

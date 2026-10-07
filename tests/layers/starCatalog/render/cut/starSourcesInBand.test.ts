@@ -52,7 +52,6 @@ describe('starSourcesInBand', () => {
     );
     expect(result).toHaveLength(1);
     expect(result[0]!.source).toBe(Source.GaiaStars);
-    expect(result[0]!.catalog).toBe(catalog);
     expect(result[0]!.crossfade).toBe(1);
   });
 

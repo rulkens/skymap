@@ -7,7 +7,7 @@
  * (`(SOURCE_GAIA_STARS << 26) | recordIdx`, see `starCatalog/pickFragment.wesl`).
  * An aggregate glow stands in for a whole subtree and has no single star to
  * name. A leaf is on that list only while its fade is above zero and it is on
- * screen (grown by the pick floor — `starCullMargins`), so what clicks is what
+ * screen (grown by the pick floor), so what clicks is what
  * the last frame drew.
  *
  * It shares the visual renderer's layouts, record blob and cut lists

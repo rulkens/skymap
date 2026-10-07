@@ -21,7 +21,7 @@ export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass {
     },
 
     draw(pass, view, ctx) {
-      drawStarCut(runtime, pass, view, ctx, 'leaf');
+      drawStarCut(runtime.renderer, pass, view, ctx, 'leaf');
     },
 
     drawPick(pass, view, ctx) {

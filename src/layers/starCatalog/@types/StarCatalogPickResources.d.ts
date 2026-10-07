@@ -1,4 +1,5 @@
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCutDraw } from './StarCutDraw';
 
 /**
  * The GPU resources the sibling `starCatalogPickRenderer` must SHARE with the
@@ -29,9 +30,5 @@ export type StarCatalogPickResources = {
   readonly recordsBgl: GPUBindGroupLayout;
   recordsBindGroup(source: SourceType): GPUBindGroup | null;
   /** The frame cut's leaf list; `null` until a frame has cut the source. */
-  leafDraw(source: SourceType): {
-    readonly bindGroup: GPUBindGroup;
-    readonly indirect: GPUBuffer;
-    readonly indirectOffset: number;
-  } | null;
+  leafDraw(source: SourceType): StarCutDraw | null;
 };

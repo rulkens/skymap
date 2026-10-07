@@ -46,6 +46,7 @@ import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutFrame } from '../@types/StarCutFrame';
+import type { StarDrawStream } from '../@types/StarDrawStream';
 import { RECORD_BYTES } from '../../../data/starCatalog/starCatalogFormat';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
@@ -96,7 +97,7 @@ export function createStarCatalogRenderer(
   // would hand every draw the LAST write (docs/RENDERER.md landmine #1).
   // And one ring per stream: in the real view the aggregate stream rasterises
   // a half-res target, so its viewport and pxPerRad differ from the leaf's.
-  const makeCameraRing = (stream: string) =>
+  const makeCameraRing = (stream: StarDrawStream) =>
     createViewSlotUniformRing({
       device,
       label: `star-catalog-camera-uniform-${stream}`,
@@ -161,15 +162,15 @@ export function createStarCatalogRenderer(
   }
 
   function upload(source: SourceType, catalog: StarCatalog): void {
+    // Empty catalog is the unload signal (a tier swap that drops the bin);
+    // `createBuffer({size:0})` is forbidden.
+    const packed = catalog.records.length === 0 ? null : repackRecords(catalog.records);
     cut.upload(source, catalog);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
-    // Empty catalog is the unload signal (a tier swap that drops the bin);
-    // `createBuffer({size:0})` is forbidden.
-    if (catalog.records.length === 0) return;
+    if (packed === null) return;
 
-    const packed = repackRecords(catalog.records);
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
       size: packed.byteLength,

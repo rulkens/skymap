@@ -18,11 +18,11 @@ export function starSourcesInBand(
   if (!settings.enabled) return [];
 
   const result: StarSourceInBand[] = [];
-  for (const { source, catalog } of runtime.renderer.loadedCatalogs()) {
+  for (const { source } of runtime.renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
     if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     const crossfade = starSourceDrawOpacity(entry, settings, camDistPc);
-    if (crossfade > 0) result.push({ source, catalog, entry, crossfade });
+    if (crossfade > 0) result.push({ source, entry, crossfade });
   }
   return result;
 }

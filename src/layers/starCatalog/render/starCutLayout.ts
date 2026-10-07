@@ -13,9 +13,9 @@ import { mortonDecode3 } from '../../../utils/math/mortonDecode3';
 /** `struct CutNode`: six u32. */
 export const CUT_NODE_WORDS = 6;
 /** Bits per axis of `CutNode.grid`, and of `CutNode.bits`'s level. */
-const GRID_AXIS_BITS = 10;
-const LEVEL_BITS = 4;
-const RECORD_COUNT_SHIFT = 8;
+export const GRID_AXIS_BITS = 10;
+export const LEVEL_BITS = 4;
+export const RECORD_COUNT_SHIFT = 8;
 
 /** Log-proxy budget bins (`CUT_BINS`), plus the chosen threshold bin. */
 export const CUT_HIST_WORDS = 1024 + 1;
@@ -25,11 +25,15 @@ export const LEAF_BLOCK_SHIFT = 3;
 export const LEAF_BLOCK_INDEX_SHIFT = 22;
 /** Two indirect draw records (leaf, then aggregate), four u32 each. */
 export const CUT_DRAWS_WORDS = 8;
-export const AGG_DRAW_BYTE_OFFSET = 16;
+/** u32 words per indirect draw record; the aggregate record follows the leaf's. */
+export const DRAW_RECORD_WORDS = 4;
+export const AGG_DRAW_BYTE_OFFSET = DRAW_RECORD_WORDS * 4;
 
 /** Frusta one cut prunes against (`CUT_MAX_VIEWS`); more views ⇒ no prune. */
 export const CUT_MAX_VIEWS = 6;
 const PLANES_FLOAT_INDEX = 16;
+/** Floats one view contributes to `planes`: six vec4 planes. */
+export const FLOATS_PER_VIEW = 24;
 /** `struct CutUniforms`: a 64-byte head, then six vec4 planes per view. */
 export const CUT_UNIFORM_BYTES = 64 + CUT_MAX_VIEWS * 6 * 16;
 
@@ -95,7 +99,7 @@ export function leafListCapacity(catalog: StarCatalog): number {
 /**
  * Fill one source's `CutUniforms`. The camera splits into a whole leaf cell
  * plus a fraction HERE, in f64, so the shader's node-minus-camera is
- * integer-exact (see `cutIo.wesl`). `planes` holds `viewCount × 24` floats.
+ * integer-exact (see `cutIo.wesl`). `planes` holds `FLOATS_PER_VIEW` floats per view; none means no prune.
  */
 export function writeStarCutUniforms(
   out: ArrayBuffer,
@@ -109,7 +113,6 @@ export function writeStarCutUniforms(
     readonly leafMarginRad: number;
     readonly opacity: number;
     readonly planes: Float32Array;
-    readonly viewCount: number;
   },
 ): void {
   const i32 = new Int32Array(out);
@@ -129,9 +132,10 @@ export function writeStarCutUniforms(
   u32[9] = cut.budgetTypical;
   f32[10] = cut.worldSpread;
   f32[11] = cut.leafMarginRad;
-  const viewCount = cut.viewCount <= CUT_MAX_VIEWS ? cut.viewCount : 0;
+  const views = cut.planes.length / FLOATS_PER_VIEW;
+  const viewCount = views <= CUT_MAX_VIEWS ? views : 0;
   u32[12] = viewCount;
   u32[13] = catalog.nodes.length;
   f32[14] = cut.opacity;
-  f32.set(cut.planes.subarray(0, viewCount * 24), PLANES_FLOAT_INDEX);
+  f32.set(cut.planes.subarray(0, viewCount * FLOATS_PER_VIEW), PLANES_FLOAT_INDEX);
 }

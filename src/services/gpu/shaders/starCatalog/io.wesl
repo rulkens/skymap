@@ -16,9 +16,6 @@
 //   VSOut      — the vertex/fragment contract (one authoritative
 //                declaration makes @location drift structurally impossible,
 //                the same reasoning bodies/starPoints/io.wesl states).
-//   NodeParams — everything a node's records need that is NOT in the record
-//                itself. Never a buffer: the vertex stage builds one per
-//                instance from the GPU cut's node table (cutIo.wesl).
 //   StarUniforms — the @group(0) per-frame uniform: the shared 80-byte
 //                'CameraUniforms' prefix (rebased vp + viewportPx) followed
 //                by the user's base star-dot size 'sizePx', star-brightness
@@ -28,8 +25,7 @@
 //                ..., pointSizePx, brightness, ... }' shape — the scalars
 //                are source-independent, so they ride the camera uniform that is
 //                already shared/idempotent across every source's draw this frame
-//                (see the renderer header) rather than being duplicated into
-//                every NodeParams block.
+//                (see the renderer header).
 
 import package::lib::camera::CameraUniforms;
 
@@ -104,34 +100,4 @@ struct VSOut {
   // the visual fragments ('fs' / 'fsLinear') declare 'in: VSOut' but ignore it,
   // so carrying it costs the visual pass one unused flat varying and nothing more.
   @location(4) @interpolate(flat) recordIdx: u32,
-};
-
-// One drawn node, as the vertex stage rebuilds it: box origin (camera-relative
-// Mpc), box edge (the record offset's unit is edge / 1024), the node's base
-// index into the records blob, its opacity (source crossfade x LOD fade), and:
-//
-// 'isAggregate' is the leaf-vs-aggregate discriminant the format deliberately
-// keeps OUT of the record (the record's 5 spare bits stay zero — see
-// starCatalogFormat.ts). It comes from the node's childMask (0 ⇒ leaf), never
-// from the octree level,
-// because a fat leaf (a sparse subtree merged into one node) lives at level > 0
-// yet is a leaf whose records are real stars. The vertex stage needs the flag
-// because a leaf record is a POINT source (its real stars) while an aggregate
-// record is an EXTENDED source (a whole subtree collapsed to its box): the glow
-// fills the box footprint for the latter but not the former.
-//
-// 'subtreeStarCount' is the flux-reconstruction multiplier: an aggregate record
-// stores its subtree's MEAN star flux (a summed magnitude would clamp the 7-bit
-// LUT — see mergeFluxAggregate), so the vertex stage multiplies the dequantized
-// mean flux by this count to recover the subtree's summed light. It is 1 for a
-// leaf (each leaf record is one star), which makes the multiply a branchless
-// identity there. The runtime derives it from the node table
-// (`starOctreeIndex`'s `subtreeCounts`).
-struct NodeParams {
-  originRelCamMpc: vec3<f32>,
-  cellScaleMpc: f32,
-  firstRecord: u32,
-  opacity: f32,
-  isAggregate: u32,
-  subtreeStarCount: f32,
 };

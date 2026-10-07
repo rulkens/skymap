@@ -15,6 +15,10 @@ import {
   CUT_WORKGROUP,
   LEAF_BLOCK_SHIFT,
   LEAF_BLOCK_INDEX_SHIFT,
+  GRID_AXIS_BITS,
+  LEVEL_BITS,
+  RECORD_COUNT_SHIFT,
+  DRAW_RECORD_WORDS,
 } from '../../../../src/layers/starCatalog/render/starCutLayout';
 
 function shader(file: string): string {
@@ -30,12 +34,15 @@ function weslConst(text: string, name: string): number {
 describe('starCatalog cut WESL <-> starCutLayout.ts parity', () => {
   const cut = shader('cut.wesl');
   const cutIo = shader('cutIo.wesl');
-  const vertex = shader('vertex.wesl');
 
   it('scalar constants match', () => {
     expect(weslConst(cut, 'CUT_BINS')).toBe(CUT_HIST_WORDS - 1);
-    expect(weslConst(cut, 'LEAF_BLOCK_SHIFT')).toBe(LEAF_BLOCK_SHIFT);
-    expect(weslConst(cut, 'LEAF_BLOCK_INDEX_SHIFT')).toBe(LEAF_BLOCK_INDEX_SHIFT);
+    expect(weslConst(cutIo, 'LEAF_BLOCK_SHIFT')).toBe(LEAF_BLOCK_SHIFT);
+    expect(weslConst(cutIo, 'LEAF_BLOCK_INDEX_SHIFT')).toBe(LEAF_BLOCK_INDEX_SHIFT);
+    expect(weslConst(cutIo, 'GRID_AXIS_BITS')).toBe(GRID_AXIS_BITS);
+    expect(weslConst(cutIo, 'LEVEL_BITS')).toBe(LEVEL_BITS);
+    expect(weslConst(cutIo, 'RECORD_COUNT_SHIFT')).toBe(RECORD_COUNT_SHIFT);
+    expect(weslConst(cut, 'DRAW_RECORD_WORDS')).toBe(DRAW_RECORD_WORDS);
     expect(weslConst(cutIo, 'CUT_MAX_VIEWS')).toBe(CUT_MAX_VIEWS);
   });
 
@@ -45,10 +52,5 @@ describe('starCatalog cut WESL <-> starCutLayout.ts parity', () => {
     expect(cut).toContain(`array<atomic<u32>, ${CUT_HIST_WORDS}>`);
     expect(cut).toContain(`array<atomic<u32>, ${CUT_DRAWS_WORDS}>`);
     expect(cutIo).toContain(`array<vec4<f32>, ${CUT_MAX_VIEWS * 6}>`);
-  });
-
-  it('the vertex stage unpacks leaf-list entries with the same split', () => {
-    expect(vertex).toContain(`entry & 0x${(2 ** LEAF_BLOCK_INDEX_SHIFT - 1).toString(16)}u`);
-    expect(vertex).toContain(`entry >> ${LEAF_BLOCK_INDEX_SHIFT}u`);
   });
 });

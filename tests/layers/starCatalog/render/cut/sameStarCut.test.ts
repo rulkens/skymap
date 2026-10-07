@@ -9,7 +9,6 @@ function frame(over: Partial<StarCutFrame> = {}): StarCutFrame {
     originMpc: [1, 2, 3],
     nowMs: 0,
     planes: new Float32Array(24).fill(0.5),
-    viewCount: 1,
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,

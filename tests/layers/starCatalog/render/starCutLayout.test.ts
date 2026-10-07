@@ -4,6 +4,7 @@ import {
   CUT_NODE_WORDS,
   CUT_MAX_VIEWS,
   CUT_UNIFORM_BYTES,
+  FLOATS_PER_VIEW,
   packStarCutNodes,
   writeStarCutUniforms,
 } from '../../../../src/layers/starCatalog/render/starCutLayout';
@@ -60,8 +61,7 @@ describe('writeStarCutUniforms', () => {
     worldSpread: 1,
     leafMarginRad: 0.001,
     opacity: 1,
-    planes: new Float32Array(24),
-    viewCount: 1,
+    planes: new Float32Array(FLOATS_PER_VIEW),
   };
   const camAtPc = (pc: number) => [pc * SCALE_UNITS.PC_TO_MPC, 0, 0] as const;
 
@@ -78,11 +78,10 @@ describe('writeStarCutUniforms', () => {
 
   it('writes 0 views when more than CUT_MAX_VIEWS are asked for', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    const planes = new Float32Array((CUT_MAX_VIEWS + 1) * 24);
+    const planes = new Float32Array((CUT_MAX_VIEWS + 1) * FLOATS_PER_VIEW);
     writeStarCutUniforms(buf, CATALOG, camAtPc(0), {
       ...cut,
       planes,
-      viewCount: CUT_MAX_VIEWS + 1,
     });
     expect(new Uint32Array(buf)[12]).toBe(0);
   });

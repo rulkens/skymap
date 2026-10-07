@@ -44,8 +44,8 @@
 // ## Flux-integrated glow (the LOD-invisible sizing)
 //
 // The physical target: an aggregate drawn at distance D deposits the same
-// integrated on-screen luminance as its children would if the walker refined
-// it, so the LOD transition is photometrically invisible. Two facts make this
+// integrated on-screen luminance as its children would if it were refined
+// into its children, so the LOD transition is photometrically invisible. Two facts make this
 // a single continuous formula rather than a leaf/aggregate special case:
 //
 //   1. FLUX IS ADDITIVE, AND THE RECORD + COUNT RECONSTRUCT THE SUM.
@@ -56,7 +56,7 @@
 //      mag past the LUT's single-star floor and would clamp to one brightness
 //      (a visible box lattice, and a flux jump when the LOD refines a clamped
 //      node); a mean stays in-window and never clamps. Multiplying the mean
-//      flux by 'node.subtreeStarCount' (the runtime-derived leaf-star count of
+//      flux by 'subtreeStarCount' (the runtime-derived leaf-star count of
 //      the subtree, 1.0 for a leaf) recovers the subtree's SUMMED light. So if
 //      every record deposits L = EXPOSURE * flux, drawing an aggregate
 //      (L = EXPOSURE * mean * N) equals drawing its refined children
@@ -116,10 +116,10 @@
 // EXTENDED source -- its subtree fills its octree box -- so its radius grows
 // to the box's on-screen footprint ('worldLenToPx' of the box edge), which is
 // what makes adjacent far aggregates' glows meet edge-to-edge into a
-// continuous field instead of a lattice of lone dots. 'node.isAggregate' is the
+// continuous field instead of a lattice of lone dots. 'isAgg' is the
 // discriminant (0 = leaf point, 1 = aggregate box); a 'select' picks the box
 // extent for aggregates and 0 for leaves, so the leaf falls out as the
-// extent = 0 case of one formula. The layer derives that flag from the node's
+// extent = 0 case of one formula. The node table's aggregate bit comes from the node's
 // childMask, NOT its octree level -- a fat leaf sits at level > 0 yet is a leaf
 // whose records are real point-source stars. Everything scales by the user's live
 // 'sizePx' slider, which therefore acts as a global spread/sharpness control
@@ -159,7 +159,6 @@
 // they were.
 
 import package::starCatalog::io::VSOut;
-import package::starCatalog::io::NodeParams;
 import package::starCatalog::io::StarUniforms;
 import package::starCatalog::cutIo::CutNode;
 import package::starCatalog::cutIo::CutUniforms;
@@ -168,6 +167,8 @@ import package::starCatalog::cutIo::nodeEdgeCells;
 import package::starCatalog::cutIo::nodeIsAggregate;
 import package::starCatalog::cutIo::nodeRecordCount;
 import package::starCatalog::cutIo::nodeMinCells;
+import package::starCatalog::cutIo::leafEntryNode;
+import package::starCatalog::cutIo::leafEntryBlock;
 import package::starCatalog::tint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
@@ -269,28 +270,22 @@ fn vs(
 ) -> VSOut {
   let shift = cutStream.blockShift;
   let entry = cutList[ii >> shift];
-  let nodeIdx = entry & 0x3fffffu;
-  let n = cutNodes[nodeIdx];
-  let local = ((entry >> 22u) << shift) | (ii & ((1u << shift) - 1u));
-  if (local >= nodeRecordCount(n)) {
+  let nodeIdx = leafEntryNode(entry);
+  let bits = cutNodes[nodeIdx].bits;
+  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
+  if (local >= nodeRecordCount(bits)) {
     // A spare instance of the node's last block: outside the clip volume.
     var skip: VSOut;
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let isAgg = nodeIsAggregate(n);
-  var node: NodeParams;
-  node.originRelCamMpc = nodeMinCells(n, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
-  node.cellScaleMpc = nodeEdgeCells(n) * cut.cellEdgeMpc;
-  node.firstRecord = n.firstRecord;
-  node.opacity = cutOpacity[nodeIdx] * cut.opacity;
-  node.isAggregate = select(0u, 1u, isAgg);
-  node.subtreeStarCount = select(1.0, f32(n.subtreeCount), isAgg);
-  return shadeRecord(node, n.firstRecord + local, vi);
-}
+  let isAgg = nodeIsAggregate(bits);
+  let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
+  let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
+  let base = cutNodes[nodeIdx].firstRecord + local;
+  let nodeOpacity = cutOpacity[nodeIdx] * cut.opacity;
+  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].subtreeCount), isAgg);
 
-// Everything past "which node, which record".
-fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   // Two u32 per record in the repacked blob.
   let lo = records[base * 2u + 0u];
   let hi = records[base * 2u + 1u];
@@ -305,7 +300,7 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
 
   // World position, camera-relative.
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
-  let worldRelCam = node.originRelCamMpc + offset * node.cellScaleMpc;
+  let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
 
   // Inverse-square attenuation: 'worldRelCam' is the record's camera-relative
   // position (Mpc), computed here BEFORE corner expansion, so its squared length
@@ -322,10 +317,10 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   // for. For a leaf this is one star's flux; for an aggregate it is the
   // subtree's MEAN star flux (mergeFluxAggregate stores -2.5*log10(sum/N), the
   // mean, because a summed magnitude would clamp the 7-bit LUT). Multiplying by
-  // 'node.subtreeStarCount' recovers the subtree's SUMMED flux -- and that count
+  // 'subtreeStarCount' recovers the subtree's SUMMED flux -- and that count
   // is 1.0 for a leaf, so leaf and aggregate share one formula (header fact 1).
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  let flux = pow(10.0, -0.4 * absMag) * node.subtreeStarCount;
+  let flux = pow(10.0, -0.4 * absMag) * subtreeStarCount;
   // Intrinsic -> apparent: dim by the inverse-square factor computed above.
   let fluxApp = flux * atten;
 
@@ -335,17 +330,17 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   // 'worldLenToPx' of the box edge gives its full on-screen span;
   // AGGREGATE_BOX_RADIUS_FACTOR turns that into the dot radius, and the
   // Gaussian's soft tail spills a little past the box so adjacent glows overlap. 'select' picks the
-  // box extent only for aggregates ('node.isAggregate' != 0); a leaf gets
+  // box extent only for aggregates ('isAgg' != 0); a leaf gets
   // extent 0 -> floor. All scaled by the user's size slider (spread control;
   // luminance is invariant to radius -- header fact 2).
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
-  let extentMpc = select(0.0, node.cellScaleMpc, node.isAggregate != 0u);
+  let extentMpc = select(0.0, cellScaleMpc, isAgg);
   let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
   // Glow overlap spreads AGGREGATE glows past their box footprint so the lattice
   // dissolves; leaves (point sources) select 1.0 and are untouched. Folded into
   // 'rPx' here, so the peak's /(K*rPx^2) below divides by 'glowOverlap^2' too --
   // total luminance stays conserved (header 'Glow overlap' + fact 2).
-  let overlap = select(1.0, u.glowOverlap, node.isAggregate != 0u);
+  let overlap = select(1.0, u.glowOverlap, isAgg);
   // Floor first (legibility), then the size/overlap spread -- 'rPxRaw' is the
   // radius the luminance-conserving photometry wants. The absolute px CEILING
   // applies last and bounds only the DRAWN radius, so STAR_GLOW_MAX_PX caps
@@ -389,7 +384,7 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   let intensity = select(
     intensityRaw,
     min(intensityRaw, u.aggregateIntensityCap),
-    node.isAggregate != 0u
+    isAgg
   );
 
   // Near-sprite dissolve -- retire the wobbling sprite as its would-be sphere
@@ -459,8 +454,8 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   // in no fixed order, so a constant depth would let the draw order — different
   // from one frame to the next — pick between two overlapping dots. The rank
   // spreads the band over [1, 1.9) x eps, still under the scene band at 2 x eps;
-  // log2 of apparent flux spans about -100..0, so 128 keeps it inside [0, 1).
-  let pickRank = clamp(0.9 + log2(max(fluxApp, 1e-30)) / 128.0, 0.0, 0.9);
+  // log2 of apparent flux spans about -100..+21, so (log2 + 100) / 128 keeps it inside [0, 1].
+  let pickRank = 0.9 * clamp((log2(max(fluxApp, 1e-30)) + 100.0) / 128.0, 0.0, 1.0);
   let pickZ = out.clip.w * PICK_BAND_SURVEY_STAR_EPS * (1.0 + pickRank);
   out.clip.z = select(out.clip.z, pickZ, u.pickPass == 1u);
 
@@ -469,7 +464,7 @@ fn shadeRecord(node: NodeParams, base: u32, vi: u32) -> VSOut {
   // Dequant BP−RP colour (bin centre) → stellar spectral tint.
   let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
   out.color = starTint(bpRp);
-  out.opacity = node.opacity;
+  out.opacity = nodeOpacity;
   out.intensity = intensity;
   // The record's bin-global index (its slice base + in-node index), already
   // computed above as 'base' to vertex-pull the record. The pick fragment packs

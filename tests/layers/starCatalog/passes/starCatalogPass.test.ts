@@ -50,7 +50,6 @@ function makeFrame(originMpc: Vec3): StarCutFrame {
     originMpc,
     nowMs: 0,
     planes: new Float32Array(24),
-    viewCount: 1,
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,

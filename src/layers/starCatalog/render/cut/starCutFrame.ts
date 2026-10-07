@@ -5,13 +5,17 @@ import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarCutFrame } from '../../@types/StarCutFrame';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { STAR_SIZE_REF_PX } from '../../../../data/starCullSlack';
+import {
+  STAR_GLOW_MIN_PX,
+  STAR_PICK_MIN_RADIUS_PX,
+  STAR_SIZE_REF_PX,
+} from '../../../../data/starCullSlack';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
-import { starCullMargins } from '../../../../utils/star/starCullMargins';
 import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
 import { starSourcesInBand } from './starSourcesInBand';
+import { FLOATS_PER_VIEW } from '../starCutLayout';
 
 /**
  * This frame's GPU cut inputs, or `null` when no source is on and in band.
@@ -33,12 +37,15 @@ export function starCutFrame(
 
   const prune = views.every((v) => v.slabs?.[NEAR0] !== undefined);
   const viewCount = prune ? views.length : 0;
-  const planes = new Float32Array(viewCount * 24);
+  const planes = new Float32Array(viewCount * FLOATS_PER_VIEW);
   // The widest view (fewest pixels per radian) needs the most angular slack.
   let pxPerRad = Infinity;
   for (let v = 0; v < viewCount; v++) {
     const rebased = narrowMat4(rebaseViewProj(views[v]!.slabs[NEAR0]!.vp, originMpc));
-    frustumPlanesFromViewProj(rebased, planes.subarray(v * 24, v * 24 + 24));
+    frustumPlanesFromViewProj(
+      rebased,
+      planes.subarray(v * FLOATS_PER_VIEW, (v + 1) * FLOATS_PER_VIEW),
+    );
     pxPerRad = Math.min(pxPerRad, views[v]!.drawPxPerRad);
   }
 
@@ -46,11 +53,12 @@ export function starCutFrame(
     originMpc,
     nowMs: view.snapshot.nowMs,
     planes,
-    viewCount,
     refineThreshold: settings.refineThreshold,
     worldSpread: Math.max(1, (settings.sizePx / STAR_SIZE_REF_PX) * settings.glowOverlap),
-    // Pick, not leaf: the widest footprint any consumer paints (`starCullMargins`).
-    leafMarginRad: starCullMargins(settings.sizePx, pxPerRad).pick,
+    // Pick, not leaf: the widest footprint any consumer paints.
+    leafMarginRad:
+      Math.max(STAR_GLOW_MIN_PX * (settings.sizePx / STAR_SIZE_REF_PX), STAR_PICK_MIN_RADIUS_PX) /
+      pxPerRad,
     sources: inBand.map(({ source, entry, crossfade }) => ({
       source,
       opacity: crossfade,

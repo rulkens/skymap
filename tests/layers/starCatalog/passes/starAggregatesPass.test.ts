@@ -44,7 +44,6 @@ const FRAME: StarCutFrame = {
   originMpc: [0, 0, 0],
   nowMs: 0,
   planes: new Float32Array(24),
-  viewCount: 1,
   refineThreshold: 0.05,
   worldSpread: 1,
   leafMarginRad: 0.001,

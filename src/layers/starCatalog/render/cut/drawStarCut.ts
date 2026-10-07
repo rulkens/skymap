@@ -1,6 +1,6 @@
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
-import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
+import type { StarCatalogRenderer } from '../../@types/StarCatalogRenderer';
 import type { StarDrawStream } from '../../@types/StarDrawStream';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -13,13 +13,13 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
  * brighter than the same star in the direct view beside it.
  */
 export function drawStarCut(
-  runtime: StarCatalogRuntime,
+  renderer: StarCatalogRenderer,
   pass: GPURenderPassEncoder,
   view: SlabView,
   ctx: FrameView,
   stream: StarDrawStream,
 ): void {
-  const frame = runtime.renderer.getFrameCut();
+  const frame = renderer.getFrameCut();
   if (frame === null) return;
   const capture = ctx.viewKind === 'capture';
   // About the CUT's origin, not this view's eye: identical for every source,
@@ -29,7 +29,7 @@ export function drawStarCut(
   // frustum in fewer rows (the aggregate stream's half-res offscreen).
   const pxPerRad = ctx.drawPxPerRad * (view.viewportPx[1] / ctx.canvasSize.height);
   for (const { source } of frame.sources) {
-    runtime.renderer.drawCut(pass, {
+    renderer.drawCut(pass, {
       source,
       stream,
       capture,

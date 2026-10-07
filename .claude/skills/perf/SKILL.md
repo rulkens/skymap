@@ -59,7 +59,8 @@ fill-bound" should come from a harness run, not intuition. Full reference:
   `node_modules` and `public/data` into it, start a second dev server (Vite auto-increments the
   port), and alternate runs A-B-A-B across the two URLs instead of measuring all-A then all-B.
   Remove the scratch worktree after use.
-- **CPU-side frame costs.** Bench against the REAL .bin with a tsx scratchpad script that
+- **CPU-side frame costs.** `npm run perf:cpu` prints main-thread ms per frame row at the perf
+  poses. To bench one function in isolation, use the REAL .bin with a tsx scratchpad script that
   drives the actual code path (name it `.mts`: the scratchpad has no `package.json`, so a plain
   `.ts`/`.js` script runs as CJS). "GC churn" diagnoses are usually inline allocation + cache
   pressure in disguise; measure before optimizing.

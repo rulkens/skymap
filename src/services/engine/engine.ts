@@ -68,7 +68,6 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import { coreSelectionRows } from './selection/coreSelectionRows';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
-import { cpuSpans } from '../../utils/perf/cpuSpans';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -247,7 +246,6 @@ export function createEngine(
           const intervalMs = frameStats.lastStartMs === 0 ? 0 : start - frameStats.lastStartMs;
           frameStats.lastStartMs = start;
           frameRef.current();
-          if (cpuSpans.on) cpuSpans.add('frame', start);
           const next = updateFrameStats(frameStats, {
             intervalMs,
             cpuMs: performance.now() - start,

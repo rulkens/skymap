@@ -7,7 +7,7 @@
  * .wesl file, derives its std140 float offsets, then drives the REAL packer
  * with a distinct sentinel per field and asserts each sentinel lands where
  * the struct — not the packer — says it should. Follows the
- * `atmosphereUniformsLayout.parity.test.ts` / `nodeParamsLayout.test.ts`
+ * `atmosphereUniformsLayout.parity.test.ts`
  * precedent for locating/parsing the struct and computing WGSL alignment;
  * the embedded `cam: CameraUniforms` prefix is treated as an opaque 80-byte
  * block, its own byte-for-byte parity living in `cameraUniforms.test.ts`.

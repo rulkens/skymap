@@ -8,6 +8,7 @@ import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from './StarDrawStream';
 import type { StarCutFrame } from './StarCutFrame';
+import type { StarCutDraw } from './StarCutDraw';
 
 export type StarCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
@@ -26,14 +27,6 @@ export type StarCutGpu = {
    */
   submitCapture(frame: StarCutFrame): void;
   /** `null` until that cut (the frame's, or the capture's) has run for the source. */
-  drawOf(
-    source: SourceType,
-    stream: StarDrawStream,
-    capture: boolean,
-  ): {
-    readonly bindGroup: GPUBindGroup;
-    readonly indirect: GPUBuffer;
-    readonly indirectOffset: number;
-  } | null;
+  drawOf(source: SourceType, stream: StarDrawStream, capture: boolean): StarCutDraw | null;
   destroy(): void;
 };

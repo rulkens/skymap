@@ -56,13 +56,7 @@ export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
           ? ctx.canvasSize
           : ctx.snapshot.renderTargets.sizeOf('star-aggregates');
 
-      drawStarCut(
-        runtime,
-        pass,
-        { ...view, viewportPx: [vw, vh] },
-        ctx,
-        'aggregate',
-      );
+      drawStarCut(runtime.renderer, pass, { ...view, viewportPx: [vw, vh] }, ctx, 'aggregate');
     },
   };
 }

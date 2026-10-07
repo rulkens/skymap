@@ -95,15 +95,15 @@ sim clock reads — the harness sets no time and none is needed.
 
 The GPU harness above is blind to **main-thread** cost: it times render passes, not the JS that
 fills them. `npm run perf:cpu` boots the same `?perf` page, sets each scenario's pose, and
-prints main-thread ms per frame row (`plan:` / `compute:` / `draw:` / `frame`) as mean, median and p90.
+prints main-thread ms per frame row (`plan:` / `compute:` / `draw:` / `frame`) as the mean over the sampled frames.
 
 ```bash
 npm run perf:cpu -- --url http://localhost:5174 --scenario star-field
 ```
 
 Flags: `--url` (default :5173), `--scenario` (repeatable; default all), `--frames` (default 120),
-`--tier`, `--top` rows printed (default 12; star rows always print). The clock ticks in 0.1 ms
-steps, so read a row below 0.1 ms from the `mean` column — median and p90 quantise to 0 there.
+every row prints, slowest first. The clock ticks in 0.1 ms steps, so only a mean over many
+frames resolves a row below that.
 Headless Chromium on a dev box runs the same JS several times faster than a phone.
 
 ## Gotchas
