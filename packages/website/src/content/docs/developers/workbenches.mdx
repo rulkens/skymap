@@ -1,6 +1,6 @@
 ---
-description: Six browser tools in the skymap repository for building the app, three of them published beside it. What each is for, how to open it, and its manual.
-facts: [bench-public-data]
+description: Six browser tools sit beside skymap in its repository. Three are published and you can open them now.
+facts: [bench-public, bench-public-data, bench-local]
 ---
 
 import WorkbenchFigure from '../../../components/WorkbenchFigure.astro';
@@ -9,31 +9,21 @@ import { WORKBENCHES } from '../../../data/workbenches';
 
 export const SITE = new URL(import.meta.env.SITE);
 
-export const how = (id) => {
-  const bench = WORKBENCHES.find((row) => row.id === id);
-  return {
-    cols: '2 4',
-    head: ['', 'How'],
-    rows: [
-      ...(bench.publicPath ? [['Open it', { href: `${SITE.origin}${bench.publicPath}`, label: `${SITE.host}${bench.publicPath}` }]] : []),
-      [
-        'From the source',
-        bench.port
-          ? { text: `Serves it on port ${bench.port}.`, code: `npm run ${bench.script}` }
-          : { text: 'Writes the page and stops.', code: `npm run ${bench.script}` },
-      ],
-      ['Manual', { href: `${REPO_BLOB}/${bench.manual}`, label: bench.manual }],
-    ],
-  };
+export const BENCHES = {
+  head: ['Workbench', 'Published at', 'From the source', 'Manual'],
+  rows: WORKBENCHES.map((bench) => [
+    bench.name,
+    bench.publicPath
+      ? { href: `${SITE.origin}${bench.publicPath}`, label: `${SITE.host}${bench.publicPath}` }
+      : 'Not published',
+    { text: bench.port ? `Port ${bench.port}` : 'Writes the page and stops', code: `npm run ${bench.script}` },
+    { href: `${REPO_BLOB}/${bench.manual}`, label: bench.manual },
+  ]),
 };
 
-<Fact id="bench-not-app" />
+<Fact id="bench-not-app" inline /> They are tools, made for one person at a desk: no welcome screen, no phone layout, and labels in the project’s own shorthand. A published one needs [the same browser as the app](/docs/start/browsers/).
 
-<Fact id="bench-public" />
-
-<Fact id="bench-local" />
-
-A published workbench needs the same browser as the app: see [Browser support and troubleshooting](/docs/start/browsers/). They are tools, made for one person at a desk: no welcome screen, no phone layout, and labels in the project’s own shorthand. The commands are listed again, with every other, under [Command-line tools](/docs/developers/cli/#workbenches).
+<Table {...BENCHES} />
 
 ## Galaxy renderer
 
@@ -43,15 +33,11 @@ Draws one galaxy from a set of parameters: a smooth field of starlight, a map of
 
 <Fact id="bench-galaxy-unused" />
 
-<Table {...how('galaxy')} />
-
 ## MCPM workbench
 
 Runs the [Monte Carlo Physarum Machine](/docs/reference/glossary/#mcpm) in the browser, on the graphics processor, over a box of real galaxies, and shows the web growing as it runs. The density field the app draws was computed elsewhere, by the authors of the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>; this is a port of the simulation itself. A field made here can be saved in the app’s format and shown in the app.
 
 <WorkbenchFigure id="mcpm" />
-
-<Table {...how('mcpm')} />
 
 ## Flow workbench
 
@@ -59,30 +45,20 @@ Loads the <Source id="cf4pp">CF4++</Source> velocity field, a grid of 128 cells 
 
 <WorkbenchFigure id="flow" />
 
-<Table {...how('flow')} />
-
 ## Scene workbench
 
-Views a place rebuilt from survey data, in each form the build makes of it: the points of a laser scan, Gaussian splats trained on aerial photographs, and a textured mesh. An outline drawn here is what the mesh is cut to. The one place so far is Søndermarken, from Denmark’s <Source id="dhm">height model</Source> and <Source id="skraafoto">oblique aerial photographs</Source>.
+Views a place rebuilt from survey data, in each form the build makes of it: the points of a laser scan, Gaussian splats trained on aerial photographs, and a textured mesh. An outline drawn here is what the mesh is cut to. The one place so far is Søndermarken, from Denmark’s <Source id="dhm">height model</Source> and <Source id="skraafoto">oblique aerial photographs</Source>. It reads files that the scene commands write on the same machine, so it is not published.
 
 <WorkbenchFigure id="scene" />
 
-It reads files that the scene commands write on the same machine, so it is not published.
-
-<Table {...how('scene')} />
-
-## Famous-galaxy curator
+## Named-galaxy curator
 
 Prepares the picture of a named galaxy: you choose a source image, frame it, have the foreground stars taken out, and set how its dark sky fades to transparent. The star removal is done by StarNet2, a separate program that has to be installed. The curator writes the result into the repository, which is why it runs only from a copy of it.
 
 <WorkbenchFigure id="curator" />
-
-<Table {...how('curator')} />
 
 ## Structure audit
 
 Not a server but one page, written by a command, of tables on the app’s own source: which folder imports which, cycles of imports, state kept outside the store, unused exports and repeated code.
 
 <WorkbenchFigure id="audit" />
-
-<Table {...how('audit')} />
