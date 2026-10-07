@@ -124,8 +124,25 @@ function initFeedback(): void {
   document.documentElement.append(layer);
 
   const isOverlay = (node: Element): boolean => !!node.closest('[data-feedback-ui], .fb-pins');
+  const shown = (el: Element): boolean => {
+    for (let node: Element | null = el; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < 0.3) return false;
+    }
+    return true;
+  };
+  // elementsFromPoint skips text that lets the pointer through (the flight's captions), and the captions of
+  // every stop share one corner at opacity 0, so the one that is showing is found by its box instead.
+  const clickThroughText = (x: number, y: number): Element | undefined =>
+    [...document.querySelectorAll('p, h1, h2, h3, small, figcaption')].find((el) => {
+      const r = el.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom || isOverlay(el)) return false;
+      return getComputedStyle(el).pointerEvents === 'none' && shown(el);
+    });
   const pick = (x: number, y: number): Element =>
-    document.elementsFromPoint(x, y).find((node) => !isOverlay(node)) ?? document.body;
+    clickThroughText(x, y) ??
+    document.elementsFromPoint(x, y).find((node) => !isOverlay(node)) ??
+    document.body;
   const place = (box: HTMLElement, r: FeedbackRect): void => {
     box.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.width}px;height:${r.height}px`;
   };
