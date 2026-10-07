@@ -260,6 +260,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:repeats'],
+        does: 'Reads every page of the built site and fails when one sourced sentence is printed in full on more pages than the set limit.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:fold'],
         does: 'Opens every page of a running site in several window sizes and fails where a page’s title and lead do not fit the first screen.',
         manual: SITE_TOOLS,
