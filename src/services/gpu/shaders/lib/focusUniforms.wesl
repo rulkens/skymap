@@ -48,6 +48,10 @@ struct FocusUniforms {
 // (>= 40% of the radius) for every category.
 const FOCUS_CORE_FRACTION: f32 = 0.6;
 
+// The multiplier everything outside the focused sphere settles to at full blend.
+// Mirrored in TS (data/focusDimFloor.ts).
+const FOCUS_DIM_FLOOR: f32 = 0.08;
+
 // A multiplier below this takes the instance out of the pick pass: the
 // multiplier is exactly 1.0 for members and at rest, so the cut lands on what
 // the visual pass fades away. Mirrored in TS (data/focusPickExcludeBelow.ts).
@@ -63,6 +67,6 @@ fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
   let inner = min(focus.physicalRadiusMpc, apparent * FOCUS_CORE_FRACTION);
   let d = distance(worldPos, focus.centerApparent.xyz);
   let t = smoothstep(inner, apparent, d);
-  let baseAlpha = mix(1.0, 0.08, t);
+  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, t);
   return mix(1.0, baseAlpha, focus.blend);
 }

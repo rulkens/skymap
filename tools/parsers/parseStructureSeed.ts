@@ -20,22 +20,18 @@
 import type { Length } from '../../src/@types/data/Length';
 import type { NebulaKind } from '../../src/@types/data/structure/NebulaKind';
 import type { StructureId } from '../../src/@types/data/structure/StructureId';
+import { MPC_PER_LENGTH_UNIT } from '../../src/data/mpcPerLengthUnit';
+import { NEBULA_KIND_LABELS } from '../../src/data/structure/nebulaKindLabels';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { STRUCTURE_IDS_BY_SLAB } from '../../src/data/structure/structureIdsBySlab';
 
-const NEBULA_KINDS: readonly string[] = [
-  'emission',
-  'reflection',
-  'planetary',
-  'supernova-remnant',
-  'dark',
-] satisfies readonly NebulaKind[];
+const NEBULA_KINDS: readonly string[] = Object.keys(NEBULA_KIND_LABELS);
 
 // Rows inside the Milky Way have no catalogue in this pipeline, so each names
 // the paper its numbers came from; the slab marks exactly those categories.
 const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SLAB.near0;
 
-const LENGTH_UNITS: readonly string[] = ['pc', 'kpc', 'Mpc'] satisfies readonly Length['unit'][];
+const LENGTH_UNITS: readonly string[] = Object.keys(MPC_PER_LENGTH_UNIT);
 
 /**
  * One featured structure from `structure_anchors.seed.json`.
