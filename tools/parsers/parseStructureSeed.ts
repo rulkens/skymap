@@ -89,6 +89,8 @@ export type StructureSeedEntry = {
    * Required on the Milky Way categories; build-time documentation only.
    */
   source?: string;
+  /** Exact English Wikipedia article title (canonical, after redirects). */
+  wikipedia?: string;
 };
 
 /**
@@ -139,6 +141,9 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
   }
   if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {
     throw new Error(`structure seed: ${e.id} has invalid abell (must be a non-empty string)`);
+  }
+  if (e.wikipedia !== undefined && (typeof e.wikipedia !== 'string' || e.wikipedia.length === 0)) {
+    throw new Error(`structure seed: ${e.id} has invalid wikipedia (must be a non-empty string)`);
   }
   if (e.category === 'nebula') {
     if (!NEBULA_KINDS.includes(e.nebulaKind as string)) {

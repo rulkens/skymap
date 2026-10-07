@@ -74,6 +74,7 @@ type SeedEntry = {
   readonly nebulaKind?: NebulaKind;
   readonly lineOfSightAssumed?: boolean;
   readonly description?: string;
+  readonly wikipedia?: string;
 };
 
 /**
@@ -103,6 +104,8 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
     // each seed entry was chosen for being worth showing.
     featured: true,
     description: a.description,
+    // Key omitted (not `undefined`) when the seed has no article, like `abell`.
+    ...(a.wikipedia !== undefined ? { wikipediaTitle: a.wikipedia } : {}),
     significance: 1,
     physicalRadiusMpc: lengthToMpc(a.physicalRadius),
     apparentRadiusMpc: lengthToMpc(a.apparentRadius),

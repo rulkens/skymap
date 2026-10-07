@@ -14,6 +14,7 @@ import { NEBULA_KIND_LABELS } from '../../../data/structure/nebulaKindLabels';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
 import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import WikipediaRow from '../WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../InfoTip/InfoTip';
 import { TIPS } from '../tooltips';
 import styles from '../cardChrome.module.css';
@@ -92,6 +93,12 @@ function StructureDetailCard({
           <DescriptionBlock text={target.description} />
         )}
       </div>
+
+      {target.wikipediaTitle && (
+        <div className={styles.cardSection}>
+          <WikipediaRow title={target.wikipediaTitle} />
+        </div>
+      )}
     </div>
   );
 }

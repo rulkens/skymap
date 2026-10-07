@@ -148,6 +148,8 @@ Seed rows state `distance`, `physicalRadius` and `apparentRadius` as `{ "value":
 
 Three optional seed fields belong to the Milky Way categories (those whose registry `slab` is `near0`): `nebulaKind` (`emission` | `reflection` | `planetary` | `supernova-remnant` | `dark`) is required on a `nebula` row and rejected elsewhere; `lineOfSightAssumed` (boolean) is accepted on `galactic-centre` rows only, marking a distance assumed equal to the Centre's; `source` (a survey, paper or bibcode) is required and non-empty on every `near0` row and says where its distance and radii came from. `source` is build-time documentation, never read at runtime.
 
+Any seed row may carry `wikipedia`, the exact English Wikipedia article title (canonical, after redirects) that the info card links to; it is never derived from the name, and a row without one shows no link.
+
 ```bash
 npm run fetch-structures    # MCXC + MSCC from CDS VizieR, verifies .sha256
 npm run build-tiers         # structures build reads the same public/data/ tree

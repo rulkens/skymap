@@ -91,6 +91,10 @@ describe('Milky Way seed fields', () => {
     expect(() => validateStructureSeedEntry(e)).toThrow(/lineOfSightAssumed/);
   });
 
+  it('rejects an empty wikipedia title', () => {
+    expect(() => validateStructureSeedEntry(baseEntry({ wikipedia: '' }))).toThrow(/wikipedia/);
+  });
+
   it('rejects a Milky Way row without source', () => {
     const e = milkyWay({ source: undefined });
     expect(() => validateStructureSeedEntry(e)).toThrow(/source/);

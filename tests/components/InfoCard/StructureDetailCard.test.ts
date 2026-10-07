@@ -47,6 +47,21 @@ describe('StructureDetailCard', () => {
     expect(container.textContent).not.toMatch(/Abell/);
   });
 
+  it('shows a Wikipedia link when the record has a title and none when it does not', () => {
+    render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, wikipediaTitle: 'Virgo Cluster' },
+      }),
+    );
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Virgo_Cluster',
+    );
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Wikipedia/);
+  });
+
   it('shows the Galaxies row when a member count is supplied', () => {
     render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 42 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();

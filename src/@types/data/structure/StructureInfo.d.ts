@@ -50,6 +50,12 @@ type StructureBase = {
    */
   readonly description?: string;
   /**
+   * Exact English Wikipedia article title for the "Learn more" link.  Curated
+   * per seed row, never derived from the name — a wrong guess links the wrong
+   * article.  Absent for bulk catalog records.
+   */
+  readonly wikipediaTitle?: string;
+  /**
    * Normalized significance in [0,1] driving ring brightness / size weight.
    * Normalized M500 for clusters, normalized Nm for superclusters; featured
    * anchors default to 1.  Optional — falls back to full weight at render.

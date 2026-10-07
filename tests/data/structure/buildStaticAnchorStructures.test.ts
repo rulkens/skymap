@@ -67,11 +67,35 @@ describe('buildStaticAnchorStructures', () => {
 });
 
 /**
- * Group-entry mapping — isolated describe block so the vi.doMock + dynamic
- * import pattern doesn't affect the module cache shared by the tests above.
- *
- * The real seed now carries group entries, but this block keeps an isolated
- * synthetic fixture (injected via vi.doMock before a dynamic import) so the
- * id/category/worldPos wiring is asserted against a single known entry rather
- * than coupling to whichever groups happen to be seeded.
+ * Isolated describe block: vi.doMock + dynamic import keeps the synthetic seed
+ * out of the module cache shared by the tests above, and keeps the assertion
+ * independent of which rows the real seed happens to title.
  */
+describe('buildStaticAnchorStructures wikipedia title', () => {
+  it("carries the seed's wikipedia title onto the record and omits it when absent", async () => {
+    const row = {
+      names: ['Fixture'],
+      category: 'void',
+      raHours: 1,
+      decDeg: 2,
+      distance: { value: 10, unit: 'Mpc' },
+      physicalRadius: { value: 1, unit: 'Mpc' },
+      apparentRadius: { value: 1, unit: 'Mpc' },
+    };
+    vi.resetModules();
+    vi.doMock('../../../data/seeds/structure_anchors.seed.json', () => ({
+      default: [
+        { ...row, id: 'with', wikipedia: 'Boötes void' },
+        { ...row, id: 'without' },
+      ],
+    }));
+    const { buildStaticAnchorStructures: build } =
+      await import('../../../src/data/structure/buildStaticAnchorStructures');
+    const [withTitle, without] = build();
+    vi.doUnmock('../../../data/seeds/structure_anchors.seed.json');
+    vi.resetModules();
+    expect(withTitle!.wikipediaTitle).toBe('Boötes void');
+    expect('wikipediaTitle' in without!).toBe(false);
+  });
+});
+
