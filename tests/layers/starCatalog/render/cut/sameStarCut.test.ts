@@ -1,49 +1,47 @@
 import { describe, it, expect } from 'vitest';
 
 import { sameStarCut } from '../../../../../src/layers/starCatalog/render/cut/sameStarCut';
-import type { StarCutInputs } from '../../../../../src/layers/starCatalog/@types/StarCutInputs';
+import type { StarCutSpec } from '../../../../../src/layers/starCatalog/@types/StarCutSpec';
+import { EYE_SLACK_MPC, PLANE_SLACK } from '../../../../../src/data/starNodeFade';
 import { Source } from '../../../../../src/data/source';
 
-function frame(over: Partial<StarCutInputs> = {}): StarCutInputs {
+function cut(over: Partial<StarCutSpec> = {}): StarCutSpec {
   return {
-    cut: {
-      originMpc: [1, 2, 3],
-      planes: new Float32Array(24).fill(0.5),
-      refineThreshold: 0.05,
-      worldSpread: 1,
-      leafMarginRad: 0.001,
-      sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
-    },
-    nowMs: 0,
-    sizePx: 2.5,
-    brightness: 1,
-    glowOverlap: 1,
-    aggregateIntensityCap: 0.06,
+    originMpc: [1, 2, 3],
+    planes: new Float32Array(24).fill(0.5),
+    refineThreshold: 0.05,
+    worldSpread: 1,
+    leafMarginRad: 0.001,
+    sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
     ...over,
   };
 }
 
-function withCut(over: Partial<StarCutInputs['cut']>): StarCutInputs {
-  return frame({ cut: { ...frame().cut, ...over } });
+function planesWith(index: number, delta: number): Float32Array {
+  const planes = new Float32Array(24).fill(0.5);
+  planes[index] = 0.5 + delta;
+  return planes;
 }
 
 describe('sameStarCut', () => {
-  it('treats frames with identical cut inputs as the same, whatever nowMs or the shader scalars', () => {
-    expect(sameStarCut(frame(), frame({ nowMs: 99, brightness: 3, sizePx: 9 }))).toBe(true);
-    expect(sameStarCut(null, null)).toBe(true);
+  it('treats identical specs as the same', () => {
+    expect(sameStarCut(cut(), cut())).toBe(true);
   });
 
-  it('differs when the origin moves, a plane changes, or one side is null', () => {
-    expect(sameStarCut(frame(), withCut({ originMpc: [1, 2, 3.0001] }))).toBe(false);
-    const planes = new Float32Array(24).fill(0.5);
-    planes[7] = 0.6;
-    expect(sameStarCut(frame(), withCut({ planes }))).toBe(false);
-    expect(sameStarCut(frame(), null)).toBe(false);
-    expect(sameStarCut(null, frame())).toBe(false);
+  it('absorbs an eye move or plane change within the slack, not beyond it', () => {
+    expect(sameStarCut(cut(), cut({ originMpc: [1, 2, 3 + EYE_SLACK_MPC / 2] }))).toBe(true);
+    expect(sameStarCut(cut(), cut({ originMpc: [1, 2, 3 + EYE_SLACK_MPC * 2] }))).toBe(false);
+    expect(sameStarCut(cut(), cut({ planes: planesWith(7, PLANE_SLACK / 2) }))).toBe(true);
+    expect(sameStarCut(cut(), cut({ planes: planesWith(7, PLANE_SLACK * 2) }))).toBe(false);
   });
 
-  it('differs when a source row changes, including its fade multiplier', () => {
+  it('differs when the plane count changes, e.g. a view is added', () => {
+    expect(sameStarCut(cut(), cut({ planes: new Float32Array(48).fill(0.5) }))).toBe(false);
+  });
+
+  it('differs on any other field, including a source fade multiplier', () => {
+    expect(sameStarCut(cut(), cut({ refineThreshold: 0.06 }))).toBe(false);
     const row = { source: Source.GaiaStars, opacity: 0.5, budgetTypical: 100 };
-    expect(sameStarCut(frame(), withCut({ sources: [row] }))).toBe(false);
+    expect(sameStarCut(cut(), cut({ sources: [row] }))).toBe(false);
   });
 });

@@ -1,11 +1,19 @@
-import type { StarCutInputs } from '../../@types/StarCutInputs';
+import type { StarCutSpec } from '../../@types/StarCutSpec';
+import { EYE_SLACK_MPC, PLANE_SLACK } from '../../../../data/starNodeFade';
 import { sameStructure } from '../../../../utils/object/sameStructure';
 
 /**
- * Whether two frames ask the GPU for the same cut: `cut` compared whole, so
- * `nowMs` and the shade scalars alone never count as a change.
+ * Whether two cut specs ask the GPU for the same cut. Eye and frustum planes
+ * match within a slack (a camera riding a moving body never repeats them
+ * exactly); every other field must match exactly, including ones added later.
  */
-export function sameStarCut(a: StarCutInputs | null, b: StarCutInputs | null): boolean {
-  if (a === null || b === null) return a === b;
-  return sameStructure(a.cut, b.cut);
+export function sameStarCut(a: StarCutSpec, b: StarCutSpec): boolean {
+  const { originMpc: eyeA, planes: planesA, ...restA } = a;
+  const { originMpc: eyeB, planes: planesB, ...restB } = b;
+  return (
+    Math.hypot(eyeA[0] - eyeB[0], eyeA[1] - eyeB[1], eyeA[2] - eyeB[2]) <= EYE_SLACK_MPC &&
+    planesA.length === planesB.length &&
+    planesA.every((v, i) => Math.abs(v - planesB[i]!) <= PLANE_SLACK) &&
+    sameStructure(restA, restB)
+  );
 }

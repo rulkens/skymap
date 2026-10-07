@@ -1,6 +1,6 @@
 /**
  * Everything that determines which nodes the GPU cut keeps. `sameStarCut`
- * compares it whole, so every field, including any added later, is compared without a list.
+ * compares it whole (eye and planes within a slack), so a field added later is compared without a list.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
