@@ -19,6 +19,8 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
+import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';
+import { FOCUS_PICK_EXCLUDE_BELOW } from '../../../data/focusPickExcludeBelow';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { STAR_CAPTION_KIND } from './starCaptionKinds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -89,13 +91,19 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       occluders: sceneOccluderBodies(state, ctx),
     };
 
-    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) =>
-      composeForegroundCaption(
+    const { focus } = ctx.snapshot;
+    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) => {
+      const composed = composeForegroundCaption(
         composeCtx,
         label,
         label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody,
-      ),
-    );
+      );
+      // A name is a click target for its star, so it leaves the pick with the
+      // star: nothing the focus dims is selectable.
+      return focusAlphaMultiplier(label.worldPos, focus) < FOCUS_PICK_EXCLUDE_BELOW
+        ? { ...composed, pickId: undefined }
+        : composed;
+    });
 
     return { labels, awake: false };
   };

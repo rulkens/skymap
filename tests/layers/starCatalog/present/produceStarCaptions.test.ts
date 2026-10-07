@@ -7,6 +7,8 @@
  * `produceSceneBodyCaptions.test.ts`.
  */
 
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import { describe, it, expect } from 'vitest';
 
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/present/produceStarCaptions';
@@ -52,9 +54,9 @@ const NO_STARS_LOADED: StarRowFixture = {
 
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
-function makeCtx(camPos: Vec3, focusBlend = 0): FrameView {
+function makeCtx(camPos: Vec3, focusBlend = 0, focus: FocusUniformsValue = ZERO_FOCUS): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend },
+    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend, focus },
     cam: { distance: 5e-4 },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -169,6 +171,20 @@ describe('produceStarCaptions', () => {
       source: Source.Sun,
       index: 0,
     });
+  });
+
+  it('a star outside the focused sphere keeps its caption but loses its pick', () => {
+    // A parsec-sized sphere a kiloparsec away: every seeded star is outside it.
+    const farFocus: FocusUniformsValue = {
+      center: [1e-3, 0, 0],
+      apparentRadiusMpc: 1e-6,
+      physicalRadiusMpc: 5e-7,
+      blend: 1,
+    };
+    const out = produceStarCaptions()(makeState(), makeCtx(EARTH_POS, 1, farFocus));
+    const proxima = out.labels.find((l) => l.id === PROXIMA_ID)!;
+    expect(proxima.pickId).toBeUndefined();
+    expect(proxima.fadeAlpha).toBeGreaterThan(0);
   });
 
   it("drops a catalog's captions with its item toggle", () => {
