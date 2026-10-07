@@ -438,7 +438,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'film-silent',
     about: 'app',
-    text: 'The recorder writes pictures only. A film from it has no soundtrack.',
+    text: 'The recorder writes pictures only, so a film from it is silent.',
     source: `${REPO_BLOB}/tools/utils/record/buildFfmpegArgs.ts`,
     sourceLabel: 'the recorder’s encoder settings, in the skymap repository',
     checked: CHECKED,

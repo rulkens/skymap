@@ -63,7 +63,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data notes, ${IN_REPO}`,
     checked: CHECKED,
-    short: 'The planets, and the large moons of Jupiter, Saturn, Uranus and Neptune, are where they were, or will be, at the instant it shows: checked against NASA’s positions for the years 1900 to 2100.',
+    short: 'The planets, and the large moons of Jupiter, Saturn, Uranus and Neptune, are where they were, or will be, at the instant it shows, matching NASA’s positions for the years 1900 to 2100.',
   },
   {
     id: 'io-lap',
