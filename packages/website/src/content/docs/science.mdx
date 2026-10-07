@@ -3,8 +3,6 @@ description: 'Where each position, distance, brightness, colour and size in skym
 facts: [gloss-honesty-words, depart-relative-brightness, depart-default-size, depart-star-tint, depart-black-hole-mass, sci-two-redshifts, pipe-blueshift, card-galaxy-derived, card-star-survey, settings-density-how, sci-surfaces, scene-s-stars, sci-star-observables, sci-galaxy-tilt, sci-galaxy-discs, sci-structures, sci-milky-way-points, sci-tone, sci-colour, sci-deepest, sci-magnitudes, sci-atmospheres, sci-markers, sci-black-hole]
 ---
 
-import Formula from '../../components/Formula.astro';
-
 [The science behind skymap](/science/) uses three words. Here the third is split in two, [modelled](/docs/reference/glossary/#modelled) and drawn.
 
 <Table
@@ -91,7 +89,7 @@ What the rule leaves out is under [Distances and redshift space](/docs/simplific
 
 A galaxy’s absolute magnitude M follows from a catalogued magnitude m and its distance d in megaparsecs.
 
-<Formula say="Absolute magnitude M equals apparent magnitude m, minus 5 times the logarithm of the distance in megaparsecs, minus 25." of={'M = m − 5 log_{10}\\, d − 25'} />
+<Formula say="Absolute magnitude M equals apparent magnitude m, minus 5 times the logarithm of the distance in megaparsecs, minus 25." of={'M = m − 5 \\,log_{10}\\, d − 25'} />
 
 The 25 is the step from megaparsecs to the 10 parsecs at which [absolute magnitude](/docs/reference/glossary/#absolute-magnitude) is defined.
 
@@ -149,7 +147,7 @@ A star’s position, its brightness in the G band and its colour, BP minus RP, a
 
 <Formula
   say="M equals m minus 5 times the logarithm of d over 10 parsecs. Light equals 10 to the power of minus 0.4 M, divided by the square of r over 10 parsecs."
-  of={['M = m − 5 log_{10}(\\frac{d}{10 \\,\\text{pc}})', '\\text{light} = \\frac{10^{−0.4 M}}{(r / 10 \\,\\text{pc})^2}']}
+  of={['M = m − 5 \\,log_{10}(\\frac{d}{10 \\,\\text{pc}})', '\\text{light} = \\frac{10^{−0.4 M}}{(r / 10 \\,\\text{pc})^2}']}
 />
 
 <Fact id="method-star-tint" />

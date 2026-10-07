@@ -5,15 +5,14 @@
  * `<Formula say="…" of="d = \frac{c}{H_0} ∫_0^z \frac{d z′}{E(z′)}" />`
  * between two rules (a list in `of` gives one equation to a line), or
  * `inline` in a sentence. The notation is utils/formulaMathml.ts. `say` is
- * the equation in words, which is what a screen reader is given. Without
- * `of` the slot is set as plain characters, as the first pages wrote them.
+ * the equation in words, which is what a screen reader is given.
  */
 import { formulaMathml } from '../utils/formulaMathml';
 
-type Props = { say: string; of?: string | readonly string[]; inline?: boolean };
+type Props = { say: string; of: string | readonly string[]; inline?: boolean };
 
 const { say, of, inline = false } = Astro.props;
-const lines = of === undefined ? [] : [of].flat();
+const lines = [of].flat();
 ---
 
 {
@@ -23,7 +22,7 @@ const lines = of === undefined ? [] : [of].flat();
     </span>
   ) : (
     <div class="formula" data-embed role="math" aria-label={say}>
-      {lines.length > 0 ? lines.map((line) => <math set:html={formulaMathml(line)} />) : <slot />}
+      {lines.map((line) => <math set:html={formulaMathml(line)} />)}
     </div>
   )
 }
@@ -65,11 +64,5 @@ const lines = of === undefined ? [] : [of].flat();
   .inline {
     color: var(--color-fg);
     white-space: nowrap;
-  }
-
-  /* MDX sets a slot of plain characters in a paragraph of its own; the rules are the block's, not that paragraph's. */
-  .formula :global(p) {
-    margin: 0;
-    color: inherit;
   }
 </style>
