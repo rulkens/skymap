@@ -7,15 +7,13 @@ const GAIA_RECORD = `${REPO_BLOB}/data/raw/gaia/README.md`;
 const VIZIER = 'https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=';
 const CITE_PAPER = 'No licence stated. Cite the paper.';
 /*
- * Catalogues we take from CDS. Their authors state no licence; CDS states its
- * own terms for the copy it serves, by the journal the table came from.
+ * Catalogues we take from CDS. Neither their authors nor CDS state a licence
+ * for them; CDS displays one rule for all it serves. Its page's source also
+ * holds commented-out sentences on AAS and A&A tables, which are not shown
+ * and are not restated here (ATTRIBUTIONS.md, "Catalogue data").
  */
-const CDS_AAS =
-  'No licence stated by the authors. CDS, which serves the copy we use, classes tables from AAS journals as CC BY-NC (non-commercial). Cite the paper.';
-const CDS_AA =
-  'No licence stated by the authors. CDS, which serves the copy we use, says tables from A&A are free for scientific use. Cite the paper.';
-const CDS_OTHER =
-  'No licence stated by the authors or in the catalogue’s ReadMe. CDS, which serves the copy we use, allows scientific use and refers commercial use to the journal. Cite the paper.';
+const CDS_COPY =
+  'No licence stated: none by the authors, none in the catalogue’s ReadMe and none on the page of the copy we use, which CDS serves. CDS says its data are free to use in a scientific context, with the paper cited, and that commercial use follows rules that depend on where the data come from. Ask the authors before any other use. Cite the paper.';
 
 const GALAXIES = 'Galaxies and quasars';
 const STARS = 'Stars';
@@ -30,10 +28,14 @@ const IMAGERY = 'Imagery';
  * download record or the catalogue's own ReadMe; `drawn` from the published
  * galaxy files (16-byte header, 64 bytes per object). Terrain heights, Mars
  * data, 3D models and fonts are not listed: they belong to the credits page.
+ * `entries` names each row's entries of ATTRIBUTIONS.md, whose data pages the
+ * table links to; tests/packages/website/dataPages.test.ts fails when a row
+ * names a licence its entries do not.
  */
 export const DATA_SOURCES: readonly DataSource[] = [
   {
     id: 'sdss',
+    entries: ['sdss'],
     group: GALAXIES,
     name: 'SDSS, the Sloan Digital Sky Survey',
     gives: 'Sky positions, spectroscopic redshifts, five-band magnitudes and shapes of galaxies',
@@ -48,18 +50,20 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: '2mrs',
+    entries: ['2mrs'],
     group: GALAXIES,
     name: '2MRS, the 2MASS Redshift Survey',
     gives: 'Positions, spectroscopic velocities and infrared magnitudes of nearby galaxies over 91 per cent of the sky',
     release: 'Huchra et al. 2012, table 3 (VizieR J/ApJS/199/26)',
     rows: '44,599 galaxies',
     drawn: '34,974',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: `${VIZIER}J/ApJS/199/26`,
     evidence: REGISTRY,
   },
   {
     id: 'glade',
+    entries: ['glade'],
     group: GALAXIES,
     name: 'GLADE, the Galaxy List for the Advanced Detector Era',
     gives: 'An all-sky compilation of galaxies with spectroscopic and photometric redshifts',
@@ -72,6 +76,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'milliquas',
+    entries: ['milliquas'],
     group: GALAXIES,
     name: 'Milliquas, the Million Quasars catalogue',
     gives: 'Positions and redshifts of quasars and other active galactic nuclei, the most distant objects in the scene',
@@ -84,6 +89,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'desi',
+    entries: ['desi'],
     group: GALAXIES,
     name: 'DESI, the Dark Energy Spectroscopic Instrument',
     gives: 'Positions and spectroscopic redshifts in three small regions, one of them a deep cone',
@@ -98,17 +104,19 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'cf4',
+    entries: ['cf4-distances'],
     group: GALAXIES,
     name: 'Cosmicflows-4',
     gives: 'Distances measured without redshift, used for galaxies inside 30 megaparsecs',
     release: 'Tully et al. 2023, table 2 (VizieR J/ApJ/944/94)',
     rows: '55,877 galaxies',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: 'https://arxiv.org/abs/2209.11238',
     evidence: REGISTRY,
   },
   {
     id: 'hyperleda',
+    entries: ['hyperleda'],
     group: GALAXIES,
     name: 'HyperLEDA',
     gives: 'Fallback distances inside 30 megaparsecs, and the tilt and size of GLADE galaxies',
@@ -119,11 +127,12 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: '2mass-xsc',
+    entries: ['2mass-xsc'],
     group: GALAXIES,
     name: '2MASS Extended Source Catalog',
     gives: 'The tilt of 2MRS galaxies on the sky',
     release: 'VizieR VII/233, fetched through the VizieR service',
-    licence: 'No licence stated for the catalogue on the 2MASS pages. We take it from CDS, which allows scientific use and refers commercial use to the catalogue’s ReadMe and journal. Cite Jarrett et al. 2000 and VizieR.',
+    licence: 'No licence stated for the catalogue, on the 2MASS pages or in the ReadMe of the copy we use, which CDS serves. CDS says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from. Cite Jarrett et al. 2000, with the 2MASS acknowledgement.',
     href: `${VIZIER}VII/233`,
     evidence: ATTRIBUTIONS,
     ask: 'This research has made use of the VizieR catalogue access tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier).',
@@ -131,6 +140,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'gaia',
+    entries: ['gaia'],
     group: STARS,
     name: 'Gaia',
     gives: 'Positions, brightness and colour of stars brighter than magnitude 14',
@@ -145,6 +155,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'bailer-jones',
+    entries: ['bailer-jones'],
     group: STARS,
     name: 'Bailer-Jones distances',
     gives: 'A distance estimate for each Gaia star',
@@ -155,6 +166,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'gcns',
+    entries: ['gcns'],
     group: STARS,
     name: 'Gaia Catalogue of Nearby Stars',
     gives: 'Every Gaia star within 100 parsecs, including those fainter than magnitude 14',
@@ -166,17 +178,19 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'hipparcos',
+    entries: ['hipparcos'],
     group: STARS,
     name: 'Hipparcos',
     gives: 'The bright stars that saturate Gaia’s detectors',
     release: 'The 2007 re-reduction, van Leeuwen (VizieR I/311)',
     rows: '117,955 stars',
-    licence: CDS_OTHER,
+    licence: `${CDS_COPY} The table that matches it to Gaia comes from the Gaia archive, whose data are CC BY-NC 3.0 IGO (non-commercial).`,
     href: `${VIZIER}I/311`,
     evidence: GAIA_RECORD,
   },
   {
     id: 'jpl-elements',
+    entries: ['jpl-elements'],
     group: SOLAR,
     name: 'JPL orbital elements',
     gives: 'The orbits of the planets, the Moon and the other moons',
@@ -187,6 +201,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'horizons',
+    entries: ['horizons'],
     group: SOLAR,
     name: 'JPL Horizons',
     gives: 'Reference positions that our orbits are corrected to, for 8 planets and 18 moons',
@@ -197,17 +212,19 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 's-stars',
+    entries: ['s-stars'],
     group: STARS,
     name: 'Stars orbiting Sagittarius A*',
     gives: 'The orbits of 40 stars around the black hole at the centre of the Milky Way',
     release: 'Gillessen et al. 2017, table 3, plus one star from the GRAVITY Collaboration 2026',
     rows: '40 orbits',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: 'https://arxiv.org/abs/1611.09144',
     evidence: ATTRIBUTIONS,
   },
   {
     id: 'mcpm',
+    entries: ['mcpm-vac'],
     group: FIELDS,
     name: 'SDSS Cosmic Slime catalogue',
     gives: 'The density field drawn as the cosmic web glow',
@@ -218,6 +235,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'cf4pp',
+    entries: ['cf4pp'],
     group: FIELDS,
     name: 'CF4++ flow field',
     gives: 'The motion of galaxies apart from the expansion, drawn in the Cosmic Flows exhibit',
@@ -228,28 +246,31 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'mcxc',
+    entries: ['mcxc'],
     group: FIELDS,
     name: 'MCXC, a catalogue of X-ray galaxy clusters',
     gives: 'Positions, redshifts and sizes for the cluster markers',
     release: 'Piffaretti et al. 2011 (VizieR J/A+A/534/A109)',
     rows: '1,743 clusters',
-    licence: CDS_AA,
+    licence: CDS_COPY,
     href: `${VIZIER}J/A%2BA/534/A109`,
     evidence: REGISTRY,
   },
   {
     id: 'mscc',
+    entries: ['mscc'],
     group: FIELDS,
     name: 'MSCC, the Main SuperCluster Catalogue',
     gives: 'Positions and extents for the supercluster markers',
     release: 'Chow-Martínez et al. 2014 (VizieR J/MNRAS/445/4073)',
     rows: '601 superclusters',
-    licence: CDS_OTHER,
+    licence: CDS_COPY,
     href: `${VIZIER}J/MNRAS/445/4073`,
     evidence: REGISTRY,
   },
   {
     id: 'blue-marble',
+    entries: ['nasa-blue-marble'],
     group: IMAGERY,
     name: 'NASA Blue Marble',
     gives: 'Earth’s surface, clouds and night lights',
@@ -260,6 +281,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'eox',
+    entries: ['eox'],
     group: IMAGERY,
     name: 'EOxCloudless',
     gives: 'Sharper satellite imagery of Earth in chosen regions',
@@ -270,6 +292,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'geodanmark',
+    entries: ['geodanmark'],
     group: IMAGERY,
     name: 'GeoDanmark orthophoto',
     gives: 'Aerial photography of one park in Copenhagen at 10 centimetres per pixel',
@@ -280,6 +303,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'solar-system-scope',
+    entries: ['solar-system-scope'],
     group: IMAGERY,
     name: 'Solar System Scope',
     gives: 'Surface maps of seven planets and the Moon, and Saturn’s rings',
@@ -290,6 +314,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'usgs-nasa-moons',
+    entries: ['usgs-galilean', 'usgs-enceladus', 'photojournal-saturn-moons', 'usgs-pluto-charon', 'usgs-triton', 'schenk-uranian'],
     group: IMAGERY,
     name: 'USGS and NASA moon mosaics',
     gives: 'Surface maps of Pluto, Charon and the moons of Jupiter, Saturn, Uranus and Neptune',

@@ -1,5 +1,5 @@
 ---
-/* Credits — who made the images and catalogues Home shows, each linked to its source and licence. */
+/* Credits — who made the images and catalogues Home shows: each name a link to its source, its licence in words, and one way to the credits page for the terms in full. */
 import { DATA_CREDITS, IMAGE_CREDITS } from '../data/credits';
 import { sitePath } from '../utils/sitePath';
 
@@ -18,15 +18,14 @@ const groups = [
         {group.credits.map((credit, i) => (
           <>
             {i > 0 && '; '}
-            <a href={credit.href}>{credit.name}</a> (
-            {credit.licenceHref ? <a href={credit.licenceHref}>{credit.licence}</a> : credit.licence})
+            <a href={credit.href}>{credit.name}</a> ({credit.licence})
           </>
         ))}
         .
       </p>
     ))
   }
-  <p>Full credits, with the acknowledgements some releases require, are on the <a href={sitePath('/docs/credits/')}>credits page</a>.</p>
+  <p>The acknowledgements some releases require, and every source’s terms in full, are on the <a href={sitePath('/docs/credits/')}>credits page</a>.</p>
 </section>
 
 <style>

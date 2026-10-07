@@ -13,9 +13,12 @@ import DocLink from '../../components/DocLink.astro';
 import DocTable from '../../components/DocTable.astro';
 import Example from '../../components/Example.astro';
 import FactText from '../../components/FactText.astro';
+import Flow from '../../components/Flow.astro';
 import Keys from '../../components/Keys.astro';
 import Links from '../../components/Links.astro';
 import Note from '../../components/Note.astro';
+import RepoLink from '../../components/RepoLink.astro';
+import SourceLink from '../../components/SourceLink.astro';
 import View from '../../components/View.astro';
 import Docs from '../../layouts/Docs.astro';
 
@@ -48,6 +51,9 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       Keys,
       Note,
       Caveat,
+      Source: SourceLink,
+      Flow,
+      Repo: RepoLink,
     }}
   />
 </Docs>

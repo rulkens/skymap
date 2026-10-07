@@ -1,0 +1,220 @@
+---
+/*
+ * DataEntryRecord — one source as a data page prints it, in the order a
+ * reader asks: may I use it, what is it in the app, what do I print (rows of
+ * a summary, the credit last because it can be long); its licence and terms
+ * as a quotation of the record; what it is, with a picture, and who made it;
+ * where its files enter the build, the registry's rows folded away. Licence,
+ * credit, makers and files are the record's or the registry's; the rest is
+ * data/dataSourceNotes.ts. `level` is the depth of its headings: 2 on a page
+ * of its own, 3 as a section of its family's page, where rows stand for sections.
+ */
+import type { DataEntry } from '../@types/DataEntry';
+import { DATA_FAMILIES_USED, DATA_USES } from '../data/dataPages';
+import { DATA_SOURCE_NOTES } from '../data/dataSourceNotes';
+import { DATA_SOURCES } from '../data/dataSources';
+import { formatDate } from '../utils/formatDate';
+import Caveat from './Caveat.astro';
+import DocFigure from './DocFigure.astro';
+import DocLink from './DocLink.astro';
+import DocTable from './DocTable.astro';
+import FactText from './FactText.astro';
+import RecordText from './RecordText.astro';
+import Recorded from './Recorded.astro';
+import Row from './Row.astro';
+import UseTerms from './UseTerms.astro';
+import View from './View.astro';
+
+type Props = { entry: DataEntry; level: 2 | 3 };
+
+const { entry, level } = Astro.props;
+const H = `h${level}` as 'h2' | 'h3';
+const { bullets, use, checked, section, sectionNotes } = entry.record;
+const note = DATA_SOURCE_NOTES[entry.id];
+const family = DATA_FAMILIES_USED.find((row) => row.id === entry.family)!;
+// On a page of its own a heading's anchor is its words; on a shared page it carries the entry's id, to stay one of a kind.
+const anchor = (name: string) => (level === 2 ? name : `${entry.id}-${name}`);
+const inTable = DATA_SOURCES.some((row) => row.entries.includes(entry.id));
+// The Checked bullet opens with the date, which the line over the quotation gives in words.
+const read = (bullets.Checked ?? '').replace(/^\d{4}-\d{2}-\d{2}[:;,.]?\s*/, '');
+const about = [
+  // A page of its own opens on a sentence about the source; the record's own wording follows here.
+  [level === 2 ? 'In the record’s words' : 'What it is', bullets.What],
+  ['Made by', bullets.By],
+  ['Where it comes from', bullets.Upstream],
+  ['Changed by us', bullets.Modified],
+].filter(([, text]) => text);
+const byHand = entry.files.filter((file) => !file.fetcher).length;
+---
+
+<dl data-embed>
+  <Row label="Use">
+    {
+      use.map((term) => (
+        <>
+          <UseTerms use={[term]} />
+          <p class="small">
+            <RecordText text={DATA_USES[term]} phrase />
+          </p>
+        </>
+      ))
+    }
+  </Row>
+  {
+    note?.shows && (
+      <Row label="In the app">
+        <p>{note.shows}</p>
+        {(note.scene || note.setting || inTable) && (
+          <p class="small tap-links">
+            {note.scene && <DocLink href={`/docs/start/scene/#${note.scene}`}>In “What is in the scene”</DocLink>}
+            {note.setting && <DocLink href={`/docs/reference/settings/#${note.setting}`}>Its switch in “All settings”</DocLink>}
+            {inTable && <DocLink href="/science/#sources">In the Science page’s table of sources</DocLink>}
+          </p>
+        )}
+      </Row>
+    )
+  }
+  {
+    note?.view && (
+      <Row label="Open">
+        <View to={note.view.to}>{note.view.label}</View>
+      </Row>
+    )
+  }
+  <Row label="Credit"><RecordText text={bullets.Attribution ?? ''} lift copy /></Row>
+  {
+    level === 3 && (
+      <>
+        {about.map(([label, text]) => (
+          <Row label={label}>
+            <RecordText text={text!} />
+          </Row>
+        ))}
+        <Row label="In the build">
+          <RecordText text={bullets['Enters skymap'] ?? ''} />
+        </Row>
+      </>
+    )
+  }
+</dl>
+{level === 3 && note?.figure && <DocFigure id={note.figure} />}
+
+<H id={anchor('licence')}>Licence and terms</H>
+<Recorded checked={checked} read={read}>
+  <RecordText text={bullets.Licence ?? ''} lift />
+</Recorded>
+{
+  bullets['Not verified'] && (
+    <Caveat title={`Not verified on ${formatDate(checked)}`}>
+      <RecordText text={bullets['Not verified']} />
+    </Caveat>
+  )
+}
+
+{
+  level === 2 && (
+    <>
+      <h2 id="about">What it is and who made it</h2>
+      {note?.figure && <DocFigure id={note.figure} />}
+      {note?.about && <p>{note.about}</p>}
+      {note?.facts?.map((id) => <FactText id={id} />)}
+      <dl data-embed>
+        {about.map(([label, text]) => (
+          <Row label={label}>
+            <RecordText text={text!} />
+          </Row>
+        ))}
+      </dl>
+      <h2 id="build">In the build</h2>
+      <RecordText text={bullets['Enters skymap'] ?? ''} />
+    </>
+  )
+}
+{
+  entry.files.length > 0 && (
+    <>
+      {family.step && (
+        <p>
+          What the build does with {entry.files.length === 1 ? 'this file' : 'these files'} next is on{' '}
+          <DocLink href={`/docs/data/pipeline/#${family.step}`}>From catalogue to pixels</DocLink>.
+        </p>
+      )}
+      <details class="files" data-embed>
+        <summary class="ring small">
+          {entry.files.length} {entry.files.length === 1 ? 'file' : 'files'} in the raw data registry
+        </summary>
+        <DocTable
+          cols="stack"
+          head={['Registry key', 'Path', 'Kept', 'Fetched by']}
+          rows={entry.files.map((file) => [
+            { code: file.key },
+            { code: file.path },
+            file.kept === 'committed' ? 'In the repository' : 'Outside the repository',
+            ...(file.fetcher ? [{ code: file.fetcher }] : []),
+          ])}
+        />
+        {byHand > 0 && (
+          <p class="small">
+            {byHand === entry.files.length ? (entry.files.length === 1 ? 'It was' : 'All were') : `${byHand} of these were`} fetched by
+            hand: the registry names no tool.
+          </p>
+        )}
+      </details>
+    </>
+  )
+}
+{
+  level === 2 && sectionNotes.length > 0 && (
+    <details class="files" data-embed>
+      <summary class="ring small">A note in our licence record on all of its part “{section}”</summary>
+      <Recorded checked={checked}>
+        {sectionNotes.map((text) => (
+          <RecordText text={text} lift />
+        ))}
+      </Recorded>
+    </details>
+  )
+}
+
+<style>
+  dl {
+    margin: 0 0 var(--stack);
+  }
+
+  .small {
+    max-width: var(--doc-measure);
+    margin: 0.25rem 0 0.5rem;
+    color: var(--site-text-dim);
+  }
+
+  /* The record writes a term's meaning as the rest of a line that the term began. */
+  p:not(.tap-links)::first-letter {
+    text-transform: uppercase;
+  }
+
+  /* The links of a row side by side, each a line of its own on a phone. */
+  .tap-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* The developer's part of the page: closed until asked for. The ring fills while it is open (styles/site.css). */
+  .files {
+    margin: 0 0 var(--stack);
+  }
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .files > :global(:not(summary)) {
+    margin-top: 0.5rem;
+  }
+</style>

@@ -1,5 +1,7 @@
 import type { Fact } from '../@types/Fact';
+import { CITATION } from './citation';
 import { REPO_BLOB } from './siteIdentity';
+import { formatDate } from '../utils/formatDate';
 
 const CHECKED = '2026-10-06';
 const IN_REPO = 'in the skymap repository';
@@ -301,7 +303,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-duplicates',
-    text: 'The catalogues overlap. Two rows within 5 arcseconds on the sky and 1 per cent in redshift are treated as one galaxy, kept from SDSS first, then 2MRS, then GLADE, then DESI. Milliquas quasars skip this step.',
+    text: 'The catalogues overlap. Two rows within 5 arcseconds on the sky whose redshifts differ by less than about 0.01 are treated as one galaxy, kept from SDSS first, then 2MRS, then GLADE, then DESI. Milliquas quasars skip this step.',
     source: `${REPO_BLOB}/tools/catalog/crossMatch.ts`,
     sourceLabel: `the cross-match, ${IN_REPO}`,
     checked: CHECKED,
@@ -368,15 +370,15 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-cite-skymap',
     about: 'app',
-    text: 'skymap is archived on Zenodo. The DOI 10.5281/zenodo.20037028 always points to the newest version; version 0.5.0, released on 31 August 2026, has its own DOI, 10.5281/zenodo.22209203.',
-    source: 'https://doi.org/10.5281/zenodo.20037028',
+    text: `skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, ${CITATION.versionDoi ? `has its own DOI, ${CITATION.versionDoi}` : 'gets a DOI of its own from Zenodo, which we print here once it is in the citation file'}.`,
+    source: `https://doi.org/${CITATION.conceptDoi}`,
     sourceLabel: 'skymap on Zenodo',
     checked: CHECKED,
   },
   {
     id: 'sci-cite-file',
     about: 'app',
-    text: 'The repository carries a CITATION.cff file with the same details, which GitHub and reference managers read.',
+    text: 'The repository carries a CITATION.cff file with the author, the title, the version and both DOIs, which GitHub and reference managers read.',
     source: `${REPO_BLOB}/CITATION.cff`,
     sourceLabel: `the citation file, ${IN_REPO}`,
     checked: CHECKED,

@@ -1,0 +1,101 @@
+---
+/*
+ * The credits: a page made from the repository's licence record
+ * (data/dataPages.ts) and not written as text, so every name, maker, credit
+ * and `Use` term on it is the record's own, in the families of the list of
+ * all sources. Only the opening and the two closing sections are written here.
+ */
+import CreditEntry from '../../components/CreditEntry.astro';
+import DocFigure from '../../components/DocFigure.astro';
+import DocLink from '../../components/DocLink.astro';
+import FactText from '../../components/FactText.astro';
+import UseLegend from '../../components/UseLegend.astro';
+import { ISSUES_URL } from '../../data/contact';
+import { DATA_ENTRIES, DATA_FAMILIES_USED } from '../../data/dataPages';
+import { REPO_BLOB } from '../../data/siteIdentity';
+import Docs from '../../layouts/Docs.astro';
+import { formatDate } from '../../utils/formatDate';
+
+const USE = 'How each may be used';
+const OURS = 'skymap itself';
+const REPORT = 'A missing or wrong credit';
+const families = DATA_FAMILIES_USED.map((family) => ({
+  ...family,
+  entries: DATA_ENTRIES.filter((entry) => entry.family === family.id),
+}));
+const headings = [
+  { depth: 2, slug: 'use', text: USE },
+  ...families.map((family) => ({ depth: 2, slug: family.id, text: family.name })),
+  { depth: 2, slug: 'skymap-itself', text: OURS },
+  { depth: 2, slug: 'report', text: REPORT },
+];
+const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!;
+---
+
+<Docs
+  path="/docs/credits/"
+  description="Everyone whose data, imagery, models, fonts and code skymap uses, with the credit each asks for and how each may be used."
+  headings={headings}
+  factIds={[]}
+>
+  <p>
+    skymap is built from other people’s work. Here are all {DATA_ENTRIES.length} sources: who made each, the credit its makers ask for,
+    and how it may be used. A holder’s own words are set apart as a quotation, with a control that copies them.
+  </p>
+  <p>
+    Everything under a name comes from our licence record, the file <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>ATTRIBUTIONS.md</a> in the
+    repository, last compared with the holders’ own pages on {formatDate(checked)}. “Ours” leads into a credit line skymap itself
+    prints. These are terms as stated, not legal advice.
+  </p>
+  <p>
+    To credit a picture or a paper made with skymap, see <DocLink href="/docs/cite/">Cite</DocLink>.
+  </p>
+
+  <p>
+    One frame can hold several of them. Here the telescope is a model of NASA’s, Earth is satellite imagery, and the stars behind
+    both are a catalogue’s.
+  </p>
+  <DocFigure id="hubble" />
+
+  <h2 id="use">{USE}</h2>
+  <p>
+    Beside each name stand one or two of twelve terms from our licence record. A filled mark is a term that limits use or says that
+    nothing was granted; an open mark is free to use on the condition named.
+  </p>
+  <UseLegend />
+
+  {
+    families.map((family) => (
+      <>
+        <h2 id={family.id}>{family.name}</h2>
+        <p class="small tap-links">
+          {family.entries.map((entry, i) => (
+            <>
+              {i > 0 && ', '}
+              <a href={`#${entry.id}`}>{entry.title}</a>
+            </>
+          ))}
+        </p>
+        {family.entries.map((entry) => (
+          <CreditEntry entry={entry} />
+        ))}
+      </>
+    ))
+  }
+
+  <h2 id="skymap-itself">{OURS}</h2>
+  <FactText id="about-maker" />
+  <FactText id="about-licence" />
+  <FactText id="about-ai" />
+  <p>
+    Everyone else whose work is in skymap is named above, under what they made. The repository keeps no other list of thanks, so
+    we add none here.
+  </p>
+
+  <h2 id="report">{REPORT}</h2>
+  <p>
+    If your work is here without the credit you ask for, with a wrong licence, or is missing, <a href={ISSUES_URL}
+      >open an issue in the repository</a
+    >. We correct the licence record first, and this page follows it at the next build.
+  </p>
+</Docs>

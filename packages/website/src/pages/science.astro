@@ -113,7 +113,6 @@ const factIds = [
   ...[...MEASURED, ...DERIVED, ...DRAWN, ...SIMPLIFIED.flatMap((group) => group.items)].map((item) => item.id),
   'sci-built-counts',
   'sci-cite-skymap',
-  'sci-cite-file',
   'astronomical-unit',
   'megaparsec-length',
 ];
@@ -154,8 +153,9 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <section class="wrap section" id="sources">
     <SectionHead title="The sources">
       <p>
-        The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name links to the
-        catalogue or its paper. “Our record” links to the file in our repository that says which release we use.
+        The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name opens its
+        page in the docs, with its licence and its files. “Its own site” leaves for the catalogue’s, and “Our record” is the file
+        in our repository that says which release we use.
       </p>
     </SectionHead>
     <SourceTable>

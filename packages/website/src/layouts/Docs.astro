@@ -40,9 +40,9 @@ const up = page.up ?? group.up;
 const all = headings.filter((heading) => heading.depth === 2);
 const sections = all.length >= TOC_FROM ? all : [];
 const turns = [
-  { page: previous, rel: 'prev', label: `Before this, in ${group.name}` },
-  { page: next, rel: 'next', label: `After this, in ${group.name}` },
-].flatMap((turn) => (turn.page ? [{ ...turn, page: turn.page }] : []));
+  { page: previous, rel: 'prev', label: 'Before this, in' },
+  { page: next, rel: 'next', label: 'After this, in' },
+].flatMap((turn) => (turn.page ? [{ ...turn, page: turn.page, label: `${turn.label} ${turn.page.family ?? group.name}` }] : []));
 ---
 
 <Base

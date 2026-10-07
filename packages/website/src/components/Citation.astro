@@ -1,44 +1,71 @@
 ---
 /*
- * Citation — how to cite skymap: the reference as a line of text, the BibTeX
- * entry in a box of its own, and where both come from. The entry is built
- * from data/citation.ts, so a release changes it in one place.
+ * Citation — how to cite skymap, built from data/citation.ts (which reads
+ * CITATION.cff), so a release changes it in one place. The short form is the
+ * reference as a line of text with a way to the docs' Cite page; `full`, for
+ * that page, adds the BibTeX entry between two rules, as the docs set code,
+ * and the citation file. Each text has the copy control an address has.
  */
+import CopyButton from './CopyButton.astro';
 import { CITATION } from '../data/citation';
 import { fact } from '../data/fact';
-import { MAKER_NAME, REPO_URL } from '../data/siteIdentity';
+import { REPO_URL } from '../data/siteIdentity';
+import { citationBibtex } from '../utils/citationBibtex';
+import { citationText } from '../utils/citationText';
+import { sitePath } from '../utils/sitePath';
 
-const year = CITATION.released.slice(0, 4);
-const [given, family] = MAKER_NAME.split(' ');
-const doiUrl = `https://doi.org/${CITATION.versionDoi}`;
-const bibtex = `@software{skymap,
-  author  = {${family}, ${given}},
-  title   = {${CITATION.title}},
-  version = {${CITATION.version}},
-  year    = {${year}},
-  doi     = {${CITATION.versionDoi}},
-  url     = {${REPO_URL}}
-}`;
+type Props = { full?: boolean };
+
+const { full = false } = Astro.props;
+const doiUrl = `https://doi.org/${CITATION.versionDoi ?? CITATION.conceptDoi}`;
+const text = citationText(CITATION);
+const bibtex = citationBibtex(CITATION, REPO_URL);
 ---
 
-<div class="citation tap-links">
-  <p class="reference small">
-    {family}, {given.charAt(0)}. ({year}). <i>{CITATION.title}</i> (version {CITATION.version}). Zenodo.{' '}
-    <a href={doiUrl}>{doiUrl}</a>
-  </p>
-  <div class="code" tabindex="0" role="group" aria-label="BibTeX entry for skymap">
-    <pre>{bibtex}</pre>
+<div class="citation tap-links" data-embed>
+  <div class="row">
+    <p class="reference small">
+      {text.replace(doiUrl, '')}<a href={doiUrl}>{doiUrl}</a>
+    </p>
+    <CopyButton text={text} label="Copy the reference" />
   </div>
-  <p class="small">
-    {fact('sci-cite-skymap').text}{' '}
-    {fact('sci-cite-file').text}{' '}
-    <a href={fact('sci-cite-file').source}>CITATION.cff</a>
-  </p>
+  {
+    full ? (
+      <>
+        <div class="row">
+          <pre>{bibtex}</pre>
+          <CopyButton text={bibtex} label="Copy the BibTeX entry" />
+        </div>
+        <p class="small">
+          {fact('sci-cite-file').text} <a href={fact('sci-cite-file').source}>CITATION.cff</a>
+        </p>
+      </>
+    ) : (
+      <p class="small">
+        {fact('sci-cite-skymap').text} The BibTeX entry, how to cite one view, and the papers to cite for each catalogue are on{' '}
+        <a href={sitePath('/docs/cite/')}>the docs’ Cite page</a>.
+      </p>
+    )
+  }
 </div>
 
 <style>
   p {
     max-width: 60ch;
+  }
+
+  /* A text and its copy control, the control at the text's first line. */
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: var(--stack);
+  }
+
+  .row > :first-child {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
   }
 
   .reference {
@@ -49,17 +76,9 @@ const bibtex = `@software{skymap,
     overflow-wrap: anywhere;
   }
 
-  /* The entry is wider than a phone; it scrolls inside its own box, never the page. */
-  .code {
-    overflow-x: auto;
-    margin-bottom: var(--stack);
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--border-divider);
-  }
-
+  /* The entry's long lines wrap inside the block's two rules (DocBody), so no word of it is out of sight. */
   pre {
-    margin: 0;
-    font: 400 0.875rem/1.6 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    color: var(--site-text-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 </style>

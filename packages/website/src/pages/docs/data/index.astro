@@ -1,0 +1,86 @@
+---
+/*
+ * All sources at a glance: every entry of the licence record in one list, by
+ * family and again by what may be done with it, made from data/dataPages.ts.
+ * A row's `Use` terms and their meanings are the record's; the counts are counted.
+ */
+import DocFigure from '../../../components/DocFigure.astro';
+import DocLink from '../../../components/DocLink.astro';
+import DocTable from '../../../components/DocTable.astro';
+import UseLegend from '../../../components/UseLegend.astro';
+import { ATTRIBUTION_USES } from '../../../../../../tools/utils/io/attributionUses';
+import { DATA_ENTRIES, DATA_FAMILIES_USED } from '../../../data/dataPages';
+import Docs from '../../../layouts/Docs.astro';
+import { formatDate } from '../../../utils/formatDate';
+
+const BY_USE = 'By what you may do with it';
+const families = DATA_FAMILIES_USED.map((family) => ({
+  ...family,
+  entries: DATA_ENTRIES.filter((entry) => entry.family === family.id),
+}));
+const checked = DATA_ENTRIES.map((entry) => entry.record.checked).sort().at(-1)!;
+const unverified = DATA_ENTRIES.filter((entry) => entry.record.bullets['Not verified']).length;
+const limited = DATA_ENTRIES.filter((entry) => entry.record.use.some((term) => ATTRIBUTION_USES[term] === 'restricted')).length;
+---
+
+<Docs
+  path="/docs/data/"
+  description="Every catalogue, picture, model, typeface and piece of code in skymap that somebody else made, with how each may be used and a page of its own."
+  headings={[
+    { depth: 2, slug: 'use', text: BY_USE },
+    ...families.map((family) => ({ depth: 2, slug: family.id, text: family.name })),
+  ]}
+  factIds={[]}
+>
+  <p>
+    Everything in skymap that somebody else made: catalogues, pictures, height maps, 3D models, typefaces, ported code and the services
+    the app calls. {DATA_ENTRIES.length} sources in {families.length} families.
+  </p>
+  <p>
+    Each row gives a source’s name, what it is and how it may be used. The name opens its page: the terms in the holder’s own words,
+    the credit to print, and what it becomes in the app. We read every holder’s pages on {formatDate(checked)}; for {unverified} sources
+    something could not be opened, and their pages say what. These pages state terms. They are not legal advice.
+  </p>
+  <p>
+    A picture made with skymap carries the terms of every source in it: see <DocLink href="/about/#press"
+      >Pictures and their terms</DocLink
+    >. The lines to print are on <DocLink href="/docs/credits/">Credits</DocLink>, and how the files become what the app loads is on <DocLink
+      href="/docs/data/pipeline/">From catalogue to pixels</DocLink
+    >.
+  </p>
+  <DocFigure id="galaxies-measured" />
+
+  <h2 id="use">{BY_USE}</h2>
+  <p>
+    Our licence record gives every source one or two of twelve terms, the most restrictive its licence text supports. A filled mark
+    is a term that limits use or says that nothing was granted: {limited} of the {DATA_ENTRIES.length} sources carry one. An open mark
+    is free to use on the condition named. The term is an index to the licence, which is on the source’s page.
+  </p>
+  <UseLegend sources />
+
+  {
+    families.map((family) => (
+      <>
+        <h2 id={family.id}>{family.name}</h2>
+        <p>
+          {family.about}{' '}
+          {family.pages === 'one' ? (
+            <>
+              These {family.entries.length} share <DocLink href={`/docs/data/${family.id}/`}>one page</DocLink>.
+            </>
+          ) : (
+            `${family.entries.length} ${family.entries.length === 1 ? 'source' : 'sources'}.`
+          )}
+        </p>
+        <DocTable
+          cols="4 2"
+          head={['Source and what it is', 'Use']}
+          rows={family.entries.map((entry) => [
+            { href: entry.href, label: entry.title, sub: entry.description },
+            { use: entry.record.use },
+          ])}
+        />
+      </>
+    ))
+  }
+</Docs>

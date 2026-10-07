@@ -11,5 +11,12 @@ license: MIT
 url: 'https://github.com/rulkens/skymap'
 repository-code: 'https://github.com/rulkens/skymap'
 doi: 10.5281/zenodo.20037028
+# Zenodo mints this after a release is published, so it trails `version` for a
+# while: the website prints it only while the version in its description is
+# the one below, and the DOI above otherwise.
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22209203
+    description: 'The Zenodo DOI of version 0.5.0'
 version: 0.5.0
 date-released: '2026-08-31'

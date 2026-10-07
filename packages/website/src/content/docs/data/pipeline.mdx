@@ -1,0 +1,153 @@
+---
+description: How the raw catalogue files become what the app loads and draws, step by step, with the tool and the choices made at each step.
+facts: [sci-directions, sci-magnitudes]
+---
+
+The app does not read a survey’s own files. A set of build tools in the repository reads them once, on our machine, and writes small binary files that a browser can fetch and hand to the graphics processor. This page follows a galaxy through that build, and then says where stars, structures, planets and imagery take a different road.
+
+Every source named here has a page with its licence and its files: [All sources at a glance](/docs/data/) lists them. What the build leaves out or gets wrong on purpose is under [Known simplifications](/science/#simplifications) on the Science page. The commands, flags and file layouts are in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>.
+
+<Flow
+  label="The steps from a survey’s file to a drawn galaxy"
+  steps={[
+    { name: 'Fetch', href: '#fetch', text: 'In: a survey’s published table. Out: the same file in our data folder, with a note of where it came from.' },
+    { name: 'Parse', href: '#parse', text: 'Out: rows of one shape, each a direction, a redshift, brightness, and a tilt where there is one.' },
+    { name: 'Cross-match and de-duplicate', href: '#cross-match-and-de-duplicate', text: 'Two rows within 5 arcseconds whose redshifts differ by less than about 0.01 become one.' },
+    { name: 'Data sizes', href: '#data-sizes', text: 'Three cuts of the same rows: SDSS at none, 156,000 and 500,000 of its most luminous galaxies.' },
+    { name: 'Distances', href: '#distances', text: 'Beyond 30 megaparsecs a distance from the redshift; inside, a measured one. Out: a position in space.' },
+    { name: 'The binary format', href: '#the-binary-format', text: '64 bytes for each galaxy, in one file for each catalogue at each data size.' },
+    { name: 'Load', href: '#load', text: 'The app fetches the files of one size: the smallest on a screen narrower than 768 pixels.' },
+    { name: 'Draw', href: '#draw', text: 'Every frame, each galaxy in view is one small square that faces the camera.' },
+    { name: 'Other roads', href: '#stars', text: 'Stars, structures and fields, planets, imagery and 3D models go through other tools, in the sections after Draw.' },
+  ]}
+/>
+
+## Fetch
+
+A fetch tool downloads a source. Six of ours (for Cosmicflows-4, DESI, Gaia, Milliquas, the two cluster catalogues, and the maps of planets and moons) also check the download against a checksum kept in the repository, so a later build can tell that the file is the same one; the others do not. Beside each raw file a note, written by hand, records the address, the date and the layout of the columns. The raw files themselves are too large for the repository and stay out of it; the notes and checksums are in it. One table, <Repo path="tools/utils/io/rawDataRegistry.ts" />, names every raw file the build reads, and each source’s page here prints its rows of that table.
+
+Not every source has a fetch tool. <Source id="sdss">SDSS</Source> is a query we run by hand; 2MRS, GLADE, the Mars data and the 3D models are downloaded by hand; and a few small tables are typed in. Each source’s page says which.
+
+<Fact id="pipe-sdss-query" />
+
+You do not need any of this to run the app from the repository: `npm run fetch-data` downloads the built files that the published app uses.
+
+## Parse
+
+One parser per catalogue, in <Repo path="tools/parsers" />, turns its table into rows of a common shape. <Source id="2mrs">2MRS</Source> and <Source id="glade">GLADE</Source> are fixed-width text read by byte position, SDSS is a table read by its column names, <Source id="desi">DESI</Source> is binary tables, and <Source id="milliquas">Milliquas</Source> is text again.
+
+<Figure id="science-wedges" />
+
+<Fact id="sci-redshifts" />
+
+<Fact id="sci-photometric-share" />
+
+2MRS and GLADE do not say how a galaxy is tilted. Where the <Source id="2mass-xsc">2MASS Extended Source Catalog</Source> or <Source id="hyperleda">HyperLEDA</Source> has a measurement, the parser joins it on.
+
+<Fact id="sci-galaxy-tilt" />
+
+## Cross-match and de-duplicate
+
+<Repo path="tools/catalog/crossMatch.ts" /> takes the surveys in a fixed order and accepts a row unless a row already accepted is the same galaxy.
+
+<Fact id="sim-duplicates" />
+
+Both tests must hold. Position alone would merge a nearby galaxy with a far one that happens to lie behind it. The redshift test is a wide one: the difference allowed, about 0.01, is some 3,000 km/s. Two members of one cluster rarely differ by that much, so where two of them lie within 5 arcseconds of each other on the sky they are, as a rule, merged into one row. It is also narrower than the error of an estimated redshift, which is near 0.015: a galaxy that one survey measured and GLADE only estimated can fail the test, and then it stays in the map twice, at two distances along one line of sight.
+
+The three DESI regions come last and are compared with the surveys before them, not with one another, since two of them overlap on purpose. Milliquas is not compared at all: a quasar and the galaxy it sits in are two things at one position. After this step the 81 named galaxies are taken out of the surveys, because the app draws those from a list of their own.
+
+## Data sizes
+
+<Fact id="sim-data-sizes" />
+
+<Fact id="pipe-galaxy-caps" />
+
+The cut is by luminosity, not by apparent brightness, over the whole catalogue at once (<Repo path="tools/catalog/selectTierRecords.ts" />). That keeps the large-scale structure at every size and puts no edge into the map. A rule of the form “keep everything within so many megaparsecs” would have drawn a shell at that distance.
+
+<Figure id="guide-size-small" />
+
+<Figure id="guide-size-large" />
+
+<Fact id="sim-flux-limits" />
+
+## Distances
+
+Until this step a galaxy is a direction and a redshift. <Repo path="tools/catalog/buildAllBins.ts" /> now gives it a place.
+
+<Fact id="sci-galaxy-distance" />
+
+<Fact id="sci-local-volume" />
+
+The short list is our own <Source id="seed-local-volume">local-volume distances</Source>; <Source id="cf4-distances">Cosmicflows-4</Source> and <Source id="hyperleda">HyperLEDA</Source> have pages too. A distance from any of the three is used only if it is under 30 megaparsecs. The published redshift is kept in the file beside the position, so a galaxy’s card still shows it.
+
+<Fact id="pipe-blueshift" />
+
+<Fact id="sim-scale-step" />
+
+## The binary format
+
+<Fact id="pipe-galaxy-format" />
+
+There is one file for each catalogue at each data size. Stars, structures, density fields, filaments and the Local Bubble each have a format of their own, and all open the same way: a short header that names the format and its version. What follows differs. Stars and structures are records of a fixed size, a density field is a cube of numbers, the filaments are lines of varying length behind a table that says where each starts, and the Local Bubble is a mesh of points and triangles.
+
+<Fact id="pipe-manifest" />
+
+## Load
+
+<Fact id="phone-data-size" />
+
+The app fetches the files of that size and no others. You can change the size in the Settings panel: see [Data size](/docs/reference/settings/#data-size). A catalogue that is switched off at first, such as the DESI regions, is fetched the first time it is switched on.
+
+## Draw
+
+<Fact id="pipe-draw" />
+
+<Fact id="sci-galaxy-discs" />
+
+What the app does to brightness and colour on the way to the screen is on the Science page, under [Measured, derived, drawn](/science/#bins).
+
+## Stars
+
+Stars go through the same steps with other tools: <Repo path="tools/stars" />, and a faster build in Rust, which is the one we run for the published files. The Rust build applies two more rules for duplicate stars, so its files hold a few stars fewer. The rows are <Source id="gaia">Gaia</Source>’s, each with a distance from the <Source id="bailer-jones">Bailer-Jones</Source> table.
+
+<Fact id="sci-star-observables" />
+
+<Fact id="sci-star-distance" />
+
+Two smaller catalogues are merged in: the <Source id="gcns">Gaia Catalogue of Nearby Stars</Source> for faint stars close to the Sun, and <Source id="hipparcos">Hipparcos</Source> for the brightest stars in the sky, in place of the Gaia rows they match. The named stars are taken out, as the named galaxies are.
+
+<Fact id="pipe-star-budgets" />
+
+In the file the stars are sorted into a tree of boxes in space. A box also stores the summed light of the stars inside it, which is what the app draws when the box is far away.
+
+## Structures, fields and filaments
+
+Cluster and supercluster markers are built by <Repo path="tools/structures/buildStructures.ts" /> from <Source id="mcxc">MCXC</Source>, <Source id="mscc">MSCC</Source> and our own <Source id="seed-structures">list of structures placed by hand</Source>. A hand-placed structure replaces any catalogue row that falls inside it.
+
+<Fact id="sci-structures" />
+
+The glow of the cosmic web is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as a cube of numbers with a header that says what the cube spans.
+
+<Figure id="science-web-points" />
+
+<Figure id="science-web-density" />
+
+<Fact id="sci-filaments" />
+
+## Planets, moons and their positions
+
+The app fetches no file for a planet’s position. The orbits are <Source id="jpl-elements">JPL’s published elements</Source>, typed into the app. The build does fetch: `npm run fetch-horizons` downloads positions from <Source id="horizons">JPL Horizons</Source>, <Repo path="data/raw/horizons/README.md">`npm run build-ephemeris-corrections`</Repo> fits a correction against them, and the correction, not the positions, is compiled into the app with the elements.
+
+<Fact id="sci-ephemeris" />
+
+## Imagery and terrain
+
+The maps of the planets and moons are downsampled to three sizes by `npm run build-textures`. Earth and Mars are also cut into tiles, by `npm run build-surface-tiles`, so that the app can fetch only the ground under the camera.
+
+<Fact id="pipe-earth-tiles" />
+
+Earth’s imagery is <Source id="nasa-blue-marble">Blue Marble</Source>, <Source id="eox">EOxCloudless</Source> and the <Source id="geodanmark">GeoDanmark orthophoto</Source>; its heights are <Source id="etopo">ETOPO 2022</Source>, the <Source id="skadi">skadi terrain tiles</Source> and <Source id="dhm">Denmark’s height model</Source>. Mars is <Source id="mola">MOLA</Source> heights and the <Source id="viking">Viking mosaic</Source>, with HiRISE close-ups at the four rover sites. The tiles are not in the manifest: the app reads a list of its own for them, and falls back to the whole-globe map where a tile is missing.
+
+## 3D models
+
+Each model is downloaded by hand, cleaned up in Blender where it needs it, and baked by `npm run build-meshes` into one mesh and one set of textures. The model of Søndermarken is our own reconstruction from <Source id="skraafoto">aerial photographs</Source> and <Source id="dhm">a laser scan</Source>. The models’ pages are listed under [3D models](/docs/data/#models).

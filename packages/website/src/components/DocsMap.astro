@@ -33,10 +33,14 @@ const written = pages.filter((page) => page.status === 'live').length;
       <section class="grid" id={group.name.toLowerCase()} aria-labelledby={`${group.name.toLowerCase()}-name`}>
         <div class="about">
           <h2 id={`${group.name.toLowerCase()}-name`}>{group.name}</h2>
-          <p class="small">{group.purpose}</p>
+          <p class="small">
+            {group.purpose}
+            {group.pages.some((page) => page.family) &&
+              ` The first of these pages lists ${group.pages.filter((page) => page.family).length} more, one for each source or kind of source.`}
+          </p>
         </div>
         <ul class="grid small">
-          {group.pages.map((page) => (
+          {group.pages.filter((page) => !page.family).map((page) => (
             <li>
               {page.status === 'live' ? (
                 <a class="ring small" href={sitePath(page.path)}>

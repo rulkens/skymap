@@ -3,7 +3,8 @@
  * DocsNav — the docs' own contents, beside every docs page: the seven groups
  * of data/docsTree.ts in order, search above them. A written page is a link; a
  * planned one is its name, dimmer and inert, so the tree shows its whole shape
- * from the first page on. The page you are on carries the app's selection
+ * from the first page on. Pages that are one of many of a kind (a data source)
+ * are listed only on a page of that kind. The page you are on carries the app's selection
  * mark, a filled point with a ring about it, hung left of the text edge.
  * Narrow, it is a bar that stays under the top bar: "Contents" and search.
  * The list opens over the page, not in it, with the page's own sections first.
@@ -18,6 +19,11 @@ import { sitePath } from '../utils/sitePath';
 type Props = { current: string; sections: readonly MarkdownHeading[] };
 
 const { current, sections } = Astro.props;
+// A page that is one of many of a kind brings its own kind into the list, under its group; the others stay out.
+const here = DOCS_TREE.flatMap((group) => group.pages).find((page) => page.path === current);
+const family = here?.family;
+// A kind with one page (a family of small entries that share it) needs no name over it.
+const kin = DOCS_TREE.flatMap((group) => group.pages).filter((page) => family && page.family === family);
 ---
 
 <nav class="docs-nav small" aria-label="Docs">
@@ -44,30 +50,59 @@ const { current, sections } = Astro.props;
               {group.name}
             </p>
             <ul aria-labelledby={`docs-nav-${group.name.toLowerCase()}`}>
-              {group.pages.map((page) => (
-                <li>
-                  {page.status === 'live' ? (
-                    <a href={sitePath(page.path)} aria-current={page.path === current ? 'page' : undefined}>
-                      {page.title}
-                    </a>
-                  ) : (
-                    <span class="planned">
-                      {page.title}
-                      <span class="unseen"> (not written yet)</span>
-                    </span>
-                  )}
-                </li>
-              ))}
+              {group.pages
+                .filter((page) => !page.family)
+                .map((page) => (
+                  <li>
+                    {page.status === 'live' ? (
+                      <a href={sitePath(page.path)} aria-current={page.path === current ? 'page' : undefined}>
+                        {page.title}
+                      </a>
+                    ) : (
+                      <span class="planned">
+                        {page.title}
+                        <span class="unseen"> (not written yet)</span>
+                      </span>
+                    )}
+                  </li>
+                ))}
             </ul>
+            {family && group.pages.includes(here!) && (
+              <>
+                {kin.length > 1 && (
+                  <p class="family" id="docs-nav-family">
+                    {family}
+                  </p>
+                )}
+                <ul aria-label={family}>
+                  {kin.map((page) => (
+                      <li>
+                        <a href={sitePath(page.path)} aria-current={page.path === current ? 'page' : undefined}>
+                          {page.title}
+                        </a>
+                      </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </>
         ))
       }
       <p class="legend" aria-hidden="true">The dimmer pages are not written yet.</p>
     </div>
   </details>
-  <!-- Before the first paint, so a phone never shows the list open and then folds it. Without script it stays open. -->
+  <!--
+    Before the first paint, so a phone never shows the list open and then folds it; without script it stays open.
+    Wide, the list scrolls by itself: the row of the page you are on is brought to its middle, and nothing else moves.
+  -->
   <script is:inline>
-    if (matchMedia('(max-width: 900px)').matches) document.currentScript.previousElementSibling.open = false;
+    {
+      const menu = document.currentScript.previousElementSibling;
+      const nav = menu.parentElement;
+      const here = menu.querySelector('[aria-current]');
+      if (matchMedia('(max-width: 900px)').matches) menu.open = false;
+      else if (here) nav.scrollTop = here.offsetTop - nav.clientHeight / 2;
+    }
   </script>
 </nav>
 
@@ -77,6 +112,12 @@ const { current, sections } = Astro.props;
   const narrow = matchMedia('(max-width: 900px)');
   if (menu) {
     narrow.addEventListener('change', () => (menu.open = !narrow.matches));
+    // Narrow, the list is a sheet with its own scroll: opened, it shows the row of the page you are on.
+    menu.addEventListener('toggle', () => {
+      const tree = menu.querySelector<HTMLElement>('.tree');
+      const here = menu.querySelector<HTMLElement>('[aria-current]');
+      if (menu.open && narrow.matches && tree && here) tree.scrollTop = here.offsetTop - tree.clientHeight / 2;
+    });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' || !narrow.matches || !menu.open) return;
       menu.open = false;
@@ -114,6 +155,13 @@ const { current, sections } = Astro.props;
     margin: 1.75rem 0 0.375rem;
     font: var(--weight-display) 1.25rem / 1.1 var(--font-family-display);
     color: var(--color-fg);
+  }
+
+  /* The name of the current page's own kind, over its pages: the list's own size, dimmer, and no link. */
+  .family {
+    max-width: none;
+    margin: 0.875rem 0 0.125rem;
+    color: var(--site-text-dim);
   }
 
   /* Wide, the page's own sections stand beside the text or are left out (layouts/Docs.astro). */

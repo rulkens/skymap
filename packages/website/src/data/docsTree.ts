@@ -1,4 +1,5 @@
 import type { DocsGroup } from '../@types/DocsGroup';
+import { DATA_PAGES } from './dataPages';
 
 /**
  * Every page the docs have or will have, in sidebar order: the one list behind
@@ -6,9 +7,9 @@ import type { DocsGroup } from '../@types/DocsGroup';
  * pages (tools/site/checkSiteLinks.ts). A `live` row has a file at
  * `src/content/docs/<path under /docs/>.mdx`; tests/packages/website/docsTree.test.ts
  * holds the two together. Paths are the published ones from the taste research
- * (section 4.2), so a few sit outside their group's folder. Still to be added
- * by their own slices: one page per data source, and the topic pages of
- * Science and Rendering.
+ * (section 4.2), so a few sit outside their group's folder. The data sources'
+ * rows are not typed: they are the pages data/dataPages.ts makes from
+ * ATTRIBUTIONS.md. Still to be added: the topic pages of Science and Rendering.
  */
 export const DOCS_TREE: readonly DocsGroup[] = [
   {
@@ -63,8 +64,14 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Every catalogue and image the map is built from, with its licence and where to check it.',
     up: '/science/',
     pages: [
-      { title: 'All sources at a glance', path: '/docs/data/', status: 'planned' },
-      { title: 'From catalogue to pixels', path: '/docs/data/pipeline/', status: 'planned' },
+      { title: 'All sources at a glance', path: '/docs/data/', status: 'live' },
+      { title: 'From catalogue to pixels', path: '/docs/data/pipeline/', status: 'live' },
+      ...DATA_PAGES.map((page) => ({
+        title: page.title,
+        path: page.path,
+        status: 'live' as const,
+        family: page.family.name,
+      })),
     ],
   },
   {
@@ -88,8 +95,8 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     up: '/about/',
     pages: [
       { title: 'Roadmap', path: '/docs/roadmap/', status: 'planned' },
-      { title: 'Credits', path: '/docs/credits/', status: 'planned', up: '/domes/' },
-      { title: 'Cite', path: '/docs/cite/', status: 'planned', up: '/science/' },
+      { title: 'Credits', path: '/docs/credits/', status: 'live', up: '/domes/' },
+      { title: 'Cite', path: '/docs/cite/', status: 'live', up: '/science/' },
       {
         title: 'Developer workbenches',
         path: '/docs/developers/workbenches/',

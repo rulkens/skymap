@@ -1,0 +1,10 @@
+---
+/* RepoLink — `<Repo path="docs/DATA.md">the notes</Repo>` on a docs page: a link to a file or folder of the repository, whose address is written once (data/siteIdentity.ts). With no words inside, it prints the path as code. */
+import { REPO_BLOB } from '../data/siteIdentity';
+
+type Props = { path: string };
+
+const { path } = Astro.props;
+---
+
+<a href={[REPO_BLOB, path].join('/')}><slot><code>{path}</code></slot></a>

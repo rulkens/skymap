@@ -13,7 +13,7 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     title: 'Every catalogued galaxy and quasar',
     credit: 'skymap / Alexander Rulkens. Data: SDSS, 2MRS, GLADE, DESI, Milliquas, Cosmicflows-4, HyperLEDA',
     terms:
-      'Contains catalogue positions only. DESI is CC BY 4.0 and SDSS calls its data public domain. GLADE, Milliquas and HyperLEDA state no licence. 2MRS and Cosmicflows-4 state none either, and CDS, which serves the copies we use, classes both as CC BY-NC (non-commercial).',
+      'Contains catalogue positions only. DESI is CC BY 4.0 and SDSS calls its data public domain. 2MRS, GLADE, Milliquas, Cosmicflows-4 and HyperLEDA state no licence. For the three we take from CDS (2MRS, GLADE and Cosmicflows-4), CDS says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from.',
   },
   {
     shot: 'tour-cosmic-web',

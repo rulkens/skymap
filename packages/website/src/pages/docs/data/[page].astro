@@ -1,0 +1,82 @@
+---
+/*
+ * One data page for each row of data/dataPages.ts: a single source, or a
+ * family of small entries (code, fonts, services) that share a page, each
+ * under a heading whose anchor is its entry id. Nothing on these pages is
+ * written here but the sentences that join the record's parts.
+ */
+import DataEntryRecord from '../../../components/DataEntryRecord.astro';
+import DocLink from '../../../components/DocLink.astro';
+import RecordText from '../../../components/RecordText.astro';
+import Recorded from '../../../components/Recorded.astro';
+import { DATA_PAGES } from '../../../data/dataPages';
+import { DATA_SOURCE_NOTES } from '../../../data/dataSourceNotes';
+import Docs from '../../../layouts/Docs.astro';
+import { formatDate } from '../../../utils/formatDate';
+import { plainText } from '../../../utils/plainText';
+
+export function getStaticPaths() {
+  return DATA_PAGES.map((page) => ({ params: { page: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const shared = page.family.pages === 'one';
+const [first] = page.entries;
+const notes = [...new Set(page.entries.flatMap((entry) => entry.record.sectionNotes))];
+const checked = page.entries.map((entry) => entry.record.checked).sort().at(-1)!;
+const headings = shared
+  ? page.entries.map((entry) => ({ depth: 2, slug: entry.id, text: plainText(entry.record.heading) }))
+  : [
+      { depth: 2, slug: 'licence', text: 'Licence and terms' },
+      { depth: 2, slug: 'about', text: 'What it is and who made it' },
+      { depth: 2, slug: 'build', text: 'In the build' },
+    ];
+const recorded = plainText(first!.record.heading);
+---
+
+<Docs
+  path={page.path}
+  description={page.description}
+  headings={headings}
+  factIds={page.entries.flatMap((entry) => DATA_SOURCE_NOTES[entry.id]?.facts ?? [])}
+>
+  {
+    shared ? (
+      <>
+        <p>
+          {page.entries.length} small sources on one page. The terms are as stated on {formatDate(checked)}, not legal advice.{' '}
+          <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists every other source.
+        </p>
+        {notes.length > 0 && (
+          <Recorded checked={checked}>
+            {notes.map((text) => (
+              <RecordText text={text} lift />
+            ))}
+          </Recorded>
+        )}
+        {page.entries.map((entry) => (
+          <>
+            <h2 id={entry.id}>
+              <RecordText text={entry.record.heading} phrase />
+            </h2>
+            <DataEntryRecord entry={entry} level={3} />
+          </>
+        ))}
+      </>
+    ) : (
+      <>
+        <DataEntryRecord entry={first!} level={2} />
+        <p>
+          Terms as stated on {formatDate(checked)}, not legal advice.
+          {recorded !== page.title && (
+            <>
+              {' '}
+              Its name in our licence record: <RecordText text={first!.record.heading} phrase />.
+            </>
+          )}{' '}
+          <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists the rest.
+        </p>
+      </>
+    )
+  }
+</Docs>
