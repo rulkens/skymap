@@ -1,134 +1,88 @@
 ---
 title: First flight
-description: A first flight in skymap takes about five minutes. You look around from above Earth, go to Saturn by name, run the clock, come home and start the tour.
+description: Ten minutes at the controls. You look around above Earth, go to Saturn by name, run the clock, come home and start the tour.
 group: Start
 order: 1
+facts:
+  [
+    start-welcome,
+    start-about-button,
+    moon-orbit-light,
+    search-tabs,
+    link-time-write,
+    start-clock-now,
+    home-key,
+    grand-tour-steps,
+    tour-keys,
+    tour-length,
+  ]
 ---
 
 import OpenApp from '../../../components/OpenApp.astro';
 
-You need a browser that has WebGPU: [Browser support and troubleshooting](/docs/start/browsers/) lists them. <Fact id="no-account" inline />
-
-The steps give a key where there is one, and a button for a phone or a tablet. Every picture was taken in the app, and the link under it opens the app in that state.
-
-## Open the app
-
-1. Open the app in a second window, so that this page stays beside it.
+You need a browser that has WebGPU; [Browser support and troubleshooting](/docs/start/browsers/) lists them. Each step gives a key and, for a phone or a tablet, a button. If a key does nothing on your keyboard, use the button. The link under each picture opens the app as the picture shows it.
 
 <p>
   <OpenApp />
 </p>
 
-2. Wait for the two buttons on the welcome screen to light up, then press **Explore**. The welcome screen closes and you are above the sunlit side of Earth.
+## Open the app
 
-<Fact id="start-welcome" />
+1. Open the app in a second window, beside this page. In front of a class, keep this page on a second device.
 
-The welcome screen is shown once. If you have been here before, the app opens straight on Earth. <Fact id="start-about-button" inline />
+2. Press **Explore** on the welcome screen. If you have been here before, there is no welcome screen. You are above Earth. Earth is selected, so it has a white ring and its card is open: on the right on a computer, as a sheet at the foot of a phone. The search box is at the top, and the scale bar and the clock are at the lower right.
 
 <Figure id="start-arrival" />
 
-What is on the screen:
-
-- **At the top**, the search box, then three round buttons: Home, a button that sets the view turning slowly, and About.
-- **On the right**, the card of the selected object. Earth is selected when you arrive, which is also why it has a white ring around it. [Info cards](/docs/guide/info-cards/) says what a card holds. On a phone the card is a sheet at the foot of the screen.
-- **On the left**, a Navigation panel that lists the main controls, and the [Settings](/docs/guide/settings/) panel. On a phone both start folded.
-- **At the lower right**, the scale bar and, under it, the clock.
-
 ## Look around
 
-3. Drag anywhere on the sky, with the mouse or with one finger. The stars swing round and Earth stays in the middle.
+3. Drag on the sky, with the mouse or one finger. The stars swing round and Earth stays in the middle.
 
-4. Put the pointer over the sky and scroll, or pinch with two fingers, so that Earth shrinks. Keep going until the scale bar reads a few hundred thousand kilometres. Earth is now a small circle with its name beside it, and the ring around it is the Moon’s orbit, with the Moon on it.
+4. With the pointer over the sky, scroll, or pinch two fingers together, until the scale bar reads about 300,000 km. Earth is now a small circle with its name beside it. The line round it is the Moon’s orbit, with the Moon on it, 1.3 seconds away at the speed of light.
 
 <Figure id="start-moon-orbit" />
 
-<Fact id="moon-orbit-light" />
-
-<Fact id="zoom-inputs" />
-
-Scrolling does nothing while the pointer is over a panel or a card. Move it back over the sky.
-
-<Fact id="scale-bar" />
-
-If you keep pulling back, the orbits of the planets come into view one after another, each with its planet’s name. [Moving around](/docs/guide/moving/) has the rest of the controls, among them the ones that take over close to a surface.
-
 ## Go to Saturn by name
 
-5. Press <Keys of="/" />, or click the search box at the top. The search opens over the scene. <Fact id="search-tabs" inline />
+5. Press <Keys of="/" />, or click the search box. The search opens over the scene, with picture cards in seven tabs.
 
 6. Type `Saturn`. The cards give way to one result.
 
-<Figure id="start-search" />
+7. Press <Keys of="Enter" />, or click the result. The camera flies to Saturn and Saturn’s card takes the place of Earth’s. If you arrive over the night side, drag round to the lit one. The address now ends in `#focus=body-saturn`: that address is a link to Saturn.
 
-7. Press <Keys of="Enter" />, or click the result. The camera flies to Saturn, Saturn’s card takes the place of Earth’s, and the address in the browser now ends in `#focus=body-saturn`.
+<Figure id="start-search" />
 
 <Figure id="start-saturn" />
 
-A flight keeps the direction you were looking in, so you may arrive over Saturn’s night side. Drag to come round to the lit one.
-
-<Fact id="search-scope" />
-
-[Finding things](/docs/guide/finding/) covers the search in full. There is a way to go somewhere without it too. <Fact id="double-click-focus" inline />
-
 ## Run the clock
 
-<Fact id="start-clock-place" />
+8. Scroll or pinch out until the scale bar reads about 300,000 km again. Thin lines with names appear round the planet: the orbits of its moons.
 
-8. Pull back from Saturn until the scale bar reads several hundred thousand kilometres. Thin circles appear around the planet and its rings, each with a name on it: these are the orbits of its moons.
+9. Press <Keys of="]" /> five times. On a phone, tap the clock first: its controls open, with a box for setting a date above them, which you can leave alone. Then tap the Faster button, the arrow to the right of the pause button, five times. The clock reads `6 hr/s`, six hours of the scene for each second, and the moons move along their orbits, the inner ones fastest. The address has gained a date and time, after `t=`.
 
-9. Press <Keys of="]" /> five times. Without a keyboard, tap the clock and press the button marked › five times. The speed on the clock reads `6 hr/s`, and the moons move along their orbits, the inner ones fastest.
+10. Press <Keys of="\" />, or the pause button on the clock. The moons stop, and `t=` in the address now holds the date and time the clock stopped on.
 
-10. Press <Keys of="\" />, or the pause button on the clock. The moons stop, and the address gains the instant the clock stopped on, after `t=`.
+11. Press <Keys of="Shift+N" />, or the **Now** button on the clock. The clock is back on the present, running at `1 s/s`, and `t=` has gone from the address.
 
 <Figure id="start-clock" />
-
-11. Press <Keys of="Shift+N" />, or the **Now** button on the clock. The clock returns to the present and runs again.
-
-<Fact id="start-clock-now" />
-
-<Fact id="clock-keys" />
-
-<Fact id="focus-follows" />
-
-To see a particular date, click the clock’s date and type one. [Time](/docs/guide/time/) explains how, and how far from the present the positions can be trusted.
 
 ## Come home
 
 12. Press <Keys of="H" />, or the Home button at the top. The camera flies back to Earth, Earth’s card returns, and the address has nothing after it again.
 
-<Fact id="home-key" />
-
-<Fact id="esc-clears" />
-
-<Note flow>
-  With nothing selected the camera no longer travels with a planet. If the clock is running fast, the planet leaves the view. Press <Keys of="H" /> to start again from Earth.
-</Note>
-
 ## Take the tour
 
-13. Press the About button, the last of the three at the top, then press **Tour** on the welcome screen. The panels go away and the tour’s title comes up.
+13. Press the About button, the last of the three at the top, then **Tour** on the welcome screen. The interface goes away and the tour’s title comes up.
+
+14. Let it play, which takes a little over 5 minutes, or go through its 14 steps with <Keys of="Right" /> and <Keys of="Left" /> or the arrow buttons at the foot of the screen.
+
+15. Press <Keys of="Esc" />, or the square button, to leave. The view stays where the tour took it, so press <Keys of="H" />, or the Home button, to come back to Earth.
 
 <Figure id="start-tour" />
 
-14. Let it play, or step through it with the arrow keys or the buttons at the foot of the screen.
-
-<Fact id="grand-tour-steps" />
-
-<Fact id="tour-keys" />
-
-<Fact id="tour-length" />
-
-<Note flow>
-  One fault, seen on 7 October 2026: if you step back from the third step to the second, the next step forward ends the tour. Start it again from the search.
-</Note>
-
-15. Press <Keys of="Esc" />, or the square button, to leave. The view stays where the tour had taken it, so press <Keys of="H" /> to come back to Earth.
-
-The same tour is in the search, under the Tours tab. [Tours and exhibits](/docs/guide/tours/) lists what else can be played.
-
 ## Where to go next
 
-- [What is in the scene](/docs/start/scene/) lists everything the app draws, from Earth outwards, with a link to each.
+- [What is in the scene](/docs/start/scene/) has everything the app draws, from Earth outwards, with a link to each.
+- [Moving around](/docs/guide/moving/), [Finding things](/docs/guide/finding/) and [Time](/docs/guide/time/) take the controls you have just used further.
 - [Sharing a view](/docs/guide/sharing/) explains the address the app writes, so that you can send someone to Saturn.
-- [Controls](/docs/reference/controls/) is the table of every key and gesture.
 - [Use skymap in the classroom](/classroom/) has links made for lessons.

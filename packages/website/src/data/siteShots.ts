@@ -596,8 +596,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: DOCS_WIDTHS,
     title: 'Earth and the Moon’s orbit, from about 2.6 million kilometres',
-    drawn: 'The ring is the Moon’s orbit, drawn as a line. Earth is too small to see from here, so the small circle and the name stand in for it.',
-    alt: 'A small circle labelled Earth inside a larger ring with the Moon labelled on it, among stars, with a scale bar reading a few hundred thousand kilometres.',
+    drawn: 'The line round Earth is the Moon’s orbit. Earth is too small to see from here, so the small circle and the name stand in for it.',
+    alt: 'A small circle labelled Earth inside the line of the Moon’s orbit, with the Moon labelled on it, among stars, with a scale bar reading a few hundred thousand kilometres.',
   },
   {
     id: 'start-search',
@@ -629,8 +629,8 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: DOCS_WIDTHS,
     title: 'Saturn’s moons on their orbits, with the clock stopped',
     caption: 'The clock’s controls are open at the lower right. A link opens the clock stopped at real speed, so the speed here reads 1 s/s.',
-    drawn: 'The positions are computed for 7 October 2026 at 12:00 UTC; the rings around the planet are the moons’ orbits, drawn as lines.',
-    alt: 'A small Saturn inside several rings with moons labelled on them, and at the lower right a bar reading Now, a speed, three buttons and a date.',
+    drawn: 'The positions are computed for 7 October 2026 at 12:00 UTC; the lines round the planet are the moons’ orbits.',
+    alt: 'A small Saturn inside the orbits of several moons, each labelled, and at the lower right a bar reading Now, a speed, three buttons and a date.',
   },
   {
     // 9 s into the first step: the title card is up and the Milky Way is in frame.
