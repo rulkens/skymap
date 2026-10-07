@@ -1,0 +1,150 @@
+---
+title: Screens, quality and domes
+description: skymap runs in a browser window of any size, from a phone to a projector, and can draw a fisheye disc for a dome. This page says what changes with the screen, what to do when the picture stutters, and what a planetarium operator needs to know about dome mode.
+group: Guide
+order: 8
+---
+
+import ViewLink from '../../../components/ViewLink.astro';
+import { appLink } from '../../../data/appLink';
+
+If you run a dome or a gallery, [skymap for domes and museums](/domes/) says what we can deliver and what is not built. Whether the app runs at all on a given machine is under [Browser support and troubleshooting](/docs/start/browsers/).
+
+## Phones and tablets
+
+<Fact id="phone-data-size" />
+
+<Fact id="settings-phone" />
+
+<Figure id="guide-phone" />
+
+<Fact id="card-phone-sheet" />
+
+<Fact id="touch-gestures" />
+
+<Fact id="navigation-panel" />
+
+A phone has no keyboard, so what the app does by key alone is out of reach: hiding the interface is one. For most keys a button does the same: the clock’s own buttons, the Home button in the top bar and the cross on a card. [Moving around](/docs/guide/moving/#on-a-touch-screen) has the gestures.
+
+<Fact id="screens-tablet" />
+
+<Fact id="screens-size-once" />
+
+To load more on a phone that can take it, open the Settings panel and set Tier to Medium: [Settings](/docs/guide/settings/#see-more-or-fewer-galaxies) says what that fetches.
+
+## Laptops and desktops
+
+A window 768 pixels wide or more gets the middle data size, both panels open at the lower left and the card at the upper right. Every key and mouse action is listed under [Controls](/docs/reference/controls/).
+
+<Fact id="screens-gpu-choice" />
+
+<Fact id="screens-pixel-cap" />
+
+<Fact id="screens-draws-on-change" />
+
+So a laptop left on a still view is not kept busy. Auto-rotate and a running clock set faster than real time keep it drawing.
+
+## Big screens and projectors
+
+<Fact id="screens-no-fullscreen" />
+
+That is <Keys of="F11" /> on Windows and Linux, and on a Mac <Keys of="Ctrl+Cmd+F" /> or the green button of the window.
+
+<Fact id="hide-interface" />
+
+<Fact id="ref-tab-taken" />
+
+<Fact id="screens-interface-size" />
+
+From the back of a room that is too small to read. The browser’s zoom, <Keys of="Ctrl" /> or <Keys of="Cmd" /> with the plus key, enlarges the panels, the cards and the search.
+
+For a dark room:
+
+1. Open the view you want and make the window fill the screen.
+2. Under Display, lower Exposure by one or two EV. A picture set for a lit office is harsh on a wall in the dark.
+3. Turn off the names you do not need, or all of them with the switch on Labels & Guides.
+4. Press <Keys of="Tab" /> to hide the interface. The clock’s keys and <Keys of="H" /> for Home still work with it hidden. The search is part of the interface: press <Keys of="Tab" /> again before you look for the next object.
+
+[Settings](/docs/guide/settings/#make-it-brighter-or-calmer) describes Exposure, Bloom and the tone curve. None of it is kept over a reload, so set it once the page is open and leave the page open.
+
+<Fact id="settings-hdr" />
+
+<Fact id="kiosk-planned" />
+
+## When it stutters
+
+<Fact id="screens-no-quality-setting" />
+
+Try these in order, and stop when the picture moves smoothly.
+
+1. **Choose a smaller data size.** Set Tier, in the title of the Settings panel, to Medium or Small. [Settings](/docs/guide/settings/#see-more-or-fewer-galaxies) has what each holds.
+2. **Make the window smaller.** The work for a frame grows with the number of pixels. A window half as wide and half as high has a quarter of them.
+3. **Switch layers off.** The glow of the cosmic web, the filaments, the flow and Bloom can each be switched off by their heading, and so can a catalogue of galaxies you are not looking at.
+4. **Close what else is using the graphics processor**: other tabs with video or 3D, and other programs.
+
+<Fact id="settings-size-large-choice" />
+
+Dome mode costs more than a flat view of the same window: see [the cost](#what-it-costs) below. If the app does not start at all, or stops with a message, that is for [Browser support and troubleshooting](/docs/start/browsers/#when-the-app-does-not-start).
+
+## Dome mode
+
+<Fact id="dome-flag" />
+
+<Fact id="share-dome" />
+
+<ViewLink href={appLink('focus=body-saturn&t=2017-10-15T12:00:00Z', 'dome')}>Open Saturn in dome mode</ViewLink>
+
+<Figure id="guide-dome-window" />
+
+### What it draws
+
+<Fact id="dome-rig" />
+
+<Fact id="screens-dome-disc" />
+
+<Figure id="dome-earth" />
+
+<Fact id="dome-tilt" />
+
+<Fact id="screens-dome-front" />
+
+So with the camera on a planet, the planet stands in front of the audience and a little above eye level, and the sky fills the rest of the dome. Turn the camera with a drag, as on a flat screen: the whole sky turns about the planet.
+
+<Fact id="screens-dome-fixed" />
+
+### Driving it
+
+<Fact id="screens-dome-pointer" />
+
+<Fact id="screens-dome-interface" />
+
+An operator therefore works like this: keep the interface up while finding the next object with <Keys of="/" />, then press <Keys of="Tab" /> to clear it. The clock’s keys, <Keys of="H" /> for Home and <Keys of="Esc" /> all work with the interface hidden. [Controls](/docs/reference/controls/) lists them.
+
+A tour or an exhibit can be opened in dome mode by link, and plays as on a flat screen, with its captions or notes flat over the disc.
+
+<ViewLink href={appLink('exhibit=cosmicWeb', 'dome')}>Open the Cosmic Web exhibit in dome mode</ViewLink>
+
+<Figure id="dome-web" />
+
+### What it costs
+
+<Fact id="screens-dome-cost" />
+
+The disc is as many pixels across as the window’s shorter side, doubled on a screen with two device pixels to one. A full-screen window on a 3,840 by 2,160 display gives a disc 2,160 pixels across. If the picture stutters, the list under [When it stutters](#when-it-stutters) applies, the data size first.
+
+### What a dome’s system has to do
+
+<Fact id="screens-dome-one-disc" />
+
+<Fact id="screens-no-capture" />
+
+- **Live.** Show the browser window, full screen and with the interface hidden, on the output your system takes a fisheye from. Someone flies the app while the audience watches.
+- **As a film.** <Fact id="film-recorder" inline /> <Fact id="film-silent" inline /> The recorder is described under [Command-line tools](/docs/developers/cli/).
+
+The address keeps the dome flag while you fly, so a link copied in dome mode opens in dome mode: [Sharing a view](/docs/guide/sharing/#dome-mode). The flag is spelt in small letters and goes before the `#`; [URL parameters](/docs/reference/url-parameters/) has the forms.
+
+What we would build for a dome, and what is still missing for one, is on [the domes page](/domes/#deliver).
+
+## Browsers
+
+skymap needs a browser with WebGPU. Which browsers have it, on which systems, and what the app shows when it cannot start are under [Browser support and troubleshooting](/docs/start/browsers/).

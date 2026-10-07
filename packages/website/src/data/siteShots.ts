@@ -859,6 +859,31 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'Every point is a catalogued galaxy or quasar.',
     alt: 'The same cloud of points, several times as wide and so dense at the centre that it runs to white.',
   },
+  // The Screens page. `guide-phone` has no focus: on a phone a pinned card hides both panels.
+  {
+    id: 'guide-phone',
+    link: `${NEAR_WEB_POSE}&${NOON}`,
+    settings: { ui: true, open: ['Settings'], settleMs: 4000 },
+    size: { width: 390, height: 760 },
+    widths: [780],
+    title: 'The app in a window the size of a phone, with the Settings panel opened',
+    caption: 'The data size reads Small.',
+    drawn: 'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
+    alt: 'A field of galaxies in an upright window. A search box and three round buttons are at the top; at the foot a folded Navigation panel and an open Settings panel with eight headings cover the lower half.',
+  },
+  {
+    id: 'guide-dome-window',
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z',
+    query: 'dome',
+    settings: { ui: true, settleMs: 4000 },
+    size: FEATURE,
+    widths: DOCS_WIDTHS,
+    title: 'Dome mode in an ordinary window',
+    caption: 'The disc is as wide as the window is high. The panels and the card lie flat over it until Tab hides them.',
+    drawn: 'Saturn’s position and ring tilt are computed for 15 October 2017.',
+    alt: 'A round all-sky picture in the middle of a black window, Saturn low in it, with the app’s panels at the left and Saturn’s card at the right.',
+    credit: 'Saturn: Solar System Scope',
+  },
   // The docs' Reference pages.
   {
     id: 'ref-settings',

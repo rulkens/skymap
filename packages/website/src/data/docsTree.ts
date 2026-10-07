@@ -41,7 +41,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       {
         title: 'Screens, quality and domes',
         path: '/docs/guide/screens-and-domes/',
-        status: 'planned',
+        status: 'live',
         up: '/domes/',
       },
     ],
