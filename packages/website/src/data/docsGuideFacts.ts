@@ -967,7 +967,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-large-choice',
     about: 'app',
-    text: 'The app never chooses the large size by itself. It is heavy for the graphics built into a laptop, so it is left for you to pick.',
+    text: 'The large size is yours to pick: it is heavy for the graphics built into a laptop, so the app never starts on it.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: `the starting-size rule, ${IN_REPO}`,
     checked: CHECKED,
@@ -1143,7 +1143,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-cost',
     about: 'app',
-    text: 'Measured on 7 October 2026 as our server sends them, compressed, the catalogues and the density grid that the app fetches as it opens above Earth came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
+    text: 'Measured on 7 October 2026 as our server sent them, compressed, the catalogues and the density grid that the app fetches as it opens above Earth came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
     checked: CHECKED,

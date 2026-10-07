@@ -15,7 +15,7 @@ const IN_REPO = 'in the skymap repository';
 export const DOCS_DATA_FACTS: readonly Fact[] = [
   {
     id: 'pipe-galaxy-caps',
-    text: 'GLADE is cut to its 256,000 most luminous galaxies at the smallest data size and 400,000 at the middle one, and the quasars of Milliquas to 60,000 and 200,000. The largest size keeps every row of both. 2MRS and the three DESI regions are never cut. For SDSS and GLADE every galaxy that appears brighter than magnitude 15 is kept as well, whatever its luminosity, which keeps the nearby faint galaxies.',
+    text: 'GLADE is cut to its 256,000 most luminous galaxies at the smallest data size and 400,000 at the middle one, and the quasars of Milliquas to 60,000 and 200,000. The largest size keeps every row of both. 2MRS and the three DESI regions are never cut. For SDSS and GLADE every galaxy that appears brighter than magnitude 15 is kept as well, whatever its luminosity, so the nearby faint galaxies stay in the map.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources`,
     sourceLabel: `the catalogue definitions, ${IN_REPO}`,
     checked: CHECKED,
