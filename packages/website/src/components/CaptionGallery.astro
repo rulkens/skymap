@@ -4,6 +4,7 @@
  * ShotCaption per view in one cell (`.view-words` in styles/site.css), under a
  * row of ring markers, one per view, that choose the view. A host treats it as
  * a single label (it carries the `caption` class and draws the same foot).
+ * The markers sit close and centred: a quiet row, not a control bar.
  * Without script the markers stay hidden and the first label stands.
  */
 import ShotCaption from './ShotCaption.astro';
@@ -16,7 +17,6 @@ const { ids } = Astro.props;
 
 <div class="caption views">
   <div class="marks" role="group" aria-label="Views">
-    <span class="small" aria-hidden="true">Views</span>
     {
       ids.map((id, i) => (
         <button
@@ -48,24 +48,20 @@ const { ids } = Astro.props;
     --caption-foot: none;
   }
 
-  /* The row stands in the host's rise above the label (`--caption-lift`), clear of the arm at the rule's left end. */
+  /* The row stands in the host's rise above the label (`--caption-lift`). */
   .marks {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     margin-top: calc(-1 * var(--caption-lift, 0rem));
-    padding-left: 0.5rem;
   }
 
-  .marks span {
-    margin-right: 0.25rem;
-    color: var(--site-text-dim);
-  }
-
+  /* Full tap height, narrow width: the dots read as one group. */
   .marks .ring {
     flex: none;
     justify-content: center;
-    width: var(--tap);
+    width: 1.5rem;
     padding: 0;
   }
 
