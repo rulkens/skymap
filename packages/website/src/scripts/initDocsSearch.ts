@@ -2,8 +2,8 @@
  * initDocsSearch — the search sheet (components/DocsSearch.astro). Pagefind's
  * module and index are fetched the first time the sheet opens, never with the
  * page. The development server has no index (it is cut from a build), and the
- * sheet says so. A result opens at the place on its page that holds the words
- * (utils/searchLanding.ts). Arrow keys walk from the field through the results and back;
+ * sheet says so. A result opens its page, or the term, row or heading on it
+ * that names what was asked for (utils/searchLanding.ts). Arrow keys walk from the field through the results and back;
  * Enter in the field opens the first result.
  */
 import type { PagefindApi } from '../@types/PagefindApi';
@@ -25,7 +25,7 @@ function hit(page: PagefindPage, query: string): HTMLLIElement {
   title.textContent = page.meta.title ?? page.url;
   const where = link.appendChild(document.createElement('span'));
   where.className = 'where';
-  where.textContent = page.meta.group ? `Docs, ${page.meta.group}` : 'Outside the docs';
+  where.textContent = `Docs, ${page.meta.group}`;
   const excerpt = link.appendChild(document.createElement('span'));
   excerpt.className = 'excerpt';
   // Pagefind's own markup: escaped page text with `<mark>` about the matched words.

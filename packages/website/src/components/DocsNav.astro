@@ -20,7 +20,7 @@ type Props = { current: string; sections: readonly MarkdownHeading[] };
 const { current, sections } = Astro.props;
 ---
 
-<nav class="docs-nav small" aria-label="Docs" data-pagefind-ignore>
+<nav class="docs-nav small" aria-label="Docs">
   <DocsSearch />
   <details open data-docs-menu>
     <summary class="ring small">Contents</summary>

@@ -26,6 +26,8 @@ const labels = Astro.props.head ?? fromSlot!.head.map((html) => html.replace(/<[
 const cols = Astro.props.cols ?? (head.length === 2 ? '2 4' : head.length === 3 ? '2 2 2' : 'stack');
 // A table with no heading over its first column names its rows there: those cells are the rows' headers.
 const named = labels[0] === '';
+// Ends every cell: the search index joins the words of neighbouring cells where nothing stands between them.
+const SPACE = ' ';
 ---
 
 <div class="doc-table" data-embed data-cols={cols}>
@@ -39,6 +41,7 @@ const named = labels[0] === '';
             ) : (
               <th role="columnheader" scope="col">
                 {typeof cell === 'object' && 'html' in cell ? <Fragment set:html={cell.html} /> : cell}
+                {SPACE}
               </th>
             ),
           )
@@ -71,12 +74,14 @@ const named = labels[0] === '';
                   ) : 'text' in cell ? (
                     <>
                       {cell.text}
+                      {SPACE}
                       {cell.sub && <small>{cell.sub}</small>}
                       {cell.code && <code class="eg">{cell.code}</code>}
                     </>
                   ) : (
                     <code>{cell.code}</code>
                   )}
+                  {SPACE}
                 </Tag>
               );
             })}

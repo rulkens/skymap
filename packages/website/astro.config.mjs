@@ -92,7 +92,7 @@ const crawlFiles = {
 };
 
 // The search index is cut from the built pages, into the build itself, so it follows base and outDir like they do.
-// Only a page whose `<main>` carries `data-pagefind-body` is in it (layouts/Base.astro).
+// Only the text of a docs page is in it: the element that carries `data-pagefind-body` (layouts/Docs.astro).
 const searchIndex = {
   name: 'search-index',
   hooks: {

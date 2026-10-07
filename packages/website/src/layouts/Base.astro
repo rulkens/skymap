@@ -17,13 +17,11 @@ type Props = {
   description: string;
   jsonLd?: readonly Record<string, unknown>[];
   heroNav?: boolean;
-  /** Out of the search index: the page that says a page is missing. */
-  unlisted?: boolean;
   /** The id "Skip to content" goes to, where a layout has its own contents before the text. */
   skipTo?: string;
 };
 
-const { title, description, jsonLd = [], heroNav = false, unlisted = false, skipTo = 'main' } = Astro.props;
+const { title, description, jsonLd = [], heroNav = false, skipTo = 'main' } = Astro.props;
 const imageAlt = siteShot('og-card').alt;
 // Shared root files stay root-absolute (the main shell serves them); the canonical and the card need the site origin.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
@@ -67,7 +65,7 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
   <body class={heroNav ? 'hero-nav' : undefined}>
     <a class="skip-link" href={`#${skipTo}`}>Skip to content</a>
     <Nav />
-    <main id="main" data-pagefind-body={unlisted ? undefined : ''}>
+    <main id="main">
       <slot />
     </main>
     <Footer />

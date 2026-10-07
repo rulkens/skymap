@@ -59,7 +59,7 @@ const turns = [
   <div class="wrap grid docs">
     <DocsNav current={path} sections={sections} />
 
-    <article class="page" id="page" data-pagefind-meta={`group:${group.name}`}>
+    <article class="page" id="page" data-pagefind-body data-pagefind-meta={`group:${group.name}`}>
       <header data-opening>
         <p class="where small tap-links" data-pagefind-ignore>
           <a href={sitePath('/docs/')}>Docs</a>
@@ -99,7 +99,7 @@ const turns = [
 
     {
       sections.length > 0 && (
-        <nav class="toc small" aria-labelledby="toc-label" data-pagefind-ignore>
+        <nav class="toc small" aria-labelledby="toc-label">
           <p id="toc-label">On this page</p>
           <PageSections sections={sections} />
         </nav>
