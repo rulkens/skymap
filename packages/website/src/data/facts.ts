@@ -35,7 +35,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
     sourceLabel: 'NASA Moon fact sheet',
     checked: CHECKED,
-    short: 'The ring around Earth is the Moon’s orbit. Light takes about 1.3 seconds to cross from there to here.',
+    short: 'The ring around Earth is the Moon’s orbit. Moonlight takes about 1.3 seconds to get here.',
   },
   {
     id: 'saturn-distance',
@@ -121,7 +121,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://science.nasa.gov/mission/voyager/voyager-1/',
     sourceLabel: 'NASA, Voyager 1',
     checked: CHECKED,
-    short: 'Voyager 1 would need about 75,000 years to reach Proxima Centauri, the nearest star.',
+    short: 'The nearest, Proxima Centauri, is about 75,000 years away at Voyager 1’s speed.',
   },
   {
     id: 'galactic-centre-light',
@@ -137,7 +137,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://doi.org/10.1038/nature22335',
     sourceLabel: 'Richter et al. 2017, dating Jebel Irhoud',
     checked: CHECKED,
-    short: 'Light from Andromeda set out 2.5 million years ago. The oldest fossils assigned to our species are about 300,000 years old.',
+    short: 'Andromeda’s light is older still: 2.5 million years, against about 300,000 for the oldest fossils of our species.',
   },
   {
     id: 'cosmic-web-map',
@@ -168,7 +168,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck 2018, cosmological parameters',
     checked: CHECKED,
-    short: 'The sphere is drawn where a model puts the edge, about 46 billion (46 thousand million) light-years out. The catalogues fill little of it.',
+    short: 'A model puts the edge here, about 46 billion (46 thousand million) light-years out. The catalogues are the small cloud inside.',
   },
   {
     id: 'sondermarken-flyout',
