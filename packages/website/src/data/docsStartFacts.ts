@@ -67,7 +67,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-models',
     about: 'app',
-    text: 'Seven spacecraft are in the scene as 3D models: Voyager 1, Voyager 2, the Hubble Space Telescope, and the Mars rovers Spirit, Opportunity, Curiosity and Perseverance. There are three other models: Søndermarken, a park in Copenhagen, and a whale and a bowl of petunias in orbit around Earth.',
+    text: 'Seven spacecraft are in the scene as 3D models: Voyager 1, Voyager 2, the Hubble Space Telescope, and the Mars rovers Spirit, Opportunity, Curiosity and Perseverance. The other three models are the park Søndermarken and, in orbit around Earth, a whale and a bowl of petunias.',
     source: `${REPO_BLOB}/src/data/bodies/sceneMeshBodies.ts`,
     sourceLabel: `the list of 3D models, ${IN_REPO}`,
     checked: CHECKED,

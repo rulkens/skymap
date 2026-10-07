@@ -164,7 +164,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'observable-edge',
-    text: 'The edge of the observable universe is about 46 billion (46 thousand million) light-years away. That is a present-day distance in a flat Lambda-CDM model, the standard model of cosmology, with Planck 2018 parameters, which is why it exceeds the age of the universe in years.',
+    text: 'The edge of the observable universe is about 46 billion (46 thousand million) light-years away. That is the distance today in a flat Lambda-CDM model, the standard model of cosmology, with Planck 2018 parameters. It exceeds the age of the universe in years because space kept expanding while the light travelled.',
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck 2018, cosmological parameters',
     checked: CHECKED,
