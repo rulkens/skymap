@@ -49,6 +49,7 @@ import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
 import { SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
+import { appViewProblem } from '../../../tools/site/utils/appViewProblem';
 import { initialTierFromViewport } from '../../../src/utils/initialTierFromViewport';
 import { layerUiContents } from '../../../src/utils/layer/layerUiContents';
 
@@ -280,6 +281,9 @@ describe('URL parameters page', () => {
     expect(
       DOCS_FOCUS_IDS.filter((row) => row.prefix && !row.example.startsWith(row.prefix)),
     ).toEqual([]);
+    expect(DOCS_FOCUS_IDS.filter((row) => appViewProblem(`focus=${row.example}`) !== null)).toEqual(
+      [],
+    );
     expect([...DOCS_BODY_NAMES]).toEqual(
       Object.values(BODY_PICK_ROWS).flatMap((seeds) => seeds.map((seed) => seed.id)),
     );
