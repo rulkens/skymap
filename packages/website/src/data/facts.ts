@@ -247,10 +247,10 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'link-pose',
     about: 'app',
-    text: 'An address can also carry the exact camera position (pose). The app reads it but does not write it into the address bar by itself, so a link you copy opens on the app’s standard view of the object.',
-    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose), which the app reads but does not write.',
-    source: `${REPO_BLOB}/src/utils/url/decodeFramedPose.ts`,
-    sourceLabel: 'the camera-position parameter, in the skymap repository',
+    text: 'An address can also carry the exact camera position (pose). The app reads it when the link opens and then takes it out of the address, and it never writes one by itself, so a link you copy from the address bar opens on the app’s standard view of the object.',
+    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose): the app reads it when the link opens, then removes it from the address, and never writes one itself.',
+    source: `${REPO_BLOB}/src/state/url/watchHashWriteSaga.ts`,
+    sourceLabel: 'how the app rewrites the address, in the skymap repository',
     checked: CHECKED,
   },
   {
