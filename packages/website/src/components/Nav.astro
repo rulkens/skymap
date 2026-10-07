@@ -93,6 +93,8 @@ const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page
     gap: 1.875rem;
     /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
     padding-inline: var(--gutter);
+    /* The launch control is as far from the right edge as from the top one. */
+    padding-right: calc((var(--nav-height) - var(--tap)) / 2);
     /* Over a picture the labels sit on stars; the shadow is their local scrim. */
     text-shadow:
       0 0 0.75rem #000,
