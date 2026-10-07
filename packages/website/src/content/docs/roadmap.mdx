@@ -1,0 +1,67 @@
+---
+description: What is planned for skymap and how far along each thing is, taken from the list of work in the repository. No dates and no promises.
+facts: [kiosk-planned, tour-earth-start-planned, bench-galaxy-unused, dome-rig]
+---
+
+import { ISSUES_URL } from '../../data/contact';
+import { ROADMAP } from '../../data/roadmap';
+
+export const STATE = { 'in progress': 'In progress', planned: 'Planned', idea: 'An idea' };
+
+export const items = (id) => ({
+  cols: 'detail',
+  head: ['What', 'What it is', 'State'],
+  rows: ROADMAP.find((group) => group.id === id).items.map((item) => [
+    item.title,
+    item.text,
+    STATE[item.state],
+  ]),
+});
+
+<Fact id="about-maker" inline /> So this is a list of intentions, in no order, and any of it may change or be dropped; who makes skymap and why is on [About](/about/).
+
+<Fact id="road-source" />
+
+We chose from that list what a visitor would notice and put it in a visitor’s words. Repairs to the code, the tools and the many small faults on it are left out; the list itself is <Repo path="docs/BACKLOG.md">in the repository</Repo>. A test fails when a row here no longer has its line there, so nothing stays on this page after it is built or given up.
+
+## The three states
+
+<Fact id="road-states" />
+
+<Fact id="road-no-dates" />
+
+## New things to see
+
+<Table {...items('to-see')} />
+
+<Figure id="milky-way-drawn" />
+
+The galaxy renderer, where the model of a galaxy is being worked out, is one of the [developer workbenches](/docs/developers/workbenches/), and you can open it.
+
+## Tours, teaching and domes
+
+<Table {...items('teaching-and-domes')} />
+
+<Figure id="dome-saturn" />
+
+What the app does for a dome today is under [Screens, quality and domes](/docs/guide/screens-and-domes/), and the tours are under [Tours and exhibits](/docs/guide/tours/). If you run a dome or an exhibit and one of these rows would decide whether you can use skymap, [Domes and museums](/domes/) says how to reach us.
+
+## Accuracy
+
+Each row is a place where the app is known to be off. What it gets wrong on purpose is under [Known simplifications](/docs/simplifications/).
+
+<Table {...items('accuracy')} />
+
+## Moving, finding and reading
+
+<Table {...items('using')} />
+
+## Speed, phones and platforms
+
+<Table {...items('speed-and-devices')} />
+
+There is no row for virtual reality or for more browsers: neither is on the list. Which browsers run the app today is under [Browser support and troubleshooting](/docs/start/browsers/).
+
+## Suggest something
+
+Open an issue on the <a href={ISSUES_URL}>issue list on GitHub</a>, and say what you were trying to do. An issue is public and carries your GitHub name. <Fact id="road-suggest" inline />

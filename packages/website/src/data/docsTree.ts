@@ -99,7 +99,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Where the project is going, whom it credits and how to cite it.',
     up: '/about/',
     pages: [
-      { title: 'Roadmap', path: '/docs/roadmap/', status: 'planned' },
+      { title: 'Roadmap', path: '/docs/roadmap/', status: 'live' },
       { title: 'Credits', path: '/docs/credits/', status: 'live', up: '/domes/' },
       { title: 'Cite', path: '/docs/cite/', status: 'live', up: '/science/' },
       {
