@@ -15,7 +15,7 @@ skymap draws with [WebGPU](/docs/reference/glossary/#webgpu), in the browser, wi
     { name: 'Capture', href: '#capture', text: 'Only when needed: the sky around a black hole, or the surroundings of a 3D model, into the six faces of a cube.' },
     { name: 'Glows at reduced size', href: '#the-far-scene', text: 'Out: four small images of smooth light, to be stretched over the frame in the next two steps.' },
     { name: 'The far scene', href: '#the-far-scene', text: 'Galaxies, filaments, the cosmic web, structure markers. Into: the one image of light, added up.' },
-    { name: 'The near scene', href: '#the-near-scene', text: 'The Milky Way and its dust, stars, constellations; the black hole’s lens over them. Into: the same image.' },
+    { name: 'The near scene', href: '#the-near-scene', text: 'The Milky Way and its dust, the Local Bubble, stars, constellations; the black hole’s lens over them. Into: the same image.' },
     { name: 'Bodies', href: '#bodies', text: 'Planets, moons, ground, clouds, rings, air and models, far to near, into an image of their own with depth. Then laid over the image of light.' },
     { name: 'Bloom', href: '#light-to-screen', text: 'The bright parts, blurred and added back.' },
     { name: 'Tone curve', href: '#light-to-screen', text: 'In: light without an upper limit. Out: the colours of a screen.' },
@@ -31,7 +31,7 @@ Almost everything before the tone curve is light added to light. Adding has no o
 
 A frame starts on the processor. Each part of the scene that must choose what to draw does so here, before any command for the graphics processor exists: the stars choose their boxes, the galaxy layer finds the few rows near enough to need more than a point, and the Milky Way and the flow ribbons settle how many points they have. Later steps only read the answers.
 
-Next come three computations that draw nothing. The particles of the [Cosmic Flows](/docs/guide/tours/) ribbons are carried one step along the velocity field. For every atmosphere in view, the brightness of its sky from the camera’s height is written into a small table. With the camera inside an atmosphere, a block of haze is filled for the view. They come first because the drawing steps look their results up.
+Next come three computations that draw nothing. The particles of the [Cosmic Flows](/docs/guide/tours/) ribbons are carried one step along the velocity field. For every atmosphere in view, the brightness of its sky from the camera’s height is written into a small table. With the camera inside an atmosphere, a block of haze is filled for the view. The first two come first because the drawing steps look their results up; the haze is filled at the start of each view.
 
 ## Capture
 
@@ -51,7 +51,7 @@ The cosmic web and the Zone of Avoidance band are drawn first, into their small 
 
 The Milky Way and the stars are added to the same image, through a projection of their own: the far scene’s nearest limit is 10 kiloparsecs out, which would cut the Milky Way’s disc in two. ([Precision across scales](/docs/rendering/precision/) has the reason.)
 
-Here the order does matter, in two places. The Milky Way’s dust is the one thing in the frame that takes light away, by multiplying what is behind it. It is drawn after the galaxies, so that it dims them as real dust does, and before the nearby stars, which lie between the camera and the dust on the way in and must not be dimmed by it. And the black hole’s lens, where it is in view, is laid over all of this, because a ray that falls in must hide the light already added behind it.
+Here the order does matter, in two places. The Milky Way’s dust is the one thing in the frame that takes light away, by multiplying what is behind it. It is drawn after the galaxies, so that it dims them as real dust does, and before the surface of the <Source id="local-bubble">Local Bubble</Source> and the nearby stars, which it must not dim: the stars lie between the camera and the dust on the way in. And the black hole’s lens, where it is in view, is laid over all of this, because a ray that falls in must hide the light already added behind it.
 
 <Figure id="about-milky-way" />
 
