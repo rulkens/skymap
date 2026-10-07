@@ -1,6 +1,7 @@
 ---
-/* Credits — who made the images and catalogues Home shows, each linked to its source and licence. */
+/* Credits — who made the images and catalogues Home shows, each linked to its source, its licence and its data page, which has the terms in full. */
 import { DATA_CREDITS, IMAGE_CREDITS } from '../data/credits';
+import { dataPagePath } from '../utils/dataPagePath';
 import { sitePath } from '../utils/sitePath';
 
 const groups = [
@@ -19,7 +20,11 @@ const groups = [
           <>
             {i > 0 && '; '}
             <a href={credit.href}>{credit.name}</a> (
-            {credit.licenceHref ? <a href={credit.licenceHref}>{credit.licence}</a> : credit.licence})
+            {credit.licenceHref ? <a href={credit.licenceHref}>{credit.licence}</a> : credit.licence};{' '}
+            <a href={sitePath(dataPagePath(credit.entry))} aria-label={`Terms in full: ${credit.name}`}>
+              terms in full
+            </a>
+            )
           </>
         ))}
         .

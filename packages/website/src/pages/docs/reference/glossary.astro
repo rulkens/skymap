@@ -10,6 +10,7 @@ import DocTable from '../../../components/DocTable.astro';
 import { DATA_SOURCES } from '../../../data/dataSources';
 import { GLOSSARY } from '../../../data/glossary';
 import Docs from '../../../layouts/Docs.astro';
+import { dataRowPath } from '../../../utils/dataRowPath';
 
 const letters = [...new Set(GLOSSARY.map((term) => term.term[0]!.toUpperCase()))];
 // The picture that closes a letter's terms: of the cosmic web, of a void, of the Zone of Avoidance.
@@ -68,7 +69,7 @@ const headings = [
                   {source && (
                     <>
                       {' '}
-                      Source: <a href={source.href}>{source.name}</a>. Our use of it:{' '}
+                      Source: <DocLink href={dataRowPath(source.entries)}>{source.name}</DocLink>. Our use of it:{' '}
                       <DocLink href="/science/#sources">The sources</DocLink>.
                     </>
                   )}
