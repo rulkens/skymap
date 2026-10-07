@@ -26,6 +26,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'stars',
     setting: 'star-catalogs',
     view: { to: 'focus=star-sun', label: 'Open the Sun, with the Gaia stars behind it' },
+    figure: 'render-stars',
   },
   'bailer-jones': {
     description:
@@ -322,6 +323,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The surfaces of Jupiter’s four large moons.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-io&t=2022-06-01T00:00:00Z', label: 'Open Io' },
+    figure: 'data-io',
   },
   'usgs-enceladus': {
     description:
@@ -330,6 +332,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The surface of Enceladus.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-enceladus&t=2026-10-07T12:00:00Z', label: 'Open Enceladus' },
+    figure: 'data-enceladus',
   },
   'photojournal-saturn-moons': {
     description:
@@ -339,6 +342,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The surfaces of Mimas, Tethys, Dione, Rhea and Iapetus.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-iapetus&t=2026-10-07T12:00:00Z', label: 'Open Iapetus' },
+    figure: 'data-iapetus',
   },
   'schenk-uranian': {
     description:
@@ -355,6 +359,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The surfaces of Pluto and Charon.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-pluto&t=2026-10-07T12:00:00Z', label: 'Open Pluto' },
+    figure: 'data-pluto',
   },
   'nasa-pluto-colour': {
     description:
@@ -371,6 +376,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The surface of Triton.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-triton&t=2026-10-07T12:00:00Z', label: 'Open Triton' },
+    figure: 'data-triton',
   },
   'nasa-blue-marble': {
     description:
@@ -398,6 +404,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The ground of Søndermarken, a park in Frederiksberg, Copenhagen, at tile levels 14 to 19: the sharpest imagery in the app.',
     scene: 'earth-and-its-surface',
     view: { to: 'focus=body-soendermarken&t=2026-06-21T11:00:00Z', label: 'Open Søndermarken' },
+    figure: 'data-soendermarken',
   },
   viking: {
     description:
@@ -405,6 +412,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The colour of Mars as you come down to the ground, and the colour given to the close-ups at all four rover sites.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
+    figure: 'data-spirit',
   },
 
   // Terrain
@@ -448,6 +456,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The ground at Perseverance’s site: its height, and a grey photograph coloured from the Viking mosaic.',
     scene: 'spacecraft',
     view: { to: 'focus=body-perseverance&t=2026-10-07T16:00:00Z', label: 'Open Perseverance' },
+    figure: 'data-perseverance',
   },
   'hirise-dtm': {
     title: 'Columbia Hills and Endeavour crater (HiRISE)',
@@ -492,6 +501,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The whale in orbit around Earth: a model of Livyatan melvillei by Major, from Sketchfab.',
     shows: 'The whale in orbit around Earth.',
     view: { to: 'focus=body-whale&t=2026-10-07T13:00:00Z', label: 'Open the whale' },
+    figure: 'data-whale',
   },
   'mesh-petunias': {
     title: 'The bowl of petunias, by Marianne Goudriaan',
@@ -499,6 +509,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The bowl of petunias behind the whale: a model by Marianne Goudriaan, from Sketchfab.',
     shows: 'The bowl of petunias in orbit around Earth, behind the whale.',
     view: { to: 'focus=body-petunias&t=2026-10-07T13:00:00Z', label: 'Open the petunias' },
+    figure: 'data-petunias',
   },
   'mesh-voyager': {
     title: 'Voyager model (NASA)',
@@ -523,6 +534,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The Perseverance rover on Mars.',
     scene: 'spacecraft',
     view: { to: 'focus=body-perseverance&t=2026-10-07T16:00:00Z', label: 'Open Perseverance' },
+    figure: 'data-perseverance',
   },
   'mesh-curiosity': {
     title: 'Curiosity rover model (NASA)',
@@ -539,6 +551,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The rovers Spirit and Opportunity on Mars.',
     scene: 'spacecraft',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Spirit' },
+    figure: 'data-spirit',
   },
   skraafoto: {
     description:
