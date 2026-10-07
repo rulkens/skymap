@@ -2,11 +2,10 @@ import type { AttributionEntry } from '../../../../tools/@types/io/AttributionEn
 import type { DataFile } from './DataFile';
 
 /**
- * One entry of `ATTRIBUTIONS.md` placed on the data pages. `title` is its
- * short name and `description` one sentence on what it is, written by hand or
- * else the record's own. `family` is its family's id, `path` the page it is
- * printed on and `href` that page with the entry's anchor where it shares the
- * page. `record` is the parsed entry, `files` its rows of the raw data registry.
+ * One entry of `ATTRIBUTIONS.md` placed on the data pages: `description` is
+ * one sentence on what it is, `family` its family's id, `path` its page and
+ * `href` that page with the entry's anchor where it shares one; `files` are
+ * its rows of the raw data registry.
  */
 export type DataEntry = {
   readonly id: string;

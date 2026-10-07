@@ -101,7 +101,8 @@ describe('what is written by hand for the data pages', () => {
   it('shows only pictures made for a column, with a title and words for a screen reader', () => {
     const poor = Object.entries(DATA_SOURCE_NOTES).filter(([, note]) => {
       const shot = SITE_SHOTS.find((row) => row.id === note.figure);
-      return shot && (Math.max(...shot.widths) < 1000 || !shot.title || !shot.alt);
+      // A text column is 552 px wide; the thumbnails' largest file is 240.
+      return shot && (Math.max(...shot.widths) < 552 || !shot.title || !shot.alt);
     });
     expect(poor.map(([id]) => id)).toEqual([]);
   });

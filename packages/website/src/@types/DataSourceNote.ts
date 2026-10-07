@@ -1,12 +1,9 @@
 /**
- * What a person adds to one source's generated page, by entry id: nothing of
- * the licence record. `title` replaces the rule-made title where the rule
- * cuts a heading badly; `description` is one sentence on what the source is,
- * the page's opening line and its row of the list. `about` is a paragraph on
- * a major source and `facts` the sourced rows of data/facts.ts after it.
- * `shows` says what it becomes in the app; `scene` and `setting` are anchors
- * on "What is in the scene" and "All settings"; `view` opens the app on it
- * (`to` follows the `#`); `figure` is a shot of data/siteShots.ts that shows it.
+ * What a person adds to one source's generated page: nothing of the licence
+ * record. `description` opens the page and is its row of the list; `facts`
+ * are rows of data/facts.ts printed after `about`; `shows` is what it becomes
+ * in the app; `scene` and `setting` are anchors on "What is in the scene" and
+ * "All settings"; `view.to` follows the `#`; `figure` is a shot's id.
  */
 export type DataSourceNote = {
   readonly title?: string;
