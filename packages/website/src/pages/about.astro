@@ -22,7 +22,7 @@ import { formatDate } from '../utils/formatDate';
 import { sitePath } from '../utils/sitePath';
 
 const title = 'About skymap: who makes it and which pictures you may reuse';
-const description = `skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, pictures for reuse, and a colophon.`;
+const description = `skymap is made by one person, ${MAKER_NAME}, and is open source. Its version and history, how to get in touch, press pictures, and a colophon.`;
 
 const ALIVE = [
   { term: 'Licence', id: 'about-licence' },
@@ -45,6 +45,7 @@ const factIds = [
   'wisdome-showing',
   'wisdome-venue',
   'about-picture-licence',
+  'about-picture-reuse',
   'gaia-licence',
   ...COLOPHON.map((item) => item.id),
 ];
@@ -139,10 +140,11 @@ const makerProfile = REPO_URL.slice(0, REPO_URL.lastIndexOf('/'));
   </section>
 
   <section class="wrap section" id="press">
-    <SectionHead title="Pictures you can reuse" narrow>
+    <SectionHead title="Pictures and their terms" narrow>
       <p>
-        {fact('about-picture-licence').text} Each picture below lists what is in it and the credit to print. Its
-        address opens the same view in the app, where you can take your own.
+        {fact('about-picture-licence').text} {fact('about-picture-reuse').text} Each picture below lists what is in
+        it and the credit to print. Its address opens the same view in the app, where you can take your own; the same
+        terms follow that picture.
       </p>
     </SectionHead>
     <PressPictures />

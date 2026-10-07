@@ -1,6 +1,6 @@
 ---
 /*
- * PressPictures — the pictures offered for reuse, in halves of the page grid: each with its
+ * PressPictures — the pictures shown with their terms, in halves of the page grid: each with its
  * name, what it shows, the credit to print, the terms, and links to the view
  * and to the widest file the site holds. The cards share their rows (subgrid),
  * so the same line of two cards sits at the same height whatever its length.
@@ -44,8 +44,7 @@ const press = PRESS_PICTURES.map((row) => {
           <div>
             <dt>Reuse</dt>
             <dd>
-              {row.nonCommercial ? 'Non-commercial use, with the credit. ' : 'Any use, with the credit. '}
-              {row.terms}
+              Ask us first. {row.terms}
             </dd>
           </div>
         </dl>

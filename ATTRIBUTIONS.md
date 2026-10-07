@@ -83,9 +83,12 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** Positions, velocities and J/H/K magnitudes of 44,599 nearby
   galaxies (table 3).
 - **By:** Huchra et al. 2012, ApJS 199, 26.
-- **Licence:** Not stated on the survey's own page, and the VizieR ReadMe
-  (J/ApJS/199/26) carries no copyright section. The CDS terms above apply to
-  the copy served by CDS, which they class as AAS-journal data.
+- **Licence:** Two statements, and skymap uses the CDS copy. The authors:
+  none; the survey's own page and the VizieR ReadMe (J/ApJS/199/26) carry no
+  licence or copyright section. CDS, of the copy it serves: "Tabular data,
+  spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
+  CC-BY-NC licence", a non-commercial licence (the link CDS attaches points
+  at by-nc-nd).
 - **Attribution:** Cite Huchra et al. 2012. 2MASS, on which the survey rests,
   asks for: "This publication makes use of data products from the Two Micron
   All Sky Survey, which is a joint project of the University of Massachusetts
@@ -209,8 +212,11 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   used for galaxies inside 30 Mpc.
 - **By:** Tully et al. 2023, ApJ 944, 94
   ([arXiv:2209.11238](https://arxiv.org/abs/2209.11238)).
-- **Licence:** The VizieR ReadMe (J/ApJ/944/94) carries no copyright section.
-  The CDS terms above apply; they class the table as AAS-journal data.
+- **Licence:** The authors state none; the VizieR ReadMe (J/ApJ/944/94)
+  carries no copyright section. CDS, whose copy skymap uses: "Tabular data,
+  spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
+  CC-BY-NC licence", a non-commercial licence (the link CDS attaches points
+  at by-nc-nd).
 - **Attribution:** Cite Tully et al. 2023.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/>
 - **Enters skymap:** `npm run fetch-cf4` → `data/raw/cf4/table2.dat` →
@@ -297,8 +303,10 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   astrometry of S2, S12 and S38 (`table5`) held as a test fixture only.
 - **By:** Gillessen et al. 2017, ApJ 837, 30. The fixture's origin follows
   Plewa et al. 2015, MNRAS 453, 3234.
-- **Licence:** The CDS terms above apply; they class the tables as AAS-journal
-  data.
+- **Licence:** The authors state none. CDS, from whose copy the rows were
+  typed: "Tabular data, spectra or images coming from AAS journals (J/ApJ,
+  J/ApJS, J/AJ) are under CC-BY-NC licence", a non-commercial licence (the
+  link CDS attaches points at by-nc-nd).
 - **Attribution:** Cite Gillessen et al. 2017.
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJ/837/30>
 - **Enters skymap:** typed by hand into `src/data/bodies/sStarElements.ts`
@@ -1499,24 +1507,31 @@ metadata carries the notice was not checked.
 
 ## Code and methods
 
-### "Spiral galaxy" by mrange (two noise functions)
+### "Spiral galaxy" by mrange (seven helper functions)
 
 <!-- attribution: id=mrange -->
 
-- **What:** `hash21` and `valueNoise2` in
-  `src/services/gpu/shaders/lib/util.wesl`. They came with a port of the
-  "Spiral galaxy" ShaderToy, which once drew the Milky Way; that shader is no
-  longer in the repository and these two helpers are what remains.
+- **What:** Seven small functions that came with a port of the "Spiral
+  galaxy" ShaderToy, which once drew the Milky Way. That shader is no longer
+  in the repository; these helpers are what remains, and other shaders use
+  them: `hash21` (the shader's `rand`), `valueNoise2` (its `noise1`) and
+  `raySphere` in `src/services/gpu/shaders/lib/util.wesl`; `rot2` (its
+  `rot`), `sabs` (its `SABS` and `LESS` macros), `toPolar` and `toRect` in
+  `src/services/gpu/shaders/lib/math.wesl`.
 - **By:** mrange (<https://www.shadertoy.com/user/mrange>).
-- **Licence:** CC0, as the shader's first line read when it was ported
-  ("// License CC0: Spiral galaxy").
-- **Attribution:** None required by CC0; the file names the source.
+- **Licence:** CC0. The shader's first line: "// License CC0: Spiral galaxy".
+  Read today in a third party's copy of ShaderToy's own API output for the
+  shader (a backup made on 5 October 2024), not on ShaderToy, which refuses
+  scripted requests.
+- **Attribution:** None required by CC0; `util.wesl` names the source,
+  `math.wesl` says only "the ShaderToy GLSL original".
 - **Upstream:** <https://www.shadertoy.com/view/wsBBWD>
 - **Enters skymap:** hand-ported to WGSL.
-- **Modified:** Yes. Translated from GLSL.
-- **Checked:** 2026-10-07: ShaderToy refused the request (HTTP 403, a browser
-  check), so the licence line was not re-read.
-- **Not verified:** the licence line today.
+- **Modified:** Yes. Translated from GLSL; `rot2` returns its result instead
+  of changing its argument.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/GabeRundlett/shadertoy-api-shaders/f6d538adf936215ccf2d11ba9b4a6c79ccb448c5/shaders/wsBBWD.json>
+  (a copy); ShaderToy itself answered HTTP 403.
+- **Not verified:** the licence line on ShaderToy's own page today.
 
 ### "Hash without Sine" by Dave Hoskins
 
@@ -1572,6 +1587,145 @@ metadata carries the notice was not checked.
 - **Enters skymap:** written by hand from the article's formulae.
 - **Modified:** Yes. Output converted from sRGB to linear light and normalised.
 - **Checked:** 2026-10-07: <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>
+
+### Mulberry32 (seeded random numbers)
+
+<!-- attribution: id=mulberry32 -->
+
+- **What:** The 32-bit generator in `src/utils/random/mulberry32.ts`, used
+  wherever the app needs the same "random" numbers on every load.
+- **By:** Tommy Ettinger, 2017.
+- **Licence:** Public domain (CC0). The gist's header: "To the extent possible
+  under law, the author has dedicated all copyright and related and
+  neighboring rights to this software to the public domain worldwide. This
+  software is distributed without any warranty. See
+  <http://creativecommons.org/publicdomain/zero/1.0/>."
+- **Attribution:** None required; the file names the author and links the gist.
+- **Upstream:** <https://gist.github.com/tommyettinger/46a874533244883189143505d203312c>
+- **Enters skymap:** written by hand in TypeScript from the gist's C.
+- **Modified:** Yes. Translated; returns a float in [0, 1).
+- **Checked:** 2026-10-07: <https://gist.githubusercontent.com/tommyettinger/46a874533244883189143505d203312c/raw>
+
+### ACES filmic tone-mapping fit (Krzysztof Narkowicz)
+
+<!-- attribution: id=narkowicz-aces -->
+
+- **What:** The five-constant curve `applyAces` in
+  `src/services/gpu/shaders/lib/tonemap.wesl` and its CPU twin `acesFilmic`
+  in `src/services/gpu/passes/compositor.ts`: one of the tone-mapping curves
+  the app offers.
+- **By:** Krzysztof Narkowicz, "ACES Filmic Tone Mapping Curve", 2016.
+- **Licence:** The article, of the code: "Fitted curve’s HLSL source code
+  (free to use under public domain CC0 or MIT license)".
+- **Attribution:** None required under CC0; the files name the author.
+- **Upstream:** <https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/>
+- **Enters skymap:** hand-ported from HLSL to WGSL and TypeScript.
+- **Modified:** Translated; constants unchanged.
+- **Checked:** 2026-10-07: <https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/>
+
+### `pcg4d` hash (Jarzynski & Olano 2020)
+
+<!-- attribution: id=pcg4d -->
+
+- **What:** The four-lane integer hash `pcg4d` in
+  `src/services/gpu/shaders/milkyWay/sprites/generate.wesl`, which the file
+  says matches "the paper's reference GLSL exactly"; it seeds the drawn Milky
+  Way's stars and clouds.
+- **By:** Mark Jarzynski and Marc Olano, "Hash Functions for GPU Rendering",
+  Journal of Computer Graphics Techniques 9(3), 2020.
+- **Licence:** The paper, which prints the function as a listing: "The Authors
+  provide this document (the Work) under the Creative Commons CC BY-ND 3.0
+  license". No separate licence for the listing's code is stated in the
+  paper. The paper's ShaderToy companion, where a licence for the code may be
+  stated, could not be opened.
+- **Attribution:** Cite the paper; the file does.
+- **Upstream:** <https://jcgt.org/published/0009/03/02/>
+- **Enters skymap:** hand-ported from the paper's listing to WGSL.
+- **Modified:** Translated; the arithmetic is the listing's.
+- **Checked:** 2026-10-07: <https://jcgt.org/published/0009/03/02/paper.pdf>
+- **Not verified:** any licence stated with the authors' ShaderToy code
+  (ShaderToy answered HTTP 403).
+
+### Colour maps: viridis, magma, inferno and "coolwarm"
+
+<!-- attribution: id=colormaps -->
+
+- **What:** Colour ramps in `src/data/volume/scalarFieldPalettes.ts`. Five
+  anchor colours each of `viridis`, `magma` and `inferno`, which the file
+  says "match matplotlib's `_cm_listed.py`"; `inferno` colours the cosmic web
+  glow. And a `coolwarm` ramp whose comment says its anchors are "borrowed
+  from matplotlib's `coolwarm`".
+- **By:** viridis, magma, inferno: Nathaniel J. Smith, Stéfan van der Walt and
+  Eric Firing (the "mpl-colormaps"), shipped in matplotlib. matplotlib's
+  `coolwarm` is, in its own source, "generated from CoolWarmFloat33.csv of
+  'Diverging Color Maps for Scientific Visualization' by Kenneth Moreland".
+- **Licence:** mpl-colormaps: CC0. "To the extent possible under law, the
+  persons who associated CC0 with mpl-colormaps have waived all copyright and
+  related or neighboring rights to mpl-colormaps." matplotlib itself: its own
+  licence, which grants use and derivative works "provided, however, that
+  MDT's License Agreement and MDT's notice of copyright, i.e., "Copyright (c)
+  2012- Matplotlib Development Team; All Rights Reserved" are retained in
+  matplotlib alone or in any derivative version". Kenneth Moreland's page
+  states no licence for the colour table. skymap's `coolwarm` anchors are not
+  matplotlib's numbers: matplotlib's table runs (59, 76, 192) → (221, 221,
+  221) → (180, 4, 38), ours (20, 60, 180) → (245, 245, 240) → (180, 30, 30).
+- **Attribution:** None required for the CC0 maps. For matplotlib's own
+  material, the licence and notice quoted above.
+- **Upstream:** <https://bids.github.io/colormap/>,
+  <https://github.com/matplotlib/matplotlib>,
+  <https://www.kennethmoreland.com/color-maps/>
+- **Enters skymap:** typed by hand as anchor colours.
+- **Modified:** Yes. Five anchors per map, interpolated; `coolwarm` re-chosen
+  by eye and given an opacity per anchor.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/BIDS/colormap/master/LICENSE.txt>,
+  <https://bids.github.io/colormap/>,
+  <https://raw.githubusercontent.com/matplotlib/matplotlib/main/LICENSE/LICENSE>,
+  <https://raw.githubusercontent.com/matplotlib/matplotlib/main/lib/matplotlib/_cm.py>,
+  <https://www.kennethmoreland.com/color-maps/>
+
+### Shader hashes whose origin is not recorded
+
+<!-- attribution: id=shader-hashes -->
+
+- **What:** `integerHash3` and `hashAvalanche` in
+  `src/services/gpu/shaders/lib/util.wesl`, used by the noise bakes of the
+  drawn Milky Way. The comment calls the first a "Bob Jenkins/Squirrel-family
+  3-int avalanche" and names no source. Its three multipliers (374761393,
+  668265263, 2246822519) are the numbers xxHash names `PRIME32_5`,
+  `PRIME32_4` and `PRIME32_2`; the function is not xxHash.
+- **By:** Not recorded.
+- **Licence:** Not recorded: no source is named, so no licence could be read.
+  xxHash, whose constants these are, is "BSD 2-Clause License", "Copyright (C)
+  2012-2023 Yann Collet".
+- **Attribution:** None recorded.
+- **Upstream:** None recorded. <https://github.com/Cyan4973/xxHash> for the
+  constants.
+- **Enters skymap:** written by hand in WGSL.
+- **Modified:** Not known.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/Cyan4973/xxHash/dev/xxhash.h>
+- **Not verified:** where the function was taken from.
+
+### DialKit's slider (design reimplemented)
+
+<!-- attribution: id=dialkit -->
+
+- **What:** `src/components/common/Slider/Slider.tsx`, which its header calls
+  "a reimplementation of dialkit's Slider adapted to skymap's tokens". The
+  package is not a dependency and, by the header, none of its animation code
+  is used.
+- **By:** Josh Puckett (dialkit).
+- **Licence:** MIT, as GitHub reports for the repository and as the npm
+  package's `license` field states. Its licence text was not read.
+- **Attribution:** MIT asks that its notice travel with copies of the
+  software; whether any of dialkit's code, as opposed to its design, is in the
+  file was not established.
+- **Upstream:** <https://github.com/joshpuckett/dialkit>
+- **Enters skymap:** written by hand in React and CSS.
+- **Modified:** A reimplementation.
+- **Checked:** 2026-10-07: <https://api.github.com/repos/joshpuckett/dialkit>,
+  <https://registry.npmjs.org/dialkit/latest>
+- **Not verified:** the licence text and its copyright line; how much of the
+  original's code the file follows.
 
 ### Atmospheres: Bruneton & Neyret 2008, Hillaire 2020
 
@@ -1723,6 +1877,61 @@ and where they come from".
 - **Enters skymap:** `.env.production` (`VITE_DATA_BASE_URL`); `docs/DEPLOY.md`.
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: the repository itself.
+
+### Pictures and films made with skymap
+
+<!-- attribution: id=skymap-pictures -->
+
+- **What:** Every render of the app that is published: the website's stills
+  (76 rows in `packages/website/src/data/siteShots.ts`, files under
+  `packages/website/src/assets/shots/`), its nine film loops
+  (`assets/loops/place-*.mp4`), the stills of the home page's flight
+  (`assets/flight/`), the two social cards (`assets/og-card.jpg`,
+  `public/og-image.jpg`), the 47 card thumbnails the app ships
+  (`public/images/featured/`), and any screenshot or recording a visitor
+  takes.
+- **By:** Alexander Rulkens, for the render. Each picture is also a copy or
+  an adaptation of whatever third-party data and imagery is in the frame.
+- **Licence:** Ours (MIT) for our part only. A picture carries the terms of
+  every entry of this file that is visible in it, and the most restrictive of
+  them governs its reuse:
+  - Any frame with stars: Gaia DR3, "CC BY-NC 3.0 IGO" (non-commercial), and
+    ESA: "Prior to any commercial use by the User of any Data or Data
+    Product, including any use or application that directly or indirectly
+    generates a financial gain, a detailed request for authorisation/licence
+    shall be made". The brightest stars are Hipparcos rows, whose catalogue
+    states no licence.
+  - Galaxy and quasar points: SDSS (public domain, as SDSS states), DESI (CC
+    BY 4.0), 2MRS and Cosmicflows-4 distances (no licence from the authors;
+    CC-BY-NC as CDS serves them), GLADE, Milliquas and HyperLEDA (no licence
+    stated).
+  - The cosmic web glow: an SDSS DR17 product (see its entry). Structure
+    markers: MCXC (CDS: "free for a scientific usage") and MSCC (no licence
+    stated).
+  - Planets and moons: per map, as "Solar-system textures" lists; the maps of
+    the moons of Uranus state no licence.
+  - Earth close up: EOxCloudless 2025, CC BY-NC-SA 4.0 (non-commercial,
+    adaptations under the same licence), used by permission; GeoDanmark and
+    Klimadatastyrelsen data, CC BY 4.0.
+  - A galaxy's photograph: per image, as "Galaxy imagery" lists. One site
+    still, `guide-card-galaxy`, shows a Digitized Sky Survey cutout:
+    copyrighted, and "Commercial, for-profit use of the copyrighted
+    collections is prohibited without written permission from the copyright
+    holder(s)."
+  - 3D models: per model, as "3D models" lists.
+  No picture that shows stars, 2MRS, GLADE or Milliquas points can therefore
+  be offered for unrestricted reuse, and the website offers none.
+- **Attribution:** "skymap / Alexander Rulkens", followed by the credit of
+  each source in the frame as its entry words it.
+- **Upstream:** the app itself; `tools/site/README.md`, `tools/capture/README.md`.
+- **Enters skymap:** `npm run site:shots`, `npm run site:media`,
+  `npm run capture-featured`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: the entries of this file named above, on the pages
+  they list; no page of its own.
+- **Not verified:** frame by frame, which sources are visible in each of the
+  76 stills, 9 loops and 47 thumbnails; 28 stills carry a credit line, the
+  loops, flight stills and thumbnails carry none.
 
 ## Services and links
 

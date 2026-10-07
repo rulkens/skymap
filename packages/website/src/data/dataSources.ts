@@ -6,9 +6,16 @@ const ATTRIBUTIONS = `${REPO_BLOB}/ATTRIBUTIONS.md`;
 const GAIA_RECORD = `${REPO_BLOB}/data/raw/gaia/README.md`;
 const VIZIER = 'https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=';
 const CITE_PAPER = 'No licence stated. Cite the paper.';
-/** Catalogues we take from CDS, whose own terms cover the copy it serves. */
-const CDS_TERMS =
-  'No licence stated by the authors. CDS, which serves it, allows scientific use and sets its own rules for commercial use. Cite the paper.';
+/*
+ * Catalogues we take from CDS. Their authors state no licence; CDS states its
+ * own terms for the copy it serves, by the journal the table came from.
+ */
+const CDS_AAS =
+  'No licence stated by the authors. CDS, which serves the copy we use, classes tables from AAS journals as CC BY-NC (non-commercial). Cite the paper.';
+const CDS_AA =
+  'No licence stated by the authors. CDS, which serves the copy we use, says tables from A&A are free for scientific use. Cite the paper.';
+const CDS_OTHER =
+  'No licence stated by the authors or in the catalogue’s ReadMe. CDS, which serves the copy we use, allows scientific use and refers commercial use to the journal. Cite the paper.';
 
 const GALAXIES = 'Galaxies and quasars';
 const STARS = 'Stars';
@@ -47,7 +54,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     release: 'Huchra et al. 2012, table 3 (VizieR J/ApJS/199/26)',
     rows: '44,599 galaxies',
     drawn: '34,974',
-    licence: CDS_TERMS,
+    licence: CDS_AAS,
     href: `${VIZIER}J/ApJS/199/26`,
     evidence: REGISTRY,
   },
@@ -96,7 +103,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Distances measured without redshift, used for galaxies inside 30 megaparsecs',
     release: 'Tully et al. 2023, table 2 (VizieR J/ApJ/944/94)',
     rows: '55,877 galaxies',
-    licence: CDS_TERMS,
+    licence: CDS_AAS,
     href: 'https://arxiv.org/abs/2209.11238',
     evidence: REGISTRY,
   },
@@ -116,7 +123,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: '2MASS Extended Source Catalog',
     gives: 'The tilt of 2MRS galaxies on the sky',
     release: 'VizieR VII/233, fetched through the VizieR service',
-    licence: 'No licence stated for the catalogue. Cite Jarrett et al. 2000 and VizieR.',
+    licence: 'No licence stated for the catalogue on the 2MASS pages. We take it from CDS, which allows scientific use and refers commercial use to the catalogue’s ReadMe and journal. Cite Jarrett et al. 2000 and VizieR.',
     href: `${VIZIER}VII/233`,
     evidence: ATTRIBUTIONS,
     ask: 'This research has made use of the VizieR catalogue access tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier).',
@@ -130,7 +137,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     release: 'DR3, table gaia_source_lite, fetched 14 and 15 July 2026',
     rows: '16,844,156 stars',
     drawn: '12,853,984',
-    licence: 'CC BY-NC 3.0 IGO. Acknowledgement text required.',
+    licence: 'CC BY-NC 3.0 IGO (non-commercial). ESA asks for a request before any commercial use. Acknowledgement text required.',
     href: 'https://www.cosmos.esa.int/web/gaia/dr3',
     evidence: GAIA_RECORD,
     ask: 'This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.',
@@ -142,7 +149,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: 'Bailer-Jones distances',
     gives: 'A distance estimate for each Gaia star',
     release: 'Bailer-Jones et al. 2021, from Gaia EDR3 (archive table gaiaedr3_distance)',
-    licence: 'No licence of its own found. It is served by the Gaia archive. Cite the paper.',
+    licence: 'No licence of its own found. It is served by the Gaia archive, whose data are CC BY-NC 3.0 IGO (non-commercial). Cite the paper.',
     href: 'https://arxiv.org/abs/2012.05220',
     evidence: GAIA_RECORD,
   },
@@ -153,7 +160,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Every Gaia star within 100 parsecs, including those fainter than magnitude 14',
     release: 'Gaia EDR3, Smart et al. 2021',
     rows: '331,312 stars',
-    licence: 'As Gaia.',
+    licence: 'No licence of its own found. It is served by the Gaia archive, whose data are CC BY-NC 3.0 IGO (non-commercial). Cite the paper.',
     href: 'https://www.cosmos.esa.int/web/gaia/edr3-gcns',
     evidence: GAIA_RECORD,
   },
@@ -164,7 +171,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'The bright stars that saturate Gaia’s detectors',
     release: 'The 2007 re-reduction, van Leeuwen (VizieR I/311)',
     rows: '117,955 stars',
-    licence: CDS_TERMS,
+    licence: CDS_OTHER,
     href: `${VIZIER}I/311`,
     evidence: GAIA_RECORD,
   },
@@ -195,7 +202,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'The orbits of 40 stars around the black hole at the centre of the Milky Way',
     release: 'Gillessen et al. 2017, table 3, plus one star from the GRAVITY Collaboration 2026',
     rows: '40 orbits',
-    licence: CDS_TERMS,
+    licence: CDS_AAS,
     href: 'https://arxiv.org/abs/1611.09144',
     evidence: ATTRIBUTIONS,
   },
@@ -205,7 +212,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: 'SDSS Cosmic Slime catalogue',
     gives: 'The density field drawn as the cosmic web glow',
     release: 'SDSS DR17 value-added catalogue, cube SDSS_z_44-476mpc, Wilde et al. 2023',
-    licence: 'Public domain, as SDSS states of its data releases. Cite the paper and SDSS DR17.',
+    licence: 'The catalogue’s own page states no terms. It is part of SDSS DR17, and SDSS calls the data of its releases public domain. Cite the paper and SDSS DR17.',
     href: 'https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold',
     evidence: ATTRIBUTIONS,
   },
@@ -226,7 +233,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Positions, redshifts and sizes for the cluster markers',
     release: 'Piffaretti et al. 2011 (VizieR J/A+A/534/A109)',
     rows: '1,743 clusters',
-    licence: CDS_TERMS,
+    licence: CDS_AA,
     href: `${VIZIER}J/A%2BA/534/A109`,
     evidence: REGISTRY,
   },
@@ -237,7 +244,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Positions and extents for the supercluster markers',
     release: 'Chow-Martínez et al. 2014 (VizieR J/MNRAS/445/4073)',
     rows: '601 superclusters',
-    licence: CDS_TERMS,
+    licence: CDS_OTHER,
     href: `${VIZIER}J/MNRAS/445/4073`,
     evidence: REGISTRY,
   },
@@ -247,7 +254,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: 'NASA Blue Marble',
     gives: 'Earth’s surface, clouds and night lights',
     release: 'Blue Marble Next Generation, August 2004. Night lights: Black Marble 2016.',
-    licence: 'Not subject to copyright in the United States, as NASA states of its imagery. Credit NASA Earth Observatory.',
+    licence: 'Generally not subject to copyright in the United States, as NASA states of its imagery; it may not be used to suggest NASA’s endorsement. Credit NASA Earth Observatory.',
     href: 'https://visibleearth.nasa.gov/',
     evidence: ATTRIBUTIONS,
   },
@@ -257,7 +264,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: 'EOxCloudless',
     gives: 'Sharper satellite imagery of Earth in chosen regions',
     release: 'Layer s2cloudless-2025, from Copernicus Sentinel-2 data',
-    licence: 'CC BY-NC-SA 4.0, used with written permission from EOX.',
+    licence: 'CC BY-NC-SA 4.0 (non-commercial, share alike), used with written permission from EOX. Commercial use needs EOX’s commercial licence.',
     href: 'https://cloudless.eox.at',
     evidence: ATTRIBUTIONS,
   },
@@ -287,7 +294,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: 'USGS and NASA moon mosaics',
     gives: 'Surface maps of Pluto, Charon and the moons of Jupiter, Saturn, Uranus and Neptune',
     release: 'Voyager, Galileo, Cassini and New Horizons mosaics, one per body',
-    licence: 'Per map. Public domain in the USGS records of Io, Ganymede, Callisto, Enceladus and Triton; NASA’s terms for five moons of Saturn; authors to be cited for Pluto and Charon; no licence stated for Paul Schenk’s maps of the moons of Uranus.',
+    licence: 'Per map. The USGS records call Io, Ganymede, Callisto, Enceladus and Triton public domain and ask that authors be cited for Enceladus and Triton; Europa’s record states no constraint; NASA’s terms for five moons of Saturn; authors to be cited for Pluto and Charon; no licence stated for Paul Schenk’s maps of the moons of Uranus.',
     href: 'https://planetarymaps.usgs.gov/',
     evidence: ATTRIBUTIONS,
   },
