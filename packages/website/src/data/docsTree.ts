@@ -51,7 +51,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     purpose: 'Every key, link parameter, setting and named object, in tables.',
     up: '/classroom/',
     pages: [
-      { title: 'Controls', path: '/docs/reference/controls/', status: 'planned' },
+      { title: 'Controls', path: '/docs/reference/controls/', status: 'live' },
       { title: 'URL parameters', path: '/docs/reference/url-parameters/', status: 'planned' },
       { title: 'Settings', path: '/docs/reference/settings/', status: 'planned' },
       { title: 'Object catalogue', path: '/docs/reference/objects/', status: 'planned' },

@@ -2,6 +2,7 @@ import type { Fact } from '../@types/Fact';
 import { ABOUT_FACTS } from './aboutFacts';
 import { CLASSROOM_FACTS } from './classroomFacts';
 import { DOCS_GUIDE_FACTS } from './docsGuideFacts';
+import { DOCS_REFERENCE_FACTS } from './docsReferenceFacts';
 import { DOCS_START_FACTS } from './docsStartFacts';
 import { PRIVACY_FACTS } from './privacyFacts';
 import { SCIENCE_FACTS } from './scienceFacts';
@@ -467,5 +468,6 @@ export const FACTS: readonly Fact[] = [
   ...CLASSROOM_FACTS,
   ...PRIVACY_FACTS,
   ...DOCS_GUIDE_FACTS,
+  ...DOCS_REFERENCE_FACTS,
   ...DOCS_START_FACTS,
 ];
