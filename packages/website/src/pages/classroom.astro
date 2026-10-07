@@ -62,10 +62,10 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   <PictureBand views={CLASS_VIEWS} gap="none" eager>
     <h1>Use skymap in the classroom</h1>
     <p class="say">
-      Distances in space are hard to feel from a page. In skymap your pupils fly across them, from the Moon to the
+      Distances in space are hard to feel from a page. In skymap your pupils <a href={sitePath('/docs/guide/moving/')}>fly</a> across them, from the Moon to the
       galaxies, at true scale.
     </p>
-    <p>You share a view as a link, and every pupil who opens it lands on the same object at the same date.</p>
+    <p>You <a href={sitePath('/docs/guide/sharing/')}>share a view as a link</a>, and every pupil who opens it lands on the same object at the same date.</p>
     <div class="view-words" data-views>
       {CLASS_VIEWS.map((view) => <AddressStrip hash={siteShot(view.id).link} />)}
     </div>
@@ -99,7 +99,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   <section class="wrap section" id="links">
     <SectionHead title="Ready-made links">
       <p>
-        Each link has one question. It opens where its picture was taken. The pictures have the name labels switched
+        Each link has one question. It opens where its picture was taken. The pictures have the <a href={sitePath('/docs/guide/settings/#turn-names-on-or-off')}>name labels</a> switched
         off; the links open with them on.
       </p>
     </SectionHead>
@@ -112,11 +112,11 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
     </SectionHead>
     <Steps>
       <Step title="Find the object">
-        <p>Open the search, type a name and press Enter. {says('double-click-focus')}</p>
+        <p>Open <a href={sitePath('/docs/guide/finding/#open-the-search')}>the search</a>, type a name and press Enter. {says('double-click-focus')}</p>
       </Step>
       <Step title="Set the date">
         <p>
-          Select the clock at the bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}{' '}
+          Select <a href={sitePath('/docs/guide/time/#set-a-date-and-time')}>the clock</a> at the bottom right, type a date and a time, and press Enter. {says('date-entry-utc')}{' '}
           {says('date-entry-paused')}
         </p>
       </Step>
@@ -139,7 +139,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
       <div>
         <h3>What it runs on</h3>
         <p>
-          WebGPU is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}
+          <a href={sitePath('/docs/reference/glossary/#webgpu')}>WebGPU</a> is the part of a browser that lets a web page draw with the computer’s graphics chip.{' '}
           {says('webgpu-required')}
         </p>
         <p class="small">{says('webgpu-browsers')}</p>
@@ -171,7 +171,7 @@ const says = (id: string) => fact(id).short ?? fact(id).text;
   <section class="wrap section" id="honest">
     <SectionHead title="Measured, derived and drawn">
       <p>
-        Some of the scene is data, some is derived from data, and some is a choice of ours. It makes a lesson in how we
+        Some of the scene is data, some is <a href={sitePath('/docs/science/')}>derived from data</a>, and some is a choice of ours. It makes a lesson in how we
         know things: of anything on screen, ask which of the three it is.
       </p>
     </SectionHead>

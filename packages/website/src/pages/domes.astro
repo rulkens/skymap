@@ -16,6 +16,7 @@ import Steps from '../components/Steps.astro';
 import ViewLink from '../components/ViewLink.astro';
 import { appLink } from '../data/appLink';
 import { fact } from '../data/fact';
+import { REPO_URL } from '../data/siteIdentity';
 import { siteShot } from '../data/siteShot';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
 import { sitePath } from '../utils/sitePath';
@@ -71,7 +72,7 @@ const STEPS = [
     <p class="say proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
     <p>
       {fact('wisdome-dome').short} {fact('wisdome-venue').short} We can do three things for a dome or a gallery: a
-      live fisheye picture from the app, a rendered film, or a screen built around one exhibit.
+      <a href={sitePath('/docs/guide/screens-and-domes/#dome-mode')}>live fisheye picture</a> from the app, a <a href={sitePath('/docs/guide/screens-and-domes/#live-or-as-a-film')}>rendered film</a>, or a screen built around <a href={sitePath('/docs/guide/tours/#what-an-exhibit-is')}>one exhibit</a>.
     </p>
     <ObjLink hang href="#contact">How to reach us</ObjLink>
     <p slot="note" class="small">
@@ -134,15 +135,15 @@ const STEPS = [
       <div>
         <h3>Data and drawing, labelled</h3>
         <p class="small">
-          Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
-          photographed the Milky Way from outside, so on your dome it is drawn.
+          Star and galaxy positions come from published <a href={sitePath('/docs/data/')}>catalogues</a>. Some of the scene is a model: nobody has
+          photographed <a href={sitePath('/docs/science/#the-milky-way')}>the Milky Way</a> from outside, so on your dome it is drawn.
         </p>
         <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
       </div>
       <div>
         <h3>Credits and licences</h3>
         <p class="small">
-          Some data and imagery in skymap carry non-commercial licences. The stars are Gaia data.{' '}
+          Some data and imagery in skymap carry non-commercial licences. The stars are <a href={sitePath('/docs/data/gaia/')}>Gaia</a> data.{' '}
           {fact('gaia-licence').text} {fact('imagery-licences').text} For a paid commission we check the terms source
           by source, ask the rights holders where the terms require it, and replace what may not be shown.
         </p>
@@ -151,7 +152,7 @@ const STEPS = [
       <div>
         <h3>Open source</h3>
         <p class="small">
-          The code is public under the MIT licence. Your technician can read how the fisheye is made before anyone
+          <a href={REPO_URL}>The code</a> is public under the MIT licence. Your technician can read <a href={sitePath('/docs/rendering/#the-dome')}>how the fisheye is made</a> before anyone
           signs anything.
         </p>
         <ObjLink hang size="small" href={sitePath('/about/')}>About skymap</ObjLink>
