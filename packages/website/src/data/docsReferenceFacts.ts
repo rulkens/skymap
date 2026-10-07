@@ -62,7 +62,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-keys-clock-boxes',
     about: 'app',
-    text: 'The clock’s date box takes Enter and Esc, and its list of speeds takes Esc. Esc reaches the list only while the keyboard is on one of its rows, and a click on the speed does not put it there: after a click, close the list with a click outside it.',
+    text: 'The clock’s date box takes Enter and Esc. The list of speeds closes on a click outside it.',
     source: `${REPO_BLOB}/src/hooks/useDismissablePopover.ts`,
     sourceLabel: `how the clock’s boxes close, ${IN_REPO}`,
     checked: CHECKED,
@@ -92,14 +92,6 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'ref-keys-sliders',
-    about: 'app',
-    text: 'A slider that has the keyboard moves one step with an arrow key, ten steps with Page Up or Page Down, and to its lowest or its highest value with Home or End. A click on a slider does not give it the keyboard, and neither does Tab: Shift+Tab, which steps back through the controls, is the way to one.',
-    source: `${REPO_BLOB}/src/components/common/Slider/Slider.tsx`,
-    sourceLabel: `the slider, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'ref-keys-development',
     about: 'app',
     text: 'Two keys of the app’s shortcut table are for the people who build it: L and D. Both work in the published app.',
@@ -110,7 +102,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-mouse',
     about: 'app',
-    text: 'From a mouse the scene takes a drag with the left button, a drag with the right or the middle button, the wheel, a click, a double-click and the pointer at rest. A press and a release less than 4 pixels apart are a click, and anything longer is a drag. Holding Shift or Alt changes nothing.',
+    text: 'From a mouse the scene takes a drag with the left button, a drag with the right or the middle button, the wheel, a click, a double-click and the pointer at rest.',
     source: POINTER,
     sourceLabel: `the mouse, wheel and touch handlers, ${IN_REPO}`,
     checked: CHECKED,
@@ -118,7 +110,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-trackpad',
     about: 'app',
-    text: 'A trackpad reaches the app as a mouse: a click and drag is a drag with the left button, a scroll with two fingers is the wheel, and a pinch is the wheel at eight times the rate.',
+    text: 'A trackpad reaches the app as a mouse: a click and drag is a drag with the left button, a scroll with two fingers is the wheel, and a pinch zooms as the wheel does.',
     source: POINTER,
     sourceLabel: `the mouse, wheel and touch handlers, ${IN_REPO}`,
     checked: CHECKED,
@@ -126,7 +118,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-touch',
     about: 'app',
-    text: 'From a touch screen the scene takes four gestures: a drag with one finger, a pinch with two, a tap and a double-tap. Two fingers moved side by side, or turned about each other, do nothing.',
+    text: 'From a touch screen the scene takes four gestures: a drag with one finger, a pinch with two, a tap and a double-tap.',
     source: POINTER,
     sourceLabel: `the mouse, wheel and touch handlers, ${IN_REPO}`,
     checked: CHECKED,
@@ -148,6 +140,14 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
+    id: 'ref-keys-read',
+    about: 'app',
+    text: 'The app reads a key of these tables only while Shift, Ctrl, Alt and Cmd are up, unless the row shows one of them. A letter is read by the letter the key types, and /, [, ] and \\ by the key’s code.',
+    source: `${REPO_BLOB}/src/services/input/createKeyboardListener.ts`,
+    sourceLabel: `where the app listens for keys, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
     id: 'ref-esc-always',
     about: 'app',
     text: 'Esc unpins the card and lets go of the focus wherever the keyboard is, whatever else it closes. With the search open it closes the search and leaves a running tour or an open exhibit as it is: a second Esc leaves that.',
@@ -158,7 +158,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-tab-taken',
     about: 'app',
-    text: 'The app takes Tab for hiding the interface, so Tab does not move the keyboard from one button to the next. Shift+Tab moves it back by one, and in the search field Tab moves it on to the tabs.',
+    text: 'Tab hides the interface, so it does not move the keyboard from one button to the next.',
     source: SHORTCUTS,
     sourceLabel: SHORTCUTS_LABEL,
     checked: CHECKED,
@@ -166,7 +166,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-keys-under-welcome',
     about: 'app',
-    text: 'The welcome screen does not stop the keys. Tab pressed while it is up hides the interface behind it, and after Explore the panels are missing until Tab is pressed again. Seen on 7 October 2026.',
+    text: 'Tab hides the interface while the welcome screen is up as well. If the panels are missing, press Tab.',
     source: `${REPO_BLOB}/src/components/App/App.tsx`,
     sourceLabel: `where the interface is hidden, ${IN_REPO}`,
     checked: CHECKED,
@@ -176,7 +176,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-hash',
     about: 'app',
-    text: 'The app reads seven parameters after the # of its address: focus, t, orientation, exhibit, tour, clip and pose. It writes the first six back as the view changes, always in that order, and never writes pose.',
+    text: 'The app writes focus, t, orientation, exhibit, tour and clip into its address as the view changes, always in that order. It never writes pose.',
     source: HASH,
     sourceLabel: HASH_LABEL,
     checked: CHECKED,
@@ -184,7 +184,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-query',
     about: 'app',
-    text: 'The app reads five flags after the ? of its address: dome, cinema, gpuTimings, perf and tour. Each is switched on by being there, whatever value follows it, and each is read once, when the page loads.',
+    text: 'A flag is switched on by being there, whatever value follows it, and is read once, when the page loads.',
     source: `${REPO_BLOB}/src/utils/url/searchHasGate.ts`,
     sourceLabel: `how a flag is read, ${IN_REPO}`,
     checked: CHECKED,
@@ -192,7 +192,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-spelling',
     about: 'app',
-    text: 'The app reads the part after the # as it is written. Names and values keep their capitals, so Focus and body-Saturn are not understood, and percent codes are not decoded, so write @, +, : and the comma as themselves. Parameters are joined with &, in any order. One that is given twice counts the last time, and one the app does not know is ignored.',
+    text: 'The app reads the part after the # as it is written. Names and values keep their capitals, so Focus and body-Saturn are not understood, and codes such as %20 are not decoded, so write @, +, : and the comma as themselves. Parameters are joined with &, in any order. One that is given twice counts the last time, and one the app does not know is ignored.',
     source: `${REPO_BLOB}/src/utils/url/parseHashParams.ts`,
     sourceLabel: `how the address is split, ${IN_REPO}`,
     checked: CHECKED,
@@ -224,7 +224,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-unknown-wait',
     about: 'app',
-    text: 'Two kinds of unknown focus keep the loading screen up for 30 seconds before the home view appears: an id that begins with cluster-, supercluster-, void- or group- and names nothing, and a star- number beyond the stars that are loaded. Seen on 7 October 2026.',
+    text: 'A link with a mistyped id can take half a minute to open on the home view.',
     source: `${REPO_BLOB}/src/data/arrival/arrivalTimeoutMs.ts`,
     sourceLabel: `how long the app waits for a link, ${IN_REPO}`,
     checked: CHECKED,
@@ -232,7 +232,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-running',
     about: 'app',
-    text: 'An address changed while the app is open is followed at once: the camera flies to a new focus, and a tour or an exhibit the new address does not name is left. A parameter the new address leaves out goes back to its default: no focus, the clock on the present, the ecliptic up. A focus the app does not know stays in the address and changes nothing.',
+    text: 'An address changed while the app is open is followed at once: the camera flies to a new focus, and a tour or an exhibit the new address does not name is left. A parameter the new address leaves out goes back to where it starts: no focus, the clock on the present, the ecliptic up.',
     source: `${REPO_BLOB}/src/state/url/watchHashReadSaga.ts`,
     sourceLabel: `how the app follows its address, ${IN_REPO}`,
     checked: CHECKED,
@@ -248,7 +248,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-focus-ids',
     about: 'app',
-    text: 'The value of focus is an id in one of thirteen forms. The app tells them apart by how they begin, and an id that begins like none of them is looked up among the famous galaxies.',
+    text: 'The app tells the forms of an id apart by how they begin, and an id that begins like none of them is looked up among the named galaxies.',
     source: `${REPO_BLOB}/src/services/engine/selection/composeSelectionRows.ts`,
     sourceLabel: `how an id is resolved, ${IN_REPO}`,
     checked: CHECKED,
@@ -256,7 +256,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-focus-galaxy-ids',
     about: 'app',
-    text: 'For a galaxy the app writes the shortest id it has: the famous galaxy’s own, or else its PGC or SDSS number, or else its place on the sky to four decimals of a degree.',
+    text: 'For a galaxy the app writes the shortest id it has: a named galaxy’s own, or else its PGC or SDSS number, or else its place on the sky to four decimals of a degree.',
     source: `${REPO_BLOB}/src/services/url/encodeGalaxyId.ts`,
     sourceLabel: `how a galaxy’s id is chosen, ${IN_REPO}`,
     checked: CHECKED,
@@ -264,7 +264,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-focus-pos-famous',
     about: 'app',
-    text: 'A pos@ id that lands on one of the famous galaxies opens it, and the app then writes the address as pgc- with a number that is not the galaxy’s: pos@10.6847,41.2687 opens Andromeda and becomes pgc-46, which opens nothing. Link to a famous galaxy by its own id, m31. Seen on 7 October 2026.',
+    text: 'Link to a named galaxy by its own id, such as m31, and not by its position.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow.ts`,
     sourceLabel: `how a galaxy’s id is read, ${IN_REPO}`,
     checked: CHECKED,
@@ -272,7 +272,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-focus-places',
     about: 'app',
-    text: 'A place on Earth has no id. Choosing one in the search moves the camera and leaves the address bare, because the focus is Earth. A link to a place is a pose.',
+    text: 'A place on Earth has no id. Choosing one in the search moves the camera and writes nothing into the address, because the focus is Earth. A link to a place is a pose.',
     source: `${REPO_BLOB}/src/data/palette/earthPlaces.ts`,
     sourceLabel: `the places on Earth, ${IN_REPO}`,
     checked: CHECKED,
@@ -280,7 +280,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-time-forms',
     about: 'app',
-    text: 'The app writes t in full, as 2020-12-21T18:00:00.000Z, and sometimes a millisecond early, as 2026-10-05T18:59:59.999Z. It reads shorter forms: a date alone is midnight UTC, a year alone is the first of January, and a time may end in Z or in an offset such as +01:00. A time with neither is read in the local time of the computer that opens the link. A number of milliseconds is not read.',
+    text: 'The app writes t in full, as 2020-12-21T18:00:00.000Z. It reads shorter forms: a date alone is midnight UTC, a year alone is the first of January, and a time may end in Z or in an offset such as +01:00. A time with neither is read in the local time of the computer that opens the link. A number of milliseconds is not read.',
     source: HASH,
     sourceLabel: HASH_LABEL,
     checked: CHECKED,
@@ -296,7 +296,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-pose-with-focus',
     about: 'app',
-    text: 'Beside a focus on a planet the app keeps the camera on the planet, wherever the first three numbers of an a pose put it: focus=body-saturn opened the same view with three zeros there as with Saturn’s own position. Seen on 7 October 2026.',
+    text: 'With a focus in the same link, write the first three numbers of an a pose as 0: the camera turns about the focus.',
     source: `${REPO_BLOB}/src/state/navigation/navigateSaga.ts`,
     sourceLabel: `how the app follows a link, ${IN_REPO}`,
     checked: CHECKED,
@@ -312,7 +312,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-pose-body-focus',
     about: 'app',
-    text: 'A pose of the b form is not kept when the link also has a focus on the same body: with focus=body-earth beside it the app opens thousands of kilometres above Earth and not where the pose says. Leave the focus out. Seen on 7 October 2026.',
+    text: 'Do not add a focus to a link with a pose of the b form: the pose names its body itself.',
     source: `${REPO_BLOB}/src/state/navigation/navigateSaga.ts`,
     sourceLabel: `how the app follows a link, ${IN_REPO}`,
     checked: CHECKED,
@@ -328,7 +328,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-clip-what',
     about: 'app',
-    text: 'A clip is one flight of the camera with no captions and no steps. The interface stays up, the clock is paused while it plays, Esc stops it, and when it ends the address goes bare again. The app knows 26: ten of their own and one for each of the 16 flights “The Long Way Out” is made of.',
+    text: 'A clip is one flight of the camera with no captions and no steps. The interface stays up, the clock is paused while it plays, Esc stops it, and when it ends the address has nothing after it again. The app knows 26: ten of their own and one for each of the 16 flights “The Long Way Out” is made of.',
     source: `${REPO_BLOB}/src/data/animation/clips/clipRegistry.ts`,
     sourceLabel: `the camera flights, ${IN_REPO}`,
     checked: CHECKED,
@@ -336,7 +336,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-dome-spelling',
     about: 'app',
-    text: 'The dome flag is ?dome in small letters. ?Dome does nothing, and ?dome=0 switches dome mode on like any other value. It goes before the #, as in ?dome#focus=body-saturn.',
+    text: 'The dome flag is ?dome, in small letters and with no value. It goes before the #, as in ?dome#focus=body-saturn. To leave dome mode, take it out of the address.',
     source: `${REPO_BLOB}/src/services/engine/engine.ts`,
     sourceLabel: `where the app reads the dome flag, ${IN_REPO}`,
     checked: CHECKED,
@@ -386,7 +386,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-settings-kept',
     about: 'app',
-    text: 'The app keeps no settings. A reload, or a new visit, starts every setting on this page where the tables say, with one exception: the orientation is written into the address, so a reload, a bookmark or a shared link keeps it. The data size is not in the address and goes back to the one the screen’s width chooses.',
+    text: 'The app keeps no settings. A reload, or a new visit, starts every setting where the tables of All settings say, with one exception: the orientation is written into the address, so a reload, a bookmark or a shared link keeps it. The data size is not in the address and goes back to the one the screen’s width chooses.',
     source: `${REPO_BLOB}/src/state/persistedValues.ts`,
     sourceLabel: `the values the app keeps over a reload, ${IN_REPO}`,
     checked: CHECKED,
@@ -410,7 +410,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-settings-sizes',
     about: 'app',
-    text: 'The counts are the ones the Settings panel printed at each data size on 7 October 2026. The app states no download size in megabytes for any of the three, and neither does its data manifest.',
+    text: 'The counts are as the Settings panel showed them at each data size on 7 October 2026.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest',
     checked: CHECKED,
@@ -507,7 +507,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'gloss-dwarf-planet',
-    text: 'A dwarf planet is a body of the solar system that orbits the Sun directly and has enough mass to be round or nearly round, as a planet does.',
+    text: 'A dwarf planet is a body of the solar system that orbits the Sun directly and has enough mass to be round or nearly round, as a planet does. Unlike a planet, it is not massive enough to clear its orbit of objects of similar size.',
     source: NASA_GLOSSARY,
     sourceLabel: NASA_GLOSSARY_LABEL,
     checked: CHECKED,
@@ -528,7 +528,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'gloss-black-hole',
-    text: 'A black hole is so dense that the gravity just inside its event horizon lets nothing out, not even light. The one at the centre of the Milky Way, Sagittarius A*, has 4 million times the mass of the Sun.',
+    text: 'A black hole is an object whose gravity is so strong that nothing inside its event horizon can get out, not even light. The one at the centre of the Milky Way, Sagittarius A*, has 4 million times the mass of the Sun.',
     source: 'https://science.nasa.gov/universe/black-holes/',
     sourceLabel: 'NASA, Black holes',
     checked: CHECKED,
@@ -563,6 +563,34 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     sourceLabel: 'NASA, Hubble’s Messier catalogue',
     checked: CHECKED,
   },
+  {
+    id: 'gloss-ngc',
+    text: 'The New General Catalogue of Nebulae and Clusters of Stars (NGC) was compiled by J. L. E. Dreyer in 1888, and he added two Index Catalogues (IC) in 1895 and 1908. A modern compilation of the three, NGC 2000.0, has 13,226 objects.',
+    source: 'https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/VII/118?format=html&tex=true',
+    sourceLabel: 'CDS, catalogue VII/118: NGC 2000.0 (Sinnott 1988)',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-ugc',
+    text: 'The Uppsala General Catalogue of Galaxies (UGC), by P. Nilson, 1973, has 12,921 galaxies north of declination −2.5 degrees, complete to a diameter of 1 arcminute or an apparent magnitude of 14.5 on the Palomar sky survey’s blue prints.',
+    source: 'https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/VII/26D?format=html&tex=true',
+    sourceLabel: 'CDS, catalogue VII/26D: Uppsala General Catalogue of Galaxies (Nilson 1973)',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-pgc',
+    text: 'The Catalogue of Principal Galaxies (PGC), by Paturel and colleagues, 1989, lists coordinates and cross-identifications for 73,197 galaxies.',
+    source: 'https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/VII/119?format=html&tex=true',
+    sourceLabel: 'CDS, catalogue VII/119: Catalogue of Principal Galaxies (Paturel et al. 1989)',
+    checked: CHECKED,
+  },
+  {
+    id: 'gloss-abell',
+    text: 'The catalogue of Abell, Corwin and Olowin, 1989, lists 4,073 rich clusters of galaxies over the whole sky, each with at least 30 members in a set range of brightness and a nominal redshift below 0.2.',
+    source: 'https://cdsarc.cds.unistra.fr/viz-bin/ReadMe/VII/110A?format=html&tex=true',
+    sourceLabel: 'CDS, catalogue VII/110A: A Catalogue of Rich Clusters of Galaxies (Abell et al. 1989)',
+    checked: CHECKED,
+  },
 
   // Glossary: the app's and the site's own words
   {
@@ -594,7 +622,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-objects-rows',
     about: 'app',
-    text: `This page lists ${OBJECT_ROWS.length} named things, read from the app’s own tables when the site is built, and ${OBJECT_ROWS.filter((row) => row.link).length} of them have a link. Every link was opened in the app on 7 October 2026 and opened the object its row names.`,
+    text: `The catalogue has ${OBJECT_ROWS.length} named objects, read from the app’s own tables when the site is built, and ${OBJECT_ROWS.filter((row) => row.link).length} of them have a link. The links are made from the same tables, and a test reads each one with the app’s own parser.`,
     source: `${REPO_BLOB}/packages/website/src/data/objectCatalogue.ts`,
     sourceLabel: `the list this page is built from, ${IN_REPO}`,
     checked: CHECKED,
@@ -602,7 +630,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-objects-bodies',
     about: 'app',
-    text: `The app’s tables of bodies hold the Sun, ${objects('planet')} planets and dwarf planets, ${objects('moon')} moons, ${objects('spacecraft')} spacecraft and ${objects('model')} other models. Earth is the view the app opens on.`,
+    text: `The app’s tables of bodies hold the Sun, ${objects('planet')} planets counting Pluto, ${objects('moon')} moons, ${objects('spacecraft')} spacecraft and ${objects('model')} other models. Earth is the view the app opens on.`,
     source: `${REPO_BLOB}/src/data/bodies/sceneBodies.ts`,
     sourceLabel: `the app’s bodies, ${IN_REPO}`,
     checked: CHECKED,
@@ -618,7 +646,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-objects-stars',
     about: 'app',
-    text: `${objects('star')} stars have a name and an id in the app, and so do ${objects('sStar')} stars in orbit round the black hole at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.`,
+    text: `The app gives a name and an id to ${objects('star')} stars, and to ${objects('sStar')} more in orbit round the black hole at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.`,
     source: `${REPO_BLOB}/src/data/bodies/seededStarCatalogs.ts`,
     sourceLabel: `the app’s named stars, ${IN_REPO}`,
     checked: CHECKED,
@@ -626,7 +654,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-objects-galaxies',
     about: 'app',
-    text: `${objects('galaxy')} galaxies have a name and a short id in the app, most of them a Messier or a Caldwell number.`,
+    text: `The app gives a name and a short id to ${objects('galaxy')} galaxies, most of them a Messier or a Caldwell number.`,
     source: `${REPO_BLOB}/data/seeds/famous_galaxies.seed.json`,
     sourceLabel: `the named galaxies, ${IN_REPO}`,
     checked: CHECKED,

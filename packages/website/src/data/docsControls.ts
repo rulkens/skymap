@@ -9,10 +9,9 @@ const STEERING = 'The scene and exhibits';
  * KEYBOARD_SHORTCUTS, and tests/packages/website/docsReference.test.ts fails
  * when that table gains or loses a key these rows do not have. The other rows
  * are read from handlers the app does not export as data: the search
- * (usePaletteSearch.ts), the date box and the speed list, the welcome screen,
- * the sliders, and every pointer, wheel and touch handler (orbitControls.ts).
- * "Anywhere" is defined on the page: scene, tour, exhibit and welcome screen,
- * with no text field holding the keyboard.
+ * (usePaletteSearch.ts), the date box, the welcome screen, and every pointer,
+ * wheel and touch handler (orbitControls.ts). "Anywhere" and "The scene and
+ * exhibits" are defined on the page.
  */
 export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
   {
@@ -29,7 +28,7 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         input: ['H', 'E'],
         shortcut: ['h', 'e'],
         does: 'Flies the camera home to the sunlit side of Earth, and selects Earth.',
-        where: `${ANYWHERE}. During a tour Earth is selected and the tour keeps the camera.`,
+        where: ANYWHERE,
       },
       {
         input: ['Esc'],
@@ -81,11 +80,7 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         does: 'Goes to the highlighted result.',
         where: 'Search open, something typed',
       },
-      {
-        input: ['Esc'],
-        does: 'Closes the search. It also unpins the card and lets go of the focus.',
-        where: 'Search open',
-      },
+      { input: ['Esc'], does: 'Closes the search.', where: 'Search open' },
     ],
   },
   {
@@ -106,26 +101,15 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         does: 'Puts the scene back on the present, running at real speed.',
         where: ANYWHERE,
       },
-    ],
-  },
-  {
-    id: 'keys-clock-boxes',
-    kind: 'keys',
-    rows: [
       {
         input: ['Enter'],
         does: 'Moves the clock to the date in the field and closes the box.',
-        where: 'The date box',
+        where: 'The clock’s date box',
       },
       {
         input: ['Esc'],
-        does: 'Closes the box and leaves the clock as it was. It also unpins the card and lets go of the focus.',
-        where: 'The date box',
-      },
-      {
-        input: ['Esc'],
-        does: 'Closes the list. It also unpins the card and lets go of the focus.',
-        where: 'The list of speeds, once the keyboard is on one of its rows',
+        does: 'Closes the box and leaves the clock as it was.',
+        where: 'The clock’s date box',
       },
     ],
   },
@@ -142,14 +126,14 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       {
         input: ['Left'],
         shortcut: ['left'],
-        does: 'Goes back one step. On the first step it does nothing.',
+        does: 'Goes back one step.',
         where: 'A tour',
       },
       {
         input: ['Space'],
         shortcut: ['space'],
-        does: 'Pauses the tour, or resumes it. During the flight to a subject it does nothing.',
-        where: 'A tour, while the view is holding on a subject',
+        does: 'Pauses the tour, or resumes it.',
+        where: 'A tour, once the camera has arrived at a step',
       },
       {
         input: ['Esc'],
@@ -165,31 +149,13 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       {
         input: ['Tab'],
         shortcut: ['tab'],
-        does: 'Hides every panel and button. Pressed again, it brings them back.',
+        does: 'Hides the interface. Pressed again, it brings it back.',
         where: ANYWHERE,
       },
       {
         input: ['Esc'],
-        does: 'Closes the welcome screen, as the Explore button does, and deselects Earth.',
+        does: 'Closes the welcome screen, as the Explore button does.',
         where: 'The welcome screen',
-      },
-    ],
-  },
-  {
-    id: 'keys-sliders',
-    kind: 'keys',
-    rows: [
-      { input: ['Right', 'Up'], does: 'One step up.', where: 'A slider that has the keyboard' },
-      { input: ['Left', 'Down'], does: 'One step down.', where: 'A slider that has the keyboard' },
-      {
-        input: ['Page Up', 'Page Down'],
-        does: 'Ten steps up or down.',
-        where: 'A slider that has the keyboard',
-      },
-      {
-        input: ['Home', 'End'],
-        does: 'The lowest or the highest value.',
-        where: 'A slider that has the keyboard',
       },
     ],
   },
@@ -200,7 +166,7 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       {
         input: ['L'],
         shortcut: ['l'],
-        does: 'Prints the camera’s position to the browser’s console, and under it a link to the view on screen with its pose and its instant.',
+        does: 'Prints the camera’s position to the browser’s console, and under it a link to the view on screen with its camera position and its date and time.',
         where: ANYWHERE,
       },
       {
@@ -217,7 +183,7 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
     rows: [
       {
         input: ['Drag with the left button'],
-        does: 'Turns the camera about its target. Near a surface, a drag that starts on the ground slides the ground and one that starts on the sky looks around.',
+        does: 'Turns the camera about its focus. Near a surface, a drag that starts on the ground slides the ground and one that starts on the sky looks around.',
         where: STEERING,
       },
       {
@@ -226,14 +192,19 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         where: STEERING,
       },
       {
+        input: ['Any drag, close to a Mars rover or to Søndermarken'],
+        does: 'Turns the camera round the site.',
+        where: 'The scene',
+      },
+      {
         input: ['Turn the wheel'],
-        does: 'Away from you moves the camera nearer its target, towards you moves it further off. Near a surface it zooms towards the point under the pointer.',
+        does: 'Away from you moves the camera nearer its focus, towards you moves it further off. Near a surface it zooms towards the point under the pointer.',
         where: `${STEERING}, with the pointer over the scene`,
       },
       {
         input: ['Click'],
         does: 'Selects the object or the name under the pointer and pins its card. On empty space it unpins the card.',
-        where: `${STEERING}. In dome mode a click selects nothing and unpins the card.`,
+        where: `${STEERING}. In dome mode a click selects nothing.`,
       },
       {
         input: ['Double-click'],
@@ -242,13 +213,8 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       },
       {
         input: ['Rest the pointer on an object'],
-        does: 'Shows a small card that names it.',
+        does: 'Shows a hover card that names it.',
         where: `${STEERING}, with no mouse button held`,
-      },
-      {
-        input: ['Right-click'],
-        does: 'Nothing. The browser’s menu does not open over the scene.',
-        where: 'The scene',
       },
     ],
   },
@@ -273,7 +239,7 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       },
       {
         input: ['Pinch'],
-        does: 'Fingers apart moves the camera nearer its target, fingers together moves it further off. It counts eight times as much as the same amount of scrolling.',
+        does: 'Fingers apart moves the camera nearer its focus, fingers together moves it further off.',
         where: `${STEERING}, with the pointer over the scene`,
       },
       {
@@ -289,17 +255,17 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
     rows: [
       {
         input: ['Drag with one finger'],
-        does: 'Turns the camera about its target. Near a surface, a drag that starts on the ground slides the ground and one that starts on the sky looks around.',
+        does: 'Turns the camera about its focus. Near a surface, a drag that starts on the ground slides the ground and one that starts on the sky looks around.',
         where: STEERING,
       },
       {
         input: ['Move two fingers apart'],
-        does: 'Moves the camera nearer its target.',
+        does: 'Moves the camera nearer its focus.',
         where: STEERING,
       },
       {
         input: ['Bring two fingers together'],
-        does: 'Moves the camera further from its target.',
+        does: 'Moves the camera further from its focus.',
         where: STEERING,
       },
       {

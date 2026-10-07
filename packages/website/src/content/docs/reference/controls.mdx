@@ -3,7 +3,26 @@ title: Controls
 description: Every key, mouse action, trackpad gesture and touch gesture that skymap responds to, in tables, each with what it does and where it applies.
 group: Reference
 order: 1
-facts: [ref-keys-camera, ref-keys-search, ref-keys-clock, ref-keys-tours, ref-keys-interface, ref-keys-development]
+facts:
+  [
+    ref-keys-camera,
+    ref-keys-search,
+    ref-keys-search-open,
+    ref-keys-clock,
+    ref-keys-clock-boxes,
+    ref-keys-tours,
+    ref-keys-interface,
+    ref-keys-welcome,
+    ref-keys-under-welcome,
+    ref-keys-development,
+    ref-mouse,
+    ref-trackpad,
+    ref-touch,
+    tour-no-steering,
+    site-view,
+    surface-controls,
+    touch-gestures,
+  ]
 ---
 
 import { DOCS_CONTROLS } from '../../../data/docsControls';
@@ -21,19 +40,21 @@ export const controls = (id) => {
   };
 };
 
-This page is for looking a control up. The Guide explains the same controls by what you want to do, starting with [Moving around](/docs/guide/moving/), and [Use skymap in the classroom](/classroom/) has views that need no steering at all.
+The Guide explains the same controls by what you want to do, starting with [Moving around](/docs/guide/moving/).
+
+<Figure id="guide-controls" eager />
 
 ## Where a control applies
 
 The last column of each table uses these words.
 
 - **Anywhere** is the scene, a tour, an exhibit and the welcome screen, as long as no text field has the keyboard.
-- **The scene and exhibits** leaves tours out. <Fact id="tour-no-steering" inline />
+- **The scene and exhibits** takes in a tour while it is paused. While a tour plays, the tour steers the camera.
 - **A text field** is the search field or the date field of the clock.
 
-<Fact id="ref-text-fields" />
+<Fact id="ref-text-fields" inline /> <Fact id="ref-esc-always" inline />
 
-<Fact id="ref-esc-always" />
+<Fact id="ref-keys-read" inline /> On a keyboard that types one of those four with Shift or Alt Gr, use the button on the screen: the search box, or the arrows and the pause button on the clock.
 
 ## Keyboard
 
@@ -41,9 +62,7 @@ The last column of each table uses these words.
 
 <Table {...controls('keys-camera')} />
 
-<Fact id="one-camera" />
-
-What the focus is, and what the camera does once it has one, is under [Moving around](/docs/guide/moving/).
+See [Moving around](/docs/guide/moving/) for what the focus is.
 
 ### Search
 
@@ -55,47 +74,25 @@ Once it is open:
 
 <Table {...controls('keys-search-open')} />
 
-<Fact id="ref-keys-search-open" />
-
-What the search finds is under [Finding things](/docs/guide/finding/).
+See [Finding things](/docs/guide/finding/) for what the search finds.
 
 ### Clock
 
 <Table {...controls('keys-clock')} />
 
-<Fact id="clock-hidden" />
-
-The clock’s two boxes take keys of their own while they are open:
-
-<Table {...controls('keys-clock-boxes')} />
-
-<Fact id="ref-keys-clock-boxes" />
-
-The speeds, and what the clock moves, are under [Time](/docs/guide/time/).
+<Fact id="clock-hidden" inline /> The list of speeds closes on a click outside it. See [Time](/docs/guide/time/) for the speeds and what the clock moves.
 
 ### Tours and exhibits
 
 <Table {...controls('keys-tours')} />
 
-An exhibit has no keys of its own but Esc. The same controls are on screen as buttons, described under [Tours and exhibits](/docs/guide/tours/).
+An exhibit has no keys of its own but <Keys of="Esc" />. The same controls are on screen as buttons; see [Tours and exhibits](/docs/guide/tours/).
 
 ### Interface
 
 <Table {...controls('keys-interface')} />
 
-<Fact id="ref-keys-welcome" />
-
-<Fact id="ref-tab-taken" />
-
-<Fact id="ref-keys-under-welcome" />
-
-The sliders of the Settings panel take these keys once one of them has the keyboard:
-
-<Table {...controls('keys-sliders')} />
-
-<Fact id="ref-keys-sliders" />
-
-The panel itself is under [Settings](/docs/guide/settings/).
+<Fact id="ref-tab-taken" inline /> If the panels are missing, press <Keys of="Tab" />.
 
 ### For development
 
@@ -103,45 +100,31 @@ The panel itself is under [Settings](/docs/guide/settings/).
 
 <Table {...controls('keys-development')} />
 
-The link that <Keys of="L" /> prints is the one way to get a camera position out of the app: see [Camera positions](/docs/reference/url-parameters/#camera-positions). The debug panel is described under [Debug panel and flags](/docs/developers/debug/).
+The link that <Keys of="L" /> prints holds the camera position; see [Camera positions](/docs/reference/url-parameters/#camera-positions).
 
 ## Mouse
 
 <Table {...controls('mouse')} />
 
-<Fact id="ref-mouse" />
+<Fact id="ref-gesture-start" inline /> Which way the wheel zooms follows the scroll direction set on your computer; the table gives the usual one.
 
-<Fact id="ref-gesture-start" />
-
-Which way the wheel zooms follows the scroll direction set on your computer. The table gives the usual one.
-
-<Fact id="surface-controls" />
-
-<Fact id="site-view" />
-
-<Fact id="clock-speed-controls" />
+Near a surface means lower over the focused planet or moon than about half its radius.
 
 ## Trackpad
 
 <Table {...controls('trackpad')} />
 
-<Fact id="ref-trackpad" />
-
 ## Touch screen
 
 <Table {...controls('touch')} />
 
-<Fact id="ref-touch" />
-
-<Fact id="touch-gestures" />
-
-<Fact id="hover-card" />
+A touch screen has no pointer to rest, so it shows no hover card.
 
 ## What has no control
 
-- **Flying with the keyboard.** No key moves the camera by itself: the keys choose a target, and the mouse, the trackpad or a finger does the rest.
-- **Auto-rotate.** <Fact id="auto-rotate" inline />
+- **Flying with the keyboard.** The keys choose a focus, and the mouse, the trackpad or a finger does the rest.
+- **Auto-rotate.** It has a button in the top bar and no key.
 - **Sliding the view and tilting it, on a touch screen.** Both need the right or the middle mouse button.
-- **The buttons, from the keyboard.** <Keys of="Tab" /> does not reach them, as said above.
+- **Moving from button to button with <Keys of="Tab" />.**
 
 Every parameter a link can carry is on the next page, [URL parameters](/docs/reference/url-parameters/).
