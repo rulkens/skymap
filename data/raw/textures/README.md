@@ -59,7 +59,7 @@ Venus atmosphere, that makes three bodies whose "full pull" is already the 4k
 tier, not a downsample of an 8k raw. Uranus/Neptune's native file _is_ the 2k
 tier, so the dev subset reuses it (never fetched twice).
 
-## NASA Blue Marble Next Generation — Earth (public domain; credit "NASA Earth Observatory")
+## NASA Blue Marble Next Generation — Earth (NASA media guidelines; credit "NASA Earth Observatory")
 
 Topography+bathymetry imagery. **Pulled vintage: August 2004.**
 
@@ -133,7 +133,7 @@ diffuse) and stores the ocean flag in G — see `buildTextures.ts`.
 | --------- | --------------------------------- | ----------- | ----- | --------------- |
 | Full pull | `world.watermask.21600x10800.png` | 21600×10800 | gray  | 4,463,359 bytes |
 
-Original source: NASA NEO Blue Marble Next Generation landmask (public domain,
+Original source: NASA NEO Blue Marble Next Generation landmask (NASA media guidelines,
 credit NASA Earth Observatory). NASA has since retired the NEO bluemarble
 archive (`neo.gsfc.nasa.gov/archive/bluemarble/…` now 404s), and the relocated
 science.nasa.gov BMNG collection dropped the mask files entirely — neither the
@@ -161,7 +161,7 @@ check needs the full source.
 | Full pull | `BlackMarble_2016_3km.jpg` | 13500×6750 | 8,106,233 bytes |
 
 Credit: **NASA Earth Observatory / NASA's Goddard Space Flight Center**, Suomi
-NPP VIIRS (Black Marble 2016). Public domain. Verified live 2026-07-19
+NPP VIIRS (Black Marble 2016). NASA media guidelines: generally not subject to copyright in the United States. Verified live 2026-07-19
 (HTTP 200, `image/jpeg`, 8,106,233 bytes).
 
 ```
@@ -182,7 +182,7 @@ shipped** as a runtime texture. Full-pull only — no dev variant.
 | Full pull | `gebco_08_rev_elev_21600x10800.png` | 21600×10800 | gray  | 18,414,843 bytes |
 
 Credit: **NASA Earth Observatory (Visible Earth)**, imagery by Jesse Allen using
-`GEBCO_08` grid data. Public domain. Verified live 2026-07-19 (HTTP 200,
+`GEBCO_08` grid data. NASA media guidelines: generally not subject to copyright in the United States. Verified live 2026-07-19 (HTTP 200,
 `image/png`, 18,414,843 bytes). The smaller 5400×2700 variant 404s — the full-res
 file is the only source. Checksum: _(pending — filled by the fetch task)_.
 
@@ -208,7 +208,7 @@ TIFF is the right source.
 | --------- | ------------------------- | --------- | ---------------- |
 | Full pull | `cloud_combined_8192.tif` | 8192×4096 | 35,870,468 bytes |
 
-Credit: **NASA Goddard Space Flight Center** (Reto Stöckli). Public domain.
+Credit: **NASA Goddard Space Flight Center** (Reto Stöckli). NASA media guidelines: generally not subject to copyright in the United States.
 Verified live 2026-07-19 (HTTP 200, `image/tiff`, 35,870,468 bytes). Checksum:
 _(pending — filled by the fetch task)_.
 
@@ -216,7 +216,7 @@ _(pending — filled by the fetch task)_.
 https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif
 ```
 
-## USGS Astrogeology — moons (public domain; credit "NASA/USGS")
+## USGS Astrogeology — moons (terms per record, see ATTRIBUTIONS.md; credit "NASA/USGS")
 
 Plain 8-bit GeoTIFFs (no ISIS toolchain needed; sharp/libvips reads TIFF
 directly). Full pull only — no dev variant. Base:
@@ -244,7 +244,7 @@ heights -1.45..1.48 km, half the pixels NULL. The build places it into a whole-g
 grid from the label's `UpperLeftCornerY` and `PixelResolution` before binning, and
 bakes the normal map at 8192 px (1.04 km per texel, no upsampling of the 600 m data).
 
-## NASA Photojournal — Saturn mid-sized moons (public domain; credit "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute")
+## NASA Photojournal — Saturn mid-sized moons (NASA media guidelines; credit "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute")
 
 Paul Schenk's 2014 Cassini ISS colour maps. Base:
 `https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia<n>/PIA<n>.tif`
@@ -263,7 +263,7 @@ mirror); the build rolls them back (`antimeridianCentred`).
 | Rhea    | `PIA18438.tif` | 12015×6008  | RGB   | greyed, tinted + lifted                             |
 | Iapetus | `PIA18436.tif` | 11741×5871  | RGB   | greyed, tinted; two-terrain albedo fit, small lift  |
 
-### Gaskell shape models: Mimas, Tethys, Dione (public domain; credit "Robert Gaskell / NASA PDS Small Bodies Node")
+### Gaskell shape models: Mimas, Tethys, Dione (no licence stated in the readmes; credit "Robert Gaskell / NASA PDS Small Bodies Node")
 
 `<body>_quad512q.tab` (~60 MB each, `https://sbnarchive.psi.edu/pds4/non_mission/gaskell.<body>.shape-model/data/<body>_quad512q.tab`):
 ASCII, line 1 = Q (512), then 6·(Q+1)² body-fixed `x y z` lines in km. Not a

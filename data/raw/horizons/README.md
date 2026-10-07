@@ -4,7 +4,7 @@ Input to `npm run build-ephemeris-corrections`, which fits each body's `Horizons
 residual into `src/data/bodies/ephemerisCorrections.generated.ts`. The CSVs are gitignored;
 regenerate with `npm run fetch-horizons`.
 
-- **Upstream:** JPL Horizons API, `https://ssd.jpl.nasa.gov/api/horizons.api` (JPL DE ephemeris; public domain, NASA/JPL).
+- **Upstream:** JPL Horizons API, `https://ssd.jpl.nasa.gov/api/horizons.api` (JPL DE ephemeris; no licence is stated for the service's output, and JPL asks that its Solar System Dynamics site be cited).
 - **Body table:** `tools/bodies/horizonsBodies.ts` (`HORIZONS_BODIES`). Each row names its target, its centre, its raw step and its out-of-span policy.
 - **Files:** `<centre>/<target>.csv`, columns `jd,x_km,y_km,z_km`, from JD 2415020.5 (1900-01-01) to 2488069.5 (2100-01-01) at the row's step.
 - **`500@10/`** (Sun body centre), 1-day step, ~3 MB each: Mercury `199`, Venus `299`, Earth–Moon barycentre `3`, then the system barycentres `4`–`8` (Mars through Neptune).
