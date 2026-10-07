@@ -117,7 +117,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'orientation-setting',
     about: 'app',
-    text: 'Orientation, under Display in the Settings panel, chooses which way is up: the plane of the solar system, Earth’s equator, the plane of the Milky Way or the plane of the local superclusters.',
+    text: 'Orientation, under Display in the Settings panel, chooses which way is up. Ecliptic keeps the plane of Earth’s orbit level, Equatorial Earth’s equator, Galactic the plane of the Milky Way and Supergalactic the plane of the nearby superclusters.',
     source: `${REPO_BLOB}/src/data/orientation/orientationFrameLabel.ts`,
     sourceLabel: `the four orientations, ${IN_REPO}`,
     checked: CHECKED,
@@ -229,7 +229,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'label-switches',
     about: 'app',
-    text: 'Labels & Guides in the Settings panel has a switch for each kind of name: famous galaxies, clusters, superclusters, voids, groups, the Milky Way, famous stars, planets, Earth, the Sun, the galactic centre and spacecraft, which it lists as “Mesh bodies”. The same section switches the orbit trails, the Zone of Avoidance, the Local Bubble and the constellations. The last two start switched off.',
+    text: 'Labels & Guides in the Settings panel has a switch for each kind of name: named galaxies, clusters, superclusters, voids, groups, the Milky Way, named stars, planets, Earth, the Sun, the galactic centre and spacecraft, which it lists as “Mesh bodies”. The same heading switches the orbits, the Zone of Avoidance, the Local Bubble and the constellations. The last two are off at first.',
     source: `${REPO_BLOB}/src/components/SettingsPanel/LabelsAndGuidesSection.tsx`,
     sourceLabel: `the Labels & Guides section, ${IN_REPO}`,
     checked: CHECKED,
@@ -927,7 +927,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-panel-grows',
     about: 'app',
-    text: 'The Settings panel stands on the lower left corner of the window and grows upwards as its headings are opened. Keep open only the headings you are using: in a low window a tall panel reaches the top of the screen and pushes the Navigation panel off it.',
+    text: 'The panel grows upwards as its headings are opened. In a low window, keep only one heading open.',
     source: `${REPO_BLOB}/src/components/App/App.module.css`,
     sourceLabel: `where the two panels stand, ${IN_REPO}`,
     checked: CHECKED,
@@ -943,7 +943,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-structures-names',
     about: 'app',
-    text: 'Switching a kind of structure off under Structures takes away its rings and its names together. Switching its name off under Labels & Guides leaves the ring.',
+    text: 'Switching a kind of structure off under Structures takes away its markers and its names together. Switching its name off under Labels & Guides leaves the marker.',
     source: `${REPO_BLOB}/src/components/SettingsPanel/StructuresSection.tsx`,
     sourceLabel: `the Structures section, ${IN_REPO}`,
     checked: CHECKED,
@@ -991,7 +991,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-names-off',
     about: 'app',
-    text: 'The switch on the Labels & Guides heading turns every name and guide off with one click. Clicked again, with all of them off, it turns all sixteen on, the Local Bubble and the constellations included, which were off to begin with. The rings round clusters and voids and the white ring round the selected object are not names and stay.',
+    text: 'One click on the switch of the Labels & Guides heading turns every name and guide off. To get them back as they were, reload the page: a second click turns on all sixteen, including the two that are off at first. The markers of clusters and voids and the white ring round the selected object are not names and stay.',
     source: `${REPO_BLOB}/src/components/SettingsPanel/LabelsAndGuidesSection.tsx`,
     sourceLabel: `the Labels & Guides section, ${IN_REPO}`,
     checked: CHECKED,
@@ -999,7 +999,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-totals',
     about: 'app',
-    text: 'Counted in the Settings panel on 7 October 2026, the smallest data size holds about 360,000 galaxies and quasars and 1.7 million stars, the middle one about 800,000 and 5.1 million, and the largest about 3.1 million and 12.9 million. The named galaxies and stars, the structures and everything in the solar system are the same at all three.',
+    text: 'Counted in the Settings panel on 7 October 2026, the small data size holds about 360,000 galaxies and quasars and 1.7 million stars, the medium one about 800,000 and 5.1 million, and the large one about 3.1 million and 12.9 million. The named galaxies and stars, the structures and everything in the solar system are the same at all three.',
     source: `${REPO_BLOB}/src/data/tierLadder.ts`,
     sourceLabel: `the three data sizes, ${IN_REPO}`,
     checked: CHECKED,
@@ -1007,7 +1007,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-large-choice',
     about: 'app',
-    text: 'The app never chooses the largest size by itself. It is everything we publish and is heavy for the graphics built into a laptop, so it is left for you to pick.',
+    text: 'The app never chooses the large size by itself. It is heavy for the graphics built into a laptop, so it is left for you to pick.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: `the starting-size rule, ${IN_REPO}`,
     checked: CHECKED,
@@ -1015,7 +1015,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-address',
     about: 'app',
-    text: 'A change of data size leaves the address as it is, and the object you had selected stays selected if the new size holds it.',
+    text: 'A change of data size downloads the new files and keeps the camera, the address and your other settings. A selected galaxy that the new size does not hold loses its selection.',
     source: `${REPO_BLOB}/src/state/tier/watchTierSaga.ts`,
     sourceLabel: `what a change of data size does, ${IN_REPO}`,
     checked: CHECKED,
@@ -1023,7 +1023,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-density-how',
     about: 'app',
-    text: 'Density correction, under Galaxies and then Advanced, starts on Angular re-weight. For each catalogue by itself the app cuts the sky into 12,288 cells and the distance into ten shells and counts the galaxies in each. A galaxy’s brightness is then multiplied by the median count for its shell divided by the count in its own cell, never by less than 0.3 or more than 1.2.',
+    text: 'Density correction, under Galaxies and then Advanced, starts on Angular re-weight. Within each catalogue the app counts the galaxies in each direction and at each distance, dims those in a direction that holds more than is usual at their distance, and brightens a little those in a direction that holds fewer.',
     source: `${REPO_BLOB}/src/services/engine/bake/computeAngularWeights.ts`,
     sourceLabel: `how the weights are computed, ${IN_REPO}`,
     checked: CHECKED,
@@ -1031,7 +1031,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-density-why',
     about: 'app',
-    text: 'The correction is on to begin with because GLADE is assembled from several surveys of unequal depth. Without it the directions the deeper ones covered show as bright spokes pointing at the Milky Way: a pattern of where telescopes looked, not of where galaxies are.',
+    text: 'The correction is on at first because GLADE is assembled from several surveys of unequal depth. Without it the directions the deeper ones covered show as bright spokes pointing at the Milky Way: a pattern of where telescopes looked, not of where galaxies are.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/bias/initialState.ts`,
     sourceLabel: `the default density correction, ${IN_REPO}`,
     checked: CHECKED,
@@ -1047,7 +1047,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-density-others',
     about: 'app',
-    text: 'The other three choices answer a different loss: far away a survey records only the most luminous galaxies. Volume-limited hides every galaxy less luminous than the M_lim slider says, so the same kinds of galaxy are drawn near and far. 1/V_max and Schechter LF keep every galaxy and change its brightness by its luminosity. Only one choice is in force at a time, so with any of these three the angular correction is off.',
+    text: 'The other three choices answer a different loss: far away a survey records only the most luminous galaxies. Volume-limited hides every galaxy less luminous than the M_lim slider says, a limit in absolute magnitude, so the same kinds of galaxy are drawn near and far. 1/V_max and Schechter LF, two standard ways of weighting a galaxy by how luminous it is, keep every galaxy and change its brightness. Only one choice is in force at a time, so with any of these three the angular correction is off.',
     source: `${REPO_BLOB}/src/data/galaxyCatalog/biasMode.ts`,
     sourceLabel: `the density corrections, ${IN_REPO}`,
     checked: CHECKED,
@@ -1183,9 +1183,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-cost',
     about: 'app',
-    text: 'As our server sent them on 7 October 2026, the catalogue files of the three sizes came to about 25, 70 and 220 megabytes. Pictures of the planets and moons come on top, as you visit them, and are larger files at a larger size.',
+    text: 'On 7 October 2026 we listed the files the app fetches as it opens above Earth and asked our server how large it sends each one, compressed where it compresses them. The catalogues and the density grid came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
-    sourceLabel: 'the published data manifest, which names the files; their sizes are in the server’s replies',
+    sourceLabel: 'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
     checked: CHECKED,
   },
 ];
