@@ -50,6 +50,11 @@ jobs:
       - name: Check website links
         run: npm run site:links
 
+      # No sourced sentence stands in full on more pages than the worst did
+      # when the check was written; the limit only goes down.
+      - name: Check repeated fact rows
+        run: npm run site:repeats
+
       # `npm run format:check` is intentionally not run in CI yet — there
       # are pre-existing files in the repo that don't match Prettier's
       # current ruleset, so wiring it up here would fail on every PR.

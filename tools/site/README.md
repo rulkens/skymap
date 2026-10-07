@@ -68,6 +68,10 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. The only pages a link may point at before they exist are the `planned` rows of the docs tree (`packages/website/src/data/docsTree.ts`); such links are reported as pending. The check fails if a planned page now exists, so the PR that writes a page sets its row to `live`.
 
+## Repeat check
+
+`npm run site:repeats` (after `npm run site:build`, and in CI) reads every built page and counts, for each row of `packages/website/src/data/facts.ts`, the pages that print its sentence in full outside their list of sources. It fails when a row stands on more pages than `MOST_PAGES` in `tests/packages/website/factRepeats.test.ts`, which was the worst row on the day the check was written and is only ever lowered. A row is stated on one page; another page says it in a clause of its own and links there: `<Fact id="…" brief to="/science/#distances">the clause</Fact>`, which keeps the row in that page's sources. The check is a Vitest file because the fact tables load through Vite; in the ordinary test run, before a build exists, it is skipped.
+
 ## First-screen check
 
 `npm run site:fold -- --url http://localhost:<port>/home/` opens every page of a running website (`npm run dev --workspace @skymap/website`) in the windows of `foldSizes.ts` and fails when a page's opening section does not fit the first screen. A served build works as well, and is steadier than a dev server that reloads under the run; its server must answer an unknown address with the build's `404.html`, as a host does, or the 404 page is reported as having no opening. Run it after changing a header, its copy or its picture; it needs a browser and a server, so CI does not run it.
