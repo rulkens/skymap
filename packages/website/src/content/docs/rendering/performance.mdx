@@ -1,39 +1,42 @@
 ---
-description: What a frame of skymap costs, what the cost grows with, how the repository measures it and what the renderer does to keep it down.
-facts: [screens-no-quality-setting, screens-dome-cost, sim-true-size]
+description: A frame of skymap costs by the number of things drawn or by the number of pixels covered. What the renderer does about each, and how to measure yours.
+facts: [screens-no-quality-setting, screens-dome-cost, sim-true-size, settings-size-totals, screens-draws-on-change, render-galaxy-triangle, render-star-tree, render-reduced-targets, render-density-march, render-atmosphere-tables, render-terrain, render-lens, render-bloom]
 ---
 
-There are no frame times on this page. A time is true of one graphics processor, one browser and one window, and we would sooner give you the tool than a number from our desk. What follows is what the cost grows with, which holds on any machine. To make the app run more smoothly on yours, see [When it stutters](/docs/guide/screens-and-domes/#when-it-stutters). [The frame](/docs/rendering/) names the steps that are timed here, and the [Science](/science/) page is the way back up.
+There are no frame times on this page: a time is true of one graphics processor, one browser and one window. What a cost grows with holds on any machine. To make the app run more smoothly on yours, see [When it stutters](/docs/guide/screens-and-domes/#when-it-stutters).
+
+## What each cost grows with
+
+<Table
+  cols="detail"
+  head={['What is drawn', 'Its cost grows with', 'What keeps it down']}
+  rows={[
+    ['Galaxies as points', 'Things: the galaxies in the data size.', 'One triangle a galaxy, and one draw call for a whole catalogue.'],
+    ['Stars', 'Things, up to a fixed budget of stars a frame. A larger file gives a sharper near field for about the same work.', 'Boxes of stars outside the view are dropped whole; a closed box is one glow.'],
+    ['The cosmic web', 'Pixels, 128 steps through the density cube for each.', 'Drawn at a third of the window’s width and height: a ninth of the pixels.'],
+    ['The other three glows', 'Pixels.', 'The Zone of Avoidance band at a fifth, the summed light of distant stars at a half, the Milky Way’s points at a sixth.'],
+    ['Atmospheres', 'Pixels seen through air, and one sky table for each atmosphere in view, filled every frame.', 'Each pixel looks its answer up in the tables. At the small data size the sky table is a ninth of its usual size.'],
+    ['The ground', 'Things: the tiles in view.', 'Tiles behind the horizon or outside the view are never fetched, and all patches are one draw call.'],
+    ['The black hole', 'Pixels, 48 steps through the disc for each.', 'The bending of light is looked up in a table.'],
+    ['Bloom', 'Pixels: ten steps over the frame.', 'Nine of the ten are on images of half size or smaller.'],
+    ['Dome mode', 'Everything above, five times.', 'Bloom and the tone curve run once, on the disc.'],
+  ]}
+/>
+
+<Note>Read from the code on 7 October 2026. [The frame](/docs/rendering/) has these in the order they are drawn, and [Techniques](/docs/rendering/techniques/) how each is drawn.</Note>
 
 ## Two kinds of work
 
-Nearly everything in a frame costs in one of two ways.
-
-**By the number of things.** A galaxy or a star is a few corners that the graphics processor must place, however small it ends up on screen. This work grows with the [data size](/docs/reference/glossary/#data-size) and does not care how large the window is.
-
-<Fact id="settings-size-totals" />
-
-<Fact id="render-galaxy-triangle" />
-
-Stars do not follow the count in the file as galaxies do: the choice of boxes on [Techniques](/docs/rendering/techniques/#stars) spends a fixed budget of stars each frame, so a larger file gives a sharper near field for about the same work.
+**By the number of things.** A galaxy or a star is a few corners that the graphics processor must place, however small it ends up on screen. This work grows with the [data size](/docs/reference/glossary/#data-size) (the large one holds nearly nine times the galaxies of the small one: [See more or fewer galaxies](/docs/guide/settings/#see-more-or-fewer-galaxies)) and does not care how large the window is.
 
 **By the number of pixels.** A glow, an atmosphere or the cosmic web costs for every pixel it covers, and many glows over the same pixel cost many times. This work grows with the window and does not care how many galaxies are loaded.
 
-<Fact id="render-reduced-targets" />
+## What else keeps it down
 
-A pixel of the cosmic web is 128 steps through the density cube. Bloom is ten more steps over the whole frame, most of them on small images. Dome mode draws the scene five times.
-
-## What the renderer does about it
-
-- **Nothing, when nothing changes.** <Fact id="screens-draws-on-change" inline />
+- **Nothing, when nothing changes.** With the scene at rest the app draws no frame ([Laptops and desktops](/docs/guide/screens-and-domes/#laptops-and-desktops)).
 - **Work done once.** A galaxy’s tilt, luminosity and its weight in the density correction are worked out when its file arrives and stored with it. The two fixed tables of each atmosphere are made as the app starts.
-- **One call for many things.** A catalogue of galaxies is one draw call, a file of stars is two (its single stars and its summed boxes), and all the ground patches in view are one.
-- **Not drawing what cannot be seen.** Boxes of stars outside the view are dropped with everything inside them. Ground tiles behind the horizon or outside the view are never fetched. A planet too small to fill a pixel is one point.
-- **Smooth things at reduced size**, as above.
-- **Tables for sums.** The sky of an atmosphere and the bending of light round the black hole are looked up for each pixel, not worked out for it.
+- **Few [draw calls](/docs/reference/glossary/#draw-call).** A file of stars is two, one for its single stars and one for its summed boxes.
 - **A light hand on the processor.** <Fact id="render-cpu-galaxies" inline />
-
-On the smallest data size the sky table of each atmosphere is a ninth of its usual size as well: on a phone we tested, filling the full table was what made frames near a planet slow.
 
 ## How it is measured
 
@@ -43,10 +46,6 @@ On the smallest data size the sky table of each atmosphere is a ninth of its usu
 
 <Fact id="render-perf-sweep" />
 
-The same times can be read live in the app’s debug panel: see [Debug panel and flags](/docs/developers/debug/). The tool also reports how much memory the app has asked the graphics processor for, by owner, and can run each place at all three data sizes in turn.
+The same times can be read live in the app’s debug panel: see [Timings](/docs/developers/debug/#timings). The tool also reports how much memory the app has asked the graphics processor for, by owner, and can run each place at all three data sizes in turn. Its <Repo path="tools/perf/README.md">notes</Repo> say how to run it against your own machine and read the report.
 
-To measure your own machine, run the app from the repository and then the tool against it; its <Repo path="tools/perf/README.md">notes</Repo> say how to read the report. The numbers are yours: another machine, browser or window size gives others.
-
-## Where this lives
-
-The tool is <Repo path="tools/perf" />; the timing inside the app is <Repo path="src/services/gpu/timing" />; the places it flies to are in <Repo path="tools/perf/perfScenarios.ts" />.
+<Note>Code: the tool is <Repo path="tools/perf" />; the timing inside the app is <Repo path="src/services/gpu/timing" />; the places it flies to are in <Repo path="tools/perf/perfScenarios.ts" />.</Note>
