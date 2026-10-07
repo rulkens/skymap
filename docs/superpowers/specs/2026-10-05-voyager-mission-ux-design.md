@@ -331,3 +331,13 @@ Both craft in one timeline confused: the interleaved event list, the two lanes o
 3. **Event card replaces the list.** Only the current event shows: date, label, caption, flyby distance.
 4. **Era-split axis kept** on the scrubber.
 5. **The other craft dims** in the 3D view: its trail and its label render dimmed, not hidden. The emphasis ends when the exhibit exits.
+
+### Revision 2 (user, 2026-10-07): flyby ride-along — design APPROVED, spec next
+
+Rulings (asks ktob, aD8k, Ya2Z, Ps7u, U2QA; drift ask UZer shipped as `Exhibit.drift?: false`, d382e5779):
+- **Ride-along**, entered **automatically** by stepping to a flyby chapter (Prev/Next, chapter bar, `,`/`.`, scrubber dots). Free scrubbing never starts one.
+- **Clock:** jump to closest approach − 2 d and play; rate follows craft–target distance (roughly constant on-screen speed, slowest at closest pass, ~20–30 s wall per ride); pause at + 2 d. Visitor pause/drag cancels the auto rate (camera keeps following). Exit restores the clock via the takeover capture. Reverses provisional ruling 5 ("clock rate untouched") for rides only.
+- **Camera:** side view, per-frame driver bound to the craft: looks along the flyby-plane normal (r × v relative to the target), distance scales with the craft–target separation (floor a few × closest), so planet, craft and bend stay framed; visitor orbit/zoom allowed without breaking the follow.
+- Non-flyby chapters fly back to the whole-mission pose; a finished ride holds; a `Whole mission` header control returns.
+- Titan and Saturn (V1, 18 h apart) are separate rides on their own targets. Event card copy while riding: "Riding along with Voyager 1 past Saturn" + live distance.
+NEXT: refactor-ground → spec → plan.
