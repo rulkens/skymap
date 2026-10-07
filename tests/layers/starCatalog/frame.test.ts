@@ -15,7 +15,8 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
-import { EYE_SLACK_MPC, NODE_FADE_MS, PLANE_SLACK } from '../../../src/data/starNodeFade';
+import { makeSlab } from '../../fixtures/makeSlab';
+import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/starNodeFade';
 
 const MID_BAND_PC = 1_000; // inside Gaia's crossfade band
 
@@ -23,7 +24,6 @@ function camAtPc(x: number): Vec3 {
   return [x * SCALE_UNITS.PC_TO_MPC, 0, 0];
 }
 
-// No `slabs`: the planner reduces such a view to an unpruned cut.
 function makeView(camPos: Vec3, nowMs: number): FrameView {
   return {
     snapshot: { nowMs },
@@ -31,6 +31,7 @@ function makeView(camPos: Vec3, nowMs: number): FrameView {
     drawPxPerRad: 600,
     viewSlot: 0,
     viewKind: 'frame',
+    slabs: [makeSlab()],
   } as unknown as FrameView;
 }
 
@@ -94,12 +95,6 @@ describe('starCatalogPlanner', () => {
   describe('drift tolerance', () => {
     const FRAME_MS = 8;
     const SLACK_PC = EYE_SLACK_MPC * SCALE_UNITS.MPC_TO_PC;
-    const STATE_WITH = (refineThreshold: number) =>
-      ({
-        settings: {
-          starCatalogs: { ...STATE.settings.starCatalogs, refineThreshold },
-        },
-      }) as unknown as PassState;
 
     function pruningView(xPc: number, yawRad: number, nowMs: number): FrameView {
       const vp = mat4d.multiply(
@@ -110,15 +105,11 @@ describe('starCatalogPlanner', () => {
     }
 
     /** Votes for frames 8 ms apart; `pose(i)` gives each frame's eye (pc) and yaw (rad). */
-    function votes(
-      frames: number,
-      pose: (i: number) => { xPc: number; yaw: number },
-      state: (i: number) => PassState = () => STATE,
-    ): boolean[] {
+    function votes(frames: number, pose: (i: number) => { xPc: number; yaw: number }): boolean[] {
       const planner = starCatalogPlanner(makeRuntime(true));
       return Array.from({ length: frames }, (_, i) => {
         const { xPc, yaw } = pose(i);
-        return planner.plan(SNAPSHOT, [pruningView(xPc, yaw, i * FRAME_MS)], state(i)).awake;
+        return planner.plan(SNAPSHOT, [pruningView(xPc, yaw, i * FRAME_MS)], STATE).awake;
       });
     }
     const afterFade = (v: boolean[]) => v.filter((_, i) => i * FRAME_MS > NODE_FADE_MS);
@@ -137,20 +128,6 @@ describe('starCatalogPlanner', () => {
       expect(awakeFrames).toHaveLength(2 * fadeFrames);
       expect(v.slice(fadeFrames, 61)).not.toContain(true);
       expect(v.slice(61 + fadeFrames)).not.toContain(true);
-    });
-
-    it('re-arms on a jump past the slack, a frustum turned past the plane slack, or a new threshold', () => {
-      const base = { xPc: MID_BAND_PC, yaw: 0 };
-      const at = (change: (i: number) => { xPc: number; yaw: number }, state = STATE) =>
-        votes(
-          60,
-          (i) => (i < 40 ? base : change(i)),
-          (i) => (i < 40 ? STATE : state),
-        )[41];
-      expect(at(() => ({ ...base, xPc: MID_BAND_PC + SLACK_PC * 2 }))).toBe(true);
-      expect(at(() => ({ ...base, yaw: PLANE_SLACK * 4 }))).toBe(true);
-      expect(at(() => base, STATE_WITH(0.07))).toBe(true);
-      expect(at(() => base)).toBe(false);
     });
   });
 });

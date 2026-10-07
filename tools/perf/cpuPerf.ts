@@ -1,6 +1,5 @@
 /**
- * cpuPerf — main-thread ms per frame row (`plan:` / `compute:` / `draw:` /
- * `frame`), at the GPU harness's own poses. The GPU harness is blind to this
+ * cpuPerf — main-thread ms per frame row (`plan:` / `compute:` / `draw:`), at the GPU harness's own poses. The GPU harness is blind to this
  * cost: it times render passes, not the JS that fills them.
  *
  *   npm run perf:cpu -- --url http://localhost:5174 --scenario star-field

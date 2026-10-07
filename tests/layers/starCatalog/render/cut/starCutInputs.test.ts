@@ -1,6 +1,6 @@
 /**
  * `starCutInputs` — what the frame reduces to for the GPU cut: frustum planes
- * only when every view has a NEAR0 slab, and the angular cull margin sized for
+ * per view, and the angular cull margin sized for
  * the widest view.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -40,28 +40,23 @@ const SETTINGS = {
 // 1000 pc: inside Gaia's crossfade band.
 const EYE = [1000 * SCALE_UNITS.PC_TO_MPC, 0, 0] as const;
 
-function view(pxPerRad: number, withSlab: boolean): FrameView {
+function view(pxPerRad: number): FrameView {
   return {
     snapshot: { nowMs: 0 },
     drawCamPos: EYE,
     drawPxPerRad: pxPerRad,
-    slabs: withSlab ? [makeSlab()] : [],
+    slabs: [makeSlab()],
   } as unknown as FrameView;
 }
 
 describe('starCutInputs', () => {
-  it('writes six planes per view when every view has a NEAR0 slab', () => {
-    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600, true), view(600, true)]);
+  it('writes six planes per view', () => {
+    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600), view(600)]);
     expect(inputs!.cut.planes).toHaveLength(2 * FLOATS_PER_VIEW);
   });
 
-  it('prunes nothing when any view lacks a NEAR0 slab', () => {
-    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600, true), view(600, false)]);
-    expect(inputs!.cut.planes).toHaveLength(0);
-  });
-
   it('sizes the leaf margin for the widest view (fewest pixels per radian)', () => {
-    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600, true), view(300, true)]);
+    const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600), view(300)]);
     expect(inputs!.cut.leafMarginRad).toBeCloseTo(STAR_PICK_MIN_RADIUS_PX / 300, 12);
   });
 });

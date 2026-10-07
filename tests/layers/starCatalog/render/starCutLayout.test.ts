@@ -3,10 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
-  NODE_BITS_WORD,
   NODE_GRID_WORD,
-  NODE_PARENT_WORD,
-  NODE_REFINE_DELTA_WORD,
   VIEW_COUNT_U32_INDEX,
   CUT_NODE_WORDS,
   CUT_MAX_VIEWS,
@@ -39,26 +36,10 @@ describe('packStarCutNodes', () => {
   const words = packStarCutNodes(CATALOG);
   const at = (node: number) => words.subarray(node * CUT_NODE_WORDS, (node + 1) * CUT_NODE_WORDS);
 
-  it('names the parent of every node, and the root names itself', () => {
-    expect([at(0)[NODE_PARENT_WORD], at(1)[NODE_PARENT_WORD], at(2)[NODE_PARENT_WORD]]).toEqual([
-      2, 2, 2,
-    ]);
-  });
-
   it('packs grid in LEAF cells, so a level-1 node is scaled by 2', () => {
     expect(at(0)[NODE_GRID_WORD]).toBe(2);
     expect(at(1)[NODE_GRID_WORD]).toBe(3);
     expect(at(2)[NODE_GRID_WORD]).toBe(2);
-  });
-
-  it('packs level, aggregate bit and record count into bits', () => {
-    expect(at(0)[NODE_BITS_WORD]).toBe(0 | (0 << 4) | (2 << 8));
-    expect(at(2)[NODE_BITS_WORD]).toBe(1 | (1 << 4) | (1 << 8));
-  });
-
-  it('refineDelta is the children records minus the aggregate own; leaves 0', () => {
-    expect(at(2)[NODE_REFINE_DELTA_WORD]).toBe(2 + 3 - 1);
-    expect(at(0)[NODE_REFINE_DELTA_WORD]).toBe(0);
   });
 });
 

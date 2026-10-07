@@ -16,7 +16,6 @@ import type { StarCutSource } from '../@types/StarCutSource';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { StarCutSourceInput } from '../@types/StarCutSourceInput';
 import type { StarCutDraw } from '../@types/StarCutDraw';
-import type { StarCutVariant } from '../@types/StarCutVariant';
 import type { StarDrawStream } from '../@types/StarDrawStream';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import cutCode from '../../../services/gpu/shaders/starCatalog/cut.wesl?static';
@@ -210,17 +209,18 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     state: StarCutState,
     inputs: StarCutInputs,
     row: StarCutSourceInput,
-    variant: StarCutVariant,
+    fadeStep: number,
+    planes: Float32Array,
   ): void {
     const { cut } = inputs;
     writeStarCutUniforms(uniformScratch, catalog, cut.originMpc, {
       refineThreshold: cut.refineThreshold,
-      fadeStep: variant.fadeStep,
+      fadeStep,
       budgetTypical: row.budgetTypical,
       worldSpread: cut.worldSpread,
       leafMarginRad: cut.leafMarginRad,
       opacity: row.opacity,
-      planes: variant.planes,
+      planes,
     });
     device.queue.writeBuffer(state.uniforms, 0, uniformScratch);
     state.lastMs = inputs.nowMs;
@@ -256,10 +256,15 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
         lastMs === null || inputs.nowMs < lastMs
           ? Infinity
           : Math.min(inputs.nowMs - lastMs, NODE_FADE_MAX_DT_MS);
-      dispatch(pass, entry.catalog, entry.live, inputs, row, {
-        fadeStep: Math.min(1, dtMs / NODE_FADE_MS),
-        planes: inputs.cut.planes,
-      });
+      dispatch(
+        pass,
+        entry.catalog,
+        entry.live,
+        inputs,
+        row,
+        Math.min(1, dtMs / NODE_FADE_MS),
+        inputs.cut.planes,
+      );
     }
     pass.end();
   }
@@ -274,10 +279,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     for (const { row, entry } of present) {
       entry.capture ??= createState(`${row.source}-capture`, entry.catalog, entry.nodes);
       // No frustum (six faces see every direction) and no fade (one static frame).
-      dispatch(pass, entry.catalog, entry.capture, inputs, row, {
-        fadeStep: 1,
-        planes: NO_PLANES,
-      });
+      dispatch(pass, entry.catalog, entry.capture, inputs, row, 1, NO_PLANES);
     }
     pass.end();
     device.queue.submit([encoder.finish()]);

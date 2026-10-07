@@ -95,7 +95,7 @@ sim clock reads — the harness sets no time and none is needed.
 
 The GPU harness above is blind to **main-thread** cost: it times render passes, not the JS that
 fills them. `npm run perf:cpu` boots the same `?perf` page, sets each scenario's pose, and
-prints main-thread ms per frame row (`plan:` / `compute:` / `draw:` / `frame`) as the mean over the sampled frames.
+prints main-thread ms per frame row (`plan:` / `compute:` / `draw:`) as the mean over the sampled frames.
 
 ```bash
 npm run perf:cpu -- --url http://localhost:5174 --scenario star-field

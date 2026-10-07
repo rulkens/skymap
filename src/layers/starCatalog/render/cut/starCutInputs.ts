@@ -22,7 +22,7 @@ import { FLOATS_PER_VIEW } from '../starCutLayout';
  * `views[0]` is the anchor — its eye is the cut's origin; every view's NEAR0
  * frustum is rebased about that origin in f64 (the cancellation discipline
  * `cutIo.wesl` keeps for node boxes) and the cut keeps a node any of them
- * sees. A view without a NEAR0 slab (a hand-built test ctx) ⇒ no prune.
+ * sees.
  */
 export function starCutInputs(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,
@@ -35,12 +35,10 @@ export function starCutInputs(
   const inBand = starSourcesInBand(runtime, settings, camDistMpc * SCALE_UNITS.MPC_TO_PC);
   if (inBand.length === 0) return null;
 
-  const prune = views.every((v) => v.slabs?.[NEAR0] !== undefined);
-  const viewCount = prune ? views.length : 0;
-  const planes = new Float32Array(viewCount * FLOATS_PER_VIEW);
+  const planes = new Float32Array(views.length * FLOATS_PER_VIEW);
   // The widest view (fewest pixels per radian) needs the most angular slack.
   let pxPerRad = Infinity;
-  for (let v = 0; v < viewCount; v++) {
+  for (let v = 0; v < views.length; v++) {
     const rebased = narrowMat4(rebaseViewProj(views[v]!.slabs[NEAR0]!.vp, originMpc));
     frustumPlanesFromViewProj(
       rebased,
