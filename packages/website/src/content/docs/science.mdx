@@ -1,0 +1,316 @@
+---
+description: 'Where each position, distance, brightness, colour and size in skymap comes from: the rule, its numbers and the paper.'
+facts: [gloss-honesty-words, depart-relative-brightness, depart-default-size, depart-star-tint, depart-black-hole-mass, sci-two-redshifts, pipe-blueshift, card-galaxy-derived, card-star-survey, settings-density-how, sci-surfaces, scene-s-stars, sci-star-observables, sci-galaxy-tilt, sci-galaxy-discs, sci-structures, sci-milky-way-points, sci-tone, sci-colour, sci-deepest, sci-magnitudes, sci-atmospheres, sci-markers, sci-black-hole]
+---
+
+[The science behind skymap](/science/) uses three words. Here the third is split in two, [modelled](/docs/reference/glossary/#modelled) and drawn.
+
+<Table
+  cols="2 4"
+  head={['Word', 'What it means on this page']}
+  rows={[
+    ['Measured', 'Taken from a catalogue or an image as published. An instrument recorded it.'],
+    ['Derived', 'Computed from measured values, object by object, by a rule stated below.'],
+    ['Modelled', 'Generated from a physical model, with numbers from the literature where a reference is given and ours where the page says so. The summary page counts it as drawn.'],
+    ['Drawn', 'Placed, shaped or coloured by us, to make the picture readable.'],
+  ]}
+/>
+
+Where a rule departs from the sky, its section links to [Known simplifications](/docs/simplifications/).
+
+## Galaxies and quasars
+
+<Table
+  cols="2 4"
+  head={['Quantity', 'How it is obtained']}
+  rows={[
+    ['Direction', 'Measured.'],
+    ['Redshift', 'Measured from a spectrum, except for about 45 per cent of GLADE, where it is estimated from colours.'],
+    ['Distance', 'Derived from the redshift beyond 30 megaparsecs. Measured by other means inside.'],
+    ['Brightness', 'Derived from a catalogued magnitude, the distance and the size.'],
+    ['Colour', 'Derived from two catalogued magnitudes.'],
+    ['Size', 'Derived from a measured angle and the distance for SDSS and most of 2MRS, from luminosity for GLADE; assumed for the rest.'],
+    ['Tilt', 'Measured where a catalogue has it; otherwise drawn.'],
+    ['Shape of the disc', 'Drawn, until a photograph replaces it.'],
+  ]}
+/>
+
+<Fact id="sci-directions" inline /> Positions are kept in megaparsecs from the Sun.
+
+### Distance from redshift
+
+<Fact id="sci-galaxy-distance" />
+
+<Formula
+  say="d equals c over H nought, times the integral from 0 to z of d z over E of z, where E of z is the square root of omega m times one plus z cubed, plus omega lambda."
+  of={['d = \\frac{c}{H_0} ∫_0^z \\frac{d z′}{E(z′)}', 'E(z) = \\sqrt{Ω_m (1 + z)^3 + Ω_Λ}']}
+/>
+
+The formula is the line-of-sight [comoving distance](/docs/reference/glossary/#comoving-distance) of [Hogg’s “Distance measures in cosmology”](https://arxiv.org/abs/astro-ph/9905116); [Lambda-CDM](/docs/reference/glossary/#lambda-cdm) is in the glossary.
+
+<Fact id="method-comoving" />
+
+<Fact id="method-cosmology-values" />
+
+<Table
+  cols="2 2 2"
+  head={['Redshift', 'Distance in megaparsecs', 'In light-years']}
+  rows={[
+    ['0.01', '43', '139 million'],
+    ['0.023', '98', '320 million'],
+    ['0.1', '418', '1.36 billion (thousand million)'],
+    ['0.3', '1,191', '3.88 billion'],
+    ['1', '3,275', '10.7 billion'],
+    ['7', '8,483', '27.7 billion'],
+  ]}
+/>
+
+<Fact id="sci-h0-range" />
+
+To check a number, open a galaxy’s card. That of PGC 2 shows a redshift of 0.0167; the rule gives 71 megaparsecs, and the speed on the card is that distance times 70.
+
+<View to="focus=pgc-2">Open PGC 2</View>
+
+What the rule leaves out is under [Distances and redshift space](/docs/simplifications/#distances-and-redshift-space).
+
+### Distance inside 30 megaparsecs
+
+<Fact id="sci-local-volume" />
+
+<Fact id="method-local-lookup" />
+
+<Formula say="d equals 10 to the power of mu minus 25, over 5." of={'d = 10^{(μ − 25) / 5}'} />
+
+<Source id="cf4-distances">Cosmicflows-4</Source> is built on a different expansion rate from ours: see [A step at 30 megaparsecs](/docs/simplifications/#distances-and-redshift-space). The other two lists are <Source id="seed-local-volume">our own</Source> and <Source id="hyperleda">HyperLEDA</Source>’s.
+
+<View to="focus=cluster-virgo-m87">Open the Virgo cluster, 16.5 megaparsecs away</View>
+
+### Brightness
+
+A galaxy’s absolute magnitude M follows from a catalogued magnitude m and its distance d in megaparsecs.
+
+<Formula say="Absolute magnitude M equals apparent magnitude m, minus 5 times the logarithm of the distance in megaparsecs, minus 25." of={'M = m − 5 \\,log_{10}\\, d − 25'} />
+
+The 25 is the step from megaparsecs to the 10 parsecs at which [absolute magnitude](/docs/reference/glossary/#absolute-magnitude) is defined.
+
+<Fact id="method-galaxy-light" />
+
+<Formula
+  say="Light equals 10 to the power of minus 0.4 times M minus the median M, divided by the square of D over 30."
+  of={'\\text{light} = \\frac{10^{−0.4 (M − M_{med})}}{(D / 30)^2}'}
+/>
+
+On the way to the screen that light is changed again, by distance and by the density correction, and it cannot be compared between two catalogues: see [Brightness, exposure and colour](/docs/simplifications/#brightness-exposure-and-colour).
+
+### Colour
+
+<Fact id="method-galaxy-colour" />
+
+### Size, tilt and shape
+
+<Fact id="method-galaxy-size" />
+
+<Formula say="The logarithm of R equals minus 0.249 times M B plus 21, plus 1.366." of={'log\\, R = −0.249 (M_B + 21) + 1.366'} />
+
+A galaxy with neither a size nor an estimate is given a default, and an angle becomes a diameter through the comoving distance: see [Sizes](/docs/simplifications/#sizes).
+
+The measured tilts are SDSS’s own, the <Source id="2mass-xsc">2MASS Extended Source Catalog</Source>’s for 2MRS and <Source id="hyperleda">HyperLEDA</Source>’s for GLADE; a galaxy with none is given one computed from its identifier (same section). [Techniques](/docs/rendering/techniques/#galaxies) says how a galaxy goes from a point to a disc to a picture.
+
+## Stars
+
+<Table
+  cols="2 4"
+  head={['Quantity', 'How it is obtained']}
+  rows={[
+    ['Direction', 'Measured by Gaia, as it was at the start of 2016.'],
+    ['Distance', 'Derived: a statistical estimate from the parallax and, where there is one, the star’s colour and brightness.'],
+    ['Brightness', 'Derived from Gaia’s magnitude and the distance.'],
+    ['Colour', 'Measured as a colour index; the colour on screen is drawn from it.'],
+    ['Temperature, luminosity, radius', 'Derived, for a card only. Rough.'],
+    ['Size on screen', 'Drawn, until a star is close enough to show a disc.'],
+  ]}
+/>
+
+### Position and distance
+
+A star’s position, its brightness in the G band and its colour, BP minus RP, are <Source id="gaia">Gaia</Source>’s; [the pipeline page](/docs/data/pipeline/#stars) says which stars are loaded.
+
+<Fact id="sci-star-distance" />
+
+<Source id="bailer-jones">Bailer-Jones and others (2021)</Source> explain why one over the [parallax](/docs/reference/glossary/#parallax) fails for most stars: the error of a small parallax is a large and lopsided error in distance.
+
+### Brightness and colour
+
+<Fact id="method-star-magnitude" />
+
+<Fact id="method-star-light" />
+
+<Formula
+  say="M equals m minus 5 times the logarithm of d over 10 parsecs. Light equals 10 to the power of minus 0.4 M, divided by the square of r over 10 parsecs."
+  of={['M = m − 5 \\,log_{10}(\\frac{d}{10 \\,\\text{pc}})', '\\text{light} = \\frac{10^{−0.4 M}}{(r / 10 \\,\\text{pc})^2}']}
+/>
+
+<Fact id="method-star-tint" />
+
+The five colours are chosen to look right: see [Brightness, exposure and colour](/docs/simplifications/#brightness-exposure-and-colour). The named stars and the stars around the black hole are coloured otherwise: from the temperature in our list, along the curve a glowing body follows, in [Tanner Helland’s approximation](https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html). Its author made it for editing photographs and says it is not accurate enough for science.
+
+### What a star’s card adds
+
+<Fact id="method-star-card" />
+
+<Formula
+  say="5040 over T equals b nought plus b one C plus b two C squared. R equals the square root of L, times the square of 5772 over T."
+  of={['\\frac{5040}{T} = b_0 + b_1 C + b_2 C^2', 'R = \\sqrt{L} × (\\frac{5772}{T})^2']}
+/>
+
+[Andrae and others 2018](https://arxiv.org/abs/1804.09374) put the error of their own luminosities at about 15 per cent and of their radii at 10; ours use the colour alone and are rougher. The temperature relation is that of [Mucciarelli, Bellazzini and Massari 2021](https://arxiv.org/abs/2106.03882). The 118 named stars take their figures from <Source id="seed-famous-stars">a list compiled by hand</Source>.
+
+<Figure id="guide-card-star" />
+
+## The Solar System
+
+<Table
+  cols="2 4"
+  head={['Quantity', 'How it is obtained']}
+  rows={[
+    ['Position', 'Derived: an orbit from published elements, corrected against JPL Horizons for the planets and 18 moons.'],
+    ['Size', 'Measured: each body is a sphere of its catalogued radius.'],
+    ['Surface', 'Measured where a spacecraft mapped it; some maps are retouched.'],
+    ['Atmosphere', 'Modelled.'],
+    ['Clouds on Earth', 'Drawn from one fixed picture.'],
+    ['Figures on a card', 'Typed in by hand.'],
+  ]}
+/>
+
+### Positions
+
+<Fact id="sci-ephemeris" />
+
+An orbit from <Source id="jpl-elements">JPL’s elements</Source> is one ellipse whose shape drifts at a steady rate; the real planets pull on one another, and the fit to <Source id="horizons">JPL Horizons</Source> takes that up.
+
+<Fact id="method-kepler-error" />
+
+What happens outside 1900 to 2100 is under [The Solar System](/docs/simplifications/#the-solar-system).
+
+### Surfaces
+
+<Fact id="sci-planet-maps" />
+
+The other maps are spacecraft mosaics, each with its own page under [Imagery and textures](/docs/data/#imagery).
+
+### Atmospheres
+
+The atmospheres of 9 bodies are computed. [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x) compute once how much light the air passes and scatters and look the answer up for every pixel; [Hillaire (2020)](https://doi.org/10.1111/cgf.14050) adds a cheaper treatment of light scattered many times. We wrote our own code for both, and each body has a table of gases and hazes.
+
+<Fact id="method-atmosphere-earth" />
+
+<View to="focus=body-titan&t=2026-10-05T12:00:00Z">Open Titan, where the haze is all there is to see</View>
+
+## The Milky Way
+
+<Table
+  cols="2 4"
+  head={['Layer', 'How it is obtained']}
+  rows={[
+    ['The galaxy seen from outside', 'Modelled.'],
+    ['The Local Bubble', 'Derived from a published table of distances.'],
+  ]}
+/>
+
+<Fact id="sci-milky-way" />
+
+<Figure id="milky-way-drawn" />
+
+<Fact id="method-galactic-centre" />
+
+<Fact id="method-disc-radius" />
+
+[Freudenreich’s](https://arxiv.org/abs/astro-ph/9707340) own bar stands at 14 degrees; we took the 27 ± 2 that [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593) measured later. The Gaia stars near the Sun are a separate, measured layer. [Techniques](/docs/rendering/techniques/#the-milky-way) says how it is drawn.
+
+### The Local Bubble
+
+<Fact id="method-local-bubble" />
+
+The table is <Source id="local-bubble">O’Neill and others’</Source>; the [Local Bubble](/docs/reference/glossary/#local-bubble) is in the glossary.
+
+## The black hole at the centre
+
+<Table
+  cols="2 4"
+  head={['Part', 'How it is obtained']}
+  rows={[
+    ['Bending of light', 'Modelled.'],
+    ['The glowing disc', 'Drawn.'],
+    ['Orbits of the 40 stars around it', 'Measured.'],
+  ]}
+/>
+
+<Fact id="method-black-hole" />
+
+The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735); the table and the code are our own. The stars around it move on <Source id="s-stars">orbits published from years of tracking</Source>, which is how the mass and the distance are known. The two come from different fits: see [The Milky Way](/docs/simplifications/#the-milky-way).
+
+<View to="focus=blackhole-sgr-a-star">Open Sagittarius A*</View>
+
+## The cosmic web
+
+<Table
+  cols="2 4"
+  head={['Layer', 'How it is obtained']}
+  rows={[
+    ['Density glow', 'Derived by a published algorithm from SDSS galaxy positions.'],
+    ['Filaments', 'Derived by a published algorithm, which we run ourselves.'],
+    ['Flow ribbons', 'Derived: a published reconstruction of how galaxies move.'],
+    ['Cluster and supercluster markers', 'Position measured, from two catalogues; radius derived from theirs by the rule below; the ring is drawn.'],
+    ['Voids and groups', 'Drawn: placed by hand.'],
+  ]}
+/>
+
+### Density, filaments and flows
+
+<Fact id="sci-density-field" />
+
+The catalogue is described by [Wilde and others (2023)](https://arxiv.org/abs/2301.02719); it has <Source id="mcpm-vac">a page here</Source>. It is built from redshift distances, so it inherits their distortions.
+
+<Fact id="sci-filaments" />
+
+The threshold of 5 standard deviations and two passes of smoothing are our settings; DisPerSE’s paper is [Sousbie (2011)](https://arxiv.org/abs/1009.4015).
+
+<Fact id="sci-flows" />
+
+The reconstruction is published with [Courtois and others (2025)](https://arxiv.org/abs/2502.01308). We draw it as it comes.
+
+<View to="exhibit=cosmicWeb">Open the Cosmic Web exhibit</View>
+
+### Clusters, superclusters, voids and groups
+
+The catalogues are <Source id="mcxc">MCXC</Source> and <Source id="mscc">MSCC</Source>; 42 more structures are placed by hand, as [Structures](/docs/simplifications/#structures) says.
+
+<Fact id="method-structure-cuts" />
+
+### The density correction
+
+It changes brightness only, and it is on when the app opens.
+
+<Fact id="method-reweight" />
+
+When to switch it off is in the [Settings guide](/docs/guide/settings/); what it cannot tell apart is under [Survey selection and completeness](/docs/simplifications/#survey-selection-and-completeness).
+
+## The edge of the observable universe
+
+<Table
+  cols="2 4"
+  head={['Part', 'How it is obtained']}
+  rows={[['The sphere', 'Modelled.']]}
+/>
+
+<Fact id="sci-horizon-shell" />
+
+The most distant objects drawn, <Source id="milliquas">Milliquas</Source> quasars at a redshift near 7, are about 8.5 gigaparsecs away. The sphere and the galaxies inside it were computed with two different expansion rates: see [Two expansion rates](/docs/simplifications/#distances-and-redshift-space).
+
+<View to="exhibit=observableUniverse">Open the Observable Universe exhibit</View>
+
+## What is only drawn
+
+<Fact id="sci-zoa-band" />
+
+Names, orbit lines, constellation lines, the selection ring and the scale bar are drawn too. The glow around bright objects and the tone curve act on the whole frame: see [Bloom, tone curves and HDR](/docs/rendering/techniques/#bloom-tone-curves-and-hdr).

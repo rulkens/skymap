@@ -6,7 +6,6 @@ import ContactForm from '../components/ContactForm.astro';
 import Credits from '../components/Credits.astro';
 import DiscBand from '../components/DiscBand.astro';
 import Figure from '../components/Figure.astro';
-import Note from '../components/Note.astro';
 import ObjLink from '../components/ObjLink.astro';
 import Offer from '../components/Offer.astro';
 import Remark from '../components/Remark.astro';
@@ -74,7 +73,6 @@ const STEPS = [
       {fact('wisdome-dome').short} {fact('wisdome-venue').short} We can do three things for a dome or a gallery: a
       live fisheye picture from the app, a rendered film, or a screen built around one exhibit.
     </p>
-    <Note flow>The showing is our own account: the venue has published nothing about it.</Note>
     <ObjLink hang href="#contact">How to reach us</ObjLink>
     <p slot="note" class="small">
       This frame was rendered {(siteShot('dome-earth').size.width * 2).toLocaleString('en-GB')} pixels across. The recorder’s fulldome frames
@@ -137,7 +135,7 @@ const STEPS = [
         <h3>Data and drawing, labelled</h3>
         <p class="small">
           Star and galaxy positions come from published catalogues. Some of the scene is a model: nobody has
-          photographed the Milky Way from outside, so on your dome it is drawn, and we say so.
+          photographed the Milky Way from outside, so on your dome it is drawn.
         </p>
         <ObjLink hang size="small" href={sitePath('/science/')}>The science behind skymap</ObjLink>
       </div>

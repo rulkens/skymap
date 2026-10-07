@@ -3,8 +3,8 @@
  * `data-views` element inside it holds one child per view in the same order,
  * all rendered by the server; this only marks which one is current
  * (`data-here`), and site.css shows it. The markers (`data-go`) choose a view.
- * Left alone the band moves on by itself, slowly, and stops for good once the
- * reader has chosen.
+ * Left alone the band moves on by itself, slowly; a choice starts the wait
+ * again, and the band waits while the reader is at the markers.
  */
 import { wrapIndex } from '../utils/wrapIndex';
 
@@ -25,7 +25,6 @@ export function initGallery(root: HTMLElement): void {
   const pictures = (view: number): HTMLImageElement[] =>
     stacks.flatMap((stack) => [...(stack[view]?.querySelectorAll('img') ?? [])]);
   let at = 0;
-  let chosen = false;
   let rested = 0;
 
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
@@ -58,7 +57,7 @@ export function initGallery(root: HTMLElement): void {
   };
 
   const choose = (view: number): void => {
-    chosen = true;
+    rested = 0;
     show(view, true);
   };
 
@@ -85,13 +84,14 @@ export function initGallery(root: HTMLElement): void {
 
   const waiting = (): boolean =>
     document.hidden ||
-    root.matches(':hover, :focus-within') ||
+    // Only the markers hold it: a band fills the first screen, so the pointer is nearly always over it.
+    marks[0]!.parentElement!.matches(':hover, :focus-within') ||
     root.getBoundingClientRect().bottom <= 0 ||
     !pictures(wrapIndex(at + 1, count)).every((img) => img.complete && img.naturalWidth > 0);
 
   // Counted in seconds of rest, so the wait starts again whenever the reader leaves the band alone.
   const clock = setInterval(() => {
-    if (chosen || still.matches) return clearInterval(clock);
+    if (still.matches) return clearInterval(clock);
     rested = waiting() ? 0 : rested + 1;
     if (rested < REST_SEC) return;
     rested = 0;

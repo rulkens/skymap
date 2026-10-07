@@ -3,7 +3,10 @@ import { ABOUT_FACTS } from './aboutFacts';
 import { CLASSROOM_FACTS } from './classroomFacts';
 import { DOCS_DATA_FACTS } from './docsDataFacts';
 import { DOCS_GUIDE_FACTS } from './docsGuideFacts';
+import { DOCS_PROJECT_FACTS } from './docsProjectFacts';
 import { DOCS_REFERENCE_FACTS } from './docsReferenceFacts';
+import { DOCS_RENDERING_FACTS } from './docsRenderingFacts';
+import { DOCS_SCIENCE_FACTS } from './docsScienceFacts';
 import { DOCS_START_FACTS } from './docsStartFacts';
 import { PRIVACY_FACTS } from './privacyFacts';
 import { SCIENCE_FACTS } from './scienceFacts';
@@ -114,11 +117,11 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'voyager1-to-proxima',
-    text: 'At its speed of 17.0 km/s relative to the Sun, Voyager 1 would take about 75,000 years to travel the 4.25 light-years to Proxima Centauri. It is not heading there.',
+    text: 'At its speed of 17.0 km/s relative to the Sun, Voyager 1 would take about 75,000 years to travel the 4.25 light-years to Proxima Centauri.',
     source: 'https://science.nasa.gov/mission/voyager/voyager-1/',
     sourceLabel: 'NASA, Voyager 1',
     checked: CHECKED,
-    short: 'Voyager 1 would need about 75,000 years to reach Proxima Centauri, the nearest star. It is not heading there.',
+    short: 'Voyager 1 would need about 75,000 years to reach Proxima Centauri, the nearest star.',
   },
   {
     id: 'galactic-centre-light',
@@ -138,7 +141,7 @@ export const FACTS: readonly Fact[] = [
   },
   {
     id: 'cosmic-web-map',
-    text: 'The purple and orange glow is a density map of the cosmic web, computed by the Monte Carlo Physarum Machine from the positions of SDSS galaxies. It is a reconstruction, not an image.',
+    text: 'The purple and orange glow is a density map of the cosmic web, computed by the Monte Carlo Physarum Machine from the positions of SDSS galaxies.',
     source: 'https://arxiv.org/abs/2301.02719',
     sourceLabel: 'Wilde et al. 2023, cosmic web catalogue',
     checked: CHECKED,
@@ -150,7 +153,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://www.sdss4.org/dr17/scope/',
     sourceLabel: 'SDSS DR17 scope',
     checked: CHECKED,
-    short: 'A dark area is not an empty one. The surveys did not look there, our galaxy’s dust hides it, or its galaxies are too faint.',
+    short: 'Where the map is dark, the surveys did not look, our galaxy’s dust is in the way, or the galaxies are too faint to record.',
   },
   {
     id: '2mrs-coverage',
@@ -345,7 +348,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'wisdome-showing',
     about: 'app',
-    text: 'We showed skymap in the dome at Wisdome Malmö in September 2026, and the film recorder’s fulldome preset was written for that dome. The showing is our own account: the venue has published nothing about it.',
+    text: 'We showed skymap in the dome at Wisdome Malmö in September 2026, and the film recorder’s fulldome preset was written for that dome.',
     source: `${REPO_BLOB}/tools/record/README.md`,
     sourceLabel: 'the recorder’s fulldome notes, in the skymap repository',
     checked: CHECKED,
@@ -435,7 +438,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'film-silent',
     about: 'app',
-    text: 'The recorder writes pictures only. A film from it has no soundtrack.',
+    text: 'The recorder writes pictures only, so a film from it is silent.',
     source: `${REPO_BLOB}/tools/utils/record/buildFfmpegArgs.ts`,
     sourceLabel: 'the recorder’s encoder settings, in the skymap repository',
     checked: CHECKED,
@@ -443,7 +446,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'kiosk-planned',
     about: 'app',
-    text: 'A kiosk mode with an attract loop and a reset after idle time is on the list of planned work. It is not built.',
+    text: 'A kiosk mode with an attract loop and a reset after idle time is on the list of planned work.',
     source: `${REPO_BLOB}/docs/BACKLOG.md`,
     sourceLabel: 'the backlog, in the skymap repository',
     checked: CHECKED,
@@ -472,4 +475,7 @@ export const FACTS: readonly Fact[] = [
   ...DOCS_REFERENCE_FACTS,
   ...DOCS_START_FACTS,
   ...DOCS_DATA_FACTS,
+  ...DOCS_PROJECT_FACTS,
+  ...DOCS_RENDERING_FACTS,
+  ...DOCS_SCIENCE_FACTS,
 ];

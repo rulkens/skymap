@@ -32,15 +32,15 @@ The [Glossary](/docs/reference/glossary/) defines the terms these docs use.
 
 ## What to check before you quote a figure
 
-- **Typed figures do not move with the clock.** A spacecraft’s distance and a rover’s position are dated in the row or in the text. Go by that date, whatever the clock says.
+- **Some figures are fixed.** A spacecraft’s distance and a rover’s position are dated in the row or in the text. Go by that date, whatever the clock says.
 - **The planets’ fact sheet names no source.** Check a figure against another source before you quote it; the card’s Wikipedia link is a start.
 - **Distance, at the top of a body’s card, is the camera’s.** It changes as you zoom. Read it only on the card of the object the camera is focused on.
 - **On a spacecraft’s card, go by the value.** The value of a row says what it measures and when, as in “~480 km above Earth (Sep 2026)”.
 - **A zero can mean “not known”.** <Fact id="card-galaxy-no-redshift" inline />
-- **“fallback” means a stand-in.** A diameter or an orientation marked that way is not a survey’s measurement of that galaxy.
+- **“fallback” means a stand-in.** A diameter or an orientation marked that way was filled in by the app.
 - **Estimates look like measurements.** The temperature, luminosity and radius of a field star are estimates from two numbers, and the type of a catalogue galaxy is a guess from its colour.
 - **Counts have a date and a limit.** <Fact id="card-structure-count" inline /> <Fact id="card-moon-count" inline />
-- **No uncertainties.** No figure on any card carries an error bar, and a long row of digits is not precision. Round before you quote.
+- **No uncertainties.** No card gives an error bar, however many digits a figure has. Round before you quote.
 
 ## What each card holds
 
@@ -51,12 +51,12 @@ The [Glossary](/docs/reference/glossary/) defines the terms these docs use.
     [
       'Planets and moons',
       'Radius, mass, surface gravity, the length of the day and the year, distance from the Sun, mean temperature, number of moons, axial tilt and atmosphere. A moon has its orbital period and its distance from its planet.',
-      'A fact sheet typed into the app by hand. The radius is the size the body is drawn at.',
+      'A fact sheet written by hand and kept with the app. The radius is the size the body is drawn at.',
       { to: 'focus=body-moon', label: 'Open the Moon' },
     ],
     [
       'Spacecraft',
-      'No radius, mass or gravity: two or three dated rows, and a text that says where the craft is.',
+      'Two or three dated rows, and a text that says where the craft is.',
       'The same fact sheet. The scene moves the Voyagers and Hubble with the clock; the card does not follow.',
       { to: 'focus=body-voyager1', label: 'Open Voyager 1' },
     ],
@@ -93,7 +93,7 @@ The [Glossary](/docs/reference/glossary/) defines the terms these docs use.
     [
       'The Milky Way and Sagittarius A*',
       'For the galaxy: type, size, the Sun’s place and orbit, mass, the number and age of its stars. For the black hole: mass, the radius of its event horizon and distance from the Sun.',
-      'The diameter, the Sun’s distance and orbit time and the black hole’s mass are the values the scene is drawn with. The rest are figures from the literature typed into the app.',
+      'The diameter, the Sun’s distance and orbit time and the black hole’s mass are the values the scene is drawn with. The rest are figures from the literature.',
       { to: 'focus=milkyWay', label: 'Open the Milky Way' },
     ],
   ]}
@@ -107,7 +107,7 @@ The [Glossary](/docs/reference/glossary/) defines the terms these docs use.
 
 <Fact id="card-own-pictures" />
 
-How the positions of planets, stars, galaxies and structures are worked out is on [The science behind skymap](/science/#sources).
+How the positions of planets, stars, galaxies and structures are computed is on [The science behind skymap](/science/#sources).
 
 ## Galaxies in detail
 

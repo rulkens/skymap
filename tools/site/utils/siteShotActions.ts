@@ -20,7 +20,7 @@ import { setOrbitTrailsEnabled } from '../../../src/state/settings/core/orbitTra
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
-import { dismissSplash } from '../../../src/state/ui/uiSlice';
+import { dismissSplash, setDebugPanelOpen } from '../../../src/state/ui/uiSlice';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { labelDeclutterActions } from '../../utils/capture/labelDeclutterActions';
@@ -63,6 +63,7 @@ export function siteShotActions({
       setBlackHoleLabelEnabled({ id: 'sgr-a-star', enabled: false }),
     );
   }
+  if (settings.debugPanel) actions.push(setDebugPanelOpen(true));
   if (settings.tourStep !== undefined) {
     const { view } = linkIntentFrom(link);
     if (view.kind !== 'tour' || !(view.id in tourRegistry)) {

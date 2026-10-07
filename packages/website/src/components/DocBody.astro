@@ -100,15 +100,6 @@
     color: var(--color-fg);
   }
 
-  /* A block of code scrolls inside its own rules; the page never scrolls sideways. */
-  .doc-body :global(pre) {
-    margin: 0 0 var(--stack);
-    padding-block: 1rem;
-    border-block: 1px solid var(--border-divider);
-    line-height: 1.55;
-    overflow-x: auto;
-  }
-
   .doc-body :global(dl:where(:not([data-embed] *))) {
     margin: 0 0 var(--stack);
   }
@@ -164,7 +155,7 @@
       --doc-measure: 35rem;
     }
 
-    .doc-body > :global(:is(pre, .caveat, .example)) {
+    .doc-body > :global(:is(.code-block, .caveat, .example)) {
       max-width: var(--doc-measure);
     }
   }

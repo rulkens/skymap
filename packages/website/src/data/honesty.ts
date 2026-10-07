@@ -81,7 +81,7 @@ export const HONESTY: Record<'measured' | 'derived' | 'drawn', readonly HonestyI
       href: 'https://github.com/ebruneton/precomputed_atmospheric_scattering',
     },
     {
-      text: 'Earth’s clouds: a fixed composite, not today’s weather',
+      text: 'Earth’s clouds: one fixed composite',
       href: 'https://visibleearth.nasa.gov/',
     },
     {
@@ -89,7 +89,7 @@ export const HONESTY: Record<'measured' | 'derived' | 'drawn', readonly HonestyI
       href: `${REPO_BLOB}/data/seeds/famous_stars.seed.json`,
     },
     {
-      text: 'Black holes: a lensing model with an invented glowing disc, not an image',
+      text: 'Black holes: a lensing model with an invented glowing disc',
       href: 'https://arxiv.org/abs/2010.08735',
     },
     {

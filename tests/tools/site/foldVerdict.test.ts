@@ -5,7 +5,13 @@ import { foldVerdict } from '../../../tools/site/utils/foldVerdict';
 
 const wide = { width: 1280, height: 665, phone: false };
 const phone = { width: 390, height: 760, phone: true };
-const fits: FoldMeasure = { bottom: 665, titleBottom: 200, leadBottom: 300, pictureTop: 72 };
+const fits: FoldMeasure = {
+  bottom: 665,
+  titleBottom: 200,
+  leadBottom: 300,
+  pictureTop: 72,
+  bodyTop: null,
+};
 
 describe('foldVerdict', () => {
   it('passes a section that ends at the window foot, and one a rounding fraction past it', () => {
@@ -26,10 +32,22 @@ describe('foldVerdict', () => {
     expect(foldVerdict({ ...fits, bottom: 1261, pictureTop: 760 }, phone)).toMatch(/^the picture/);
   });
 
+  it('wants a line of a docs page’s first heading, table or figure on the first screen', () => {
+    const docs = { ...fits, bottom: 344 };
+    expect(foldVerdict({ ...docs, bodyTop: 625 }, wide)).toBeNull();
+    expect(foldVerdict({ ...docs, bodyTop: 735 }, wide)).toBe(
+      'the first heading, table or figure starts 110px below the first screen',
+    );
+    expect(foldVerdict({ ...docs, bodyTop: 1400 }, phone)).toBeNull();
+  });
+
   it('fails a page with no opening section marked, and tolerates one without a lead or a picture', () => {
     expect(foldVerdict(null, wide)).toMatch(/data-opening/);
     expect(
-      foldVerdict({ bottom: 600, titleBottom: 200, leadBottom: null, pictureTop: null }, phone),
+      foldVerdict(
+        { bottom: 600, titleBottom: 200, leadBottom: null, pictureTop: null, bodyTop: null },
+        phone,
+      ),
     ).toBeNull();
   });
 });

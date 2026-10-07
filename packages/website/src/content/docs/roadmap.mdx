@@ -1,0 +1,37 @@
+---
+description: What is planned for skymap and how far along each thing is.
+facts: [kiosk-planned, tour-earth-start-planned, bench-galaxy-unused, dome-rig]
+---
+
+import { ISSUES_URL } from '../../data/contact';
+import { ROADMAP } from '../../data/roadmap';
+
+export const items = (state) => ({
+  cols: 'detail',
+  head: ['What', 'What it is'],
+  rows: ROADMAP.flatMap((group) =>
+    group.items
+      .filter((item) => item.state === state)
+      .map((item) => [{ text: item.title, sub: group.title }, item.text]),
+  ),
+});
+
+<Fact id="about-maker" inline /> So this is a list of intentions, in no order, and any of it may change or be dropped. <Fact id="road-states" inline /> The full list of work is <Repo path="docs/BACKLOG.md">in the repository</Repo>.
+
+## Partly built
+
+<Table {...items('in progress')} />
+
+## Planned
+
+<Table {...items('planned')} />
+
+The model of a galaxy can be tried in the [galaxy renderer](/docs/developers/workbenches/#galaxy-renderer). What the app does for a dome today is under [Screens, quality and domes](/docs/guide/screens-and-domes/).
+
+## Ideas
+
+<Table {...items('idea')} />
+
+## Suggest something
+
+Open an issue <a href={ISSUES_URL}>on GitHub</a> and say what you were trying to do. An issue is public and carries your GitHub name. <Fact id="road-suggest" inline /> If you run a dome or an exhibit and one of these rows would decide whether you can use skymap, [Domes and museums](/domes/) says how to reach us.

@@ -15,21 +15,21 @@ const IN_REPO = 'in the skymap repository';
 export const DOCS_DATA_FACTS: readonly Fact[] = [
   {
     id: 'pipe-galaxy-caps',
-    text: 'GLADE is cut to its 256,000 most luminous galaxies at the smallest data size and 400,000 at the middle one, and the quasars of Milliquas to 60,000 and 200,000. The largest size keeps every row of both. 2MRS and the three DESI regions are never cut. For SDSS and GLADE every galaxy that appears brighter than magnitude 15 is kept as well, whatever its luminosity, so the nearby faint galaxies are not lost.',
+    text: 'GLADE is cut to its 256,000 most luminous galaxies at the smallest data size and 400,000 at the middle one, and the quasars of Milliquas to 60,000 and 200,000. The largest size keeps every row of both. 2MRS and the three DESI regions are never cut. For SDSS and GLADE every galaxy that appears brighter than magnitude 15 is kept as well, whatever its luminosity, so the nearby faint galaxies stay in the map.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources`,
     sourceLabel: `the catalogue definitions, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'pipe-blueshift',
-    text: 'A nearby galaxy that moves towards us has a negative redshift, which gives no distance at all. If none of the three distance lists has it, we place it in its true direction at its speed divided by the Hubble constant, and never on the far side of the sky.',
+    text: 'A nearby galaxy that moves towards us has a negative redshift, which gives no distance. If none of the three distance lists has it, we place it in its true direction at its speed divided by the Hubble constant.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'pipe-star-budgets',
-    text: 'The star file of each data size is cut to fit a compressed download of 10, 30 or 75 megabytes: stars are dropped from the faintest up until the file fits. The faint stars that come only from the Gaia Catalogue of Nearby Stars are not dropped for being faint. They are thinned from 70 parsecs outwards, more of them the farther out, and gone at 100, so that the neighbourhood of the Sun does not end at a visible shell. Which ones go is fixed by each star’s Gaia number, so every build drops the same stars.',
+    text: 'The star file of each data size is cut to fit a compressed download of 10, 30 or 75 megabytes: stars are dropped from the faintest up until the file fits. The faint stars that come only from the Gaia Catalogue of Nearby Stars are kept however faint. They are thinned from 70 parsecs outwards, more of them the farther out, and gone at 100, so that the neighbourhood of the Sun fades out gradually. Which ones go is fixed by each star’s Gaia number, so every build drops the same stars.',
     source: `${REPO_BLOB}/tools/stars/buildStars.ts`,
     sourceLabel: `the star build, ${IN_REPO}`,
     checked: CHECKED,
@@ -61,7 +61,7 @@ export const DOCS_DATA_FACTS: readonly Fact[] = [
   {
     id: 'pipe-draw',
     about: 'app',
-    text: 'The bytes of a galaxy file go to the graphics processor almost as they are: 56 bytes a galaxy, with the values that never change, such as its tilt and its luminosity, worked out once on arrival. Each galaxy is then one small square that always faces the camera, and the program that colours it runs on the graphics processor for every frame.',
+    text: 'The bytes of a galaxy file go to the graphics processor almost as they are: 56 bytes a galaxy, with the values that never change, such as its tilt and its luminosity, computed once on arrival. Each galaxy is then one small triangle that always faces the camera, of which only the dot inside it is coloured, and the program that colours it runs on the graphics processor for every frame.',
     source: `${REPO_BLOB}/docs/RENDERER.md`,
     sourceLabel: `the renderer notes, ${IN_REPO}`,
     checked: CHECKED,

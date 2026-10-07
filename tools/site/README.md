@@ -44,6 +44,26 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - What costs bytes is every pixel changing: a full orbit of a dense field of points (Laniakea) is 1.8 MB at the starting CRF, a sway of 5 degrees fits the cap. Choose the motion before raising the cap.
 - Look at each film after a run: a camera orbit passes the night side of a planet, which is true and dark.
 
+## Workbench pictures
+
+`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands the six pictures were taken with are these.
+
+| Picture   | Command, after `npx tsx tools/site/shootWorkbench.ts`                                       |
+| --------- | ------------------------------------------------------------------------------------------- |
+| `galaxy`  | `galaxy https://skymap.rulkens.com/galaxy/`                                                 |
+| `mcpm`    | `mcpm https://skymap.rulkens.com/mcpm/ --quality 40`                                        |
+| `flow`    | `flow http://localhost:<port>/ --fill intensity=0.8 --wheel=-4000 --settle 25000`           |
+| `scene`   | `scene http://localhost:<port>/ --settle 25000`                                             |
+| `curator` | `curator --from-master`, after the steps under the table                                    |
+| `audit`   | `audit file://<repo>/tools/structure-audit/out/structureAudit.html --dark --click Layering` |
+
+- The flow workbench as it opens is a faint ball in a black window: the picture raises the intensity and zooms in. The audit page is light by default and would be the one bright rectangle on a dark page, so it is asked for its dark colours.
+- The curator's picture shows a galaxy half-way through, which takes a file dropped on the tool: serve it with `STARNET_WEIGHTS` set (its README), choose C12, drop `public/images/famous-curated/c12/source.webp` on the middle, fill the three attribution fields from that folder's `recipe.json` and press Commit with the requests to `/api/export` and `/api/build-famous` refused, so that it removes the stars and writes nothing. Save the window at 2880x1800 as `data/shots/site/workbenches/curator.png` and run the command.
+- A tool's dev server shares the app's dependency cache (`node_modules/.vite`) and re-optimises it. Beside a running app server, give the tool a `cacheDir` of its own.
+- `--settle <ms>` is the wait before the shot (12 s if left out): the scene workbench needs about 25 s to stream its splats. `--from-master` writes the files again from the PNG of the last run (`data/shots/site/workbenches/`, gitignored), for a change of quality.
+- Budget, as for the shots: at most about 400 KB for the largest file. `--quality` lowers the AVIF quality of the two wider files; the MCPM picture, a cloud of points, needs 40.
+- The runner fails on an address that does not answer and on a picture that is one flat colour. Look at each picture all the same: it must show what its caption says.
+
 ## Link check
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. The only pages a link may point at before they exist are the `planned` rows of the docs tree (`packages/website/src/data/docsTree.ts`); such links are reported as pending. The check fails if a planned page now exists, so the PR that writes a page sets its row to `live`.
@@ -55,4 +75,5 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - The opening section is the one element marked `data-opening`. `PictureBand` (with `gap="none"`), `DiscBand` and the Home flight set it; a docs page has no picture, and its title block is its opening section (the Docs layout and `DocsMap` set it). A page without one fails.
 - Docs pages are made by one pattern file, so the check takes them from the docs tree's `live` rows.
 - Wide windows: the whole section ends inside the window, the picture's label included. Phones (the rows marked `phone`): the title and the lead are inside and the picture has begun; its label may be below.
+- A docs page's opening section is only its title and lead, which fit whatever follows them. So for a docs page the first thing in its text that is not a paragraph (the first heading, table, figure, diagram, list or example) must also show 40 px on the first screen of a wide window: a page may open on a paragraph or two, not on a screen of them. A phone is let off, since a title and a lead can fill one.
 - The rule itself is `utils/foldVerdict.ts`. The room comes from `--first-screen` in the site's `site.css`.

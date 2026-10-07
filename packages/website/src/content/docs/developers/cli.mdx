@@ -1,0 +1,66 @@
+---
+description: The npm run commands a developer types in the skymap repository, by task.
+facts: [cli-scripts, cli-arguments, cli-running-app, cli-unlisted-deploy]
+---
+
+import pkg from '../../../../../../package.json';
+import { DOCS_COMMANDS } from '../../../data/docsCommands';
+import { REPO_BLOB } from '../../../data/siteIdentity';
+
+export const NODE = pkg.engines.node.replace('>=', '');
+
+export const members = (row) =>
+  row.does.replace('<sources>', row.scripts.map((name) => name.slice(row.family.indexOf('<'))).join(', '));
+
+export const commands = (id) => ({
+  head: ['Command', 'What it does', 'Read'],
+  rows: DOCS_COMMANDS.find((group) => group.id === id).rows.map((row) => [
+    { codes: row.family ? [row.family] : row.scripts },
+    row.family ? members(row) : row.does,
+    { href: `${REPO_BLOB}/${row.manual}`, label: row.manual },
+  ]),
+});
+
+Each is a script in the `package.json` at the root of the repository and needs Node {NODE} or later. Everything after a bare `--` is handed to the tool:
+
+```
+npm run shot -- 'focus=body-saturn' --url http://localhost:5173
+```
+
+## Run and build
+
+<Table {...commands('run-and-build')} />
+
+## Data
+
+Most read raw files that are not in the repository; only `fetch-data`, above, is needed to run the app with its data. Their order is in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>, and [From catalogue to pixels](/docs/data/pipeline/) tells the same story without the flags.
+
+<Table {...commands('data')} />
+
+## Pictures and films
+
+`capture-featured`, `site:shots` and `site:loops` drive an app that is already running and take its address after `--url`, as `perf` does; so do `record-tour` and `record-clip` unless they are given `--serve`. `shot` starts an app itself when it is given no address.
+
+<Table {...commands('pictures-and-films')} />
+
+## Measuring
+
+<Table {...commands('measuring')} />
+
+## Code
+
+<Table {...commands('code')} />
+
+## Workbenches
+
+What each one is for is on [Developer workbenches](/docs/developers/workbenches/).
+
+<Table {...commands('workbenches')} />
+
+## This site
+
+<Table {...commands('this-site')} />
+
+## Left out
+
+The tables leave out scripts that publish (their steps are in the <Repo path="docs/DEPLOY.md">deployment notes</Repo>), scripts another command runs for you, and probes written for one question.

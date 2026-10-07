@@ -7,20 +7,29 @@
  * site's honesty device. It is set quietly, as a caption: nothing in it is
  * brighter than the page's body text. It lays itself out by the room it is
  * given: stacked under a narrow picture, in columns along the foot of a wide one.
+ * `label` gives the words for a picture that is not in the manifest and is
+ * not a view of the app: it has no address to open.
  */
 import ViewLink from './ViewLink.astro';
 import { appLink } from '../data/appLink';
 import { siteShot } from '../data/siteShot';
+import type { SiteShot } from '../@types/SiteShot';
 
-type Props = { id: string; open?: boolean };
+type Props = { id?: string; label?: Pick<SiteShot, 'title' | 'caption' | 'credit'>; open?: boolean };
 
-const { id, open = true } = Astro.props;
-const shot = siteShot(id);
+const { id, label, open = true } = Astro.props;
+const row = id === undefined ? undefined : siteShot(id);
+const shot: Pick<SiteShot, 'title' | 'caption' | 'drawn' | 'credit'> | undefined = row ?? label;
+if (!shot) throw new Error('ShotCaption needs the id of a shot or a label');
+// The view a manifest picture was taken at, where the label is to open it.
+const view = row && open ? row : undefined;
+// Whether the title and its sentence have the label to themselves.
+const alone = !shot.drawn && !shot.credit && !view;
 ---
 
 <div class="caption small">
   <div class="plate">
-    <p class="what">
+    <p class:list={['what', { alone }]}>
       <strong>{shot.title}</strong>
       {shot.caption && <span>{shot.caption}</span>}
     </p>
@@ -33,7 +42,7 @@ const shot = siteShot(id);
       )
     }
     {
-      (shot.credit || open) && (
+      (shot.credit || view || !row) && (
         <div class="end">
           {shot.credit && (
             <dl>
@@ -41,12 +50,13 @@ const shot = siteShot(id);
               <dd>{shot.credit}.</dd>
             </dl>
           )}
-          {open &&
-            (shot.link.startsWith('tour=') ? (
-              <ViewLink href={appLink(shot.link, shot.query)}>Start the tour</ViewLink>
+          {view &&
+            (view.link.startsWith('tour=') ? (
+              <ViewLink href={appLink(view.link, view.query)}>Start the tour</ViewLink>
             ) : (
-              <ViewLink href={appLink(shot.link, shot.query)} />
+              <ViewLink href={appLink(view.link, view.query)} />
             ))}
+          {!row && <div class="room" />}
         </div>
       )
     }
@@ -107,6 +117,11 @@ const shot = siteShot(id);
     color: var(--site-text-faint);
   }
 
+  /* A label with no address keeps that line all the same: a docs figure sets "Enlarge" at its end (FigureFrame). */
+  .room {
+    height: 2.125rem;
+  }
+
   /* The control keeps its 44px for the thumb; the margin takes back what the row of text does not need. */
   .end :global(.ring) {
     margin-block: 0 -0.625rem;
@@ -131,6 +146,14 @@ const shot = siteShot(id);
     .drawn,
     .end {
       grid-column: calc(var(--what) + 1) / -1;
+    }
+
+    .what.alone {
+      grid-area: auto / 1 / auto / -1;
+    }
+
+    .what.alone + .end {
+      grid-column: 1 / -1;
     }
   }
 

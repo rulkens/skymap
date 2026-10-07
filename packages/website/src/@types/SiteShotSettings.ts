@@ -27,6 +27,8 @@ export type SiteShotSettings = {
   ui?: true;
   /** With `ui`: open the app’s search and type this before the shot; an empty string leaves it on its picture cards. */
   searchFor?: string;
+  /** With `ui`: the app's debug panel open, as the D key opens it. */
+  debugPanel?: true;
   /** With `ui`: headings of the app's panels to click before the shot, in order (`Settings` itself where the panel starts folded). */
   open?: readonly string[];
   /** Keep this part of the frame only, in the viewport's CSS pixels: a phone's cut of a wide interface shot. */

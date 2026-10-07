@@ -103,7 +103,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-density-field',
-    text: 'The cosmic web glow is a density field from the SDSS DR17 Cosmic Slime catalogue. It was made by the Monte Carlo Physarum Machine, an algorithm modelled on a slime mould: simulated agents move towards galaxies and the trails they leave are added up. It covers SDSS galaxies between 44 and 476 megaparsecs on a grid of 712 by 1,200 by 728 cells, which we reduce to three sizes.',
+    text: 'The cosmic web glow is a density field from the SDSS DR17 Cosmic Slime catalogue. It was made by the Monte Carlo Physarum Machine, an algorithm modelled on a slime mould: simulated agents move towards galaxies and the trails they leave accumulate. It covers SDSS galaxies between 44 and 476 megaparsecs on a grid of 712 by 1,200 by 728 cells, which we reduce to three sizes.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,
@@ -140,7 +140,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   // Drawn
   {
     id: 'sci-milky-way',
-    text: 'The Milky Way seen from outside is a generated model. A few of its numbers come from the literature: the disc’s scale length of 2.6 kiloparsecs and its thickness from Freudenreich 1998, and the bar’s angle of 27 degrees from Wegg and Gerhard. The four spiral arms are shaped by hand; no arm is placed from a measurement.',
+    text: 'The Milky Way seen from outside is a generated model. A few of its numbers come from the literature: the disc’s scale length of 2.6 kiloparsecs and its thickness from Freudenreich 1998, and the bar’s angle of 27 degrees from Wegg and Gerhard. The four spiral arms are shaped by hand.',
     source: `${REPO_BLOB}/src/data/milkyWay/milkyWayGalaxyParams.ts`,
     sourceLabel: `the Milky Way parameters, ${IN_REPO}`,
     checked: CHECKED,
@@ -154,7 +154,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-horizon-shell',
-    text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer. Nothing is observed at that distance.',
+    text: 'The sphere at the edge of the observable universe is drawn at 14.3 gigaparsecs (46.6 thousand million light-years). It marks the particle horizon of a cosmological model: how far away, today, the most distant matter is from which any signal could have reached us. The matter whose glow we see as the microwave background is a little nearer.',
     source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
@@ -168,14 +168,14 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-atmospheres',
-    text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body. They are not photographs.',
+    text: 'The atmospheres of 9 bodies are computed from a light-scattering model after Bruneton and Neyret and Hillaire, with a table of gases and hazes for each body.',
     source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'sci-earth-clouds',
-    text: 'Earth’s clouds are one fixed NASA composite, not the weather on the date shown. The surface under them is the Blue Marble mosaic of August 2004, with newer satellite and aerial imagery set into some regions.',
+    text: 'Earth’s clouds are one fixed NASA composite. The surface under them is the Blue Marble mosaic of August 2004, with newer satellite and aerial imagery set into some regions.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,
@@ -189,21 +189,21 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-galaxy-discs',
-    text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc, which is not its real shape. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
+    text: 'A galaxy smaller than about 8 pixels on screen is a point. Larger than that, it is drawn as a generated disc. From about 24 pixels it carries a picture: a photograph of our choosing for 81 named galaxies, and for the others a survey image the app fetches from the Sloan Digital Sky Survey or, failing that, from the Digitized Sky Survey through the CDS in Strasbourg.',
     source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'sci-galaxy-tilt',
-    text: 'Where a catalogue gives no measured tilt for a galaxy, we give it one computed from its identifier and position. It is the same on every visit, and it is not real.',
+    text: 'Where a catalogue gives no measured tilt for a galaxy, we give it one computed from its identifier and position, the same on every visit.',
     source: `${REPO_BLOB}/tools/catalog/buildAllBins.ts`,
     sourceLabel: `the catalogue build, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'sci-black-hole',
-    text: 'Sagittarius A* is drawn as a non-rotating black hole bending the light behind it, with a glowing disc that we invented. It is not the Event Horizon Telescope image.',
+    text: 'Sagittarius A* is drawn as a non-rotating black hole bending the light behind it, with a glowing disc that we invented.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,
@@ -254,7 +254,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-horizon-h0',
-    text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it. This is a known inconsistency in the app, not a rounding choice.',
+    text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it.',
     source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
@@ -275,7 +275,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-desi-patches',
-    text: 'DESI appears as three regions cut from its first data release, not as a survey of the sky: a cone 2.5 degrees in radius towards Corona Borealis, a band of declination and the Sloan Great Wall.',
+    text: 'DESI appears as three regions cut from its first data release: a cone 2.5 degrees in radius towards Corona Borealis, a band of declination and the Sloan Great Wall.',
     source: `${REPO_BLOB}/tools/catalog/desiPatches.ts`,
     sourceLabel: `the DESI sample shapes, ${IN_REPO}`,
     checked: CHECKED,
@@ -289,7 +289,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-reweight',
-    text: 'Unless you change the setting, we also dim galaxies in directions a catalogue sampled more densely than its median, so that uneven coverage does not read as structure. This changes brightness, never position.',
+    text: 'Unless you change the setting, we also dim galaxies in directions a catalogue sampled more densely than its median, and brighten a little those it sampled more thinly, so that uneven coverage does not read as structure. This changes brightness only.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/bias/initialState.ts`,
     sourceLabel: `the default bias setting, ${IN_REPO}`,
     checked: CHECKED,
@@ -338,7 +338,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-quasar-boost',
-    text: 'Quasars are drawn three times brighter than our brightness model gives, and they do not fade with distance as galaxies do.',
+    text: 'Quasars are drawn three times brighter than our brightness model gives a galaxy.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources/milliquas.ts`,
     sourceLabel: `the Milliquas definition, ${IN_REPO}`,
     checked: CHECKED,

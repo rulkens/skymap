@@ -1,0 +1,99 @@
+---
+/*
+ * FigureFrame — a picture on a docs page with its label under it: what
+ * DocFigure (a shot of the app) and WorkbenchFigure (a tool's own picture)
+ * share. The picture (slot `picture`) is a link to its largest file, which
+ * FigureSheet opens over the page; "Enlarge" under it says so in words.
+ * `sheet` is that link's address and the attributes the sheet reads. `wide`
+ * runs the figure, label and all, past the text column to the page's right
+ * edge, nine columns. A phone gets the picture edge to edge either way.
+ */
+type Props = { sheet: Record<string, string | number>; wide?: boolean };
+
+const { sheet, wide = false } = Astro.props;
+---
+
+<figure class:list={{ wide }} data-embed>
+  <!-- Out of the keyboard's path: "Enlarge" below is the same link with words a reader can see. -->
+  <a class="picture" tabindex="-1" {...sheet}>
+    <slot name="picture" />
+    <span class="unseen" data-pagefind-ignore>Open this picture larger</span>
+  </a>
+  <figcaption>
+    <slot />
+    <a class="ring small enlarge" data-pagefind-ignore {...sheet}>Enlarge</a>
+  </figcaption>
+</figure>
+
+<style>
+  .picture {
+    display: block;
+    cursor: zoom-in;
+  }
+
+  .picture :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    position: relative;
+    margin-top: 0.5rem;
+  }
+
+  /* On the label's last line, where "Open this view" stands, at the other end of it. */
+  .enlarge {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    color: var(--site-text-dim);
+  }
+
+  /* Narrow, the picture runs to the screen's edges; its label keeps the text edge. */
+  @media (max-width: 900px) {
+    .picture {
+      margin-inline: calc(-1 * var(--gutter));
+    }
+  }
+
+  /*
+   * Wide: the figure runs out to the right by the page grid's columns the text does not use (twelve less the
+   * contents' three and the text's own), so its right edge is the page's, and its label lies along its foot on
+   * those nine columns.
+   */
+  @media (min-width: 901px) {
+    .wide {
+      --figure-out: calc((var(--cols) - 9) * ((100% - (var(--cols) - 1) * var(--col-gap)) / var(--cols) + var(--col-gap)));
+    }
+
+    .wide figcaption {
+      --cols: 9;
+    }
+  }
+
+  /*
+   * The page's own headings stand still in those columns (layouts/Docs.astro), and a wide figure passes in front
+   * of them: black from its top to its foot, fading in over the gap above it and out over the gap below, so the
+   * list dims as the picture nears and nothing is switched.
+   */
+  @media (min-width: 1200px) {
+    .wide {
+      position: relative;
+      z-index: 1;
+    }
+
+    .wide::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      inset: -2.5rem 0;
+      background: linear-gradient(
+        rgb(0 0 0 / 0),
+        var(--color-bg) 2.5rem,
+        var(--color-bg) calc(100% - 2.5rem),
+        rgb(0 0 0 / 0)
+      );
+    }
+  }
+</style>

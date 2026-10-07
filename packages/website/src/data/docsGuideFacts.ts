@@ -13,7 +13,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'focus-meaning',
     about: 'app',
-    text: 'The focus is the object the camera turns about and zooms towards. A click selects an object and leaves the focus where it was. A double-click, the F key, the Focus button on a card and a search result all move it. Zooming does not: however far back the camera pulls, it still turns about the same object.',
+    text: 'The focus is the object the camera turns about and zooms towards. A click selects an object and leaves the focus where it was. A double-click, the F key, the Focus button on a card and a search result all move it. Zooming leaves it in place: however far back the camera pulls, it still turns about the same object.',
     source: `${REPO_BLOB}/src/state/selection/selectionSlice.ts`,
     sourceLabel: `the selection and the focus, ${IN_REPO}`,
     checked: CHECKED,
@@ -125,7 +125,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'touch-gestures',
     about: 'app',
-    text: 'On a touch screen two fingers zoom and do nothing else: they do not rotate the view or slide it. Sliding the view and tilting it near a surface need the right or the middle mouse button, so a touch screen has neither.',
+    text: 'On a touch screen two fingers zoom and do nothing else. Sliding the view and tilting it near a surface need the right or the middle mouse button, so a touch screen has neither.',
     source: `${REPO_BLOB}/src/services/camera/orbitControls.ts`,
     sourceLabel: `the pointer and wheel handling, ${IN_REPO}`,
     checked: CHECKED,
@@ -350,7 +350,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'probe-one-orbit',
     about: 'app',
-    text: 'Each spacecraft follows one orbit, the one it was on in September 2026. The app knows no launch dates and no flybys, so for an earlier year it puts a probe where that orbit runs and not where the probe was: on 5 March 1979, the day Voyager 1 passed Jupiter, the app has it 5 astronomical units from the planet.',
+    text: 'Each spacecraft follows one orbit, the one it was on in September 2026. The app knows no launch dates and no flybys, so for an earlier year it puts a probe where that orbit runs: on 5 March 1979, the day Voyager 1 passed Jupiter, the app has it 5 astronomical units from the planet.',
     source: `${REPO_BLOB}/src/data/bodies/orbitalElements.ts`,
     sourceLabel: `the orbits of the planets, moons and spacecraft, ${IN_REPO}`,
     checked: CHECKED,
@@ -390,7 +390,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'link-time-write',
     about: 'app',
-    text: 'Once the speed has been changed or a date set, the app writes an instant into the address as t, in UTC, like t=2033-03-14T21:00:00.000Z. It is the instant of the last change of speed, pause or date, not a time that runs. Pausing a clock that is still on the present writes nothing, and the Now button takes t away again.',
+    text: 'Once the speed has been changed or a date set, the app writes an instant into the address as t, in UTC, like t=2033-03-14T21:00:00.000Z. It is the instant of the last change of speed, pause or date. Pausing a clock that is still on the present writes nothing, and the Now button takes t away again.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `what the app writes into its address, ${IN_REPO}`,
     checked: CHECKED,
@@ -581,7 +581,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-earth-start-planned',
     about: 'app',
-    text: 'A start at Earth for “The Long Way Out”, with steps for the solar system and the nearby stars before the Milky Way, is on the list of planned work. It is not built: the tour begins at the Milky Way.',
+    text: 'A start at Earth for “The Long Way Out”, with steps for the solar system and the nearby stars before the Milky Way, is on the list of planned work. Today the tour begins at the Milky Way.',
     source: `${REPO_BLOB}/docs/BACKLOG.md`,
     sourceLabel: `the list of planned work, ${IN_REPO}`,
     checked: CHECKED,
@@ -646,7 +646,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-settings',
     about: 'app',
-    text: 'Apart from the orientation, a link carries no settings: not the data size, not which catalogues, names and guides are switched on, not brightness, bloom or field of view, and not whether the interface is hidden. The app keeps no settings between visits either, so a link opens with every one of them as it is at first.',
+    text: 'Apart from the orientation, a link carries no settings: the data size, the catalogues, names and guides that are switched on, brightness, bloom, field of view and a hidden interface all stay behind. The app keeps no settings between visits either, so a link opens with every one of them as it is at first.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `the address parameters, ${IN_REPO}`,
     checked: CHECKED,
@@ -735,7 +735,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-moon-count',
     about: 'app',
-    text: 'The Moons row of a planet is the count on the day its sheet was typed. The number of known moons keeps rising, so look one up before you quote it.',
+    text: 'The Moons row of a planet is the count on the day its sheet was written. The number of known moons keeps rising, so look one up before you quote it.',
     source: `${REPO_BLOB}/data/seeds/planet_facts.seed.json`,
     sourceLabel: `the planets’ fact sheet, ${IN_REPO}`,
     checked: CHECKED,
@@ -743,7 +743,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-spacecraft',
     about: 'app',
-    text: 'A spacecraft’s card has no radius, mass or gravity. The two Voyagers carry a distance from the Sun marked with its date, September 2026, which was typed in and does not follow the clock. Hubble carries the 94 minutes of one orbit and its height above Earth on the same date. The four Mars rovers carry the length of a Martian day, and their text says where the marker stands and on which day of the mission that position was taken.',
+    text: 'A spacecraft’s card has no radius, mass or gravity. The two Voyagers carry a distance from the Sun marked with its date, September 2026, a fixed figure that does not follow the clock. Hubble carries the 94 minutes of one orbit and its height above Earth on the same date. The four Mars rovers carry the length of a Martian day, and their text says where the marker stands and on which day of the mission that position was taken.',
     source: `${REPO_BLOB}/data/seeds/planet_facts.seed.json`,
     sourceLabel: `the planets’ fact sheet, ${IN_REPO}`,
     checked: CHECKED,
@@ -759,7 +759,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-star-survey',
     about: 'app',
-    text: 'Any other star is headed “Field star”, with a letter for its spectral class. Its card gives the distance, the apparent magnitude in Gaia’s G band, the absolute magnitude and the colour BP−RP, and then a temperature, a luminosity and a radius. Those last three are not measured: the app estimates them from the colour and the absolute magnitude, and a “~” before one marks a colour outside the range the estimate was fitted to.',
+    text: 'Any other star is headed “Field star”, with a letter for its spectral class. Its card gives the distance, the apparent magnitude in Gaia’s G band, the absolute magnitude and the colour BP−RP, and then a temperature, a luminosity and a radius. The app estimates those last three from the colour and the absolute magnitude, and a “~” before one marks a colour outside the range the estimate was fitted to.',
     source: `${REPO_BLOB}/src/components/InfoCard/StarDetailCard/StarDetailCard.tsx`,
     sourceLabel: `the card of a star, ${IN_REPO}`,
     checked: CHECKED,
@@ -791,7 +791,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-galaxy-era',
     about: 'app',
-    text: 'The line about Earth turns the light-travel time into one of twelve phrases, from “essentially now (modern era)” to “near the dawn of the universe”. The steps are wide: any time from 66 to 250 million years reads “before the dinosaurs went extinct”. Take the line as colour.',
+    text: 'The line about Earth turns the light-travel time into one of twelve phrases, from “essentially now (modern era)” to “near the dawn of the universe”. The steps are wide: any time from 66 to 250 million years reads “before the dinosaurs went extinct”.',
     source: `${REPO_BLOB}/src/utils/math/earthEraForLookback.ts`,
     sourceLabel: `the Earth-era phrases, ${IN_REPO}`,
     checked: CHECKED,
@@ -799,7 +799,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-galaxy-provenance',
     about: 'app',
-    text: 'A small line under the diameter and under the orientation says where the figure comes from. “SDSS petroR50_r”, “2MRS Riso”, “GLADE Tully”, “SDSS exp+deV blend”, “2MASS XSC sup_phi” and “HyperLEDA PGC” name a survey’s own column. “fallback (30 kpc)” and “deterministic fallback” mean that the figure is not a survey’s measurement of that galaxy.',
+    text: 'A small line under the diameter and under the orientation says where the figure comes from. “SDSS petroR50_r”, “2MRS Riso”, “GLADE Tully”, “SDSS exp+deV blend”, “2MASS XSC sup_phi” and “HyperLEDA PGC” name a survey’s own column. “fallback (30 kpc)” and “deterministic fallback” mean that the app filled the figure in where the surveys have none for that galaxy.',
     source: `${REPO_BLOB}/src/services/engine/helpers/buildGalaxyInfo.ts`,
     sourceLabel: `how the app fills a galaxy’s card, ${IN_REPO}`,
     checked: CHECKED,
@@ -807,7 +807,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-galaxy-no-redshift',
     about: 'app',
-    text: 'A redshift of 0.0000 beside “0 km/s away” means that the app holds no redshift for that galaxy, not that one was measured as zero. The 81 named galaxies are placed by a distance from the app’s own list.',
+    text: 'A redshift of 0.0000 beside “0 km/s away” means that the app holds no redshift for that galaxy. The 81 named galaxies are placed by a distance from the app’s own list.',
     source: `${REPO_BLOB}/data/seeds/famous_galaxies.seed.json`,
     sourceLabel: `the list of named galaxies, ${IN_REPO}`,
     checked: CHECKED,
@@ -847,7 +847,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-structure-count',
     about: 'app',
-    text: 'The Galaxies row of a structure counts the points the app has loaded inside its sphere, not the structure’s members: on 7 October 2026 the Virgo cluster’s card counted 341 at the medium data size, and its own text speaks of 1,000 to 2,000.',
+    text: 'The Galaxies row of a structure counts the points the app has loaded inside its sphere: on 7 October 2026 the Virgo cluster’s card counted 341 at the medium data size, where its own text speaks of 1,000 to 2,000 members.',
     source: `${REPO_BLOB}/src/components/InfoCard/StructureDetailCard/StructureDetailCard.tsx`,
     sourceLabel: `the card of a structure, ${IN_REPO}`,
     checked: CHECKED,
@@ -855,7 +855,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-milky-way',
     about: 'app',
-    text: 'The Milky Way’s card gives its type, the Sun’s distance from the centre, the diameter of the disc, a range for the number of stars, the mass in stars and in total, the age of the oldest stars, the time and speed of the Sun’s orbit, and the central black hole with its mass. The diameter, the Sun’s distance, the orbit time and the black hole’s mass are the values the scene is drawn with. The others are figures from the literature typed into the app.',
+    text: 'The Milky Way’s card gives its type, the Sun’s distance from the centre, the diameter of the disc, a range for the number of stars, the mass in stars and in total, the age of the oldest stars, the time and speed of the Sun’s orbit, and the central black hole with its mass. The diameter, the Sun’s distance, the orbit time and the black hole’s mass are the values the scene is drawn with. The others are figures from the literature.',
     source: `${REPO_BLOB}/src/layers/milkyWay/ui/MilkyWayDetailCard/MilkyWayDetailCard.tsx`,
     sourceLabel: `the Milky Way’s card, ${IN_REPO}`,
     checked: CHECKED,
@@ -927,7 +927,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-tone-curve',
     about: 'app',
-    text: 'Tone curve chooses how light brighter than the screen’s white is brought back into range. The app starts on Reinhard, which rolls the highlights off smoothly. Linear does nothing and lets them clip to white, Asinh lifts faint structure, Gamma 2.0 lifts the middle tones, and ACES gives the contrast of film.',
+    text: 'Tone curve chooses how the picture is tone-mapped: how light brighter than the screen’s white is compressed into its range. The app starts on Reinhard, which rolls the highlights off smoothly. Linear lets them clip to white, Asinh lifts faint structure, Gamma 2.0 lifts the middle tones, and ACES gives the contrast of film.',
     source: `${REPO_BLOB}/src/data/toneMapCurve.ts`,
     sourceLabel: `the tone curves, ${IN_REPO}`,
     checked: CHECKED,
@@ -951,7 +951,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-names-off',
     about: 'app',
-    text: 'One click on the switch of the Labels & Guides heading turns every name and guide off. To get them back as they were, reload the page: a second click turns on all sixteen, including the two that are off at first. The markers of clusters and voids and the white ring round the selected object are not names and stay.',
+    text: 'One click on the switch of the Labels & Guides heading turns every name and guide off. To get them back as they were, reload the page: a second click turns on all sixteen, including the two that are off at first. The markers of clusters and voids and the white ring round the selected object stay.',
     source: `${REPO_BLOB}/src/components/SettingsPanel/LabelsAndGuidesSection.tsx`,
     sourceLabel: `the Labels & Guides section, ${IN_REPO}`,
     checked: CHECKED,
@@ -967,7 +967,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-large-choice',
     about: 'app',
-    text: 'The app never chooses the large size by itself. It is heavy for the graphics built into a laptop, so it is left for you to pick.',
+    text: 'The large size is yours to pick: it is heavy for the graphics built into a laptop, so the app never starts on it.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: `the starting-size rule, ${IN_REPO}`,
     checked: CHECKED,
@@ -991,7 +991,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-density-why',
     about: 'app',
-    text: 'The correction is on at first because GLADE is assembled from several surveys of unequal depth. Without it the directions the deeper ones covered show as bright spokes pointing at the Milky Way: a pattern of where telescopes looked, not of where galaxies are.',
+    text: 'The correction is on at first because GLADE is assembled from several surveys of unequal depth. Without it the directions the deeper ones covered show as bright spokes pointing at the Milky Way: a pattern of where telescopes looked.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/bias/initialState.ts`,
     sourceLabel: `the default density correction, ${IN_REPO}`,
     checked: CHECKED,
@@ -999,7 +999,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-density-limits',
     about: 'app',
-    text: 'The correction counts galaxies and cannot tell a crowded catalogue from a crowded part of the universe, so a cell that holds a rich cluster is dimmed like any other full cell. It moves no galaxy and hides none.',
+    text: 'The correction counts galaxies and cannot tell a crowded catalogue from a crowded part of the universe, so a cell that holds a rich cluster is dimmed like any other full cell. It changes the brightness of a galaxy and nothing else.',
     source: `${REPO_BLOB}/src/services/engine/bake/computeAngularWeights.ts`,
     sourceLabel: `how the weights are computed, ${IN_REPO}`,
     checked: CHECKED,
@@ -1095,7 +1095,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-interface',
     about: 'app',
-    text: 'The panels, the card, the clock, a tour’s captions and an exhibit’s notes are drawn flat over the window, as on any screen. Nothing bends them into the disc.',
+    text: 'The panels, the card, the clock, a tour’s captions and an exhibit’s notes are drawn flat over the window, as on any screen.',
     source: `${REPO_BLOB}/src/components/App/App.tsx`,
     sourceLabel: `how the app lays out its interface, ${IN_REPO}`,
     checked: CHECKED,
@@ -1127,7 +1127,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-one-disc',
     about: 'app',
-    text: 'The app sends one disc to one window. It does not cut the picture up for several projectors, warp it to a screen or blend edges; a dome’s own system has to take the disc as its input.',
+    text: 'The app sends one disc to one window. Slicing the picture for several projectors, warping it to a screen and blending edges are left to the dome’s own system, which takes the disc as its input.',
     source: `${REPO_BLOB}/src/data/rendering/viewRigs.ts`,
     sourceLabel: `the two ways of drawing a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -1143,7 +1143,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-size-cost',
     about: 'app',
-    text: 'On 7 October 2026 we listed the files the app fetches as it opens above Earth and asked our server how large it sends each one, compressed where it compresses them. The catalogues and the density grid came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
+    text: 'Measured on 7 October 2026 as our server sent them, compressed, the catalogues and the density grid that the app fetches as it opens above Earth came to about 25 megabytes at the small size, 70 at the medium and 220 at the large. The pictures the app opens with, most of them Earth’s and the Moon’s, load with them: about 6 megabytes at the small size and 18 at the medium, and a switch from medium to large fetched 37 more. Other planets and moons load as you visit them.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest, which names the files; their sizes are the lengths our server gave for each on 7 October 2026',
     checked: CHECKED,

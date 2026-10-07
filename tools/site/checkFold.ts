@@ -57,6 +57,8 @@ try {
           titleBottom: opening.querySelector('h1')?.getBoundingClientRect().bottom ?? null,
           leadBottom: opening.querySelector('h1 ~ p')?.getBoundingClientRect().bottom ?? null,
           pictureTop: opening.querySelector('img')?.getBoundingClientRect().top ?? null,
+          bodyTop:
+            document.querySelector('.doc-body > :not(p)')?.getBoundingClientRect().top ?? null,
         };
       });
       const reason = foldVerdict(measure, size);

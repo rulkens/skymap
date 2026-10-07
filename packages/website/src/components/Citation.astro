@@ -3,9 +3,10 @@
  * Citation — how to cite skymap, built from data/citation.ts (which reads
  * CITATION.cff), so a release changes it in one place. The short form is the
  * reference as a line of text with a way to the docs' Cite page; `full`, for
- * that page, adds the BibTeX entry between two rules, as the docs set code,
- * and the citation file. Each text has the copy control an address has.
+ * that page, adds the BibTeX entry as a block of code (CodeBlock) and the
+ * citation file. Each text has the copy control an address has.
  */
+import CodeBlock from './CodeBlock.astro';
 import CopyButton from './CopyButton.astro';
 import { CITATION } from '../data/citation';
 import { fact } from '../data/fact';
@@ -32,10 +33,7 @@ const bibtex = citationBibtex(CITATION, REPO_URL);
   {
     full ? (
       <>
-        <div class="row">
-          <pre>{bibtex}</pre>
-          <CopyButton text={bibtex} label="Copy the BibTeX entry" />
-        </div>
+        <CodeBlock text={bibtex} label="Copy the BibTeX entry" />
         <p class="small">
           {fact('sci-cite-file').text} <a href={fact('sci-cite-file').source}>CITATION.cff</a>
         </p>
@@ -73,12 +71,6 @@ const bibtex = citationBibtex(CITATION, REPO_URL);
   }
 
   .reference a {
-    overflow-wrap: anywhere;
-  }
-
-  /* The entry's long lines wrap inside the block's two rules (DocBody), so no word of it is out of sight. */
-  pre {
-    white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 </style>

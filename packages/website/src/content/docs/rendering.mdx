@@ -1,0 +1,97 @@
+---
+description: What skymap’s renderer does between one picture and the next, in the order the code runs it, and why each step is a step of its own.
+facts: [webgpu-what, sci-tone, dome-rig, screens-draws-on-change, settings-tone-curve, render-lines]
+---
+
+skymap draws with [WebGPU](/docs/reference/glossary/#webgpu) in the browser, with no engine underneath: the renderer and its [shaders](/docs/reference/glossary/#shader) are our own.
+
+## One frame, in order
+
+<Flow
+  label="One frame, in the order it is drawn"
+  steps={[
+    { name: 'Plan and compute', href: '#plan-and-compute', text: 'The processor chooses what to draw. The graphics processor advances the flow ribbons and computes each sky in view.' },
+    { name: 'Capture', href: '#capture', text: 'Only when needed: the sky around a black hole, or the surroundings of a 3D model, into the six faces of a cube.' },
+    { name: 'Glows at reduced size', href: '#the-far-scene', text: 'Four small images of smooth light, to be upsampled over the frame in the next two steps.' },
+    { name: 'The far scene', href: '#the-far-scene', text: 'Galaxies, filaments, the cosmic web and markers, accumulated in the one image of light.' },
+    { name: 'The near scene', href: '#the-near-scene', text: 'The Milky Way and its dust, the Local Bubble, stars, constellations, and the black hole’s lens over them, into the same image.' },
+    { name: 'Bodies', href: '#bodies', text: 'Planets, moons, ground, clouds, rings, air and models, far to near, into an image with a depth buffer, then composited over the image of light.' },
+    { name: 'Bloom and tone curve', href: '#light-to-screen', text: 'The bright parts are blurred and added back. Then the image is tone-mapped to the colours of a screen.' },
+    { name: 'Names', href: '#light-to-screen', text: 'With marker lines and the selection ring, drawn last, straight onto the screen’s image.' },
+  ]}
+/>
+
+## One image of light
+
+<Fact id="render-hdr-target" />
+
+Almost everything before the [tone curve](/docs/reference/glossary/#tone-curve) is additive blending. Addition has no order: a galaxy in front of another and the same two the other way round give the same pixel, so most of the scene needs no sorting and no [depth buffer](/docs/reference/glossary/#depth-buffer). The steps exist where that stops being true: where something blocks light, where something is too costly to draw at full size, and where a result must be ready before another step reads it.
+
+## Plan and compute
+
+Each part of the scene that must choose what to draw does so here, before any command is encoded: the stars choose their boxes, the galaxy layer finds the few rows near enough to need more than a point, and the Milky Way and the flow ribbons settle how many points they have.
+
+Next come three computations that draw nothing. The [flow ribbons](/docs/guide/tours/) are advanced one step along the velocity field. For every atmosphere in view, the brightness of its sky from the camera’s height is written into a small table. With the camera inside an atmosphere, a block of haze is filled at the start of each view. The first two come first because the drawing steps read their results.
+
+## Capture
+
+The black hole bends the light of the sky behind it, so near Sagittarius A* the galaxies and stars are drawn into the six faces of a cube map from where the camera is. A 3D model reflects its surroundings, so the planet it stands on or flies over, and the stars, are drawn into a small cube from where the model is. Neither runs on most frames: the sky cube is drawn only near the black hole, and again only when what it shows has changed, and a model’s cube is redrawn at most every two seconds.
+
+## The far scene
+
+<Fact id="render-reduced-targets" />
+
+The cosmic web and the Zone of Avoidance band are drawn first, into their small images. Then everything at the scale of galaxies is accumulated in the image of light: the galaxies as points, generated discs and pictures, the filaments, the flow ribbons, the two small images upsampled to full size, the sphere at the edge of the observable universe and the markers. Nothing here occludes anything else, so the order inside the step is free.
+
+<Figure id="science-web-points" />
+
+<Figure id="science-web-density" />
+
+## The near scene
+
+The Milky Way and the stars are added to the same image, through a projection of their own: the far scene’s nearest limit is 10 kiloparsecs out, which would cut the Milky Way’s disc in two ([Precision across scales](/docs/rendering/precision/#where-it-still-shows)).
+
+Here the order matters in two places. The Milky Way’s dust is the one thing in the frame that removes light: it multiplies what is behind it. It is drawn after the galaxies, so that it dims them as real dust does, and before the surface of the <Source id="local-bubble">Local Bubble</Source> and the nearby stars, which lie between the camera and the dust on the way in. The black hole’s lens, where it is in view, is laid over all of this, because a ray that falls in must hide the light already added behind it.
+
+<Figure id="render-near-scene" />
+
+## Bodies
+
+Planets, moons, the ground, clouds, rings and 3D models are opaque: the near one occludes the far one. They are drawn into a second image that has a depth buffer, one body after another from the farthest to the nearest, and the depth buffer is cleared for each. Inside one body’s turn the order is: the globe, the ground tiles over it, the clouds, the rings, then the two things that read the depth the others wrote (a model’s contact shadow on the ground, and the air), then the models. Stars near enough to show a disc, the Sun among them, are spheres in this image too.
+
+The image of bodies is then composited over the image of light while both are still linear, before the tone curve. That is why there is no seam where the Sun’s edge or Earth’s air meets the stars: one curve brings all of it to the screen. Orbits are drawn after this, so that the near half of a moon’s orbit passes in front of its planet.
+
+<Figure id="earth-terminator" />
+
+## Light to screen
+
+<Fact id="render-bloom" />
+
+The image is then tone-mapped: the curve brings light brighter than the screen’s white back into range. The app starts on Reinhard; the others, and the settings of [bloom](/docs/reference/glossary/#bloom), are under [Make it brighter or calmer](/docs/guide/settings/#make-it-brighter-or-calmer).
+
+Names, marker lines and the selection ring are drawn after the tone curve. The curve would turn their plain colours grey, and they are alpha-blended over the picture.
+
+## The dome
+
+<Fact id="render-dome-resample" />
+
+In [dome mode](/docs/guide/screens-and-domes/#dome-mode) the scene, from the far scene to the orbits, runs five times, once for each view, and a step after them resamples the five into the fisheye disc. Bloom and the tone curve then run once, on the disc. Names are left out.
+
+## What is particular to WebGPU
+
+- **Compute.** The flow ribbons, the Milky Way’s points and the atmosphere’s tables are computed by compute shaders, which run on the graphics processor and draw nothing. WebGL, the older way to draw in a browser, has none.
+- **One submit.** <Fact id="render-one-submit" inline />
+- **No wide lines.** WebGPU draws lines one pixel wide; [The cosmic web](/docs/rendering/techniques/#the-cosmic-web) says what we draw in their place.
+- **Stricter in some browsers.** A shader that one browser accepts another may refuse, and a refused shader in a command buffer loses the whole frame without an error.
+
+## Processor and graphics processor
+
+What the processor does every frame is small and fixed in kind: it moves the camera and the clock, places the planets, makes the choices under [Plan](#plan-and-compute), walks the tree of ground tiles when the camera is near one, places the names, and builds the camera’s matrices in 64-bit numbers. The galaxies and the stars are uploaded to the graphics processor once, when a file arrives, and every frame after that the position, size, brightness and colour of each on screen are computed there. With the scene at rest no frame is drawn ([Laptops and desktops](/docs/guide/screens-and-domes/#laptops-and-desktops)).
+
+<Fact id="render-pick" />
+
+## The order is one list
+
+<Fact id="render-frame-order" />
+
+<Note>Code: the list is <Repo path="src/data/rendering/frameSections.ts" />, the code that runs it is in <Repo path="src/services/engine/frame" />, the shaders in <Repo path="src/services/gpu/shaders" /> and the parts of the scene in <Repo path="src/layers" />.</Note>

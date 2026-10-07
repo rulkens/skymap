@@ -236,7 +236,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   {
     id: 'ref-params-history',
     about: 'app',
-    text: 'Each change the app writes into the address is a new entry in the browser’s history, so the Back button returns to the view before. The address a link arrived with is replaced, not added to.',
+    text: 'Each change the app writes into the address is a new entry in the browser’s history, so the Back button returns to the view before. The address a link arrived with is replaced.',
     source: `${REPO_BLOB}/src/services/url/writeHashBody.ts`,
     sourceLabel: `how the app writes its address, ${IN_REPO}`,
     checked: CHECKED,
@@ -546,7 +546,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'gloss-supergalactic',
-    text: 'The supergalactic plane is a flattened structure in the distribution of nearby galaxies. A study of it describes it as part of a web of filaments and sheets, not a pancake standing alone.',
+    text: 'The supergalactic plane is a flattened structure in the distribution of nearby galaxies. A study of it describes it as part of a web of filaments and sheets.',
     source: 'https://arxiv.org/abs/astro-ph/9809343',
     sourceLabel: 'Lahav et al. 2000, the supergalactic plane',
     checked: CHECKED,
