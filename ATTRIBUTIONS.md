@@ -25,9 +25,13 @@ Every third-party thing is one `###` entry with the same bullets:
 [`parseAttributions.ts`](tools/utils/io/parseAttributions.ts) reads the entries
 back as rows, and
 [`attributionCoverage.test.ts`](tests/tools/utils/io/attributionCoverage.test.ts)
-fails when a registry key or a host in `src/`, `index.html` or
-`.env.production` has no entry here. Adding a source therefore means adding its
-entry, with the page you read and the date.
+fails when a `###` heading here is not a complete entry, when a registry key
+(or the host it is fetched from) does not belong to exactly one entry, or when
+a host named anywhere in `src/`, `index.html` or `.env.production`, comments
+included, has no entry. Adding a source, or porting code and naming where it
+came from, therefore means adding its entry, with the page you read and the
+date. The gate cannot tell whether a licence line is true; that is the
+reader's check.
 
 The entries state terms; they are not legal advice.
 
@@ -306,7 +310,9 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Licence:** The ReadMe (I/311) carries no copyright section. The CDS terms
   above apply.
 - **Attribution:** Cite van Leeuwen 2007.
-- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>
+- **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>; the cross-match
+  table comes from the Gaia archive (`gea.esac.esa.int`), under the terms
+  quoted for Gaia DR3.
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/hip2.dat` →
   `tools/parsers/hipparcos2.ts`.
 - **Modified:** Yes. Merged into the star set in place of the matching Gaia rows.
@@ -937,7 +943,7 @@ countries.
 - **Attribution:** "Credits: NASA/JPL-Caltech/Space Science Institute/Lunar and
   Planetary Institute".
 - **Upstream:** <https://science.nasa.gov/photojournal/color-maps-of-mimas-2014/>
-  and its four siblings.
+  and its four siblings; the files are on `assets.science.nasa.gov`.
 - **Enters skymap:** `npm run fetch-textures` → `build-textures`.
 - **Modified:** Yes. Brightness only is kept and tinted; each map is turned
   half a turn to put longitude 0 at the centre.
@@ -973,7 +979,8 @@ countries.
 - **Licence:** Access constraints "None"; use constraints "Please cite authors".
 - **Attribution:** Schenk & McKinnon 2024, Icarus 408,
   doi:10.1016/j.icarus.2023.115827.
-- **Upstream:** <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>
+- **Upstream:** <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>;
+  the file is on USGS's bucket `asc-astropedia.s3.us-west-2.amazonaws.com`.
 - **Enters skymap:** `npm run fetch-textures` → `bakeNormalMap.ts`.
 - **Modified:** Yes. Turned into a normal map.
 - **Checked:** 2026-10-07: <https://astrogeology.usgs.gov/search/map/enceladus-cassini-global-dem-200m-schenk>
@@ -1034,7 +1041,8 @@ countries.
   Laboratory/Southwest Research Institute" and, for the true-colour view,
   "…/Alex Parker".
 - **Upstream:** <https://science.nasa.gov/photojournal/pluto-color-map/>,
-  <https://science.nasa.gov/resource/true-colors-of-pluto/>
+  <https://science.nasa.gov/resource/true-colors-of-pluto/>; the files are on
+  `assets.science.nasa.gov`.
 - **Enters skymap:** `npm run fetch-textures` → `tools/textures/fitPlutoChroma.ts`.
 - **Modified:** Yes. PIA11707's colour is un-stretched by a fit against the
   true-colour view before any of it reaches a texture; neither file is shipped
@@ -1113,9 +1121,10 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Attribution:** "NASA should be acknowledged as the source of the
   material." Ours: "NASA Earth Observatory", and for night lights "NASA Earth
   Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS".
-- **Upstream:** <https://visibleearth.nasa.gov/>; file URLs in the registry.
-  The water mask is fetched from the Internet Archive's copy of NASA's retired
-  NEO archive.
+- **Upstream:** <https://visibleearth.nasa.gov/>; the files themselves come
+  from `assets.science.nasa.gov` and `eoimages.gsfc.nasa.gov` (URLs in the
+  registry). The water mask is fetched from the Internet Archive's copy
+  (`web.archive.org`) of NASA's retired NEO archive.
 - **Enters skymap:** `npm run fetch-textures` → `build-textures` (base globe,
   night, clouds, material and normal maps) and `build-surface-tiles` (tile
   levels 3 to 7).
@@ -1188,7 +1197,8 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   National Centers for Environmental Information. 2022: ETOPO 2022 15
   Arc-Second Global Relief Model. NOAA National Centers for Environmental
   Information. https://doi.org/10.25921/fd45-gt74. Accessed [date]."
-- **Upstream:** <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
+- **Upstream:** <https://www.ncei.noaa.gov/products/etopo-global-relief-model>;
+  the tiles are on `www.ngdc.noaa.gov`.
 - **Enters skymap:** `npm run fetch-height` → `data/raw/etopo/` →
   `build-surface-tiles` → `earth-tiles/…/height/`.
 - **Modified:** Yes. Re-gridded, quantised to 0.1 m; water flattened to its
@@ -1572,7 +1582,7 @@ metadata carries the notice was not checked.
 
 ### "Spiral galaxy" by mrange (seven helper functions)
 
-<!-- attribution: id=mrange -->
+<!-- attribution: id=mrange; hosts=www.shadertoy.com -->
 
 - **What:** Seven small functions that came with a port of the "Spiral
   galaxy" ShaderToy, which once drew the Milky Way. That shader is no longer
@@ -1598,7 +1608,7 @@ metadata carries the notice was not checked.
 
 ### "Hash without Sine" by Dave Hoskins
 
-<!-- attribution: id=hoskins-hash -->
+<!-- attribution: id=hoskins-hash; hosts=www.shadertoy.com -->
 
 - **What:** `hash21Hq` in `src/services/gpu/shaders/lib/util.wesl` (the
   shader's `hash12`), used by other shaders for jitter.
@@ -1672,7 +1682,7 @@ metadata carries the notice was not checked.
 
 ### Colour temperature to RGB (Tanner Helland)
 
-<!-- attribution: id=helland -->
+<!-- attribution: id=helland; hosts=tannerhelland.com -->
 
 - **What:** The piecewise fit in `src/utils/color/temperatureToLinearRgb.ts`
   that gives a star its colour from its temperature.
@@ -1692,7 +1702,7 @@ metadata carries the notice was not checked.
 
 ### Mulberry32 (seeded random numbers)
 
-<!-- attribution: id=mulberry32 -->
+<!-- attribution: id=mulberry32; hosts=gist.github.com -->
 
 - **What:** The 32-bit generator in `src/utils/random/mulberry32.ts`, used
   wherever the app needs the same "random" numbers on every load.

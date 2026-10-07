@@ -1,8 +1,12 @@
 /**
- * The attribution gate: everything third-party that enters skymap through
- * `rawDataRegistry.ts`, and every outside host the app's code names, has an
- * entry in `ATTRIBUTIONS.md`. A new registry key or a new host fails here until
- * its licence is written down.
+ * The attribution gate: every `###` heading of `ATTRIBUTIONS.md` is a complete
+ * entry, every key of `rawDataRegistry.ts` (with its upstream host) belongs to
+ * exactly one entry, and every outside host the app's source names, comments
+ * included, is on an entry.
+ * Limits: it cannot see a host assembled at run time, `packages/website/`,
+ * fetchers under `tools/` that bypass the registry, files under `public/`, npm
+ * packages, an entry with no key and no host that is deleted whole, or
+ * whether a licence text is true.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -10,10 +14,12 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseAttributions } from '../../../../tools/utils/io/parseAttributions';
-import { RAW_DATA } from '../../../../tools/utils/io/rawDataRegistry';
+import { RAW_DATA, type RawDataEntry } from '../../../../tools/utils/io/rawDataRegistry';
 
 const ROOT = resolve(__dirname, '../../../..');
-const ENTRIES = parseAttributions(readFileSync(join(ROOT, 'ATTRIBUTIONS.md'), 'utf8'));
+const MARKDOWN = readFileSync(join(ROOT, 'ATTRIBUTIONS.md'), 'utf8');
+const ENTRIES = parseAttributions(MARKDOWN);
+const REGISTRY: Readonly<Record<string, RawDataEntry>> = RAW_DATA;
 
 const REQUIRED_LABELS = [
   'What',
@@ -25,6 +31,10 @@ const REQUIRED_LABELS = [
   'Modified',
   'Checked',
 ];
+/** A licence line that says nothing: a marker word, or "unknown" with no reason after it. */
+const PLACEHOLDER = /\b(TODO|TBD|FIXME)\b|^(unknown|n\/a|none|\W*)\W*$/i;
+/** A prefix shorter than this is a catch-all (`*`, `a*`), not a catalogue. */
+const MIN_PREFIX = 4;
 
 /** XML and JSON-LD namespaces and the dev server: named in code, never a third party's data. */
 const NOT_A_SOURCE = new Set(['www.w3.org', 'schema.org', 'localhost']);
@@ -41,25 +51,49 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** Hosts in code, not in comments: a comment's reference link fetches nothing. */
-function hostsIn(text: string): string[] {
-  const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '');
-  return [...code.matchAll(/https?:\/\/([A-Za-z0-9.-]+)/g)].map((match) => match[1] ?? '');
-}
-
+const SOURCE = [
+  ...sourceFiles(join(ROOT, 'src')),
+  join(ROOT, 'index.html'),
+  join(ROOT, '.env.production'),
+].map((path) => readFileSync(path, 'utf8'));
+/** Comments are scanned too: a comment is where ported code names where it came from. */
 const CODE_HOSTS = new Set(
-  [...sourceFiles(join(ROOT, 'src')), join(ROOT, 'index.html'), join(ROOT, '.env.production')]
-    .flatMap((path) => hostsIn(readFileSync(path, 'utf8')))
-    .filter((host) => !NOT_A_SOURCE.has(host)),
+  SOURCE.flatMap((text) =>
+    [...text.matchAll(/(?:https?|wss?):\/\/([A-Za-z0-9.-]+)/g)].map((match) => match[1] ?? ''),
+  ).filter((host) => !NOT_A_SOURCE.has(host)),
 );
 
+describe('parseAttributions', () => {
+  const entry = (marker: string, extra = '') =>
+    `### Thing\n\n${marker}\n\n- **What:** a thing\n- **Licence:** MIT\n${extra}`;
+
+  it('refuses a heading whose marker is missing, misspelt or carries an unknown attribute', () => {
+    expect(() => parseAttributions(entry(''))).toThrow(/no attribution marker/);
+    expect(() => parseAttributions(entry('<!-- atribution: id=thing -->'))).toThrow(
+      /no attribution marker/,
+    );
+    expect(() =>
+      parseAttributions(entry('<!-- attribution: id=thing; host=example.org -->')),
+    ).toThrow(/"host"/);
+  });
+
+  it('refuses a second bullet of the same label', () => {
+    expect(() =>
+      parseAttributions(entry('<!-- attribution: id=thing -->', '- **Licence:** GPL\n')),
+    ).toThrow(/second "Licence"/);
+  });
+});
+
 describe('ATTRIBUTIONS.md entries', () => {
-  it('each has a unique id, every required bullet and a check date', () => {
+  it('each has a unique id, every required bullet, a licence that says something and a check date not in the future', () => {
+    const today = new Date().toISOString().slice(0, 10);
     const ids = ENTRIES.map((entry) => entry.id);
     expect(ids.filter((id, i) => id === '' || ids.indexOf(id) !== i)).toEqual([]);
     const incomplete = ENTRIES.flatMap((entry) => {
       const missing = REQUIRED_LABELS.filter((label) => !entry.fields[label]);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.checked)) missing.push('Checked date');
+      if (PLACEHOLDER.test(entry.fields.Licence ?? '')) missing.push('Licence is a placeholder');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.checked) || entry.checked > today)
+        missing.push('Checked date');
       return missing.map((label) => `${entry.id}: ${label}`);
     });
     expect(incomplete).toEqual([]);
@@ -67,22 +101,38 @@ describe('ATTRIBUTIONS.md entries', () => {
 });
 
 describe('attribution coverage', () => {
-  it('every raw-data registry key has an entry', () => {
+  it('every raw-data registry key belongs to exactly one entry, by a key or a prefix of a catalogue', () => {
     const patterns = ENTRIES.flatMap((entry) => entry.keys);
-    const uncovered = Object.keys(RAW_DATA).filter(
-      (key) => !patterns.some((pattern) => covers(pattern, key)),
-    );
-    expect(uncovered).toEqual([]);
+    expect(
+      patterns.filter((pattern) => pattern.endsWith('*') && pattern.length <= MIN_PREFIX),
+    ).toEqual([]);
+    const notOnce = Object.keys(REGISTRY).flatMap((key) => {
+      const owners = ENTRIES.filter((entry) => entry.keys.some((pattern) => covers(pattern, key)));
+      return owners.length === 1
+        ? []
+        : [`${key}: ${owners.map((entry) => entry.id).join(', ') || 'no entry'}`];
+    });
+    expect(notOnce).toEqual([]);
   });
 
   it('every key an entry names is still in the registry', () => {
-    const keys = Object.keys(RAW_DATA);
+    const keys = Object.keys(REGISTRY);
     const stale = ENTRIES.flatMap((entry) =>
       entry.keys
         .filter((pattern) => !keys.some((key) => covers(pattern, key)))
         .map((pattern) => `${entry.id}: ${pattern}`),
     );
     expect(stale).toEqual([]);
+  });
+
+  it('the entry of a registry key names the host the key is fetched from', () => {
+    const unnamed = Object.entries(REGISTRY).flatMap(([key, row]) => {
+      const host = /^https?:\/\/([A-Za-z0-9.-]+)/.exec(row.upstream ?? '')?.[1];
+      const owner = ENTRIES.find((entry) => entry.keys.some((pattern) => covers(pattern, key)));
+      const text = Object.values(owner?.fields ?? {}).join(' ');
+      return host === undefined || text.includes(host) ? [] : [`${key}: ${host}`];
+    });
+    expect(unnamed).toEqual([]);
   });
 
   it('every outside host the app names has an entry', () => {
@@ -95,5 +145,15 @@ describe('attribution coverage', () => {
       entry.hosts.filter((host) => !CODE_HOSTS.has(host)).map((host) => `${entry.id}: ${host}`),
     );
     expect(stale).toEqual([]);
+  });
+
+  it('no address in the app is assembled from a variable or left without its scheme', () => {
+    const hidden = SOURCE.flatMap(
+      (text) =>
+        text.match(
+          /(?:https?|wss?):\/\/\$\{|["'`](?:https?|wss?):\/\/["'`]|["'`]\/\/[a-z0-9-]+\.[a-z]/gi,
+        ) ?? [],
+    );
+    expect(hidden).toEqual([]);
   });
 });
