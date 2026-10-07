@@ -111,6 +111,7 @@ describe('expandFrameOrder', () => {
       'star-points',
       'star-catalog',
       'star-upsample',
+      'structure-markers-near',
       'constellations',
       'body-glints',
       'black-hole-marker',

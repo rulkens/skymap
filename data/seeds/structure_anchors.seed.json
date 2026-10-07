@@ -6,9 +6,9 @@
     "category": "cluster",
     "raHours": 12.513611,
     "decDeg": 12.383333,
-    "distMpc": 16.5,
-    "physicalRadiusMpc": 2.2,
-    "apparentRadiusMpc": 6,
+    "distance": { "value": 16.5, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.2, "unit": "Mpc" },
+    "apparentRadius": { "value": 6, "unit": "Mpc" },
     "description": "The nearest large galaxy cluster, about 16.5 Mpc (54 million light-years) away in the constellation Virgo. It contains between 1,000 and 2,000 galaxies — including the giant elliptical M87 and the M84/M86 Markarian's Chain — and forms the heart of the Virgo Supercluster, of which the Local Group is an outlying member."
   },
   {
@@ -18,9 +18,9 @@
     "category": "cluster",
     "raHours": 3.641389,
     "decDeg": -35.45,
-    "distMpc": 20,
-    "physicalRadiusMpc": 1.4,
-    "apparentRadiusMpc": 3,
+    "distance": { "value": 20, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.4, "unit": "Mpc" },
+    "apparentRadius": { "value": 3, "unit": "Mpc" },
     "description": "A small but nearby galaxy cluster about 19 Mpc away in the southern constellation Fornax — the second-richest cluster within ~60 million light-years after Virgo. Centred on the giant elliptical NGC 1399, it is a benchmark for studying how galaxies evolve in dense environments."
   },
   {
@@ -31,9 +31,9 @@
     "category": "cluster",
     "raHours": 10.611944,
     "decDeg": -27.516667,
-    "distMpc": 50,
-    "physicalRadiusMpc": 1.5,
-    "apparentRadiusMpc": 3,
+    "distance": { "value": 50, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.5, "unit": "Mpc" },
+    "apparentRadius": { "value": 3, "unit": "Mpc" },
     "description": "A moderately rich cluster of around 150 bright galaxies roughly 50 Mpc away in the constellation Hydra. Dominated by the central ellipticals NGC 3309 and NGC 3311, it is unusually relaxed and symmetric, and lies within the larger Hydra–Centaurus Supercluster."
   },
   {
@@ -44,9 +44,9 @@
     "category": "cluster",
     "raHours": 12.814444,
     "decDeg": -41.3,
-    "distMpc": 52,
-    "physicalRadiusMpc": 1.6,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 52, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.6, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "An X-ray-bright cluster of several hundred galaxies about 52 Mpc away in Centaurus, centred on the giant elliptical NGC 4696. It is made of two merging components — the main Cen 30 body and the infalling Cen 45 group — and belongs to the Hydra–Centaurus Supercluster."
   },
   {
@@ -57,9 +57,9 @@
     "category": "cluster",
     "raHours": 16.25,
     "decDeg": -60.9,
-    "distMpc": 70,
-    "physicalRadiusMpc": 1.5,
-    "apparentRadiusMpc": 3,
+    "distance": { "value": 70, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.5, "unit": "Mpc" },
+    "apparentRadius": { "value": 3, "unit": "Mpc" },
     "description": "A massive cluster about 70 Mpc away in the constellation Norma, lying close to the Galactic plane in the heavily obscured Zone of Avoidance. It sits near the centre of the Great Attractor, the gravitational anomaly drawing the Milky Way and thousands of nearby galaxies toward it at hundreds of kilometres per second."
   },
   {
@@ -70,9 +70,9 @@
     "category": "cluster",
     "raHours": 3.33,
     "decDeg": 41.516667,
-    "distMpc": 75,
-    "physicalRadiusMpc": 2.0,
-    "apparentRadiusMpc": 5,
+    "distance": { "value": 75, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.0, "unit": "Mpc" },
+    "apparentRadius": { "value": 5, "unit": "Mpc" },
     "description": "One of the most massive objects in the known universe and among the brightest X-ray sources in the sky, about 75 Mpc away in Perseus. Its hot intracluster gas, centred on the active galaxy NGC 1275, carries the deepest 'note' ever detected — a B-flat some 57 octaves below middle C, set ringing by the central black hole."
   },
   {
@@ -83,9 +83,9 @@
     "category": "cluster",
     "raHours": 12.99694,
     "decDeg": 27.983333,
-    "distMpc": 100,
-    "physicalRadiusMpc": 3.0,
-    "apparentRadiusMpc": 6,
+    "distance": { "value": 100, "unit": "Mpc" },
+    "physicalRadius": { "value": 3.0, "unit": "Mpc" },
+    "apparentRadius": { "value": 6, "unit": "Mpc" },
     "description": "A very rich cluster of over 1,000 galaxies about 100 Mpc away in Coma Berenices. Fritz Zwicky's 1933 study of its galaxies' motions gave the first evidence for dark matter — they move far too fast to be held together by their visible mass alone."
   },
   {
@@ -95,9 +95,9 @@
     "category": "cluster",
     "raHours": 16.477222,
     "decDeg": 39.55,
-    "distMpc": 120,
-    "physicalRadiusMpc": 2.0,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 120, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.0, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "A relaxed, cool-core cluster about 120 Mpc away in Hercules, dominated by the giant elliptical NGC 6166 — one of the most massive galaxies known, with a multiple-nucleus core. It forms an interacting pair with the neighbouring cluster Abell 2197."
   },
   {
@@ -106,9 +106,9 @@
     "category": "cluster",
     "raHours": 17.206944,
     "decDeg": -23.366667,
-    "distMpc": 120,
-    "physicalRadiusMpc": 2.0,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 120, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.0, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "A hot, X-ray-luminous cluster about 120 Mpc away near the Galactic plane in Ophiuchus, partly hidden by intervening dust. In 2020 it was found to host the largest known explosion in the universe — a vast cavity blown in its gas by an outburst from the central supermassive black hole."
   },
   {
@@ -119,9 +119,9 @@
     "category": "cluster",
     "raHours": 16.0875,
     "decDeg": 17.75,
-    "distMpc": 158,
-    "physicalRadiusMpc": 1.8,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 158, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.8, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "An irregular, gas-rich cluster about 158 Mpc away in Hercules, notable for its high fraction of spiral and interacting galaxies — a sign that it is still assembling rather than settled. It anchors the Hercules Supercluster together with Abell 2147 and Abell 2152."
   },
   {
@@ -131,9 +131,9 @@
     "category": "cluster",
     "raHours": 13.465833,
     "decDeg": -31.5,
-    "distMpc": 200,
-    "physicalRadiusMpc": 2.5,
-    "apparentRadiusMpc": 5,
+    "distance": { "value": 200, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.5, "unit": "Mpc" },
+    "apparentRadius": { "value": 5, "unit": "Mpc" },
     "description": "The dominant cluster at the core of the Shapley Concentration, about 200 Mpc away in Centaurus. A3558 is itself a merging system and the most massive node of the densest large-scale structure in the nearby universe."
   },
   {
@@ -144,9 +144,9 @@
     "category": "cluster",
     "raHours": 11.7414,
     "decDeg": 19.8333,
-    "distMpc": 95,
-    "physicalRadiusMpc": 1.8,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 95, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.8, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "A young, irregular cluster about 95 Mpc away in Leo that is still actively forming, with several galaxies trailing long tails of gas stripped by their fall into the cluster. Together with the Coma Cluster it anchors the Coma Supercluster."
   },
   {
@@ -156,9 +156,9 @@
     "category": "cluster",
     "raHours": 15.1828,
     "decDeg": 5.7447,
-    "distMpc": 320,
-    "physicalRadiusMpc": 2.2,
-    "apparentRadiusMpc": 5,
+    "distance": { "value": 320, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.2, "unit": "Mpc" },
+    "apparentRadius": { "value": 5, "unit": "Mpc" },
     "description": "A massive, highly relaxed cool-core cluster about 320 Mpc away in Serpens. Its central galaxy, IC 1101, is one of the largest galaxies ever found, and the cluster serves as a standard calibrator for the relation between cluster mass and X-ray luminosity."
   },
   {
@@ -168,9 +168,9 @@
     "category": "cluster",
     "raHours": 13.785,
     "decDeg": -32.863,
-    "distMpc": 155,
-    "physicalRadiusMpc": 2.0,
-    "apparentRadiusMpc": 4,
+    "distance": { "value": 155, "unit": "Mpc" },
+    "physicalRadius": { "value": 2.0, "unit": "Mpc" },
+    "apparentRadius": { "value": 4, "unit": "Mpc" },
     "description": "A massive, X-ray-luminous cluster about 155 Mpc away in Hydra and one of the brightest clusters in the ROSAT All-Sky Survey. It lies in the outskirts of the Shapley Concentration."
   },
   {
@@ -180,9 +180,9 @@
     "category": "cluster",
     "raHours": 15.3742,
     "decDeg": 27.7078,
-    "distMpc": 305,
-    "physicalRadiusMpc": 1.5,
-    "apparentRadiusMpc": 3,
+    "distance": { "value": 305, "unit": "Mpc" },
+    "physicalRadius": { "value": 1.5, "unit": "Mpc" },
+    "apparentRadius": { "value": 3, "unit": "Mpc" },
     "description": "A rich double cluster about 305 Mpc away in Corona Borealis, caught in the act of merging — X-ray imaging reveals two distinct subclusters falling together. It is one of the principal members of the Corona Borealis Supercluster."
   },
   {
@@ -192,9 +192,9 @@
     "category": "supercluster",
     "raHours": 10.0,
     "decDeg": -46.0,
-    "distMpc": 80,
-    "physicalRadiusMpc": 80,
-    "apparentRadiusMpc": 80,
+    "distance": { "value": 80, "unit": "Mpc" },
+    "physicalRadius": { "value": 80, "unit": "Mpc" },
+    "apparentRadius": { "value": 80, "unit": "Mpc" },
     "description": "The supercluster of galaxies that contains the Milky Way, defined in 2014 from the flow lines of galaxy motions. Spanning some 160 Mpc (520 million light-years) and around 100,000 galaxies, all its members stream toward a common gravitational focus near the Great Attractor. Its name is Hawaiian for 'immense heaven'."
   },
   {
@@ -204,9 +204,9 @@
     "category": "supercluster",
     "raHours": 2.5,
     "decDeg": 38.0,
-    "distMpc": 70,
-    "physicalRadiusMpc": 50,
-    "apparentRadiusMpc": 50,
+    "distance": { "value": 70, "unit": "Mpc" },
+    "physicalRadius": { "value": 50, "unit": "Mpc" },
+    "apparentRadius": { "value": 50, "unit": "Mpc" },
     "description": "One of the largest structures in the nearby universe — a dense chain of galaxies stretching some 70 Mpc (250 million light-years) across the sky through Perseus and Pisces. It is a textbook example of the filamentary 'cosmic web'."
   },
   {
@@ -216,9 +216,9 @@
     "category": "supercluster",
     "raHours": 12.8333,
     "decDeg": 28.0,
-    "distMpc": 100,
-    "physicalRadiusMpc": 30,
-    "apparentRadiusMpc": 30,
+    "distance": { "value": 100, "unit": "Mpc" },
+    "physicalRadius": { "value": 30, "unit": "Mpc" },
+    "apparentRadius": { "value": 30, "unit": "Mpc" },
     "description": "A large concentration of galaxies about 100 Mpc away, built around the Coma and Leo clusters. It sits at the centre of the CfA2 'Great Wall', the vast sheet of galaxies revealed by the first large redshift surveys in the 1980s."
   },
   {
@@ -227,9 +227,9 @@
     "category": "supercluster",
     "raHours": 13.2833,
     "decDeg": -15.0,
-    "distMpc": 152,
-    "physicalRadiusMpc": 50,
-    "apparentRadiusMpc": 50,
+    "distance": { "value": 152, "unit": "Mpc" },
+    "physicalRadius": { "value": 50, "unit": "Mpc" },
+    "apparentRadius": { "value": 50, "unit": "Mpc" },
     "description": "A wall-like overdensity of galaxies in the Hydra–Centaurus direction, roughly 150 Mpc away, forming part of the network of filaments that link the local superclusters across the cosmic web."
   },
   {
@@ -239,9 +239,9 @@
     "category": "supercluster",
     "raHours": 15.6667,
     "decDeg": 16.0,
-    "distMpc": 120,
-    "physicalRadiusMpc": 60,
-    "apparentRadiusMpc": 60,
+    "distance": { "value": 120, "unit": "Mpc" },
+    "physicalRadius": { "value": 60, "unit": "Mpc" },
+    "apparentRadius": { "value": 60, "unit": "Mpc" },
     "description": "A large supercluster about 120 Mpc away spanning the clusters Abell 2147, 2151, and 2152. It forms one end of the CfA2 Great Wall and is among the more massive structures within 200 Mpc."
   },
   {
@@ -251,9 +251,9 @@
     "category": "supercluster",
     "raHours": 13.4167,
     "decDeg": -31.0,
-    "distMpc": 195,
-    "physicalRadiusMpc": 40,
-    "apparentRadiusMpc": 40,
+    "distance": { "value": 195, "unit": "Mpc" },
+    "physicalRadius": { "value": 40, "unit": "Mpc" },
+    "apparentRadius": { "value": 40, "unit": "Mpc" },
     "description": "The largest concentration of galaxies in the nearby universe, about 200 Mpc away in Centaurus. Containing dozens of rich Abell clusters, it is massive enough to tug on the motion of the Local Group and may be a major contributor to the pull of the Great Attractor."
   },
   {
@@ -263,9 +263,9 @@
     "category": "supercluster",
     "raHours": 15.3667,
     "decDeg": 29.0,
-    "distMpc": 290,
-    "physicalRadiusMpc": 35,
-    "apparentRadiusMpc": 35,
+    "distance": { "value": 290, "unit": "Mpc" },
+    "physicalRadius": { "value": 35, "unit": "Mpc" },
+    "apparentRadius": { "value": 35, "unit": "Mpc" },
     "description": "A strikingly dense and compact supercluster about 290 Mpc away in Corona Borealis, anchored by the merging clusters Abell 2061, 2065, 2067, and 2089. It is one of the most massive bound structures known at its distance."
   },
   {
@@ -274,9 +274,9 @@
     "category": "supercluster",
     "raHours": 1.0,
     "decDeg": -6.0,
-    "distMpc": 260,
-    "physicalRadiusMpc": 45,
-    "apparentRadiusMpc": 45,
+    "distance": { "value": 260, "unit": "Mpc" },
+    "physicalRadius": { "value": 45, "unit": "Mpc" },
+    "apparentRadius": { "value": 45, "unit": "Mpc" },
     "description": "An enormous filament of galaxies stretching roughly 300 Mpc (about a billion light-years) from Pisces through Cetus, identified by R. Brent Tully in 1987. The Laniakea Supercluster forms one branch of this larger complex."
   },
   {
@@ -285,9 +285,9 @@
     "category": "void",
     "raHours": 0.0,
     "decDeg": -30.0,
-    "distMpc": 35,
-    "physicalRadiusMpc": 25,
-    "apparentRadiusMpc": 25,
+    "distance": { "value": 35, "unit": "Mpc" },
+    "physicalRadius": { "value": 25, "unit": "Mpc" },
+    "apparentRadius": { "value": 25, "unit": "Mpc" },
     "description": "A nearby empty region of space about 35 Mpc away toward the constellation Sculptor, roughly 25 Mpc across. Like all cosmic voids it is not perfectly empty, but holds far fewer galaxies than the surrounding filaments and walls."
   },
   {
@@ -296,9 +296,9 @@
     "category": "void",
     "raHours": 18.6333,
     "decDeg": 18.0,
-    "distMpc": 25,
-    "physicalRadiusMpc": 30,
-    "apparentRadiusMpc": 30,
+    "distance": { "value": 25, "unit": "Mpc" },
+    "physicalRadius": { "value": 30, "unit": "Mpc" },
+    "apparentRadius": { "value": 30, "unit": "Mpc" },
     "description": "A vast, largely empty region bordering the Local Group, beginning just beyond our own neighbourhood and extending mostly above the plane of the Milky Way. Mapped by Tully and collaborators, it is some 60 Mpc across, and its emptiness is thought to push the Local Group along at over 200 km/s."
   },
   {
@@ -308,9 +308,9 @@
     "category": "void",
     "raHours": 14.8333,
     "decDeg": 46.0,
-    "distMpc": 245,
-    "physicalRadiusMpc": 50,
-    "apparentRadiusMpc": 50,
+    "distance": { "value": 245, "unit": "Mpc" },
+    "physicalRadius": { "value": 50, "unit": "Mpc" },
+    "apparentRadius": { "value": 50, "unit": "Mpc" },
     "description": "One of the largest known voids, nicknamed 'the Great Nothing' — a near-empty sphere about 100 Mpc (330 million light-years) across, centred roughly 245 Mpc away in Boötes. Discovered in 1981, it contains only a few dozen galaxies where thousands would be expected."
   },
   {
@@ -320,9 +320,9 @@
     "category": "group",
     "raHours": 0.71,
     "decDeg": 41.3,
-    "distMpc": 0.43,
-    "physicalRadiusMpc": 0.16,
-    "apparentRadiusMpc": 0.94,
+    "distance": { "value": 0.43, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.16, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.94, "unit": "Mpc" },
     "description": "Our home galaxy group — about 15 dominant members (plus dozens of dwarfs) spanning roughly 3 Mpc, ruled by the Milky Way and Andromeda (M31). Because we sit inside it, the marker is placed at the group's barycentre, ~0.43 Mpc away along the M31 sightline."
   },
   {
@@ -331,9 +331,9 @@
     "category": "group",
     "raHours": 3.78,
     "decDeg": 68.1,
-    "distMpc": 3.0,
-    "physicalRadiusMpc": 0.21,
-    "apparentRadiusMpc": 0.9,
+    "distance": { "value": 3.0, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.21, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.9, "unit": "Mpc" },
     "description": "A nearby group of about 16 galaxies ~3 Mpc away, centred on the large face-on spiral IC 342. It lies deep in the Zone of Avoidance behind the Milky Way's disk, so it is heavily dust-obscured despite its proximity."
   },
   {
@@ -342,9 +342,9 @@
     "category": "group",
     "raHours": 9.93,
     "decDeg": 69.07,
-    "distMpc": 3.5,
-    "physicalRadiusMpc": 0.21,
-    "apparentRadiusMpc": 1.05,
+    "distance": { "value": 3.5, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.21, "unit": "Mpc" },
+    "apparentRadius": { "value": 1.05, "unit": "Mpc" },
     "description": "A compact, well-studied group of about 29 galaxies ~3.5 Mpc away, dominated by the grand-design spiral M81 and the starburst M82, which are locked in an ongoing tidal interaction."
   },
   {
@@ -354,9 +354,9 @@
     "category": "group",
     "raHours": 13.42,
     "decDeg": -43.02,
-    "distMpc": 3.6,
-    "physicalRadiusMpc": 0.26,
-    "apparentRadiusMpc": 1.26,
+    "distance": { "value": 3.6, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.26, "unit": "Mpc" },
+    "apparentRadius": { "value": 1.26, "unit": "Mpc" },
     "description": "The nearest group hosting a giant elliptical, ~3.6 Mpc away and centred on the radio galaxy Centaurus A (NGC 5128). With around 40 members it is the richer of the two concentrations in the Centaurus A / M83 complex."
   },
   {
@@ -365,9 +365,9 @@
     "category": "group",
     "raHours": 13.62,
     "decDeg": -29.87,
-    "distMpc": 4.8,
-    "physicalRadiusMpc": 0.089,
-    "apparentRadiusMpc": 0.4,
+    "distance": { "value": 4.8, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.089, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.4, "unit": "Mpc" },
     "description": "The southern subgroup of the Centaurus A / M83 complex, ~4.8 Mpc away, centred on the bright barred spiral M83 (the Southern Pinwheel). Its turnaround radius is estimated from the compact bound core."
   },
   {
@@ -377,9 +377,9 @@
     "category": "group",
     "raHours": 0.79,
     "decDeg": -25.29,
-    "distMpc": 3.8,
-    "physicalRadiusMpc": 0.36,
-    "apparentRadiusMpc": 0.7,
+    "distance": { "value": 3.8, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.36, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.7, "unit": "Mpc" },
     "description": "A loose, filament-like association of about 6 bright galaxies ~3.8 Mpc away — strung along the line of sight rather than a tightly bound halo. The marker is anchored near its dominant spiral NGC 253."
   },
   {
@@ -389,9 +389,9 @@
     "category": "group",
     "raHours": 12.85,
     "decDeg": 41.12,
-    "distMpc": 4.2,
-    "physicalRadiusMpc": 0.39,
-    "apparentRadiusMpc": 0.63,
+    "distance": { "value": 4.2, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.39, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.63, "unit": "Mpc" },
     "description": "A diffuse 'cloud' of about 9 gas-rich, late-type galaxies ~4.2 Mpc away — an extended, unrelaxed association rather than a bound group. Anchored near the spiral M94."
   },
   {
@@ -400,9 +400,9 @@
     "category": "group",
     "raHours": 2.61,
     "decDeg": 59.65,
-    "distMpc": 5.7,
-    "physicalRadiusMpc": 0.2,
-    "apparentRadiusMpc": 0.6,
+    "distance": { "value": 5.7, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.2, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.6, "unit": "Mpc" },
     "description": "An obscured group behind the Milky Way anchored on the elliptical Maffei 1. Its distance is contested (estimates span 3.4–6.7 Mpc) and its radii here are estimated rather than catalogued; it was once thought to be a close Local Group neighbour before the heavy dust extinction was understood."
   },
   {
@@ -412,9 +412,9 @@
     "category": "group",
     "raHours": 20.58,
     "decDeg": 60.15,
-    "distMpc": 5.9,
-    "physicalRadiusMpc": 0.21,
-    "apparentRadiusMpc": 0.42,
+    "distance": { "value": 5.9, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.21, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.42, "unit": "Mpc" },
     "description": "A small group of about 8 galaxies ~5.9 Mpc away, centred on the face-on 'Fireworks' spiral NGC 6946 (the Cepheus 1 group). It sits low against the Milky Way and is partly obscured."
   },
   {
@@ -423,9 +423,9 @@
     "category": "group",
     "raHours": 14.05,
     "decDeg": 54.35,
-    "distMpc": 7.0,
-    "physicalRadiusMpc": 0.3,
-    "apparentRadiusMpc": 0.9,
+    "distance": { "value": 7.0, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.3, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.9, "unit": "Mpc" },
     "description": "A loose group ~7 Mpc away centred on the large face-on spiral M101 (the Pinwheel), part of the M101–M51 filament. The bound-core radius is estimated."
   },
   {
@@ -435,9 +435,9 @@
     "category": "group",
     "raHours": 12.7,
     "decDeg": 32.54,
-    "distMpc": 7.4,
-    "physicalRadiusMpc": 0.24,
-    "apparentRadiusMpc": 0.5,
+    "distance": { "value": 7.4, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.24, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.5, "unit": "Mpc" },
     "description": "A group ~7.4 Mpc away centred on the edge-on 'Whale' galaxy NGC 4631 and its companion NGC 4656. Its membership is author-dependent, ranging from about 5 to 28 galaxies depending on the selection. The outer radius is estimated."
   },
   {
@@ -446,9 +446,9 @@
     "category": "group",
     "raHours": 13.5,
     "decDeg": 47.2,
-    "distMpc": 8.3,
-    "physicalRadiusMpc": 0.13,
-    "apparentRadiusMpc": 0.4,
+    "distance": { "value": 8.3, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.13, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.4, "unit": "Mpc" },
     "description": "A small group ~8.3 Mpc away dominated by the interacting Whirlpool galaxy M51 and its companion NGC 5195. Radii are estimated from the compact pair."
   },
   {
@@ -457,9 +457,9 @@
     "category": "group",
     "raHours": 2.67,
     "decDeg": 39.07,
-    "distMpc": 8.0,
-    "physicalRadiusMpc": 0.17,
-    "apparentRadiusMpc": 0.5,
+    "distance": { "value": 8.0, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.17, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.5, "unit": "Mpc" },
     "description": "A nearby group centred on the lenticular galaxy NGC 1023, with a contested distance (estimates 6.3–10 Mpc). Both radii are estimated."
   },
   {
@@ -469,9 +469,9 @@
     "category": "group",
     "raHours": 10.78,
     "decDeg": 11.82,
-    "distMpc": 10.7,
-    "physicalRadiusMpc": 0.18,
-    "apparentRadiusMpc": 0.54,
+    "distance": { "value": 10.7, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.18, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.54, "unit": "Mpc" },
     "description": "A group ~10.7 Mpc away in Leo, centred on the M96/M105 concentration and home to the giant intergalactic Leo Ring of primordial gas. Its turnaround radius is estimated."
   },
   {
@@ -481,9 +481,9 @@
     "category": "group",
     "raHours": 11.34,
     "decDeg": 12.99,
-    "distMpc": 9.5,
-    "physicalRadiusMpc": 0.15,
-    "apparentRadiusMpc": 0.2,
+    "distance": { "value": 9.5, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.15, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.2, "unit": "Mpc" },
     "description": "The tight, photogenic trio of M65, M66 and the edge-on NGC 3628 (the Hamburger Galaxy), ~9.5 Mpc away — an interacting subgroup within the larger Leo II cloud. The core radius is estimated."
   },
   {
@@ -493,9 +493,9 @@
     "category": "group",
     "raHours": 15.11,
     "decDeg": 55.76,
-    "distMpc": 13.5,
-    "physicalRadiusMpc": 0.17,
-    "apparentRadiusMpc": 0.5,
+    "distance": { "value": 13.5, "unit": "Mpc" },
+    "physicalRadius": { "value": 0.17, "unit": "Mpc" },
+    "apparentRadius": { "value": 0.5, "unit": "Mpc" },
     "description": "An edge-on-spiral-rich group ~13.5 Mpc away centred on the lenticular NGC 5866 (often identified with M102). Both radii are estimated."
   }
 ]

@@ -244,7 +244,9 @@ export type EngineGpuHandles = {
    * the renderer's GPU buffers (per-category bind groups + per-instance
    * buffer + corner VBO).
    */
-  structureMarkerRenderer: StructureMarkerRenderer | null;
+  structureMarkerCosmoRenderer: StructureMarkerRenderer | null;
+  /** The NEAR0-slab categories' marker renderer; same lifecycle, separate buffers. */
+  structureMarkerNearRenderer: StructureMarkerRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other

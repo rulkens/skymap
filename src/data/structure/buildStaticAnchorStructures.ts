@@ -43,6 +43,9 @@
  */
 
 import { raDecDistToEqCart } from '../../utils/math/raDecDistToEqCart';
+import { lengthToMpc } from '../../utils/math/lengthToMpc';
+import type { Length } from '../../@types/data/Length';
+import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
@@ -61,12 +64,12 @@ import structureSeedJson from '../../../data/seeds/structure_anchors.seed.json';
 type SeedEntry = {
   readonly id: string;
   readonly names: readonly string[];
-  readonly category: 'cluster' | 'supercluster' | 'void' | 'group';
+  readonly category: StructureId;
   readonly raHours: number;
   readonly decDeg: number;
-  readonly distMpc: number;
-  readonly physicalRadiusMpc: number;
-  readonly apparentRadiusMpc: number;
+  readonly distance: Length;
+  readonly physicalRadius: Length;
+  readonly apparentRadius: Length;
   readonly abell?: string;
   readonly description?: string;
 };
@@ -89,15 +92,19 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
     // or non-ASCII characters in the display name.
     id: `${a.category}-${a.id}`,
     name: a.names[0]!,
-    worldPos: raDecDistToEqCart(a),
+    worldPos: raDecDistToEqCart({
+      raHours: a.raHours,
+      decDeg: a.decDeg,
+      distMpc: lengthToMpc(a.distance),
+    }),
     // Curated anchors are always featured: they get labels and are
     // resolvable as deep-link targets.  Significance is full weight —
     // each seed entry was chosen for being worth showing.
     featured: true,
     description: a.description,
     significance: 1,
-    physicalRadiusMpc: a.physicalRadiusMpc,
-    apparentRadiusMpc: a.apparentRadiusMpc,
+    physicalRadiusMpc: lengthToMpc(a.physicalRadius),
+    apparentRadiusMpc: lengthToMpc(a.apparentRadius),
   } as const;
   switch (a.category) {
     case 'cluster':

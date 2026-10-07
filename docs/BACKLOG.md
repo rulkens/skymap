@@ -186,7 +186,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`CatalogDrawEntry` bind-group coverage** `deferred` — a wrong-source `fadeBindGroup`/`sourceBindGroup` on a `catalogStore.entries()` entry would pass every test (the draw test only smoke-checks the command list). → [details](backlog/2026-07-14-catalog-draw-entry-coverage.md)
 - [ ] **Star-bin ↔ MW-cloud crossfade density calibration** `manual` — calibrate the procedural cloud's inner density/colors to Gaia counts if the v1 hand-tuned crossfade band shows a seam. → [details](backlog/2026-07-13-star-bin-crossfade-density-calibration.md)
 - [ ] **Fluid ISM-map event CDF has no texel-area term** `deferred` — log-radial grid means uniform-per-texel sampling seeds the centre and starves the outer disc; fixing it recalibrates the whole tuned map. → [details](backlog/2026-08-10-ism-fluid-event-cdf-texel-area.md)
-- [ ] **Galactic Center place labels** `needs-design` — four POI markers (central cluster, Arches, Quintuplet, CMZ) around the shipped Sgr A\*; category fit is the open question. → [details](backlog/2026-07-30-galactic-center-place-labels.md)
 - [ ] **Filaments + flow field lack scale fade bands** `ready` — both layers gate on user intent alone, with no zoom-based fade like the survey point clouds. → [details](backlog/2026-07-24-filaments-flow-scale-bands.md)
 - [ ] **Flow field does not reseed on a particle-count change** `needs-verification` — confirmed on the deployed build; the latch arms and the seed pass encodes, so the suspect is a stale trail ring or index-hashed seed positions. → [details](backlog/2026-09-15-flow-field-no-reseed-on-count-change.md)
 - [ ] **Barycentric orbit pairs** `needs-design` — Pluto's wobble is one `BARYCENTRIC_PAIRS` row (Earth–Moon already uses it); the minor moons still need an invisible focus-graph node. → [details](backlog/2026-08-16-barycentric-orbit-pairs.md)
@@ -236,6 +235,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
 - [ ] **Break up `tools/record/record.ts`** `ready` — move the ffmpeg pipe and the preview-build server into `tools/utils/record/`, leaving argv + the frame loop; own PR, smoke a clip before/after.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
+- [ ] **Path-based object links with share previews** `needs-design` — `/<kind>/<slug>` paths for identity, hash for view state, so shared links unfurl; needs Worker tag injection and permanent hash aliases. → [details](backlog/2026-10-05-path-based-object-links.md)
 
 ## Docs & process
 
