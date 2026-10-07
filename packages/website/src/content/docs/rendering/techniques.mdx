@@ -47,7 +47,7 @@ Where this lives: <Repo path="src/layers/starCatalog" /> and <Repo path="src/ser
 
 <Fact id="render-body-light" />
 
-The law is from M. Minnaert, [“The reciprocity principle in lunar photometry”](https://doi.org/10.1086/144279) (The Astrophysical Journal 93, 1941). It was written for the Moon. We use it for decks of cloud and haze, and leave the Moon and the other airless bodies on the plain cosine. Where a body has a map of its relief, the direction each point of the surface faces is taken from it, so craters and ridges catch the light without being modelled.
+The law is from M. Minnaert, [“The reciprocity principle in lunar photometry”](https://doi.org/10.1086/144279) (The Astrophysical Journal 93, 1941). It was written for the Moon. We use it for decks of cloud and haze, and leave the Moon and the other airless bodies on the plain cosine. Where a body has a map of its relief, the direction each point of the surface faces is taken from it, so craters and ridges catch the light without being built as shapes.
 
 <Fact id="render-earth" />
 
@@ -55,7 +55,7 @@ The law is from M. Minnaert, [“The reciprocity principle in lunar photometry�
 
 <Figure id="saturn" />
 
-The formulas are those of S. Chandrasekhar’s “Radiative Transfer” (1960), as used by L. Dones, J. N. Cuzzi and M. R. Showalter in [“Voyager Photometry of Saturn’s A Ring”](https://doi.org/10.1006/icar.1993.1118) (Icarus 105, 1993). Ours keeps single scattering only and a simpler rule for the direction particles scatter in, and takes the rings’ density from the map of them, not from a measurement.
+The formulas are those of S. Chandrasekhar’s “Radiative Transfer” (1960), as used by L. Dones, J. N. Cuzzi and M. R. Showalter in [“Voyager Photometry of Saturn’s A Ring”](https://doi.org/10.1006/icar.1993.1118) (Icarus 105, 1993). Ours keeps single scattering only and a simpler rule for the direction particles scatter in, takes the rings’ density from the map of them, and makes the particles three times as bright as the map’s colour, a factor we set by eye.
 
 Where this lives: <Repo path="src/services/gpu/shaders/bodies" /> and <Repo path="src/services/gpu/shaders/lib" />.
 
@@ -69,7 +69,7 @@ Sky colour, the red of a sunset and the thin blue line at the edge of a planet a
 
 <Fact id="render-atmosphere-tables" />
 
-The first to make this fast was E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (Computer Graphics Forum 27, 2008): do the sums once and keep the answers in tables, one of them of four dimensions. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (Computer Graphics Forum 39, 2020), did away with the large table by treating light that has scattered more than once as the same in every direction. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire. What we add is the air of other worlds: each body has its own list of up to four gases and hazes, each with a colour, a spread over height and a way of scattering.
+The first to make this fast was E. Bruneton and F. Neyret, [“Precomputed Atmospheric Scattering”](https://doi.org/10.1111/j.1467-8659.2008.01245.x) (Computer Graphics Forum 27, 2008): do the sums once and keep the answers in tables, one of them of four dimensions. S. Hillaire, [“A Scalable and Production Ready Sky and Atmosphere Rendering Technique”](https://doi.org/10.1111/cgf.14050) (Computer Graphics Forum 39, 2020), did away with the large table: the sky is worked out afresh each frame into small ones, and light that has scattered more than once is treated as the same in every direction. skymap takes the layout of the first table from Bruneton and Neyret and the rest from Hillaire. What we add is the air of other worlds: each body has its own list of up to four gases and hazes. Earth’s numbers are the papers’; the others mix published values, values worked out from them and values chosen for the look, and the file marks which is which.
 
 <Fact id="render-aerial" />
 
@@ -147,14 +147,14 @@ Where this lives: <Repo path="src/layers/blackHoles" /> and <Repo path="src/serv
 
 <Fact id="render-labels" />
 
-The method is that of [msdfgen](https://github.com/Chlumsky/msdfgen), by V. Chlumský, which also makes our texture, once, when the app is built. The typeface is <Source id="font-cormorant">Cormorant</Source>.
+The method is that of [msdfgen](https://github.com/Chlumsky/msdfgen), by V. Chlumský, which also made our texture: a command of its own builds it, and the result is kept in the repository. The typeface is <Source id="font-cormorant">Cormorant</Source>.
 
 Where this lives: <Repo path="src/services/gpu/shaders/labels" /> and <Repo path="src/services/gpu/labelLayout" />.
 
 ## Bloom, tone curves and HDR
 
-[The frame](/docs/rendering/#light-to-screen) says where these run. Bloom follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six.
+[The frame](/docs/rendering/#light-to-screen) says where these run. Bloom follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six, and a threshold that is a setting.
 
-Three of the five tone curves have a source. Reinhard is from E. Reinhard, M. Stark, P. Shirley and J. Ferwerda, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (ACM Transactions on Graphics 21, 2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004), written for colour pictures of the sky that must show faint things beside bright ones. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
+Three of the five tone curves have a source. Reinhard is from E. Reinhard, M. Stark, P. Shirley and J. Ferwerda, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (ACM Transactions on Graphics 21, 2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004). Both papers bend a pixel’s brightness and keep its colour; ours bends red, green and blue separately, so a bright pixel also moves towards white. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
 
 <Fact id="settings-hdr" />
