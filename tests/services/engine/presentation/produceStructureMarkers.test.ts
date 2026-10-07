@@ -14,7 +14,10 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { STRUCTURE_MARKER_STYLES } from '../../../../src/services/engine/presentation/structureMarkerStyles';
+import {
+  STRUCTURE_MARKER_STYLES,
+  SELECTED_RING_BRIGHTEN,
+} from '../../../../src/services/engine/presentation/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
@@ -158,9 +161,9 @@ describe('produceStructureMarkers', () => {
     expect(half.haloColor[3]).toBeCloseTo(base.haloColor[3] * 0.5, 6);
   });
 
-  it('applies significance weight and selection 1.5x bump (at rest)', () => {
-    // significance 0 → sigWeight 0.25, so the base ring alpha is well under 1
-    // and the ×1.5 selection bump is observable. No focus (blend 0).
+  it('applies significance weight to alpha and brightens the selected ring colour', () => {
+    // significance 0 → sigWeight 0.25. Selection is a colour gain, so it shows
+    // on a ring whose alpha is already at its ceiling. No focus (blend 0).
     const sel = makeState('a', 'a'); // 'a' selected AND focused
     sel.data.structures.setGroup('anchors', [
       rec('a', 'cluster', { significance: 0 }),
@@ -169,11 +172,11 @@ describe('produceStructureMarkers', () => {
     const markers = produceStructureMarkers(sel, makeCtx());
     const a = markers.find((m) => m.id === 'a')!;
     const b = markers.find((m) => m.id === 'b')!;
-    // base = ringColor.a(1) × fade(1) × sigWeight(0.25) = 0.25
-    // a is selected → min(1, 0.25 × 1.5) = 0.375
-    expect(a.ringColor[3]).toBeCloseTo(0.375, 6);
-    // b is non-focused but blend 0 → recession 1 → 0.25 × 1 = 0.25
+    // alpha = ringColor.a(1) × fade(1) × sigWeight(0.25), selected or not
+    expect(a.ringColor[3]).toBeCloseTo(0.25, 6);
     expect(b.ringColor[3]).toBeCloseTo(0.25, 6);
+    expect(a.ringColor[0]).toBeCloseTo(b.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
+    expect(a.ringColor[2]).toBeCloseTo(b.ringColor[2] * SELECTED_RING_BRIGHTEN, 6);
   });
 
   it('non-focused marker ring AND halo alpha scale by focusRecession at blend > 0', () => {

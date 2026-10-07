@@ -33,7 +33,11 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
+import {
+  STRUCTURE_MARKER_STYLES,
+  SIG_MIN_ALPHA,
+  SELECTED_RING_BRIGHTEN,
+} from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -154,15 +158,14 @@ export function produceStructureMarkers(
       style.haloColor[3] * weightedFade * recession * bandFade,
     ];
 
-    // Ring: same fade bake plus selection. Selected ring ×1.5 (capped at 1),
-    // recession-free; every other ring scaled by the focus recession.
-    const ringAlphaBase = style.ringColor[3] * weightedFade;
-    const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase * recession;
+    // Ring: same fade bake plus selection. The selected ring is brightened and
+    // recession-free; every other ring is scaled by the focus recession.
+    const ringGain = isSelected ? SELECTED_RING_BRIGHTEN : 1;
     const ringColor: Vec4 = [
-      style.ringColor[0],
-      style.ringColor[1],
-      style.ringColor[2],
-      ringAlpha * bandFade,
+      style.ringColor[0] * ringGain,
+      style.ringColor[1] * ringGain,
+      style.ringColor[2] * ringGain,
+      style.ringColor[3] * weightedFade * (isSelected ? 1 : recession) * bandFade,
     ];
 
     out.push({

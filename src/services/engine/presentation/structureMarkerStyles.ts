@@ -234,3 +234,10 @@ export const STRUCTURE_MARKER_STYLES = {
  * (significance 1) — low-significance bulk clusters stay dim but visible.
  */
 export const SIG_MIN_ALPHA = 0.25;
+
+/**
+ * Colour gain on the selected structure's ring. A gain on colour, not alpha:
+ * most rings rest at full opacity, where an alpha boost has nowhere to go, and
+ * the HDR target has the headroom to show a colour above 1.
+ */
+export const SELECTED_RING_BRIGHTEN = 1.6;
