@@ -6,7 +6,6 @@ facts:
     sci-earth-clouds,
     search-places,
     sci-surfaces,
-    moon-orbit-light,
     sci-ephemeris,
     sim-ephemeris-span,
     sci-planet-maps,
@@ -25,7 +24,6 @@ facts:
     sgr-a-distance,
     scene-s-stars,
     sci-zoa-band,
-    andromeda-distance,
     sci-local-volume,
     sci-galaxy-discs,
     sci-galaxy-tilt,
@@ -40,7 +38,6 @@ facts:
     scene-desi-off,
     sci-structures,
     scene-structure-kinds,
-    laniakea-home,
     sci-markers,
     sci-density-field,
     sci-filaments,
@@ -50,11 +47,11 @@ facts:
   ]
 ---
 
-Everything skymap shows is one of three things. **Measured** is what an instrument recorded: a direction on the sky, a brightness, a photograph. **Derived** is computed from measurements by a stated method: a distance from a redshift, a planet’s position from its orbit. **Drawn** is a model or a choice of ours: a ring, a glow, a picture of something no camera has seen. [The science behind skymap](/science/#bins) sorts the whole scene into the three and gives the reasons.
+Three words are used the same way on every line. **Measured** is what an instrument recorded: a direction on the sky, a brightness, a photograph. **Derived** is computed from measurements by a stated method: a distance from a redshift, a planet’s position from its orbit. **Drawn** is a model or a choice of ours, with no measurement behind each object: a ring, a glow, a picture of something no camera has seen. [The science behind skymap](/science/#bins) sorts the whole scene into these three and gives the reasons.
 
 ## Is it in here?
 
-| What | In the scene | Mostly |
+| What | In the scene | Mostly is |
 | --- | --- | --- |
 | [Earth](#earth-and-its-surface) | Yes, down to aerial photographs | Measured |
 | [The Moon](#the-moon) | Yes | Derived |
@@ -73,11 +70,11 @@ Everything skymap shows is one of three things. **Measured** is what an instrume
 | [Filaments and the cosmic web](#filaments-and-the-cosmic-web) | Yes | Derived |
 | [The edge of the observable universe](#the-edge-of-the-observable-universe) | Yes, as a sphere | Drawn |
 
-The last column is a first answer, because nearly everything mixes the three. Each section says which part is which.
+The last column is a first answer. Nearly everything mixes the three, and the sections below take each thing apart.
 
 ## Earth and its surface
 
-From orbit the surface is NASA’s <Source id="nasa-blue-marble">Blue Marble</Source> mosaic of August 2004. Come down and sharper satellite and aerial imagery takes over in places, sharpest over Søndermarken, a park in Copenhagen, at 10 centimetres per pixel. The clouds are one fixed composite. The [search](/docs/guide/finding/) can take you down to any of 18 places on Earth.
+The surface is NASA’s <Source id="nasa-blue-marble">Blue Marble</Source> mosaic of August 2004, with sharper satellite and aerial imagery set into some regions as you come down. The sharpest is Søndermarken, a park in Copenhagen, at 10 centimetres per pixel. The clouds are one fixed composite. The search knows 18 places on Earth; see [Finding things](/docs/guide/finding/).
 
 **Measured:** the surface. **Derived:** where Earth is and which side is lit. **Drawn:** the clouds and the glow of the air. The imagery and its licences are under [Imagery](/science/#sources).
 
@@ -85,17 +82,17 @@ From orbit the surface is NASA’s <Source id="nasa-blue-marble">Blue Marble</So
 
 ## The Moon
 
-The Moon is a sphere at its true size, going round Earth at an average of 384,400 km, which light covers in about 1.3 seconds.
+The Moon is a sphere at its true size on its orbit round Earth. <Fact id="moon-orbit-light" inline />
 
-**Derived:** its position, less closely than a planet’s, because the Moon follows an average orbit while the planets are corrected against NASA’s positions. **Drawn:** its surface map, from Solar System Scope like the planets’.
+**Derived:** its position, and less closely than a planet’s: the Moon follows an average of its orbit, where the planets are corrected against NASA’s positions. **Drawn:** its surface map, which is Solar System Scope’s (see the next section).
 
 <View to="focus=body-moon">Open the Moon</View>
 
 ## Planets and their moons
 
-<Fact id="scene-bodies" inline /> Each is a sphere at its true size, placed where it was or will be at the date and time on the [clock](/docs/guide/time/). Nine have an atmosphere, and only Saturn has rings.
+<Fact id="scene-bodies" inline /> Each is a sphere at its true size, where it was or will be at the date and time on the clock. Nine of them have an atmosphere, and Saturn has the only rings.
 
-**Derived:** every position, from published orbits. For the eight planets and 18 moons of the giant planets we correct those orbits against NASA’s <Source id="horizons">JPL Horizons</Source> service for the years 1900 to 2100, while Pluto, Charon, the moons of Mars, Puck and Nereid follow average orbits. **Measured:** the surfaces of Pluto, Charon and the larger moons, which are spacecraft photographs. **Drawn:** the atmospheres, and the maps of seven planets, whose maker says the gaps are filled with invented terrain. The orbits’ sources are under [Solar system](/science/#sources).
+**Derived:** every position, from published orbits. For the eight planets and 18 moons of the giant planets the orbits are corrected against NASA’s <Source id="horizons">JPL Horizons</Source> service for the years 1900 to 2100; Pluto, Charon, the moons of Mars, Puck and Nereid follow average orbits without that correction. **Measured:** the surfaces of Pluto, Charon and the larger moons, which are spacecraft photographs. **Drawn:** the atmospheres, and the maps of seven planets, which their maker says fill gaps with invented terrain. See [Time](/docs/guide/time/) for setting the date; the orbits’ sources are under [Solar system](/science/#sources).
 
 <Figure id="saturn" />
 
@@ -121,11 +118,11 @@ The Moon is a sphere at its true size, going round Earth at an average of 384,40
 
 ## Stars
 
-Almost every star is one <Source id="gaia">Gaia</Source> measured: those brighter than [magnitude](/docs/reference/glossary/#magnitude) 14, plus <Source id="gcns">Gaia’s stars within 100 parsecs</Source>, with <Source id="hipparcos">Hipparcos</Source> supplying the few too bright for Gaia. The app loads the brightest, up to 12.9 million depending on the data size, and names 118. Each stands where Gaia measured it in 2016, whatever date the clock shows.
+The stars are <Source id="gaia">Gaia</Source>’s, the brightest of those brighter than magnitude 14, with <Source id="gcns">Gaia’s stars within 100 parsecs</Source> and <Source id="hipparcos">Hipparcos</Source> for the ones too bright for Gaia. How many load depends on the data size: up to 12.9 million. The app names 118 of them. They stand where Gaia measured them in 2016, whatever date the clock shows.
 
 <Fact id="scene-constellations" />
 
-**Measured:** a star’s direction, brightness and colour. **Derived:** its distance. **Drawn:** the constellation lines, which you switch on under Labels & Guides in the [Settings](/docs/guide/settings/) panel. The catalogues are under [Stars](/science/#sources).
+**Measured:** a star’s direction, brightness and colour. **Derived:** its distance. **Drawn:** the constellation lines, which are switched on under Labels & Guides in the [Settings](/docs/guide/settings/) panel. The catalogues are under [Stars](/science/#sources).
 
 <Links>
   <View to="focus=star-sun">Open the Sun</View>
@@ -135,7 +132,7 @@ Almost every star is one <Source id="gaia">Gaia</Source> measured: those brighte
 
 ## The Milky Way
 
-From inside, the Milky Way is the measured stars themselves. Fly out and it becomes a generated model, because every camera we have is inside it. At its centre is the black hole Sagittarius A*, with a glowing disc that we invented, and round it move 40 stars on orbits published after years of tracking them. A blue band along the galaxy’s plane marks the Zone of Avoidance, where its dust hides the galaxies behind.
+From inside, the Milky Way you see is the measured stars themselves. From outside it is a generated model, because every camera we have is inside it. At its centre is the black hole Sagittarius A*, with a glowing disc that we invented, and 40 stars that move round it on orbits published from years of tracking them. A blue band along the galaxy’s plane marks the Zone of Avoidance, the part of the sky where its dust hides the galaxies behind.
 
 **Drawn:** the galaxy from outside, the black hole’s picture and the band. **Derived:** the black hole’s distance and the orbits of the stars around it.
 
@@ -148,9 +145,9 @@ From inside, the Milky Way is the measured stars themselves. Fly out and it beco
 
 ## Nearby galaxies
 
-Fly towards a galaxy and it grows from a point into a disc and then into a picture: a photograph we chose for 81 named galaxies, and a survey image for the rest. Among the 81 are the two Magellanic Clouds and Andromeda (M31), which is about 2.5 million light-years away (761 kiloparsecs, plus or minus 11).
+<Fact id="andromeda-distance" inline /> Close to it a galaxy grows from a point into a disc and then into a picture: a photograph of our choosing for 81 named galaxies, among them Andromeda and the two Magellanic Clouds, and a survey image for the others.
 
-**Measured:** the direction, and the photograph. **Derived:** the distance, found without redshift inside 30 [megaparsecs](/docs/reference/glossary/#megaparsec), where a galaxy’s own motion distorts it. **Drawn:** the generated disc a galaxy wears before its picture arrives, and its tilt where no catalogue gives one.
+**Measured:** the direction, and the photograph. **Derived:** the distance, which inside 30 megaparsecs comes from methods that do not use redshift. **Drawn:** the generated disc a galaxy wears before its picture arrives, and its tilt where no catalogue gives one.
 
 <Links>
   <View to="focus=m31">Open Andromeda</View>
@@ -161,19 +158,19 @@ Fly towards a galaxy and it grows from a point into a disc and then into a pictu
 
 ## The galaxy surveys
 
-Every other galaxy is a point from one of four catalogues: <Source id="sdss">SDSS</Source>, <Source id="2mrs">2MRS</Source>, <Source id="glade">GLADE</Source> and <Source id="desi">DESI</Source>. The shape of the cloud they make depends on where each survey looked. <Fact id="survey-gaps" inline />
+Every other galaxy is a point from one of four catalogues: <Source id="sdss">SDSS</Source>, <Source id="2mrs">2MRS</Source>, <Source id="glade">GLADE</Source> and <Source id="desi">DESI</Source>. The quasars, from <Source id="milliquas">Milliquas</Source>, are the most distant objects in the scene. <Fact id="survey-gaps" inline />
 
-<Fact id="2mrs-coverage" inline /> DESI is three regions cut from its first data release, off at first. The [quasars](/docs/reference/glossary/#quasar), from <Source id="milliquas">Milliquas</Source>, lie farthest of all.
+<Fact id="2mrs-coverage" inline /> DESI is three regions cut from its first data release, off at first.
 
-**Measured:** direction and [redshift](/docs/reference/glossary/#redshift), the stretching of light as space expands. **Derived:** distance, from the redshift and a model of cosmology, and the colour of a point, from two measured brightnesses. How many galaxies load depends on the data size you choose in [Settings](/docs/guide/settings/). The table under [Galaxies and quasars](/science/#sources) counts the objects we draw from each catalogue, and [Known simplifications](/science/#simplifications) says what the points leave out.
+**Measured:** direction and redshift. **Derived:** distance, from the redshift and a model of cosmology, and the colour of a point, from two measured brightnesses. How many galaxies load depends on the data size; see [Settings](/docs/guide/settings/). The table under [Galaxies and quasars](/science/#sources) has each catalogue with the number of objects we draw from it, and [Known simplifications](/science/#simplifications) has what the points leave out.
 
 <Figure id="science-wedges" />
 
 ## Clusters, superclusters and voids
 
-Named markers stand for the large structures. Most come from two catalogues, of <Source id="mcxc">X-ray clusters</Source> and of <Source id="mscc">superclusters</Source>, and we placed another 42 by hand: 15 clusters, 16 groups of galaxies, 8 superclusters and 3 voids. A void gets a ring with no glow, since it is defined by what is missing. One of the superclusters is Laniakea, which contains the Milky Way and is defined by the flow of galaxies towards its centre.
+Markers with names stand for the large structures. Most come from two catalogues, of <Source id="mcxc">X-ray clusters</Source> and of <Source id="mscc">superclusters</Source>. <Fact id="scene-structure-kinds" inline /> A void gets a ring and no glow. <Fact id="laniakea-home" inline />
 
-**Derived:** positions and sizes from the two catalogues. **Drawn:** the 42 placed by hand, and every disc, ring and name.
+**Derived:** the positions and sizes of the markers taken from the two catalogues. **Drawn:** the 42 placed by hand, and every disc, ring and name.
 
 <Links>
   <View to="focus=cluster-virgo-m87">Open the Virgo cluster</View>
@@ -183,9 +180,9 @@ Named markers stand for the large structures. Most come from two catalogues, of 
 
 ## Filaments and the cosmic web
 
-The purple and orange glow is the <Source id="mcpm-vac">density of the cosmic web</Source>, computed from the positions of SDSS galaxies by the Monte Carlo Physarum Machine, an algorithm modelled on a slime mould. Two more layers show the same structure differently: filaments traced along it, and flow ribbons that follow the motion galaxies have on top of the expansion.
+The purple and orange glow is the <Source id="mcpm-vac">density of the cosmic web</Source>, computed by the Monte Carlo Physarum Machine from the positions of SDSS galaxies. Two more layers show the same structure another way: filaments traced along it, and flow ribbons that follow the motion of galaxies apart from the expansion.
 
-**Derived:** all three, each the output of an algorithm run on galaxy positions or velocities. The glow is on at first; you switch the other two on in [Settings](/docs/guide/settings/).
+**Derived:** all three. Each is the output of an algorithm run on galaxy positions or velocities. The glow is on at first; the other two are switched on in the [Settings](/docs/guide/settings/) panel.
 
 <Links>
   <View to="exhibit=cosmicWeb">Open the Cosmic Web exhibit</View>
@@ -202,6 +199,6 @@ The purple and orange glow is the <Source id="mcpm-vac">density of the cosmic we
 
 ## What is not here
 
-<Fact id="scene-not-here" inline /> Nebulae, star clusters and the International Space Station are missing too. A star or a galaxy that the [search](/docs/guide/finding/) cannot find by name may still be there as an unnamed point.
+<Fact id="scene-not-here" inline /> Nebulae, star clusters and the International Space Station are not objects in the scene either. A star or a galaxy that the search does not find by name may still be there as an unnamed point; see [Finding things](/docs/guide/finding/).
 
-Every named object is listed in the [Object catalogue](/docs/reference/objects/), and [All sources at a glance](/docs/data/) says where each catalogue comes from and how it is licensed.
+Every named object is in the [Object catalogue](/docs/reference/objects/). For where each catalogue comes from and how it is licensed, see [All sources at a glance](/docs/data/).
