@@ -697,7 +697,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: FEATURE,
     widths: [1280, 800],
     title: 'The clock with its controls open',
-    caption: 'Cut from a wider window. From the left: Now, the speed, slower, play, faster and the date. The scale bar sits above it.',
+    caption: 'From the left: Now, the speed, slower, play, faster and the date. The scale bar sits above it.',
     drawn: 'The curved lines are the orbits of Jupiter’s moons, computed and drawn as lines.',
     alt: 'A bar at the lower right of the app reading Now, 1 s/s, a left arrow, a play triangle, a right arrow and 2033-03-14 21:00 UTC, under a scale bar.',
   },
