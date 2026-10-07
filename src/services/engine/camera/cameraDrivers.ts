@@ -37,7 +37,6 @@ import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
@@ -161,7 +160,7 @@ function followPose(
     distanceTarget = memory.saturated
       ? committed.distance
       : framingPose(focus, ctx.projection.fovYRad, from).distance;
-  } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
+  } else if (!CAMERA_DRIVERS.find((d) => d.id === ctx.winnerLastFrame)?.followsMovingTarget) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {
     distanceTarget = ctx.followDistanceTarget;
@@ -224,6 +223,7 @@ function framedClipArm(
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
+    followsMovingTarget: false,
     priority: 95,
     epoch: 'clip',
     deliversFraming: true,
@@ -255,6 +255,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'orbitDrag',
+    followsMovingTarget: false,
     priority: 80,
     // The pin overwrites the dragged target with the live body, so a drag
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
@@ -267,6 +268,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'followApproach',
+    followsMovingTarget: true,
     // 55 keeps the two relationships that matter and nothing else: ABOVE
     // autoRotate (20), or the spin outranks a body switch and the camera never
     // approaches — it holds the old body's distance, which over Saturn is
@@ -289,6 +291,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'followHold',
+    followsMovingTarget: true,
     // The steady follow, back under autoRotate and the drag: once the approach
     // is saturated the row only re-asserts the body's own target, which the
     // pivot pin gives those drivers anyway.
@@ -304,6 +307,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'tween',
+    followsMovingTarget: false,
     priority: 60,
     epoch: 'tween',
     deliversFraming: true,
@@ -339,6 +343,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'autoRotate',
+    followsMovingTarget: false,
     priority: 20,
     epoch: 'autoRotate',
     commitsOnEdge: true,
@@ -362,6 +367,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   },
   {
     id: 'resting',
+    followsMovingTarget: false,
     priority: 0,
     // Pivots too, so 'every orbit driver pivots on the focused body' holds without exception.
     pivotsOnFocusedBody: true,

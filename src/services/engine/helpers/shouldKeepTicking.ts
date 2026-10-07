@@ -13,7 +13,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
+import { followsMovingTarget } from '../camera/followsMovingTarget';
 
 /**
  * Ease with no camera-slice flag behind it: without this term the loop sleeps
@@ -23,7 +23,7 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
  */
 function followApproachEaseActive(state: EngineState): boolean {
   const { register, follow } = state.cameraRuntime;
-  if (!isFollowDriverId(register.winner)) return false;
+  if (!followsMovingTarget(register.winner)) return false;
   // A winning follow row always leaves memory (its null-guard arms are unreachable
   // while `followActive` holds); a null here would park the loop mid-ease.
   return follow !== null && !follow.saturated;
