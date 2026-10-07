@@ -57,6 +57,11 @@ type StructureMarkerStyle = {
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
   readonly outlineEmFrac: number;
+  /**
+   * Where the label sits against its ring: centred on it, or just above its
+   * top edge for categories whose rings stay on screen at large sizes.
+   */
+  readonly labelPlacement: 'centre' | 'above';
 };
 
 /**
@@ -80,6 +85,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'centre',
   },
   supercluster: {
     // Orange end of the warm ramp — saturated enough to read clearly
@@ -98,6 +104,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'centre',
   },
   void: {
     labelColor: hexToGl('#99D9F2'),
@@ -114,6 +121,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'centre',
   },
   group: {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
@@ -148,6 +156,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'centre',
   },
   'open-cluster': {
     labelColor: hexToGl('#A9C4FF'),
@@ -164,6 +173,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.galacticStructures,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'above',
   },
   'globular-cluster': {
     labelColor: hexToGl('#C9A8FF'),
@@ -180,6 +190,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.galacticStructures,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'above',
   },
   nebula: {
     labelColor: hexToGl('#FF8FA3'),
@@ -196,6 +207,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.galacticStructures,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'above',
   },
   'galactic-centre': {
     labelColor: hexToGl('#E8E8F0'),
@@ -212,6 +224,7 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.galacticStructures,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
+    labelPlacement: 'above',
   },
 } as const satisfies Readonly<Record<StructureId, StructureMarkerStyle>>;
 

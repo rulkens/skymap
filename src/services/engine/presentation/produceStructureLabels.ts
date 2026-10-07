@@ -4,7 +4,8 @@
  *
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
- * and the ring-centre anchor. Famous-galaxy labels come from
+ * and the anchor (ring centre, or just above the ring's drawn top for the
+ * categories whose style asks for it). Famous-galaxy labels come from
  * `produceFamousGalaxyLabels` instead — a split that also carries the deep-zoom
  * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
  * dissolve with their rings on the descent into the solar system), while
@@ -52,6 +53,12 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
+import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../data/structureLabelAboveGapPx';
+import { aboveRingAnchor } from '../../../utils/labels/aboveRingAnchor';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -103,6 +110,9 @@ export function produceStructureLabels(
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
   const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
+  // Screen-up in world axes; the same direction applies in both frames.
+  const forward = orbitForwardOf(ctx.cam);
+  const screenUp = imagePlaneBasis(forward, ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up;
   for (const p of structures.all()) {
     if (!slabIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
@@ -201,6 +211,10 @@ export function produceStructureLabels(
           );
     fadeAlpha *= catOpacity * recession * clipFactor * bandFade;
 
+    // Rings that stay on screen at large sizes would sit under a centred
+    // label, so those labels hang just above the ring's drawn top instead.
+    const above = style.labelPlacement === 'above';
+
     labels.push({
       id: p.id,
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
@@ -210,9 +224,14 @@ export function produceStructureLabels(
         STRUCTURE_ID_CODES[p.category],
         structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
       ),
-      // Structures anchor at the ring centre, centred on both axes (only
-      // famous galaxies lift their label off the dot).
-      worldPos: [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
+      worldPos: above
+        ? aboveRingAnchor(
+            [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
+            screenUp,
+            markerRadiusMpc * MARKER_RADIUS_RETUNE,
+            (STRUCTURE_LABEL_ABOVE_GAP_PX * distanceMpc) / pxPerRad,
+          )
+        : [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
       // Long names ("Perseus-Pisces Supercluster") break onto two balanced
       // lines here, at the presentation seam — the store keeps the unwrapped
       // name for the palette / InfoCard, and the layout just honours the '\n'.
@@ -225,7 +244,7 @@ export function produceStructureLabels(
       maxPixelSize: style.maxPixelSize,
       fadeAlpha,
       alignX: 'center',
-      alignY: 'center',
+      alignY: above ? 'bottom' : 'center',
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,

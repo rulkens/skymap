@@ -5,6 +5,8 @@ import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/fo
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
+import { MARKER_RADIUS_RETUNE } from '../../../../src/data/markerRadiusRetune';
+import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../../src/data/structureLabelAboveGapPx';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -90,6 +92,8 @@ function makeCtx(
   return {
     snapshot: { focusBlend, nowMs: 0 },
     drawCamPos: [0, 0, CAM_Z],
+    // Identity pose: screen-up is world +Y.
+    cam: { yaw: 0, pitch: 0, roll: 0, poseBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
     ...viewOver,
@@ -290,6 +294,33 @@ describe('produceStructureLabels', () => {
     const alpha = out.labels[0]!.fadeAlpha!;
     expect(alpha).toBeGreaterThan(0);
     expect(alpha).toBeLessThan(1);
+  });
+
+  it("an 'above' category's label is anchored above its ring with a bottom alignment", () => {
+    // Nebula on the near0 slab, inside its visibility band (camera 0.03 Mpc from
+    // the origin): camera-relative anchor [0.01, 0, 0], ring radius 0.001 Mpc at
+    // 0.01 Mpc. Straight up from the centre by the drawn radius plus the pixel
+    // gap converted to Mpc at that distance.
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('n1', { category: 'nebula', worldPos: [0.01, 0, 0.03], physicalRadiusMpc: 0.001 }),
+    ]);
+    const ctx = makeCtx({ drawCamPos: [0, 0, 0.03] as Readonly<[number, number, number]> });
+    const label = produceStructureLabels(state, ctx, 'near0').labels[0]!;
+    const pxPerRad = 540 / Math.tan((30 * Math.PI) / 180);
+    const lift = 0.001 * MARKER_RADIUS_RETUNE + (STRUCTURE_LABEL_ABOVE_GAP_PX * 0.01) / pxPerRad;
+    expect(label.alignY).toBe('bottom');
+    expect(label.worldPos[0]).toBeCloseTo(0.01, 9);
+    expect(label.worldPos[1]).toBeCloseTo(lift, 9);
+    expect(label.worldPos[2]).toBeCloseTo(0, 9);
+  });
+
+  it("a 'centre' category's label anchor and alignment are unchanged", () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
+    const label = produceStructureLabels(state, makeCtx(), 'cosmo').labels[0]!;
+    expect(label.worldPos).toEqual([10, 0, CAM_Z]);
+    expect(label.alignY).toBe('center');
   });
 
   it('stamps each label with the pick id its own ring writes — a PER-CATEGORY index', () => {
