@@ -148,7 +148,9 @@ const press = PRESS_PICTURES.map((row) => {
   }
 
   @media (max-width: 480px) {
+    /* Name above statement: two rows of its own, or the pair would share the card's one row and overlap. */
     dl > div {
+      grid-template-rows: none;
       row-gap: 0.25rem;
     }
 
