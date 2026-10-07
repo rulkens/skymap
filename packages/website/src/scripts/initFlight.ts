@@ -136,7 +136,8 @@ export function initFlight(root: HTMLElement): void {
     const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
     if (scale.textContent !== readout) scale.textContent = readout;
 
-    fill.style.height = `${p * 100}%`;
+    // The rings are evenly spaced, so the line fills by stops passed and is full at the last ring.
+    fill.style.height = `${(Math.min(at, count - 1) / (count - 1)) * 100}%`;
     const shown = Math.min(Math.round(at), count - 1);
     if (shown !== current) {
       current = shown;
