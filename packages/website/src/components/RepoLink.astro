@@ -5,6 +5,27 @@ import { REPO_BLOB } from '../data/siteIdentity';
 type Props = { path: string };
 
 const { path } = Astro.props;
+// A printed path breaks after a slash and nowhere else, so a hyphen at a line's end is never mistaken for part of a name.
+const parts = path.split('/');
 ---
 
-<a href={[REPO_BLOB, path].join('/')}><slot><code>{path}</code></slot></a>
+<a href={[REPO_BLOB, path].join('/')}
+  ><slot
+    ><code
+      >{
+        parts.map((part, i) => (
+          <>
+            <span>{part + (i < parts.length - 1 ? '/' : '')}</span>
+            <wbr />
+          </>
+        ))
+      }</code
+    ></slot
+  ></a
+>
+
+<style>
+  span {
+    white-space: nowrap;
+  }
+</style>

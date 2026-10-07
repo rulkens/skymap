@@ -2,7 +2,7 @@
 /*
  * DocTable — every table of a docs page: a Markdown table (its slot) or, as
  * `<Table head={…} rows={…} />`, one fed from data. Each row is laid on the
- * text column's own grid columns by one of five layouts (@types/DocTableCols),
+ * text column's own grid columns by one of the layouts of @types/DocTableCols,
  * chosen by the number of columns unless `cols` names one, so tables with the
  * same headings share their column edges down a page. Under 700px a row is a
  * block: its first cell as its name, the others under it, led by their
@@ -25,7 +25,9 @@ const fromSlot = Astro.props.rows ? undefined : tableCells(await Astro.slots.ren
 const head: readonly Cell[] = Astro.props.head ?? fromSlot!.head.map((html) => ({ html }));
 const rows: readonly (readonly Cell[])[] = Astro.props.rows ?? fromSlot!.rows.map((row) => row.map((html) => ({ html })));
 const labels = Astro.props.head ?? fromSlot!.head.map((html) => html.replace(/<[^>]+>/g, '').trim());
-const cols = Astro.props.cols ?? (head.length === 2 ? '2 4' : head.length === 3 ? '2 2 2' : 'stack');
+// A name in code is never broken, so it can be wider than a name column: a table of such names sets each over its words.
+const coded = rows.some((row) => typeof row[0] === 'object' && 'codes' in row[0]);
+const cols = coded ? 'over' : (Astro.props.cols ?? (head.length === 2 ? '2 4' : head.length === 3 ? '2 2 2' : 'stack'));
 // A table with no heading over its first column names its rows there: those cells are the rows' headers.
 const named = labels[0] === '';
 // Ends every cell: the search index joins the words of neighbouring cells where nothing stands between them.
@@ -73,7 +75,7 @@ const SPACE = ' ';
                     cell.codes.map((code, k) => (
                       <>
                         {k > 0 && ', '}
-                        <code>{code}</code>
+                        <code class="name">{code}</code>
                       </>
                     ))
                   ) : 'use' in cell ? (
@@ -168,6 +170,11 @@ const SPACE = ' ';
     margin-top: 0.25rem;
   }
 
+  /* A hyphen at a line's end could be the name's own or the break's: a name stays whole. */
+  .name {
+    white-space: nowrap;
+  }
+
   /* True columns: the first cell's span, the last cell's from the right, and what is between takes the rest. */
   tr > * {
     grid-column-end: span 2;
@@ -206,8 +213,22 @@ const SPACE = ' ';
     margin-top: 0.375rem;
   }
 
+  /* Names over their words: a row is a block at every width, as every row but a `2 4` one is on a phone. */
+  [data-cols='over'] tr > * {
+    grid-column: 1 / -1;
+  }
+
+  [data-cols='over'] tbody tr > :nth-child(n + 2) {
+    margin-top: 0.375rem;
+  }
+
+  [data-cols='over'] tbody tr:first-child {
+    border-top: 1px solid rgb(232 238 255 / 0.2);
+  }
+
   /* A stacked cell is led by its column's heading, so the heading row keeps only the headings of true columns. */
   [data-cols='detail'] td:nth-child(n + 3)::before,
+  [data-cols='over'] td:nth-child(n + 3)::before,
   [data-cols='stack'] td:nth-child(n + 2)::before {
     content: attr(data-label);
     /* Read once, from the heading cell: not again here. */
@@ -217,7 +238,8 @@ const SPACE = ' ';
   }
 
   [data-cols='detail'] thead th:nth-child(n + 3),
-  [data-cols='stack'] thead th:nth-child(n + 2) {
+  [data-cols='stack'] thead th:nth-child(n + 2),
+  [data-cols='over'] thead {
     position: absolute;
     width: 1px;
     height: 1px;
