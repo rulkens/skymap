@@ -17,7 +17,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Distance
   {
     id: 'method-comoving',
-    text: 'The integral has no closed form, so we work it out by Simpson’s rule in 64 steps. The constant in front, c/H₀, is 4,283 megaparsecs. A redshift of 0.1 comes out at 418 megaparsecs and a redshift of 1 at 3,275. The straight-line rule, distance = cz/H₀, would give 428 and 4,283: 2.5 per cent and 31 per cent too far.',
+    text: 'The integral has no closed form, so we work it out by Simpson’s rule in 64 steps. The constant in front, c/H₀, is 4,283 megaparsecs. The straight-line rule, distance = cz/H₀, would put a redshift of 0.1 at 428 megaparsecs and a redshift of 1 at 4,283: 2.5 per cent and 31 per cent too far.',
     source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
@@ -31,7 +31,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-local-lookup',
-    text: 'A distance from one of the three lists is used only when it is under 30 megaparsecs. Our own list has 14 galaxies, each with the method of its distance written beside it. Cosmicflows-4 and HyperLEDA are looked up by a galaxy’s PGC number, so a row without one keeps its redshift distance. HyperLEDA gives a distance modulus μ, which becomes 10^((μ − 25) / 5) megaparsecs.',
+    text: 'A distance from one of the three lists is used only when it is under 30 megaparsecs. Our own list has 14 galaxies, each with the method of its distance written beside it. Cosmicflows-4 and HyperLEDA are looked up by a galaxy’s PGC number, so a row without one keeps its redshift distance. HyperLEDA gives a distance modulus μ, which becomes megaparsecs by the rule below.',
     source: `${REPO_BLOB}/tools/catalog/catalogDistanceFor.ts`,
     sourceLabel: `the nearby-distance lookup, ${IN_REPO}`,
     checked: CHECKED,
@@ -40,21 +40,21 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Galaxies: brightness, colour, size
   {
     id: 'method-galaxy-light',
-    text: 'A galaxy’s light on screen starts from its absolute magnitude M, taken from one band of its catalogue: g for SDSS, J for 2MRS, B for GLADE. It is 10^(−0.4 (M − M_med)), where M_med is the median of that galaxy’s own catalogue, divided by the square of its diameter over 30 kiloparsecs. A compact luminous galaxy is bright and a large faint one is dim.',
+    text: 'A galaxy’s light on screen starts from its absolute magnitude M, taken from one band of its catalogue: g for SDSS, J for 2MRS, B for GLADE. It is counted from the median of that galaxy’s own catalogue and divided by the square of its diameter D over 30 kiloparsecs, as below. A compact luminous galaxy is bright and a large faint one is dim.',
     source: `${REPO_BLOB}/src/utils/galaxy/galaxySbAmp.ts`,
     sourceLabel: `the galaxy brightness function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-galaxy-colour',
-    text: 'Each catalogue has its own range on the colour scale: u − g from 0.5 to 2.0 for SDSS, B − J from 0.5 to 3.5 for GLADE, J − K from 0.7 to 1.1 for 2MRS, g − r from 0.35 to 1.05 for DESI and B − R from 0 to 2 for the quasars. For SDSS and GLADE the colour is first moved towards the blue in proportion to the redshift, a rough correction for the reddening that redshift itself causes. A galaxy without both magnitudes is drawn a pale neutral.',
+    text: 'A galaxy’s colour on screen is the difference of two catalogued magnitudes, placed on a scale from blue through white to red. Each catalogue has its own pair and range: u − g from 0.5 to 2.0 for SDSS, B − J from 0.5 to 3.5 for GLADE, J − K from 0.7 to 1.1 for 2MRS, g − r from 0.35 to 1.05 for DESI and B − R from 0 to 2 for the quasars. For SDSS and GLADE the colour is first moved towards the blue in proportion to the redshift, a rough correction for the reddening that redshift itself causes. A galaxy without both magnitudes is drawn a pale neutral.',
     source: `${REPO_BLOB}/src/data/galaxyCatalog/colourIndex.ts`,
     sourceLabel: `the colour-index function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-galaxy-size',
-    text: 'A galaxy’s diameter comes from a different measurement in each catalogue. SDSS: six times the radius that holds half the light. 2MRS: the width at the contour where the infrared surface brightness falls to 20 magnitudes per square arcsecond. GLADE has no size at all, so we estimate one from the luminosity in blue light by a size-luminosity relation the code gives to Tully (1988), log R = −0.249 (M_B + 21) + 1.366 with R in kiloparsecs, and never less than 1 kiloparsec across.',
+    text: 'A galaxy’s diameter comes from a different measurement in each catalogue. SDSS: six times the radius that holds half the light. 2MRS: the width at the contour where the infrared surface brightness falls to 20 magnitudes per square arcsecond. GLADE has no size at all, so we estimate one from the luminosity in blue light by a size-luminosity relation the code gives to Tully (1988), with the radius R in kiloparsecs, and never less than 1 kiloparsec across.',
     source: `${REPO_BLOB}/src/utils/math/galaxyDiameterKpc.ts`,
     sourceLabel: `the size estimate, ${IN_REPO}`,
     checked: CHECKED,
@@ -63,14 +63,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Stars
   {
     id: 'method-star-magnitude',
-    text: 'A star’s absolute magnitude is M = m − 5 log₁₀(d / 10 parsecs), from its apparent magnitude m in Gaia’s G band and the distance d we adopted. For the stars taken from Hipparcos, m is the Hipparcos magnitude and the colour is its B − V turned into BP − RP. Nothing is corrected for the dust between the star and us.',
+    text: 'A star’s absolute magnitude M comes from its apparent magnitude m in Gaia’s G band and the distance d we adopted. For the stars taken from Hipparcos, m is the Hipparcos magnitude and the colour is its B − V turned into BP − RP. Nothing is corrected for the dust between the star and us.',
     source: `${REPO_BLOB}/tools/stars/buildStars.ts`,
     sourceLabel: `the star build, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-star-light',
-    text: 'On screen a star gives 10^(−0.4 M) of light, which is what it would send from 10 parsecs, divided by the square of the camera’s distance counted in units of 10 parsecs. That is the inverse-square law in empty space. The result is then multiplied by an exposure we set by eye.',
+    text: 'On screen a star gives the light it would send from 10 parsecs, divided by the square of the camera’s distance r counted in units of 10 parsecs. That is the inverse-square law in empty space. The result is then multiplied by an exposure we set by eye.',
     source: `${REPO_BLOB}/src/services/gpu/shaders/lib/starPhotometry.wesl`,
     sourceLabel: `the star brightness shader, ${IN_REPO}`,
     checked: CHECKED,
@@ -84,7 +84,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-star-card',
-    text: 'The temperature on a field star’s card comes from BP − RP by the relation of Mucciarelli, Bellazzini and Massari (2021), 5040 / T = b₀ + b₁C + b₂C², taken at the Sun’s metal content; the paper gives its scatter as 60 to 80 kelvin. A star brighter than absolute magnitude 4.0 and redder than 0.9 is treated as a giant, any other as a dwarf. The luminosity adds the bolometric correction of Andrae and others (2018), which we use only between 4,000 and 8,000 kelvin, and takes the Sun’s bolometric magnitude as 4.74. The radius follows from the two: R = √L × (5772 / T)², in solar units.',
+    text: 'The temperature on a field star’s card comes from the colour C = BP − RP by the relation of Mucciarelli, Bellazzini and Massari (2021), taken at the Sun’s metal content; the paper gives its scatter as 60 to 80 kelvin. A star brighter than absolute magnitude 4.0 and redder than 0.9 is treated as a giant, any other as a dwarf. The luminosity adds the bolometric correction of Andrae and others (2018), which we use only between 4,000 and 8,000 kelvin, and takes the Sun’s bolometric magnitude as 4.74. The radius follows from the two, in solar units.',
     source: `${REPO_BLOB}/src/utils/astro/deriveStarProperties.ts`,
     sourceLabel: `the star estimates, ${IN_REPO}`,
     checked: CHECKED,
@@ -93,14 +93,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Solar System
   {
     id: 'method-kepler-error',
-    text: 'JPL gives the error of its elements by themselves, for the years 1800 to 2050: 15 to 40 arcseconds along the orbit for Mercury, Venus and Mars, 400 for Jupiter and 600 for Saturn, and in distance from the Sun up to 600,000 kilometres for Jupiter, 1 million for Uranus and 1.5 million for Saturn. The fitted correction is what brings a planet to within 1,000 kilometres.',
+    text: 'By themselves, for the years 1800 to 2050, JPL gives its elements an error of 10 to 600 arcseconds along the orbit, Saturn’s being the largest, and of up to 1.5 million kilometres in distance from the Sun. The fitted correction is what brings a planet to within 1,000 kilometres.',
     source: 'https://ssd.jpl.nasa.gov/planets/approx_pos.html',
     sourceLabel: 'JPL Solar System Dynamics, approximate positions of the planets',
     checked: CHECKED,
   },
   {
     id: 'method-atmosphere-earth',
-    text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols scatter 3.9 and absorb 4.4 in every colour, mostly forwards, with a scale height of 1.2 kilometres. Ozone absorbs in a layer centred 25 kilometres up. The shell ends 100 kilometres above the ground. The other eight tables mix published values, values worked out from them and values adjusted by eye; the file marks which is which.',
+    text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values worked out from them and values adjusted by eye; the file marks which is which.',
     source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
@@ -123,7 +123,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-black-hole',
-    text: 'For a black hole that does not rotate, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres, about a twelfth of the distance from Earth to the Sun.',
+    text: 'For a black hole that does not rotate, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres.',
     source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the light-bending table, ${IN_REPO}`,
     checked: CHECKED,
@@ -155,21 +155,21 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-light-travel',
-    text: 'The light-travel time on a galaxy’s card is a short rule, z / (1 + z) times 13.97 thousand million years, and not the model’s own integral. Against the integral it reads 2 per cent short at a redshift of 0.1, 5 per cent at 0.3 and 9 per cent at 1.',
+    text: 'The light-travel time on a galaxy’s card is a short rule, z / (1 + z) times 13.97 billion (thousand million) years, and not the model’s own integral. Against the integral it reads 2 per cent short at a redshift of 0.1, 5 per cent at 0.3 and 9 per cent at 1.',
     source: `${REPO_BLOB}/src/utils/math/lookbackTimeGyr.ts`,
     sourceLabel: `the light-travel rule, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-luminosity-distance',
-    text: 'A galaxy’s absolute magnitude is worked out with the comoving distance, where the luminosity distance, (1 + z) times larger, belongs, and with no correction for the part of the spectrum that redshift moves out of the band. Luminosities are therefore too low by (1 + z)²: 0.2 magnitudes at a redshift of 0.1 and 0.6 at 0.3, as a card shows them. On screen the light is spread over a disc that is itself (1 + z) too wide where its size was measured, so the surface brightness is low by (1 + z)⁴: 0.4 magnitudes at 0.1.',
+    text: 'A galaxy’s absolute magnitude is worked out with the comoving distance, where the luminosity distance, (1 + z) times larger, belongs, and with no correction for the part of the spectrum that redshift moves out of the band. Luminosities, as a card shows them, are therefore too low by (1 + z)². On screen the light is spread over a disc that is itself (1 + z) too wide where its size was measured, so the surface brightness is low by (1 + z)⁴.',
     source: `${REPO_BLOB}/src/utils/math/absoluteFromApparent.ts`,
     sourceLabel: `the absolute-magnitude function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-galaxy-fade',
-    text: 'A galaxy too far away to be larger than its dot does not fade as distance squared. Its light is multiplied by the ratio of its true size on screen to the dot’s, raised to the power 0.7; the inverse-square law is the power 2. At ten times the distance where it shrank to a dot, a galaxy is drawn 5 times fainter where it should be 100 times fainter.',
+    text: 'A galaxy too far away to be larger than its dot does not fade as distance squared. Its light is multiplied by the ratio of its true size on screen to the dot’s, raised to the power 0.7; the inverse-square law is the power 2.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/galaxyCatalogs/initialState.ts`,
     sourceLabel: `the galaxies’ starting settings, ${IN_REPO}`,
     checked: CHECKED,
@@ -190,7 +190,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-size-distance',
-    text: 'A galaxy’s diameter in kiloparsecs is its measured angle times the comoving distance, where a distance smaller by (1 + z) belongs. An SDSS diameter is therefore too large by that factor: 10 per cent at a redshift of 0.1 and 30 per cent at 0.3. Seen from the Sun the galaxy still covers the angle that was measured.',
+    text: 'A galaxy’s diameter in kiloparsecs is its measured angle times the comoving distance, where a distance smaller by (1 + z) belongs. An SDSS diameter is therefore too large by that factor. Seen from the Sun the galaxy still covers the angle that was measured.',
     source: `${REPO_BLOB}/tools/parsers/sdssCsv.ts`,
     sourceLabel: `the SDSS parser, ${IN_REPO}`,
     checked: CHECKED,
@@ -225,14 +225,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-star-steps',
-    text: 'A star’s absolute magnitude is stored in 128 steps of 0.19 magnitudes from −6.0 and its colour in 64 steps of 0.08 from −0.6. A star’s brightness can therefore be off by up to 9 per cent, half a step, and anything outside those ranges is stored at the end of the range.',
+    text: 'A star’s absolute magnitude is stored in 128 steps of 0.19 magnitudes from −6.0 and its colour in 64 steps of 0.08 from −0.6. Anything outside those ranges is stored at the end of the range.',
     source: `${REPO_BLOB}/src/data/starCatalog/starCatalogFormat.ts`,
     sourceLabel: `the star file format, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-earth-barycentre',
-    text: 'Earth is drawn at the Earth-Moon barycentre, the point the pair turn about, since that is what JPL’s elements and our fit describe. The centre of the real Earth lies about 4,700 kilometres from that point, always on the side away from the Moon.',
+    text: 'Earth is drawn at the Earth-Moon barycentre, the point the pair turn about, since that is what JPL’s elements and our fit describe. The real Earth’s centre is off that point, always on the side away from the Moon.',
     source: `${REPO_BLOB}/src/data/bodies/orbitalElements.ts`,
     sourceLabel: `the orbital elements, ${IN_REPO}`,
     checked: CHECKED,
@@ -246,23 +246,37 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-planet-facts',
-    text: 'The fact sheet on a body’s card was typed by hand from rounded textbook figures, with no source kept for each value. On 7 October 2026 we compared the nine planet rows with NASA’s Planetary Fact Sheet. Eight values differ: the surface gravity of Jupiter (2.53 g here, 2.36 at NASA), Saturn (1.07, 0.916), Neptune (1.14, 1.12) and Pluto (0.063, 0.071); Saturn’s moons (146, 274); the distances of Saturn (9.54 astronomical units, 9.57) and Neptune (30.1, 30.18); and Pluto’s mean temperature (−232 °C, −225). The 34 rows for moons, spacecraft and other bodies have been compared with nothing.',
+    text: 'The figures on a body’s card were typed by hand from rounded textbook values, with no source kept for each. For a number you mean to quote, use NASA’s Planetary Fact Sheet.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-hand-structures',
-    text: 'The 3 voids and 16 groups exist only as rows we placed by hand, as do the 15 clusters and 8 superclusters that replace a catalogue row. Each has a position, a distance and a radius, and no reference. A void or a group has no agreed edge: take every such ring as our choice of where to draw one.',
+    text: 'The 3 voids and 16 groups exist only as rows we placed by hand, as do the 15 clusters and 8 superclusters that replace a catalogue row, and none has a reference. A void or a group has no agreed edge: take every such ring as our choice of where to draw one.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-black-hole-mass',
-    text: 'The black hole’s mass and its distance come from two different fits. The distance is the 8,178 parsecs of 2019; the mass matches the GRAVITY Collaboration’s later fit, 4.30 million solar masses to a quarter of a per cent, which was made with its own distance.',
+    text: 'The black hole’s mass and its distance come from two different fits. The distance is the 8,178 parsecs of 2019; the mass matches the GRAVITY Collaboration’s later fit, 4.30 million solar masses to a quarter of a per cent, which was made with its own distance, 8,277 parsecs.',
     source: 'https://arxiv.org/abs/2112.07478',
     sourceLabel: 'GRAVITY Collaboration 2022, the mass distribution in the Galactic Centre',
+    checked: CHECKED,
+  },
+  {
+    id: 'depart-frame-size',
+    text: 'The cosmic microwave background is 3.372 millikelvin warmer in one direction than its mean of 2.728 kelvin, which puts the Sun’s speed against it at 370 km/s. A redshift measured from the Sun differs from one in that frame by up to that speed, which is 5 megaparsecs at our Hubble constant.',
+    source: 'https://arxiv.org/abs/astro-ph/9605054',
+    sourceLabel: 'Fixsen et al. 1996, the cosmic microwave background spectrum from the full COBE FIRAS data set',
+    checked: CHECKED,
+  },
+  {
+    id: 'depart-star-motion',
+    text: 'Barnard’s Star crosses the sky at 10.4 arcseconds a year: 0.80 in right ascension and 10.36 in declination, in Gaia’s third data release.',
+    source: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Barnard%27s+star',
+    sourceLabel: 'SIMBAD, Barnard’s Star',
     checked: CHECKED,
   },
   {

@@ -32,7 +32,9 @@ function lookbackGyr(z: number): number {
 describe('docs science numbers', () => {
   it('the table of distances is what the distance function gives', () => {
     const rows = [
-      ...PAGE.matchAll(/\['([\d.]+)', '([\d,]+)', '([\d.]+) (million|thousand million)'\]/g),
+      ...PAGE.matchAll(
+        /\['([\d.]+)', '([\d,]+)', '([\d.]+) (million|billion)(?: \(thousand million\))?'\]/g,
+      ),
     ];
     expect(rows.length).toBe(6);
     for (const [, z, mpc, ly, unit] of rows) {
