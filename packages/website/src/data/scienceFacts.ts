@@ -338,7 +338,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-quasar-boost',
-    text: 'Quasars are drawn three times brighter than our brightness model gives, and they do not fade with distance as galaxies do.',
+    text: 'Quasars are drawn three times brighter than our brightness model gives a galaxy.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources/milliquas.ts`,
     sourceLabel: `the Milliquas definition, ${IN_REPO}`,
     checked: CHECKED,
