@@ -18,12 +18,12 @@ const written = pages.filter((page) => page.status === 'live').length;
 <header class="wrap open" data-opening>
   <h1>Docs</h1>
   <p class="say">
-    These pages document what skymap does, the data it is built from and how it draws that data.
+    skymap is a free, open-source web app that draws the mapped universe in three dimensions at true scale. These
+    pages document what it does, the data it is built from and how it draws that data.
   </p>
   <DocsSearch big />
   <p class="count small">
-    {written} of {pages.length} pages {written === 1 ? 'is' : 'are'} written so far. A name with a ring is a page you
-    can read. The dimmer names are planned, and listed so that you can see what is coming.
+    {written} of {pages.length} pages {written === 1 ? 'is' : 'are'} written. The dimmer names are planned.
   </p>
 </header>
 

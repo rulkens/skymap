@@ -1,17 +1,17 @@
 ---
 title: Object catalogue
-description: Every thing in skymap that has a name of its own, each with its other names, the id a link uses and a link that opens it in the app.
+description: Every named object in skymap, with its other names, the id a link uses and a link that opens it in the app.
 group: Reference
 order: 4
-facts: [search-catalogue-galaxies, search-scope]
+facts: [search-catalogue-galaxies, ref-objects-rows]
 ---
 
 import ObjectFinder from '../../../components/ObjectFinder.astro';
 import ObjectList from '../../../components/ObjectList.astro';
 
-<Fact id="ref-objects-rows" inline /> Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. To link to a row of this page, put the same id after the page’s address: `#body-saturn`.
+Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. Each row here has an address of its own too: add the id to this page’s, as in `#body-saturn`. The rows and their links are made from the app’s own tables when the site is built.
 
-The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a GLADE or 2MRS galaxy by its designation, as [Finding things](/docs/guide/finding/) describes, and any object you have selected has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
+The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a GLADE or 2MRS galaxy by its designation (see [Finding things](/docs/guide/finding/)), and any object the camera is focused on has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
 
 <ObjectFinder />
 
