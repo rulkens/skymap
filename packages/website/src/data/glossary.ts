@@ -91,7 +91,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'bloom',
     term: 'Bloom',
-    text: 'The soft glow the app adds round the brightest parts of the picture. It is image processing, not something in the sky.',
+    text: 'The soft glow the app adds round the brightest parts of the picture. It is image processing.',
     facts: ['sci-tone'],
     more: SETTINGS,
   },
@@ -134,7 +134,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'colour-index',
     term: 'Colour index',
-    text: 'The difference between an object’s magnitudes in two bands of light, which says whether it is bluer or redder. A galaxy’s colour on screen comes from one; it is not the colour an eye would see.',
+    text: 'The difference between an object’s magnitudes in two bands of light, which says whether it is bluer or redder. A galaxy’s colour on screen comes from one.',
     facts: ['sci-colour'],
     more: BINS,
   },
@@ -210,7 +210,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'derived',
     term: 'Derived',
-    text: `${gloss('derived')} A galaxy’s distance, worked out from its redshift, is derived. One of the site’s three sorting words.`,
+    text: `${gloss('derived')} A galaxy’s distance, computed from its redshift, is derived. One of the site’s three sorting words.`,
     facts: ['gloss-honesty-words', 'sci-galaxy-distance'],
     more: BINS,
     see: ['measured', 'drawn'],
@@ -304,7 +304,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'finger-of-god',
     term: 'Finger of god',
-    text: 'A streak of galaxies that points at us in a map made from redshifts. It is a rich cluster stretched along the line of sight by the speeds of its own galaxies, not a real shape.',
+    text: 'A streak of galaxies that points at us in a map made from redshifts. It is a rich cluster stretched along the line of sight by the speeds of its own galaxies.',
     facts: ['sim-redshift-space'],
     more: SIMPLE,
     see: ['peculiar-velocity'],
@@ -319,7 +319,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'flux-limit',
     term: 'Flux limit',
-    text: 'The faintest brightness a survey records. Far away only the most luminous galaxies pass it, so a map thins with distance without the universe being emptier there.',
+    text: 'The faintest brightness a survey records. Far away only the most luminous galaxies pass it, so a map made from the survey thins with distance.',
     facts: ['sim-flux-limits'],
     more: SIMPLE,
   },
@@ -367,7 +367,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'glade',
     term: 'GLADE',
-    text: 'The Galaxy List for the Advanced Detector Era: a compilation of galaxy catalogues that covers the whole sky. Nearly half its redshifts are estimates from colour, not from a spectrum.',
+    text: 'The Galaxy List for the Advanced Detector Era: a compilation of galaxy catalogues that covers the whole sky. Nearly half its redshifts are estimated from colour.',
     facts: ['sci-photometric-share'],
     source: 'glade',
     see: ['photometric-redshift'],
@@ -558,7 +558,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'modelled',
     term: 'Modelled',
-    text: 'Generated from a physical model, not measured object by object. The model’s numbers are from the literature where a reference is given, and ours where the page says so. The docs use the word for the Milky Way seen from outside, the atmospheres, the black hole and the sphere at the edge of the observable universe; under the site’s three sorting words it counts as drawn.',
+    text: 'Generated from a physical model. The model’s numbers are from the literature where a reference is given, and ours where the page says so. The docs use the word for the Milky Way seen from outside, the atmospheres, the black hole and the sphere at the edge of the observable universe; under the site’s three sorting words it counts as drawn.',
     facts: ['gloss-honesty-words', 'sci-milky-way', 'sci-atmospheres', 'sci-black-hole', 'sci-horizon-shell'],
     more: { label: 'Measured, derived, modelled, drawn', path: '/docs/science/' },
     see: ['drawn', 'derived'],
@@ -615,14 +615,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'particle-horizon',
     term: 'Particle horizon',
-    text: 'How far away, today, the most distant matter is from which any signal could have reached us. It is the edge of the observable universe, and it comes from a model, not from an observation.',
+    text: 'How far away, today, the most distant matter is from which any signal could have reached us. It is the edge of the observable universe, and it is computed from a model of cosmology.',
     facts: ['sci-horizon-shell'],
     see: ['observable-universe'],
   },
   {
     id: 'pass',
     term: 'Pass',
-    text: 'One run of commands on the graphics processor: a render pass draws into a set of images, a compute pass works something out and draws nothing.',
+    text: 'One run of commands on the graphics processor: a render pass draws into a set of images, a compute pass computes and draws nothing.',
     facts: ['gloss-pass'],
     more: { label: 'The frame', path: '/docs/rendering/' },
     see: ['draw-call'],
@@ -790,7 +790,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'utc',
     term: 'UTC',
-    text: 'Coordinated Universal Time: the world’s standard clock time, which is the time at Greenwich without summer time. The app’s clock shows it and reads typed dates in it, not in your computer’s local time.',
+    text: 'Coordinated Universal Time: the world’s standard clock time, which is the time at Greenwich without summer time. The app’s clock shows it and reads typed dates in it.',
     facts: ['date-entry-utc'],
     more: { label: 'Time', path: '/docs/guide/time/' },
   },
