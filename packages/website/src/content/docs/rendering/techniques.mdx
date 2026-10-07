@@ -9,7 +9,7 @@ The order these are drawn in is on [The frame](/docs/rendering/); what each stan
 
 <Figure id="render-lod" />
 
-The catalogues hold up to about three million galaxies, and from far out nearly all of them are smaller than a pixel. Up close, one galaxy can fill the window, so a galaxy is drawn in three ways.
+The [catalogues](/docs/data/) hold up to about three million galaxies, and from far out nearly all of them are smaller than a pixel. Up close, one galaxy can fill the window, so a galaxy is drawn in three ways.
 
 <Fact id="render-galaxy-triangle" />
 
@@ -139,8 +139,8 @@ The method is that of [msdfgen](https://github.com/Chlumsky/msdfgen), by V. Chlu
 
 ## Bloom, tone curves and HDR
 
-[The frame](/docs/rendering/#light-to-screen) says where these run. Bloom follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six, and a threshold that is a setting.
+[The frame](/docs/rendering/#light-to-screen) says where these run. [Bloom](/docs/reference/glossary/#bloom) follows J. Jimenez, [“Next Generation Post Processing in Call of Duty: Advanced Warfare”](https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare/) (SIGGRAPH 2014 course), with five sizes where the talk has six, and a threshold that is a setting.
 
-Three of the five tone curves have a source. Reinhard is from E. Reinhard and others, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004). Both papers map a pixel’s luminance and keep its colour; ours maps red, green and blue separately, so a bright pixel also desaturates towards white. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
+Three of the five [tone curves](/docs/reference/glossary/#tone-curve) have a source. Reinhard is from E. Reinhard and others, [“Photographic Tone Reproduction for Digital Images”](https://doi.org/10.1145/566654.566575) (2002), in the form with a chosen white point. Asinh is the stretch of R. Lupton and others, [“Preparing Red-Green-Blue Images from CCD Data”](https://arxiv.org/abs/astro-ph/0312483) (2004). Both papers map a pixel’s luminance and keep its colour; ours maps red, green and blue separately, so a bright pixel also desaturates towards white. ACES is <Source id="narkowicz-aces">K. Narkowicz’s fitted curve</Source>, unchanged.
 
 HDR, for a display that reports a high dynamic range, is a switch under [Make it brighter or calmer](/docs/guide/settings/#make-it-brighter-or-calmer).

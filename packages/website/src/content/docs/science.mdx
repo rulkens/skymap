@@ -35,7 +35,7 @@ Where a rule departs from the sky, its section links to [Known simplifications](
   ]}
 />
 
-<Fact id="sci-directions" inline /> Positions are kept in megaparsecs from the Sun.
+<Fact id="sci-directions" inline /> Positions are kept in [megaparsecs](/docs/reference/glossary/#megaparsec) from the Sun.
 
 ### Distance from redshift
 
@@ -67,7 +67,7 @@ The formula is the line-of-sight [comoving distance](/docs/reference/glossary/#c
 
 <Fact id="sci-h0-range" />
 
-To check a number, open a galaxy’s card. That of PGC 2 shows a redshift of 0.0167; the rule gives 71 megaparsecs, and the speed on the card is that distance times 70.
+To check a number, open [a galaxy’s card](/docs/guide/info-cards/). That of PGC 2 shows a [redshift](/docs/reference/glossary/#redshift) of 0.0167; the rule gives 71 megaparsecs, and the speed on the card is that distance times 70.
 
 <View to="focus=pgc-2">Open PGC 2</View>
 
@@ -133,7 +133,7 @@ The measured tilts are SDSS’s own, the <Source id="2mass-xsc">2MASS Extended S
 
 ### Position and distance
 
-A star’s position, its brightness in the G band and its colour, BP minus RP, are <Source id="gaia">Gaia</Source>’s; [the pipeline page](/docs/data/pipeline/#stars) says which stars are loaded.
+A star’s position, its brightness in the G band and its [colour](/docs/reference/glossary/#colour-index), BP minus RP, are <Source id="gaia">Gaia</Source>’s; [the pipeline page](/docs/data/pipeline/#stars) says which stars are loaded.
 
 <Fact id="sci-star-distance" />
 
@@ -200,7 +200,7 @@ The other maps are spacecraft mosaics, each with its own page under [Imagery and
 
 ### Atmospheres
 
-The atmospheres of 9 bodies are computed. [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x) compute once how much light the air passes and scatters and look the answer up for every pixel; [Hillaire (2020)](https://doi.org/10.1111/cgf.14050) adds a cheaper treatment of light scattered many times. We wrote our own code for both, and each body has a table of gases and hazes.
+The [atmospheres](/docs/rendering/techniques/#atmospheres) of 9 bodies are computed. [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x) compute once how much light the air passes and scatters and look the answer up for every pixel; [Hillaire (2020)](https://doi.org/10.1111/cgf.14050) adds a cheaper treatment of light scattered many times. We wrote our own code for both, and each body has a table of gases and hazes.
 
 <Fact id="method-atmosphere-earth" />
 
@@ -225,7 +225,7 @@ The atmospheres of 9 bodies are computed. [Bruneton and Neyret (2008)](https://d
 
 <Fact id="method-disc-radius" />
 
-[Freudenreich’s](https://arxiv.org/abs/astro-ph/9707340) own bar stands at 14 degrees; we took the 27 ± 2 that [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593) measured later. The Gaia stars near the Sun are a separate, measured layer. [Techniques](/docs/rendering/techniques/#the-milky-way) says how it is drawn.
+[Freudenreich’s](https://arxiv.org/abs/astro-ph/9707340) own bar stands at 14 degrees; we took the 27 ± 2 that [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593) measured later. <Source id="gaia">The Gaia stars</Source> near the Sun are a separate, measured layer. [Techniques](/docs/rendering/techniques/#the-milky-way) says how it is drawn.
 
 ### The Local Bubble
 
@@ -247,7 +247,7 @@ The table is <Source id="local-bubble">O’Neill and others’</Source>; the [Lo
 
 <Fact id="method-black-hole" />
 
-The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735); the table and the code are our own. The stars around it move on <Source id="s-stars">orbits published from years of tracking</Source>, which is how the mass and the distance are known. The two come from different fits: see [The Milky Way](/docs/simplifications/#the-milky-way).
+The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735); [the table and the code](/docs/rendering/techniques/#the-black-hole) are our own. The stars around it move on <Source id="s-stars">orbits published from years of tracking</Source>, which is how the mass and the distance are known. The two come from different fits: see [The Milky Way](/docs/simplifications/#the-milky-way).
 
 <View to="focus=blackhole-sgr-a-star">Open Sagittarius A*</View>
 
@@ -273,11 +273,11 @@ The catalogue is described by [Wilde and others (2023)](https://arxiv.org/abs/23
 
 <Fact id="sci-filaments" />
 
-The threshold of 5 standard deviations and two passes of smoothing are our settings; DisPerSE’s paper is [Sousbie (2011)](https://arxiv.org/abs/1009.4015).
+The threshold of 5 standard deviations and two passes of smoothing are our settings; <Source id="disperse">DisPerSE</Source>’s paper is [Sousbie (2011)](https://arxiv.org/abs/1009.4015).
 
 <Fact id="sci-flows" />
 
-The reconstruction is published with [Courtois and others (2025)](https://arxiv.org/abs/2502.01308). We draw it as it comes.
+<Source id="cf4pp">The reconstruction</Source> is published with [Courtois and others (2025)](https://arxiv.org/abs/2502.01308). We draw it as it comes.
 
 <View to="exhibit=cosmicWeb">Open the Cosmic Web exhibit</View>
 
@@ -305,7 +305,7 @@ When to switch it off is in the [Settings guide](/docs/guide/settings/); what it
 
 <Fact id="sci-horizon-shell" />
 
-The most distant objects drawn, <Source id="milliquas">Milliquas</Source> quasars at a redshift near 7, are about 8.5 gigaparsecs away. The sphere and the galaxies inside it were computed with two different expansion rates: see [Two expansion rates](/docs/simplifications/#distances-and-redshift-space).
+The most distant objects drawn, <Source id="milliquas">Milliquas</Source> quasars at a redshift near 7, are about 8.5 [gigaparsecs](/docs/reference/glossary/#gigaparsec) away. The sphere and the galaxies inside it were computed with two different expansion rates: see [Two expansion rates](/docs/simplifications/#distances-and-redshift-space).
 
 <View to="exhibit=observableUniverse">Open the Observable Universe exhibit</View>
 
@@ -313,4 +313,4 @@ The most distant objects drawn, <Source id="milliquas">Milliquas</Source> quasar
 
 <Fact id="sci-zoa-band" />
 
-Names, orbit lines, constellation lines, the selection ring and the scale bar are drawn too. The glow around bright objects and the tone curve act on the whole frame: see [Bloom, tone curves and HDR](/docs/rendering/techniques/#bloom-tone-curves-and-hdr).
+[Names](/docs/rendering/techniques/#names), orbit lines, constellation lines, the selection ring and the [scale bar](/docs/reference/glossary/#scale-bar) are drawn too. The glow around bright objects and the tone curve act on the whole frame: see [Bloom, tone curves and HDR](/docs/rendering/techniques/#bloom-tone-curves-and-hdr).

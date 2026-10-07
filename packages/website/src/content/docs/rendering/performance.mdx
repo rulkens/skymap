@@ -46,6 +46,6 @@ A frame time holds for one graphics processor, one browser and one window; what 
 
 <Fact id="render-perf-sweep" />
 
-The same times can be read live in the app’s debug panel: see [Timings](/docs/developers/debug/#timings). The tool also reports how much memory the app has asked the graphics processor for, by owner, and can run each place at all three data sizes in turn. Its <Repo path="tools/perf/README.md">notes</Repo> say how to run it against your own machine and read the report.
+The same times can be read live in the app’s debug panel: see [Timings](/docs/developers/debug/#timings). The [tool](/docs/developers/cli/#measuring) also reports how much memory the app has asked the graphics processor for, by owner, and can run each place at all three data sizes in turn. Its <Repo path="tools/perf/README.md">notes</Repo> say how to run it against your own machine and read the report.
 
 <Note>Code: the tool is <Repo path="tools/perf" />; the timing inside the app is <Repo path="src/services/gpu/timing" />; the places it flies to are in <Repo path="tools/perf/perfScenarios.ts" />.</Note>

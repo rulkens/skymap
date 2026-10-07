@@ -30,7 +30,7 @@ You can stand in a park in Copenhagen and fly without a cut to where the map of 
 
 <Fact id="render-depth-range" />
 
-The ranges are drawn from the farthest to the nearest, each over the last, so a planet covers the stars behind it with no depth test between the two. Inside the galaxies’ range nothing occludes anything, so it has no [depth buffer](/docs/reference/glossary/#depth-buffer): its limits are clip planes only. The depth buffer belongs to the bodies, and each body in view clears it and uses the whole of it for itself.
+The ranges are drawn from the farthest to the nearest, each over the last, so a planet covers the stars behind it with no depth test between the two. Inside the galaxies’ range nothing occludes anything, so it has no [depth buffer](/docs/reference/glossary/#depth-buffer): its limits are [clip planes](/docs/reference/glossary/#clip) only. The depth buffer belongs to the bodies, and each body in view clears it and uses the whole of it for itself.
 
 <Fact id="render-reversed-z" />
 
@@ -56,7 +56,7 @@ Earth is about 0.000000000005 [megaparsecs](/docs/reference/glossary/#megaparsec
 
 <Figure id="render-near-cut" />
 
-The Milky Way is drawn in the near range, so its disc is never cut; other galaxies are in the far one.
+The [Milky Way](/docs/rendering/techniques/#the-milky-way) is drawn in the near range, so its disc is never cut; other galaxies are in the far one.
 
 <Fact id="render-painter" />
 
