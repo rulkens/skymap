@@ -79,6 +79,8 @@ export const voyager: Exhibit = {
       },
     },
   },
+  // The mission clock already moves the scene; a turning camera distracts from it.
+  drift: false,
   fitRadiusMpc: FRAMING_RADIUS_AU * SCALE_UNITS.AU_TO_MPC,
   pose: {
     target: [0, 0, 0],

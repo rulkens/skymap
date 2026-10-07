@@ -79,7 +79,7 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // which a generator runs on cancellation too, so a supersede winds it back
   // as surely as an exit does.
   const priorSpin = yield* select((s: RootState) => s.camera.autoRotate);
-  yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
+  if (exhibit.drift !== false) yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
   try {
     yield* take(exitTakeover);
   } finally {
