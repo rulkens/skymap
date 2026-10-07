@@ -17,7 +17,7 @@ import { sitePath } from '../utils/sitePath';
 type Props = { full?: boolean };
 
 const { full = false } = Astro.props;
-const doiUrl = `https://doi.org/${CITATION.versionDoi}`;
+const doiUrl = `https://doi.org/${CITATION.versionDoi ?? CITATION.conceptDoi}`;
 const text = citationText(CITATION);
 // The reference with its title in italics: the words either side of the title, as the plain line has them.
 const [before = '', after = ''] = text.replace(doiUrl, '').split(CITATION.title);

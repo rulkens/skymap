@@ -17,6 +17,35 @@ const BURCHETT_2020: CiteRef = {
   checked: CHECKED,
 };
 
+/** 2MASS's own paper, which its pages name as the reference for every 2MASS product. */
+const SKRUTSKIE_2006: CiteRef = {
+  authors: 'Skrutskie, M. F., Cutri, R. M., Stiening, R., et al.',
+  year: 2006,
+  title: 'The Two Micron All Sky Survey (2MASS)',
+  journal: `${AJ} 131, 1163`,
+  doi: '10.1086/498708',
+  checked: CHECKED,
+};
+
+/** ESA asks for the mission paper beside the paper of whichever release was used. */
+const GAIA_MISSION_2016: CiteRef = {
+  authors: 'Gaia Collaboration, Prusti, T., de Bruijne, J. H. J., et al.',
+  year: 2016,
+  title: 'The Gaia mission',
+  journal: `${AA} 595, A1`,
+  doi: '10.1051/0004-6361/201629272',
+  checked: CHECKED,
+};
+
+const GAIA_EDR3_2021: CiteRef = {
+  authors: 'Gaia Collaboration, Brown, A. G. A., Vallenari, A., et al.',
+  year: 2021,
+  title: 'Gaia Early Data Release 3. Summary of the contents and survey properties',
+  journal: `${AA} 649, A1`,
+  doi: '10.1051/0004-6361/202039657',
+  checked: CHECKED,
+};
+
 const ELEK_2021: CiteRef = {
   authors: 'Elek, O., Burchett, J. N., Prochaska, J. X., & Forbes, A. G.',
   year: 2021,
@@ -33,9 +62,11 @@ const ELEK_2021: CiteRef = {
  * skymap can rest on, keyed by entry id of ATTRIBUTIONS.md, whose entries name
  * each paper only as "Huchra et al. 2012". Authors, year, title, journal,
  * volume and page are as the DOI's record at doi.org gave them on the check
- * date (three authors, then "et al."); a title printed there in capitals is
- * given as its arXiv record has it. tests/packages/website/citeRefs.test.ts
- * holds each row to the entry that names it.
+ * date (up to four authors in full; of more, three and then "et al."); a
+ * title printed there in capitals is given as its arXiv record has it.
+ * tests/packages/website/cite.test.ts holds each row to the entry that names
+ * it. A source's first row is its own paper; papers its makers also ask for
+ * follow.
  */
 export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
   sdss: [
@@ -59,6 +90,7 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       arxiv: '1108.0669',
       checked: CHECKED,
     },
+    SKRUTSKIE_2006,
   ],
   '2mass-xsc': [
     {
@@ -69,6 +101,7 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       doi: '10.1086/301330',
       checked: CHECKED,
     },
+    SKRUTSKIE_2006,
   ],
   glade: [
     {
@@ -142,6 +175,7 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       doi: '10.1051/0004-6361/202243940',
       checked: CHECKED,
     },
+    GAIA_MISSION_2016,
   ],
   'bailer-jones': [
     {
@@ -153,6 +187,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       doi: '10.3847/1538-3881/abd806',
       checked: CHECKED,
     },
+    GAIA_MISSION_2016,
+    GAIA_EDR3_2021,
   ],
   gcns: [
     {
@@ -163,6 +199,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       doi: '10.1051/0004-6361/202039498',
       checked: CHECKED,
     },
+    GAIA_MISSION_2016,
+    GAIA_EDR3_2021,
   ],
   hipparcos: [
     {
@@ -244,6 +282,14 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       doi: '10.1051/aas:2000169',
       checked: CHECKED,
     },
+    {
+      authors: 'Ochsenbein, F.',
+      year: 1996,
+      title: 'The VizieR database of astronomical catalogues',
+      journal: 'CDS, Centre de Données astronomiques de Strasbourg (the service)',
+      doi: '10.26093/cds/vizier',
+      checked: CHECKED,
+    },
   ],
   cf4pp: [
     {
@@ -283,8 +329,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       year: 2023,
       title:
         'A Parsec-Scale Galactic 3D Dust Map out to 1.25 kpc from the Sun -- Dataset for the 1.25 kpc 3D Dust Map and the 2 kpc 3D Dust Map',
-      journal: 'Zenodo, version 1.0',
-      doi: '10.5281/zenodo.8187943',
+      journal: 'Zenodo, version 1.0.2',
+      doi: '10.5281/zenodo.10658339',
       checked: CHECKED,
     },
   ],
@@ -296,6 +342,14 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
       journal: `${APJ} 973, 136`,
       doi: '10.3847/1538-4357/ad61de',
       arxiv: '2403.04961',
+      checked: CHECKED,
+    },
+    {
+      authors: 'O’Neill, T., Zucker, C., Goodman, A., & Edenhofer, G.',
+      year: 2024,
+      title: 'Data for “The Local Bubble is a Local Chimney: A New Model from 3D Dust Mapping”',
+      journal: 'Harvard Dataverse, version 2.1',
+      doi: '10.7910/DVN/INB1RB',
       checked: CHECKED,
     },
   ],

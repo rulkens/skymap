@@ -54,20 +54,20 @@ skymap draws other people’s measurements. A distance, a redshift or a position
 <CiteRefs />
 
 <Note flow>
-  {PAPERS} papers and datasets for {Object.keys(CITE_REFS).length} sources. We opened each at its DOI or its arXiv record on {CHECKED}, and the authors, year, title and journal here are as that record gives them: three authors, then “et al.”.
+  {PAPERS} papers and datasets for {Object.keys(CITE_REFS).length} sources. We opened each at its DOI or its arXiv record on {CHECKED}, and the authors, year, title and journal here are as that record gives them: up to four authors in full, and of more than four the first three, then “et al.”.
 </Note>
 
 Maps, terrain, 3D models, fonts and code are credited on [Credits](/docs/credits/), with a citation where their makers ask for one.
 
 ## A worked example
 
-This picture of Saturn is on the About page. Its planet is a texture, and the stars behind it come from two catalogues.
+This picture of Saturn is on the About page. Its planet is a texture, and the stars behind it come from two catalogues, with a third for the distances of the Gaia stars.
 
 <Figure id="saturn" />
 
 Here is what we would print with it.
 
-<CiteCaption picture="saturn" cite={['gaia', 'hipparcos']} />
+<CiteCaption picture="saturn" cite={['gaia', 'bailer-jones', 'hipparcos']} />
 
 A picture made with skymap carries the terms of everything in the frame. For this one: {SATURN.terms}
 

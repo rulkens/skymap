@@ -370,7 +370,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-cite-skymap',
     about: 'app',
-    text: `skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, has its own DOI, ${CITATION.versionDoi}.`,
+    text: `skymap is archived on Zenodo. The DOI ${CITATION.conceptDoi} always points to the newest version; version ${CITATION.version}, released on ${formatDate(CITATION.released)}, ${CITATION.versionDoi ? `has its own DOI, ${CITATION.versionDoi}` : 'gets a DOI of its own from Zenodo, which we print here once it is in the citation file'}.`,
     source: `https://doi.org/${CITATION.conceptDoi}`,
     sourceLabel: 'skymap on Zenodo',
     checked: CHECKED,
@@ -378,7 +378,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-cite-file',
     about: 'app',
-    text: 'The repository carries a CITATION.cff file with the same details, which GitHub and reference managers read.',
+    text: 'The repository carries a CITATION.cff file with the author, the title, the version and both DOIs, which GitHub and reference managers read.',
     source: `${REPO_BLOB}/CITATION.cff`,
     sourceLabel: `the citation file, ${IN_REPO}`,
     checked: CHECKED,

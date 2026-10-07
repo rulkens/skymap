@@ -5,5 +5,5 @@ export function citationText(citation: SoftwareCitation): string {
   const authors = citation.authors
     .map((author) => `${author.family}, ${author.given.replace(/(\p{L})\p{L}*\.?/gu, '$1.')}`)
     .join(', ');
-  return `${authors} (${citation.released.slice(0, 4)}). ${citation.title} (version ${citation.version}). Zenodo. https://doi.org/${citation.versionDoi}`;
+  return `${authors} (${citation.released.slice(0, 4)}). ${citation.title} (version ${citation.version}). Zenodo. https://doi.org/${citation.versionDoi ?? citation.conceptDoi}`;
 }

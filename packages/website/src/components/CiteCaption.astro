@@ -27,8 +27,10 @@ if (!press) throw new Error(`No press picture "${picture}" (see src/data/pressPi
 const entries = cite.map((id) => {
   const entry = CREDIT_GROUPS.flatMap((group) => group.entries).find((row) => row.id === id);
   if (!entry || !CITE_REFS[id]) throw new Error(`No reference for "${id}" (see src/data/citeRefs.ts)`);
-  return { ...entry, reference: CITE_REFS[id][0]! };
+  return { ...entry, references: CITE_REFS[id] };
 });
+// Two sources can ask for the same paper (the Gaia mission paper); it is listed once.
+const references = [...new Set(entries.flatMap((entry) => entry.references))];
 // The address as the app itself writes it: the camera's exact position is read once and never written back.
 const view = siteShot(picture)
   .link.split('&')
@@ -48,9 +50,9 @@ const asking = entries.filter((entry) => asksAcknowledgement(entry.asks));
   <h3>In the reference list</h3>
   <p>{citationText(CITATION)}</p>
   {
-    entries.map((entry) => (
+    references.map((reference) => (
       <p>
-        <RefLine reference={entry.reference} />
+        <RefLine reference={reference} />
       </p>
     ))
   }

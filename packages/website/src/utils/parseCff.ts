@@ -15,12 +15,23 @@ export function parseCff(cff: string): CffCitation {
   const authors = [...cff.matchAll(/^\s+- family-names:\s*(.+)\n\s+given-names:\s*(.+)$/gm)].map(
     ([, family = '', given = '']) => ({ family: family.trim(), given: given.trim() }),
   );
-  if (authors.length === 0) throw new Error('CITATION.cff: no authors');
+  // An author written in another key order would be dropped; fail and say so.
+  if (
+    authors.length === 0 ||
+    authors.length !== (cff.match(/^\s+(?:- )?family-names:/gm) ?? []).length
+  )
+    throw new Error('CITATION.cff: an author is not "family-names" then "given-names"');
+  const [, versionDoi, versionOfDoi] =
+    /^\s+- type: doi\n\s+value:\s*(\S+)\n\s+description:.*?version (\d+\.\d+\.\d+)/m.exec(cff) ??
+    [];
   return {
     title: scalar('title'),
     version: scalar('version'),
     released: scalar('date-released'),
     doi: scalar('doi'),
+    ...(versionDoi && versionOfDoi
+      ? { versionDoi: { doi: versionDoi, version: versionOfDoi } }
+      : {}),
     url: scalar('url'),
     licence: scalar('license'),
     authors,

@@ -13,6 +13,7 @@ import { CITATION } from '../../../packages/website/src/data/citation';
 import { CITE_REFS } from '../../../packages/website/src/data/citeRefs';
 import { citationBibtex } from '../../../packages/website/src/utils/citationBibtex';
 import { citationText } from '../../../packages/website/src/utils/citationText';
+import { parseCff } from '../../../packages/website/src/utils/parseCff';
 
 /** Apostrophes as one character, so "O’Neill" on the page is "O'Neill" in the record. */
 const plain = (text: string) => text.replace(/’/g, "'");
@@ -22,13 +23,38 @@ describe('software citation', () => {
     expect(CITATION.version).toBe(pkg.version);
   });
 
-  it('prints the version, the year and the version DOI in both forms', () => {
+  it('prints the version, the year and a DOI in both forms', () => {
     for (const form of [citationText(CITATION), citationBibtex(CITATION, 'https://example.org')]) {
       expect(form).toContain(CITATION.version);
       expect(form).toContain(CITATION.released.slice(0, 4));
-      expect(form).toContain(CITATION.versionDoi);
+      expect(form).toContain(CITATION.versionDoi ?? CITATION.conceptDoi);
       expect(form).toContain(CITATION.authors[0]!.family);
     }
+  });
+
+  // A release moves `version` before Zenodo has minted its DOI: the old one must not follow it.
+  it('never prints a version beside another version’s DOI', () => {
+    const { versionDoi: _old, ...released } = CITATION;
+    const next = { ...released, version: '99.0.0' };
+    expect(citationText(next)).toContain(CITATION.conceptDoi);
+    if (CITATION.versionDoi) expect(citationText(next)).not.toContain(CITATION.versionDoi);
+  });
+});
+
+describe('parseCff', () => {
+  const cff = (version: string, authors: string) =>
+    `title: 'a thing'\nauthors:\n${authors}license: MIT\nurl: 'https://example.org'\ndoi: 10.1/concept\nidentifiers:\n  - type: doi\n    value: 10.1/v1\n    description: 'The Zenodo DOI of version 1.0.0'\nversion: ${version}\ndate-released: '2026-01-01'\n`;
+  const author = '  - family-names: Doe\n    given-names: Jo\n';
+
+  it('reads the version DOI with the version it belongs to', () => {
+    expect(parseCff(cff('1.0.0', author)).versionDoi).toEqual({ doi: '10.1/v1', version: '1.0.0' });
+    expect(parseCff(cff('1.1.0', author)).versionDoi?.version).toBe('1.0.0');
+  });
+
+  it('fails on an author it would otherwise drop', () => {
+    expect(() =>
+      parseCff(cff('1.0.0', `${author}  - given-names: Al\n    family-names: Roe\n`)),
+    ).toThrow(/author/);
   });
 });
 
