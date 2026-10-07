@@ -8,6 +8,7 @@
 import { getCollection, render } from 'astro:content';
 
 import Caveat from '../../components/Caveat.astro';
+import CodeBlock from '../../components/CodeBlock.astro';
 import DocFigure from '../../components/DocFigure.astro';
 import DocLink from '../../components/DocLink.astro';
 import DocTable from '../../components/DocTable.astro';
@@ -42,6 +43,7 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
   <Content
     components={{
       a: DocLink,
+      pre: CodeBlock,
       table: DocTable,
       Table: DocTable,
       Figure: DocFigure,
