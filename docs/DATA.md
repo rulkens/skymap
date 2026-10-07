@@ -210,6 +210,29 @@ At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surface
 
 `npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev and Endeavour orthos are grey RED, colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable.
 
+## Scene reconstruction (`tools/scene-recon/`)
+
+A second, offline pipeline turns Danish open data into 3D scenes of one place, Søndermarken in Copenhagen. Its inputs are the Skråfoto oblique aerial frames (`npm run fetch-skraafoto`, [`data/raw/skraafoto/README.md`](../data/raw/skraafoto/README.md)), the DHM Punktsky LiDAR tiles (`npm run fetch-dhm`, [`data/raw/dhm/README.md`](../data/raw/dhm/README.md)) and the GeoDanmark orthophoto. Each bake works on one scene group (`--group <id>`) and writes under `public/data/geo3d/groups/<id>/` with a `manifest.json`, registered in `scenes.json`:
+
+| Command               | External program                         | Output       |
+| --------------------- | ---------------------------------------- | ------------ |
+| `npm run bake-lidar`  | PDAL                                     | `points.bin` |
+| `npm run bake-splats` | Brush (`brush-cli`), PROJ                | `splats.bin` |
+| `npm run bake-mesh`   | COLMAP (workspace layout only), OpenMVS  | `mesh.glb`   |
+| `npm run crop-mesh`, `npm run repack-atlas` | none                 | a cropped `mesh.glb` with a re-packed atlas |
+
+The camera poses come from the flight's own metadata, so nothing is feature-matched: the LiDAR cloud projected into the known poses is the sparse model. These outputs are read by the `tools/scene-workbench/` dev tool. The app itself ships one of them: the cropped mesh, copied to `data/raw/meshes/soendermarken/mesh.glb` and baked by `npm run build-meshes` like any other mesh body ([its README](../data/raw/meshes/soendermarken/README.md)). Licences of the inputs and of the programs: [ATTRIBUTIONS.md](../ATTRIBUTIONS.md), "Skråfoto and the Søndermarken scan".
+
+## Hand-typed values and where they come from
+
+Some of what the app shows was typed by hand and has no fetcher. [ATTRIBUTIONS.md](../ATTRIBUTIONS.md) ("Hand-typed data") has one entry per file; this is the detail, as found on 2026-10-07.
+
+- **`data/seeds/planet_facts.seed.json`** (the fact sheet on each body's card, 43 rows). No source is recorded per value; they are rounded textbook figures held as display strings. The nine planet rows were compared with NASA's [Planetary Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/) (last updated 18 March 2025) and agree to the rounding shown, except: Jupiter's gravity (seed 2.53 g, NASA 2.36), Saturn's gravity (1.07 g against 0.916), Saturn's moons (146 against 274), Saturn's distance (9.54 AU against 9.57), Neptune's distance (30.1 AU against 30.18) and gravity (1.14 g against 1.12), Pluto's gravity (0.063 g against 0.071) and mean temperature (−232 °C against −225). The seed was not changed. The 34 rows for moons, spacecraft and other bodies were not compared with anything. The file has no `source` field: `buildPlanetFacts.ts` copies every field of a row into the generated table, so adding one changes what the app compiles.
+- **Voids and groups** (`data/seeds/structure_anchors.seed.json`). Clusters come from MCXC and superclusters from MSCC, but the 3 voids and 16 groups exist only as hand-placed rows of this seed, as do the 15 clusters and 8 superclusters that override a catalogue row. A row holds a position, a distance, a physical and an apparent radius and a paragraph, and no reference. Treat every radius of a void or group as an editorial choice, not a measurement.
+- **Zone of Avoidance band** (`src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts`). The four shape constants (inner radius 3 Mpc, outer radius 380 Mpc, half-width 10° at the bulge and 3° at the anticentre) are, in the file's own words, "visual-pass placeholders". They come from no survey mask or extinction map.
+- **`data/seeds/local_volume_distances.seed.json`.** Each row's `method` field names its source (most were looked up in NED).
+- **`data/seeds/famous_stars.seed.json`, `sun.seed.json`.** Typed by hand; no source per value.
+
 ## Data-refresh re-run orders
 
 Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (a worktree's `data/` is its own; see the deploy doc). The sync step is the deploy path, covered in [docs/DEPLOY.md](DEPLOY.md).
