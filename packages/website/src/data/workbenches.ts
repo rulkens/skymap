@@ -74,7 +74,7 @@ export const WORKBENCHES: readonly Workbench[] = [
     picture: {
       title: 'The curator with a galaxy part-way through',
       caption: 'The source picture of one named galaxy, framed in the middle, with the sliders for star removal and for the fade to transparent on the right. In the list on the left a tick marks a galaxy whose picture is done.',
-      alt: 'A list of Caldwell and NGC numbers with green ticks on the left, a photograph of a spiral galaxy among many stars inside a square frame with handles in the middle, and on the right sliders above two small pictures of the same galaxy without its stars, the lower one on a chequered ground.',
+      alt: 'A list of Caldwell and NGC numbers on the left, most of them on green with a tick, a photograph of a spiral galaxy among many stars inside a square frame with handles in the middle, and on the right sliders above two small pictures of the same galaxy without its stars, the lower one on a chequered ground.',
       credit: 'Andreigusan (photograph of NGC 6946), CC0',
     },
   },

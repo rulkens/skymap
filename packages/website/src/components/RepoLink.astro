@@ -16,7 +16,7 @@ const parts = path.split('/');
         parts.map((part, i) => (
           <>
             <span>{part + (i < parts.length - 1 ? '/' : '')}</span>
-            <wbr />
+            {i < parts.length - 1 && <wbr />}
           </>
         ))
       }</code
@@ -25,6 +25,11 @@ const parts = path.split('/');
 >
 
 <style>
+  /* A path can run over two lines. As the inline block a link is in a note (site.css, .tap-links) it would be a box of its own, and the full stop after it would stand alone on a third line. `[href]` outweighs that rule. */
+  a[href] {
+    display: inline;
+  }
+
   span {
     white-space: nowrap;
   }

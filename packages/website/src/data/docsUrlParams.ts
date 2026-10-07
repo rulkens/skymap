@@ -139,7 +139,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     part: 'query',
     value: 'None',
     example: '?tour',
-    does: 'Adds a button to the top bar that starts “The Long Way Out”. It starts no tour by itself: that is tour after the #.',
+    does: 'Adds a button to the top bar that starts “The Long Way Out”. It starts nothing by itself: naming a tour after the # does.',
     written: NOT_WRITTEN,
     unknown: 'There is none.',
     skipsWelcome: true,
