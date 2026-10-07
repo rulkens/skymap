@@ -1,18 +1,53 @@
 ---
 description: Every place we know of where the scene in skymap departs from the sky, with how large the difference is, who would notice, and why.
-facts: [sim-redshift-space, sim-frames, sim-horizon-h0, sim-scale-step, sci-photometric-share, sci-h0-range, card-galaxy-no-redshift, pipe-blueshift, depart-light-travel, survey-gaps, 2mrs-coverage, sim-zone, sim-desi-patches, sim-flux-limits, sim-data-sizes, sim-duplicates, sim-reweight, method-reweight, settings-density-limits, depart-other-corrections, sim-star-coverage, sim-exposure, depart-galaxy-fade, depart-luminosity-distance, depart-relative-brightness, sim-quasar-boost, sci-desi-brightness, sci-colour, depart-star-tint, depart-star-dust, depart-star-steps, sci-tone, sim-point-floor, depart-default-size, depart-size-distance, sci-galaxy-discs, sci-galaxy-tilt, sim-true-size, depart-snapshot, sim-star-epoch, time-galaxies-still, sim-ephemeris-span, probe-one-orbit, sci-earth-clouds, sci-ephemeris, depart-earth-barycentre, depart-mean-moons, depart-planet-facts, sci-planet-maps, sci-atmospheres, method-atmosphere-earth, sci-milky-way, sci-milky-way-points, method-disc-radius, sci-black-hole, depart-black-hole-mass, depart-hand-structures, method-structure-cuts, sci-markers, card-structure-count, sci-zoa-band, sci-filaments, sci-density-field, depart-labels, scene-not-here, scene-rings, sci-horizon-shell]
+facts: [sim-redshift-space, sim-frames, depart-frame-size, sim-horizon-h0, sim-scale-step, sci-photometric-share, sci-h0-range, card-galaxy-no-redshift, pipe-blueshift, depart-light-travel, survey-gaps, 2mrs-coverage, sim-zone, sim-desi-patches, sim-flux-limits, sim-data-sizes, sim-duplicates, sim-reweight, method-reweight, settings-density-limits, depart-other-corrections, sim-star-coverage, sci-star-observables, sim-exposure, depart-galaxy-fade, depart-luminosity-distance, depart-relative-brightness, sim-quasar-boost, sci-desi-brightness, sci-colour, depart-star-tint, depart-star-dust, depart-star-steps, sci-tone, sim-point-floor, depart-default-size, depart-size-distance, sci-galaxy-discs, sci-galaxy-tilt, sim-true-size, depart-snapshot, sim-star-epoch, depart-star-motion, time-galaxies-still, sim-ephemeris-span, probe-one-orbit, sci-earth-clouds, sci-ephemeris, depart-earth-barycentre, depart-mean-moons, depart-planet-facts, sci-planet-maps, sci-atmospheres, method-atmosphere-earth, sci-milky-way, sci-milky-way-points, method-disc-radius, method-local-bubble, sci-black-hole, depart-black-hole-mass, depart-hand-structures, method-structure-cuts, sci-markers, card-structure-count, sci-zoa-band, sci-filaments, sci-density-field, depart-labels, scene-not-here, scene-rings, sci-horizon-shell]
 ---
 
 import RedshiftSpace from '../../components/RedshiftSpace.astro';
 import { REPO_URL } from '../../data/siteIdentity';
 import { fact } from '../../data/fact';
 
-export const HEAD = ['Departure', 'What we do, and what is true', 'How large', 'Who would notice', 'Choice or limit'];
-export const row = (name, id, size, who, kind) => [name, fact(id).text, size, who, kind];
+export const HEAD = ['Departure', 'What we do, and what is true', 'How large', 'Who would notice', 'Choice or limit', 'Method'];
+export const SCI = '/docs/science/';
+export const PIPE = '/docs/data/pipeline/';
+export const DRAWN = '/docs/rendering/techniques/';
+export const METHOD = {
+  redshift: { href: `${SCI}#distance-from-redshift`, label: 'Distance from redshift' },
+  local: { href: `${SCI}#distance-inside-30-megaparsecs`, label: 'Distance inside 30 megaparsecs' },
+  brightness: { href: `${SCI}#brightness`, label: 'Brightness' },
+  colour: { href: `${SCI}#colour`, label: 'Colour' },
+  size: { href: `${SCI}#size-tilt-and-shape`, label: 'Size, tilt and shape' },
+  starPlace: { href: `${SCI}#position-and-distance`, label: 'Position and distance' },
+  starLight: { href: `${SCI}#brightness-and-colour`, label: 'Brightness and colour' },
+  positions: { href: `${SCI}#positions`, label: 'Positions' },
+  surfaces: { href: `${SCI}#surfaces`, label: 'Surfaces' },
+  air: { href: `${SCI}#atmospheres`, label: 'Atmospheres' },
+  milkyWay: { href: `${SCI}#the-milky-way`, label: 'The Milky Way' },
+  bubble: { href: `${SCI}#the-local-bubble`, label: 'The Local Bubble' },
+  blackHole: { href: `${SCI}#the-black-hole-at-the-centre`, label: 'The black hole at the centre' },
+  web: { href: `${SCI}#density-filaments-and-flows`, label: 'Density, filaments and flows' },
+  markers: { href: `${SCI}#clusters-superclusters-voids-and-groups`, label: 'Clusters, superclusters, voids and groups' },
+  density: { href: `${SCI}#the-density-correction`, label: 'The density correction' },
+  edge: { href: `${SCI}#the-edge-of-the-observable-universe`, label: 'The edge of the observable universe' },
+  drawn: { href: `${SCI}#what-is-only-drawn`, label: 'What is only drawn' },
+  pipeline: { href: `${PIPE}#distances`, label: 'From catalogue to pixels' },
+  sizes: { href: `${PIPE}#data-sizes`, label: 'From catalogue to pixels' },
+  matching: { href: `${PIPE}#cross-match-and-de-duplicate`, label: 'From catalogue to pixels' },
+  starBuild: { href: `${PIPE}#stars`, label: 'From catalogue to pixels' },
+  cards: { href: '/docs/guide/info-cards/', label: 'Info cards' },
+  time: { href: '/docs/guide/time/', label: 'Time' },
+  galaxies: { href: `${DRAWN}#galaxies`, label: 'Techniques' },
+  starsDrawn: { href: `${DRAWN}#stars`, label: 'Techniques' },
+  tone: { href: `${DRAWN}#bloom-tone-curves-and-hdr`, label: 'Techniques' },
+};
+export const said = (name, text, size, who, kind, method) => [name, text, size, who, kind, ...(method ? [METHOD[method]] : [])];
+export const row = (name, id, size, who, kind, method) => said(name, fact(id).text, size, who, kind, method);
 
-The method behind each entry is on [Measured, derived, modelled, drawn](/docs/science/). Each entry was read against the code on 7 October 2026. A limit is something the data or the screen forces on us; a choice is something we could do otherwise and have not.
+The method behind each entry is on [Measured, derived, modelled, drawn](/docs/science/), and a row’s last line links to it. A limit is something the data or the screen forces on us; a choice is something we could do otherwise and have not. Where neither word fits, the row says “not settled”.
 
 ## What not to claim in class
+
+Rows a pupil would notice say so under “Who would notice”.
 
 - That the map shows the universe at one moment: see [Time and motion](#time-and-motion).
 - That a streak of galaxies pointing at the Sun is a real shape: see [Distances and redshift space](#distances-and-redshift-space).
@@ -26,22 +61,22 @@ The method behind each entry is on [Measured, derived, modelled, drawn](/docs/sc
 ## Distances and redshift space
 
 <RedshiftSpace label="Two rows. In each a ring on the left marks the Sun and a dashed line runs from it to a cluster of dots on the right. In the first row the cluster is round. In the second the same dots are spread out along the line into a long streak.">
-  A “[finger of God](/docs/reference/glossary/#finger-of-god)”. The ring is the Sun. Above, a cluster as it lies in space. Below, where a map made from redshifts puts the same galaxies: each has moved along the line of sight by its own speed inside the cluster, and none has moved sideways.
+  A “[finger of god](/docs/reference/glossary/#finger-of-god)”. The ring is the Sun. Above, a cluster as it lies in space. Below, where a map made from redshifts puts the same galaxies: each has moved along the line of sight by its own speed inside the cluster, and none has moved sideways.
 </RedshiftSpace>
 
 <Table
   cols="detail"
   head={HEAD}
   rows={[
-    row('Redshift space', 'sim-redshift-space', '4 megaparsecs for each 300 km/s.', 'An amateur who knows a cluster’s true shape.', 'Limit: undoing it needs a model of how every galaxy moves.'),
-    row('Reference frame', 'sim-frames', 'Not worked out.', 'A specialist.', 'Choice.'),
-    row('The expansion rate', 'sci-h0-range', '4 per cent either way.', 'Anyone who compares distances.', 'Limit of what is known.'),
-    row('A step at 30 megaparsecs', 'sim-scale-step', '7 per cent.', 'A specialist.', 'Choice.'),
-    row('Two expansion rates', 'sim-horizon-h0', '5 per cent.', 'A specialist.', 'Neither: an inconsistency.'),
-    row('Estimated redshifts', 'sci-photometric-share', '60 megaparsecs at a redshift of 0.1.', 'An amateur: GLADE’s far galaxies are smeared in depth.', 'Choice.'),
-    row('Galaxies moving towards us', 'pipe-blueshift', 'A placeholder distance.', 'A specialist.', 'Limit: no distance has been measured.'),
-    row('Named galaxies', 'card-galaxy-no-redshift', '81 galaxies.', 'Anyone who reads the card.', 'Choice.'),
-    row('Light-travel time', 'depart-light-travel', 'Up to 9 per cent.', 'A specialist.', 'Choice: a shortcut.'),
+    said('Redshift space', 'Beyond 30 megaparsecs we treat the whole redshift as expansion, so a galaxy’s own speed moves it along the line of sight and a rich cluster becomes a streak pointing at us. We do not correct for it.', '4 megaparsecs for each 300 km/s.', 'An amateur who knows a cluster’s true shape.', 'Limit: undoing it needs a model of how every galaxy moves.', 'redshift'),
+    said('Reference frame', 'Redshifts are used in the frame they were published in: we convert no catalogue to the rest frame of the cosmic microwave background.', 'Up to 370 km/s, which is 5 megaparsecs, by direction.', 'A specialist.', 'Choice.', 'redshift'),
+    said('The expansion rate', 'Every redshift distance rests on a Hubble constant of 70 km/s per megaparsec, and measurements run from about 67 to about 73.', '4 per cent either way.', 'Anyone who compares distances.', 'Limit of what is known.', 'redshift'),
+    said('A step at 30 megaparsecs', 'The Cosmicflows-4 distances we use inside 30 megaparsecs correspond to a Hubble constant of 74.6; outside we use 70, and we rescale neither.', 'A step of 7 per cent at the boundary.', 'A specialist.', 'Choice.', 'local'),
+    said('Two expansion rates', 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies, the same model gives about 13.6.', 'The sphere is 5 per cent too far out for the galaxies inside it.', 'A specialist.', 'Not settled.', 'edge'),
+    said('Estimated redshifts', 'About 45 per cent of GLADE’s rows carry a redshift estimated from the galaxy’s colours, not measured from a spectrum, with an error near 0.015. We keep those rows.', '60 megaparsecs along the line of sight at a redshift of 0.1.', 'An amateur: GLADE’s far galaxies are smeared in depth.', 'Choice.'),
+    said('Galaxies moving towards us', 'A galaxy with a negative redshift and no place in the three distance lists is put in its true direction, at its speed divided by the Hubble constant.', 'A placeholder distance.', 'A specialist.', 'Limit: no distance has been measured.', 'pipeline'),
+    said('Named galaxies', 'The named galaxies are placed by a distance from the app’s own list; a redshift of 0.0000 on a card means that the app holds none.', '81 galaxies.', 'Anyone who reads the card.', 'Choice.', 'cards'),
+    row('Light-travel time', 'depart-light-travel', 'It grows with redshift.', 'A specialist.', 'Choice: a shortcut.'),
   ]}
 />
 
@@ -54,18 +89,18 @@ The method behind each entry is on [Measured, derived, modelled, drawn](/docs/sc
   head={HEAD}
   rows={[
     row('SDSS footprint', 'survey-gaps', 'Three quarters of the sky.', 'A pupil: the map has two fans.', 'Limit of the survey.'),
-    row('Zone of Avoidance', 'sim-zone', 'A band along the whole Milky Way; 2MRS leaves out 9 per cent of the sky there.', 'A pupil.', 'Limit: our own galaxy is in the way.'),
-    row('DESI', 'sim-desi-patches', 'Three regions of a whole survey.', 'An amateur.', 'Choice.'),
-    row('Flux limits', 'sim-flux-limits', 'It grows with distance.', 'A pupil, who will read thinner as emptier.', 'Limit of every survey.'),
-    row('Data sizes', 'sim-data-sizes', 'About half of SDSS at the largest size.', 'An amateur who counts.', 'Choice, for memory and download.'),
-    row('Which stars', 'sim-star-coverage', '12.9 of 16.8 million stars at most.', 'A specialist.', 'Choice, for download.'),
-    row('Duplicates', 'sim-duplicates', '5 arcseconds and about 3,000 km/s.', 'A specialist.', 'Choice of thresholds.'),
-    row('Our own dimming', 'sim-reweight', 'Between 0.3 and 1.2 times. A rich cluster is dimmed like any crowded direction.', 'Nobody, unless told.', 'Choice. It can be switched off.'),
-    row('The other corrections', 'depart-other-corrections', 'Not measured.', 'A specialist.', 'Choice: working values.'),
+    said('Zone of Avoidance', 'Dust and stars in the plane of the Milky Way hide the galaxies behind them.', 'About 25 per cent of the optically visible galaxies, by one review; 2MRS leaves out 9 per cent of the sky.', 'A pupil.', 'Limit: our own galaxy is in the way.'),
+    said('DESI', 'DESI appears as regions cut from its first data release, not as a survey of the sky.', 'Three: a cone 2.5 degrees in radius towards Corona Borealis, a band of declination and the Sloan Great Wall.', 'An amateur.', 'Choice.'),
+    said('Flux limits', 'Each survey records only what is brighter than a limit. Far away only the most luminous galaxies pass, so the map thins with distance in every direction.', 'Magnitude 17.77 in the r band for SDSS’s main sample, 11.75 in K for 2MRS.', 'A pupil, who will read thinner as emptier.', 'Limit of every survey.'),
+    said('Data sizes', 'Every data size cuts SDSS to its most luminous galaxies, and the small one has none.', '502,114 of 970,067 at the large size, 159,899 at the medium.', 'An amateur who counts.', 'Choice, for memory and download.', 'sizes'),
+    said('Which stars', 'The stars are Gaia’s down to magnitude 14, with Hipparcos for the brightest. Each data size keeps the stars near the Sun and the brightest of the rest.', '12.9 of 16.8 million stars at the large size, 1.7 million at the small.', 'A specialist.', 'Choice, for download.', 'starBuild'),
+    said('Duplicates', 'Two rows close together on the sky and in redshift are treated as one galaxy, kept from SDSS first, then 2MRS, GLADE and DESI. The quasars skip this step.', 'Within 5 arcseconds and about 0.01 in redshift.', 'A specialist.', 'Choice of thresholds.', 'matching'),
+    said('Our own dimming', 'Unless you change the setting, galaxies are dimmed where a catalogue sampled the sky more densely than its median and brightened a little where it sampled more thinly. The count cannot tell a crowded catalogue from a rich cluster.', 'A factor between 0.3 and 1.2.', 'Nobody, unless told.', 'Choice. It can be switched off.', 'density'),
+    row('The other corrections', 'depart-other-corrections', 'The SDSS density is 1.8 times the paper’s.', 'A specialist.', 'Choice: working values.'),
   ]}
 />
 
-For anything you mean to measure, set Density correction to None: the [Settings guide](/docs/guide/settings/) says how, and [The density correction](/docs/science/#the-density-correction) gives the rule.
+For anything you mean to measure, set Density correction to None: the [Settings guide](/docs/guide/settings/) says how.
 
 <View to="exhibit=zoneOfAvoidance">Open the Zone of Avoidance exhibit</View>
 
@@ -75,17 +110,17 @@ For anything you mean to measure, set Density correction to None: the [Settings 
   cols="detail"
   head={HEAD}
   rows={[
-    row('Exposure', 'sim-exposure', 'Nearly 5 times.', 'Nobody: it is what makes both views readable.', 'Limit of a screen.'),
-    row('Fading with distance', 'depart-galaxy-fade', '20 times too bright there.', 'A specialist.', 'Choice. Distance falloff, in the Settings panel, is the power.'),
-    row('The wrong distance for luminosity', 'depart-luminosity-distance', 'It grows with redshift.', 'A specialist.', 'Neither: an error.'),
-    row('Between catalogues', 'depart-relative-brightness', 'No common scale.', 'A specialist.', 'Limit: the catalogues measure different bands.'),
-    row('Quasars', 'sim-quasar-boost', '3 times.', 'A specialist.', 'Choice.'),
-    row('DESI brightness', 'sci-desi-brightness', 'One value for a whole class.', 'A specialist.', 'Limit of the files we read.'),
-    row('Galaxy colour', 'sci-colour', 'A different pair of bands in each catalogue.', 'A pupil, who will take it for true colour.', 'Choice of scale; limit of the bands.'),
-    row('Star colour', 'depart-star-tint', 'Five colours and the mixes between.', 'An amateur.', 'Choice.'),
-    row('Dust', 'depart-star-dust', 'Not worked out. Largest in the plane of the Milky Way.', 'A specialist.', 'Limit: we hold no dust correction for single stars.'),
-    row('Stored in steps', 'depart-star-steps', 'Up to 9 per cent.', 'Nobody by eye.', 'Choice, for download.'),
-    row('Glow and tone', 'sci-tone', 'The whole frame.', 'A specialist.', 'Limit of a screen; choice of curve.'),
+    said('Exposure', 'The exposure on stars rises as the camera pulls back from 1 parsec to 10 kiloparsecs, because a monitor cannot adapt to the dark as an eye does.', 'Nearly 5 times.', 'Nobody: it is what makes both views readable.', 'Limit of a screen.', 'starsDrawn'),
+    row('Fading with distance', 'depart-galaxy-fade', 'At ten times the distance where it became a dot, 5 times fainter where 100 belongs.', 'A specialist.', 'Choice. Distance falloff, in the Settings panel, is the power.'),
+    row('The distance used for luminosity', 'depart-luminosity-distance', 'On a card 0.2 magnitudes at a redshift of 0.1 and 0.6 at 0.3; on screen 0.4 at 0.1.', 'A specialist.', 'Not settled.', 'brightness'),
+    row('Between catalogues', 'depart-relative-brightness', 'No common scale.', 'A specialist.', 'Limit: the catalogues measure different bands.', 'brightness'),
+    said('Quasars', 'Quasars are drawn brighter than our brightness model gives a galaxy.', '3 times.', 'A specialist.', 'Choice.'),
+    said('DESI brightness', 'For three DESI target classes the files we read give position and redshift only, so every object in a class is drawn with one assumed luminosity.', 'One value for a whole class.', 'A specialist.', 'Limit of the files we read.'),
+    said('Galaxy colour', 'A galaxy’s colour is a colour index placed on a scale from blue to red. It is not the colour an eye would see.', 'A different pair of bands in each catalogue.', 'A pupil, who will take it for true colour.', 'Choice of scale; limit of the bands.', 'colour'),
+    row('Star colour', 'depart-star-tint', 'Five colours and the mixes between.', 'An amateur.', 'Choice.', 'starLight'),
+    row('Dust', 'depart-star-dust', 'Not worked out.', 'A specialist.', 'Limit: we hold no dust correction for single stars.', 'starLight'),
+    row('Stored in steps', 'depart-star-steps', 'Up to 9 per cent in brightness, half a step.', 'Nobody by eye.', 'Choice, for download.'),
+    said('Glow and tone', 'The glow around bright objects and the tone curve are image processing on the whole frame, so brightness on screen is not in proportion to light.', 'The whole frame.', 'A specialist.', 'Limit of a screen; choice of curve.', 'tone'),
   ]}
 />
 
@@ -96,10 +131,10 @@ For anything you mean to measure, set Density correction to None: the [Settings 
   head={HEAD}
   rows={[
     row('Galaxy points', 'sim-point-floor', '2.5 pixels in radius unless you change it.', 'A pupil, who may think galaxies fill space.', 'Limit: at true size most would be smaller than a pixel.'),
-    row('Galaxy sizes', 'depart-default-size', 'Every galaxy whose card marks its diameter “fallback”.', 'A specialist.', 'Limit of the catalogues.'),
-    row('The wrong distance for size', 'depart-size-distance', 'It grows with redshift.', 'A specialist.', 'Neither: an error.'),
-    row('Galaxy discs', 'sci-galaxy-discs', 'Between about 8 and 24 pixels across.', 'An amateur, close up.', 'Limit: most galaxies have no picture that sharp.'),
-    row('Galaxy tilt', 'sci-galaxy-tilt', 'Every galaxy whose card marks its orientation “fallback”.', 'A specialist.', 'Limit of the catalogues.'),
+    row('Galaxy sizes', 'depart-default-size', 'Every galaxy whose card marks its diameter “fallback”.', 'A specialist.', 'Limit of the catalogues.', 'size'),
+    row('The distance used for size', 'depart-size-distance', '10 per cent at a redshift of 0.1, 30 per cent at 0.3.', 'A specialist.', 'Not settled.', 'size'),
+    said('Galaxy discs', 'Between about 8 and 24 pixels across, a galaxy is a generated disc, which is not its real shape.', 'Every galaxy at that size.', 'An amateur, close up.', 'Limit: most galaxies have no picture that sharp.', 'galaxies'),
+    row('Galaxy tilt', 'sci-galaxy-tilt', 'Every galaxy whose card marks its orientation “fallback”.', 'A specialist.', 'Limit of the catalogues.', 'size'),
     row('Planets, moons and stars', 'sim-true-size', 'A pixel.', 'A pupil.', 'Limit of a screen.'),
   ]}
 />
@@ -111,10 +146,10 @@ For anything you mean to measure, set Density correction to None: the [Settings 
   head={HEAD}
   rows={[
     row('Not one moment', 'depart-snapshot', 'The whole map beyond the Solar System.', 'A pupil who asks “is this now?”', 'Limit of observing at all.'),
-    row('Stars stand still', 'sim-star-epoch', 'It grows with every year away from 2016.', 'A specialist.', 'Choice.'),
+    said('Stars stand still', 'Star positions are Gaia’s for the start of 2016. We apply no proper motion, so the stars stand still whatever date the clock shows.', 'Barnard’s Star: 10.4 arcseconds a year.', 'A specialist.', 'Choice.', 'starPlace'),
     row('Galaxies stand still', 'time-galaxies-still', 'Nothing a lifetime would show.', 'Nobody.', 'Choice.'),
-    row('Spacecraft', 'probe-one-orbit', '5 astronomical units on that day.', 'An amateur.', 'Choice.'),
-    row('Earth’s clouds', 'sci-earth-clouds', 'Every cloud.', 'A pupil.', 'Choice.'),
+    said('Spacecraft', 'Each spacecraft follows the one orbit it was on in September 2026, so in an earlier year a probe is where that orbit runs and not where the probe was.', '5 astronomical units from Jupiter on the day Voyager 1 passed it.', 'An amateur.', 'Choice.', 'time'),
+    said('Earth’s clouds', 'Earth’s clouds are one fixed picture, not the weather on the date shown.', 'Every cloud.', 'A pupil.', 'Choice.'),
   ]}
 />
 
@@ -128,16 +163,14 @@ For anything you mean to measure, set Density correction to None: the [Settings 
   cols="detail"
   head={HEAD}
   rows={[
-    row('Outside 1900 to 2100', 'sim-ephemeris-span', 'Within 1,000 km of JPL Horizons inside those years; not measured outside.', 'An amateur who looks up a historical event.', 'Limit of the fit.'),
-    row('Earth’s place', 'depart-earth-barycentre', '4,700 km.', 'A specialist.', 'Choice.'),
-    row('Moons on mean orbits', 'depart-mean-moons', 'Not measured.', 'An amateur who checks an eclipse.', 'Choice for the Moon; for Puck, a limit of the reference.'),
-    row('Figures on a card', 'depart-planet-facts', '8 of the planets’ values.', 'Anyone who checks them.', 'Neither: errors listed and not yet corrected.'),
-    row('Planet maps', 'sci-planet-maps', 'Not stated by their maker.', 'A specialist.', 'Limit of the maps we may use.'),
-    row('Atmospheres', 'sci-atmospheres', 'Eight of nine tables are in part set by eye.', 'A specialist.', 'Choice.'),
+    said('Outside 1900 to 2100', 'Outside those years the planets keep the correction from the nearest end of the span, and the 18 fitted moons fall back to mean orbits.', 'Within 1,000 km of JPL Horizons inside those years; not measured outside.', 'An amateur who looks up a historical event.', 'Limit of the fit.', 'positions'),
+    row('Earth’s place', 'depart-earth-barycentre', 'About 4,700 km.', 'A specialist.', 'Choice.', 'positions'),
+    row('Moons on mean orbits', 'depart-mean-moons', 'Not measured.', 'An amateur who checks an eclipse.', 'Choice for the Moon; for Puck, a limit of the reference.', 'positions'),
+    row('Figures on a card', 'depart-planet-facts', 'Rounded values.', 'Anyone who quotes them.', 'Choice.', 'cards'),
+    said('Planet maps', 'In the maps of seven planets and the Moon, gaps are filled with fictional terrain and the colours are slightly more saturated, by their maker’s own account.', 'Not stated by their maker.', 'A specialist.', 'Limit of the maps we may use.', 'surfaces'),
+    said('Atmospheres', 'Each atmosphere is computed from a model of how light scatters and a table of gases and hazes. It is not a photograph.', 'Eight of nine tables are in part set by eye.', 'A specialist.', 'Choice.', 'air'),
   ]}
 />
-
-How the positions are fitted is under [Positions](/docs/science/#positions).
 
 <Example to="focus=body-saturn&t=1610-07-25T20:00:00Z" label="Open Saturn in July 1610">
   Saturn on 25 July 1610, 290 years before the fit begins. The picture looks as sure of itself as today’s.
@@ -145,15 +178,14 @@ How the positions are fitted is under [Positions](/docs/science/#positions).
 
 ## The Milky Way
 
-<Figure id="milky-way-drawn" />
-
 <Table
   cols="detail"
   head={HEAD}
   rows={[
-    row('The model', 'sci-milky-way', 'Every arm. The disc’s radius of 17.5 kiloparsecs is our own figure, and each point of light stands for about 700,000 stars.', 'A pupil, who will take it for a photograph.', 'Limit: no camera has left the Milky Way.'),
-    row('The black hole', 'sci-black-hole', 'The whole disc of gas.', 'A pupil, who has seen the telescope’s image.', 'Choice.'),
-    row('Its mass and distance', 'depart-black-hole-mass', 'Not worked out.', 'A specialist.', 'Neither: an inconsistency.'),
+    said('The model', 'Seen from outside, the Milky Way is a generated model. Its four spiral arms are shaped by hand; no arm is placed from a measurement.', 'Every arm. The disc’s radius of 17.5 kiloparsecs is ours, and each point of light stands for about 700,000 stars.', 'A pupil, who will take it for a photograph.', 'Limit: no camera has left the Milky Way.', 'milkyWay'),
+    said('The Local Bubble', 'The Local Bubble is one smoothed surface, in a colour and an opacity of our choosing.', 'Smoothed over 2.5 degrees.', 'A specialist.', 'Choice.', 'bubble'),
+    said('The black hole', 'The bending of light is computed; the glowing disc is invented. It is not the Event Horizon Telescope image.', 'The whole disc of gas.', 'A pupil, who has seen the telescope’s image.', 'Choice.', 'blackHole'),
+    row('Its mass and distance', 'depart-black-hole-mass', 'The two distances differ by 1.2 per cent.', 'A specialist.', 'Not settled.', 'blackHole'),
   ]}
 />
 
@@ -163,13 +195,13 @@ How the positions are fitted is under [Positions](/docs/science/#positions).
   cols="detail"
   head={HEAD}
   rows={[
-    row('Voids and groups', 'depart-hand-structures', '42 structures.', 'A specialist.', 'Choice.'),
-    row('What a ring is', 'sci-markers', 'Every marker. A cluster’s ring is 2.5 times the catalogue’s radius.', 'A pupil, who may take a ring for a boundary.', 'Choice.'),
-    row('The count on a card', 'card-structure-count', 'Virgo: 341 counted of 1,000 to 2,000.', 'Anyone who reads the card.', 'Limit of the catalogues loaded.'),
-    row('Zone of Avoidance band', 'sci-zoa-band', 'The whole band.', 'A specialist.', 'Choice.'),
-    row('Filaments', 'sci-filaments', 'No filament is traced from SDSS.', 'A specialist.', 'Choice of threshold; limit of the footprint.'),
-    row('Density glow', 'sci-density-field', 'Only between 44 and 476 megaparsecs, where SDSS looked.', 'A pupil: the web seems to end.', 'Limit of the catalogue.'),
-    row('The edge sphere', 'sci-horizon-shell', 'Nothing is observed there.', 'A pupil, who may take it for a wall.', 'Choice to draw it.'),
+    row('Voids and groups', 'depart-hand-structures', '42 structures.', 'A specialist.', 'Choice.', 'markers'),
+    said('What a ring is', 'A marker is a disc and a ring sized by a catalogued or hand-set radius, not an edge that anyone has observed.', 'A cluster’s ring is 2.5 times the catalogue’s radius.', 'A pupil, who may take a ring for a boundary.', 'Choice.', 'markers'),
+    said('The count on a card', 'The Galaxies row of a structure’s card counts the points the app has loaded inside its sphere, not the structure’s members.', '341 for Virgo at the medium data size; its card speaks of 1,000 to 2,000.', 'Anyone who reads the card.', 'Limit of the catalogues loaded.', 'cards'),
+    said('Zone of Avoidance band', 'The blue band is a guide we draw along the plane of the Milky Way. The shortage of galaxies behind it is in the catalogues; the band’s width is ours.', '10 degrees towards the galactic centre, 3 away from it.', 'A specialist.', 'Choice.', 'drawn'),
+    said('Filaments', 'Filaments are traced from 2MRS and GLADE only. SDSS is left out, because the edges of its footprint would be traced as structure.', 'No filament is traced from SDSS.', 'A specialist.', 'Choice of threshold; limit of the footprint.', 'web'),
+    said('Density glow', 'The glow exists only where the SDSS catalogue it is made from reaches. It ends there; the web does not.', 'Between 44 and 476 megaparsecs.', 'A pupil: the web seems to end.', 'Limit of the catalogue.', 'web'),
+    said('The edge sphere', 'The sphere marks the particle horizon of a cosmological model. Nothing is observed at that distance.', 'The whole sphere.', 'A pupil, who may take it for a wall.', 'Choice to draw it.', 'edge'),
     row('Names', 'depart-labels', 'Any crowded view.', 'Anyone looking for a name.', 'Limit of a screen.'),
   ]}
 />
@@ -178,10 +210,8 @@ How the positions are fitted is under [Positions](/docs/science/#positions).
 
 ## What is missing altogether
 
-<Fact id="scene-not-here" />
-
-<Fact id="scene-rings" />
-
-Beyond the Solar System the scene holds only what a catalogue we read holds. A galaxy too faint for those surveys is not in the map, wherever it is. No nebula and no star cluster is an object of its own, though a cluster’s stars are there one by one where Gaia has them.
+The scene has no asteroids, comets or planets of other stars, and Saturn has the only rings: [What is in the scene](/docs/start/scene/) has the list. Beyond the Solar System the scene holds only what a catalogue we read holds: a galaxy too faint for those surveys is not in the map. No nebula and no star cluster is an object of its own, though a cluster’s stars are there one by one where Gaia has them.
 
 If you find a departure that is not on this page, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.
+
+<Note>Each entry was read against the code on 7 October 2026.</Note>
