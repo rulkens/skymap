@@ -254,7 +254,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-horizon-h0',
-    text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is drawn about 5 per cent too far out for the galaxies inside it. This is a known inconsistency in the app, not a rounding choice.',
+    text: 'The sphere at 14.3 gigaparsecs fits a Hubble constant near 67. With the 70 we use for galaxies and the same matter density, the same model gives about 13.6 gigaparsecs. The sphere is about 5 per cent too far out for the galaxies inside it.',
     source: `${REPO_BLOB}/src/data/rendering/horizonRadiusGpc.ts`,
     sourceLabel: `the horizon radius, ${IN_REPO}`,
     checked: CHECKED,
