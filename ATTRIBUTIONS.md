@@ -1402,7 +1402,13 @@ into `src/data/bodies/meshAssets.generated.ts`.
 The NASA models come from NASA 3D Resources, whose repository says: "These
 assets are free and without copyright. Please read the usage guidelines."
 Those guidelines are NASA's media guidelines, quoted under "Solar-system
-textures" above.
+textures" above. The app ships the string `Public domain (NASA)` as the
+`licence` of each of the five NASA models (`meshAssets.generated.ts`, copied
+from the hand-written `tools/utils/io/meshSources.ts`); those are not NASA's
+words, which are "generally are not subject to copyright in the United
+States" and "The NASA Insignia, Logotype, identifiers, and imagery are not in
+the public domain". The string was left as it is: the generated file is
+rewritten only by `npm run build-meshes`, which re-bakes the models.
 
 ### "Livyatan melvillei" by Major (the whale)
 
@@ -1524,9 +1530,17 @@ textures" above.
 All three are under the SIL Open Font License 1.1, whose second condition
 reads: "Original or Modified Versions of the Font Software may be bundled,
 redistributed and/or sold with any software, provided that each copy contains
-the above copyright notice and this license." The repository holds the font
-files without a copy of the licence text beside them; whether the files' own
-metadata carries the notice was not checked.
+the above copyright notice and this license." Each project's `OFL.txt`, with
+its copyright line, is copied from its repository beside the font files:
+`public/fonts/OFL-CormorantGaramond.txt`, `OFL-Sora.txt` and `OFL-Jost.txt`
+(the build copies `public/` as it is, so the deploy serves them at
+`/fonts/OFL-*.txt`, the one deploy that holds both the app and the website),
+and an `OFL.txt` beside each other copy of Cormorant Garamond in the
+repository (`data/raw/fonts/`, `tools/site/fonts/`,
+`packages/website/src/assets/fonts/`). The website's own font files are
+written to `_astro/` under hashed names, away from those texts. Whether the
+font files' own metadata carries the notice was not checked. None of the
+three projects declares a Reserved Font Name in its `OFL.txt`.
 
 ### Cormorant Garamond
 
@@ -2120,19 +2134,25 @@ and where they come from".
   `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
   `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
   (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
-  families under `react-markdown`, and others), which is not listed here by
-  name. Build-time tools are listed in `package.json`.
+  families under `react-markdown`, and others); the build lists every one in
+  `third-party-licenses.md`. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
 - **Licence:** MIT, each of the fourteen named, as its own `package.json`
-  states. The packages they pull in were not read one by one.
+  states. Of the 74 packages the app's bundle holds, the build reports MIT
+  for 71, ISC for one, and no licence field for two entry points of
+  `redux-saga` (itself MIT).
 - **Attribution:** MIT asks that "The above copyright notice and this
   permission notice shall be included in all copies or substantial portions
-  of the Software." The notices are in each package's licence file under
-  `node_modules/`, which is not deployed; what the deploy itself carries is
-  under "Not verified".
+  of the Software." The app's bundle itself carries no licence notice (the
+  build strips comments), so the app's build writes them to one file beside
+  it, `third-party-licenses.md` (Vite's `build.license`): the licence text of
+  each of the 74 packages in the app's bundle, all MIT but one ISC
+  (`@ungap/structured-clone`). The website's build and the three dev-tool
+  pages (`/galaxy/`, `/mcpm/`, `/flow/`) write no such file.
 - **Upstream:** <https://www.npmjs.com/>
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: the `license` field of each of the fourteen
-  installed packages; the built bundle, searched for licence notices.
-- **Not verified:** the licences of the transitive packages in the bundle.
+  installed packages; the built bundle, searched for licence notices; the
+  generated `third-party-licenses.md`.
+- **Not verified:** what the website's scripts and the dev-tool pages bundle.
