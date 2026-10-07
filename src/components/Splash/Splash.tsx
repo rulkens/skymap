@@ -23,7 +23,6 @@
  */
 
 import { Fragment, type MouseEvent, type ReactNode, useEffect, useRef } from 'react';
-import cx from 'classnames';
 import SplashProgress from './SplashProgress';
 import {
   BODY_DATA_ID,
@@ -39,23 +38,24 @@ import styles from './Splash.module.css';
 
 export type SplashProps = {
   readonly blocked: boolean;
-  readonly canContinueAnyway: boolean;
   readonly loadProgress?: LoadProgressState | null;
   readonly error: SplashError | null;
   readonly onExplore: () => void;
   readonly onTour: () => void;
-  readonly onContinueAnyway: () => void;
   readonly onReload: () => void;
 };
 
+// Before the first download is in flight the engine is still starting: an
+// unknown total keeps the hairline sweeping, carrying on from index.html's
+// boot shell instead of leaving the disabled CTAs unexplained.
+const ENGINE_STARTING: LoadProgressState = { loadedBytes: 0, totalBytes: 0, inFlightCount: 0 };
+
 function Splash({
   blocked,
-  canContinueAnyway,
   loadProgress,
   error,
   onExplore,
   onTour,
-  onContinueAnyway,
   onReload,
 }: SplashProps): ReactNode {
   const hardError = error !== null;
@@ -179,17 +179,6 @@ function Splash({
           </div>
         )}
 
-        {blocked && canContinueAnyway && !hardError ? (
-          <button
-            type="button"
-            className={cx(styles.cta, styles.continueAnyway)}
-            onClick={onContinueAnyway}
-            aria-live="polite"
-          >
-            Continue anyway
-          </button>
-        ) : null}
-
         <div className={styles.footer}>
           <p className={styles.credits}>
             Skymap aims to accurately represent data from{' '}
@@ -224,7 +213,9 @@ function Splash({
         </div>
       </section>
 
-      {!hardError ? <SplashProgress progress={loadProgress} /> : null}
+      {!hardError ? (
+        <SplashProgress progress={loadProgress ?? (blocked ? ENGINE_STARTING : null)} />
+      ) : null}
     </div>
   );
 }

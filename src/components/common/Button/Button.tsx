@@ -2,7 +2,7 @@
  * Button — the HUD's single push-button primitive.
  *
  * Every clickable affordance in the overlay UI (Splash's Explore /
- * Tour / Reload / Continue anyway, the TimeBar controls) renders
+ * Tour / Reload, the TimeBar controls) renders
  * through here so they share font, padding,
  * border, focus ring, and disabled treatment.  Per-surface CSS
  * modules previously each rolled their own `.button` rule and
@@ -21,8 +21,7 @@
  *     common case (Tour CTA).
  *   - primary — accent fill for high-conviction actions (Explore,
  *     Reload).
- *   - ghost — text-only with underline; for low-emphasis escapes
- *     like Splash's "Continue anyway".
+ *   - ghost — text-only with underline; for low-emphasis escapes.
  */
 
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';

@@ -6,18 +6,17 @@
  * `useAppDispatch` find the store.  The wrapper is built with `createElement`
  * (not JSX) so this stays a `.ts` file — matches the hooks.test.ts convention.
  *
- * `status` and `loadProgress` are read from the engine Redux slice rather than
- * passed as arguments, so these tests seed the engine slice via
- * `engineStatusChanged` / `engineLoadProgressChanged` before or during the
- * render.
+ * `status` is read from the engine Redux slice rather than passed as an
+ * argument, so these tests seed the engine slice via `engineStatusChanged`
+ * before or during the render.
  *
  * Visibility init (first-visit / deep-link / seenVersion gates) is covered by
  * `buildInitialUiState.test.ts`.  These tests assert that `splashVisible`
  * follows the store and that dismiss/reopen dispatch the correct actions.
- * The 8 s timer, blocked state, and error mapping are unchanged logic tested
- * here end-to-end with appropriate store seeds.
+ * Blocked state and error mapping are tested here end-to-end with
+ * appropriate store seeds.
  */
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { renderHook, act } from '@testing-library/react';
@@ -128,7 +127,9 @@ describe('useSplash — blocked state', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('flips blocked=false when the engine reports ready with no loadProgress', () => {
+  // Gating the CTAs on the catalogs again would strand a slow connection on
+  // the splash for minutes: the in-flight download here must not block.
+  it('unblocks once the engine is drawing, while downloads are still in flight', () => {
     const ui: UiState = {
       paletteOpen: false,
       uiHidden: false,
@@ -136,85 +137,17 @@ describe('useSplash — blocked state', () => {
       paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
-    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
-    const wrapper = ({ children }: { children: ReactNode }) =>
-      createElement(Provider, { store, children });
-
-    // Start with the default engine state (initializing, no loadProgress).
-    // Hook reads status + loadProgress from the store.
-    const { result } = renderHook(() => useSplash(), { wrapper });
+    const { store, result } = renderSplash(ui);
     expect(result.current.blocked).toBe(true);
 
-    // Both gate conditions now live in the store, so driving it is the whole
-    // trigger — no input prop participates in readiness.
     act(() => {
-      store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
-      store.dispatch(engineLoadProgressChanged(null));
+      store.dispatch(engineStatusChanged({ kind: 'loading' }));
+      store.dispatch(
+        engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }),
+      );
     });
 
     expect(result.current.blocked).toBe(false);
-  });
-
-  it('stays blocked while loadProgress is non-null even after status=ready', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      paletteTab: 'highlights',
-      splash: { visible: true, dismissedVersion: null },
-    };
-    const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
-    // Seed the engine slice: status=ready, loadProgress in-flight.
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
-    store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }));
-    const wrapper = ({ children }: { children: ReactNode }) =>
-      createElement(Provider, { store, children });
-
-    const { result } = renderHook(() => useSplash(), { wrapper });
-    expect(result.current.blocked).toBe(true);
-  });
-});
-
-describe('useSplash — 8 s "Continue anyway" timer', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    window.history.replaceState(null, '', '/');
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('canContinueAnyway flips true after 8 s of being blocked', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      paletteTab: 'highlights',
-      splash: { visible: true, dismissedVersion: null },
-    };
-    // Default engine state is `initializing` → hook reads blocked=true.
-    const { result } = renderSplash(ui);
-    expect(result.current.canContinueAnyway).toBe(false);
-    act(() => {
-      vi.advanceTimersByTime(8001);
-    });
-    expect(result.current.canContinueAnyway).toBe(true);
-  });
-
-  it('does not start the 8 s timer when splash is not visible (deep-link path)', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      paletteTab: 'highlights',
-      splash: { visible: false, dismissedVersion: null },
-    };
-    const { result } = renderSplash(ui);
-    act(() => {
-      vi.advanceTimersByTime(10_000);
-    });
-    expect(result.current.canContinueAnyway).toBe(false);
   });
 });
 

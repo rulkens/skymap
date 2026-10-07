@@ -44,6 +44,7 @@
  * the closures its sagas call into.
  */
 
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
@@ -54,6 +55,8 @@ import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
 import { PERSISTED_VALUES } from './state/persistedValues';
+import { selectArrivalPending } from './state/arrival/selectors';
+import { selectSplashVisible } from './state/ui/selectors';
 import { persistValues } from './utils/storage/persistValues';
 import { installRecorderHook } from './state/recorder/installRecorderHook';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
@@ -98,13 +101,29 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // Recorder seam (`window.__skymapRecorder`) — gated on `?cinema` INSIDE the
   // installer, so this call stays unconditional. No-op on a normal visit.
   installRecorderHook(store);
-  createRoot(root).render(
-    <Provider store={store}>
-      <SagaContextProvider value={setSagaContext}>
-        <RunSagaProvider value={runSaga}>
-          <App />
-        </RunSagaProvider>
-      </SagaContextProvider>
-    </Provider>,
+  const reactRoot = createRoot(root);
+  // Synchronous, so index.html's boot shell comes down in the same task the
+  // app goes up in: no frame shows both, and none shows neither.
+  flushSync(() =>
+    reactRoot.render(
+      <Provider store={store}>
+        <SagaContextProvider value={setSagaContext}>
+          <RunSagaProvider value={runSaga}>
+            <App />
+          </RunSagaProvider>
+        </SagaContextProvider>
+      </Provider>,
+    ),
   );
+  // The shell stays up until React has something to show in its place: the
+  // splash at once, otherwise the first drawn frame, which is what `arrival`
+  // reports. Dropping it at mount left a black canvas while the engine loaded.
+  const dropBootShell = (): void => {
+    const state = store.getState();
+    if (!selectSplashVisible(state) && selectArrivalPending(state)) return;
+    document.getElementById('boot')?.remove();
+    unsubscribe();
+  };
+  const unsubscribe = store.subscribe(dropBootShell);
+  dropBootShell();
 }
