@@ -1,0 +1,212 @@
+---
+title: Sharing a view
+description: The address in the browser’s address bar is a link to what you are looking at. This page covers what that link holds and when the app writes each part, what the person who opens it sees, what it leaves behind, and how to make one for a lesson.
+group: Guide
+order: 5
+---
+
+import ViewLink from '../../../components/ViewLink.astro';
+import { appLink } from '../../../data/appLink';
+
+If you are preparing a lesson, [Use skymap in the classroom](/classroom/#make) has the three steps and a set of ready-made links. This page is the long form.
+
+## The address is the link
+
+<Fact id="share-address" />
+
+Everything after the `#` is written by the app. An address with nothing after it is the home view: Earth, at the present moment.
+
+```
+#focus=body-saturn&t=2033-03-14T21:00:00.000Z
+```
+
+The parts are joined with `&`, and each is described below. [URL parameters](/docs/reference/url-parameters/) lists every one in a table.
+
+## What the app writes, and when
+
+| Part | What it holds | Written when |
+| --- | --- | --- |
+| `focus` | The object the camera turns about | You fly to an object |
+| `t` | An instant, in UTC | You set a date or change the clock’s speed |
+| `orientation` | Which way is up | You change Orientation in the Settings panel |
+| `exhibit`, `tour` | The exhibit or tour that is open | One opens |
+| `pose` | The camera’s position and direction | Never by itself: see [the camera](#the-camera) |
+
+### The object
+
+<Fact id="share-focus" />
+
+<Figure id="start-saturn" />
+
+<Fact id="share-selection" />
+
+To move the focus to a pinned object, press <Keys of="F" /> or the Focus button on its card. [Moving around](/docs/guide/moving/#go-somewhere-else) explains the focus, and [Finding things](/docs/guide/finding/) the search.
+
+<Fact id="esc-clears" />
+
+It also takes `focus` out of the address.
+
+### The instant
+
+<Fact id="link-time-write" />
+
+Pause the clock before you copy the address, and the link opens on the moment you were looking at. [Time](/docs/guide/time/#a-date-in-a-link) has the forms a date can take when you type one by hand.
+
+### Which way is up
+
+<Fact id="share-orientation" />
+
+The four orientations are listed under [Moving around](/docs/guide/moving/#look-around-an-object).
+
+### The camera
+
+<Fact id="share-camera" />
+
+<Fact id="link-pose" />
+
+<Fact id="share-camera-link" />
+
+<Figure id="guide-share-pose" />
+
+Press <Keys of="D" /> again to close the panel. It is a tool for the people who build skymap and is described under [Debug panel and flags](/docs/developers/debug/).
+
+<Fact id="share-pose-dropped" />
+
+## Copy the link
+
+1. Bring the view to where you want it: the object, the date and, if it matters, the orientation.
+2. Pause the clock with <Keys of="\" /> if the moment matters.
+3. Select the address in the address bar and copy it. On a phone, use the browser’s own share button.
+
+That link opens the app’s standard view of the object. For a link that also holds the camera, use the “copy URL” button described under [the camera](#the-camera).
+
+## What the person who opens it sees
+
+<Fact id="share-opens" />
+
+<Fact id="link-time-read" />
+
+So the clock is paused, on the date you chose, and the planets, moons and spacecraft are where they were at that instant. Two people who open the same link read the same digits on the clock wherever they are. To let the scene run, press <Keys of="\" />; to return to the present, <Keys of="Shift+N" />.
+
+What differs is the receiver’s own screen.
+
+- **The frame.** A wider or narrower window shows more or less of the scene around the object. A link with a pose keeps the camera’s distance and direction, not the edges of your picture.
+- **The data size.** <Fact id="phone-data-size" inline /> A planet, or a named galaxy such as Andromeda, opens at either. <Fact id="share-data-size" inline />
+- **The card.** On a phone the card is a sheet at the bottom of the screen: see [Info cards](/docs/guide/info-cards/).
+
+<Fact id="share-unknown" />
+
+## What a link does not carry
+
+<Fact id="share-settings" />
+
+If a lesson needs the names off, a catalogue on or another data size, say so beside the link: the [Settings](/docs/guide/settings/) page lists where each switch is. The pictures of ready-made links on the [classroom page](/classroom/) were taken with the names switched off, and the links open with them on.
+
+<Fact id="share-place" />
+
+<Fact id="search-places" />
+
+## Tours and exhibits
+
+<Fact id="takeover-links" />
+
+<Fact id="exhibit-link-time" />
+
+<Figure id="guide-conjunction" />
+
+<Fact id="share-tour-focus" />
+
+The tours and exhibits themselves are under [Tours and exhibits](/docs/guide/tours/).
+
+## Dome mode
+
+<Fact id="dome-flag" />
+
+<Fact id="share-dome" />
+
+<Figure id="dome-saturn" />
+
+Dome mode is described under [Screens, quality and domes](/docs/guide/screens-and-domes/), and what a planetarium needs to know is on [the domes page](/domes/).
+
+## Back, Forward and typing an address
+
+<Fact id="share-history" />
+
+## A link for a lesson
+
+1. Find the object: open the search with <Keys of="/" />, type its name and press <Keys of="Enter" />.
+2. Set the date: click the date on the clock at the lower right, type a date and a time in UTC, and press <Keys of="Enter" />. The clock pauses there.
+3. Copy the address.
+4. Open the link in a new window before the lesson, on the screen you will use, and look at what it shows.
+
+<Fact id="lesson-link" />
+
+The [classroom page](/classroom/) has links made this way, each with a question to ask, and says what the app needs from the room’s computer.
+
+## Worked examples
+
+Each link opens what its line says. The line under it is what follows the app’s address.
+
+**Saturn, now, with the clock running.**
+
+```
+#focus=body-saturn
+```
+
+<ViewLink href={appLink('focus=body-saturn')}>Open Saturn</ViewLink>
+
+**Jupiter on 14 March 2033 at 21:00 UTC, with the clock paused.**
+
+```
+#focus=body-jupiter&t=2033-03-14T21:00:00Z
+```
+
+<ViewLink href={appLink('focus=body-jupiter&t=2033-03-14T21:00:00Z')}>Open Jupiter on that date</ViewLink>
+
+**Saturn on 7 October 2026, from a chosen camera position.**
+
+```
+#focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0
+```
+
+<ViewLink href={appLink('focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0')}>Open this view</ViewLink>
+
+**The Milky Way with its own plane level.**
+
+```
+#focus=milkyWay&orientation=galactic
+```
+
+<ViewLink href={appLink('focus=milkyWay&orientation=galactic')}>Open the Milky Way</ViewLink>
+
+**The Solar System exhibit on 21 December 2020.**
+
+```
+#exhibit=solarSystem&t=2020-12-21T18:00:00Z
+```
+
+<ViewLink href={appLink('exhibit=solarSystem&t=2020-12-21T18:00:00Z')}>Open the exhibit on that date</ViewLink>
+
+**The tour “Named Cosmic Web”, from its first step.**
+
+```
+#tour=webShowcase
+```
+
+<ViewLink href={appLink('tour=webShowcase')}>Start the tour</ViewLink>
+
+**Saturn in dome mode.**
+
+```
+?dome#focus=body-saturn
+```
+
+<ViewLink href={appLink('focus=body-saturn', 'dome')}>Open Saturn in dome mode</ViewLink>
+
+**The Grand Canyon on 5 October 2026, from above.** This link came from the “copy URL” button, as every link to a place on Earth does, and is too long to print whole.
+
+```
+#t=2026-10-05T19:00:00Z&pose=b,earth,…
+```
+
+<ViewLink href={appLink('t=2026-10-05T19:00:00Z&pose=b,earth,0,0,0,-1941502.7,-4775348.4,3751536.8,0.57082812,-0.63805226,-0.51676356,0.28419471,-0.43693643,0.85341662,0.77031723,0.63401567,0.068084524')}>Open the Grand Canyon</ViewLink>

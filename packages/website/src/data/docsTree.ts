@@ -35,7 +35,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       { title: 'Finding things', path: '/docs/guide/finding/', status: 'live' },
       { title: 'Time', path: '/docs/guide/time/', status: 'live' },
       { title: 'Tours and exhibits', path: '/docs/guide/tours/', status: 'live' },
-      { title: 'Sharing a view', path: '/docs/guide/sharing/', status: 'planned' },
+      { title: 'Sharing a view', path: '/docs/guide/sharing/', status: 'live' },
       { title: 'Info cards', path: '/docs/guide/info-cards/', status: 'planned' },
       { title: 'Settings', path: '/docs/guide/settings/', status: 'planned' },
       {

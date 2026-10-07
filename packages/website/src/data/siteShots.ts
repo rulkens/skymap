@@ -733,4 +733,16 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The purple field is density computed from SDSS galaxy positions; the rings mark named clusters and superclusters.',
     alt: 'A purple web of threads with ringed, named clusters, a title reading Cosmic Web, and on the right notes headed What you’re seeing, How it was made, Key and Sources, with an Exit view button at the foot.',
   },
+  {
+    id: 'guide-share-pose',
+    link: 'focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0',
+    settings: { ui: true, settleMs: 4000 },
+    size: FEATURE,
+    widths: DOCS_WIDTHS,
+    title: 'Saturn through a link that holds the camera',
+    caption: 'The same planet as a plain link opens, from a distance and a direction that were chosen. The clock is stopped on the link’s date.',
+    drawn: 'The planet’s position, its lit side and the tilt of its rings are computed for 7 October 2026 at 12:00 UTC; the ellipses are the moons’ orbits, drawn as lines.',
+    alt: 'Saturn inside a selection ring with the orbits of its moons drawn round it, a card headed Saturn on the right and a clock reading 2026-10-07 12:00 UTC.',
+    credit: 'Saturn: Solar System Scope',
+  },
 ];
