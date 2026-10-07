@@ -55,6 +55,7 @@ import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
@@ -154,7 +155,7 @@ const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDow
 
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
-    snapshot: { nowMs: 0, simDays: CONST_J2000, focusBlend: 0 },
+    snapshot: { nowMs: 0, simDays: CONST_J2000, focusBlend: 0, focus: ZERO_FOCUS },
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
