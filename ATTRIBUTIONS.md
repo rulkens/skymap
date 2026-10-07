@@ -335,7 +335,8 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Licence:** A published paper; two numbers are used.
 - **Attribution:** Cite the paper.
 - **Upstream:** A&A 625, L10 (the journal; no link is recorded in the repository).
-- **Enters skymap:** `src/data/milkyWay/galacticCenter.ts` and the S-star scale.
+- **Enters skymap:** `src/data/bodies/sgrAStarMassSolar.ts`,
+  `src/data/bodies/sStarOrbitInfo.ts` and the S-star scale.
 - **Modified:** No.
 - **Checked:** 2026-10-07: no page opened.
 - **Not verified:** the paper itself.
@@ -566,7 +567,7 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   record).
 - **Attribution:** Cite the paper and the dataset, doi:10.5281/zenodo.8187943.
 - **Upstream:** <https://zenodo.org/records/8187943>
-- **Enters skymap:** `data/raw/edenhofer/fetch_edenhofer.sh` →
+- **Enters skymap:** downloaded as `data/raw/edenhofer/README.md` describes →
   `tools/volumes/extractDustCube.py` → `buildDustVolume.ts` →
   `public/data/scalar-field/v3/edenhofer-dust-*.scfd` (shipped, with no layer
   drawing it yet).
@@ -1312,228 +1313,496 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
 
 ## 3D models
 
-### "Livyatan melvillei" — Major
+Each model is shipped as a derivative under `public/data/meshes/<key>*`; the
+raw downloads are gitignored and `data/raw/meshes/<key>/README.md` records
+each one. The credit string of each model is copied by `npm run build-meshes`
+into `src/data/bodies/meshAssets.generated.ts`.
 
-- **Use:** The whale in the pair of mesh bodies orbiting Earth (the
-  Hitchhiker's Guide easter egg). Shipped as a derivative:
-  `npm run build-meshes` de-rigs the model, merges its primitives and resizes
-  its textures into `public/data/meshes/whale.*`. The raw GLB is gitignored;
-  per-file provenance lives in `tools/utils/io/rawDataRegistry.ts` (the
-  `meshes.*` rows) and `data/raw/meshes/whale/README.md`.
-- **Source:**
-  <https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba>,
-  by Major (<https://sketchfab.com/majorgalah>).
-- **Licence:** CC BY 4.0. Required attribution, verbatim:
+The NASA models come from NASA 3D Resources, whose repository says: "These
+assets are free and without copyright. Please read the usage guidelines."
+Those guidelines are NASA's media guidelines, quoted under "Solar-system
+textures" above.
+
+### "Livyatan melvillei" by Major (the whale)
+
+<!-- attribution: id=mesh-whale; keys=meshes.whale*; hosts=sketchfab.com -->
+
+- **What:** The whale of the pair of bodies in orbit around Earth.
+- **By:** Major (<https://sketchfab.com/majorgalah>).
+- **Licence:** CC BY 4.0 ("License: CC Attribution", linking the 4.0 deed).
+- **Attribution:** Verbatim, as Sketchfab words it:
 
   > This work is based on "Livyatan melvillei" (https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba) by Major (https://sketchfab.com/majorgalah) licensed under CC-BY-4.0
 
-### "Flowers Petunia White" — Marianne Goudriaan
+- **Upstream:** <https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba>
+- **Enters skymap:** downloaded by hand → `npm run build-meshes` →
+  `public/data/meshes/whale.*`.
+- **Modified:** Yes. Rig removed, primitives merged, textures resized.
+- **Checked:** 2026-10-07: <https://sketchfab.com/3d-models/livyatan-melvillei-8313bd7fde514b108c9ef469817b62ba>
 
-- **Use:** The bowl of petunias trailing the whale. Shipped as a derivative:
-  a headless Blender import (`npm run import-mesh -- petunias`) and pre-bake
-  (`npm run prebake-mesh -- petunias`) bake the author's six textures into one
-  set of PBR atlases, which
-  `npm run build-meshes` then bakes to `public/data/meshes/petunias.*`. The raw
-  GLB and the pre-bake output are gitignored; provenance lives in
-  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/petunias/README.md`.
-- **Source:** <https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0>,
-  by Marianne Goudriaan (<https://sketchfab.com/mariannegoudriaan>).
-- **Licence:** CC BY 4.0. Required attribution, verbatim:
+### "Flowers Petunia White" by Marianne Goudriaan (the bowl of petunias)
+
+<!-- attribution: id=mesh-petunias; keys=meshes.petunias* -->
+
+- **What:** The bowl of petunias trailing the whale.
+- **By:** Marianne Goudriaan (<https://sketchfab.com/mariannegoudriaan>).
+- **Licence:** CC BY 4.0 ("License: CC Attribution", linking the 4.0 deed).
+- **Attribution:** Verbatim:
 
   > This work is based on "Flowers Petunia White" (https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0) by Marianne Goudriaan (https://sketchfab.com/mariannegoudriaan) licensed under CC-BY-4.0
 
-### "Voyager Probe (B)" — NASA / Michael D. Carbajal
+- **Upstream:** <https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0>
+- **Enters skymap:** downloaded by hand → `npm run import-mesh -- petunias`,
+  `npm run prebake-mesh -- petunias` (Blender) → `npm run build-meshes`.
+- **Modified:** Yes. Eleven materials baked into one set of atlases.
+- **Checked:** 2026-10-07: <https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0>
 
-- **Use:** The Voyager 1 and Voyager 2 mesh bodies (both `meshKey: 'voyager'`).
-  Shipped as a derivative: a headless Blender pre-bake
-  (`npm run prebake-mesh -- voyager`) flattens the scene to one mesh and one
-  albedo atlas, which `npm run build-meshes` then bakes to
-  `public/data/meshes/voyager.*`. The raw GLB and the pre-bake output are
-  gitignored; provenance and the pre-bake's own steps live in
-  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/voyager/README.md`.
-- **Source:** NASA 3D Resources,
-  <https://science.nasa.gov/3d-resources/voyager-probe-b/> (download served
-  from `assets.science.nasa.gov`).
-- **Licence:** Public domain under NASA's media usage guidelines — see
-  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
-- **Credit:** NASA / Michael D. Carbajal (NASA Headquarters).
+### "Voyager Probe (B)" (Voyager 1 and 2)
 
-### "Mars 2020 Perseverance Rover" — Brian Kumanchik, NASA/JPL-Caltech
+<!-- attribution: id=mesh-voyager; keys=meshes.voyager*; hosts=science.nasa.gov -->
 
-- **Use:** The Perseverance mesh body. Shipped as a derivative: a headless
-  Blender pre-bake (`npm run prebake-mesh -- perseverance`) flattens the
-  deployed rig to one mesh and one albedo atlas, which `npm run build-meshes`
-  then bakes to `public/data/meshes/perseverance.*`. The raw GLB and the
-  pre-bake output are gitignored; provenance and the pre-bake's own steps live
-  in `tools/utils/io/rawDataRegistry.ts` and
-  `data/raw/meshes/perseverance/README.md`.
-- **Source:** NASA 3D Resources,
-  <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
-  (download served from `assets.science.nasa.gov`).
-- **Licence:** Public domain under NASA's media usage guidelines — see
-  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
-- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+- **What:** The model drawn for both Voyager spacecraft.
+- **By:** The page gives "Source NASA/Michael D. Carbajal".
+- **Licence:** NASA's media guidelines.
+- **Attribution:** NASA asks to be acknowledged as the source. Ours: "NASA /
+  Michael D. Carbajal (NASA Headquarters)".
+- **Upstream:** <https://science.nasa.gov/3d-resources/voyager-probe-b/>
+- **Enters skymap:** downloaded by hand → Blender pre-bake → `build-meshes`.
+- **Modified:** Yes. Flattened to one mesh and one set of atlases.
+- **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/voyager-probe-b/>,
+  <https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/README.md>,
+  <https://www.nasa.gov/nasa-brand-center/images-and-media/>
 
-### "Curiosity Rover (MSL) (Clean)" — Brian Kumanchik, NASA/JPL-Caltech
+### "Hubble Space Telescope (A)"
 
-- **Use:** The Curiosity mesh body. Shipped as a derivative: a headless
-  Blender pre-bake (`npm run prebake-mesh -- curiosity`) flattens the deployed
-  rig to one mesh and one albedo atlas, which `npm run build-meshes` then bakes
-  to `public/data/meshes/curiosity.*`. The raw archive and the pre-bake output
-  are gitignored; provenance and the pre-bake's own steps live in
-  `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/curiosity/README.md`.
-- **Source:** NASA 3D Resources,
-  <https://science.nasa.gov/3d-resources/curiosity-rover-msl/> (download
-  served from `assets.science.nasa.gov`, a zip archive holding one `.blend`
-  file).
-- **Licence:** Public domain under NASA's media usage guidelines — see
-  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
-- **Credit:** Brian Kumanchik, NASA/JPL-Caltech.
+<!-- attribution: id=mesh-hubble; keys=meshes.hubble* -->
 
-### "Mars Exploration Rover - Spirit and Opportunity" — NASA/JPL-Caltech
+- **What:** The Hubble model, the textured variant found only in NASA's GitHub
+  mirror of the collection.
+- **By:** NASA; the mirror names no individual modeller.
+- **Licence:** NASA's media guidelines. GitHub reports no licence file for the
+  repository; its README carries the sentence quoted above.
+- **Attribution:** Ours: "NASA, "Hubble Space Telescope (A)" — NASA 3D
+  Resources".
+- **Upstream:** <https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)>
+- **Enters skymap:** downloaded by hand → `npm run import-mesh -- hubble`,
+  `npm run prebake-mesh -- hubble` → `build-meshes` →
+  `public/data/meshes/hubble.*`.
+- **Modified:** Yes. Scaled from inches to metres, foil materials made
+  metallic, flattened to one set of atlases.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/README.md>,
+  <https://api.github.com/repos/nasa/NASA-3D-Resources>
 
-- **Use:** The Spirit and Opportunity mesh bodies (both `meshKey: 'mer'`) —
-  the same vehicle design, so both bodies draw this one model. Shipped as a
-  derivative: a headless Blender pre-bake (`npm run prebake-mesh -- mer`)
-  flattens the deployed rig to one mesh and one albedo atlas, which
-  `npm run build-meshes` then bakes to `public/data/meshes/mer.*`. The raw
-  `.blend` and the pre-bake output are gitignored; provenance and the
-  pre-bake's own steps live in `tools/utils/io/rawDataRegistry.ts` and
-  `data/raw/meshes/mer/README.md`.
-- **Source:** NASA 3D Resources page
-  <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>;
-  the page's own download link 404s (verified 2026-09-11), so the file is
-  fetched from NASA's own GitHub mirror of the same collection,
-  <https://github.com/nasa/NASA-3D-Resources>.
-- **Licence:** Public domain under NASA's media usage guidelines — see
-  <https://www.nasa.gov/nasa-brand-center/images-and-media>.
-- **Credit:** NASA/JPL-Caltech.
+### "Mars 2020 Perseverance Rover"
+
+<!-- attribution: id=mesh-perseverance; keys=meshes.perseverance* -->
+
+- **What:** The Perseverance model.
+- **By:** The page gives "Source NASA/Jet Propulsion Laboratory". Our shipped
+  credit names Brian Kumanchik, NASA/JPL-Caltech; the page does not name him
+  today (the collection's README lists him as a contributor, without saying
+  which models are his).
+- **Licence:** NASA's media guidelines.
+- **Attribution:** Ours: "Brian Kumanchik, NASA/JPL-Caltech".
+- **Upstream:** <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
+- **Enters skymap:** downloaded by hand → Blender pre-bake → `build-meshes`.
+- **Modified:** Yes. Posed mast-up, reduced to 100k triangles, flattened.
+- **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/>
+
+### "Curiosity Rover (MSL) (Clean)"
+
+<!-- attribution: id=mesh-curiosity; keys=meshes.curiosity* -->
+
+- **What:** The Curiosity model.
+- **By:** The page's metadata names "NASA/Brian E. Kumanchik".
+- **Licence:** NASA's media guidelines.
+- **Attribution:** Ours: "Brian Kumanchik, NASA/JPL-Caltech".
+- **Upstream:** <https://science.nasa.gov/3d-resources/curiosity-rover-msl/>
+- **Enters skymap:** downloaded by hand (a zip holding one `.blend`) → Blender
+  import and pre-bake → `build-meshes`.
+- **Modified:** Yes. Three defects of the source repaired, flattened.
+- **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/curiosity-rover-msl/>
+
+### "Mars Exploration Rover - Spirit and Opportunity"
+
+<!-- attribution: id=mesh-mer; keys=meshes.mer* -->
+
+- **What:** One model drawn for both rovers.
+- **By:** No author was found on the page today. Ours: "NASA/JPL-Caltech".
+- **Licence:** NASA's media guidelines.
+- **Attribution:** Ours: "NASA/JPL-Caltech".
+- **Upstream:** <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>;
+  the file itself comes from <https://github.com/nasa/NASA-3D-Resources>,
+  because the page's own download link was dead when it was fetched.
+- **Enters skymap:** downloaded by hand → Blender pre-bake → `build-meshes`.
+- **Modified:** Yes. Posed deployed, flattened.
+- **Checked:** 2026-10-07: <https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/>
 
 ## Fonts
 
-### Cormorant Garamond — display serif
+All three are under the SIL Open Font License 1.1, whose second condition
+reads: "Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy contains
+the above copyright notice and this license." The repository holds the font
+files without a copy of the licence text beside them; whether the files' own
+metadata carries the notice was not checked.
 
-- **Use:** The label font. Vendored as `CormorantGaramond-SemiBold.ttf` in two
-  places — `data/raw/fonts/` (baked into the MSDF label atlas by
-  `tools/fonts/buildFontAtlas.ts`) and `tools/site/fonts/` (rasterised into
-  `public/og-image.jpg` by `tools/site/makeOgImage.ts`) — and additionally
-  self-hosted as a subsetted `public/fonts/CormorantGaramond-SemiBold.woff2`
-  (`@font-face` in `src/styles/global.css`) for the 2D UI chrome
-  (`--font-family-display`), rather than loaded from Google Fonts.
-- **Designer:** Christian Thalmann (Catharsis Fonts).
-- **Source:** <https://fonts.google.com/specimen/Cormorant+Garamond>.
+### Cormorant Garamond
+
+<!-- attribution: id=font-cormorant; keys=fonts.dir -->
+
+- **What:** The display face: labels in the app (an MSDF atlas), headings of
+  the app's panels and of the website, the social card.
+- **By:** Christian Thalmann (Catharsis Fonts). "Copyright 2015 the Cormorant
+  Project Authors (github.com/CatharsisFonts/Cormorant)".
 - **Licence:** SIL Open Font License 1.1.
+- **Attribution:** The copyright notice and licence with each copy (see above).
+- **Upstream:** <https://github.com/CatharsisFonts/Cormorant>
+- **Enters skymap:** `data/raw/fonts/CormorantGaramond-SemiBold.ttf` →
+  `npm run build-fonts` → `public/fonts/cormorant.{json,webp}`;
+  `public/fonts/CormorantGaramond-SemiBold.woff2`;
+  `tools/site/fonts/CormorantGaramond-SemiBold.ttf`;
+  `packages/website/src/assets/fonts/cormorant-garamond-600-site.woff2`.
+- **Modified:** Yes. Subsetted to WOFF2, and rasterised into a distance-field
+  atlas.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/CatharsisFonts/Cormorant/master/OFL.txt>
 
-## Shaders
+### Sora
 
-### Milky Way impostor — "Spiral galaxy" by mrange
+<!-- attribution: id=font-sora -->
 
-The volumetric raymarched fragment shader at the heart of
-`src/services/gpu/shaders/milkyWayImpostor.wgsl` is a port of the
-"Spiral galaxy" ShaderToy by **mrange**.
+- **What:** Sora Thin, the face of the exhibit titles in the app.
+- **By:** "Copyright 2019 The Sora Project Authors
+  (https://github.com/sora-xor/sora-font)".
+- **Licence:** SIL Open Font License 1.1.
+- **Attribution:** The copyright notice and licence with each copy.
+- **Upstream:** <https://github.com/sora-xor/sora-font>
+- **Enters skymap:** `public/fonts/Sora-Thin.woff2` (`@font-face` in
+  `src/styles/tokens.css`).
+- **Modified:** Converted to WOFF2; whether it was subsetted is not recorded.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/sora-xor/sora-font/master/OFL.txt>
 
-- **Original:** https://www.shadertoy.com/view/wsBBWD
-- **Author profile:** https://www.shadertoy.com/user/mrange
-- **Licence:** CC0 (public domain dedication, declared in the original
-  source's leading `// License CC0: Spiral galaxy` comment).
-- **Use:** WGSL port serves as the procedural Milky Way at the world
-  origin so the user has a meaningful "here" to anchor on. The vertex
-  stage was rewritten from the ground up to use a world-anchored view-
-  aligned billboard driven by the engine's real camera; the fragment
-  stage's raymarched render logic (bulge sphere, exponential disk,
-  star-cell sampling, dust integral) is structurally a line-by-line
-  port with WGSL-syntax adjustments and skymap-specific output
-  sanitisation (NaN masking, disk-extent envelope). Display-space
-  post-processing (gamma, contrast, vignette) was deleted so the
-  engine's HDR tone-map pass can run on a clean linear-light input.
+### Jost
 
-### Atmospheres — Bruneton & Neyret 2008, Hillaire 2020
+<!-- attribution: id=font-jost -->
 
-- **Use:** Method reference, no code reused. The three-LUT atmosphere pipeline
-  (`src/services/gpu/shaders/atmosphere/`) follows Bruneton's transmittance-LUT
-  horizon-packing (r, mu) uv parametrisation (`scattering.wesl`,
-  `transmittanceLut.wesl`) and Hillaire's closed-form single-order
-  approximation of the multiple-scattering series (`multiScatterLut.wesl`);
-  the shell fragment's segment-transmittance ratio (`shell/fragment.wesl`) is
-  Bruneton's ratio identity. `AtmosphereShellRenderer.d.ts` and
-  `atmosphereParams.ts` describe the same three-LUT structure.
-- **Reference:** Bruneton, E. & Neyret, F. 2008, "Precomputed Atmospheric
-  Scattering", EGSR / Computer Graphics Forum 27(4); reference implementation
-  <https://github.com/ebruneton/precomputed_atmospheric_scattering> (BSD-3).
-  Hillaire, S. 2020, "A Scalable and Production Ready Sky and Atmosphere
-  Rendering Technique", EGSR / Computer Graphics Forum 39(4),
-  <https://sebh.github.io/publications/egsr2020.pdf>.
-- **Licence:** Both papers are cited above; no code from either is reused, so
-  no licence obligation applies beyond citation.
+- **What:** The text face of the website.
+- **By:** indestructible type\*. "Copyright 2020 The Jost Project Authors
+  (https://github.com/indestructible-type/Jost)".
+- **Licence:** SIL Open Font License 1.1.
+- **Attribution:** The copyright notice and licence with each copy.
+- **Upstream:** <https://github.com/indestructible-type/Jost>
+- **Enters skymap:** the npm package `@fontsource-variable/jost`
+  (`packages/website/package.json`), bundled by the site build.
+- **Modified:** No.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/indestructible-type/Jost/master/OFL.txt>
 
-### Sgr A\* lens — Bruneton 2020
+## Code and methods
 
-- **Use:** Reference and audit baseline only — no code reused. The Sgr A\*
-  lens computes its own Schwarzschild bending-angle LUT by quadrature
+### "Spiral galaxy" by mrange (two noise functions)
+
+<!-- attribution: id=mrange -->
+
+- **What:** `hash21` and `valueNoise2` in
+  `src/services/gpu/shaders/lib/util.wesl`. They came with a port of the
+  "Spiral galaxy" ShaderToy, which once drew the Milky Way; that shader is no
+  longer in the repository and these two helpers are what remains.
+- **By:** mrange (<https://www.shadertoy.com/user/mrange>).
+- **Licence:** CC0, as the shader's first line read when it was ported
+  ("// License CC0: Spiral galaxy").
+- **Attribution:** None required by CC0; the file names the source.
+- **Upstream:** <https://www.shadertoy.com/view/wsBBWD>
+- **Enters skymap:** hand-ported to WGSL.
+- **Modified:** Yes. Translated from GLSL.
+- **Checked:** 2026-10-07: ShaderToy refused the request (HTTP 403, a browser
+  check), so the licence line was not re-read.
+- **Not verified:** the licence line today.
+
+### "Hash without Sine" by Dave Hoskins
+
+<!-- attribution: id=hoskins-hash -->
+
+- **What:** `hash21Hq` in `src/services/gpu/shaders/lib/util.wesl`, used by
+  other shaders for jitter.
+- **By:** Dave Hoskins.
+- **Licence:** Not recorded in the repository, and ShaderToy could not be
+  opened today.
+- **Attribution:** The file names the author and links the shader.
+- **Upstream:** <https://www.shadertoy.com/view/4djSRW>
+- **Enters skymap:** hand-ported to WGSL.
+- **Modified:** Yes. Translated from GLSL.
+- **Checked:** 2026-10-07: ShaderToy refused the request (HTTP 403).
+- **Not verified:** the shader's licence header.
+
+### HEALPix pixel indexing
+
+<!-- attribution: id=healpix -->
+
+- **What:** `src/utils/math/healpixNest.ts`, which turns a sky direction into
+  a nested HEALPix pixel index (used to weigh survey coverage).
+- **By:** The scheme: Górski et al. 2005, ApJ 622, 759. The file's header
+  says the algorithm was "transcribed from healpy's
+  `pixelfunc.lonlat_to_healpix` (BSD-licensed) and the original `chealpix` C
+  source".
+- **Licence:** That header does not match what the projects state today:
+  `lonlat_to_healpix` is a function of astropy-healpix, which is BSD 3-Clause
+  ("Copyright (c) 2016-2018, Astropy Developers"); healpy is GPL-2.0, as
+  GitHub reports it. Which source the file was written from is not recorded
+  beyond that sentence.
+- **Attribution:** Cite Górski et al. 2005. BSD 3-Clause asks that
+  redistributions of the code keep its copyright notice.
+- **Upstream:** <https://github.com/astropy/astropy-healpix>,
+  <https://github.com/healpy/healpy>
+- **Enters skymap:** written by hand in TypeScript.
+- **Modified:** A re-implementation.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/astropy/astropy-healpix/main/LICENSE.md>,
+  <https://api.github.com/repos/healpy/healpy>
+
+### Colour temperature to RGB (Tanner Helland)
+
+<!-- attribution: id=helland -->
+
+- **What:** The piecewise fit in `src/utils/color/temperatureToLinearRgb.ts`
+  that gives a star its colour from its temperature.
+- **By:** Tanner Helland, "How to Convert Temperature (K) to RGB: Algorithm
+  and Sample Code", 2012.
+- **Licence:** Not stated in the article.
+- **Attribution:** The file names the author and links the article.
+- **Upstream:** <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>
+- **Enters skymap:** written by hand from the article's formulae.
+- **Modified:** Yes. Output converted from sRGB to linear light and normalised.
+- **Checked:** 2026-10-07: <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>
+
+### Atmospheres: Bruneton & Neyret 2008, Hillaire 2020
+
+<!-- attribution: id=atmosphere-methods -->
+
+- **What:** Methods only; no code is reused. The atmosphere shaders
+  (`src/services/gpu/shaders/atmosphere/`) follow Bruneton's
+  transmittance-table parametrisation and Hillaire's multiple-scattering
+  approximation.
+- **By:** Bruneton & Neyret 2008, "Precomputed Atmospheric Scattering",
+  Computer Graphics Forum 27(4); Hillaire 2020, "A Scalable and Production
+  Ready Sky and Atmosphere Rendering Technique", Computer Graphics Forum 39(4).
+- **Licence:** None applies to a method; the papers are cited.
+- **Attribution:** Cite the two papers.
+- **Upstream:** <https://github.com/ebruneton/precomputed_atmospheric_scattering>,
+  <https://sebh.github.io/publications/egsr2020.pdf>
+- **Enters skymap:** as a design, in our own WGSL.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** the licence of the reference implementations (not used).
+
+### Black-hole lensing: Bruneton 2020
+
+<!-- attribution: id=black-hole-method -->
+
+- **What:** Method and comparison baseline only; no code is reused. The lens
+  around Sagittarius A\* computes its own deflection table
   (`src/utils/lensing/buildSchwarzschildDeflectionLut.ts`) and its own march
-  (`src/services/gpu/shaders/bodies/sgrAStarLensing/fragment.wesl`), design
-  descended from an earlier in-repo NFW lens LUT. Bruneton's paper informed
-  the backward-lookup convention (rotate the escape ray toward the hole by
-  the bending angle) and served as the comparison baseline for the
-  emission-disk and LUT math audit during development.
-- **Reference:** Eric Bruneton, "Real-time High-Quality Rendering of
-  Non-Rotating Black Holes," 2020, [arXiv:2010.08735](https://arxiv.org/abs/2010.08735);
-  reference implementation <https://github.com/ebruneton/black_hole_shader>.
-- **Licence:** BSD-3-Clause (reference implementation).
+  (`src/services/gpu/shaders/bodies/blackHoleLensing/`).
+- **By:** Eric Bruneton, "Real-time High-Quality Rendering of Non-Rotating
+  Black Holes", 2020 ([arXiv:2010.08735](https://arxiv.org/abs/2010.08735)).
+- **Licence:** None applies to a method; the paper is cited.
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://github.com/ebruneton/black_hole_shader>
+- **Enters skymap:** as a design, in our own WGSL.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** the licence of the reference implementation (not used).
 
-## Vendored data
+## Hand-typed data
 
-### d3-celestial — constellation line data
+These files are written by hand in the repository. Their provenance, row by
+row where it is known, is in [docs/DATA.md](docs/DATA.md), "Hand-typed values
+and where they come from".
 
-- **Use:** IAU constellation stick-figure vertices, vendored at
-  `data/raw/constellations/constellations.lines.json` and resolved at build
-  time to real 3D star positions, shipped as `public/data/constellations.json`.
-- **Source:** [d3-celestial](https://github.com/ofrohn/d3-celestial) by
-  Olaf Frohn, `data/constellations.lines.json`.
-- **Licence:** BSD-3-Clause.
+### Fact sheets of the solar-system bodies
 
-## External services / APIs
+<!-- attribution: id=seed-planet-facts; keys=planet-facts.seed -->
 
-These services are queried at build-time or read-only at runtime; no data
-flows from skymap to them.
+- **What:** Mass, gravity, day, year, distance, temperature, moons, tilt and
+  atmosphere of 43 bodies, as display strings, with a paragraph each.
+- **By:** Typed by hand by the project; no source is recorded per value.
+- **Licence:** Ours (MIT), for the wording; the numbers are facts.
+- **Attribution:** None. The nine planet rows were compared with NASA's
+  Planetary Fact Sheet today and agree but for the values listed in
+  `docs/DATA.md`.
+- **Upstream:** <https://nssdc.gsfc.nasa.gov/planetary/factsheet/> (the
+  comparison, not a recorded source).
+- **Enters skymap:** `data/seeds/planet_facts.seed.json` →
+  `npm run build-planet-facts` → `src/data/bodies/bodyFacts.generated.ts`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: <https://nssdc.gsfc.nasa.gov/planetary/factsheet/>,
+  <https://nssdc.gsfc.nasa.gov/planetary/factsheet/planet_table_ratio.html>
+- **Not verified:** the 34 rows of moons, spacecraft and other bodies.
 
-- **Wikipedia REST API** (`https://en.wikipedia.org/api/rest_v1/page/summary/...`)
-  — descriptions + images for the famous-galaxy enrichment pass.
-  Wikipedia content is CC-BY-SA 4.0.
-- **HyperLEDA fG.cgi** (`http://atlas.obs-hp.fr/hyperleda/fG.cgi`) — used by
-  `tools/fetchHyperLeda.ts` and `tools/expandFamousFromCatalogs.ts` to fetch
-  per-galaxy metadata.
-- **DESI Legacy viewer cutouts**
-  (`https://www.legacysurvey.org/viewer/cutout.jpg`) — used by
-  `tools/fetchFamousImages.ts` for the thumbnail fallback path.
-- **VizieR TAP** (`https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync`) —
-  used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL, and
-  as the one-off source for the hand-transcribed Gillessen S-star tables (and
-  the check that verified that transcription). CDS asks that use of VizieR be
-  acknowledged: "This research has made use of the VizieR catalogue access
-  tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier)." The original
-  description of the service is Ochsenbein, Bauer & Marcout 2000, A&AS 143, 23.
-- **NED — NASA/IPAC Extragalactic Database**
-  (`https://ned.ipac.caltech.edu/byname?objname=…`) — linked from the
-  InfoCard "Catalogues" row for famous galaxies. Read-only; no programmatic
-  access at build time.
+### Featured clusters, superclusters, voids and groups
 
-## NPM dependencies
+<!-- attribution: id=seed-structures; keys=structures.seed -->
 
-The runtime + build-time JavaScript dependencies are listed in
-[`package.json`](package.json). Notable third-party libraries:
+- **What:** 42 hand-placed structures (15 clusters, 16 groups, 8
+  superclusters, 3 voids): a position, a distance, two radii and a paragraph
+  each. The voids and groups exist only here; no catalogue feeds them.
+- **By:** Typed by hand by the project; no source is recorded per row.
+- **Licence:** Ours (MIT).
+- **Attribution:** None.
+- **Upstream:** None recorded.
+- **Enters skymap:** `data/seeds/structure_anchors.seed.json` →
+  `npm run build-structures` → `public/data/structure-catalog/`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: the file itself; no outside page.
+- **Not verified:** every position, distance and radius in it.
 
-- **react / react-dom** (MIT) — UI framework.
-- **wgpu-matrix** (MIT) — vector / matrix math.
-- **vite** (MIT) — dev server + bundler.
-- **vitest** (MIT) — test runner.
-- **@vitejs/plugin-react** (MIT) — React refresh / JSX transform.
-- **@webgpu/types** (BSD-3) — WebGPU TypeScript declarations.
-- **typescript** (Apache-2.0) — typechecker / transpiler.
-- **prettier** (MIT) — code formatter.
-- **sharp** (Apache-2.0) — image processing for the thumbnail pipeline.
-- **tsx** (MIT) — TypeScript runner for tools scripts.
-- **@types/\* packages** (MIT) — type stubs.
+### Famous galaxies
 
-Each dependency's licence and full attribution is enumerated in its own
-`node_modules/<package>/LICENSE` after `npm install`.
+<!-- attribution: id=seed-famous-galaxies; keys=famous.seed -->
+
+- **What:** 81 well-known galaxies: names, position, distance, diameter, type
+  and a description.
+- **By:** Compiled by the project from HyperLEDA (names, position, distance
+  modulus, diameter) and Wikipedia (about 50 descriptions); about 20
+  descriptions are our own.
+- **Licence:** As HyperLEDA and Wikipedia above; ours for the rest.
+- **Attribution:** As HyperLEDA and Wikipedia above.
+- **Upstream:** <http://atlas.obs-hp.fr/hyperleda/>, <https://en.wikipedia.org/>
+- **Enters skymap:** `data/seeds/famous_galaxies.seed.json` →
+  `npm run build-famous` → `famous.bin`, `famous_galaxies_meta.json`.
+- **Modified:** Yes. Units converted; descriptions shortened.
+- **Checked:** 2026-10-07: the pages under HyperLEDA and Wikipedia.
+
+### Famous stars, the Sun and constellation overrides
+
+<!-- attribution: id=seed-famous-stars; keys=famous-stars.seed,sun.seed,constellation-overrides.seed -->
+
+- **What:** Well-known stars with their catalogue numbers, position,
+  distance, magnitude, type, radius, temperature, mass and a description; the
+  Sun in the same form; and star choices for constellation vertices the
+  resolver could not place.
+- **By:** Typed by hand by the project; no source is recorded per value.
+- **Licence:** Ours (MIT), for the wording; the numbers are facts.
+- **Attribution:** None.
+- **Upstream:** None recorded.
+- **Enters skymap:** `data/seeds/famous_stars.seed.json`, `sun.seed.json` →
+  `npm run build-famous-stars`; `constellation_overrides.seed.json` →
+  `tools/stars-rs`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: the files themselves; no outside page.
+- **Not verified:** the values in them.
+
+### Local-volume distances
+
+<!-- attribution: id=seed-local-volume; keys=localvolume.distances -->
+
+- **What:** Distances for a handful of nearby galaxies that neither
+  Cosmicflows-4 nor our HyperLEDA cache covers.
+- **By:** Typed by hand by the project. Each row's `method` field names where
+  its distance comes from (for example "TRGB, Karachentsev+ 2003 (NED)").
+- **Licence:** Ours (MIT); the numbers are published measurements.
+- **Attribution:** The source named in each row.
+- **Upstream:** Per row; most were looked up in NED.
+- **Enters skymap:** `data/seeds/local_volume_distances.seed.json` →
+  `tools/catalog/catalogDistanceFor.ts`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: the file itself; no outside page.
+- **Not verified:** each row against its named source.
+
+### skymap's own records and hosts
+
+<!-- attribution: id=skymap-own; keys=textures.dir,textures.sha256,textures.readme,meshes.dir,meshes.sha256,meshes.readme; hosts=skymap-data.rulkens.com,skymap.rulkens.com,rulkens.com -->
+
+- **What:** Checksum files, provenance READMEs and download folders of the
+  registry that belong to no single source; and the project's own hosts: the
+  app, the maker's site, and the R2 bucket from which the app fetches every
+  built data file, texture, tile and model named in this file.
+- **By:** Alexander Rulkens.
+- **Licence:** MIT for what is ours; each file served from the bucket keeps
+  the terms of its entry here.
+- **Attribution:** As each entry states.
+- **Upstream:** <https://github.com/rulkens/skymap>
+- **Enters skymap:** `.env.production` (`VITE_DATA_BASE_URL`); `docs/DEPLOY.md`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: the repository itself.
+
+## Services and links
+
+### NED, the NASA/IPAC Extragalactic Database (link only)
+
+<!-- attribution: id=ned; hosts=ned.ipac.caltech.edu -->
+
+- **What:** The cards of galaxies link to NED's page for the object. Nothing
+  is fetched from NED by the app; some hand-typed distances were looked up
+  there.
+- **By:** NASA/IPAC, Caltech.
+- **Licence:** Not read; no NED data is shipped as such.
+- **Attribution:** None for a link.
+- **Upstream:** <https://ned.ipac.caltech.edu/>
+- **Enters skymap:** `src/utils/math/nedByNameUrl.ts`, `nedNearPositionUrl.ts`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** NED's terms and the acknowledgement it asks for.
+
+### Counterscale (visit counter)
+
+<!-- attribution: id=counterscale; hosts=counterscale.rulkens.workers.dev -->
+
+- **What:** The script that counts visits, run on our own Cloudflare account.
+- **By:** Ben Vinegar and contributors.
+- **Licence:** MIT. "Copyright 2025 Ben Vinegar".
+- **Attribution:** The MIT notice with copies of the software; we serve its
+  tracker script unchanged from our deployment.
+- **Upstream:** <https://github.com/benvinegar/counterscale>
+- **Enters skymap:** `.env.production` (`VITE_COUNTERSCALE_URL`) →
+  `src/utils/analytics/injectAnalytics.ts`.
+- **Modified:** No.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/benvinegar/counterscale/main/LICENSE>
+
+### Cloudflare Turnstile (contact form check)
+
+<!-- attribution: id=turnstile; hosts=challenges.cloudflare.com -->
+
+- **What:** The spam check of the website's contact form; the Worker asks
+  Cloudflare to verify a token. The form is closed until it is configured.
+- **By:** Cloudflare.
+- **Licence:** A service under Cloudflare's terms, not read here.
+- **Attribution:** None.
+- **Upstream:** <https://challenges.cloudflare.com/turnstile/v0/siteverify>
+- **Enters skymap:** `src/data/worker/contactConfig.ts`,
+  `src/utils/worker/verifyTurnstile.ts`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: no page opened.
+- **Not verified:** Cloudflare's terms.
+
+### Links to papers, repositories and reference pages
+
+<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org -->
+
+- **What:** Plain links in the app's exhibits, credits and page head: papers
+  on arXiv and by DOI, repositories on GitHub, the WebGPU support table, the
+  MIT licence text. Nothing is fetched from them.
+- **By:** Their respective owners.
+- **Licence:** None applies to a link.
+- **Attribution:** None.
+- **Upstream:** the links themselves.
+- **Enters skymap:** `src/data/exhibits/*.ts`, `src/components/Splash/`,
+  `src/unsupportedPage.ts`, `index.html`.
+- **Modified:** Not applicable.
+- **Checked:** 2026-10-07: no page opened.
+
+### npm dependencies
+
+<!-- attribution: id=npm-dependencies -->
+
+- **What:** The libraries the app and the website bundle: `react`,
+  `react-dom`, `react-redux`, `@reduxjs/toolkit`, `redux-saga`,
+  `typed-redux-saga`, `react-markdown`, `classnames`, `hotkeys-js`,
+  `meshoptimizer`, `wgpu-matrix`; for the website `astro`, `@astrojs/mdx`,
+  `pagefind`. Build-time tools are listed in `package.json`.
+- **By:** Their authors.
+- **Licence:** MIT, each of the fourteen, as its own `package.json` states.
+- **Attribution:** MIT asks that the copyright notice travel with copies; the
+  notices are in each package's licence file under `node_modules/`.
+- **Upstream:** <https://www.npmjs.com/>
+- **Enters skymap:** `package.json`, `packages/website/package.json`.
+- **Modified:** No.
+- **Checked:** 2026-10-07: the `license` field of each installed package.
