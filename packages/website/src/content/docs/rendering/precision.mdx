@@ -30,7 +30,7 @@ You can stand in a park in Copenhagen and fly without a cut to where the map of 
 
 <Fact id="render-depth-range" />
 
-The ranges are drawn from the farthest to the nearest, each over the last, so a planet covers the stars behind it without any comparison of depth between the two. Inside the galaxies’ range nothing hides anything, so it has no [depth buffer](/docs/reference/glossary/#depth-buffer) at all: its limits only say where drawing stops. The depth buffer belongs to the bodies, and each body in view clears it and uses the whole of it for itself.
+The ranges are drawn from the farthest to the nearest, each over the last, so a planet covers the stars behind it with no depth test between the two. Inside the galaxies’ range nothing occludes anything, so it has no [depth buffer](/docs/reference/glossary/#depth-buffer): its limits are clip planes only. The depth buffer belongs to the bodies, and each body in view clears it and uses the whole of it for itself.
 
 <Fact id="render-reversed-z" />
 
