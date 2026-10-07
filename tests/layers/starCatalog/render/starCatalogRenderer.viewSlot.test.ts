@@ -96,7 +96,28 @@ describe('starCatalogRenderer viewSlot isolation', () => {
 
     const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
     const cameraWrites = writeBuffer.mock.calls.filter(([buf]) =>
-      (buf as { label?: string }).label?.startsWith('star-catalog-camera-uniform-slot'),
+      (buf as { label?: string }).label?.startsWith('star-catalog-camera-uniform-'),
+    );
+    expect(cameraWrites).toHaveLength(2);
+    expect(cameraWrites[0]![0]).not.toBe(cameraWrites[1]![0]);
+  });
+
+  it('the leaf and aggregate streams of one view slot write different camera buffers', () => {
+    const device = mockDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    renderer.upload(Source.GaiaStars, CATALOG);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      drawIndirect: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    renderer.drawCut(pass, { ...args(0), stream: 'aggregate', viewportPx: [640, 360] });
+    renderer.drawCut(pass, args(0));
+
+    const writeBuffer = device.queue.writeBuffer as unknown as ReturnType<typeof vi.fn>;
+    const cameraWrites = writeBuffer.mock.calls.filter(([buf]) =>
+      (buf as { label?: string }).label?.startsWith('star-catalog-camera-uniform-'),
     );
     expect(cameraWrites).toHaveLength(2);
     expect(cameraWrites[0]![0]).not.toBe(cameraWrites[1]![0]);

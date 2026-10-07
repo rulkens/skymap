@@ -94,12 +94,16 @@ export function createStarCatalogRenderer(
   // One camera buffer per view slot: a capture sweep's faces and the real view
   // each carry a different vp, all before one `submit()`, and a shared buffer
   // would hand every draw the LAST write (docs/RENDERER.md landmine #1).
-  const cameraRing = createViewSlotUniformRing({
-    device,
-    label: 'star-catalog-camera-uniform',
-    byteSize: STAR_UNIFORM_BYTES,
-    layout: cameraBgl,
-  });
+  // And one ring per stream: in the real view the aggregate stream rasterises
+  // a half-res target, so its viewport and pxPerRad differ from the leaf's.
+  const makeCameraRing = (stream: string) =>
+    createViewSlotUniformRing({
+      device,
+      label: `star-catalog-camera-uniform-${stream}`,
+      byteSize: STAR_UNIFORM_BYTES,
+      layout: cameraBgl,
+    });
+  const cameraRings = { leaf: makeCameraRing('leaf'), aggregate: makeCameraRing('aggregate') };
   const recordsBgl = device.createBindGroupLayout({
     label: 'star-catalog-records-bgl',
     entries: [
@@ -200,6 +204,7 @@ export function createStarCatalogRenderer(
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = args.glowOverlap;
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = args.aggregateIntensityCap;
     cameraScratch[PX_PER_RAD_FLOAT_INDEX] = args.pxPerRad;
+    const cameraRing = cameraRings[args.stream];
     cameraRing.writeSlot(args.viewSlot, cameraScratch);
 
     pass.setPipeline(args.knee ? pipelines.kneed : pipelines.linear);
@@ -229,7 +234,8 @@ export function createStarCatalogRenderer(
     for (const entry of sources.values()) entry.recordsBuffer.destroy();
     sources.clear();
     cut.destroy();
-    cameraRing.destroy();
+    cameraRings.leaf.destroy();
+    cameraRings.aggregate.destroy();
   }
 
   const renderer: StarCatalogRenderer = {
