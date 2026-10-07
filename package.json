@@ -112,6 +112,7 @@
     "lint:fix": "eslint . --fix",
     "move-files": "tsx tools/dev/moveFiles.ts",
     "perf": "tsx tools/perf/measurePerf.ts",
+    "perf:cpu": "tsx tools/perf/cpuPerf.ts",
     "preview": "vite preview",
     "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/deploy/r2Cors.json",
     "record-clip": "tsx tools/record/record.ts --clip",

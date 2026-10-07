@@ -1,21 +1,16 @@
 /**
- * A star catalog's load-time index: the derived, flat, typed-array view of
- * `catalog.nodes` the per-frame walk reads. Descending the tree needs a
- * `(level, morton) → node index` lookup (Morton names WHERE a child sits, not
- * its array slot); resolving that per frame cost ~300k `Map.set` inserts on
- * the large tier, so it is built once here instead and memoised per catalog.
+ * A star catalog's load-time index: flat typed arrays parallel to
+ * `catalog.nodes`, built once and memoised per catalog. Read by the GPU cut's
+ * node-table packer and by `nearestResolvableStar`. Resolving
+ * `(level, morton) → node index` needs a scan; the same forward scan folds in
+ * `subtreeCounts` (a leaf's own `recordCount`; an aggregate's sum over children).
  *
- * Folds in `subtreeCounts` (a leaf's own `recordCount`; an aggregate's sum
- * over present children) in the SAME forward scan, since it needs the same
- * child resolution in the same ascending-(level, morton) order.
- *
- * Layout invariants relied on (from `buildStarOctree`): `catalog.nodes` holds
- * every node in ascending `(level, mortonIndex)` order, so a forward scan
- * visits children before parents and the final node is the root. A level-`L`
- * aggregate's present children (named by `childMask`) sit at level `L-1`,
- * Morton `(M << 3) | k` for each set bit `k`; a childless node is a leaf. Box
- * origin is `gridOrigin + mortonDecode3(M) · (cellEdgePc · 2^L)` — the same
- * reconstruction `walkStarOctreeCut` and `starNodeOriginRelCamMpc` invert.
+ * Relies on `buildStarOctree`'s layout: `catalog.nodes` holds every node in
+ * ascending `(level, mortonIndex)` order, so a forward scan visits children
+ * before parents and the final node is the root. A level-`L` aggregate's
+ * children (named by `childMask`) sit at level `L-1`, Morton `(M << 3) | k` for
+ * each set bit `k`; a childless node is a leaf. Box origin is `gridOrigin +
+ * mortonDecode3(M) · (cellEdgePc · 2^L)`.
  */
 import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';

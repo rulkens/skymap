@@ -41,8 +41,7 @@
  * has itself crossed the ON threshold takes over immediately (the camera has
  * clearly moved to it), but a merely-nearer star still in the band does not
  * dislodge the one already shown. The present star is remembered per catalog in a
- * `WeakMap` — the same catalog-keyed, tier-swap-isolated pattern
- * `starFadeState` uses for the star catalog's own per-node fades.
+ * `WeakMap`, keyed by the catalog object so a tier swap starts empty.
  *
  * `enabled` runs the query and STORES the result; `draw` / `drawPick` READ the
  * stored star (never re-query), so the sphere they stamp and the presence flag
@@ -141,9 +140,8 @@ type PresentStar = { recordIdx: number; positionMpc: Vec3; bpRp: number };
 const OFF_FRACTION = 0.8;
 
 /**
- * Per-catalog presence memory. Keyed by the CATALOG object (like
- * `starFadeState`) so a tier swap — a fresh catalog object —
- * starts empty and the old entry is GC'd with the WeakMap. Holds the currently
+ * Per-catalog presence memory. Keyed by the CATALOG object so a tier swap — a
+ * fresh catalog object — starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */
 const presentByCatalog = new WeakMap<StarCatalog, PresentStar | null>();

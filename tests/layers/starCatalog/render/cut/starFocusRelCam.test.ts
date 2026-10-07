@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { starFocusRelCam } from '../../../../../src/layers/starCatalog/render/cut/starFocusRelCam';
-import {
-  writeStarFocus,
-  FOCUS_CENTER_FLOAT_INDEX,
-  FOCUS_BLEND_FLOAT_INDEX,
-  STAR_UNIFORM_BYTES,
-} from '../../../../../src/layers/starCatalog/render/starCatalogLayout';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 describe('starFocusRelCam', () => {
@@ -20,12 +14,9 @@ describe('starFocusRelCam', () => {
       blend: 1,
     };
     const sphere = starFocusRelCam(focus, camera);
-    const scratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
-    writeStarFocus(scratch, sphere);
-    const at = FOCUS_CENTER_FLOAT_INDEX;
-    expect(scratch[at]).toBeCloseTo(3e-6, 12);
-    expect(scratch[at + 1]).toBeCloseTo(2e-6, 12);
-    expect(scratch[FOCUS_BLEND_FLOAT_INDEX]).toBe(1);
+    expect(sphere.centerRelCamMpc[0]).toBeCloseTo(3e-6, 12);
+    expect(sphere.centerRelCamMpc[1]).toBeCloseTo(2e-6, 12);
+    expect(sphere.blend).toBe(1);
   });
 
   it('blend 0 packs a multiplier-neutral sphere', () => {
