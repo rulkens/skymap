@@ -52,7 +52,7 @@ One parser per catalogue, in <Repo path="tools/parsers" />, turns its table into
 
 <Fact id="sim-duplicates" />
 
-Both tests must hold. Position alone would merge a nearby galaxy with a far one that happens to lie behind it. The redshift test is a wide one: the difference allowed, about 0.01, is some 3,000 km/s. Two members of one cluster rarely differ by that much, so where two of them lie within 5 arcseconds of each other on the sky they are, as a rule, merged into one row. It is also narrower than the error of an estimated redshift, which is near 0.015: a galaxy that one survey measured and GLADE only estimated can fail the test, and then it stays in the map twice, at two distances along one line of sight.
+Both tests must hold. Position alone would merge a nearby galaxy with a far one that happens to lie behind it. The [redshift](/docs/reference/glossary/#redshift) test is a wide one: the difference allowed, about 0.01, is some 3,000 km/s. Two members of one cluster rarely differ by that much, so where two of them lie within 5 [arcseconds](/docs/reference/glossary/#arcsecond) of each other on the sky they are, as a rule, merged into one row. It is also narrower than the error of an estimated redshift, which is near 0.015: a galaxy that one survey measured and GLADE only estimated can fail the test, and then it stays in the map twice, at two distances along one line of sight.
 
 The three DESI regions come last and are compared only with the surveys before them, since two of them overlap on purpose. Milliquas is not compared at all: a quasar and the galaxy it sits in are two things at one position. After this step the 81 named galaxies are taken out of the surveys, because the app draws those from a list of their own.
 
@@ -78,7 +78,7 @@ Until this step a galaxy is a direction and a redshift. <Repo path="tools/catalo
 
 <Fact id="sci-local-volume" />
 
-The short list is our own <Source id="seed-local-volume">local-volume distances</Source>; <Source id="cf4-distances">Cosmicflows-4</Source> and <Source id="hyperleda">HyperLEDA</Source> have pages too. A distance from any of the three is used only if it is under 30 megaparsecs. The published redshift is kept in the file beside the position, so a galaxy’s card still shows it.
+The short list is our own <Source id="seed-local-volume">local-volume distances</Source>; <Source id="cf4-distances">Cosmicflows-4</Source> and <Source id="hyperleda">HyperLEDA</Source> have pages too. A distance from any of the three is used only if it is under 30 [megaparsecs](/docs/reference/glossary/#megaparsec). The published redshift is kept in the file beside the position, so a galaxy’s card still shows it.
 
 <Fact id="pipe-blueshift" />
 
@@ -88,7 +88,7 @@ The short list is our own <Source id="seed-local-volume">local-volume distances<
 
 <Fact id="pipe-galaxy-format" />
 
-There is one file for each catalogue at each data size. Stars, structures, density fields, filaments and the Local Bubble each have a format of their own, and all open the same way: a short header that names the format and its version. What follows differs. Stars and structures are records of a fixed size, a density field is a cube of numbers, the filaments are lines of varying length behind a table that says where each starts, and the Local Bubble is a mesh of points and triangles.
+There is one file for each catalogue at each data size. Stars, structures, density fields, filaments and the <Source id="local-bubble">Local Bubble</Source> each have a format of their own, and all open the same way: a short header that names the format and its version. What follows differs. Stars and structures are records of a fixed size, a density field is a cube of numbers, the filaments are lines of varying length behind a table that says where each starts, and the Local Bubble is a mesh of points and triangles.
 
 <Fact id="pipe-manifest" />
 
@@ -122,11 +122,11 @@ In the file the stars are sorted into a tree of boxes in space. A box also store
 
 ## Structures, fields and filaments
 
-Cluster and supercluster markers are built by <Repo path="tools/structures/buildStructures.ts" /> from <Source id="mcxc">MCXC</Source>, <Source id="mscc">MSCC</Source> and our own <Source id="seed-structures">list of structures placed by hand</Source>. A hand-placed structure replaces any catalogue row that falls inside it.
+Cluster and [supercluster](/docs/reference/glossary/#supercluster) markers are built by <Repo path="tools/structures/buildStructures.ts" /> from <Source id="mcxc">MCXC</Source>, <Source id="mscc">MSCC</Source> and our own <Source id="seed-structures">list of structures placed by hand</Source>. A hand-placed structure replaces any catalogue row that falls inside it.
 
 <Fact id="sci-structures" />
 
-The glow of the cosmic web is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as a cube of numbers with a header that says what the cube spans.
+The glow of the [cosmic web](/docs/reference/glossary/#cosmic-web) is the <Source id="mcpm-vac">SDSS Cosmic Slime catalogue</Source>’s density field, reduced to three sizes; the flow ribbons are drawn from the <Source id="cf4pp">CF4++</Source> velocity field. Both are stored as a cube of numbers with a header that says what the cube spans.
 
 <Figure id="science-web-points" />
 
@@ -142,7 +142,7 @@ A planet’s position needs no file. The orbits are <Source id="jpl-elements">JP
 
 ## Imagery and terrain
 
-The maps of the planets and moons are downsampled to three sizes by `npm run build-textures`. Earth and Mars are also cut into tiles, by `npm run build-surface-tiles`, so that the app can fetch only the ground under the camera.
+The maps of the planets and moons are downsampled to three sizes by `npm run build-textures`. Earth and Mars are also [cut into tiles](/docs/rendering/techniques/#the-ground-on-earth-and-mars), by `npm run build-surface-tiles`, so that the app can fetch only the ground under the camera.
 
 <Fact id="pipe-earth-tiles" />
 

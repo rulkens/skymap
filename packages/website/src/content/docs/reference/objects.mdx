@@ -9,7 +9,7 @@ import { objectCount } from '../../../utils/objectCount';
 
 Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. Each row here has an address of its own too: add the id to this page’s, as in `#body-saturn`. The rows and their links are made from the app’s own tables when the site is built.
 
-The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a GLADE or 2MRS galaxy by its designation (see [Finding things](/docs/guide/finding/)), and any object the camera is focused on has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
+The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a <Source id="glade">GLADE</Source> or <Source id="2mrs">2MRS</Source> galaxy by its [designation](/docs/reference/glossary/#designation) (see [Finding things](/docs/guide/finding/)), and any object the camera is focused on has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
 
 <ObjectFinder />
 
@@ -41,7 +41,7 @@ The app’s search knows {objectCount('place')} places on Earth. A place has no 
 
 ## Named stars
 
-The app gives a name and an id to {objectCount('star')} stars, and to {objectCount('sStar')} more in orbit round the black hole at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.
+The app gives a name and an id to {objectCount('star')} stars, and to {objectCount('sStar')} more <Source id="s-stars">in orbit round the black hole</Source> at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.
 
 <ObjectList section="named-stars" />
 
@@ -55,13 +55,13 @@ The app gives a name and an id to {objectCount('star')} stars, and to {objectCou
 
 ## Named galaxies
 
-The app gives a name and a short id to {objectCount('galaxy')} galaxies, most of them a Messier or a Caldwell number.
+The app gives a name and a short id to {objectCount('galaxy')} galaxies, most of them a [Messier](/docs/reference/glossary/#messier-catalogue) or a Caldwell number.
 
 <ObjectList section="named-galaxies" />
 
 ## Galaxy groups
 
-The app’s list of named structures has {objectCount('group')} galaxy groups, {objectCount('cluster')} clusters, {objectCount('supercluster')} superclusters and {objectCount('void')} voids. The app also draws X-ray clusters and superclusters taken from catalogues, which come with its data files and are not listed on this page.
+The app’s list of named structures has {objectCount('group')} galaxy groups, {objectCount('cluster')} clusters, {objectCount('supercluster')} superclusters and {objectCount('void')} voids. The app also draws <Source id="mcxc">X-ray clusters</Source> and <Source id="mscc">superclusters</Source> taken from catalogues, which come with its data files and are not listed on this page.
 
 <ObjectList section="galaxy-groups" />
 
@@ -79,7 +79,7 @@ The app’s list of named structures has {objectCount('group')} galaxy groups, {
 
 ## Exhibits
 
-The app’s search lists {objectCount('exhibit')} exhibits and {objectCount('tour')} tours. The Zone of Avoidance is an exhibit only: the band itself has no id.
+The app’s search lists {objectCount('exhibit')} exhibits and {objectCount('tour')} tours. The [Zone of Avoidance](/docs/reference/glossary/#zone-of-avoidance) is an exhibit only: the band itself has no id.
 
 <ObjectList section="exhibits" />
 

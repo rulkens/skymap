@@ -113,7 +113,7 @@ Go to the object in the app, from the search or with a double-click, and read `f
   <Fact id="ref-focus-galaxy-ids" inline /> <Fact id="ref-focus-pos-famous" inline />
 </p>
 
-The band of the Zone of Avoidance has no id: it is a direction on the sky, so the camera cannot fly to it. A place on Earth has none either; a link to a place is a [camera position](#camera-positions).
+The band of the [Zone of Avoidance](/docs/reference/glossary/#zone-of-avoidance) has no id: it is a direction on the sky, so the camera cannot fly to it. A place on Earth has none either; a link to a place is a [camera position](#camera-positions).
 
 ## Instants
 
@@ -121,7 +121,7 @@ The value of `t` is an instant, a date and time.
 
 | Written as | Read as |
 | --- | --- |
-| `t=2020-12-21T18:00:00Z` | 21 December 2020 at 18:00 UTC |
+| `t=2020-12-21T18:00:00Z` | 21 December 2020 at 18:00 [UTC](/docs/reference/glossary/#utc) |
 | `t=2020-12-21T18:00:00+01:00` | 17:00 UTC on that day |
 | `t=2020-12-21` | Midnight UTC at the start of that day |
 | `t=2020` | Midnight UTC at the start of 1 January 2020 |
@@ -170,7 +170,7 @@ The value of `pose` is an exact camera position. <Fact id="link-pose" inline />
 
 The seven numbers of the `a` form are, in order:
 
-1. Three for the point the camera turns about, in megaparsecs from the Sun.
+1. Three for the point the camera turns about, in [megaparsecs](/docs/reference/glossary/#megaparsec) from the Sun.
 2. Two angles for the side the camera looks from, in radians.
 3. The distance from that point to the camera, in megaparsecs. It has to be more than zero.
 4. The roll of the picture, in radians. Write 0.
@@ -245,4 +245,4 @@ A pose with the wrong number of values, a value that is not a number or a name t
 
 Four flags are for the people who build skymap: <Codes of={DEV_FLAGS.map((param) => param.example)} />. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline /> What each does is on [Debug panel and flags](/docs/developers/debug/#flags).
 
-Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the home page of this site opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.
+Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the [home page of this site](/) opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.
