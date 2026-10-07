@@ -53,7 +53,6 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-desi',
           'fetch-dhm',
           'fetch-eox',
-          'fetch-famous-images',
           'fetch-gaia',
           'fetch-height',
           'fetch-horizons',
@@ -64,7 +63,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-structures',
           'fetch-textures',
         ],
-        does: 'Each downloads one source’s raw files into data/raw/.',
+        does: 'Each downloads raw files into data/raw/: one source each, except fetch-structures, which fetches both cluster catalogues. fetch-dhm and fetch-skraafoto need an API key.',
         manual: DATA,
       },
       {
@@ -84,7 +83,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-filaments', 'build-filaments-sdss', 'build-filaments-small'],
-        does: 'Trace the filament skeleton of the cosmic web from the built galaxy files: all catalogues, SDSS alone, or a smaller cut.',
+        does: 'Trace the filament skeleton of the cosmic web with DisPerSE from the built galaxy files: 2MRS and GLADE together (SDSS is left out on purpose), SDSS alone as a test, or a sparser skeleton at a higher threshold.',
         manual: DATA,
       },
       {
@@ -118,8 +117,14 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['expand-famous', 'famous-seed-from-leda', 'build-famous-thumbs', 'build-famous-hires'],
-        does: 'Maintain the list of named galaxies and their pictures: add entries from the Messier and Caldwell lists or from HyperLEDA, and prepare the pictures for the cards and for upload.',
+        scripts: [
+          'expand-famous',
+          'famous-seed-from-leda',
+          'fetch-famous-images',
+          'build-famous-thumbs',
+          'build-famous-hires',
+        ],
+        does: 'Maintain the list of named galaxies and their pictures: add entries from the Messier and Caldwell lists or from HyperLEDA, fetch a picture of each into public/images/famous/, and prepare the pictures for the cards and for upload.',
         manual: 'tools/famous-curator/README.md',
       },
       {
@@ -129,7 +134,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-data-manifest'],
-        does: 'Puts a hash of each built file’s contents into its name and writes the list the app finds the files by. The build commands above run it themselves.',
+        does: 'Puts a hash of each built file’s contents into its name and writes the list the app finds the files by. The commands that write catalogue, star, named-object, structure, filament, field and mesh files run it themselves.',
         manual: DATA,
       },
     ],
