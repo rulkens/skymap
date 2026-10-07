@@ -1,22 +1,16 @@
 ---
 title: Browser support and troubleshooting
-description: skymap runs in any browser that has WebGPU. This page lists the browsers that do, what you see in one that does not, and what to try when the app will not start.
+description: skymap runs in any browser that has WebGPU. Which browsers those are, what you see in one that does not, and what to try when the app will not start.
 group: Start
 order: 3
-facts: [webgpu-browsers, app-browser-advice]
+facts: [webgpu-what, webgpu-required, webgpu-browsers, app-browser-advice, ref-keys-under-welcome, phone-data-size]
 ---
 
 import { ISSUES_URL } from '../../../data/contact';
 
-If you are preparing a lesson, [Use skymap in the classroom](/classroom/) has links that are ready to hand out. This page is about the machines those links will be opened on.
-
 ## What skymap needs
 
-<Fact id="webgpu-what" />
-
-<Fact id="webgpu-required" />
-
-<Fact id="no-account" />
+skymap draws with WebGPU, a web standard that lets a page use the computer’s graphics processor. Nothing has to be installed.
 
 ## Browsers that have WebGPU
 
@@ -30,9 +24,7 @@ As of 6 October 2026, WebGPU is switched on by default in the browsers below. On
 | Firefox | Windows | 141 |
 | Firefox | Macs with Apple silicon | 147 |
 
-The table follows the [implementation status page](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) kept by the group that writes the standard. Check a browser that is not listed there.
-
-<Fact id="app-browser-advice" />
+The table follows the [implementation status page](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) kept by the group that writes the standard. Check a browser that is not listed there. If in doubt, use a recent Chrome or Edge on a desktop computer.
 
 ## What you see without WebGPU
 
@@ -50,15 +42,17 @@ What to do about each:
 - **The galaxy data failed to load.** Check the connection, then reload.
 - **skymap was updated.** Reload the page. The reload fetches data that matches the new version.
 
-<Fact id="app-continue-anyway" />
+<Fact id="app-continue-anyway" inline /> The link closes the welcome screen while the data is still arriving.
 
-The link closes the welcome screen while the data is still arriving.
+## When the panels are missing
+
+Press <Keys of="Tab" />. That key hides the interface and brings it back; see [Controls](/docs/reference/controls/#interface).
 
 ## Phones and small screens
 
-<Fact id="phone-data-size" />
+A phone starts with the smallest of the three data sizes, which holds fewer stars and galaxies. You can change it in the Settings panel; see [Settings](/docs/guide/settings/).
 
-<Fact id="app-data-size-choice" />
+<Figure id="guide-phone" />
 
 ## If none of this helps
 
