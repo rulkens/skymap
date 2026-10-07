@@ -20,25 +20,9 @@ const TOOL_PAGES = `${REPO_BLOB}/tools/utils/io/toolPages.ts`;
 export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   // Roadmap
   {
-    id: 'road-source',
-    about: 'app',
-    text: 'The repository keeps one list of work that has not been started, in which every line carries a mark of how ready it is. Work that is picked up is taken off the list, and finished work is deleted from it, not struck through.',
-    source: BACKLOG,
-    sourceLabel: BACKLOG_LABEL,
-    checked: CHECKED,
-  },
-  {
     id: 'road-states',
     about: 'app',
-    text: 'On this page “planned” is a line the list marks as ready to build or as needing a design first, or work with a written design and no line. “An idea” is a line the list marks as set aside, waiting on other work or on a fact to be checked, or not yet decided. “Partly built” is work of which a part is already in the repository; nobody need be working on it now.',
-    source: BACKLOG,
-    sourceLabel: BACKLOG_LABEL,
-    checked: CHECKED,
-  },
-  {
-    id: 'road-no-dates',
-    about: 'app',
-    text: 'The list sets no date for any of it, and neither does this page.',
+    text: '“Partly built” has a part in the repository already; “planned” is ready to build or needs a design first; “an idea” is set aside, not yet decided, or waits on other work or a fact to be checked.',
     source: BACKLOG,
     sourceLabel: BACKLOG_LABEL,
     checked: CHECKED,
@@ -71,7 +55,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-local',
     about: 'app',
-    text: 'The scene workbench and the famous-galaxy curator are not published. Each runs from a copy of the repository, on a port of its own, and reads and writes files on that machine.',
+    text: 'The scene workbench and the named-galaxy curator are not published. Each runs from a copy of the repository, on a port of its own, and reads and writes files on that machine.',
     source: `${REPO_BLOB}/tools/utils/io/devPorts.ts`,
     sourceLabel: `the table of ports, ${IN_REPO}`,
     checked: CHECKED,
@@ -79,7 +63,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-not-app',
     about: 'app',
-    text: 'A workbench is a small app of its own, beside skymap in the repository. None of its code is in what a visitor to skymap downloads.',
+    text: 'A workbench is a small app of its own: none of its code is in what a visitor to skymap downloads.',
     source: `${REPO_BLOB}/tools/galaxy-renderer/README.md`,
     sourceLabel: `the galaxy renderer’s manual, ${IN_REPO}`,
     checked: CHECKED,
@@ -112,9 +96,9 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'cli-running-app',
     about: 'app',
-    text: 'perf, capture-featured, site:shots and site:loops drive an app that is already running, and take its address after --url; so do record-tour and record-clip unless they are given --serve. site:fold takes the address of a running copy of this site. shot starts one itself when it is given no address.',
+    text: 'perf, capture-featured, site:shots and site:loops drive an app that is already running, and take its address after --url; so do record-tour and record-clip unless they are given --serve. shot starts one itself when it is given no address.',
     source: `${REPO_BLOB}/tools/perf/README.md`,
-    sourceLabel: `the manual of the speed test, ${IN_REPO}`,
+    sourceLabel: `the manual of the perf tool, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -161,9 +145,9 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'debug-hook-modes',
     about: 'app',
-    text: 'With perf in the address the app also sets window.__skymapPerf, for the speed test, and with cinema window.__skymapRecorder, for the film recorder.',
+    text: 'With perf in the address the app also sets window.__skymapPerf, for the perf tool, and with cinema window.__skymapRecorder, for the film recorder.',
     source: `${REPO_BLOB}/src/state/perf/installPerfHook.ts`,
-    sourceLabel: `the hook of the speed test, ${IN_REPO}`,
+    sourceLabel: `the hook of the perf tool, ${IN_REPO}`,
     checked: CHECKED,
   },
 ];

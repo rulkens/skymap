@@ -5,7 +5,9 @@ const SPECS = 'docs/superpowers/specs';
 /**
  * The Roadmap page (content/docs/roadmap.mdx), chosen by hand from the
  * repository's docs/BACKLOG.md and its written designs: what a visitor would
- * notice, in a visitor's words. Refactors, fixes and tooling are left out.
+ * notice, in a visitor's words: what will be added or improved, never what is
+ * wrong today. Refactors, fixes and tooling are left out. The page groups the
+ * rows by state and prints a group's title as each row's theme.
  * A row's state follows the mark its backlog line carries (ready, needs-design
  * and needs-perf are planned; deferred, blocked, awaiting-decision and
  * needs-verification are an idea), unless a part of it is built already.
@@ -15,7 +17,7 @@ const SPECS = 'docs/superpowers/specs';
 export const ROADMAP: readonly RoadmapGroup[] = [
   {
     id: 'to-see',
-    title: 'New things to see',
+    title: 'To see',
     items: [
       {
         id: 'dust',
@@ -28,7 +30,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'milky-way-model',
         title: 'A Milky Way drawn from a model',
-        text: 'A second way of drawing the Milky Way, from a model of its light and dust, to stand beside the cloud of points the app draws today. The model runs in the galaxy renderer workbench; the app does not use it yet.',
+        text: 'A second way of drawing the Milky Way, from a model of its light and dust, beside the cloud of points the app draws today.',
         state: 'planned',
         backlog: 'Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1',
       },
@@ -42,28 +44,28 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'galaxy-impostors',
         title: 'Galaxies with structure at middle distance',
-        text: 'A galaxy seen from some way off drawn from a picture of its generated model, where the app now shows a photograph fetched from a sky survey.',
+        text: 'A galaxy at middle distance drawn from a picture of its generated model, where the app now shows a photograph from a sky survey.',
         state: 'planned',
         backlog: 'Galaxy impostor LOD',
       },
       {
         id: 'distant-fading',
         title: 'Faint galaxies that fade with distance',
-        text: 'Galaxies shown or hidden by how bright they would look from where the camera is. A design is written; it has to be revised against the way brightness is drawn now.',
+        text: 'Galaxies shown or hidden by how bright they would look from where the camera is. A design is written and has to be revised.',
         state: 'planned',
         spec: `${SPECS}/2026-07-10-distant-galaxy-fading-design.md`,
       },
       {
         id: 'relief',
         title: 'Relief on moons',
-        text: 'Craters and ridges that change the outline of a small moon, not only its shading. Today a round moon is a perfect sphere with a map on it.',
+        text: 'Craters and ridges that change the outline of a small moon, not only its shading.',
         state: 'planned',
         backlog: 'Real relief displacement for near-spherical bodies',
       },
       {
         id: 'mars-relief',
         title: 'Finer terrain over the whole of Mars',
-        text: 'Two more levels of terrain everywhere on Mars from the MOLA heights, which hold more detail than the app uses for the planet as a whole.',
+        text: 'Two more levels of terrain everywhere on Mars, from the MOLA heights.',
         state: 'planned',
         backlog: 'Mars global height z8–z9 from MOLA (supports z9.7)',
       },
@@ -77,14 +79,14 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'pluto-pair',
         title: 'Pluto and Charon round their common centre',
-        text: 'Pluto and Charon each circling the point between them. Pluto’s four small moons, which circle the same point, wait for this.',
+        text: 'Pluto and Charon each circling the point between them, which Pluto’s four small moons wait for.',
         state: 'planned',
         backlog: 'Barycentric orbit pairs',
       },
       {
         id: 'sky-sphere',
         title: 'The sky as a sphere',
-        text: 'A switch that moves the stars and the constellation lines between their true places in space and a sphere round the Earth, to show that a constellation is a matter of where you stand.',
+        text: 'A switch that moves the stars and the constellation lines between their true places in space and a sphere round the Earth.',
         state: 'planned',
         backlog: 'Celestial-sphere morph toggle',
       },
@@ -98,7 +100,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'jwst',
         title: 'The James Webb Space Telescope',
-        text: 'The telescope as a model to fly to. It waits for a way to place a craft at the point beyond Earth where it is stationed.',
+        text: 'The telescope as a model to fly to, once a craft can be placed at the point beyond Earth where it is stationed.',
         state: 'idea',
         backlog: 'JWST mesh body',
       },
@@ -119,48 +121,41 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desi-dr1',
         title: 'The whole first DESI data release',
-        text: 'About 9.75 million galaxies and quasars, three times what the app draws at its largest data size today, so it waits for a way to draw more points.',
+        text: 'About 9.75 million galaxies and quasars, three times what the app draws at the large data size, so it waits for a way to draw more points.',
         state: 'idea',
         backlog: 'DESI DR1 as a data source',
-      },
-      {
-        id: 'desi-second-cone',
-        title: 'A second deep DESI region',
-        text: 'One more narrow cone of DESI galaxies to great depth. Which part of the sky is not decided.',
-        state: 'idea',
-        backlog: 'Second DESI deep cone',
       },
     ],
   },
   {
     id: 'teaching-and-domes',
-    title: 'Tours, teaching and domes',
+    title: 'Tours and domes',
     items: [
       {
         id: 'tour-earth-start',
         title: 'A tour that starts at Earth',
-        text: '“The Long Way Out” opening at Earth, with steps for the solar system and the nearby stars before the Milky Way. Today it begins at the Milky Way.',
+        text: '“The Long Way Out” opening at Earth, with steps for the solar system and the nearby stars before the Milky Way.',
         state: 'planned',
         backlog: 'Grand tour: Earth start + scale rungs',
       },
       {
         id: 'kiosk',
         title: 'Kiosk mode',
-        text: 'A tour that plays unattended and starts again, and perhaps a return to it when nobody has touched the screen for a while. The app can already play a tour with no panels or buttons.',
+        text: 'A tour that plays unattended and starts again, and perhaps a return to it when nobody has touched the screen for a while.',
         state: 'planned',
         backlog: 'Museum kiosk mode',
       },
       {
         id: 'dome-labels',
         title: 'Names in dome mode',
-        text: 'Names drawn on the fisheye picture, which has none today, and the smallest size of a star measured in the dome’s own pixels so that faint stars stop flickering.',
+        text: 'Names drawn on the fisheye picture, which has none today, and stars sized in the dome’s own pixels.',
         state: 'planned',
         backlog: 'Dome output-space overlays: labels plus pixel floors in fisheye pixels',
       },
       {
         id: 'openspace-controls',
         title: 'Controls like OpenSpace',
-        text: 'A second set of mouse controls to choose, which behaves as OpenSpace does, for people who run a planetarium with it. A design is written and the groundwork is in the app; the second set is not.',
+        text: 'A second set of mouse controls that behaves as OpenSpace does, for people who run a planetarium with it. The groundwork is in the app; the second set is not.',
         state: 'in progress',
         spec: `${SPECS}/2026-09-29-openspace-camera-mode-design.md`,
         built: 'src/services/engine/camera/controlSchemes.ts',
@@ -168,7 +163,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'structure-shapes',
         title: 'Superclusters with their own shape',
-        text: 'A supercluster or a wall picked out by its real extent. Today the galaxies that belong to a structure are those inside a sphere, which swallows a flat sheet.',
+        text: 'A supercluster or a wall picked out by its real extent, not by a sphere round it.',
         state: 'planned',
         backlog: 'Supercluster/wall shape in focus',
       },
@@ -181,72 +176,51 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'star-magnitudes',
         title: 'A night sky as bright as the real one',
-        text: 'The brightness of stars from Earth set so that the sky matches what an eye sees. The stars’ brightness relative to one another is already measured.',
+        text: 'The brightness of stars seen from Earth set so that the sky matches what an eye sees.',
         state: 'planned',
         backlog: 'Real star apparent magnitudes from Earth',
       },
       {
-        id: 'surface-brightness',
-        title: 'Galaxy brightness from each catalogue’s own measurements',
-        text: 'How bright a galaxy’s disc is drawn worked out from what its catalogue measured, without the fixed reference size and the hand-set factor the app uses now.',
-        state: 'planned',
-        backlog: 'Physically-honest galaxy surface brightness',
-      },
-      {
         id: 'missing-stars',
-        title: 'About 24 naked-eye stars that are missing',
-        text: 'Stars of magnitude 3.9 to 5.1 that the constellation figures pass through and the star data leaves out.',
+        title: 'The last naked-eye stars of the constellation figures',
+        text: 'About 24 stars of magnitude 3.9 to 5.1 on the constellation figures, added to the star data.',
         state: 'planned',
         backlog: '~24 naked-eye figure stars absent from star bins',
       },
       {
-        id: 'albedos',
-        title: 'Measured reflectance for planets and moons',
-        text: 'The share of light each planet and moon reflects is a value set by hand, and only Pluto’s has been compared with a published measurement. Each would be checked, and the surface and the air above it given the separate values they need.',
-        state: 'planned',
-        backlog: 'Body seed albedos are authored, not measured',
-      },
-      {
         id: 'mars-air',
         title: 'The right thickness of air at the Mars rover sites',
-        text: 'The atmosphere measured from the planet’s reference surface and not from its lowest ground, which makes the air about 17% too thin at the rover sites today.',
+        text: 'The atmosphere measured from the planet’s reference surface and not from its lowest ground.',
         state: 'planned',
         backlog: 'Atmosphere density altitude-zero is the relief floor',
       },
       {
         id: 'saturn-rings',
         title: 'Brighter rings for Saturn',
-        text: 'The rings read too dim beside the planet’s disc; their brightness is to be set again.',
+        text: 'The brightness of the rings set again beside the planet’s disc.',
         state: 'planned',
         backlog: 'Saturn ring brightness',
       },
       {
         id: 'eclipse',
-        title: 'A solar eclipse without a swollen Sun',
-        text: 'The Sun’s glow kept from spreading over the edge of the Moon as it crosses. The two discs are already the right size.',
+        title: 'A solar eclipse with a sharp edge',
+        text: 'The Sun’s glow kept from spreading over the edge of the Moon as it crosses.',
         state: 'planned',
         backlog: 'Sun bloom inflates the solar disc against a transiting Moon',
       },
       {
         id: 's-star-lensing',
         title: 'The stars round Sagittarius A* bent by it',
-        text: 'The black hole bends the light of the far sky and not yet that of the stars in orbit close to it.',
+        text: 'The light of the stars in orbit round the black hole bent by it, as the light of the far sky already is.',
         state: 'planned',
         backlog: 'S-stars are not lensed by Sgr A\\*',
       },
       {
         id: 'quasar-colours',
-        title: 'A colour scale of their own for quasars',
-        text: 'Quasars share the galaxies’ colour scale, on which they read as blue star-forming galaxies.',
+        title: 'Quasars in colours of their own',
+        text: 'A colour scale for quasars, which share the galaxies’ scale today.',
         state: 'planned',
         backlog: 'Milliquas AGN colormap',
-      },
-      {
-        id: 'scale-bar',
-        title: 'A scale bar measured from the ground',
-        text: 'The scale bar near a surface measured from the terrain under the camera, not from the planet’s reference radius, which is kilometres away at the Mars sites.',
-        state: 'planned',
-        backlog: 'Scale bar measures from the datum, not the ground',
       },
       {
         id: 'clouds',
@@ -258,7 +232,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desi-shapes',
         title: 'Real shapes for DESI galaxies',
-        text: 'The DESI tables the app reads hold no sizes or tilts, so every DESI galaxy is drawn at one size with a made-up tilt. Whether another DESI table can supply them has to be checked.',
+        text: 'Sizes and tilts for DESI galaxies, if another DESI table holds them; the tables the app reads do not.',
         state: 'idea',
         backlog: 'DESI BGS real galaxy shapes',
       },
@@ -266,7 +240,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
   },
   {
     id: 'using',
-    title: 'Moving, finding and reading',
+    title: 'Using the app',
     items: [
       {
         id: 'card-phase',
@@ -278,14 +252,14 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'earth-link',
         title: 'A link to a place on Earth',
-        text: 'A longitude and a latitude in the address, which you could write by hand. Today only a copied camera position holds a place.',
+        text: 'A longitude and a latitude in the address, which you could write by hand.',
         state: 'planned',
         backlog: 'Earth point in the URL hash',
       },
       {
         id: 'label-declutter',
         title: 'Names that hold still',
-        text: 'A switch for thinning out overlapping names, and names that no longer flicker in and out while the camera moves.',
+        text: 'A switch for thinning out overlapping names, and names that do not come and go while the camera moves.',
         state: 'planned',
         backlog: 'Label declutter toggle + hysteresis',
       },
@@ -299,16 +273,9 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'you-are-here',
         title: 'A “You are here” that follows you in',
-        text: 'The label fades out within 2 kiloparsecs of the Sun. It could hand over to the Sun and then to Earth.',
+        text: 'The label, which fades out within 2 kiloparsecs of the Sun, perhaps handed over to the Sun and then to Earth.',
         state: 'planned',
         backlog: '"You are here" label continuity',
-      },
-      {
-        id: 'settings-panel',
-        title: 'A tidier Settings panel',
-        text: 'The panel’s sections put in a better order, with a mark for each.',
-        state: 'planned',
-        backlog: 'SettingsPanel polish',
       },
       {
         id: 'smooth-zoom',
@@ -321,56 +288,21 @@ export const ROADMAP: readonly RoadmapGroup[] = [
   },
   {
     id: 'speed-and-devices',
-    title: 'Speed, phones and platforms',
+    title: 'Devices',
     items: [
       {
         id: 'desktop-app',
         title: 'A desktop app that runs offline',
-        text: 'skymap as a program for macOS and Windows that downloads its data once and then needs no network, for a museum’s machine. A design and a plan are written; nothing is built.',
+        text: 'skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written; nothing is built.',
         state: 'planned',
         spec: `${SPECS}/2026-09-19-desktop-offline-app-design.md`,
       },
       {
         id: 'fetch-by-scale',
         title: 'A lighter start',
-        text: 'Fetching a catalogue only once the camera is far enough out to see it. Of about 102 MB fetched at the start at the medium data size, about 68 MB draws nothing in the opening view of Earth.',
+        text: 'A catalogue fetched only once the camera is far enough out to see it: about 68 MB of the 102 MB fetched at the start today, at the medium data size.',
         state: 'planned',
         backlog: 'Scale-gated asset demand',
-      },
-      {
-        id: 'touch-picking',
-        title: 'A truer tap on a phone',
-        text: 'The area that answers a tap is half as wide on a dense screen as it should be, so a tap can pick a neighbouring galaxy.',
-        state: 'planned',
-        backlog: 'Touch picking selects the wrong galaxy',
-      },
-      {
-        id: 'status-bar-phone',
-        title: 'A status bar that fits a phone',
-        text: 'The bar at the foot of the window laid out again for a narrow screen.',
-        state: 'planned',
-        backlog: 'StatusBar mobile reflow',
-      },
-      {
-        id: 'tile-crossfade',
-        title: 'Ground imagery that blends on the way out',
-        text: 'Earth’s imagery fades in as the camera descends and changes abruptly as it climbs. It should blend both ways.',
-        state: 'planned',
-        backlog: 'Earth tile crossfade on zoom-out',
-      },
-      {
-        id: 'free-memory',
-        title: 'Memory given back when a field is switched off',
-        text: 'A density field that is switched off stays in graphics memory until the page is reloaded.',
-        state: 'planned',
-        backlog: 'Deselecting a volume field never frees its VRAM',
-      },
-      {
-        id: 'phone-stars',
-        title: 'Fewer stars on small phones',
-        text: 'A lower limit on stars drawn at the small data size, set on a real phone, with a pass over iPhones and iPads.',
-        state: 'idea',
-        backlog: 'Star drawBudget small-tier mobile cap + iOS device pass',
       },
     ],
   },
