@@ -1,11 +1,11 @@
 ---
-description: How each kind of thing in skymap gets its position, distance, brightness, colour and size, with every model’s rule, its numbers as the code has them, and its reference.
-facts: [gloss-honesty-words, sci-two-redshifts, pipe-blueshift, card-galaxy-derived, card-star-survey, settings-density-how, sci-surfaces, scene-s-stars]
+description: How each kind of thing in skymap gets its position, distance, brightness, colour and size, with each rule, its numbers and its reference.
+facts: [gloss-honesty-words, depart-relative-brightness, depart-default-size, depart-star-tint, sci-two-redshifts, pipe-blueshift, card-galaxy-derived, card-star-survey, settings-density-how, sci-surfaces, scene-s-stars]
 ---
 
 import Formula from '../../components/Formula.astro';
 
-[The science behind skymap](/science/) is the one-screen summary and uses three words. Here the third is split in two, so that a model with published numbers is not confused with a choice of ours.
+[The science behind skymap](/science/) is the one-screen summary and uses three words. Here the third is split in two, [modelled](/docs/reference/glossary/#modelled) and drawn, so that a model with published numbers is not confused with a choice of ours.
 
 <Table
   cols="2 4"
@@ -47,7 +47,7 @@ Everything shares one frame: <Fact id="sci-directions" inline /> Positions are k
   d = (c / H₀) × ∫₀ᶻ dz′ / E(z′), with E(z) = √(Ωm (1 + z)³ + ΩΛ)
 </Formula>
 
-This is the line-of-sight [comoving distance](/docs/reference/glossary/#comoving-distance) of [Hogg’s “Distance measures in cosmology”](https://arxiv.org/abs/astro-ph/9905116), in a flat [Lambda-CDM](/docs/reference/glossary/#lambda-cdm) model.
+The formula is the line-of-sight [comoving distance](/docs/reference/glossary/#comoving-distance) of [Hogg’s “Distance measures in cosmology”](https://arxiv.org/abs/astro-ph/9905116); [Lambda-CDM](/docs/reference/glossary/#lambda-cdm) is in the glossary.
 
 <Fact id="method-comoving" />
 
@@ -94,9 +94,9 @@ The lists are <Source id="seed-local-volume">our own</Source>, <Source id="cf4-d
 
 [Absolute magnitude](/docs/reference/glossary/#absolute-magnitude) is the glossary’s; the 25 is the step from megaparsecs to the 10 parsecs it is defined at.
 
-<Fact id="method-galaxy-light" />
+<Fact id="method-galaxy-light" inline /> <Fact id="depart-relative-brightness" inline />
 
-On the way to the screen that light is changed again, by distance, by the density correction and by the exposure: see [Brightness, exposure and colour](/docs/simplifications/#brightness-exposure-and-colour).
+On the way to the screen that light is changed again, by distance and by the density correction: see [Brightness, exposure and colour](/docs/simplifications/#brightness-exposure-and-colour).
 
 ### Colour
 
@@ -106,7 +106,7 @@ On the way to the screen that light is changed again, by distance, by the densit
 
 ### Size, tilt and shape
 
-<Fact id="method-galaxy-size" />
+<Fact id="method-galaxy-size" inline /> <Fact id="depart-default-size" inline />
 
 <Fact id="sci-galaxy-tilt" />
 
@@ -143,7 +143,7 @@ The estimates are those of <Source id="bailer-jones">Bailer-Jones and others (20
 
 <Fact id="method-star-light" />
 
-<Fact id="method-star-tint" />
+<Fact id="method-star-tint" inline /> <Fact id="depart-star-tint" inline />
 
 The named stars and the stars around the black hole are coloured otherwise: from the temperature in our list, along the curve a glowing body follows, in [Tanner Helland’s approximation](https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html). Its author made it for editing photographs and says it is not accurate enough for science.
 
@@ -202,7 +202,7 @@ The method is that of [Bruneton and Neyret (2008)](https://github.com/ebruneton/
 
 ## The Milky Way
 
-Modelled. No camera has left the Milky Way, so its portrait from outside cannot be measured.
+Modelled.
 
 <Fact id="sci-milky-way" />
 

@@ -535,6 +535,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     see: ['quasar'],
   },
   {
+    id: 'modelled',
+    term: 'Modelled',
+    text: 'Generated from a model whose numbers come from the literature. No object in it was measured one by one. The docs use the word for the Milky Way seen from outside, the atmospheres, the black hole and the sphere at the edge of the observable universe; under the site’s three sorting words it counts as drawn.',
+    facts: ['gloss-honesty-words', 'sci-milky-way', 'sci-atmospheres', 'sci-black-hole', 'sci-horizon-shell'],
+    more: { label: 'Measured, derived, modelled, drawn', path: '/docs/science/' },
+    see: ['drawn', 'derived'],
+  },
+  {
     id: 'mscc',
     term: 'MSCC',
     text: 'The Main SuperCluster Catalogue, a list of 601 superclusters. The app’s supercluster markers come from its largest entries.',
