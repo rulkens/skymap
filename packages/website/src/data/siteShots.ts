@@ -171,6 +171,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     size: WIDE,
     widths: [800, 640],
     title: 'The filaments of the cosmic web',
+    caption: 'The app opens with them off: the switch is Cosmic web filaments, in Settings.',
     drawn: 'Traced by an algorithm through the positions of catalogued galaxies.',
     alt: 'Bright branching violet threads spreading from a dense core across a field of galaxies.',
   },
