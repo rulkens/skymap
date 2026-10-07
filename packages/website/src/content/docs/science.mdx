@@ -112,7 +112,7 @@ On the way to the screen that light is changed again, by distance and by the den
 
 <Formula say="The logarithm of R equals minus 0.249 times M B plus 21, plus 1.366." of={'log\\, R = −0.249 (M_B + 21) + 1.366'} />
 
-A galaxy with neither a size nor an estimate is given a default, and the distance in that sum is not the one that belongs there: see [Sizes](/docs/simplifications/#sizes).
+A galaxy with neither a size nor an estimate is given a default, and the sum uses the comoving distance: see [Sizes](/docs/simplifications/#sizes).
 
 The measured tilts are SDSS’s own, the <Source id="2mass-xsc">2MASS Extended Source Catalog</Source>’s for 2MRS and <Source id="hyperleda">HyperLEDA</Source>’s for GLADE; a galaxy with none is given one computed from its identifier (same section). [Techniques](/docs/rendering/techniques/#galaxies) says how a galaxy goes from a point to a disc to a picture.
 
@@ -163,7 +163,7 @@ The five colours are chosen to look right: see [Brightness, exposure and colour]
   of={['\\frac{5040}{T} = b_0 + b_1 C + b_2 C^2', 'R = \\sqrt{L} × (\\frac{5772}{T})^2']}
 />
 
-[Andrae and others 2018](https://arxiv.org/abs/1804.09374) put the error of their own luminosities at about 15 per cent and of their radii at 10; ours use the colour alone and are rougher. The temperature relation is that of [Mucciarelli, Bellazzini and Massari 2021](https://arxiv.org/abs/2106.03882). The 118 named stars do not go through any of this: their figures are typed in from <Source id="seed-famous-stars">a list compiled by hand</Source>.
+[Andrae and others 2018](https://arxiv.org/abs/1804.09374) put the error of their own luminosities at about 15 per cent and of their radii at 10; ours use the colour alone and are rougher. The temperature relation is that of [Mucciarelli, Bellazzini and Massari 2021](https://arxiv.org/abs/2106.03882). The 118 named stars take their figures from <Source id="seed-famous-stars">a list compiled by hand</Source>.
 
 <Figure id="guide-card-star" />
 
@@ -200,7 +200,7 @@ The other maps are spacecraft mosaics, each with its own page under [Imagery and
 
 ### Atmospheres
 
-The atmospheres of 9 bodies are computed, not photographed. [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x) compute once how much light the air passes and scatters and look the answer up for every pixel; [Hillaire (2020)](https://doi.org/10.1111/cgf.14050) adds a cheaper treatment of light scattered many times. We wrote our own code for both, and each body has a table of gases and hazes.
+The atmospheres of 9 bodies are computed. [Bruneton and Neyret (2008)](https://doi.org/10.1111/j.1467-8659.2008.01245.x) compute once how much light the air passes and scatters and look the answer up for every pixel; [Hillaire (2020)](https://doi.org/10.1111/cgf.14050) adds a cheaper treatment of light scattered many times. We wrote our own code for both, and each body has a table of gases and hazes.
 
 <Fact id="method-atmosphere-earth" />
 
@@ -225,7 +225,7 @@ The atmospheres of 9 bodies are computed, not photographed. [Bruneton and Neyret
 
 <Fact id="method-disc-radius" />
 
-[Freudenreich’s](https://arxiv.org/abs/astro-ph/9707340) own bar stands at 14 degrees; we took the 27 ± 2 that [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593) measured later. The Gaia stars near the Sun are a separate, measured layer that the model does not replace. [Techniques](/docs/rendering/techniques/#the-milky-way) says how it is drawn.
+[Freudenreich’s](https://arxiv.org/abs/astro-ph/9707340) own bar stands at 14 degrees; we took the 27 ± 2 that [Wegg and Gerhard 2013](https://arxiv.org/abs/1308.0593) measured later. The Gaia stars near the Sun are a separate, measured layer. [Techniques](/docs/rendering/techniques/#the-milky-way) says how it is drawn.
 
 ### The Local Bubble
 
@@ -247,7 +247,7 @@ The table is <Source id="local-bubble">O’Neill and others’</Source>; the [Lo
 
 <Fact id="method-black-hole" />
 
-The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735); the table and the code are our own. The stars around it move on <Source id="s-stars">orbits published from years of tracking</Source>, which is how the mass and the distance are known at all. The two come from different fits: see [The Milky Way](/docs/simplifications/#the-milky-way).
+The method follows [Bruneton’s “Real-time High-Quality Rendering of Non-Rotating Black Holes”](https://arxiv.org/abs/2010.08735); the table and the code are our own. The stars around it move on <Source id="s-stars">orbits published from years of tracking</Source>, which is how the mass and the distance are known. The two come from different fits: see [The Milky Way](/docs/simplifications/#the-milky-way).
 
 <View to="focus=blackhole-sgr-a-star">Open Sagittarius A*</View>
 
@@ -273,7 +273,7 @@ The catalogue is described by [Wilde and others (2023)](https://arxiv.org/abs/23
 
 <Fact id="sci-filaments" />
 
-The threshold of 5 standard deviations and two passes of smoothing are our settings, not the recommendation of DisPerSE’s paper, [Sousbie (2011)](https://arxiv.org/abs/1009.4015).
+The threshold of 5 standard deviations and two passes of smoothing are our settings; DisPerSE’s paper is [Sousbie (2011)](https://arxiv.org/abs/1009.4015).
 
 <Fact id="sci-flows" />
 
@@ -289,7 +289,7 @@ The catalogues are <Source id="mcxc">MCXC</Source> and <Source id="mscc">MSCC</S
 
 ### The density correction
 
-It changes brightness, not position, and it is on when the app opens.
+It changes brightness only, and it is on when the app opens.
 
 <Fact id="method-reweight" />
 
@@ -313,4 +313,4 @@ The most distant objects drawn, <Source id="milliquas">Milliquas</Source> quasar
 
 <Fact id="sci-zoa-band" />
 
-Names, orbit lines, constellation lines, the selection ring and the scale bar are drawn too, and none of them stands for a measurement of its own. The glow around bright objects and the tone curve act on the whole frame: see [Bloom, tone curves and HDR](/docs/rendering/techniques/#bloom-tone-curves-and-hdr).
+Names, orbit lines, constellation lines, the selection ring and the scale bar are drawn too. The glow around bright objects and the tone curve act on the whole frame: see [Bloom, tone curves and HDR](/docs/rendering/techniques/#bloom-tone-curves-and-hdr).
