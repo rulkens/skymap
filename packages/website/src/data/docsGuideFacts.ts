@@ -614,7 +614,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-focus',
     about: 'app',
-    text: 'The address names the focus, the object the camera turns about: focus=body-saturn for a planet, a moon or a spacecraft, focus=star-sirius for a named star, focus=m31 for a named galaxy, focus=cluster-virgo-m87 for a structure, focus=milkyWay for the Milky Way. It changes when the focus does: on a search result, a double-click, the F key or the Focus button on a card. With Earth as the focus the address names no focus at all, because the bare address is the home view.',
+    text: 'The address names the focus, the object the camera turns about: focus=body-saturn for a planet, a moon or a spacecraft, focus=star-sirius for a named star, focus=m31 for a named galaxy, focus=cluster-virgo-m87 for a structure, focus=milkyWay for the Milky Way. With Earth as the focus the address names no focus at all, because the address with nothing after it is the home view.',
     source: `${REPO_BLOB}/src/services/url/urlHashFor.ts`,
     sourceLabel: `how the app names an object in its address, ${IN_REPO}`,
     checked: CHECKED,
@@ -622,7 +622,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-selection',
     about: 'app',
-    text: 'A click pins a card and leaves the focus where it was, and the address does not change. A link carries the focus, not a card pinned beside it.',
+    text: 'A click pins a card and leaves the focus where it was, and the address does not change. A link carries the focus; a card pinned beside it is left behind.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `the address parameters, ${IN_REPO}`,
     checked: CHECKED,
@@ -630,15 +630,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-orientation',
     about: 'app',
-    text: 'When Orientation in the Settings panel is on anything but its first choice, the plane of the solar system, the address says so: orientation=equatorial, orientation=galactic or orientation=supergalactic. An address that holds an orientation and nothing else still opens on the welcome screen.',
-    source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
-    sourceLabel: `the address parameters, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'share-camera',
-    about: 'app',
-    text: 'Turning the view and zooming change nothing in the address.',
+    text: 'When Orientation in the Settings panel is on anything but its first choice, the plane of the solar system, the address says so: orientation=equatorial, orientation=galactic or orientation=supergalactic.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `the address parameters, ${IN_REPO}`,
     checked: CHECKED,
@@ -646,7 +638,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-camera-link',
     about: 'app',
-    text: 'Two keys give a link that holds the camera as well. L prints one in the browser’s developer console. D opens the debug panel, where the “copy URL” button under Camera puts the same link on the clipboard. The link names the focus, the instant the scene shows at that moment, whether or not the clock is running, and the camera, as pose.',
+    text: 'Turning the view and zooming change nothing in the address. For a link that also holds the camera, press D and use the “copy URL” button under Camera, then press D again to close the panel. That link names the focus, the date and time the scene shows, whether or not the clock is running, and the camera, as pose.',
     source: `${REPO_BLOB}/src/state/url/shareUrlFor.ts`,
     sourceLabel: `how the app composes a link with the camera in it, ${IN_REPO}`,
     checked: CHECKED,
@@ -654,7 +646,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-pose-dropped',
     about: 'app',
-    text: 'Once a link with a pose has opened, the app takes the pose out of the address again. The address bar then holds a link to the standard view, so pass on the link you were given, not the address you see.',
+    text: 'Once a link with a pose has opened, the address bar holds a link to the standard view, so pass on the link you were given, not the address you see.',
     source: `${REPO_BLOB}/src/state/url/watchHashWriteSaga.ts`,
     sourceLabel: `where the app writes its address, ${IN_REPO}`,
     checked: CHECKED,
@@ -662,7 +654,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-opens',
     about: 'app',
-    text: 'A link that names an object, an instant, a camera position, a tour or an exhibit opens without the welcome screen. The object it names becomes the focus, and its card is pinned.',
+    text: 'A link that names an object, a date, a camera position, a tour or an exhibit opens without the welcome screen. The object it names becomes the focus, and its card is pinned. A link with a date opens with the clock paused on it.',
     source: `${REPO_BLOB}/src/utils/url/hasDeepLink.ts`,
     sourceLabel: `which links skip the welcome screen, ${IN_REPO}`,
     checked: CHECKED,
@@ -670,7 +662,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-settings',
     about: 'app',
-    text: 'Apart from the orientation, a link carries no settings: not the data size, not which catalogues, names and guides are switched on, not brightness, bloom or field of view, and not whether the interface is hidden. The app keeps no settings between visits either, so a link opens with every one of them as the app first sets it.',
+    text: 'Apart from the orientation, a link carries no settings: not the data size, not which catalogues, names and guides are switched on, not brightness, bloom or field of view, and not whether the interface is hidden. The app keeps no settings between visits either, so a link opens with every one of them as it is at first.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `the address parameters, ${IN_REPO}`,
     checked: CHECKED,
@@ -678,7 +670,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-data-size',
     about: 'app',
-    text: 'A galaxy known only by a catalogue number is found only if the data size the link opens with holds it. A link such as focus=sdss-1237651250440896578 opens that galaxy at the middle size, and at the smallest size, which has no SDSS galaxies, it opens the home view.',
+    text: 'A galaxy known only by a catalogue number opens only if the receiver’s data size holds it.',
     source: `${REPO_BLOB}/src/state/navigation/navigateSaga.ts`,
     sourceLabel: `how the app opens what a link names, ${IN_REPO}`,
     checked: CHECKED,
@@ -694,7 +686,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-place',
     about: 'app',
-    text: 'A place on Earth chosen in the search does not appear in the address: the focus is Earth, and Earth is the bare address. A link made with L or “copy URL” does hold the place, as a camera position measured from Earth, and opens above the same ground.',
+    text: 'A place on Earth chosen in the search does not appear in the address: the focus is Earth, and Earth is the address with nothing after it. A link from the “copy URL” button does hold the place, as a camera position measured from Earth, and opens above the same ground.',
     source: `${REPO_BLOB}/src/utils/url/decodeFramedPose.ts`,
     sourceLabel: `the camera-position parameter, ${IN_REPO}`,
     checked: CHECKED,
@@ -710,7 +702,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-tour-focus',
     about: 'app',
-    text: 'During a tour the address also names the object the step is on, as in focus=cluster-virgo-m87&tour=webShowcase. A link copied then starts the tour at its first step all the same.',
+    text: 'A link copied during a tour starts the tour from its first step.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: `the address parameters, ${IN_REPO}`,
     checked: CHECKED,
