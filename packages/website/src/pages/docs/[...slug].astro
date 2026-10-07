@@ -15,6 +15,7 @@ import DocTable from '../../components/DocTable.astro';
 import Example from '../../components/Example.astro';
 import FactText from '../../components/FactText.astro';
 import Flow from '../../components/Flow.astro';
+import Formula from '../../components/Formula.astro';
 import Keys from '../../components/Keys.astro';
 import Links from '../../components/Links.astro';
 import Note from '../../components/Note.astro';
@@ -56,6 +57,7 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
       Caveat,
       Source: SourceLink,
       Flow,
+      Formula,
       Spans,
       Repo: RepoLink,
     }}
