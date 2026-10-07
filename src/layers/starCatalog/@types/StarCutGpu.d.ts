@@ -7,7 +7,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from './StarDrawStream';
-import type { StarCutFrame } from './StarCutFrame';
+import type { StarCutInputs } from './StarCutInputs';
 import type { StarCutDraw } from './StarCutDraw';
 
 export type StarCutGpu = {
@@ -15,17 +15,17 @@ export type StarCutGpu = {
   readonly drawBgl: GPUBindGroupLayout;
   /** Build a source's buffers; an empty catalog releases them. */
   upload(source: SourceType, catalog: StarCatalog): void;
-  /** One compute pass: every source in `frame` gets this frame's cut. */
+  /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(
     encoder: GPUCommandEncoder,
-    frame: StarCutFrame,
+    inputs: StarCutInputs,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void;
   /**
-   * The capture cut of `frame` — its eye, every direction, no fade — submitted
-   * at once on its own encoder. A second call for the same `frame` does nothing.
+   * The capture cut of `inputs` — its eye, every direction, no fade — submitted
+   * at once on its own encoder. A second call for the same `inputs` does nothing.
    */
-  submitCapture(frame: StarCutFrame): void;
+  submitCapture(inputs: StarCutInputs): void;
   /** `null` until that cut (the frame's, or the capture's) has run for the source. */
   drawOf(source: SourceType, stream: StarDrawStream, capture: boolean): StarCutDraw | null;
   destroy(): void;

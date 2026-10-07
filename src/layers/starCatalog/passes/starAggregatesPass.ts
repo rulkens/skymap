@@ -1,29 +1,12 @@
 /**
- * starAggregatesPass — the survey (Gaia bin) star AGGREGATE stream, drawn
- * LINEAR into the half-res `star-aggregates` offscreen.
- *
- * The fill-bound half of the star pass. Interior octree nodes (flux-mip glows
- * whose radius fills the box footprint × the glow-overlap spread) deposit
- * tens-to-hundreds of full screens of additive overdraw at kpc-scale zoom, so
- * they draw into a half-res target (quartering the fragment cost) instead of
- * straight into HDR. The `star-upsample` layer (`starAggregateUpsamplePass`)
- * then composites this offscreen back, applying the hue-preserving knee to the
- * SUMMED aggregate field. The leaf stream stays full-resolution in HDR
- * (`starCatalogPass`).
- *
- * The cut, its LOD fades and the leaf/aggregate split are one GPU compute
- * (`star-cut`) shared with `starCatalogPass`; this layer draws ONLY the
- * aggregate list, via `drawStarCut` with `stream: 'aggregate'` — the
- * `fsLinear` pipeline into the offscreen.
- *
- * ### Why `enabled` shares `starCatalogVisible`
- *
- * The offscreen is cleared on first touch each frame by the executor. If this
- * layer were gated differently from the `star-upsample` consumer, a frame where
- * the aggregate render is skipped (offscreen NOT cleared, holding stale bytes)
- * but the upsample still ran would composite last frame's aggregates. Sharing
- * one gate is the same stale-offscreen guard the volume liveness projection
- * enforces between the raymarch and its upsample.
+ * starAggregatesPass — the survey star AGGREGATE stream, drawn LINEAR into the
+ * half-res `star-aggregates` offscreen. Interior flux-mip glows fill their box
+ * footprint, so at kpc zoom they deposit many screens of additive overdraw; the
+ * half-res target quarters that. `star-upsample` composites it back with the
+ * knee on the SUMMED field; the leaf stream stays full-res (`starCatalogPass`).
+ * `enabled` shares `starCatalogVisible` with that upsample: the offscreen is
+ * cleared on first touch, so a skipped draw beside a running upsample would
+ * composite last frame's aggregates.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -40,17 +23,11 @@ export function starAggregatesPass(runtime: StarCatalogRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      // Viewport is the DESTINATION target's allocated size, not the canvas:
-      // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
-      // RASTERISED, so the canvas size would make the floor 0.75 texels here and
-      // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
-      // brightness — `toRefPx` normalises by this target's own `pxPerRad`, so
-      // the photometry holds per solid angle at any target size and fov).
-      // `viewKind === 'capture'` marks a capture draw (see `FrameView.viewKind`),
-      // whose destination is the capture face: `deriveView(faceViewSpec(...))`
-      // builds the synthetic ctx at the row's declared face size, so `canvasSize` already IS
-      // that size. The view is COPIED rather than mutated: one `SlabView` is
-      // shared by every pass in the render step.
+      // The DESTINATION target's size, not the canvas: STAR_GLOW_MIN_PX floors the
+      // radius in pixels OF THE TARGET RASTERISED, so the canvas size would put the
+      // floor sub-texel here (dropout and flicker). A capture face's synthetic ctx
+      // already carries its own size. The view is COPIED: one `SlabView` is shared
+      // by every pass in the render step.
       const { width: vw, height: vh } =
         ctx.viewKind === 'capture'
           ? ctx.canvasSize

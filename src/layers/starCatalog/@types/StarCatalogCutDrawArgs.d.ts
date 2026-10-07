@@ -1,6 +1,6 @@
 /**
  * One stream of the GPU cut for one source: the per-view camera and the
- * source-independent shader scalars. No node arrays — the lists stay on the GPU.
+ * source-independent shader scalars. The lists stay on the GPU.
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';

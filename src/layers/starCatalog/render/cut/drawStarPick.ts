@@ -1,6 +1,6 @@
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogPickRenderer } from '../../@types/StarCatalogPickRenderer';
-import type { StarCutFrame } from '../../@types/StarCutFrame';
+import type { StarCutInputs } from '../../@types/StarCutInputs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
@@ -14,17 +14,17 @@ export function drawStarPick(
   pickRenderer: StarCatalogPickRenderer,
   pass: GPURenderPassEncoder,
   view: SlabView,
-  frame: StarCutFrame,
+  inputs: StarCutInputs,
   pxPerRad: number,
 ): void {
-  const vp = narrowMat4(rebaseViewProj(view.slab.vp, frame.originMpc));
-  for (const { source } of frame.sources) {
+  const vp = narrowMat4(rebaseViewProj(view.slab.vp, inputs.cut.originMpc));
+  for (const { source } of inputs.cut.sources) {
     pickRenderer.draw(pass, {
       source,
       vp,
       viewportPx: view.viewportPx,
       pxPerRad,
-      sizePx: frame.sizePx,
+      sizePx: inputs.sizePx,
     });
   }
 }

@@ -1,4 +1,4 @@
-/** A source's GPU cut: the static node table plus its frame and capture cuts. */
+/** A source's GPU cut: the static node table plus its live and capture cuts. */
 
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCutState } from './StarCutState';
@@ -6,7 +6,7 @@ import type { StarCutState } from './StarCutState';
 export type StarCutSource = {
   readonly catalog: StarCatalog;
   readonly nodes: GPUBuffer;
-  readonly frame: StarCutState;
+  readonly live: StarCutState;
   /** Built on the first capture: most sessions never bake a sky cubemap. */
   capture: StarCutState | null;
 };

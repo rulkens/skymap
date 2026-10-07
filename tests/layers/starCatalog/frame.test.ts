@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
-import type { StarCutFrame } from '../../../src/layers/starCatalog/@types/StarCutFrame';
+import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarCutInputs';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
@@ -35,12 +35,12 @@ function makeView(camPos: Vec3, nowMs: number): FrameView {
 
 function makeRuntime(loaded: boolean): StarCatalogRuntime {
   const catalog = { starCount: 0 } as unknown as StarCatalog;
-  let cut: StarCutFrame | null = null;
+  let cut: StarCutInputs | null = null;
   return {
     renderer: {
       loadedCatalogs: () =>
         (loaded ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
-      setFrameCut: vi.fn((c: StarCutFrame | null) => {
+      setFrameCut: vi.fn((c: StarCutInputs | null) => {
         cut = c;
       }),
       getFrameCut: () => cut,
@@ -68,7 +68,7 @@ describe('starCatalogPlanner', () => {
     const runtime = makeRuntime(true);
     const planner = starCatalogPlanner(runtime);
     planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), 0)], STATE);
-    expect(runtime.renderer.getFrameCut()?.sources).toHaveLength(1);
+    expect(runtime.renderer.getFrameCut()?.cut.sources).toHaveLength(1);
 
     const empty = makeRuntime(false);
     const vote = starCatalogPlanner(empty).plan(

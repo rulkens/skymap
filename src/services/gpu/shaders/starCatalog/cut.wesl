@@ -1,42 +1,34 @@
-// starCatalog/cut.wesl — the per-frame octree cut, on the GPU: which nodes
-// draw (near cells as their real leaf stars, far subtrees as one aggregate
-// glow), each node's LOD fade, and the two draw lists the vertex stage reads.
+// starCatalog/cut.wesl — the per-frame octree cut, on the GPU. Derivation-heavy
+// file: the header carries the scheme. Near cells draw as real leaf stars, far
+// subtrees as one aggregate glow; each node gets an LOD fade and a place in one
+// of two draw lists the vertex stage reads.
 //
-// ## Why this is one flat pass over every node, not a tree walk
+// ## One flat pass over every node
+// The refine proxy 'edge^2 / distanceToBox^2' only shrinks going down the tree
+// (a child's edge halves and its box sits inside its parent's), so "every
+// ancestor refined" collapses to "the parent refined": a node is in the cut
+// exactly when its parent refines and it does not, answerable from its own box
+// and its parent's alone.
 //
-// The refine proxy 'edge^2 / distanceToBox^2' can only shrink going down the
-// tree (a child's edge halves and its box sits inside its parent's), so "every
-// ancestor refined" collapses to "the parent refined". A node is therefore in
-// the cut exactly when its parent refines and it does not — a test each node
-// answers alone, from its own box and its parent's.
-//
-// ## The draw budget as a threshold
-//
-// A best-first refine under an instance budget pops candidates in descending
-// proxy order, so it stops at one proxy value: everything above it refined,
-// nothing below. 'histogram' sums each visible candidate's instance cost into
-// log-proxy bins, 'pickThreshold' walks the bins from the top until the budget
-// is spent, and 'emit' refines only bins at or above that one.
+// ## Budget as a threshold
+// A best-first refine under an instance budget pops in descending proxy order,
+// so it stops at one proxy value. 'histogram' sums each visible candidate's
+// instance cost into log-proxy bins, 'pickThreshold' walks the bins from the top
+// until the budget is spent, and 'emit' refines only bins at or above that one.
 //
 // ## Fades
-//
-// A node's opacity walks linearly toward 1 in the cut and 0 out of it, and it
-// draws while above 0 — so a split or merge cross-dissolves. Linear because
-// luminance is linear in opacity: parent * (1 - t) + children * t conserves
-// flux. Opacity is kept for off-screen nodes, so one that leaves the screen and
-// returns has kept its fade; only the budget histogram and the draw lists
-// skip them, counting on-screen candidates alone.
+// Opacity walks linearly to 1 in the cut and to 0 out of it, and a node draws
+// while above 0, so a split or merge cross-dissolves. Linear because luminance
+// is linear in opacity: parent*(1-t) + children*t conserves flux. Off-screen
+// nodes keep their fade; only the histogram and the lists skip them.
 //
 // ## Draw lists
-//
-// An aggregate is one record: its list entry is its node index. A leaf holds
-// up to a few thousand, so it claims 'ceil(count / 8)' blocks of 8 instances,
-// one entry each: node index | block-in-node << 22. The vertex stage finds its
-// record from 'instance >> 3' with no search, and discards the last block's
-// spare instances. 'draws' is the two indirect draw records the lists feed.
+// An aggregate's entry is its node index. A leaf holds up to a few thousand
+// records, so it claims 'ceil(count / 8)' blocks of 8 instances, one entry each:
+// node | block << 22. The vertex stage finds its record from 'instance >> 3' with
+// no search and discards the last block's spare instances.
 //
 // ## Bindings: writer -> reader
-//
 //   u         CPU each frame -> all three entry points, and vertex.wesl
 //   nodes     CPU at upload  -> all three entry points, and vertex.wesl
 //   opacity   emit           -> emit (next frame), vertex.wesl
@@ -56,7 +48,7 @@ import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::packLeafEntry;
 import package::starCatalog::cutIo::LEAF_BLOCK_SHIFT;
 
-// Mirrors starCutLayout.ts.
+// Mirrors starCutLayout.ts (CUT_BINS, DRAW_RECORD_WORDS).
 const CUT_BINS: u32 = 1024u;
 const CUT_BINS_PER_OCTAVE: f32 = 64.0;
 // 'draws' words: leaf record first, aggregate record DRAW_RECORD_WORDS on;

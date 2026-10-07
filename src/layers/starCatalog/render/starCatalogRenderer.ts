@@ -1,42 +1,11 @@
 /**
- * starCatalogRenderer — the survey (Gaia bin) stars as additive point sprites
- * in the depthless HDR accumulation, fed from an in-file octree of
- * cell-quantized 6-byte records.
- *
- * ### Why a dedicated pipeline (not `starPointRenderer`, not `galaxyPointRenderer`)
- *
- * The survey stars' positions live as 10-bit in-cell offsets inside 6-byte
- * records, reconstructed in the vertex stage against their octree node's box.
- * Neither a flat instance buffer of seeded stars nor the galaxies' 52-byte
- * interleaved layout has that shape, so this is its own thin pipeline, sharing
- * the common substance at the WESL level (`lib/camera`, `lib/billboard`).
- *
- * ### Storage vs frame
- *
- * A catalog's record blob is static: uploaded once per source (`upload`). What
- * changes per frame is the octree CUT — which nodes draw — and that is taken
- * on the GPU (`starCutGpu`): this renderer sets the frame's inputs, encodes
- * the compute, and draws each stream with one `drawIndirect` over the lists it
- * left. No node, count or list crosses to JS.
- *
- * ### Two streams — leaf into HDR, aggregate into a half-res offscreen
- *
- * The cut splits into a LEAF list (real stars) and an AGGREGATE list (interior
- * flux-mip glows). Aggregate glow FILL is the star pass's dominant GPU cost,
- * so the aggregates draw LINEAR into the half-res `star-aggregates` offscreen
- * (fragment `fsLinear`), which the `star-upsample` composite knees and adds
- * back; the leaves draw into full-res HDR (fragment `fs`, per-glow knee). Both
- * targets are `rgba16float`, so one `targetFormat` builds both pipelines.
- *
- * ### Record repack at upload — 6 bytes → two u32
- *
- * The on-disk record is two independent 24-bit halves (`packStarRecord`; JS
- * bitwise ops are signed-32). A 6-byte blob is not 4-byte-aligned per record,
- * so `upload` repacks each into two u32 the vertex stage indexes as
- * `records[base*2]` / `records[base*2+1]`. The 8/6 VRAM overhead buys aligned
- * addressing.
- *
- * @module
+ * starCatalogRenderer — the survey (Gaia bin) stars as additive point sprites in
+ * the depthless HDR accumulation. Its own pipeline: records are 6-byte cell
+ * quantized octree records, vertex-pulled and rebuilt against their node's box.
+ * `upload` commits a catalog once; the per-frame cut is taken on the GPU
+ * (`starCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
+ * one `drawIndirect`. Leaves go to full-res HDR (`fs`), aggregates LINEAR to the
+ * half-res `star-aggregates` offscreen (`fsLinear`); both are rgba16float.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -45,7 +14,8 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
-import type { StarCutFrame } from '../@types/StarCutFrame';
+import type { StarCutInputs } from '../@types/StarCutInputs';
+import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
 import { RECORD_BYTES } from '../../../data/starCatalog/starCatalogFormat';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
@@ -54,9 +24,6 @@ import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompil
 import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { createViewSlotUniformRing } from '../../../utils/gpu/createViewSlotUniformRing';
-// The `StarUniforms` byte layout lives in starCatalogLayout.ts, shared with the
-// pick renderer. This renderer never writes `pickPass`: its scratch is
-// zero-init, so the vertex stage takes the visual path.
 import {
   STAR_UNIFORM_BYTES,
   SIZE_PX_FLOAT_INDEX,
@@ -80,9 +47,8 @@ export function createStarCatalogRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarCatalogRenderer {
-  // The frame's one star cut (see `setFrameCut`'s doc): ONE fact for the whole
-  // frame, so plain closure state rather than a WeakMap keyed per ctx.
-  let frameCut: StarCutFrame | null = null;
+  // ONE fact for the whole frame, so plain closure state, not a map keyed per ctx.
+  let frameCut: StarCutInputs | null = null;
   const cut = createStarCutGpu(device);
 
   const cameraScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
@@ -145,8 +111,9 @@ export function createStarCatalogRenderer(
   const sources = new Map<SourceType, LoadedStarSource>();
 
   /**
-   * Repack the catalog's 6-byte records into two u32 each (`lo` = on-disk
-   * bytes 0..2, `hi` = bytes 3..5), mirroring packStarRecord's byte order.
+   * Repack 6-byte records into two u32 each (`lo` = on-disk bytes 0..2, `hi` =
+   * bytes 3..5; the record is two independent 24-bit halves, JS bitwise ops
+   * being signed-32). Costs 8/6 VRAM, buys aligned addressing in the shader.
    */
   function repackRecords(records: Uint8Array): Uint32Array {
     const total = records.length / RECORD_BYTES;
@@ -198,7 +165,8 @@ export function createStarCatalogRenderer(
     if (!entry || cutDraw === null) return;
 
     // Identical bytes for every source within one view slot, so the repeated
-    // write is idempotent. float 19 stays zero-init.
+    // write is idempotent. `pickPass` is never written, so the zero-init
+    // scratch sends the vertex stage down the visual path.
     writeCameraPrefix(cameraScratch, args.vp, args.viewportPx, args.pxPerRad);
     cameraScratch[SIZE_PX_FLOAT_INDEX] = args.sizePx;
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = args.brightness;
@@ -215,12 +183,18 @@ export function createStarCatalogRenderer(
     pass.drawIndirect(cutDraw.indirect, cutDraw.indirectOffset);
   }
 
-  /**
-   * What the sibling `starCatalogPickRenderer` shares: the three BGLs (so its
-   * pick pipeline is group-equivalent), the records bind group, and the frame
-   * cut's leaf list. It builds its OWN camera buffer against `cameraBgl`, so a
-   * pick draw can never scribble on this renderer's live one.
-   */
+  function setFrameCut(next: StarCutInputs | null): void {
+    frameCut = next;
+  }
+
+  function getFrameCut(): StarCutInputs | null {
+    return frameCut;
+  }
+
+  function encodeCut(encoder: GPUCommandEncoder, claimTimestampWrites: ClaimTimestampWrites): void {
+    if (frameCut !== null) cut.encode(encoder, frameCut, claimTimestampWrites);
+  }
+
   function pickResources(): StarCatalogPickResources {
     return {
       cameraBgl,
@@ -244,14 +218,10 @@ export function createStarCatalogRenderer(
     upload,
     loadedCatalogs,
     drawCut,
-    encodeCut: (encoder, claimTimestampWrites) => {
-      if (frameCut !== null) cut.encode(encoder, frameCut, claimTimestampWrites);
-    },
+    encodeCut,
     pickResources,
-    setFrameCut: (next) => {
-      frameCut = next;
-    },
-    getFrameCut: () => frameCut,
+    setFrameCut,
+    getFrameCut,
     destroy,
   };
   renderer satisfies Renderer;

@@ -1,5 +1,5 @@
 /**
- * The one home of the two-part source gate shared by `starCutFrame` and
+ * The one home of the two-part source gate shared by `starCutInputs` and
  * `starCatalogVisible`. Loaded survey catalogs whose crossfade at `camDistPc` is > 0; empty when
  * the master toggle is off.
  */

@@ -14,7 +14,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
-import type { StarCutFrame } from '../../../../src/layers/starCatalog/@types/StarCutFrame';
+import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
 const PASS_STUB = {} as unknown as GPURenderPassEncoder;
 
@@ -40,14 +40,16 @@ function makeCtx(capture = false): FrameView {
   } as unknown as FrameView;
 }
 
-const FRAME: StarCutFrame = {
-  originMpc: [0, 0, 0],
+const FRAME: StarCutInputs = {
+  cut: {
+    originMpc: [0, 0, 0],
+    planes: new Float32Array(24),
+    refineThreshold: 0.05,
+    worldSpread: 1,
+    leafMarginRad: 0.001,
+    sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
+  },
   nowMs: 0,
-  planes: new Float32Array(24),
-  refineThreshold: 0.05,
-  worldSpread: 1,
-  leafMarginRad: 0.001,
-  sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
   sizePx: 2.5,
   brightness: 1,
   glowOverlap: 1,

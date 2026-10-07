@@ -1,25 +1,11 @@
 /**
- * starCatalogPickRenderer — the r32uint pick provider for the survey (Gaia bin)
- * stars, the pick twin of `starCatalogRenderer`.
- *
- * It draws the frame's GPU cut — the LEAF list only — into an already-begun
- * r32uint pick pass, where each fragment stamps the star's packed identity
- * (`(SOURCE_GAIA_STARS << 26) | recordIdx`, see `starCatalog/pickFragment.wesl`).
- * An aggregate glow stands in for a whole subtree and has no single star to
- * name. A leaf is on that list only while its fade is above zero and it is on
- * screen (grown by the pick floor), so what clicks is what
- * the last frame drew.
- *
- * It shares the visual renderer's layouts, record blob and cut lists
- * (`pickResources`), and owns the one buffer it writes: its `StarUniforms`,
- * with `pickPass = 1`. A pick draw must never write the visual renderer's live
- * camera buffer — the queued writes would race at submit.
- *
- * Unlike the depthless additive visual pass, the pick pipeline is depth-tested
- * in the NEAR0 slab's convention so the vertex stage's pick depth bands order
- * a survey star against the other pickable rows.
- *
- * @module
+ * starCatalogPickRenderer — the r32uint pick twin of `starCatalogRenderer`. It
+ * draws the frame cut's LEAF list (an aggregate has no single star to name),
+ * stamping `(SOURCE_GAIA_STARS << 26) | recordIdx`; a leaf is listed only while
+ * on screen with fade above zero, so what clicks is what drew. Layouts, records
+ * and lists are the visual renderer's (`pickResources`); it owns only its
+ * `StarUniforms` (`pickPass = 1`), since a pick draw writing the visual camera
+ * buffer would race at submit. Depth-tested in the NEAR0 slab's convention.
  */
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -107,11 +93,11 @@ export function createStarCatalogPickRenderer(
     pass.drawIndirect(leaves.indirect, leaves.indirectOffset);
   }
 
-  const renderer: StarCatalogPickRenderer = {
-    label: 'starCatalogPickRenderer',
-    draw,
-    destroy: () => uniformBuffer.destroy(),
-  };
+  function destroy(): void {
+    uniformBuffer.destroy();
+  }
+
+  const renderer: StarCatalogPickRenderer = { label: 'starCatalogPickRenderer', draw, destroy };
   renderer satisfies Renderer;
   return renderer;
 }

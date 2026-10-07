@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  CUT_BINS,
   CUT_HIST_WORDS,
   CUT_DRAWS_WORDS,
   CUT_MAX_VIEWS,
@@ -36,7 +37,7 @@ describe('starCatalog cut WESL <-> starCutLayout.ts parity', () => {
   const cutIo = shader('cutIo.wesl');
 
   it('scalar constants match', () => {
-    expect(weslConst(cut, 'CUT_BINS')).toBe(CUT_HIST_WORDS - 1);
+    expect(weslConst(cut, 'CUT_BINS')).toBe(CUT_BINS);
     expect(weslConst(cutIo, 'LEAF_BLOCK_SHIFT')).toBe(LEAF_BLOCK_SHIFT);
     expect(weslConst(cutIo, 'LEAF_BLOCK_INDEX_SHIFT')).toBe(LEAF_BLOCK_INDEX_SHIFT);
     expect(weslConst(cutIo, 'GRID_AXIS_BITS')).toBe(GRID_AXIS_BITS);

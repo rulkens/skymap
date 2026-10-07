@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  CAM_CELL_INT_INDEX,
+  CAM_FRAC_FLOAT_INDEX,
+  NODE_BITS_WORD,
+  NODE_GRID_WORD,
+  NODE_PARENT_WORD,
+  NODE_REFINE_DELTA_WORD,
+  VIEW_COUNT_U32_INDEX,
   CUT_NODE_WORDS,
   CUT_MAX_VIEWS,
   CUT_UNIFORM_BYTES,
@@ -33,23 +40,25 @@ describe('packStarCutNodes', () => {
   const at = (node: number) => words.subarray(node * CUT_NODE_WORDS, (node + 1) * CUT_NODE_WORDS);
 
   it('names the parent of every node, and the root names itself', () => {
-    expect([at(0)[4], at(1)[4], at(2)[4]]).toEqual([2, 2, 2]);
+    expect([at(0)[NODE_PARENT_WORD], at(1)[NODE_PARENT_WORD], at(2)[NODE_PARENT_WORD]]).toEqual([
+      2, 2, 2,
+    ]);
   });
 
   it('packs grid in LEAF cells, so a level-1 node is scaled by 2', () => {
-    expect(at(0)[0]).toBe(2);
-    expect(at(1)[0]).toBe(3);
-    expect(at(2)[0]).toBe(2);
+    expect(at(0)[NODE_GRID_WORD]).toBe(2);
+    expect(at(1)[NODE_GRID_WORD]).toBe(3);
+    expect(at(2)[NODE_GRID_WORD]).toBe(2);
   });
 
   it('packs level, aggregate bit and record count into bits', () => {
-    expect(at(0)[2]).toBe(0 | (0 << 4) | (2 << 8));
-    expect(at(2)[2]).toBe(1 | (1 << 4) | (1 << 8));
+    expect(at(0)[NODE_BITS_WORD]).toBe(0 | (0 << 4) | (2 << 8));
+    expect(at(2)[NODE_BITS_WORD]).toBe(1 | (1 << 4) | (1 << 8));
   });
 
   it('refineDelta is the children records minus the aggregate own; leaves 0', () => {
-    expect(at(2)[5]).toBe(2 + 3 - 1);
-    expect(at(0)[5]).toBe(0);
+    expect(at(2)[NODE_REFINE_DELTA_WORD]).toBe(2 + 3 - 1);
+    expect(at(0)[NODE_REFINE_DELTA_WORD]).toBe(0);
   });
 });
 
@@ -68,12 +77,12 @@ describe('writeStarCutUniforms', () => {
   it('splits the camera into a whole cell and a [0,1) fraction, below zero too', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
     writeStarCutUniforms(buf, CATALOG, camAtPc(-25), cut); // -2.5 cells
-    expect(new Int32Array(buf)[0]).toBe(-3);
-    expect(new Float32Array(buf)[4]).toBeCloseTo(0.5, 6);
+    expect(new Int32Array(buf)[CAM_CELL_INT_INDEX]).toBe(-3);
+    expect(new Float32Array(buf)[CAM_FRAC_FLOAT_INDEX]).toBeCloseTo(0.5, 6);
 
     writeStarCutUniforms(buf, CATALOG, camAtPc(37), cut); // 3.7 cells
-    expect(new Int32Array(buf)[0]).toBe(3);
-    expect(new Float32Array(buf)[4]).toBeCloseTo(0.7, 6);
+    expect(new Int32Array(buf)[CAM_CELL_INT_INDEX]).toBe(3);
+    expect(new Float32Array(buf)[CAM_FRAC_FLOAT_INDEX]).toBeCloseTo(0.7, 6);
   });
 
   it('writes 0 views when more than CUT_MAX_VIEWS are asked for', () => {
@@ -83,6 +92,6 @@ describe('writeStarCutUniforms', () => {
       ...cut,
       planes,
     });
-    expect(new Uint32Array(buf)[12]).toBe(0);
+    expect(new Uint32Array(buf)[VIEW_COUNT_U32_INDEX]).toBe(0);
   });
 });

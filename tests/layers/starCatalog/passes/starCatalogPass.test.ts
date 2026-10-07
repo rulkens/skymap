@@ -24,7 +24,7 @@ import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
-import type { StarCutFrame } from '../../../../src/layers/starCatalog/@types/StarCutFrame';
+import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -45,18 +45,20 @@ function makeCtx(camPos: Readonly<Vec3>): FrameView {
   } as unknown as FrameView;
 }
 
-function makeFrame(originMpc: Vec3): StarCutFrame {
+function makeFrame(originMpc: Vec3): StarCutInputs {
   return {
-    originMpc,
+    cut: {
+      originMpc,
+      planes: new Float32Array(24),
+      refineThreshold: 0.05,
+      worldSpread: 1,
+      leafMarginRad: 0.001,
+      sources: [
+        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
+        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
+      ],
+    },
     nowMs: 0,
-    planes: new Float32Array(24),
-    refineThreshold: 0.05,
-    worldSpread: 1,
-    leafMarginRad: 0.001,
-    sources: [
-      { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
-      { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
-    ],
     sizePx: 6.25,
     brightness: 2,
     glowOverlap: 2.2,
@@ -64,7 +66,7 @@ function makeFrame(originMpc: Vec3): StarCutFrame {
   };
 }
 
-function makeRuntime(frame: StarCutFrame | null) {
+function makeRuntime(frame: StarCutInputs | null) {
   const drawCut = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogCutDrawArgs) => void>();
   const catalog = { starCount: 1 } as unknown as StarCatalog;
   const renderer = {
@@ -124,7 +126,7 @@ describe('starCatalogPass.draw', () => {
     expect(a!.knee).toBe(true);
     expect(a!.vp).toBe(b!.vp);
     expect(a!.vp).not.toBe(view.vp);
-    expect(a!.vp).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, frame.originMpc)));
+    expect(a!.vp).toEqual(narrowMat4(rebaseViewProj(view.slab.vp, frame.cut.originMpc)));
     expect(a!.viewSlot).toBe(3);
     expect(a!.sizePx).toBe(6.25);
     expect(a!.brightness).toBe(2);

@@ -2,7 +2,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
-import type { StarCutFrame } from '../../@types/StarCutFrame';
+import type { StarCutInputs } from '../../@types/StarCutInputs';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import {
@@ -24,11 +24,11 @@ import { FLOATS_PER_VIEW } from '../starCutLayout';
  * `cutIo.wesl` keeps for node boxes) and the cut keeps a node any of them
  * sees. A view without a NEAR0 slab (a hand-built test ctx) ⇒ no prune.
  */
-export function starCutFrame(
+export function starCutInputs(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,
   settings: StarCatalogSettings,
   views: readonly FrameView[],
-): StarCutFrame | null {
+): StarCutInputs | null {
   const view = views[0]!;
   const originMpc: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camDistMpc = Math.hypot(originMpc[0], originMpc[1], originMpc[2]);
@@ -50,20 +50,22 @@ export function starCutFrame(
   }
 
   return {
-    originMpc,
+    cut: {
+      originMpc,
+      planes,
+      refineThreshold: settings.refineThreshold,
+      worldSpread: Math.max(1, (settings.sizePx / STAR_SIZE_REF_PX) * settings.glowOverlap),
+      // Pick, not leaf: the widest footprint any consumer paints.
+      leafMarginRad:
+        Math.max(STAR_GLOW_MIN_PX * (settings.sizePx / STAR_SIZE_REF_PX), STAR_PICK_MIN_RADIUS_PX) /
+        pxPerRad,
+      sources: inBand.map(({ source, entry, crossfade }) => ({
+        source,
+        opacity: crossfade,
+        budgetTypical: entry.drawBudget.typical,
+      })),
+    },
     nowMs: view.snapshot.nowMs,
-    planes,
-    refineThreshold: settings.refineThreshold,
-    worldSpread: Math.max(1, (settings.sizePx / STAR_SIZE_REF_PX) * settings.glowOverlap),
-    // Pick, not leaf: the widest footprint any consumer paints.
-    leafMarginRad:
-      Math.max(STAR_GLOW_MIN_PX * (settings.sizePx / STAR_SIZE_REF_PX), STAR_PICK_MIN_RADIUS_PX) /
-      pxPerRad,
-    sources: inBand.map(({ source, entry, crossfade }) => ({
-      source,
-      opacity: crossfade,
-      budgetTypical: entry.drawBudget.typical,
-    })),
     sizePx: settings.sizePx,
     // DISPLAY exposure (see `starExposureRamp`), on the cut origin's distance.
     brightness:

@@ -84,7 +84,7 @@ export function galaxyCatalogPlanner(
         void runtime.biasCorrection.setMode(biasMode);
       }
 
-      // The once row's rig-wide anchor (mirrors `starCutFrame.ts`'s
+      // The once row's rig-wide anchor (mirrors `starCutInputs.ts`'s
       // views[0]-is-anchor contract): the widest face sizes the walk, the
       // first view's camera aims it — the disk walk touches the whole visible
       // catalog (~2.5M rows), so a per-view re-walk would be a 5× CPU cost

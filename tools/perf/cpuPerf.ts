@@ -6,8 +6,7 @@
  *   npm run perf:cpu -- --url http://localhost:5174 --scenario star-field
  *
  * Flags: `--url` (default :5173), `--scenario` (repeatable; default all),
- * `--frames` (default 120). Every row prints, slowest first.
- * Headless Chromium on a dev box; a phone runs the same JS several times slower.
+ * `--frames` (default 120). Rows print slowest first; a phone runs this JS slower.
  */
 
 import { launchChromium } from '../utils/browser/launchChromium';
