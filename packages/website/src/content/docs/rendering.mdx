@@ -86,7 +86,7 @@ In [dome mode](/docs/guide/screens-and-domes/#dome-mode) the scene, from the far
 
 ## Processor and graphics processor
 
-What the processor does every frame is small and fixed in kind: it moves the camera and the clock, places the planets, makes the choices under [Plan](#plan-and-compute), walks the tree of ground tiles when the camera is near one, places the names, and builds the camera’s matrices in 64-bit numbers. The galaxies and the stars are uploaded to the graphics processor once, when a file arrives, and every frame after that the position, size, brightness and colour of each on screen are computed there. With the scene at rest no frame is drawn at all ([Laptops and desktops](/docs/guide/screens-and-domes/#laptops-and-desktops)).
+What the processor does every frame is small and fixed in kind: it moves the camera and the clock, places the planets, makes the choices under [Plan](#plan-and-compute), walks the tree of ground tiles when the camera is near one, places the names, and builds the camera’s matrices in 64-bit numbers. The galaxies and the stars are uploaded to the graphics processor once, when a file arrives, and every frame after that the position, size, brightness and colour of each on screen are computed there. With the scene at rest no frame is drawn ([Laptops and desktops](/docs/guide/screens-and-domes/#laptops-and-desktops)).
 
 <Fact id="render-pick" />
 

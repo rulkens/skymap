@@ -17,7 +17,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-frame-order',
     about: 'app',
-    text: 'The order of a frame is one list written by hand: what is drawn, in what order, into which image. As it starts, the app compares the list with the drawing steps its parts have registered, and stops before the first frame if a step is on no line of it.',
+    text: 'The order of a frame is one list written by hand: what is drawn, in what order, into which image. As it starts, the app compares the list with the drawing steps its parts have registered, and stops before the first frame if a step is missing from it.',
     source: `${REPO_BLOB}/src/data/rendering/frameSections.ts`,
     sourceLabel: `the frame’s order, ${IN_REPO}`,
     checked: CHECKED,
