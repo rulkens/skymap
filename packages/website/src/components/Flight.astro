@@ -21,7 +21,7 @@ type Props = { stills: FlightStill[]; videoUrl: string };
 const { stills, videoUrl } = Astro.props;
 // Shown at the end of the flight; the web glow (derived) and the Milky Way (drawn) are the two things a viewer has seen by then that are not catalogue points.
 const closing =
-  'The stars and galaxies in this flight sit where the catalogues put them. The glow of the web is computed from those positions, and the Milky Way’s disc is drawn. Each stop says which.';
+  'The stars and galaxies in this flight are at their catalogued positions. The glow of the web is computed from those positions, and the Milky Way’s disc is drawn.';
 // What each still shows, by stop id: written from the frames, so re-read them after `npm run site:media`.
 const ALT: Record<string, string> = {
   earth: 'Earth seen from space, with labelled stars and galaxies around it. This is the first frame of the flight.',

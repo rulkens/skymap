@@ -35,7 +35,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
     sourceLabel: 'NASA Moon fact sheet',
     checked: CHECKED,
-    short: 'The ring around Earth is the Moon’s orbit. Light takes about 1.3 seconds to cross from there to here.',
+    short: 'The ring around Earth is the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
   },
   {
     id: 'saturn-distance',
@@ -106,7 +106,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://science.nasa.gov/mission/voyager/voyager-2/',
     sourceLabel: 'NASA, Voyager 2',
     checked: CHECKED,
-    short: 'Neptune has had one visitor, Voyager 2, in 1989. The trip took twelve years.',
+    short: 'Only Voyager 2 has flown past Neptune: in 1989, twelve years after its launch.',
   },
   {
     id: 'proxima-distance',
@@ -129,7 +129,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://doi.org/10.1126/science.1172873',
     sourceLabel: 'Clark et al. 2009, last glacial maximum',
     checked: CHECKED,
-    short: 'Light from the centre of our galaxy set out about 27,000 years ago, when the ice sheets were at their largest.',
+    short: 'Light from the centre of our galaxy left it about 27,000 years ago, when the ice sheets were at their largest.',
   },
   {
     id: 'andromeda-light',
@@ -137,7 +137,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://doi.org/10.1038/nature22335',
     sourceLabel: 'Richter et al. 2017, dating Jebel Irhoud',
     checked: CHECKED,
-    short: 'Light from Andromeda set out 2.5 million years ago. The oldest fossils assigned to our species are about 300,000 years old.',
+    short: 'Light from Andromeda left it 2.5 million years ago. The oldest fossils assigned to our species are about 300,000 years old.',
   },
   {
     id: 'cosmic-web-map',
@@ -153,7 +153,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://www.sdss4.org/dr17/scope/',
     sourceLabel: 'SDSS DR17 scope',
     checked: CHECKED,
-    short: 'Where the map is dark, the surveys did not look, our galaxy’s dust is in the way, or the galaxies are too faint to record.',
+    short: 'The map is dark where no survey observed, where our galaxy’s dust blocks the view, and where galaxies are too faint to record.',
   },
   {
     id: '2mrs-coverage',
