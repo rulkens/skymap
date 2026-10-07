@@ -53,6 +53,8 @@ The Milky Way and the stars are added to the same image, through a projection of
 
 Here the order does matter, in two places. The Milky Way’s dust is the one thing in the frame that takes light away, by multiplying what is behind it. It is drawn after the galaxies, so that it dims them as real dust does, and before the surface of the <Source id="local-bubble">Local Bubble</Source> and the nearby stars, which lie between the camera and the dust on the way in. The black hole’s lens, where it is in view, is laid over all of this, because a ray that falls in must hide the light already added behind it.
 
+<Figure id="render-near-scene" />
+
 ## Bodies
 
 Planets, moons, the ground, clouds, rings and 3D models are solid: the near one hides the far one. They are drawn into a second image that has a depth buffer, one body after another from the farthest to the nearest, and the depth buffer is cleared for each. Inside one body’s turn the order is: the globe, the ground tiles over it, the clouds, the rings, then the two things that read the depth the others wrote (a model’s contact shadow on the ground, and the air), then the models. Stars near enough to show a disc, the Sun among them, are spheres in this image too.
