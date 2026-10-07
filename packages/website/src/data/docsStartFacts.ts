@@ -25,17 +25,9 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'start-about-button',
     about: 'app',
-    text: 'The About button in the row at the top of the app opens the welcome screen again.',
+    text: 'The About button in the top bar opens the welcome screen again.',
     source: `${REPO_BLOB}/src/components/containers/TopBarContainer.tsx`,
     sourceLabel: `the top row’s buttons, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'start-clock-place',
-    about: 'app',
-    text: 'The clock at the lower right shows the scene’s date and time in UTC. Its controls open when the pointer is over it or the keyboard is on it, and stay open once the speed or the date has been changed.',
-    source: `${REPO_BLOB}/src/components/TimeBar/TimeBar.module.css`,
-    sourceLabel: `the clock’s layout, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -67,7 +59,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-rings',
     about: 'app',
-    text: 'Saturn’s are the only rings drawn.',
+    text: 'Saturn has the only rings in the scene.',
     source: `${REPO_BLOB}/src/data/bodies/sceneRings.ts`,
     sourceLabel: `the list of ring systems, ${IN_REPO}`,
     checked: CHECKED,
@@ -115,7 +107,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-constellations',
     about: 'app',
-    text: 'Lines for the 88 constellations join the stars at their catalogued distances, so the figures come apart as the camera leaves the Sun. They are switched off to begin with.',
+    text: 'Lines for the 88 constellations join the stars at their catalogued distances, so the figures come apart as the camera leaves the Sun. They are off at first.',
     source: `${REPO_BLOB}/src/layers/constellations/layer.ts`,
     sourceLabel: `the constellation lines, ${IN_REPO}`,
     checked: CHECKED,
@@ -131,7 +123,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-desi-off',
     about: 'app',
-    text: 'The three DESI regions are switched off to begin with.',
+    text: 'The three DESI regions are off at first.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/galaxyCatalogs/initialState.ts`,
     sourceLabel: `the catalogues’ starting state, ${IN_REPO}`,
     checked: CHECKED,
@@ -139,7 +131,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-filaments-off',
     about: 'app',
-    text: 'The filament lines are switched off to begin with.',
+    text: 'The filaments are off at first.',
     source: `${REPO_BLOB}/src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState.ts`,
     sourceLabel: `the filaments’ starting state, ${IN_REPO}`,
     checked: CHECKED,

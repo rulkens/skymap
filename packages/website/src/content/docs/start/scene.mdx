@@ -1,21 +1,31 @@
 ---
 title: What is in the scene
-description: skymap draws one scene that runs from a park in Copenhagen to the edge of the observable universe. This page lists what is in it from near to far, and says of each thing whether it is measured, derived or drawn.
+description: Everything skymap draws, from a park in Copenhagen to the edge of the observable universe, nearest first, and whether it is measured, derived or drawn.
 group: Start
 order: 2
 facts:
   [
+    geodanmark-orthophoto,
+    sci-earth-clouds,
+    search-places,
     sci-surfaces,
     sci-ephemeris,
+    sim-ephemeris-span,
     sci-planet-maps,
     sci-atmospheres,
     sim-true-size,
+    scene-rings,
+    scene-probe-orbits,
+    scene-rovers,
+    scene-named-stars,
+    sim-star-epoch,
     sci-star-observables,
     sim-star-coverage,
     sci-star-distance,
     sci-milky-way,
     sci-black-hole,
     sgr-a-distance,
+    scene-s-stars,
     sci-zoa-band,
     sci-local-volume,
     sci-galaxy-discs,
@@ -25,24 +35,26 @@ facts:
     sci-galaxy-distance,
     sci-colour,
     sci-deepest,
+    survey-gaps,
+    2mrs-coverage,
     sim-desi-patches,
+    scene-desi-off,
     sci-structures,
+    scene-structure-kinds,
     sci-markers,
     sci-density-field,
     sci-filaments,
+    scene-filaments-off,
     sci-flows,
     sci-horizon-shell,
   ]
 ---
 
-import ViewLink from '../../../components/ViewLink.astro';
-import { appLink } from '../../../data/appLink';
-
-Three words are used the same way on every line. **Measured** is what an instrument recorded: a direction on the sky, a brightness, a photograph. **Derived** is computed from measurements by a method someone could repeat: a distance from a redshift, a planet’s position from its orbit. **Drawn** is put there by us so that the picture can be read: a ring, a glow, a model of something no camera has seen. [Science and data](/science/#bins) sorts the whole scene into these three and gives the reasons.
+Three words are used the same way on every line. **Measured** is what an instrument recorded: a direction on the sky, a brightness, a photograph. **Derived** is computed from measurements by a stated method: a distance from a redshift, a planet’s position from its orbit. **Drawn** is a model or a choice of ours, with no measurement behind each object: a ring, a glow, a picture of something no camera has seen. [The science behind skymap](/science/#bins) sorts the whole scene into these three and gives the reasons.
 
 ## Is it in here?
 
-| What | In the scene | Mostly |
+| What | In the scene | Mostly is |
 | --- | --- | --- |
 | [Earth](#earth-and-its-surface) | Yes, down to aerial photographs | Measured |
 | [The Moon](#the-moon) | Yes | Derived |
@@ -51,7 +63,7 @@ Three words are used the same way on every line. **Measured** is what an instrum
 | Asteroids, comets, planets of other stars | [No](#what-is-not-here) | |
 | [Spacecraft](#spacecraft) | Seven | Derived |
 | [Stars](#stars) | Yes, from Gaia and Hipparcos | Measured |
-| [Constellations](#stars) | Lines only, switched off at first | Drawn |
+| [Constellations](#stars) | Lines only, off at first | Drawn |
 | [The Milky Way from outside](#the-milky-way) | Yes | Drawn |
 | [The black hole at its centre](#the-milky-way) | Yes | Drawn |
 | [Andromeda and other named galaxies](#nearby-galaxies) | 81 with photographs | Measured, derived |
@@ -61,11 +73,11 @@ Three words are used the same way on every line. **Measured** is what an instrum
 | [Filaments and the cosmic web](#filaments-and-the-cosmic-web) | Yes | Derived |
 | [The edge of the observable universe](#the-edge-of-the-observable-universe) | Yes, as a sphere | Drawn |
 
-The last column is a first answer. Nearly everything mixes the three, and the sections below take each thing apart. Every statement on this page has its source in the list at the foot.
+The last column is a first answer. Nearly everything mixes the three, and the sections below take each thing apart.
 
 ## Earth and its surface
 
-The surface is satellite photography, with sharper imagery set into some regions as you come down. <Fact id="geodanmark-orthophoto" inline /> <Fact id="sci-earth-clouds" inline /> <Fact id="search-places" inline />
+The surface is NASA’s Blue Marble mosaic of August 2004, with sharper satellite and aerial imagery set into some regions as you come down. The sharpest is Søndermarken, a park in Copenhagen, at 10 centimetres per pixel. The clouds are one fixed composite, so they are never that day’s weather. The search knows 18 places on Earth; see [Finding things](/docs/guide/finding/).
 
 **Measured:** the surface. **Derived:** where Earth is and which side is lit. **Drawn:** the clouds and the glow of the air. The imagery and its licences are under [Imagery](/science/#sources).
 
@@ -73,124 +85,112 @@ The surface is satellite photography, with sharper imagery set into some regions
 
 ## The Moon
 
-<Fact id="moon-orbit-light" />
+The Moon is a sphere at its true size on its orbit round Earth. <Fact id="moon-orbit-light" inline />
 
-**Derived:** its position, and less closely than a planet’s. The Moon follows mean orbital elements, an average of its orbit, where the planets are corrected against NASA’s positions. **Drawn:** its surface map, which is Solar System Scope’s (see the next section).
+**Derived:** its position, and less closely than a planet’s: the Moon follows an average of its orbit, where the planets are corrected against NASA’s positions. **Drawn:** its surface map, which is Solar System Scope’s (see the next section).
 
-<p class="link-row">
-  <ViewLink href={appLink('focus=body-moon')}>The Moon</ViewLink>
-</p>
+<View to="focus=body-moon">Open the Moon</View>
 
 ## Planets and their moons
 
-<Fact id="scene-bodies" />
+<Fact id="scene-bodies" inline /> Each is a sphere at its true size, where it was or will be at the date and time on the clock. Nine of them have an atmosphere, and Saturn has the only rings.
 
-<Fact id="scene-rings" />
-
-Each is a sphere at its true size, where it was or will be at the instant on the clock. Nine of them have an atmosphere.
-
-**Derived:** every position, from published orbits corrected against NASA’s JPL Horizons service for the years 1900 to 2100. **Measured:** the surfaces of Pluto, Charon and the larger moons, which are spacecraft photographs. **Drawn:** the atmospheres, and the maps of seven planets, which their maker says fill gaps with invented terrain. [Time](/docs/guide/time/) says how to set the date, and the orbits’ sources are under [Solar system](/science/#sources).
+**Derived:** every position, from published orbits. For the eight planets and 18 moons of the giant planets the orbits are corrected against NASA’s JPL Horizons service for the years 1900 to 2100; Pluto, Charon, the moons of Mars, Puck and Nereid follow average orbits without that correction. **Measured:** the surfaces of Pluto, Charon and the larger moons, which are spacecraft photographs. **Drawn:** the atmospheres, and the maps of seven planets, which their maker says fill gaps with invented terrain. See [Time](/docs/guide/time/) for setting the date; the orbits’ sources are under [Solar system](/science/#sources).
 
 <Figure id="saturn" />
 
-<p class="link-row">
-  <ViewLink href={appLink('exhibit=solarSystem')}>The Solar System exhibit</ViewLink>
-  <ViewLink href={appLink('focus=body-mars')}>Mars</ViewLink>
-  <ViewLink href={appLink('focus=body-jupiter')}>Jupiter</ViewLink>
-  <ViewLink href={appLink('focus=body-titan')}>Titan</ViewLink>
-  <ViewLink href={appLink('focus=body-pluto')}>Pluto</ViewLink>
-</p>
+<Links>
+  <View to="exhibit=solarSystem">Open the Solar System exhibit</View>
+  <View to="focus=body-mars">Open Mars</View>
+  <View to="focus=body-jupiter">Open Jupiter</View>
+  <View to="focus=body-titan">Open Titan</View>
+  <View to="focus=body-pluto">Open Pluto</View>
+</Links>
 
 ## Spacecraft
 
-<Fact id="scene-models" />
-
-<Fact id="scene-probe-orbits" inline /> <Fact id="scene-rovers" inline />
+<Fact id="scene-models" inline /> The Voyagers and Hubble move on orbits copied from JPL Horizons in September 2026, and each rover stands where it is now or where its mission ended.
 
 **Derived:** the positions. **Drawn:** the models. The whale and the petunias are not data.
 
-<p class="link-row">
-  <ViewLink href={appLink('focus=body-hubble')}>Hubble</ViewLink>
-  <ViewLink href={appLink('focus=body-voyager1')}>Voyager 1</ViewLink>
-  <ViewLink href={appLink('focus=body-perseverance')}>Perseverance</ViewLink>
-</p>
+<Links>
+  <View to="focus=body-hubble">Open Hubble</View>
+  <View to="focus=body-voyager1">Open Voyager 1</View>
+  <View to="focus=body-perseverance">Open Perseverance</View>
+</Links>
 
 ## Stars
 
-The stars are Gaia’s, brighter than magnitude 14, with every Gaia star within 100 parsecs and Hipparcos for the ones too bright for Gaia. <Fact id="scene-named-stars" inline /> <Fact id="sim-star-epoch" inline />
+The stars are Gaia’s, the brightest of those brighter than magnitude 14, with Gaia’s stars within 100 parsecs and Hipparcos for the ones too bright for Gaia. How many load depends on the data size: up to 12.9 million. The app names 118 of them. They stand where Gaia measured them in 2016, whatever date the clock shows.
 
 <Fact id="scene-constellations" />
 
-**Measured:** a star’s direction, brightness and colour. **Derived:** its distance. **Drawn:** the constellation lines, which are switched on under Labels & Guides in [Settings](/docs/guide/settings/). The catalogues are under [Stars](/science/#sources).
+**Measured:** a star’s direction, brightness and colour. **Derived:** its distance. **Drawn:** the constellation lines, which are switched on under Labels & Guides in the [Settings](/docs/guide/settings/) panel. The catalogues are under [Stars](/science/#sources).
 
-<p class="link-row">
-  <ViewLink href={appLink('focus=star-sun')}>The Sun</ViewLink>
-  <ViewLink href={appLink('focus=star-proxima-centauri')}>Proxima Centauri</ViewLink>
-  <ViewLink href={appLink('focus=star-betelgeuse')}>Betelgeuse</ViewLink>
-</p>
+<Links>
+  <View to="focus=star-sun">Open the Sun</View>
+  <View to="focus=star-proxima-centauri">Open Proxima Centauri</View>
+  <View to="focus=star-betelgeuse">Open Betelgeuse</View>
+</Links>
 
 ## The Milky Way
 
-From inside, the Milky Way you see is the measured stars themselves. From outside it is a generated model, because every camera we have is inside it. At its centre is the black hole Sagittarius A*, with a glowing disc that we invented. <Fact id="scene-s-stars" inline /> A blue band along the galaxy’s plane marks the Zone of Avoidance, the part of the sky where its dust hides the galaxies behind.
+From inside, the Milky Way you see is the measured stars themselves. From outside it is a generated model, because every camera we have is inside it. At its centre is the black hole Sagittarius A*, with a glowing disc that we invented, and 40 stars that move round it on orbits published from years of tracking them. A blue band along the galaxy’s plane marks the Zone of Avoidance, the part of the sky where its dust hides the galaxies behind.
 
 **Drawn:** the galaxy from outside, the black hole’s picture and the band. **Derived:** the black hole’s distance and the orbits of the stars around it.
 
 <Figure id="milky-way-drawn" />
 
-<p class="link-row">
-  <ViewLink href={appLink('focus=blackhole-sgr-a-star')}>Sagittarius A*</ViewLink>
-  <ViewLink href={appLink('exhibit=zoneOfAvoidance')}>The Zone of Avoidance exhibit</ViewLink>
-</p>
+<Links>
+  <View to="focus=blackhole-sgr-a-star">Open Sagittarius A*</View>
+  <View to="exhibit=zoneOfAvoidance">Open the Zone of Avoidance exhibit</View>
+</Links>
 
 ## Nearby galaxies
 
-<Fact id="andromeda-distance" />
-
-Close to it a galaxy grows from a point into a disc and then into a picture: a photograph of our choosing for 81 named galaxies, among them Andromeda and the two Magellanic Clouds, and a survey image for the others.
+<Fact id="andromeda-distance" inline /> Close to it a galaxy grows from a point into a disc and then into a picture: a photograph of our choosing for 81 named galaxies, among them Andromeda and the two Magellanic Clouds, and a survey image for the others.
 
 **Measured:** the direction, and the photograph. **Derived:** the distance, which inside 30 megaparsecs comes from methods that do not use redshift. **Drawn:** the generated disc a galaxy wears before its picture arrives, and its tilt where no catalogue gives one.
 
-<p class="link-row">
-  <ViewLink href={appLink('focus=m31')}>Andromeda</ViewLink>
-  <ViewLink href={appLink('focus=m33')}>Triangulum</ViewLink>
-  <ViewLink href={appLink('focus=lmc')}>The Large Magellanic Cloud</ViewLink>
-  <ViewLink href={appLink('focus=group-local-group')}>The Local Group</ViewLink>
-</p>
+<Links>
+  <View to="focus=m31">Open Andromeda</View>
+  <View to="focus=m33">Open Triangulum</View>
+  <View to="focus=lmc">Open the Large Magellanic Cloud</View>
+  <View to="focus=group-local-group">Open the Local Group</View>
+</Links>
 
 ## The galaxy surveys
 
-Every other galaxy is a point from one of four catalogues: SDSS, 2MRS, GLADE and DESI. The quasars, from Milliquas, are the most distant objects in the scene. <Fact id="survey-gaps" inline /> <Fact id="2mrs-coverage" inline /> <Fact id="scene-desi-off" inline />
+Every other galaxy is a point from one of four catalogues: SDSS, 2MRS, GLADE and DESI. The quasars, from Milliquas, are the most distant objects in the scene. <Fact id="survey-gaps" inline />
 
-**Measured:** direction and redshift. **Derived:** distance, from the redshift and a model of cosmology, and the colour of a point, from two measured brightnesses. How many galaxies load depends on the data size, which [Screens, quality and domes](/docs/guide/screens-and-domes/) explains. Each catalogue, with the number of objects we draw from it, is in the table under [Galaxies and quasars](/science/#sources), and [Known simplifications](/science/#simplifications) lists what the points leave out.
+<Fact id="2mrs-coverage" inline /> DESI is three regions cut from its first data release, off at first.
+
+**Measured:** direction and redshift. **Derived:** distance, from the redshift and a model of cosmology, and the colour of a point, from two measured brightnesses. How many galaxies load depends on the data size; see [Settings](/docs/guide/settings/). The table under [Galaxies and quasars](/science/#sources) has each catalogue with the number of objects we draw from it, and [Known simplifications](/science/#simplifications) has what the points leave out.
 
 <Figure id="science-wedges" />
 
 ## Clusters, superclusters and voids
 
-Discs and rings with names mark the large structures. Some come from two catalogues, of X-ray clusters and of superclusters. <Fact id="scene-structure-kinds" inline /> A void gets a ring and no glow.
+Markers with names stand for the large structures. Most come from two catalogues, of X-ray clusters and of superclusters. <Fact id="scene-structure-kinds" inline /> A void gets a ring and no glow. <Fact id="laniakea-home" inline />
 
-<Fact id="laniakea-home" />
+**Derived:** the positions and sizes of the markers taken from the two catalogues. **Drawn:** the 42 placed by hand, and every disc, ring and name.
 
-**Derived:** the positions and sizes, from the catalogues or set by hand. **Drawn:** the discs, rings and names.
-
-<p class="link-row">
-  <ViewLink href={appLink('focus=cluster-virgo-m87')}>The Virgo cluster</ViewLink>
-  <ViewLink href={appLink('focus=supercluster-laniakea-sc')}>Laniakea</ViewLink>
-  <ViewLink href={appLink('focus=void-bootes-void')}>The Boötes Void</ViewLink>
-</p>
+<Links>
+  <View to="focus=cluster-virgo-m87">Open the Virgo cluster</View>
+  <View to="focus=supercluster-laniakea-sc">Open Laniakea</View>
+  <View to="focus=void-bootes-void">Open the Boötes Void</View>
+</Links>
 
 ## Filaments and the cosmic web
 
-<Fact id="cosmic-web-map" />
+The purple and orange glow is the density of the cosmic web, computed by the Monte Carlo Physarum Machine from the positions of SDSS galaxies. Two more layers show the same structure another way: filaments traced along it, and flow ribbons that follow the motion of galaxies apart from the expansion.
 
-Two more layers show the same structure another way: lines traced along the filaments, and ribbons that follow the flow of galaxies apart from the expansion. <Fact id="scene-filaments-off" inline /> So are the flows, which have an exhibit of their own.
+**Derived:** all three. Each is the output of an algorithm run on galaxy positions or velocities, and none is an image. The glow is on at first; the other two are switched on in the [Settings](/docs/guide/settings/) panel.
 
-**Derived:** all three. Each is the output of an algorithm run on galaxy positions or velocities, and none is an image. The glow is on when the app opens; the other two are switched on in [Settings](/docs/guide/settings/).
-
-<p class="link-row">
-  <ViewLink href={appLink('exhibit=cosmicWeb')}>The Cosmic Web exhibit</ViewLink>
-  <ViewLink href={appLink('exhibit=cosmicFlows')}>The Cosmic Flows exhibit</ViewLink>
-</p>
+<Links>
+  <View to="exhibit=cosmicWeb">Open the Cosmic Web exhibit</View>
+  <View to="exhibit=cosmicFlows">Open the Cosmic Flows exhibit</View>
+</Links>
 
 ## The edge of the observable universe
 
@@ -202,8 +202,6 @@ Two more layers show the same structure another way: lines traced along the fila
 
 ## What is not here
 
-<Fact id="scene-not-here" />
+<Fact id="scene-not-here" inline /> Nebulae, star clusters and the International Space Station are not objects in the scene either. A star or a galaxy that the search does not find by name may still be there as an unnamed point; see [Finding things](/docs/guide/finding/).
 
-Nebulae, star clusters and the International Space Station are not objects in the scene either. A star or a galaxy that the search does not find by name may still be there as an unnamed point: [Finding things](/docs/guide/finding/) says what the search covers.
-
-The full list of named objects will be in the [Object catalogue](/docs/reference/objects/). For where each catalogue comes from and how it is licensed, see [All sources at a glance](/docs/data/). To fly through the scene in order, start with [First flight](/docs/start/first-flight/).
+Every named object is in the [Object catalogue](/docs/reference/objects/). For where each catalogue comes from and how it is licensed, see [All sources at a glance](/docs/data/).

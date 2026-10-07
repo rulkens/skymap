@@ -29,7 +29,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-star-observables',
-    text: 'For stars we take three Gaia measurements: position, brightness in Gaia’s G band and the colour BP minus RP, for the 16,844,156 stars brighter than magnitude 14.',
+    text: 'For stars we take three Gaia measurements: position, brightness in Gaia’s G band and the colour BP minus RP. We read them for the 16,844,156 Gaia stars brighter than magnitude 14. The app loads the brightest of them: 12,853,984 stars in all at its largest data size.',
     source: `${REPO_BLOB}/data/raw/gaia/README.md`,
     sourceLabel: `the Gaia download record, ${IN_REPO}`,
     checked: CHECKED,
@@ -294,7 +294,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-data-sizes',
-    text: 'The app loads one of three data sizes, and every size cuts SDSS to its most luminous galaxies: about 500,000 of 970,067 at the largest, 156,000 at the middle, where the apparently bright nearby ones are also kept, and none at the smallest.',
+    text: 'The app loads one of three data sizes, and every size cuts SDSS to its most luminous galaxies: the 500,000 most luminous of 970,067 at the largest and the 156,000 most luminous at the middle. Galaxies that appear brighter than magnitude 15 are kept as well, so that the nearby ones are not lost, which makes 502,114 and 159,899 loaded. The smallest size has none.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/sources/sdss.ts`,
     sourceLabel: `the SDSS definition, ${IN_REPO}`,
     checked: CHECKED,
@@ -315,7 +315,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sim-star-coverage',
-    text: 'The star catalogue holds Gaia stars brighter than magnitude 14, the 331,312 stars of the Gaia Catalogue of Nearby Stars within 100 parsecs, and Hipparcos for the stars too bright for Gaia. Of the magnitude-14 set, 99.24 per cent has a distance estimate; the rest are left out.',
+    text: 'The star catalogue holds Gaia stars brighter than magnitude 14, the 331,312 stars of the Gaia Catalogue of Nearby Stars within 100 parsecs, and Hipparcos for the stars too bright for Gaia. Of the magnitude-14 set, 99.24 per cent has a distance estimate; the rest are left out. Each data size then keeps the stars near the Sun and, of the others, the brightest that fit its download: 1,697,603 stars at the smallest size, 5,117,467 at the middle and 12,853,984 at the largest. About four million of the faintest are in no size.',
     source: `${REPO_BLOB}/data/raw/gaia/README.md`,
     sourceLabel: `the Gaia download record, ${IN_REPO}`,
     checked: CHECKED,
