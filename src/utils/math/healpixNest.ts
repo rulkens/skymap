@@ -27,9 +27,12 @@
  *   4. Bit-interleave x and y to produce the nested-scheme local pixel index,
  *      then add `face * nside²` for the global index.
  *
- * Reference: Górski et al. 2005, ApJ, 622, 759 §4.1.  Algorithm transcribed
- * from healpy's `pixelfunc.lonlat_to_healpix` (BSD-licensed) and the original
- * `chealpix` C source.
+ * Reference: Górski et al. 2005, ApJ, 622, 759 §4.1.  The body follows
+ * `ang2pix_nest_z_phi` in the HEALPix C library's `chealpix.c` (Copyright (C)
+ * 1997-2016 Gorski, Hivon, Reinecke, Wandelt, Banday, Bartelmann, Ansari &
+ * Ganga; GNU GPL version 2 or later), statement by statement.  An earlier
+ * header called its source BSD-licensed; `chealpix.c` is not.  See
+ * ATTRIBUTIONS.md, "HEALPix pixel indexing".
  *
  * ### Numerical notes
  *

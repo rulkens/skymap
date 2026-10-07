@@ -96,7 +96,9 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   Technology, funded by the National Aeronautics and Space Administration and
   the National Science Foundation."
 - **Upstream:** <http://tdc-www.harvard.edu/2mrs/>;
-  <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26>
+  <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26>. (The
+  app's Splash links the name 2MRS to NASA LAMBDA's page on 2MASS, which is
+  why that host is listed here; it is not the survey's page.)
 - **Enters skymap:** `data/raw/2mrs/2mrs_table3.dat` → `tools/parsers/twoMrs.ts`.
 - **Modified:** Yes. Cross-matched, given distances and re-encoded.
 - **Checked:** 2026-10-07: <http://tdc-www.harvard.edu/2mrs/>,
@@ -111,15 +113,23 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   galaxies, from VizieR `VII/233/xsc`.
 - **By:** Jarrett et al. 2000, AJ 119, 2498; the 2MASS project (University of
   Massachusetts and IPAC/Caltech).
-- **Licence:** Not stated for the catalogue on the 2MASS page read. The CDS
-  terms above apply to the copy served by CDS.
+- **Licence:** Two statements, and skymap uses the CDS copy. The survey's own
+  archive, IRSA: "Most data served by IRSA is public, with no usage
+  restrictions." (it does not name 2MASS in that sentence; the 2MASS pages
+  read state no licence for the catalogue). CDS, of the copy it serves
+  (VII/233, not a journal table): "Please refer to the ReadMe file associated
+  to the catalogue to verify if a 'copyright' exists. Else, see the policy
+  section of the journals", and "The commercial usage of the data is subject
+  to rules depending of the origin".
 - **Attribution:** The 2MASS acknowledgement quoted under 2MRS, and the VizieR
   acknowledgement (see VizieR below).
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/233>
 - **Enters skymap:** `tools/fetch/fetch2massXsc.ts` → `data/raw/2mrs/2mass_xsc_pa.csv`.
 - **Modified:** Yes. Two columns kept, joined to 2MRS by 2MASS id.
 - **Checked:** 2026-10-07: <https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html>,
+  <https://irsa.ipac.caltech.edu/data_use_terms.html>,
   <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Not verified:** whether the ReadMe of VII/233 carries a copyright section.
 
 ### GLADE v2.3, the Galaxy List for the Advanced Detector Era
 
@@ -189,10 +199,12 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   three regions.
 - **By:** The DESI Collaboration. DESI Collaboration et al. 2026, "Data Release
   1 of the Dark Energy Spectroscopic Instrument", AJ 171, 285.
-- **Licence:** CC BY 4.0. DESI's conditions: cite the data release paper,
-  "Indicate if any changes are made (if re-distributing DESI data)", and
-  "Include the following acknowledgments text in any publications or derived
-  works."
+- **Licence:** CC BY 4.0: "for any purpose, including commercially, as long
+  as they" cite the data release paper, "Indicate if any changes are made (if
+  re-distributing DESI data)", and "Include the following acknowledgments
+  text in any publications or derived works." DESI adds: "Also please cite
+  publications from the Technical Papers section if they cover any material
+  used in your work."
 - **Attribution:** The acknowledgement, verbatim:
 
   > This research used data obtained with the Dark Energy Spectroscopic Instrument (DESI). DESI construction and operations is managed by the Lawrence Berkeley National Laboratory. This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of High-Energy Physics, under Contract No. DE–AC02–05CH11231, and by the National Energy Research Scientific Computing Center, a DOE Office of Science User Facility under the same contract. Additional support for DESI was provided by the U.S. National Science Foundation (NSF), Division of Astronomical Sciences under Contract No. AST-0950945 to the NSF’s National Optical-Infrared Astronomy Research Laboratory; the Science and Technology Facilities Council of the United Kingdom; the Gordon and Betty Moore Foundation; the Heising-Simons Foundation; the French Alternative Energies and Atomic Energy Commission (CEA); the National Council of Humanities, Science and Technology of Mexico (CONAHCYT); the Ministry of Science and Innovation of Spain (MICINN), and by the DESI Member Institutions: www.desi.lbl.gov/collaborating-institutions. The DESI collaboration is honored to be permitted to conduct scientific research on I’oligam Du’ag (Kitt Peak), a mountain with particular significance to the Tohono O’odham Nation. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the U.S. National Science Foundation, the U.S. Department of Energy, or any of the listed funding agencies.
@@ -236,7 +248,11 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Licence:** "Gaia data are distributed under the CC BY-NC 3.0 IGO license.
   For details and guidelines concerning commercial use of the Gaia data, please
   see the Terms and Conditions for the use of data in the ESA space science
-  archives."
+  archives." Those terms: "Prior to any commercial use by the User of any
+  Data or Data Product, including any use or application that directly or
+  indirectly generates a financial gain, a detailed request for
+  authorisation/licence shall be made by the User by sending email to
+  data.licences@esa.int."
 - **Attribution:** The acknowledgement, verbatim:
 
   > This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.
@@ -248,6 +264,7 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Modified:** Yes. Selected, given distances, deduplicated, quantised into an
   octree.
 - **Checked:** 2026-10-07: <https://www.cosmos.esa.int/web/gaia-users/license>,
+  <https://www.cosmos.esa.int/web/esdc/terms-and-conditions>,
   <https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/>
 
 ### Bailer-Jones distances (Gaia EDR3)
@@ -483,17 +500,25 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 
 - **What:** Mean velocity and density on a 128³ grid in a 1000 Mpc box
   (`CF4pp_mean_std_grids.npz`), drawn as the flow field.
-- **By:** Courtois et al. 2025 ([arXiv:2502.01308](https://arxiv.org/abs/2502.01308)),
-  built on the Cosmicflows-4 distances of Tully et al. 2023.
+- **By:** Courtois, Mould, Hollinger, Dupuy & Zhang 2025, A&A 701, 187
+  ([arXiv:2502.01308](https://arxiv.org/abs/2502.01308)), built on the
+  Cosmicflows-4 distances of Tully et al. 2023.
 - **Licence:** Not stated on the project's page.
 - **Attribution:** "If you use this data cite the article above" (the page, of
   each download).
-- **Upstream:** <https://projets.ip2i.in2p3.fr/cosmicflows/>
+- **Upstream:** <https://projets.ip2i.in2p3.fr/cosmicflows/>, the page the
+  file was downloaded from. `rawDataRegistry.ts` gives the density array
+  (`cf4.density-mean`) a different upstream, the Extragalactic Distance
+  Database's CF4 calculator (`https://edd.ifa.hawaii.edu/CF4calculator/`);
+  the array is cut from the npz above, so the registry's link looks wrong,
+  and that site could not be reached today to read its terms.
 - **Enters skymap:** `data/raw/cf4/CF4pp_mean_std_grids.npz` (the two mean
   arrays are also hosted on R2 for contributors) → `npm run build-flow-field` →
   `public/data/scalar-field/v3/flowfield.scfd`.
 - **Modified:** Yes. Two of the six arrays are packed to 16-bit floats.
 - **Checked:** 2026-10-07: <https://projets.ip2i.in2p3.fr/cosmicflows/>
+- **Not verified:** the Extragalactic Distance Database's terms
+  (`edd.ifa.hawaii.edu` did not answer).
 
 ### SDSS Cosmic Slime value-added catalogue (MCPM density)
 
@@ -503,8 +528,11 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   Carlo Physarum Machine (`SDSS_z_44-476mpc`), drawn as the cosmic web glow.
 - **By:** Wilde et al. 2023 ([arXiv:2301.02719](https://arxiv.org/abs/2301.02719));
   method: Burchett et al. 2020, Elek et al. 2021.
-- **Licence:** It is an SDSS DR17 data product; SDSS states: "All SDSS data
-  released in our public data releases is considered in the public domain."
+- **Licence:** The catalogue's own page states no terms. It is a value-added
+  catalogue of SDSS DR17, and SDSS says of its releases in general: "All SDSS
+  data released in our public data releases is considered in the public
+  domain." Whether SDSS means that sentence to cover catalogues contributed
+  by its members is not said on either page.
 - **Attribution:** Cite the papers above and SDSS DR17, with the SDSS-IV
   acknowledgement (see SDSS).
 - **Upstream:** <https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold>
@@ -605,15 +633,16 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** The filament skeleton is computed by us from the 2MRS and GLADE
   galaxies with DisPerSE, run offline; the program is not shipped.
 - **By:** Thierry Sousbie. Sousbie 2011 (as cited in `docs/DATA.md`).
-- **Licence:** GitHub reports a licence it does not recognise for the
-  repository ("Other"); its text was not read.
+- **Licence:** The repository's `License.txt`: "This software is
+  'dual-licensed', you have to choose one of the two licenses below to apply:
+  CeCILL-C : a LGPL like license … CeCILL v2.0 : a GPL like license". The
+  program is run, not shipped or linked.
 - **Attribution:** Cite Sousbie 2011.
 - **Upstream:** <https://github.com/thierry-sousbie/DisPerSE>
 - **Enters skymap:** `npm run build-filaments` → `data/raw/filaments/` →
   `public/data/filament/v1/filaments.bin`.
 - **Modified:** Not applicable: the output is our own derived product.
-- **Checked:** 2026-10-07: <https://api.github.com/repos/thierry-sousbie/DisPerSE>
-- **Not verified:** DisPerSE's licence text.
+- **Checked:** 2026-10-07: <https://api.github.com/repos/thierry-sousbie/DisPerSE/license>
 
 ## Galaxy imagery
 
@@ -660,18 +689,21 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   (`esahubble.org/images/opo2506a/` answered 404); 12 of the 16 NOIRLab image
   pages.
 
-Open points in the per-image record, left as they are for the owner:
+Where the per-image record (`data/seeds/famous_curated_overrides.json`, and
+the `recipe.json` shipped beside each image) differs from what the source
+states. The record is a shipped file and was not edited:
 
-- `c29` (NGC 5005) is recorded `"license": "unknown"`. Its NOIRLab page gives
-  the credit "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block" and no
-  note that sets it apart from NOIRLab's CC BY 4.0 statement.
-- `m88` and `m91` are recorded as public domain and `m94` as "CC 4.0". Their
-  NOIRLab pages carry no such note either; NOIRLab's statement is CC BY 4.0.
-- `c17` (NGC 147) and `c18` (NGC 185) are recorded `"license": "unknown"`,
-  author "Digital Sky Survey" / "Digitized Sky Survey 2". If they are DSS
-  frames, the terms are those quoted under "Digitized Sky Survey cutouts"
-  below: copyrighted, free for non-profit use, commercial use "prohibited
-  without written permission from the copyright holder(s)".
+| image | the record says | the source says (read 2026-10-07) |
+| --- | --- | --- |
+| `c29` NGC 5005 | `"license": "unknown"` | NOIRLab: CC BY 4.0 ("Unless specifically noted"; the page carries no note). Credit on the page: "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block" |
+| `m88` | `"Public domain"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block" |
+| `m91` | `"Public Domain"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "NOIRLab/ NSF /AURA" |
+| `m94` | `"CC 4.0"` | NOIRLab: CC BY 4.0, no note on the page. Credit: "Hillary Mathis, N.A.Sharp/NOIRLab/ NSF /AURA/" |
+| `c17` NGC 147, `c18` NGC 185 | `"license": "unknown"`, author "Digital Sky Survey" / "Digitized Sky Survey 2", taken from theskylive.com | Not opened (HTTP 403). If they are DSS frames, the terms are those under "Digitized Sky Survey cutouts" below: copyrighted, free for non-profit use, commercial use "prohibited without written permission from the copyright holder(s)" |
+
+Each of the four NOIRLab pages also says: "Crediting this image with the full
+credit line, in a visible way is MANDATORY, if you want to use it without
+paying a fee."
 
 ### Galaxy photographs fetched from Wikipedia (3 images) and galaxy descriptions
 
@@ -728,7 +760,12 @@ Open points in the per-image record, left as they are for the owner:
 - **Licence:** "We provide all images on a Creative Commons Attribution license
   (CC-BY). Any SDSS image on the SDSS Web site may be downloaded, linked to, or
   otherwise used for any purpose, provided that you maintain the image
-  credits." (the SDSS-IV policy page; the DR18 page was not found).
+  credits." (the SDSS-IV policy page). The page of the current phase, which
+  serves DR18, says the same in other order: "any SDSS image on the SDSS Web
+  site may be downloaded, linked to, or otherwise used for any purpose,
+  provided that you maintain the image credits … We provide all images on a
+  Creative Commons Attribution license (CC-BY)." Both add: "Your use of the
+  image does not imply our endorsement of any product or service".
 - **Attribution:** "Unless otherwise stated, images should be credited to the
   Sloan Digital Sky Survey."
 - **Upstream:** `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg`
@@ -736,7 +773,8 @@ Open points in the per-image record, left as they are for the owner:
   `src/utils/network/fetchGalaxyBitmap.ts`, in the visitor's browser; nothing
   is stored by skymap.
 - **Modified:** Drawn on a disc with a faded edge.
-- **Checked:** 2026-10-07: <https://www.sdss4.org/collaboration/#image-use>
+- **Checked:** 2026-10-07: <https://www.sdss4.org/collaboration/#image-use>,
+  <https://www.sdss.org/collaboration/#image-use>
 
 ### Digitized Sky Survey cutouts (fetched while the app runs)
 
@@ -752,7 +790,9 @@ Open points in the per-image record, left as they are for the owner:
   other than that users are requested to acknowledge the source of the data in
   any publications resulting from that use. Commercial, for-profit use of the
   copyrighted collections is prohibited without written permission from the
-  copyright holder(s)." The holders are Caltech, the Anglo-Australian
+  copyright holder(s). Contact archive@stsci.edu for details." And, of what
+  skymap fetches: "Color DSS Images: For use of color DSS images not covered
+  by above use policy, contact archive@stsci.edu." The holders are Caltech, the Anglo-Australian
   Observatory Board, the UK SERC/PPARC (now STFC) and AURA, by plate. The CDS
   tile set names `hips_license = ODbL-1.0` and `obs_copyright = Digitized Sky
   Survey - STScI/NASA, Colored & Healpixed by CDS`.
@@ -778,9 +818,11 @@ Open points in the per-image record, left as they are for the owner:
   runs to take the foreground stars out of each galaxy photograph. The
   `starless.webp` and atlas files shipped for the 78 curated galaxies are its
   output; the program and weights are not shipped.
-- **By:** Nikita Misiura (StarNet).
-- **Licence:** Not found for StarNet2 on starnetastro.com's front page. The
-  author's earlier public repository (StarNet v1) states: "Code is available
+- **By:** Mikita Misiura (StarNet).
+- **Licence:** None stated for StarNet2. The site carries "© 2026 Mikita
+  Misiura. All rights reserved." on the pages read, the command-line tools
+  page included, and no licence. The author's earlier public repository
+  (StarNet v1) states: "Code is available
   under MIT License" and "Weights are available under
   Attribution-NonCommercial-ShareAlike 4.0 International Creative Commons
   license … You can **NOT** use them for commercial purposes. You must give
@@ -792,6 +834,7 @@ Open points in the per-image record, left as they are for the owner:
   weights downloaded by hand to `data/starnet/`.
 - **Modified:** No.
 - **Checked:** 2026-10-07: <https://www.starnetastro.com/>,
+  <https://www.starnetastro.com/cli-tools/>,
   <https://raw.githubusercontent.com/nekitmm/starnet/master/README.md>
 - **Not verified:** the terms that come with the StarNet2 command-line download.
 
@@ -810,12 +853,18 @@ images, audio, video, and media files used in the rendition of 3-dimensional
 models, such as texture maps and polygon data in any format – generally are not
 subject to copyright in the United States. You may use this material for
 educational or informational purposes … NASA should be acknowledged as the
-source of the material." and "If the NASA material is to be used for commercial
+source of the material." Under "COMMERCIAL USE": "For use of NASA images
+clearances may be necessary for images that include any NASA logos or NASA
+employees to be used as cover art or in promotional content. Otherwise, NASA
+imagery can be generally used editorially within published works that are not
+promotional in nature. If the NASA material is to be used for commercial
 purposes, including advertisements, it must not explicitly or implicitly convey
 NASA’s endorsement of commercial goods or services." The same page says "The
 NASA Insignia, Logotype, identifiers, and imagery are not in the public
 domain." (<https://www.nasa.gov/nasa-brand-center/images-and-media/>, read
-2026-10-07.)
+2026-10-07.) NASA's statement is about the United States ("generally are not
+subject to copyright in the United States"); it says nothing of other
+countries.
 
 ### Solar System Scope: planet and Moon maps
 
@@ -1128,16 +1177,24 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 
 - **What:** The 30 arc-second surface elevation grid; the global height band.
 - **By:** NOAA National Centers for Environmental Information.
-- **Licence:** Not stated on the product page.
-- **Attribution:** "NOAA National Centers for Environmental Information. 2022:
-  ETOPO 2022 15 Arc-Second Global Relief Model. NOAA National Centers for
-  Environmental Information. DOI: 10.25921/fd45-gt74. Accessed [date]."
+- **Licence:** CC0 1.0. NOAA's metadata record for the dataset: "These data
+  were produced by NOAA and are not subject to copyright protection in the
+  United States. NOAA waives any potential copyright and related rights in
+  these data worldwide through the Creative Commons Zero 1.0 Universal Public
+  Domain Dedication (CC0-1.0)." and "SPDX License: Creative Commons Zero v1.0
+  Universal (CC0-1.0)". Under use limitations it says: "Not to be used for
+  navigation." The product page itself states no licence.
+- **Attribution:** None required by CC0. The record asks: "Cite as: NOAA
+  National Centers for Environmental Information. 2022: ETOPO 2022 15
+  Arc-Second Global Relief Model. NOAA National Centers for Environmental
+  Information. https://doi.org/10.25921/fd45-gt74. Accessed [date]."
 - **Upstream:** <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
 - **Enters skymap:** `npm run fetch-height` → `data/raw/etopo/` →
   `build-surface-tiles` → `earth-tiles/…/height/`.
 - **Modified:** Yes. Re-gridded, quantised to 0.1 m; water flattened to its
   shore level.
-- **Checked:** 2026-10-07: <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
+- **Checked:** 2026-10-07: <https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022>,
+  <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
 
 ### Terrain Tiles "skadi" (1 arc-second heights)
 
@@ -1270,7 +1327,13 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
   (`MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif`) has no record that was found.
 - **Licence:** Access constraints "Please credit authors"; use constraints
   "None" (both records).
-- **Attribution:** Credit the authors. The string in the tile manifest is
+- **Attribution:** Credit the authors. The DEM's record gives "Recommended
+  Citation: Calef III, F.J. and Parker, T., 2016, MSL Gale Merged Orthophoto
+  Mosaic, Publisher: PDS Annex, U.S. Geological Survey,
+  https://astrogeology.usgs.gov/search/map/mars_msl_gale_merged_dem_1m" (the
+  record's own words, title included); the orthophoto's: "Calef III, F. J., &
+  Parker, T. (2016). MSL Gale Merged Orthophoto Mosaic. PDS Annex, U.S.
+  Geological Survey." The string in the tile manifest is
   "HiRISE: NASA/JPL/University of Arizona; MSL Gale DEM and 78-quad colour
   mosaic, USGS Astrogeology / JPL (public domain)."; it names neither author,
   and "public domain" is not a phrase of either record.
@@ -1537,41 +1600,75 @@ metadata carries the notice was not checked.
 
 <!-- attribution: id=hoskins-hash -->
 
-- **What:** `hash21Hq` in `src/services/gpu/shaders/lib/util.wesl`, used by
-  other shaders for jitter.
-- **By:** Dave Hoskins.
-- **Licence:** Not recorded in the repository, and ShaderToy could not be
-  opened today.
-- **Attribution:** The file names the author and links the shader.
+- **What:** `hash21Hq` in `src/services/gpu/shaders/lib/util.wesl` (the
+  shader's `hash12`), used by other shaders for jitter.
+- **By:** David Hoskins, 2014.
+- **Licence:** MIT. The header of the shader's code, as read today in a third
+  party's copy of ShaderToy's own API output (a backup made on 5 October
+  2024), not on ShaderToy, which refuses scripted requests:
+
+  > Hash without Sine. MIT License... Copyright (c)2014 David Hoskins. Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  The same copy shows the shader's sound tab under a different header,
+  "License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported
+  License"; the hashes, `hash12` among them, are in the tab headed by the MIT
+  notice.
+- **Attribution:** The licence asks that "The above copyright notice and this
+  permission notice shall be included in all copies or substantial portions
+  of the Software." The notice is quoted whole above, and `util.wesl` names
+  the author, the licence and this entry.
 - **Upstream:** <https://www.shadertoy.com/view/4djSRW>
 - **Enters skymap:** hand-ported to WGSL.
 - **Modified:** Yes. Translated from GLSL.
-- **Checked:** 2026-10-07: ShaderToy refused the request (HTTP 403).
-- **Not verified:** the shader's licence header.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/GabeRundlett/shadertoy-api-shaders/f6d538adf936215ccf2d11ba9b4a6c79ccb448c5/shaders/4djSRW.json>
+  (a copy); ShaderToy itself answered HTTP 403.
+- **Not verified:** the header on ShaderToy's own page today; ShaderToy's
+  terms, which are said to set a default licence for shaders that state none
+  (the page answered HTTP 403).
 
 ### HEALPix pixel indexing
 
 <!-- attribution: id=healpix -->
 
 - **What:** `src/utils/math/healpixNest.ts`, which turns a sky direction into
-  a nested HEALPix pixel index (used to weigh survey coverage).
-- **By:** The scheme: Górski et al. 2005, ApJ 622, 759. The file's header
-  says the algorithm was "transcribed from healpy's
-  `pixelfunc.lonlat_to_healpix` (BSD-licensed) and the original `chealpix` C
-  source".
-- **Licence:** That header does not match what the projects state today:
-  `lonlat_to_healpix` is a function of astropy-healpix, which is BSD 3-Clause
-  ("Copyright (c) 2016-2018, Astropy Developers"); healpy is GPL-2.0, as
-  GitHub reports it. Which source the file was written from is not recorded
-  beyond that sentence.
-- **Attribution:** Cite Górski et al. 2005. BSD 3-Clause asks that
-  redistributions of the code keep its copyright notice.
-- **Upstream:** <https://github.com/astropy/astropy-healpix>,
-  <https://github.com/healpy/healpy>
+  a nested HEALPix pixel index (used to weigh survey coverage). The app
+  ships it.
+- **By:** The scheme: Górski et al. 2005, ApJ 622, 759. The code: the function
+  follows `ang2pix_nest_z_phi` of the HEALPix C library's `chealpix.c`
+  statement by statement, with the same variable names (`temp1`, `temp2`,
+  `jp`, `jm`, `ifp`, `ifm`, `ntt`, `tp`, `tmp`) and the same expressions
+  (`(ifp|4)`, `ifm+8`, `nside*sqrt(3*(1-za))`). `chealpix.c` is "Copyright (C)
+  1997-2016 Krzysztof M. Gorski, Eric Hivon, Martin Reinecke, Benjamin D.
+  Wandelt, Anthony J. Banday, Matthias Bartelmann, Reza Ansari & Kenneth M.
+  Ganga".
+- **Licence:** GNU General Public License, version 2 or later, for
+  `chealpix.c`. Its header: "HEALPix is free software; you can redistribute
+  it and/or modify it under the terms of the GNU General Public License as
+  published by the Free Software Foundation; either version 2 of the
+  License, or (at your option) any later version." skymap's own code is
+  under MIT; this file's origin is under the GPL. Until 2026-10-07 the
+  file's header named "healpy's `pixelfunc.lonlat_to_healpix` (BSD-licensed)"
+  as its source. No such function exists in healpy, whose `COPYING` is the
+  GNU GPL version 2; `lonlat_to_healpix` belongs to astropy-healpix, which is
+  BSD 3-Clause ("Copyright (c) 2016-2018, Astropy Developers") and wraps a
+  different C implementation, from Astrometry.net, that this file does not
+  resemble.
+- **Attribution:** Cite Górski et al. 2005. The GPL asks that a work based on
+  the program be licensed as a whole under the GPL when distributed, with the
+  copyright notice kept.
+- **Upstream:** <https://healpix.sourceforge.io/>;
+  <https://github.com/healpy/healpixmirror> (healpy's mirror of the library's
+  source); <https://github.com/astropy/astropy-healpix>
 - **Enters skymap:** written by hand in TypeScript.
-- **Modified:** A re-implementation.
-- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/astropy/astropy-healpix/main/LICENSE.md>,
-  <https://api.github.com/repos/healpy/healpy>
+- **Modified:** Yes. Translated from C; the bit interleave is written anew.
+- **Checked:** 2026-10-07: <https://raw.githubusercontent.com/healpy/healpixmirror/trunk/src/C/subs/chealpix.c>
+  (a mirror kept by the healpy project; the library's own site answered HTTP
+  403), <https://raw.githubusercontent.com/healpy/healpy/main/COPYING>,
+  <https://raw.githubusercontent.com/healpy/healpy/main/lib/healpy/pixelfunc.py>,
+  <https://raw.githubusercontent.com/astropy/astropy-healpix/main/LICENSE.md>,
+  <https://raw.githubusercontent.com/astropy/astropy-healpix/main/astropy_healpix/core.py>
+- **Not verified:** the licence page on the HEALPix site itself; from which
+  file the code was in fact written (no record beyond the old header).
 
 ### Colour temperature to RGB (Tanner Helland)
 
@@ -1581,8 +1678,13 @@ metadata carries the notice was not checked.
   that gives a star its colour from its temperature.
 - **By:** Tanner Helland, "How to Convert Temperature (K) to RGB: Algorithm
   and Sample Code", 2012.
-- **Licence:** Not stated in the article.
-- **Attribution:** The file names the author and links the article.
+- **Licence:** CC BY-SA 4.0. The page's footer: "©2020 Tanner Helland Text and
+  images are CC BY-SA 4.0." The article gives no separate licence for its
+  pseudocode, which is part of that text. skymap took the pseudocode's
+  structure and its eight fitted constants (329.698727446 and the others).
+- **Attribution:** CC BY-SA 4.0 asks for credit, a link to the licence, a note
+  of changes, and that adaptations of the licensed material be shared under
+  the same licence. The file names the author, the licence and the article.
 - **Upstream:** <https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html>
 - **Enters skymap:** written by hand from the article's formulae.
 - **Modified:** Yes. Output converted from sRGB to linear light and normalised.
@@ -2002,16 +2104,25 @@ and where they come from".
 
 <!-- attribution: id=npm-dependencies -->
 
-- **What:** The libraries the app and the website bundle: `react`,
-  `react-dom`, `react-redux`, `@reduxjs/toolkit`, `redux-saga`,
-  `typed-redux-saga`, `react-markdown`, `classnames`, `hotkeys-js`,
-  `meshoptimizer`, `wgpu-matrix`; for the website `astro`, `@astrojs/mdx`,
-  `pagefind`. Build-time tools are listed in `package.json`.
+- **What:** The libraries the app and the website bundle. Named in
+  `package.json`: `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`,
+  `redux-saga`, `typed-redux-saga`, `react-markdown`, `classnames`,
+  `hotkeys-js`, `meshoptimizer`, `wgpu-matrix`; for the website `astro`,
+  `@astrojs/mdx`, `pagefind`. The bundles also hold what those pull in
+  (`immer`, `redux`, `reselect`, `scheduler`, the `unified` and `micromark`
+  families under `react-markdown`, and others), which is not listed here by
+  name. Build-time tools are listed in `package.json`.
 - **By:** Their authors.
-- **Licence:** MIT, each of the fourteen, as its own `package.json` states.
-- **Attribution:** MIT asks that the copyright notice travel with copies; the
-  notices are in each package's licence file under `node_modules/`.
+- **Licence:** MIT, each of the fourteen named, as its own `package.json`
+  states. The packages they pull in were not read one by one.
+- **Attribution:** MIT asks that "The above copyright notice and this
+  permission notice shall be included in all copies or substantial portions
+  of the Software." The notices are in each package's licence file under
+  `node_modules/`, which is not deployed; what the deploy itself carries is
+  under "Not verified".
 - **Upstream:** <https://www.npmjs.com/>
 - **Enters skymap:** `package.json`, `packages/website/package.json`.
 - **Modified:** No.
-- **Checked:** 2026-10-07: the `license` field of each installed package.
+- **Checked:** 2026-10-07: the `license` field of each of the fourteen
+  installed packages; the built bundle, searched for licence notices.
+- **Not verified:** the licences of the transitive packages in the bundle.

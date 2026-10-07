@@ -11,7 +11,8 @@
 
 // ── noise / hash ─────────────────────────────────────────────────────
 //
-// hash21 and valueNoise2 come from mrange's CC0 ShaderToy spiral port.
+// hash21, valueNoise2 and raySphere come from mrange's CC0 ShaderToy
+// "Spiral galaxy" (https://www.shadertoy.com/view/wsBBWD).
 // The names + signatures are domain-neutral, so any procedural pass
 // that needs cheap 2D noise can reach for them.
 
@@ -44,6 +45,8 @@ fn hash21(co: vec2<f32>) -> f32 {
 // hash21Hq — higher-quality 2D-to-1D hash in [0, 1).
 //
 // Dave Hoskins' "Hash without Sine" (https://www.shadertoy.com/view/4djSRW),
+// MIT License, Copyright (c)2014 David Hoskins; the full notice the licence
+// asks for is in ATTRIBUTIONS.md under the same title. It is
 // the de-facto upgrade for callers that found hash21's sin-based
 // banding visually objectionable.  Three integer-style multiply +
 // fract steps that scramble the bits much more thoroughly than a
