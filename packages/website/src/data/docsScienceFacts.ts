@@ -17,14 +17,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Distance
   {
     id: 'method-comoving',
-    text: 'The integral has no closed form, so we work it out by Simpson’s rule in 64 steps. The constant in front, c/H₀, is 4,283 megaparsecs. The straight-line rule, distance = cz/H₀, would put a redshift of 0.1 at 428 megaparsecs and a redshift of 1 at 4,283: 2.5 per cent and 31 per cent too far.',
+    text: 'The integral has no closed form, so we integrate it by Simpson’s rule in 64 steps. The constant in front, c/H₀, is 4,283 megaparsecs. The straight-line rule, distance = cz/H₀, would put a redshift of 0.1 at 428 megaparsecs and a redshift of 1 at 4,283: 2.5 per cent and 31 per cent too far.',
     source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'method-cosmology-values',
-    text: 'The matter density is Planck 2018’s, 0.315 ± 0.007. The Hubble constant is not Planck’s 67.4 ± 0.5: we use 70, a round figure between the measurements. The model is flat, so the dark-energy density is 1 − 0.315 = 0.685, and radiation is left out.',
+    text: 'The matter density is Planck 2018’s, 0.315 ± 0.007. For the Hubble constant we use 70, a round figure between the measurements; Planck’s is 67.4 ± 0.5. The model is flat, so the dark-energy density is 1 − 0.315 = 0.685, and radiation is left out.',
     source: 'https://arxiv.org/abs/1807.06209',
     sourceLabel: 'Planck Collaboration 2018, cosmological parameters',
     checked: CHECKED,
@@ -54,7 +54,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-galaxy-size',
-    text: 'A galaxy’s diameter comes from a different measurement in each catalogue. SDSS: six times the radius that holds half the light. 2MRS: the width at the contour where the infrared surface brightness falls to 20 magnitudes per square arcsecond. GLADE has no size at all, so we estimate one from the luminosity in blue light by a size-luminosity relation the code gives to Tully (1988), with the radius R in kiloparsecs, and never less than 1 kiloparsec across.',
+    text: 'A galaxy’s diameter comes from a different measurement in each catalogue. SDSS: six times the radius that holds half the light. 2MRS: the width at the contour where the infrared surface brightness falls to 20 magnitudes per square arcsecond. GLADE has no size, so we estimate one from the luminosity in blue light by a size-luminosity relation attributed to Tully (1988), with the radius R in kiloparsecs, and never less than 1 kiloparsec across.',
     source: `${REPO_BLOB}/src/utils/math/galaxyDiameterKpc.ts`,
     sourceLabel: `the size estimate, ${IN_REPO}`,
     checked: CHECKED,
@@ -63,7 +63,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Stars
   {
     id: 'method-star-magnitude',
-    text: 'A star’s absolute magnitude M comes from its apparent magnitude m in Gaia’s G band and the distance d we adopted. For the stars taken from Hipparcos, m is the Hipparcos magnitude and the colour is its B − V turned into BP − RP. Nothing is corrected for the dust between the star and us.',
+    text: 'A star’s absolute magnitude M comes from its apparent magnitude m in Gaia’s G band and the distance d we adopted. For the stars taken from Hipparcos, m is the Hipparcos magnitude and the colour is its B − V turned into BP − RP. Dust between the star and us is left uncorrected.',
     source: `${REPO_BLOB}/tools/stars/buildStars.ts`,
     sourceLabel: `the star build, ${IN_REPO}`,
     checked: CHECKED,
@@ -100,7 +100,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-atmosphere-earth',
-    text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values worked out from them and values adjusted by eye; the file marks which is which.',
+    text: 'Earth’s table holds three ingredients. Air molecules scatter 5.8, 13.6 and 33.1 millionths of the light per metre in red, green and blue, thinning by a factor e every 8 kilometres of height: this is why the sky is blue. Aerosols have a scale height of 1.2 kilometres, and ozone absorbs in a layer centred 25 kilometres up. The other eight tables mix published values, values derived from them and values adjusted by eye; the file marks which is which.',
     source: `${REPO_BLOB}/src/data/bodies/atmosphereParams.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
     checked: CHECKED,
@@ -123,7 +123,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'method-black-hole',
-    text: 'For a black hole that does not rotate, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres.',
+    text: 'For a non-rotating black hole, how far a ray of light is bent depends only on how close it passes. We compute that angle once for passes from 1 to 50 Schwarzschild radii and keep it as a table; a ray aimed closer than 3√3/2, about 2.6 radii, is captured and the pixel is black. The radius follows from the mass, r = 2GM/c²: with the 4.297 million solar masses in the code it is 12.7 million kilometres.',
     source: `${REPO_BLOB}/src/utils/lensing/buildSchwarzschildDeflectionLut.ts`,
     sourceLabel: `the light-bending table, ${IN_REPO}`,
     checked: CHECKED,
@@ -148,28 +148,28 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   // Departures no sim-* row holds
   {
     id: 'depart-snapshot',
-    text: 'The map is not a photograph of one moment. A galaxy stands at the distance it has today, yet its light, and so its redshift, left it long ago. Inside the Solar System the opposite holds: bodies are placed where they are at the clock’s instant, not where their light now reaching Earth shows them.',
+    text: 'The map mixes times. A galaxy stands at the distance it has today, yet its light, and so its redshift, left it long ago. Inside the Solar System bodies are placed where they are at the clock’s instant, with no delay for the travel of light.',
     source: `${REPO_BLOB}/src/utils/math/redshiftToDistanceMpc.ts`,
     sourceLabel: `the redshift-to-distance function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-light-travel',
-    text: 'The light-travel time on a galaxy’s card is a short rule, z / (1 + z) times 13.97 billion (thousand million) years, and not the model’s own integral. Against the integral it reads 2 per cent short at a redshift of 0.1, 5 per cent at 0.3 and 9 per cent at 1.',
+    text: 'The light-travel time on a galaxy’s card is a short rule, z / (1 + z) times 13.97 billion (thousand million) years. Against the model’s own integral it reads 2 per cent short at a redshift of 0.1, 5 per cent at 0.3 and 9 per cent at 1.',
     source: `${REPO_BLOB}/src/utils/math/lookbackTimeGyr.ts`,
     sourceLabel: `the light-travel rule, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-luminosity-distance',
-    text: 'A galaxy’s absolute magnitude is worked out with the comoving distance, where the luminosity distance, (1 + z) times larger, belongs, and with no correction for the part of the spectrum that redshift moves out of the band. Luminosities, as a card shows them, are therefore too low by (1 + z)². On screen the light is spread over a disc that is itself (1 + z) too wide where its size was measured, so the surface brightness is low by (1 + z)⁴.',
+    text: 'A galaxy’s absolute magnitude is computed with the comoving distance, where the luminosity distance, (1 + z) times larger, belongs, and with no correction for the part of the spectrum that redshift moves out of the band. Luminosities, as a card shows them, are therefore too low by (1 + z)². On screen the light is spread over a disc that is itself (1 + z) too wide where its size was measured, so the surface brightness is low by (1 + z)⁴.',
     source: `${REPO_BLOB}/src/utils/math/absoluteFromApparent.ts`,
     sourceLabel: `the absolute-magnitude function, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-galaxy-fade',
-    text: 'A galaxy too far away to be larger than its dot does not fade as distance squared. Its light is multiplied by the ratio of its true size on screen to the dot’s, raised to the power 0.7; the inverse-square law is the power 2.',
+    text: 'A galaxy too far away to be larger than its dot fades more slowly than distance squared: its light is multiplied by the ratio of its true size on screen to the dot’s, raised to the power 0.7, where the inverse-square law is the power 2.',
     source: `${REPO_BLOB}/src/layers/galaxyCatalog/state/galaxyCatalogs/initialState.ts`,
     sourceLabel: `the galaxies’ starting settings, ${IN_REPO}`,
     checked: CHECKED,
@@ -204,21 +204,21 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-star-tint',
-    text: 'The five colours of the star scale are ours, chosen to look right; they are not computed from a spectrum.',
+    text: 'The five colours of the star scale are ours, chosen by eye.',
     source: `${REPO_BLOB}/src/utils/color/starTintFromBpRp.ts`,
     sourceLabel: `the star colour scale, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-other-corrections',
-    text: 'The luminosity-function parameters behind the 1/V_max and Schechter choices are working values in the code, not published fits. For SDSS the code has M* = −21.18, α = −1.16 and a density of 0.0093 per cubic megaparsec; the paper it names gives, for the r band at our Hubble constant of 70, −21.21, −1.05 and 0.0051. GLADE’s values are not those of the fit its code names either, and the quasars and DESI borrow the SDSS values. Treat those two choices as a way of looking, not as a measured density.',
+    text: 'The luminosity-function parameters behind the 1/V_max and Schechter choices are working values of our own. For SDSS they are M* = −21.18, α = −1.16 and a density of 0.0093 per cubic megaparsec; the paper the code names gives, for the r band at our Hubble constant of 70, −21.21, −1.05 and 0.0051. GLADE’s values also differ from the fit its code names, and the quasars and DESI borrow the SDSS values. Use those two choices as a way of looking at the map.',
     source: 'https://arxiv.org/abs/astro-ph/0210215',
     sourceLabel: 'Blanton et al. 2003, the galaxy luminosity function at redshift 0.1',
     checked: CHECKED,
   },
   {
     id: 'depart-star-dust',
-    text: 'No star is corrected for dust. A star behind dust is dimmer and redder in the catalogue than it is, and we draw it so; on its card it reads cooler than it is.',
+    text: 'Stars are drawn as catalogued, with no correction for dust: a star behind dust is dimmer and redder than it is, and reads cooler on its card.',
     source: `${REPO_BLOB}/src/utils/astro/starLuminositySolar.ts`,
     sourceLabel: `the star luminosity estimate, ${IN_REPO}`,
     checked: CHECKED,
@@ -246,14 +246,14 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'depart-planet-facts',
-    text: 'The figures on a body’s card were typed by hand from rounded textbook values, with no source kept for each. For a number you mean to quote, use NASA’s Planetary Fact Sheet.',
+    text: 'The figures on a body’s card are rounded textbook values, typed in by hand. For a number you mean to quote, use NASA’s Planetary Fact Sheet.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'depart-hand-structures',
-    text: 'The 3 voids and 16 groups exist only as rows we placed by hand, as do the 15 clusters and 8 superclusters that replace a catalogue row, and none has a reference. A void or a group has no agreed edge: take every such ring as our choice of where to draw one.',
+    text: 'The 3 voids and 16 groups are rows we placed by hand, as are the 15 clusters and 8 superclusters that replace a catalogue row; none carries a reference. A void or a group has no agreed edge, so each ring is our choice of where to draw one.',
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data pipeline notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -282,7 +282,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'depart-labels',
     about: 'app',
-    text: 'Names are thinned. Where two would overlap on screen, the object that looks larger keeps its name and the other goes unnamed until you move. A missing name does not mean a missing object.',
+    text: 'Names are thinned: where two would overlap on screen, the object that looks larger keeps its name and the other goes unnamed until the view changes.',
     source: `${REPO_BLOB}/src/utils/labels/declutterByScreenSeparation.ts`,
     sourceLabel: `the label thinning, ${IN_REPO}`,
     checked: CHECKED,
