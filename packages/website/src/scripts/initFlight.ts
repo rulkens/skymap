@@ -44,6 +44,7 @@ export function initFlight(root: HTMLElement): void {
   const arrive = root.querySelector<HTMLElement>('[data-arrive]')!;
   const fill = root.querySelector<HTMLElement>('[data-fill]')!;
   const scale = root.querySelector<HTMLElement>('[data-scale]')!;
+  const hint = root.querySelector<HTMLElement>('[data-hint]')!;
   const rings = [...root.querySelectorAll<HTMLButtonElement>('[data-ring]')];
   const stops = [...root.querySelectorAll<HTMLElement>('[data-stop]')];
   const pictures = stops.map((stop) => stop.querySelector<HTMLElement>('picture')!);
@@ -125,6 +126,12 @@ export function initFlight(root: HTMLElement): void {
     });
     // The readout shares the bottom edge with the wordmark block's hint, so it waits for that block to leave.
     scale.style.opacity = String(pose.index === 0 ? leaving : 1);
+    // The hint dips to nothing as the wordmark leaves, changes its words there, and goes when the last block arrives.
+    const opening = pose.index === 0 && leaving < 0.5;
+    const dip = pose.index === 0 ? Math.abs(1 - 2 * leaving) : 1;
+    hint.style.opacity = String(dip * (1 - Number(arrive.style.opacity)));
+    const nudge = opening ? 'Scroll to pull back' : 'Keep scrolling';
+    if (hint.textContent !== nudge) hint.textContent = nudge;
 
     const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
     if (scale.textContent !== readout) scale.textContent = readout;

@@ -79,7 +79,6 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
           <h1 class="word">skymap</h1>
           <p class="tag">Explore the universe at true scale in your browser</p>
         </div>
-        <p class="hint small" aria-hidden="true">Scroll to pull back</p>
       </div>
 
       <ol class="stops">
@@ -114,6 +113,9 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
       <!-- Rewritten on every scroll frame, so it is kept from screen readers; the stops' captions carry the same story. -->
       <p class="scale small" data-scale aria-hidden="true"></p>
+
+      <!-- Stays through the flight and changes its words once the wordmark has gone (scripts/initFlight.ts). -->
+      <p class="hint small" data-hint aria-hidden="true">Scroll to pull back</p>
 
       <video class="film" muted playsinline preload="none" tabindex="-1" aria-hidden="true"></video>
 
@@ -377,6 +379,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     align-items: center;
     gap: 0.625rem;
     position: absolute;
+    z-index: 4;
     left: 0;
     right: 0;
     bottom: 1.25rem;
@@ -384,6 +387,8 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     margin: 0;
     text-align: center;
     color: var(--site-text-muted);
+    text-shadow: 0 0 0.5rem #000, 0 0 0.25rem #000;
+    pointer-events: none;
   }
 
   /* A mouse with its wheel rolling; the wheel is a background so one box draws both. */
@@ -543,6 +548,14 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
 
     .flight[data-live] .scale {
       bottom: 0.875rem;
+    }
+
+    /* The readout has the left of this line, so the hint takes the right. */
+    .flight[data-live] .hint {
+      left: auto;
+      right: var(--gutter);
+      bottom: 0.875rem;
+      line-height: 1;
     }
 
     .flight[data-live] .cap::before {
