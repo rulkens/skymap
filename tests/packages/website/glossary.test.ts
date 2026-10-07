@@ -1,22 +1,16 @@
 /**
- * The glossary (data/glossary.ts) is a list other pages link into by anchor,
- * and its page prints a heading per first letter and a source list from its
- * frontmatter. These hold the list in order and whole, the page to the list,
- * and every link to an anchor of the page, from any page or data file, to a
- * term that exists.
+ * The glossary (data/glossary.ts) is a list other pages link into by anchor;
+ * its page (pages/docs/reference/glossary.astro) is made from it. These hold
+ * the list in order and whole. Links to its anchors are the link check's
+ * (tools/site/checkSiteLinks.ts).
  */
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
 import { fact } from '../../../packages/website/src/data/fact';
 import { GLOSSARY } from '../../../packages/website/src/data/glossary';
 
-const SITE = resolve(import.meta.dirname, '../../../packages/website/src');
-const PAGE = readFileSync(join(SITE, 'content/docs/reference/glossary.mdx'), 'utf8');
 const ids = GLOSSARY.map((term) => term.id);
-const letters = [...new Set(GLOSSARY.map((term) => term.term[0]!.toUpperCase()))];
 const number = (text: string) => Number(text.replace(/,/g, ''));
 
 describe('glossary', () => {
@@ -31,6 +25,8 @@ describe('glossary', () => {
   it('has no id twice, ids that work as anchors, and terms in the order of the alphabet', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.filter((id) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id))).toEqual([]);
+    // A single letter is the anchor of that letter's heading on the page.
+    expect(ids.filter((id) => id.length === 1)).toEqual([]);
     const terms = GLOSSARY.map((term) => term.term);
     expect(terms).toEqual(
       [...terms].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })),
@@ -49,41 +45,6 @@ describe('glossary', () => {
       if (term.more !== undefined)
         expect(term.more.path, term.id).toMatch(/^\/[a-z/-]*\/(#[a-z-]+)?$/);
     }
-  });
-
-  it('has a heading on the page for each first letter, in order, and no other', () => {
-    const drawn = [...PAGE.matchAll(/^## (\S)\n\n<Terms letter="(\S)" \/>$/gm)];
-    expect(drawn.map((match) => match[1])).toEqual(letters);
-    expect(drawn.map((match) => match[2])).toEqual(letters);
-    // A letter's anchor is its heading's, so no term may take a single letter as its id.
-    expect(ids.filter((id) => id.length === 1)).toEqual([]);
-  });
-
-  it('lists in the page’s frontmatter every row a definition rests on', () => {
-    const front = PAGE.split('---')[1]!;
-    const listed = front
-      .slice(front.indexOf('facts:'))
-      .match(/[a-z0-9][a-z0-9-]+/g)!
-      .slice(1);
-    expect([...listed].sort()).toEqual([...new Set(GLOSSARY.flatMap((term) => term.facts))].sort());
-  });
-
-  it('is linked to only at anchors it has', () => {
-    const anchors = new Set([
-      ...ids,
-      ...letters.map((letter) => letter.toLowerCase()),
-      'units-of-distance',
-    ]);
-    const broken: string[] = [];
-    for (const name of readdirSync(SITE, { recursive: true, encoding: 'utf8' })) {
-      if (!/\.(mdx|astro|ts)$/.test(name)) continue;
-      const text = readFileSync(join(SITE, name), 'utf8');
-      for (const match of text.matchAll(/\/docs\/reference\/glossary\/#([\w-]*)/g))
-        if (!anchors.has(match[1]!)) broken.push(`${name}: #${match[1]}`);
-    }
-    for (const match of PAGE.matchAll(/\]\(#([\w-]+)\)/g))
-      if (!anchors.has(match[1]!)) broken.push(`glossary.mdx: #${match[1]}`);
-    expect(broken).toEqual([]);
   });
 });
 

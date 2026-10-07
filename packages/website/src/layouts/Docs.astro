@@ -25,7 +25,6 @@ import { sitePath } from '../utils/sitePath';
 
 type Props = {
   path: string;
-  title: string;
   description: string;
   headings: readonly MarkdownHeading[];
   factIds: readonly string[];
@@ -34,8 +33,9 @@ type Props = {
 // A shorter page is read in less time than its list of headings would take to scan.
 const TOC_FROM = 4;
 
-const { path, title, description, headings, factIds } = Astro.props;
+const { path, description, headings, factIds } = Astro.props;
 const { group, page, previous, next } = docsPlace(DOCS_TREE, path);
+const { title } = page;
 const up = page.up ?? group.up;
 const all = headings.filter((heading) => heading.depth === 2);
 const sections = all.length >= TOC_FROM ? all : [];

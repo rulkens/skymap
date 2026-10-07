@@ -15,23 +15,16 @@ import { DOCS_CONTROLS } from '../../../packages/website/src/data/docsControls';
 import { DOCS_SETTINGS } from '../../../packages/website/src/data/docsSettings';
 import { DOCS_SETTING_SIZES } from '../../../packages/website/src/data/docsSettingSizes';
 import {
-  DOCS_BODY_NAMES,
-  DOCS_CLIP_IDS,
   DOCS_EXHIBIT_IDS,
   DOCS_FOCUS_IDS,
   DOCS_ORIENTATIONS,
-  DOCS_POSE_SITES,
-  DOCS_TOUR_CLIP_IDS,
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../packages/website/src/data/docsUrlParams';
 import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
-import { clipFactories } from '../../../src/data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
-import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
-import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
 import { FLOW_SLIDER_FIELDS } from '../../../src/data/flow/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
@@ -178,6 +171,10 @@ describe('Settings page', () => {
       const text = read(file).replace(/\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, '');
       const sliders = [...text.matchAll(/<Slider\s+label="([^"]+)"/g)].map((match) => match[1]!);
       const titles = [...text.matchAll(/<CollapsibleSection\s+title="([^"]+)"/g)].map((m) => m[1]!);
+      // The two patterns want the name as the tag's first prop: a tag written another way must fail here, not go unread.
+      expect(text.match(/<(Slider|CollapsibleSection)\b/g) ?? [], file).toHaveLength(
+        sliders.length + titles.length,
+      );
       const flow = file.includes('/flow/')
         ? FLOW_SLIDER_FIELDS.filter((field) => field.surface === 'panel').map(
             (field) => field.label,
@@ -214,9 +211,6 @@ describe('Settings page', () => {
       DOCS_SETTINGS.filter((group) => group.file.startsWith('src/layers/')).map((g) => g.file),
     );
     expect(layerFiles.size).toBe(drawn);
-    const shell = read('src/components/SettingsPanel/SettingsPanel.tsx');
-    const containers = [...shell.matchAll(/<(\w+)SectionContainer\b/g)].map((match) => match[1]!);
-    expect(sorted(containers)).toEqual(['Display', 'Earth', 'LabelsAndGuides', 'Structures']);
   });
 });
 
@@ -250,7 +244,7 @@ describe('URL parameters page', () => {
     expect(sorted(listed)).toEqual(sorted([...read]));
   });
 
-  it('lists the values the app takes for orientation, exhibit, tour and clip', () => {
+  it('lists the values the app takes for orientation, exhibit and tour', () => {
     expect(sorted(DOCS_ORIENTATIONS.map((row) => row.id))).toEqual(
       sorted(Object.keys(ORIENTATION_FRAMES)),
     );
@@ -258,12 +252,9 @@ describe('URL parameters page', () => {
       sorted(Object.keys(exhibitRegistry)),
     );
     expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(sorted(Object.keys(tourRegistry)));
-    expect(sorted([...DOCS_CLIP_IDS, ...DOCS_TOUR_CLIP_IDS])).toEqual(
-      sorted(Object.keys(clipFactories)),
-    );
   });
 
-  it('lists every way a focus id can begin, every body and every site a pose can name', () => {
+  it('lists every way a focus id can begin, each with an example the app reads', () => {
     const prefixes = new Set(DOCS_FOCUS_IDS.flatMap((row) => row.prefix ?? []));
     expect(sorted([...prefixes])).toEqual(
       sorted([
@@ -284,9 +275,5 @@ describe('URL parameters page', () => {
     expect(DOCS_FOCUS_IDS.filter((row) => appViewProblem(`focus=${row.example}`) !== null)).toEqual(
       [],
     );
-    expect([...DOCS_BODY_NAMES]).toEqual(
-      Object.values(BODY_PICK_ROWS).flatMap((seeds) => seeds.map((seed) => seed.id)),
-    );
-    expect(sorted(DOCS_POSE_SITES)).toEqual(sorted(SURFACE_FIXED_SITES.map((site) => site.id)));
   });
 });

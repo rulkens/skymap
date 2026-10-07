@@ -31,7 +31,6 @@ const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)]
 
 <Docs
   path={`/docs/${entry.id}/`}
-  title={entry.data.title}
   description={entry.data.description}
   headings={headings}
   factIds={[...printed, ...entry.data.facts]}

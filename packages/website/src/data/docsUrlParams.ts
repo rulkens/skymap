@@ -169,40 +169,6 @@ export const DOCS_TOUR_IDS: readonly { id: string; name: string }[] = [
   { id: 'demo', name: 'Demo Tour' },
 ];
 
-/** The values of `clip` that are not a step of “The Long Way Out”. */
-export const DOCS_CLIP_IDS: readonly string[] = [
-  'sondermarkenFlyout',
-  'perseveranceToSondermarken',
-  'earthFlyout',
-  'flyout',
-  'earthUniverseLoop',
-  'earthCosmicWebLoop',
-  'cosmicFlows',
-  'flowOrbit',
-  'famousFlythrough',
-  'flyPathDemo',
-];
-
-/** The values of `clip` that play one step of “The Long Way Out”, in the tour’s order. */
-export const DOCS_TOUR_CLIP_IDS: readonly string[] = [
-  'tourOpeningTitle',
-  'tourYouAreHere',
-  'tourYouAreHereDwell',
-  'tourApproachM31',
-  'tourLocalGroup',
-  'tourNeighbourhoodReveal',
-  'tourNeighbourhood',
-  'tourApproachVirgo',
-  'tourLaniakea',
-  'tourCosmicWeb',
-  'tourCosmicWebDwell',
-  'tourCosmicFlows',
-  'tourEmptiness',
-  'tourDeepField',
-  'tourTheEdge',
-  'tourHomeAgain',
-];
-
 /** The ways of writing the value of `focus`. */
 export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
   {
@@ -283,60 +249,4 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     example: 'blackhole-sgr-a-star',
     names: 'The black hole at the centre of the Milky Way. It is the only one.',
   },
-];
-
-/** Every name that follows `body-`, in the order the app holds them. */
-export const DOCS_BODY_NAMES: readonly string[] = [
-  'earth',
-  'mercury',
-  'venus',
-  'mars',
-  'jupiter',
-  'saturn',
-  'uranus',
-  'neptune',
-  'moon',
-  'phobos',
-  'deimos',
-  'io',
-  'europa',
-  'ganymede',
-  'callisto',
-  'mimas',
-  'enceladus',
-  'tethys',
-  'dione',
-  'rhea',
-  'titan',
-  'iapetus',
-  'pluto',
-  'charon',
-  'miranda',
-  'ariel',
-  'umbriel',
-  'titania',
-  'oberon',
-  'puck',
-  'triton',
-  'proteus',
-  'nereid',
-  'whale',
-  'petunias',
-  'voyager1',
-  'voyager2',
-  'hubble',
-  'curiosity',
-  'perseverance',
-  'spirit',
-  'opportunity',
-  'soendermarken',
-];
-
-/** The places the `s` form of `pose` can name. */
-export const DOCS_POSE_SITES: readonly string[] = [
-  'curiosity',
-  'perseverance',
-  'spirit',
-  'opportunity',
-  'soendermarken',
 ];

@@ -1,8 +1,5 @@
 ---
-title: URL parameters
 description: The parameters a link to skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
-group: Reference
-order: 2
 facts:
   [
     takeover-links,
@@ -18,12 +15,12 @@ facts:
   ]
 ---
 
+import { BODY_PICK_ROWS } from '../../../../../../src/data/bodies/bodyPickRows';
+import { SURFACE_FIXED_SITES } from '../../../../../../src/data/bodies/surfaceFixedSites';
 import {
-  DOCS_BODY_NAMES,
   DOCS_EXHIBIT_IDS,
   DOCS_FOCUS_IDS,
   DOCS_ORIENTATIONS,
-  DOCS_POSE_SITES,
   DOCS_TOUR_IDS,
   DOCS_URL_PARAMS,
 } from '../../../data/docsUrlParams';
@@ -106,7 +103,7 @@ The value of `focus` is the id of one object.
 
 <Fact id="ref-focus-ids" />
 
-The names that follow `body-` are: <Codes of={DOCS_BODY_NAMES} />.
+The names that follow `body-` are: <Codes of={Object.values(BODY_PICK_ROWS).flatMap((rows) => rows.map((row) => row.id))} />.
 
 ### Where to find an id
 
@@ -180,7 +177,7 @@ The seven numbers of the `a` form are, in order:
 
 The two more that may follow turn the view away from that point, in radians, so that the focus sits off-centre. <Fact id="ref-pose-with-focus" inline />
 
-The three numbers of the `s` form are the direction the camera stands in and its height above the horizon, both in radians, and its distance from the site in metres, which has to be more than zero. The sites are <Codes of={DOCS_POSE_SITES} />.
+The three numbers of the `s` form are the direction the camera stands in and its height above the horizon, both in radians, and its distance from the site in metres, which has to be more than zero. The sites are <Codes of={SURFACE_FIXED_SITES.map((site) => site.id)} />.
 
 <Fact id="ref-pose-from-app" inline /> The key is in the [Controls](/docs/reference/controls/#for-development) tables. <Fact id="ref-pose-body-focus" inline />
 

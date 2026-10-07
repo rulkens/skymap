@@ -37,6 +37,8 @@ describe('website facts', () => {
         .sort();
     // heroVideoUrl takes one function with no imports of its own: the address of the data host.
     expect(importers(/from '(\.\.\/)+src\//)).toEqual([
+      // Two tables of ids, for the lists of body and site names.
+      'content/docs/reference/url-parameters.mdx',
       'data/objectCatalogue.ts',
       'utils/heroVideoUrl.ts',
     ]);
