@@ -5,7 +5,7 @@
  * the source, on `port` (none for a tool that writes a page and stops).
  * `manual` is its README, a path from the repository's root. The picture is
  * `assets/workbenches/<id>-<width>.avif|webp`, taken by
- * tools/site/shootWorkbench.ts; `click` is a text the runner clicks first.
+ * tools/site/shootWorkbench.ts.
  */
 export type Workbench = {
   id: string;
@@ -14,5 +14,5 @@ export type Workbench = {
   script: string;
   port?: number;
   manual: string;
-  picture: { title: string; caption: string; alt: string; credit?: string; click?: string };
+  picture: { title: string; caption: string; alt: string; credit?: string };
 };

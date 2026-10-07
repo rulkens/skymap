@@ -7,7 +7,7 @@ export const WORKBENCH_WINDOW = { width: 1440, height: 900 } as const;
 
 /**
  * The browser tools of the Developer workbenches page
- * (content/docs/developers/workbenches.mdx), each opened on 7 October 2026.
+ * (content/docs/developers/workbenches.mdx).
  * tests/packages/website/docsProject.test.ts holds the public paths and the
  * ports to the repository's own two tables (tools/utils/io/toolPages.ts and
  * devPorts.ts), so a workbench added to either fails until it has a row.
@@ -49,7 +49,7 @@ export const WORKBENCHES: readonly Workbench[] = [
     picture: {
       title: 'The flow workbench with a run under way',
       caption: 'Particles drifting along the CF4++ velocity field, with the panel of sliders at the upper right. The bright threads and knots are where the flow converges.',
-      alt: 'A faint ball of fine blue and orange streaks on black, with a few bright blue threads through its middle and a panel of seven sliders at the upper right.',
+      alt: 'A ball of fine blue and orange streaks on black, with bright blue threads winding through its middle and a panel of seven sliders at the upper right.',
     },
   },
   {
@@ -74,7 +74,8 @@ export const WORKBENCHES: readonly Workbench[] = [
     picture: {
       title: 'The curator with a galaxy part-way through',
       caption: 'The source picture of one named galaxy, framed in the middle, with the sliders for star removal and for the fade to transparent on the right. In the list on the left a tick marks a galaxy whose picture is done.',
-      alt: 'A list of Caldwell and NGC numbers with green ticks on the left, an empty box in the middle that asks for an address or a dropped image, and sliders for star removal and transparency on the right.',
+      alt: 'A list of Caldwell and NGC numbers with green ticks on the left, a photograph of a spiral galaxy among many stars inside a square frame with handles in the middle, and on the right sliders above two small pictures of the same galaxy without its stars, the lower one on a chequered ground.',
+      credit: 'Andreigusan (photograph of NGC 6946), CC0',
     },
   },
   {
@@ -85,8 +86,7 @@ export const WORKBENCHES: readonly Workbench[] = [
     picture: {
       title: 'The structure audit, on its Layering tab',
       caption: 'The shade of a cell is the number of imports from its row’s folder into its column’s. A red ring marks an import against the proposed order of the folders.',
-      alt: 'A light page with a grid of blue-shaded cells, folder names along its top and left side and many cells ringed in red, under a row of eleven tabs and six totals.',
-      click: 'Layering',
+      alt: 'A dark page with a grid of blue-shaded cells, folder names along its top and left side and many cells ringed in red, under a row of eleven tabs and six totals.',
     },
   },
 ];

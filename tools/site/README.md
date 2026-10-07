@@ -46,11 +46,23 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Workbench pictures
 
-`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest.
+`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands the six pictures were taken with are these.
 
-- The three published ones are taken from the published site (`https://skymap.rulkens.com/galaxy/`); the scene workbench and the curator from their own dev servers; the structure audit from the file `npm run structure-audit` writes (`file://…/tools/structure-audit/out/structureAudit.html`).
+| Picture   | Command, after `npx tsx tools/site/shootWorkbench.ts`                                       |
+| --------- | ------------------------------------------------------------------------------------------- |
+| `galaxy`  | `galaxy https://skymap.rulkens.com/galaxy/`                                                 |
+| `mcpm`    | `mcpm https://skymap.rulkens.com/mcpm/ --quality 40`                                        |
+| `flow`    | `flow http://localhost:<port>/ --fill intensity=0.8 --wheel=-4000 --settle 25000`           |
+| `scene`   | `scene http://localhost:<port>/ --settle 25000`                                             |
+| `curator` | `curator --from-master`, after the steps under the table                                    |
+| `audit`   | `audit file://<repo>/tools/structure-audit/out/structureAudit.html --dark --click Layering` |
+
+- The flow workbench as it opens is a faint ball in a black window: the picture raises the intensity and zooms in. The audit page is light by default and would be the one bright rectangle on a dark page, so it is asked for its dark colours.
+- The curator's picture shows a galaxy half-way through, which takes a file dropped on the tool: serve it with `STARNET_WEIGHTS` set (its README), choose C12, drop `public/images/famous-curated/c12/source.webp` on the middle, fill the three attribution fields from that folder's `recipe.json` and press Commit with the requests to `/api/export` and `/api/build-famous` refused, so that it removes the stars and writes nothing. Save the window at 2880x1800 as `data/shots/site/workbenches/curator.png` and run the command.
 - A tool's dev server shares the app's dependency cache (`node_modules/.vite`) and re-optimises it. Beside a running app server, give the tool a `cacheDir` of its own.
-- `--settle <ms>` is the wait before the shot (12 s if left out): the scene workbench needs about 25 s to stream its splats.
+- `--settle <ms>` is the wait before the shot (12 s if left out): the scene workbench needs about 25 s to stream its splats. `--from-master` writes the files again from the PNG of the last run (`data/shots/site/workbenches/`, gitignored), for a change of quality.
+- Budget, as for the shots: at most about 400 KB for the largest file. `--quality` lowers the AVIF quality of the two wider files; the MCPM picture, a cloud of points, needs 40.
+- The runner fails on an address that does not answer and on a picture that is one flat colour. Look at each picture all the same: it must show what its caption says.
 
 ## Link check
 

@@ -16,15 +16,13 @@ import { SITE_SHOTS } from '../../packages/website/src/data/siteShots';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { warnIfWrongCheckout } from '../utils/browser/warnIfWrongCheckout';
 import { readCanvas } from '../utils/shot/readCanvas';
+import { SHOT_ENCODING } from './shotEncoding';
 import { makeSiteOgCard } from './utils/makeSiteOgCard';
 import { openSiteShot } from './utils/openSiteShot';
 
 const MASTERS_DIR = 'data/shots/site';
 const OUT_DIR = 'packages/website/src/assets/shots';
-const DPR = 2;
-// Measured on these frames: AVIF 50 holds a star field, and WebP needs 76 to match it.
-const AVIF = { quality: 50, effort: 9 };
-const WEBP = { quality: 76, effort: 6 };
+const { dpr: DPR, avif: AVIF, webp: WEBP } = SHOT_ENCODING;
 // Typed as a person types, then long enough for the palette's results to land.
 const KEY_DELAY_MS = 60;
 const RESULTS_SETTLE_MS = 1200;
