@@ -8,6 +8,8 @@ const SHORTCUTS_LABEL = `the keyboard shortcuts, ${IN_REPO}`;
 const POINTER = `${REPO_BLOB}/src/services/camera/orbitControls.ts`;
 const HASH = `${REPO_BLOB}/src/state/url/hashParamSources.ts`;
 const HASH_LABEL = `the address parameters, ${IN_REPO}`;
+const SETTINGS_PANEL = `${REPO_BLOB}/src/components/SettingsPanel/SettingsPanel.tsx`;
+const SETTINGS_PANEL_LABEL = `the Settings panel, ${IN_REPO}`;
 
 /**
  * What the two Reference pages of the docs rest on, spread into FACTS: one row
@@ -331,6 +333,112 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     text: 'The dome flag is ?dome in small letters. ?Dome does nothing, and ?dome=0 switches dome mode on like any other value. It goes before the #, as in ?dome#focus=body-saturn.',
     source: `${REPO_BLOB}/src/services/engine/engine.ts`,
     sourceLabel: `where the app reads the dome flag, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+
+  // Settings
+  {
+    id: 'ref-settings-panel',
+    about: 'app',
+    text: 'The Settings panel has 73 controls: the data size in its title strip, then Galaxies, Stars, Cosmic web density, Cosmic web filaments, Flow, Structures, Labels & Guides and Display. Two of the 73 are in the panel only while another setting calls for them.',
+    source: SETTINGS_PANEL,
+    sourceLabel: SETTINGS_PANEL_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-place',
+    about: 'app',
+    text: 'The Settings panel is at the lower left of the app, under the Navigation panel. A click on its title folds it and opens it again. On a screen narrower than 768 pixels both panels start folded. Each heading inside it opens and folds the same way; all start folded but Galaxy catalogs and Star catalogs, which show once Galaxies or Stars is opened.',
+    source: SETTINGS_PANEL,
+    sourceLabel: SETTINGS_PANEL_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-kinds',
+    about: 'app',
+    text: 'A setting is one of three controls. A switch is on or off. A slider is dragged, or clicked anywhere along its length, and shows its value at its right end. A list opens on a click and takes one choice. A change shows in the scene at once; no button applies it, and none puts a setting back to where it started.',
+    source: `${REPO_BLOB}/src/components/common/Slider/Slider.tsx`,
+    sourceLabel: `the slider, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-masters',
+    about: 'app',
+    text: 'Most headings carry a switch of their own. On Galaxies, Structures and Labels & Guides it sets every switch under the heading: all on when all were off, and all off otherwise. It shows a dash while the switches under it differ. On Stars, Cosmic web density, Cosmic web filaments, Flow, Bloom and HDR it is a setting in itself, and the ones under it keep their values while it is off.',
+    source: `${REPO_BLOB}/src/components/SettingsPanel/CollapsibleSection.tsx`,
+    sourceLabel: `the panel’s headings, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-counts',
+    about: 'app',
+    text: 'The number beside a catalogue or a kind of structure is how many of its objects are loaded. It changes with the data size, and a catalogue that has not been fetched shows none.',
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/ui/GalaxiesSection.tsx`,
+    sourceLabel: `the Galaxies section, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-kept',
+    about: 'app',
+    text: 'The app keeps no settings. A reload, or a new visit, starts every setting on this page where the tables say, with one exception: the orientation is written into the address, so a reload, a bookmark or a shared link keeps it. The data size is not in the address and goes back to the one the screen’s width chooses.',
+    source: `${REPO_BLOB}/src/state/persistedValues.ts`,
+    sourceLabel: `the values the app keeps over a reload, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-takeover',
+    about: 'app',
+    text: 'A tour or an exhibit changes some settings while it is open, such as which catalogues and layers are on, and puts them back as you had them when you leave it.',
+    source: `${REPO_BLOB}/src/state/settings/mergeSettingsSnapshot.ts`,
+    sourceLabel: `how settings are put back, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-tier-reload',
+    about: 'app',
+    text: 'A change of data size downloads the files of the new size for the SDSS, GLADE and Milliquas catalogues, the Gaia stars and the cosmic web density, and draws the Milky Way again with its new number of points. The camera and the other settings stay as they are. A selected galaxy that the new size does not hold loses its selection.',
+    source: `${REPO_BLOB}/src/state/tier/watchTierSaga.ts`,
+    sourceLabel: `what a change of data size does, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-sizes',
+    about: 'app',
+    text: 'The counts are the ones the Settings panel printed at each data size on 7 October 2026. The app states no download size in megabytes for any of the three, and neither does its data manifest.',
+    source: 'https://skymap-data.rulkens.com/data/manifest.json',
+    sourceLabel: 'the published data manifest',
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-labels',
+    about: 'app',
+    text: 'The first twelve switches of Labels & Guides show and hide names only: the object stays in the scene. The last four show and hide a drawing: the orbit lines, the band of the Zone of Avoidance, the surface of the Local Bubble and the constellation lines. The markers of clusters, superclusters, voids and groups are under Structures, apart from their names.',
+    source: `${REPO_BLOB}/src/components/containers/LabelsAndGuidesSectionContainer.tsx`,
+    sourceLabel: `the rows of Labels & Guides, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-orientation',
+    about: 'app',
+    text: 'A change of Orientation changes which way is up for the camera and moves nothing in the scene. It is the one setting the app writes into the address: orientation=equatorial, orientation=galactic or orientation=supergalactic, and nothing for Ecliptic.',
+    source: HASH,
+    sourceLabel: HASH_LABEL,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-earth',
+    about: 'app',
+    text: 'The three sliders under Earth change Earth alone. The other planets and the moons keep fixed values for the same three things.',
+    source: `${REPO_BLOB}/src/@types/settings/EarthSettings.d.ts`,
+    sourceLabel: `Earth’s settings, ${IN_REPO}`,
+    checked: CHECKED,
+  },
+  {
+    id: 'ref-settings-debug',
+    about: 'app',
+    text: 'The app’s settings hold more values than the Settings panel shows, among them the colours and contrast of the cosmic web, the shape of the Zone of Avoidance band, the Milky Way model and the disc round Sagittarius A*. They are changed in the debug panel, which the D key opens and which is made for the people who build the app. They are not kept over a reload either.',
+    source: `${REPO_BLOB}/src/state/settings/initialSettings.ts`,
+    sourceLabel: `the app’s starting settings, ${IN_REPO}`,
     checked: CHECKED,
   },
 ];

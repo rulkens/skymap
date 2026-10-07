@@ -1,0 +1,230 @@
+---
+title: Settings
+description: Every setting of skymap’s Settings panel, in the panel’s order and under its headings, each with what it does, the values it takes, where it starts and whether it is kept.
+group: Reference
+order: 3
+facts: [ref-settings-panel, privacy-app-storage]
+---
+
+import DocTable from '../../../components/DocTable.astro';
+import { DOCS_SETTINGS } from '../../../data/docsSettings';
+import { DOCS_SETTING_SIZES } from '../../../data/docsSettingSizes';
+
+export const SettingsTable = ({ id }) => {
+  const group = DOCS_SETTINGS.find((candidate) => candidate.id === id);
+  return (
+    <DocTable>
+      <thead>
+        <tr>
+          <th>Setting</th>
+          <th>What it does</th>
+          <th>Values</th>
+          <th>At first</th>
+        </tr>
+      </thead>
+      <tbody>
+        {group.rows.map((row) => (
+          <tr>
+            <td>
+              {row.name}
+              <br />
+              <small>{row.control}</small>
+            </td>
+            <td>{row.does}</td>
+            <td>{row.values}</td>
+            <td>{row.first}</td>
+          </tr>
+        ))}
+      </tbody>
+    </DocTable>
+  );
+};
+
+export const SizesTable = () => (
+  <DocTable>
+    <thead>
+      <tr>
+        <th>What is loaded</th>
+        <th>Small</th>
+        <th>Medium</th>
+        <th>Large</th>
+      </tr>
+    </thead>
+    <tbody>
+      {DOCS_SETTING_SIZES.map((row) => (
+        <tr>
+          <td>{row.what}</td>
+          <td>{row.small}</td>
+          <td>{row.medium}</td>
+          <td>{row.large}</td>
+        </tr>
+      ))}
+    </tbody>
+  </DocTable>
+);
+
+This page is for looking a setting up. [Settings](/docs/guide/settings/) in the Guide goes through the same panel by what you want to change, and [Controls](/docs/reference/controls/) lists the keys and gestures.
+
+{/* Below 700 px the figure shows the manifest row 'ref-settings-phone', which it finds by name. */}
+
+<Figure id="ref-settings" />
+
+## Where the settings are
+
+<Fact id="ref-settings-place" />
+
+<Fact id="ref-settings-kinds" />
+
+<Fact id="ref-settings-masters" />
+
+<Fact id="ref-settings-counts" />
+
+The keys a slider takes are under [Controls](/docs/reference/controls/#interface).
+
+## What is kept
+
+<Fact id="ref-settings-kept" />
+
+| What | Where it is kept | How long |
+| --- | --- | --- |
+| Orientation, when it is not Ecliptic | In the address, as `orientation=` | As long as the link |
+| Every other setting on this page | Nowhere | Until the page is reloaded or closed |
+| That you have closed the welcome screen | In the browser’s storage | Until the browser’s data for the site is cleared |
+
+<Fact id="ref-settings-takeover" />
+
+The `orientation` parameter is under [URL parameters](/docs/reference/url-parameters/), and what a link does and does not carry is under [Sharing a view](/docs/guide/sharing/).
+
+## Data size
+
+The control marked Tier, in the panel’s title strip.
+
+<SettingsTable id="data-size" />
+
+<Fact id="phone-data-size" />
+
+<Fact id="ref-settings-tier-reload" />
+
+What each size holds, as the panel counts it:
+
+<SizesTable />
+
+<Fact id="ref-settings-sizes" />
+
+<Fact id="sim-data-sizes" />
+
+## Galaxies
+
+<SettingsTable id="galaxies" />
+
+### Galaxy catalogs
+
+<SettingsTable id="galaxy-catalogs" />
+
+<Fact id="sim-desi-patches" />
+
+Each catalogue is described under [The sources](/science/#sources) on the Science page.
+
+### Advanced
+
+The second heading under Galaxies, folded at first.
+
+<SettingsTable id="galaxies-advanced" />
+
+<Fact id="sim-reweight" />
+
+<Fact id="sim-flux-limits" />
+
+## Stars
+
+<SettingsTable id="stars" />
+
+### Star catalogs
+
+<SettingsTable id="star-catalogs" />
+
+### Advanced
+
+The second heading under Stars, folded at first.
+
+<SettingsTable id="stars-advanced" />
+
+<Fact id="sim-exposure" />
+
+## Cosmic web density
+
+<SettingsTable id="cosmic-web-density" />
+
+<Fact id="sci-density-field" />
+
+## Cosmic web filaments
+
+<SettingsTable id="cosmic-web-filaments" />
+
+<Fact id="sci-filaments" />
+
+## Flow
+
+<SettingsTable id="flow" />
+
+<Fact id="sci-flows" />
+
+## Structures
+
+<SettingsTable id="structures" />
+
+<Fact id="sci-markers" />
+
+## Labels & Guides
+
+<SettingsTable id="labels-and-guides" />
+
+<Fact id="ref-settings-labels" />
+
+Names in the scene, and what a click on one does, are under [Finding things](/docs/guide/finding/#names-in-the-scene).
+
+## Display
+
+<SettingsTable id="display" />
+
+<Fact id="ref-settings-orientation" />
+
+<Fact id="sci-tone" />
+
+### Bloom
+
+<SettingsTable id="bloom" />
+
+### HDR
+
+<SettingsTable id="hdr" />
+
+### Earth
+
+<SettingsTable id="earth" />
+
+<Fact id="ref-settings-earth" />
+
+## Outside the Settings panel
+
+These are not in the panel, and none of them is kept over a reload either.
+
+| What | Where | Values | At first |
+| --- | --- | --- | --- |
+| Each panel, folded or open | A click on the panel’s title: Settings or Navigation | Open or folded | Open; folded on a screen narrower than 768 pixels |
+| The whole interface, shown or hidden | The Tab key | Shown or hidden | Shown |
+| Auto-rotate | The play button in the top bar | On or off | Off |
+| The clock: its speed, and running or paused | The clock at the lower right | See [Time](/docs/guide/time/) | Running on the present at 1 s/s |
+| Dome mode | `?dome` in the address | On or off | Off |
+
+<Fact id="hide-interface" />
+
+<Fact id="auto-rotate" />
+
+<Fact id="dome-flag" />
+
+## What the panel does not hold
+
+<Fact id="ref-settings-debug" />
+
+That panel is described under [Debug panel and flags](/docs/developers/debug/).

@@ -792,4 +792,26 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'Distance and radius are those of the sphere drawn for the cluster.',
     alt: 'A card headed Virgo (M87) and tagged Galaxy Cluster, with rows for distance, radius and galaxies above a paragraph of text.',
   },
+  // The docs' Reference pages.
+  {
+    id: 'ref-settings',
+    link: `pose=a,0,0,0,2.1,0.35,260,0&${NOON}`,
+    settings: { ui: true, settleMs: 4000 },
+    size: FEATURE,
+    widths: DOCS_WIDTHS,
+    title: 'The Settings panel',
+    caption: 'At the lower left, as the app opens it, with every heading folded.',
+    drawn: 'The galaxies are catalogue positions. The glow is a density map computed from them.',
+    alt: 'The app’s window with two panels at the left, Navigation and under it Settings. Beside the title is a list marked Tier, set to Medium, and under it eight headings, most with a switch: Galaxies, Stars, Cosmic web density, Cosmic web filaments, Flow, Structures, Labels & Guides and Display.',
+  },
+  {
+    id: 'ref-settings-phone',
+    link: `pose=a,0,0,0,2.1,0.35,260,0&${NOON}`,
+    settings: { ui: true, settleMs: 4000, crop: { left: 0, top: 450, width: 400, height: 300 } },
+    size: FEATURE,
+    widths: PHONE_WIDTHS,
+    title: 'The Settings panel',
+    caption: 'Cut from a wider window.',
+    alt: 'A panel headed Settings with a list marked Tier and eight headings, most with a switch.',
+  },
 ];
