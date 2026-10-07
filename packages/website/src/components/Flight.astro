@@ -79,7 +79,6 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
           <h1 class="word">skymap</h1>
           <p class="tag">Explore the universe at true scale in your browser</p>
         </div>
-        <p class="start small">Run for free in your browser</p>
         <p class="hint small" aria-hidden="true">Scroll to pull back</p>
       </div>
 
@@ -173,12 +172,6 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     font-size: var(--text-lead);
     line-height: 1.4;
     color: var(--site-text);
-  }
-
-  .start {
-    margin: 0;
-    font-style: italic;
-    color: var(--site-text-muted);
   }
 
   .stops {
@@ -378,10 +371,6 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     font-size: clamp(5.5rem, 10vw, 10rem);
   }
 
-  .flight[data-live] .start {
-    text-align: right;
-  }
-
   .flight[data-live] .hint {
     display: flex;
     flex-direction: column;
@@ -546,10 +535,6 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     /* Never wider than the window, whatever the reader's text size. */
     .flight[data-live] .word {
       font-size: min(clamp(4.5rem, 24vw, 7rem), 27vw);
-    }
-
-    .flight[data-live] .start {
-      text-align: left;
     }
 
     .flight[data-live] .cap {
