@@ -42,4 +42,14 @@ export const ICONS: Record<IconName, string> = {
   method: 'M12 2.5v2M10.5 6a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M11.4 7.4L6.5 20.5M12.6 7.4l4.9 13.1M8.4 15.5a9 9 0 0 0 7.2 0',
   // A measured curve and the straight line we draw in its place.
   simplified: 'M3 9c2-5 4-5 6 0s4 5 6 0s4-5 6 0M3 18.5h18',
+  // A list: a point and its line, three times.
+  contents: 'M4.5 6.5h.01M8.5 6.5h11M4.5 12h.01M8.5 12h11M4.5 17.5h.01M8.5 17.5h11',
+  // The site's pages, folded away.
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  // A lens.
+  search: 'M4.5 10.5a6 6 0 1 0 12 0a6 6 0 1 0-12 0M15 15l5 5',
+  // A picture pulled out by two of its corners. Drawn to be shown at 16px, beside the view mark.
+  enlarge: 'M14 4.5h5.5V10M19.5 4.5L13 11M10 19.5H4.5V14M4.5 19.5L11 13',
+  // What shuts a sheet laid over the page.
+  close: 'M6 6l12 12M18 6L6 18',
 };

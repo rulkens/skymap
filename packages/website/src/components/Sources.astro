@@ -5,6 +5,7 @@
  * count in the summary says they are there. Only science claims are listed;
  * `all` lists statements about the app too, for the Privacy page.
  */
+import Icon from './Icon.astro';
 import { fact } from '../data/fact';
 import { formatDate } from '../utils/formatDate';
 import { listedSources } from '../utils/listedSources';
@@ -18,7 +19,10 @@ const rows = listedSources([...new Set(ids)].map(fact), all);
 {
   rows.length > 0 && (
     <details class="sources small">
-      <summary class="ring small">Sources for this page ({rows.length})</summary>
+      <summary class="ring small">
+        <Icon name="cite" />
+        Sources for this page ({rows.length})
+      </summary>
       <ol>
         {rows.map((row) => (
           <li>

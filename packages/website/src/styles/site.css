@@ -463,8 +463,8 @@ html:has(dialog[open]) {
   --gap: 1.375rem;
 }
 
-/* The view mark recurs under every picture, so it is set small and dim; pointing at its link lights it. */
-.ring.small:has(> [data-icon='view']) {
+/* The view and enlarge marks recur under every picture, so they are set small and dim; pointing at a link lights it. */
+.ring.small:has(> :is([data-icon='view'], [data-icon='enlarge'])) {
   --mark: 1rem;
   --gap: 0.75rem;
 }
@@ -500,7 +500,7 @@ html:has(dialog[open]) {
   transition: border-color 0.25s ease;
 }
 
-.ring > .glyph[data-icon='view'] {
+.ring > .glyph:is([data-icon='view'], [data-icon='enlarge']) {
   stroke: var(--site-text-dim);
   transition:
     border-color 0.25s ease,
@@ -509,7 +509,8 @@ html:has(dialog[open]) {
 
 :is(.ring, .glyph-ring):hover > .glyph,
 :is(.ring, .glyph-ring):focus-visible > .glyph,
-.ring[aria-current='page'] > .glyph {
+.ring[aria-current='page'] > .glyph,
+[open] > .ring > .glyph {
   border-color: var(--color-accent);
   stroke: var(--color-accent);
 }
@@ -540,7 +541,7 @@ html:has(dialog[open]) {
 @media (prefers-reduced-motion: reduce) {
   .ring::before,
   :is(.ring, .glyph-ring) > .glyph,
-  .ring > .glyph[data-icon='view'] {
+  .ring > .glyph:is([data-icon='view'], [data-icon='enlarge']) {
     transition: none;
   }
 }

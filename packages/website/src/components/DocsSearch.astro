@@ -7,6 +7,7 @@
  * (scripts/initDocsSearch.ts). The `/` key opens it from anywhere on the page.
  * `big` is the control at a page's own size, for the docs index.
  */
+import Icon from './Icon.astro';
 import { sitePath } from '../utils/sitePath';
 
 type Props = { big?: boolean };
@@ -15,7 +16,7 @@ const { big = false } = Astro.props;
 ---
 
 <button class:list={['ring search-open', { small: !big }]} type="button" data-search-open aria-haspopup="dialog">
-  Search the docs <kbd aria-hidden="true">/</kbd>
+  <Icon name="search" />Search the docs <kbd aria-hidden="true">/</kbd>
 </button>
 
 <dialog class="sheet" data-search data-index={sitePath('/pagefind/pagefind.js')} aria-labelledby="search-label">
@@ -24,7 +25,7 @@ const { big = false } = Astro.props;
       <label class="small" id="search-label" for="search-field">Search the docs</label>
       <input id="search-field" type="text" inputmode="search" autocomplete="off" spellcheck="false" enterkeyhint="search" />
     </div>
-    <button class="ring small shut" type="button" data-search-close>Close</button>
+    <button class="ring small shut" type="button" data-search-close><Icon name="close" />Close</button>
     <p class="status small" role="status"></p>
     <ol></ol>
   </div>

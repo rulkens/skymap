@@ -15,4 +15,9 @@ export type IconName =
   | 'code'
   | 'sources'
   | 'method'
-  | 'simplified';
+  | 'simplified'
+  | 'contents'
+  | 'menu'
+  | 'search'
+  | 'enlarge'
+  | 'close';
