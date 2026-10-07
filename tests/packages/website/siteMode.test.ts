@@ -6,7 +6,7 @@
  * each mode into a scratch directory and reads what came out.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -90,6 +90,36 @@ describe.each([
     expect(description.length).toBeGreaterThanOrEqual(70);
     expect(description.length).toBeLessThanOrEqual(155);
     expect(html).toContain('<html lang="en-GB">');
+  });
+
+  // A search engine cuts a longer title or description, and two pages with one title cannot be told apart in its list.
+  it('gives every page one h1, a title of its own up to 60 characters and a description up to 155', () => {
+    const pages = readdirSync(built().out, { recursive: true, encoding: 'utf8' })
+      .filter((name) => name.endsWith('.html'))
+      .map((name) => {
+        const page = readFileSync(join(built().out, name), 'utf8');
+        // An entity is one character on the results page.
+        const text = (re: RegExp) => (page.match(re)?.[1] ?? '').replace(/&#?\w+;/g, '.');
+        return {
+          name,
+          title: text(/<title>([^<]+)<\/title>/),
+          description: text(/<meta name="description" content="([^"]+)"/),
+          h1: page.match(/<h1[\s>]/g)?.length,
+        };
+      });
+    expect(pages.length).toBeGreaterThan(20);
+    const titles = pages.map((page) => page.title);
+    expect(titles.filter((title, i) => titles.indexOf(title) !== i)).toEqual([]);
+    expect(
+      pages.filter(
+        (page) =>
+          page.h1 !== 1 ||
+          page.title.length === 0 ||
+          page.title.length > 60 ||
+          page.description.length === 0 ||
+          page.description.length > 155,
+      ),
+    ).toEqual([]);
   });
 
   it('has one canonical, complete social tags and parseable structured data', () => {
