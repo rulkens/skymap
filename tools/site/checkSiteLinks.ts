@@ -18,7 +18,7 @@ import { resolveSiteLink } from './utils/resolveSiteLink';
 
 const base = `/${toolPages.website}/`;
 const siteDir = resolve(distDir, toolPages.website);
-const publicDir = resolve('public');
+const publicDir = resolve(import.meta.dirname, '../../public');
 
 if (!existsSync(siteDir)) {
   console.error(`No build at ${siteDir}. Run "npm run site:build" first.`);

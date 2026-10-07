@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 
 import { CITATION } from '../../../packages/website/src/data/citation';
 import { DATA_SOURCES } from '../../../packages/website/src/data/dataSources';
+import { DOCS_SETTING_SIZES } from '../../../packages/website/src/data/docsSettingSizes';
+import { fact } from '../../../packages/website/src/data/fact';
 import { HORIZON_RADIUS_GPC } from '../../../src/data/rendering/horizonRadiusGpc';
 import { C_KM_S, H0_KM_S_MPC, PC_TO_LY } from '../../../src/utils/math/constants';
 import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
@@ -125,6 +127,14 @@ describe('data sources', () => {
         Boolean(row.askHref),
       );
     }
+  });
+
+  // The count of stars drawn is typed in four places: the table, two sentences of the Science page and All settings.
+  it('gives Gaia the count of stars its sentences and the settings table give', () => {
+    const { drawn } = DATA_SOURCES.find((row) => row.id === 'gaia')!;
+    expect(fact('sci-star-observables').text).toContain(`${drawn} stars`);
+    expect(fact('sim-star-coverage').text).toContain(`${drawn} at the largest`);
+    expect(DOCS_SETTING_SIZES.find((size) => size.what === 'Gaia stars')!.large).toBe(drawn);
   });
 });
 

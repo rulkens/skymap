@@ -63,6 +63,7 @@ export function initDocsSearch(sheet: SearchSheet, opener: HTMLElement): void {
     const pages = await Promise.all(found.results.slice(0, SHOWN).map((result) => result.data()));
     if (query !== field.value.trim()) return;
     list.replaceChildren(...pages.map((page) => hit(page, query)));
+    list.dataset.query = query;
     const total = found.results.length;
     status.textContent =
       total === 0
@@ -87,7 +88,8 @@ export function initDocsSearch(sheet: SearchSheet, opener: HTMLElement): void {
   sheet.addEventListener('keydown', (event) => {
     const stops = [field, ...list.querySelectorAll<HTMLElement>('a')];
     if (event.key === 'Enter' && event.target === field) {
-      stops[1]?.click();
+      // Until the search for what is typed has come back, the list is still the last query's.
+      if (list.dataset.query === field.value.trim()) stops[1]?.click();
       return;
     }
     const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;

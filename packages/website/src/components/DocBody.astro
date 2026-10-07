@@ -1,6 +1,6 @@
 ---
 /*
- * DocBody — the running text of a docs page: everything Markdown can emit,
+ * DocBody — the running text of a docs page: what the pages' Markdown emits,
  * set for reading at length on black. Jost 400 at 18px, about 65 characters
  * to the line; headings in the display face, never under 20px; a list's
  * bullets are the site's ring, small. The rules reach into the slot because
@@ -40,17 +40,11 @@
     margin: 2.5rem 0 0.75rem;
   }
 
-  .doc-body :global(h4) {
-    margin: 2rem 0 0.5rem;
-    font: var(--weight-display) 1.25rem / 1.2 var(--font-family-display);
-    color: var(--color-fg);
-  }
-
   /*
    * A heading or a term a link landed on stands clear of the bars above it. The contents' bar is counted here and
    * not in the page's scroll padding, which would move the page whenever the bar itself took the keyboard.
    */
-  .doc-body :global(:is(h2, h3, h4, dt)) {
+  .doc-body :global(:is(h2, h3, dt)) {
     scroll-margin-top: calc(1.5rem + var(--docs-bar));
   }
 
@@ -115,20 +109,6 @@
     overflow-x: auto;
   }
 
-  .doc-body :global(blockquote) {
-    margin: 2rem 0;
-    padding-left: 1.5rem;
-    border-left: 1px solid var(--color-accent);
-  }
-
-  .doc-body :global(blockquote p) {
-    color: var(--site-text);
-  }
-
-  .doc-body :global(blockquote > :last-child) {
-    margin-bottom: 0;
-  }
-
   .doc-body :global(dl:where(:not([data-embed] *))) {
     margin: 0 0 var(--stack);
   }
@@ -147,12 +127,6 @@
   .doc-body :global(dd:where(:not([data-embed] *))) {
     margin: 0 0 0.75rem;
     color: var(--site-text-muted);
-  }
-
-  .doc-body :global(hr) {
-    margin: 3rem 0;
-    border: 0;
-    border-top: 1px solid var(--border-divider);
   }
 
   /* `--figure-out` is how far a wide figure runs past the text's right edge (components/DocFigure.astro). */

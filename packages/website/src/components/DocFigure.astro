@@ -3,7 +3,7 @@
  * DocFigure — `<Figure id="…" />` on a docs page: a picture from the shot
  * manifest with its label and "Open this view". A picture of the app's
  * interface runs past the text column to the page's right edge, nine columns,
- * label and all, so its text can be read; `wide` and `column` overrule that.
+ * label and all, so its text can be read (utils/docFigureWide.ts).
  * A phone gets the manifest's `<id>-phone` row where there is one, edge to
  * edge either way. The picture is a link to its largest file, which
  * FigureSheet opens over the page; "Enlarge" under it says so in words.
@@ -16,11 +16,11 @@ import { SITE_SHOTS } from '../data/siteShots';
 import { docFigureWide } from '../utils/docFigureWide';
 import { shotSources } from '../utils/shotSources';
 
-type Props = { id: string; wide?: boolean; column?: boolean; eager?: boolean };
+type Props = { id: string; eager?: boolean };
 
-const { id, wide: asWide = false, column = false, eager = false } = Astro.props;
+const { id, eager = false } = Astro.props;
 const shot = siteShot(id);
-const wide = asWide || (!column && docFigureWide(shot));
+const wide = docFigureWide(shot);
 const phone = SITE_SHOTS.find((row) => row.id === `${id}-phone`)?.id;
 const { full, width, height } = shotSources(id);
 // The picture's box at each layout of layouts/Docs.astro: nine columns of the page grid, or the text's seven and then six.
