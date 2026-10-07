@@ -6,7 +6,7 @@ facts: [kiosk-planned, tour-earth-start-planned, bench-galaxy-unused, dome-rig]
 import { ISSUES_URL } from '../../data/contact';
 import { ROADMAP } from '../../data/roadmap';
 
-export const STATE = { 'in progress': 'In progress', planned: 'Planned', idea: 'An idea' };
+export const STATE = { 'in progress': 'Partly built', planned: 'Planned', idea: 'An idea' };
 
 export const items = (id) => ({
   cols: 'detail',
@@ -22,7 +22,7 @@ export const items = (id) => ({
 
 <Fact id="road-source" />
 
-We chose from that list what a visitor would notice and put it in a visitor’s words. Repairs to the code, the tools and the many small faults on it are left out; the list itself is <Repo path="docs/BACKLOG.md">in the repository</Repo>. A test fails when a row here no longer has its line there, so nothing stays on this page after it is built or given up.
+We chose from that list what a visitor would notice and put it in a visitor’s words. Repairs to the code, the tools and the many small faults on it are left out; the list itself is <Repo path="docs/BACKLOG.md">in the repository</Repo>. A test fails when a row here no longer has its line there, or when its design is filed as finished.
 
 ## The three states
 

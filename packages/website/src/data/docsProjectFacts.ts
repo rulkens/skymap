@@ -30,7 +30,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'road-states',
     about: 'app',
-    text: 'On this page “planned” is a line the list marks as ready to build or as needing a design first, and “an idea” is a line it marks as set aside, waiting on something outside the project, or not yet decided. “In progress” is work of which a part is already in the repository.',
+    text: 'On this page “planned” is a line the list marks as ready to build or as needing a design first, or work with a written design and no line. “An idea” is a line the list marks as set aside, waiting on other work or on a fact to be checked, or not yet decided. “Partly built” is work of which a part is already in the repository; nobody need be working on it now.',
     source: BACKLOG,
     sourceLabel: BACKLOG_LABEL,
     checked: CHECKED,
@@ -38,7 +38,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'road-no-dates',
     about: 'app',
-    text: 'The list holds no dates, and neither does this page.',
+    text: 'The list sets no date for any of it, and neither does this page.',
     source: BACKLOG,
     sourceLabel: BACKLOG_LABEL,
     checked: CHECKED,
@@ -112,7 +112,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'cli-running-app',
     about: 'app',
-    text: 'perf, capture-featured, site:shots and site:loops drive an app that is already running, and take its address after --url. shot starts one itself when it is given no address.',
+    text: 'perf, capture-featured, site:shots and site:loops drive an app that is already running, and take its address after --url; so do record-tour and record-clip unless they are given --serve. site:fold takes the address of a running copy of this site. shot starts one itself when it is given no address.',
     source: `${REPO_BLOB}/tools/perf/README.md`,
     sourceLabel: `the manual of the speed test, ${IN_REPO}`,
     checked: CHECKED,
@@ -129,7 +129,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'debug-open',
     about: 'app',
-    text: 'The D key opens a panel headed “Skymap Debug” at the right of the window, and closes it. It is in the published app and needs no flag. No button opens it, so it needs a keyboard.',
+    text: 'The D key opens a panel headed “Skymap Debug” at the right of the window, and closes it. It is in the published app and needs no flag. No button opens it, so it needs a keyboard. It does not show while the welcome screen, a tour or an exhibit is up or the interface is hidden, nor with cinema in the address.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the keyboard shortcuts, ${IN_REPO}`,
     checked: CHECKED,

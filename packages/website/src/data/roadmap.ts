@@ -28,10 +28,9 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'milky-way-model',
         title: 'A Milky Way drawn from a model',
-        text: 'The Milky Way drawn from a model of its light and dust, in place of the cloud of points the app draws today. The model runs in the galaxy renderer workbench; the app does not use it yet.',
-        state: 'in progress',
+        text: 'A second way of drawing the Milky Way, from a model of its light and dust, to stand beside the cloud of points the app draws today. The model runs in the galaxy renderer workbench; the app does not use it yet.',
+        state: 'planned',
         backlog: 'Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1',
-        built: 'tools/galaxy-renderer/README.md',
       },
       {
         id: 'galactic-centre-places',
@@ -120,7 +119,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desi-dr1',
         title: 'The whole first DESI data release',
-        text: 'About 9.75 million galaxies, some ten times what the app draws at once today, so it waits for a way to draw more points.',
+        text: 'About 9.75 million galaxies and quasars, three times what the app draws at its largest data size today, so it waits for a way to draw more points.',
         state: 'idea',
         backlog: 'DESI DR1 as a data source',
       },
@@ -147,7 +146,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'kiosk',
         title: 'Kiosk mode',
-        text: 'A tour that plays unattended and starts again, with a return to it when nobody has touched the screen for a while. The app can already play a tour with no panels or buttons.',
+        text: 'A tour that plays unattended and starts again, and perhaps a return to it when nobody has touched the screen for a while. The app can already play a tour with no panels or buttons.',
         state: 'planned',
         backlog: 'Museum kiosk mode',
       },
@@ -161,9 +160,10 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'openspace-controls',
         title: 'Controls like OpenSpace',
-        text: 'A second set of mouse controls to choose, which behaves as OpenSpace does, for people who run a planetarium with it. A design is written.',
-        state: 'planned',
+        text: 'A second set of mouse controls to choose, which behaves as OpenSpace does, for people who run a planetarium with it. A design is written and the groundwork is in the app; the second set is not.',
+        state: 'in progress',
         spec: `${SPECS}/2026-09-29-openspace-camera-mode-design.md`,
+        built: 'src/services/engine/camera/controlSchemes.ts',
       },
       {
         id: 'structure-shapes',
@@ -216,7 +216,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'saturn-rings',
         title: 'Brighter rings for Saturn',
-        text: 'The rings set to the brightness of the planet’s disc, beside which they are too dim.',
+        text: 'The rings read too dim beside the planet’s disc; their brightness is to be set again.',
         state: 'planned',
         backlog: 'Saturn ring brightness',
       },
@@ -271,7 +271,7 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'card-phase',
         title: 'Phase and brightness on a planet’s card',
-        text: 'The phase a planet or a moon shows from Earth at the scene’s date, and how bright it is in the sky.',
+        text: 'The phase of the planet or moon in focus at the scene’s date, and its apparent brightness.',
         state: 'planned',
         backlog: 'InfoCard live phase + apparent-mag rows',
       },
