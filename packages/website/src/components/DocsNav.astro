@@ -22,6 +22,8 @@ const { current, sections } = Astro.props;
 // A page that is one of many of a kind brings its own kind into the list, under its group; the others stay out.
 const here = DOCS_TREE.flatMap((group) => group.pages).find((page) => page.path === current);
 const family = here?.family;
+// A kind with one page (a family of small entries that share it) needs no name over it.
+const kin = DOCS_TREE.flatMap((group) => group.pages).filter((page) => family && page.family === family);
 ---
 
 <nav class="docs-nav small" aria-label="Docs">
@@ -67,19 +69,19 @@ const family = here?.family;
             </ul>
             {family && group.pages.includes(here!) && (
               <>
-                <p class="family" id="docs-nav-family">
-                  {family}
-                </p>
-                <ul aria-labelledby="docs-nav-family">
-                  {group.pages
-                    .filter((page) => page.family === family)
-                    .map((page) => (
+                {kin.length > 1 && (
+                  <p class="family" id="docs-nav-family">
+                    {family}
+                  </p>
+                )}
+                <ul aria-label={family}>
+                  {kin.map((page) => (
                       <li>
                         <a href={sitePath(page.path)} aria-current={page.path === current ? 'page' : undefined}>
                           {page.title}
                         </a>
                       </li>
-                    ))}
+                  ))}
                 </ul>
               </>
             )}

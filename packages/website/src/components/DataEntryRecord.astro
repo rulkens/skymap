@@ -42,6 +42,8 @@ const inTable = DATA_SOURCES.some((row) => row.entries.includes(entry.id));
 const read = (bullets.Checked ?? '').replace(/^\d{4}-\d{2}-\d{2}[:;,.]?\s*/, '');
 // On a page of its own the page's opening line is this bullet, unless it was too long to stand there whole.
 const what = plainText(bullets.What ?? '');
+// The record starts some bullets in lower case, as the rest of a sentence its label began.
+const capital = (text: string) => text.replace(/^[a-z]/, (first) => first.toUpperCase());
 const facts = [
   ['What it is', level === 2 && fitText(what, 155) === what ? '' : bullets.What],
   ['Made by', bullets.By],
@@ -60,7 +62,7 @@ const facts = [
       <>
         <dt>{label}</dt>
         <dd>
-          <RecordText text={recordParagraphs(text!)} />
+          <RecordText text={capital(recordParagraphs(text!))} />
         </dd>
       </>
     ))
@@ -80,7 +82,7 @@ const facts = [
     <>
       <p>The record gives “{term.term}” once, for every entry that names them:</p>
       <Recorded checked={entry.checked}>
-        <RecordText text={term.text} lift />
+        <RecordText text={term.text} />
       </Recorded>
     </>
   ))
@@ -108,13 +110,13 @@ const facts = [
 {
   bullets['Not verified'] && (
     <Caveat title="Not verified">
-      <RecordText text={`Not verified: ${bullets['Not verified']}`} />
+      <RecordText text={capital(bullets['Not verified'])} />
     </Caveat>
   )
 }
 
 <H id={anchor('pipeline')}>Where it enters skymap</H>
-<RecordText text={recordParagraphs(bullets['Enters skymap'] ?? '')} />
+<RecordText text={capital(recordParagraphs(bullets['Enters skymap'] ?? ''))} />
 {
   entry.files.length > 0 && (
     <DocTable
@@ -124,7 +126,7 @@ const facts = [
         { code: file.key },
         { code: file.path },
         file.kept === 'committed' ? 'In the repository' : 'Fetched or built, not in the repository',
-        file.fetcher ? { code: file.fetcher } : 'By hand, or by the step named above',
+        file.fetcher ? { code: file.fetcher } : 'No tool named in the registry',
       ])}
     />
   )
@@ -135,7 +137,7 @@ const facts = [
       <p>The record says of this part of the data:</p>
       <Recorded checked={entry.checked}>
         {sectionNotes.map((text) => (
-          <RecordText text={text} lift />
+          <RecordText text={text} />
         ))}
       </Recorded>
     </>
