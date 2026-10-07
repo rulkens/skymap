@@ -453,7 +453,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-long-way-steps',
     about: 'app',
-    text: 'The 14 steps of “The Long Way Out” are headed The Long Way Out, You are here, Nearest neighbour, The Local Group, Our neighbourhood, Meeting the neighbours, The nearest cluster, Laniakea, The cosmic web, Everything is flowing, The emptiness, The deep field, The edge and Home again. The shortest takes 7 seconds and the longest, Meeting the neighbours, 41.',
+    text: 'The shortest of the 14 steps of “The Long Way Out” takes 7 seconds and the longest, Meeting the neighbours, 41.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: `the tour’s steps, ${IN_REPO}`,
     checked: CHECKED,
@@ -461,7 +461,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-web-showcase',
     about: 'app',
-    text: '“Named Cosmic Web” has three steps and takes 43 seconds: the Milky Way, the Virgo Cluster and the galaxy M87. It hides the cosmic web’s glow and the names of the famous galaxies, and leaves the galaxies and the ringed, named structures.',
+    text: '“Named Cosmic Web” has three steps and takes 43 seconds: the Milky Way, the Virgo Cluster and the galaxy M87. It hides the glow of the cosmic web and the names of the named galaxies, and leaves the galaxies and the markers and names of the structures.',
     source: `${REPO_BLOB}/src/data/animation/tours/webShowcase.ts`,
     sourceLabel: `the tour’s steps, ${IN_REPO}`,
     checked: CHECKED,
@@ -477,7 +477,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-buttons',
     about: 'app',
-    text: 'A tour puts four buttons at the foot of the screen: previous step, pause, leave the tour, and next step. The ring round the pause button runs down as the step’s time runs out. The previous button is greyed out on the first step.',
+    text: 'A tour puts four buttons at the foot of the screen: previous step, pause, leave the tour, and next step. The ring round the pause button runs down as the step’s time runs out.',
     source: `${REPO_BLOB}/src/components/TourOverlay/TourNav.tsx`,
     sourceLabel: `the tour’s buttons, ${IN_REPO}`,
     checked: CHECKED,
@@ -485,7 +485,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-pause',
     about: 'app',
-    text: 'A tour can be paused while the view is holding on a subject, not while the camera is flying to it. During the flight Space and the pause button do nothing. A paused step keeps its caption and waits until it is resumed or stepped past.',
+    text: 'A tour pauses only once the camera has arrived at a step’s subject, while the view is holding on it. A paused step keeps its caption and waits until it is resumed or stepped past.',
     source: `${REPO_BLOB}/src/state/tour/pausableDwellSaga.ts`,
     sourceLabel: `the pause inside a tour step, ${IN_REPO}`,
     checked: CHECKED,
@@ -493,7 +493,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-caption',
     about: 'app',
-    text: 'Each step has a caption: the tour’s name with the step’s number, like “The Long Way Out · 03 / 14”, a heading, and a sentence or two. It comes up when the camera has arrived, not during the flight.',
+    text: 'Each step has a caption: the tour’s name with the step’s number, like “The Long Way Out · 03 / 14”, a heading, and a sentence or two. It comes up when the camera has arrived.',
     source: `${REPO_BLOB}/src/components/TourOverlay/TourCaption.tsx`,
     sourceLabel: `the tour’s caption, ${IN_REPO}`,
     checked: CHECKED,
@@ -501,7 +501,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-rail',
     about: 'app',
-    text: 'A column of dots at the right edge has one dot for each step, with the current one lit. Pointing at a dot shows that step’s heading. The dots take no click.',
+    text: 'A column of dots at the right edge has one dot for each step, with the current one lit. Pointing at a dot shows that step’s heading.',
     source: `${REPO_BLOB}/src/components/TourBeatRail/TourBeatRail.tsx`,
     sourceLabel: `the tour’s column of dots, ${IN_REPO}`,
     checked: CHECKED,
@@ -509,7 +509,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-no-steering',
     about: 'app',
-    text: 'While a tour runs, dragging and zooming do nothing, paused or not. The app’s panels, the search bar and the clock are hidden, though the / key still opens the search.',
+    text: 'While a tour plays, dragging and zooming do nothing. While it is paused they move the camera as usual, and the next step takes the camera on to its own subject. The app’s panels, the search box and the clock are hidden, though the / key still opens the search.',
     source: `${REPO_BLOB}/src/services/engine/camera/replayInput.ts`,
     sourceLabel: `what input reaches the camera, ${IN_REPO}`,
     checked: CHECKED,
@@ -523,14 +523,6 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'tour-back-fault',
-    about: 'app',
-    text: 'One fault, seen on 7 October 2026 in “The Long Way Out”: after a step back from the third step to the second, made once the third step’s caption was up, the next step forward ended the tour.',
-    source: `${REPO_BLOB}/src/state/tour/visitBeatSaga.ts`,
-    sourceLabel: `how one tour step plays, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'exhibit-what',
     about: 'app',
     text: 'An exhibit is a prepared view. Opening one switches the layers it is about on and the ones in its way off, flies the camera to a set position, and prints its title and notes over the scene.',
@@ -541,7 +533,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'exhibit-views',
     about: 'app',
-    text: 'Solar System looks down on the planets’ orbits from 42 astronomical units. Cosmic Flows hides the galaxies and shows the flow ribbons round the Milky Way. Cosmic Web hides the galaxies and shows the density map, with a second map made from the 2MRS catalogue switched on. Zone of Avoidance looks along the plane of the Milky Way from 1.2 megaparsecs with the band switched on. Observable Universe pulls back until the whole sphere fits the window.',
+    text: 'Solar System looks down on the planets’ orbits from 42 astronomical units. Cosmic Flows hides the galaxies and shows the flow ribbons round the Milky Way. Cosmic Web hides the galaxies and shows the glow of the cosmic web, with a second glow made from the 2MRS catalogue switched on. Zone of Avoidance looks along the plane of the Milky Way from 1.2 megaparsecs with the band switched on. Observable Universe pulls back until the whole sphere fits the window.',
     source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
     sourceLabel: `the list of exhibits, ${IN_REPO}`,
     checked: CHECKED,
@@ -549,17 +541,9 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'exhibit-open',
     about: 'app',
-    text: 'An exhibit opens from its card in the search, from its name typed into the search, and from a link. The Highlights tab has cards for Solar System, Cosmic Flows, Cosmic Web and Observable Universe, the Deep Space tab has the last three again, and the Milky Way tab has Zone of Avoidance.',
+    text: 'An exhibit opens from its card in the search, from its name typed into the search, and from a link.',
     source: `${REPO_BLOB}/src/data/palette/featuredTabs.ts`,
     sourceLabel: `the search’s cards, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'exhibit-panel',
-    about: 'app',
-    text: 'At the lower left an exhibit prints its title and one sentence about it. Down the right it prints its notes: two or three headed paragraphs, the first always “What you’re seeing”, then four figures, then its sources as links that open in a new tab.',
-    source: `${REPO_BLOB}/src/components/ExhibitOverlay/ExhibitNoteSection.tsx`,
-    sourceLabel: `the parts of an exhibit’s notes, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -589,7 +573,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'exhibit-notes-fit',
     about: 'app',
-    text: 'The notes do not scroll. In a window less than about 860 pixels high the foot of the Cosmic Flows and Cosmic Web notes is cut off, and on a phone held upright the notes and the title print over each other.',
+    text: 'An exhibit’s notes are laid out for a tall window: under about 860 pixels of height the foot of the longest ones is cut off. A taller window, or the browser zoomed out, shows them whole.',
     source: `${REPO_BLOB}/src/components/ExhibitOverlay/ExhibitOverlay.module.css`,
     sourceLabel: `the layout of an exhibit’s notes, ${IN_REPO}`,
     checked: CHECKED,
@@ -597,7 +581,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'takeover-links',
     about: 'app',
-    text: 'While a tour or an exhibit is open the address names it: tour=grandTour or tour=webShowcase for the tours, and exhibit=solarSystem, exhibit=cosmicFlows, exhibit=cosmicWeb, exhibit=zoneOfAvoidance or exhibit=observableUniverse for the exhibits. A link with one of these opens straight into it, without the welcome screen. A tour always starts at its first step. A name the app does not know opens the ordinary view of Earth.',
+    text: 'While a tour or an exhibit is open the address names it: tour=grandTour or tour=webShowcase for the tours, and exhibit=solarSystem, exhibit=cosmicFlows, exhibit=cosmicWeb, exhibit=zoneOfAvoidance or exhibit=observableUniverse for the exhibits. A link with one of these opens straight into it, without the welcome screen. A tour always starts at its first step. A name the app does not know opens the home view.',
     source: `${REPO_BLOB}/src/state/navigation/navigateSaga.ts`,
     sourceLabel: `how the app opens what a link names, ${IN_REPO}`,
     checked: CHECKED,

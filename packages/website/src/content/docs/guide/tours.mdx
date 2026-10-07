@@ -1,32 +1,22 @@
 ---
 title: Tours and exhibits
-description: A tour flies the camera for you through a set of captioned steps. An exhibit is one prepared view with notes beside it. This page lists the tours and exhibits skymap has, and how to start, steer and leave each.
+description: A tour flies the camera through captioned steps. An exhibit is one prepared view with notes beside it. How to start, steer and leave each.
 group: Guide
 order: 4
+facts: [search-tours, grand-tour-steps, tour-length, tour-long-way-steps, tour-start, start-about-button, tour-keys, tour-buttons, tour-pause, tour-no-steering, tour-end, tour-rail, exhibits, exhibit-views, exhibit-notes-fit, exhibit-open, exhibit-leave, clock-hidden, takeover-links, exhibit-link-time, tour-earth-start-planned, kiosk-planned]
 ---
-
-import ViewLink from '../../../components/ViewLink.astro';
-import { appLink } from '../../../data/appLink';
-
-If you are preparing a lesson, [Use skymap in the classroom](/classroom/) says where a tour or an exhibit fits in one. This page describes what each does once it is open.
 
 ## What a tour is
 
 <Fact id="tour-what" />
 
-<Fact id="search-tours" />
+skymap has two tours.
 
 ## The Long Way Out
 
-<Fact id="grand-tour-steps" />
-
-<Fact id="tour-length" />
-
-<Fact id="tour-long-way-steps" />
+“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back. Left to play, it takes a little over 5 minutes: the shortest step takes 7 seconds and the longest 41.
 
 <Figure id="class-tour" />
-
-<ViewLink href={appLink('tour=grandTour')}>Start “The Long Way Out”</ViewLink>
 
 ## Named Cosmic Web
 
@@ -34,21 +24,15 @@ If you are preparing a lesson, [Use skymap in the classroom](/classroom/) says w
 
 <Figure id="guide-tour-virgo" />
 
-<ViewLink href={appLink('tour=webShowcase')}>Start “Named Cosmic Web”</ViewLink>
-
 ## Start a tour
 
 | | Control |
 | --- | --- |
 | Mouse or trackpad | Open the search, choose the Tours tab and click a card |
-| Touch screen | Tap the search bar, choose the Tours tab and tap a card |
+| Touch screen | Tap the search box, choose the Tours tab and tap a card |
 | Keyboard | <Keys of="/" />, type the tour’s name, <Keys of="Enter" /> |
 
-<Fact id="tour-start" />
-
-<Fact id="start-about-button" />
-
-The search and its tabs are described under [Finding things](/docs/guide/finding/).
+The Tour button on the welcome screen starts “The Long Way Out”, and the About button in the top bar brings the welcome screen back.
 
 ## Pause, step and leave
 
@@ -57,99 +41,77 @@ The search and its tabs are described under [Finding things](/docs/guide/finding
 | Mouse, trackpad or touch screen | The right arrow at the foot | The left arrow at the foot | The round button with two bars | The round button with a square |
 | Keyboard | <Keys of="Right" /> | <Keys of="Left" /> | <Keys of="Space" /> | <Keys of="Esc" /> |
 
-<Fact id="tour-keys" />
+A tour pauses only once the camera has arrived at a step’s subject. The ring round the pause button runs down as the step’s time runs out, and a paused step keeps its caption until you resume it or step past it.
 
-<Fact id="tour-buttons" />
+While a tour plays, dragging and zooming do nothing. While it is paused they move the camera as usual, and the next step takes the camera on to its own subject. The panels, the search box and the clock are hidden, though <Keys of="/" /> still opens the search. The clock keeps running and its keys still work: see [Time](/docs/guide/time/).
 
-<Fact id="tour-pause" />
+A tour ends after its last step, or when you press <Keys of="Right" /> on that step, or when you leave it. The panels come back, the layers the tour switched are put back as they were, and the camera stays where the tour left it. Press <Keys of="H" /> to come back to Earth.
 
-<Fact id="tour-no-steering" />
-
-<Fact id="tour-end" />
-
-Press <Keys of="H" /> to come back to Earth afterwards.
-
-<Fact id="tour-back-fault" />
-
-If that happens, start the tour again from the search.
+If a tour ends early, start it again from the search.
 
 ## Captions and the column of dots
 
 <Fact id="tour-caption" />
 
-<Fact id="tour-rail" />
+A column of dots at the right edge has one dot for each step, with the current one lit. Pointing at a dot shows that step’s heading.
 
 ## What an exhibit is
 
 <Fact id="exhibit-what" />
 
-<Fact id="exhibits" />
-
-<Fact id="exhibit-views" />
-
 <Figure id="class-exhibit" />
 
-| Exhibit | Opens |
-| --- | --- |
-| Solar System | <ViewLink href={appLink('exhibit=solarSystem')}>Open the Solar System exhibit</ViewLink> |
-| Cosmic Flows | <ViewLink href={appLink('exhibit=cosmicFlows')}>Open the Cosmic Flows exhibit</ViewLink> |
-| Cosmic Web | <ViewLink href={appLink('exhibit=cosmicWeb')}>Open the Cosmic Web exhibit</ViewLink> |
-| Zone of Avoidance | <ViewLink href={appLink('exhibit=zoneOfAvoidance')}>Open the Zone of Avoidance exhibit</ViewLink> |
-| Observable Universe | <ViewLink href={appLink('exhibit=observableUniverse')}>Open the Observable Universe exhibit</ViewLink> |
+<Table
+  cols="detail"
+  head={['Exhibit', 'What it shows', 'In the app']}
+  rows={[
+    ['Solar System', 'Looks down on the planets’ orbits from 42 astronomical units.', { to: 'exhibit=solarSystem', label: 'Open' }],
+    ['Cosmic Flows', 'Hides the galaxies and shows the flow ribbons round the Milky Way.', { to: 'exhibit=cosmicFlows', label: 'Open' }],
+    ['Cosmic Web', 'Hides the galaxies and shows the glow of the cosmic web, with a second glow made from the 2MRS catalogue switched on.', { to: 'exhibit=cosmicWeb', label: 'Open' }],
+    ['Zone of Avoidance', 'Looks along the plane of the Milky Way from 1.2 megaparsecs, with the band switched on.', { to: 'exhibit=zoneOfAvoidance', label: 'Open' }],
+    ['Observable Universe', 'Pulls back until the whole sphere fits the window.', { to: 'exhibit=observableUniverse', label: 'Open' }],
+  ]}
+/>
 
-What the flow ribbons, the density map and the band are made from is on the [Science page](/science/), and each source is listed under [All sources at a glance](/docs/data/).
+What the flow ribbons, the glow and the band are made from is in [The science behind skymap](/science/).
 
 ## The notes
 
 <Fact id="exhibit-notes" />
 
-<Fact id="exhibit-panel" />
-
 <Fact id="exhibit-key" />
 
 <Figure id="guide-exhibit-web" />
 
-<Fact id="exhibit-notes-fit" />
+The notes are laid out for a tall window. If their foot is cut off, make the window taller or zoom the browser out.
 
 ## Open and leave an exhibit
 
 | | Open | Leave |
 | --- | --- | --- |
 | Mouse or trackpad | Open the search and click the exhibit’s card | The Exit view button at the foot |
-| Touch screen | Tap the search bar and tap the exhibit’s card | The Exit view button at the foot |
+| Touch screen | Tap the search box and tap the exhibit’s card | The Exit view button at the foot |
 | Keyboard | <Keys of="/" />, type its name, <Keys of="Enter" /> | <Keys of="Esc" /> |
-
-<Fact id="exhibit-open" />
 
 <Fact id="exhibit-steering" />
 
 <Figure id="dome-exhibit" />
 
-<Fact id="exhibit-leave" />
+Leaving puts the layers back as you had them and leaves the camera where it is. Opening another exhibit from the search leaves the first.
 
-<Fact id="clock-hidden" />
-
-In the Solar System exhibit that is worth using: press <Keys of="]" /> a few times and the planets move along their rings. The clock’s keys are on the [Time](/docs/guide/time/) page.
+The clock is hidden in an exhibit too, and its keys work there as well: in the Solar System exhibit, press <Keys of="]" /> a few times and the planets move along their orbits.
 
 ## A tour or an exhibit in a link
 
-<Fact id="takeover-links" />
+While a tour or an exhibit is open the address names it, and a link with that address opens straight into it, without the welcome screen. A tour always starts at its first step. An exhibit link can carry a date as well.
 
 ```
 #tour=grandTour
-#exhibit=cosmicWeb
+#exhibit=solarSystem&t=2020-12-21T18:00:00Z
 ```
 
-<Fact id="exhibit-link-time" />
+[Sharing a view](/docs/guide/sharing/) has the rest of the address, and the [Object catalogue](/docs/reference/objects/#exhibits) lists the name of each tour and exhibit.
 
-[Sharing a view](/docs/guide/sharing/) covers the rest of the address, and [URL parameters](/docs/reference/url-parameters/) lists every part of it.
+## Not built yet
 
-## Planned, not built
-
-<Caveat title="What is not there yet">
-  <Fact id="tour-earth-start-planned" />
-
-  <Fact id="kiosk-planned" />
-
-  The [Roadmap](/docs/roadmap/) is where planned work is listed.
-</Caveat>
+A start at Earth for “The Long Way Out”, with steps for the solar system and the nearby stars before the Milky Way, is planned: today the tour begins at the Milky Way. A kiosk mode, with an attract loop and a reset after idle time, is planned too. Planned work is listed in the [Roadmap](/docs/roadmap/).
