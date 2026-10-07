@@ -41,7 +41,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-one-submit',
     about: 'app',
-    text: 'A frame of the flat view is one list of commands, handed to the graphics processor in one piece. WebGPU does not promise that a value written between two draws of one list reaches the second draw only, so what differs between draws is stored with each object and not rewritten in between.',
+    text: 'A frame of the flat view is one list of commands, handed to the graphics processor in one piece, apart from the cube faces of Capture, which go ahead of it. A value written to a buffer takes effect at once and the list runs later, so of two values written between two draws both draws see the second. What differs between draws is therefore stored with each object.',
     source: `${REPO_BLOB}/src/services/engine/frame/renderFrame.ts`,
     sourceLabel: `how a frame is handed over, ${IN_REPO}`,
     checked: CHECKED,
@@ -49,7 +49,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-pick',
     about: 'app',
-    text: 'Finding what is under the pointer is not part of the frame. When the pointer moves or clicks, the things that can be selected are drawn again into an image of 32-bit numbers, 6 bits for the catalogue and 26 for the row, and the app reads back the one pixel under the pointer.',
+    text: 'Finding what is under the pointer is not part of the frame. When the pointer moves or clicks, the things that can be selected are drawn again into an image of 32-bit numbers, 6 bits for the catalogue and 26 for the row, and the app reads back the pixel under the pointer.',
     source: `${REPO_BLOB}/src/services/engine/frame/pickProgram.ts`,
     sourceLabel: `the selection pass, ${IN_REPO}`,
     checked: CHECKED,
@@ -66,6 +66,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-galaxy-fades',
+    about: 'app',
     text: 'The three ways of drawing a galaxy fade into one another by its size on screen: the point into the generated disc between 8 and 14 pixels, the disc into a picture between 24 and 40, and for a named galaxy the small picture into its full photograph between 120 and 160.',
     source: `${REPO_BLOB}/src/data/galaxyLodBands.ts`,
     sourceLabel: `the galaxy level-of-detail bands, ${IN_REPO}`,
@@ -132,6 +133,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-atmosphere-tables',
+    about: 'app',
     text: 'For each atmosphere the app keeps three small tables. Two are computed once, as the app starts: how much sunlight survives a path through the air (256 by 64 values) and how much light has scattered more than once (32 by 32). The third, the brightness of the sky in every direction from where the camera is, is computed again every frame at 192 by 108, or 64 by 36 at the small data size.',
     source: `${REPO_BLOB}/src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts`,
     sourceLabel: `the atmosphere tables, ${IN_REPO}`,
@@ -139,6 +141,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   },
   {
     id: 'render-aerial',
+    about: 'app',
     text: 'With the camera inside an atmosphere, the haze between it and the ground is computed every frame in a block of 32 by 32 by 64 cells that fills the view, one layer every 4 kilometres. A pixel reads the haze at its own distance from the block; beyond the last layer it takes the answer of the sky tables.',
     source: `${REPO_BLOB}/src/data/atmosphere/froxelVolume.ts`,
     sourceLabel: `the haze volume, ${IN_REPO}`,
@@ -225,15 +228,15 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-depth-range',
     about: 'app',
-    text: 'The farthest thing in the scene is about 50,000,000,000,000,000 times farther away than the nearest. A depth buffer of the usual kind keeps surfaces in order over a range of a hundred thousand or a million to one.',
-    source: `${REPO_BLOB}/src/@types/engine/frame/Slab.d.ts`,
-    sourceLabel: `the depth ranges, ${IN_REPO}`,
+    text: 'The far limit of the scene is 50 gigaparsecs, 1.5 × 10²⁷ metres. The near limit of a planet’s range, with the camera close to the ground, is a thousandth of a millimetre: 33 powers of ten between them. A depth buffer of the usual kind keeps surfaces in order over five or six.',
+    source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
+    sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
     id: 'render-slabs',
     about: 'app',
-    text: 'The scene is cut into ranges of distance, each with its own near and far limit, units and projection. The galaxies have a fixed range from 10 kiloparsecs to 50 gigaparsecs, in megaparsecs. The stars and the Milky Way have one that follows the camera, from a ten-thousandth of its height above the thing it circles. Each planet, moon or model in view has one in metres, centred on the eye, with no far limit.',
+    text: 'The scene is cut into ranges of distance, each with its own near and far limit, units and projection. The galaxies have a fixed range from 10 kiloparsecs to 50 gigaparsecs, in megaparsecs. The stars and the Milky Way have one that follows the camera, from a ten-thousandth of its height above the thing it circles. Each planet or moon in view has one in metres, centred on the eye, with no far limit; a model on or beside a body shares that body’s.',
     source: `${REPO_BLOB}/src/services/engine/frame/slabs.ts`,
     sourceLabel: `the ranges of a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -273,8 +276,8 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
   {
     id: 'render-floors',
     about: 'app',
-    text: 'The camera cannot come closer to a point than about 3 centimetres, and over Earth it stops about 15 metres above the ground.',
-    source: `${REPO_BLOB}/src/utils/camera/clampDistance.ts`,
+    text: 'The camera stops just above the surface of the body it circles, about 15 metres over Earth, and never within 3 centimetres of a body’s centre. Round a thing with no surface, such as a galaxy, it stops about 300 kilometres away.',
+    source: `${REPO_BLOB}/src/services/engine/camera/pivotRadiusMpc.ts`,
     sourceLabel: `the camera’s limits, ${IN_REPO}`,
     checked: CHECKED,
   },

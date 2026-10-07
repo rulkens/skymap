@@ -13,7 +13,7 @@ You can stand in a park in Copenhagen and fly without a cut to where the map of 
 
 <Spans
   label="The three kinds of range a frame is cut into, on a scale of distance from the camera"
-  min={-3}
+  min={-6}
   max={27.2}
   ticks={[
     { at: 0, label: '1 m' },
@@ -24,7 +24,7 @@ You can stand in a park in Copenhagen and fly without a cut to where the map of 
     { at: 27.2, label: '50 Gpc' },
   ]}
   spans={[
-    { name: 'Each planet, moon and model', from: -3, text: 'In metres, centred on the eye. It begins at the body’s near face, or at a ten-thousandth of the camera’s height above the body when the camera is close, and has no far limit.' },
+    { name: 'Each planet and moon', from: -6, text: 'In metres, centred on the eye. It begins at the body’s near face or, with the camera close, at a ten-thousandth of its height above the body’s highest ground, never under a thousandth of a millimetre. It has no far limit.' },
     { name: 'Stars and the Milky Way', from: 0.8, text: 'In megaparsecs from the Sun. It begins at a ten-thousandth of the camera’s height above what it circles, never under 6 metres, and has no far limit.' },
     { name: 'Galaxies and beyond', from: 20.49, to: 27.19, text: 'In megaparsecs. Fixed, from 10 kiloparsecs to 50 gigaparsecs.' },
   ]}
@@ -74,4 +74,4 @@ The Milky Way’s own disc was cut the same way on the flight in to the Sun, whi
 
 ## Where this lives
 
-The ranges are derived each frame in <Repo path="src/services/engine/frame/slabs.ts" />, the step from megaparsecs to metres is <Repo path="src/services/engine/camera/bodyRelativePose.ts" />, and the decision to give every object its own origin is recorded in <Repo path="docs/adrs/0010-continuous-floating-origin-for-free-zoom.md">a design record</Repo>.
+The ranges are worked out each frame in <Repo path="src/services/engine/frame/slabs.ts" />, the step from megaparsecs to metres is <Repo path="src/services/engine/camera/bodyRelativePose.ts" />, and the decision to give every object its own origin is recorded in <Repo path="docs/adrs/0010-continuous-floating-origin-for-free-zoom.md">a design record</Repo>.
