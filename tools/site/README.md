@@ -68,6 +68,13 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 `npm run site:links` (after `npm run site:build`, and in CI) walks `dist/home/**/*.html` and resolves every internal `href`, `src` and `srcset` candidate: base-prefixed pages and files against the build, root-absolute shared files (`/fonts`, `/images/featured`, `/favicon.svg`) against the repo's `public/`, `/` as the app, and `#anchors` against the target page's ids. The only pages a link may point at before they exist are the `planned` rows of the docs tree (`packages/website/src/data/docsTree.ts`); such links are reported as pending. The check fails if a planned page now exists, so the PR that writes a page sets its row to `live`.
 
+## External link check
+
+`npm run site:external` (after `npm run site:build`; needs the network, so not in CI) asks once for every `http(s)` address the built pages link to, without its fragment, two at a time to a host. An address that fails a plain request is opened in Chromium, since many publishers serve a browser and refuse a script; a DOI is good when doi.org redirects it. What is left is printed in two lists, each address with its status, its pages and the data row or line of `ATTRIBUTIONS.md` that holds it: addresses that are gone (404, 410, a server error, no such host), which fail the run, and addresses that refuse a robot (403, 405, 429), for a person to open. `--only <host>` limits a run. Run it twice before believing a failure.
+
+- Links to the repository's files on `main` fail until the branch that adds those files is merged.
+- Some `Upstream` lines of the licence record are the folder or endpoint the build downloads from, not a page (`planetarymaps.usgs.gov/mosaic/`, an S3 prefix, a cutout service that wants parameters): they answer 404 or 400 to a reader as well.
+
 ## Repeat check
 
 `npm run site:repeats` (after `npm run site:build`, and in CI) reads every built page and counts, for each row of `packages/website/src/data/facts.ts`, the pages that print its sentence in full outside their list of sources. It fails when a row stands on more pages than `MOST_PAGES` in `tests/packages/website/factRepeats.test.ts`, which was the worst row on the day the check was written and is only ever lowered. A row is stated on one page; another page says it in a clause of its own and links there: `<Fact id="…" brief to="/science/#distances">the clause</Fact>`, which keeps the row in that page's sources. The check is a Vitest file because the fact tables load through Vite; in the ordinary test run, before a build exists, it is skipped.

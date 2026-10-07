@@ -260,6 +260,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: SITE_TOOLS,
       },
       {
+        scripts: ['site:external'],
+        does: 'Asks for every address outside the site that a built page links to, and lists each one that is gone with its pages and its data row.',
+        manual: SITE_TOOLS,
+      },
+      {
         scripts: ['site:repeats'],
         does: 'Reads every page of the built site and fails when one sourced sentence is printed in full on more pages than the set limit.',
         manual: SITE_TOOLS,
