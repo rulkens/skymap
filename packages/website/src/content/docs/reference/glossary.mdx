@@ -5,22 +5,23 @@ group: Reference
 order: 5
 facts:
   [
-    2mrs-coverage, gloss-magnitude, gloss-active-nucleus, gloss-quasar, gloss-arcsecond, sim-duplicates,
-    astronomical-unit, gloss-light-units, sci-star-distance, sci-ephemeris, gloss-black-hole, sci-black-hole,
-    sci-tone, sci-earth-clouds, hover-card, card-on-click, sci-flows, ref-clip-what,
-    gloss-galaxy-cluster, sci-structures, scene-structure-kinds, sci-colour, sci-galaxy-distance, great-conjunction-2020,
-    gloss-constellation, scene-constellations, gloss-cmb, sci-horizon-shell, gloss-supergalactic, cosmic-web-map,
-    sci-filaments, sci-local-volume, sim-scale-step, phone-data-size, app-data-size-choice, sci-directions,
-    sci-density-field, gloss-honesty-words, sim-desi-patches, scene-desi-off, search-catalogue-galaxies, dome-flag,
-    sci-milky-way, gloss-dwarf-planet, gloss-ecliptic, orientation-setting, sim-star-epoch, exhibit-what,
-    exhibits, sim-exposure, scene-filaments-off, sim-redshift-space, sim-flux-limits, focus-meaning,
-    survey-gaps, sci-star-observables, sim-star-coverage, sgr-a-distance, megaparsec-length, sci-photometric-share,
-    sim-frames, sci-h0-range, observable-edge, laniakea-home, gloss-layer, speed-of-light,
-    moon-orbit-light, card-galaxy-derived, gloss-light-year, gloss-local-bubble, gloss-local-group, sci-redshifts,
-    virgo-distance, gloss-messier, sci-deepest, sim-ephemeris-span, proxima-distance, pinned-card,
-    link-pose, scene-s-stars, scale-bar, solstices-2026, tour-what, date-entry-utc,
-    gloss-vizier, bootes-void, sci-markers, webgpu-what, webgpu-required, start-welcome,
-    sim-zone, sci-zoa-band,
+    2mrs-coverage, gloss-abell, gloss-magnitude, gloss-active-nucleus, gloss-quasar, gloss-arcsecond,
+    sim-duplicates, astronomical-unit, gloss-light-units, sci-star-distance, sci-ephemeris, gloss-black-hole,
+    sci-black-hole, sci-tone, sci-earth-clouds, hover-card, card-on-click, sci-flows,
+    ref-clip-what, gloss-galaxy-cluster, sci-structures, scene-structure-kinds, sci-colour, sci-galaxy-distance,
+    great-conjunction-2020, gloss-constellation, scene-constellations, gloss-cmb, sci-horizon-shell, gloss-supergalactic,
+    cosmic-web-map, sci-filaments, sci-local-volume, sim-scale-step, phone-data-size, app-data-size-choice,
+    sci-directions, sci-density-field, gloss-honesty-words, sim-desi-patches, scene-desi-off, search-catalogue-galaxies,
+    dome-flag, sci-milky-way, gloss-dwarf-planet, gloss-ecliptic, orientation-setting, sim-star-epoch,
+    exhibit-what, exhibits, sim-exposure, scene-filaments-off, sim-redshift-space, sim-flux-limits,
+    focus-meaning, survey-gaps, sci-star-observables, sim-star-coverage, sgr-a-distance, megaparsec-length,
+    sci-photometric-share, sim-frames, sci-h0-range, observable-edge, laniakea-home, gloss-layer,
+    speed-of-light, moon-orbit-light, card-galaxy-derived, gloss-light-year, gloss-local-bubble, gloss-local-group,
+    sci-redshifts, virgo-distance, gloss-messier, sci-deepest, gloss-ngc, sim-ephemeris-span,
+    proxima-distance, gloss-pgc, ref-focus-galaxy-ids, pinned-card, link-pose, scene-s-stars,
+    scale-bar, solstices-2026, tour-what, gloss-ugc, date-entry-utc, gloss-vizier,
+    bootes-void, sci-markers, webgpu-what, webgpu-required, start-welcome, sim-zone,
+    sci-zoa-band,
   ]
 ---
 
@@ -34,14 +35,14 @@ export const Terms = ({ letter }) => (
       const source = DATA_SOURCES.find((row) => row.id === term.source);
       return (
         <>
-          <dt id={term.id}>{term.term}</dt>
+          <dt id={term.id}>{term.term}</dt>{' '}
           <dd>
             {term.text}
             {source && (
               <>
                 {' '}
-                <a href={source.href}>Its own site or paper</a>, and its row under{' '}
-                <DocLink href="/science/#sources">The sources</DocLink> on the Science page.
+                Source: <a href={source.href}>{source.name}</a>. Our use of it:{' '}
+                <DocLink href="/science/#sources">The sources</DocLink>.
               </>
             )}
             {term.more && (
@@ -70,9 +71,9 @@ export const Terms = ({ letter }) => (
   </dl>
 );
 
-This page defines {GLOSSARY.length} terms in the order of the alphabet. Each has an address of its own: `/docs/reference/glossary/#redshift` opens at Redshift. The numbers in a definition come from the sources listed at the foot of the page.
+Each of the {GLOSSARY.length} terms has an address of its own: `/docs/reference/glossary/#redshift` opens at Redshift.
 
-Three words have one fixed meaning across the site: [measured](#measured), [derived](#derived) and [drawn](#drawn). The [Science page](/science/#bins) sorts everything the app shows under them.
+Three words have one fixed meaning across the site: [measured](#measured), [derived](#derived) and [drawn](#drawn). [The science behind skymap](/science/#bins) sorts everything the app shows under them.
 
 ## Units of distance
 
@@ -87,12 +88,6 @@ Three words have one fixed meaning across the site: [measured](#measured), [deri
 | Kiloparsec (kpc) | 1,000 parsecs | |
 | Megaparsec (Mpc) | 1,000 kiloparsecs, or 3.26 million light-years | |
 | Gigaparsec (Gpc) | 1,000 megaparsecs, or 3.26 thousand million light-years | |
-
-<Fact id="gloss-light-units" />
-
-<Fact id="astronomical-unit" />
-
-<Fact id="megaparsec-length" />
 
 ## 2
 
@@ -109,6 +104,8 @@ Three words have one fixed meaning across the site: [measured](#measured), [deri
 ## C
 
 <Terms letter="C" />
+
+<Figure id="science-web-density" />
 
 ## D
 
@@ -150,6 +147,10 @@ Three words have one fixed meaning across the site: [measured](#measured), [deri
 
 <Terms letter="M" />
 
+## N
+
+<Terms letter="N" />
+
 ## O
 
 <Terms letter="O" />
@@ -182,6 +183,8 @@ Three words have one fixed meaning across the site: [measured](#measured), [deri
 
 <Terms letter="V" />
 
+<Figure id="void-bootes" />
+
 ## W
 
 <Terms letter="W" />
@@ -189,3 +192,5 @@ Three words have one fixed meaning across the site: [measured](#measured), [deri
 ## Z
 
 <Terms letter="Z" />
+
+<Figure id="science-zoa" />

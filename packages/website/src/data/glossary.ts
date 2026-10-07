@@ -1,10 +1,10 @@
 import type { GlossaryTerm } from '../@types/GlossaryTerm';
 import { HONESTY_BINS } from './honestyBins';
 
-const SOURCES = { label: 'The sources, on the Science page', path: '/science/#sources' };
-const BINS = { label: 'Measured, derived, drawn, on the Science page', path: '/science/#bins' };
-const SIMPLE = { label: 'Known simplifications, on the Science page', path: '/science/#simplifications' };
-const SETTINGS = { label: 'Settings', path: '/docs/reference/settings/' };
+const SOURCES = { label: 'The sources, in The science behind skymap', path: '/science/#sources' };
+const BINS = { label: 'Measured, derived, drawn, in The science behind skymap', path: '/science/#bins' };
+const SIMPLE = { label: 'Known simplifications, in The science behind skymap', path: '/science/#simplifications' };
+const SETTINGS = { label: 'All settings', path: '/docs/reference/settings/' };
 const gloss = (id: (typeof HONESTY_BINS)[number]['id']) =>
   HONESTY_BINS.find((bin) => bin.id === id)!.gloss;
 
@@ -25,6 +25,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     text: 'The 2MASS Redshift Survey: a catalogue of nearby galaxies with measured redshifts and infrared brightness. It covers 91 per cent of the sky, all but the plane of the Milky Way.',
     facts: ['2mrs-coverage'],
     source: '2mrs',
+  },
+  {
+    id: 'abell-catalogue',
+    term: 'Abell catalogue',
+    text: 'A catalogue of 4,073 rich clusters of galaxies over the whole sky, each with at least 30 members. A cluster in it is written Abell with a number, such as Abell 2029; several of the app’s clusters carry such a name.',
+    facts: ['gloss-abell'],
+    see: ['cluster', 'designation'],
   },
   {
     id: 'absolute-magnitude',
@@ -77,7 +84,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'black-hole',
     term: 'Black hole',
-    text: 'An object so dense that nothing, not even light, gets out from inside its boundary, the event horizon. The one at the centre of the Milky Way is Sagittarius A*.',
+    text: 'An object whose gravity is so strong that nothing, not even light, gets out from inside its boundary, the event horizon. The one at the centre of the Milky Way is Sagittarius A*.',
     facts: ['gloss-black-hole', 'sci-black-hole'],
     see: ['sagittarius-a-star'],
   },
@@ -98,7 +105,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'card',
     term: 'Card',
-    text: 'The panel of facts the app shows for one object. Resting the pointer on an object shows a small one; a click pins the full one.',
+    text: 'The panel of figures the app shows for one object. Resting the pointer on an object shows a hover card that names it; a click pins the object’s card.',
     facts: ['hover-card', 'card-on-click'],
     more: { label: 'Finding things', path: '/docs/guide/finding/' },
   },
@@ -177,7 +184,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Data size (Tier)',
     text: 'How much of the catalogues the app loads: small, medium or large. The app’s Settings panel calls it Tier. A phone starts with the smallest.',
     facts: ['phone-data-size', 'app-data-size-choice'],
-    more: { label: 'Settings', path: '/docs/reference/settings/#data-size' },
+    more: { label: 'All settings', path: '/docs/reference/settings/#data-size' },
   },
   {
     id: 'declination',
@@ -196,7 +203,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'derived',
     term: 'Derived',
-    text: `One of the site’s three words for what the app shows. ${gloss('derived')} A galaxy’s distance, worked out from its redshift, is derived.`,
+    text: `${gloss('derived')} A galaxy’s distance, worked out from its redshift, is derived. One of the site’s three sorting words.`,
     facts: ['gloss-honesty-words', 'sci-galaxy-distance'],
     more: BINS,
     see: ['measured', 'drawn'],
@@ -204,7 +211,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'desi',
     term: 'DESI',
-    text: 'The Dark Energy Spectroscopic Instrument, which measures the redshifts of galaxies and quasars. The app shows three regions cut from its first data release, switched off at first.',
+    text: 'The Dark Energy Spectroscopic Instrument, which measures the redshifts of galaxies and quasars. The app shows three regions cut from its first data release, off at first.',
     facts: ['sim-desi-patches', 'scene-desi-off'],
     source: 'desi',
   },
@@ -229,12 +236,12 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Dome mode',
     text: 'The app drawing a round fisheye picture for a dome projector. A link turns it on with ?dome.',
     facts: ['dome-flag'],
-    more: { label: 'Domes and museums', path: '/domes/' },
+    more: { label: 'Screens, quality and domes', path: '/docs/guide/screens-and-domes/' },
   },
   {
     id: 'drawn',
     term: 'Drawn',
-    text: `One of the site’s three words for what the app shows. ${gloss('drawn')} The Milky Way seen from outside is drawn.`,
+    text: `${gloss('drawn')} The Milky Way seen from outside is drawn. One of the site’s three sorting words.`,
     facts: ['gloss-honesty-words', 'sci-milky-way'],
     more: BINS,
     see: ['measured', 'derived'],
@@ -242,13 +249,13 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'dwarf-planet',
     term: 'Dwarf planet',
-    text: 'A body that orbits the Sun directly and is massive enough to be round or nearly round, without being counted a planet.',
+    text: 'A body that orbits the Sun directly and is massive enough to be round or nearly round, but has not cleared its orbit of other bodies of its size, so it is not counted a planet.',
     facts: ['gloss-dwarf-planet'],
   },
   {
     id: 'ecliptic',
     term: 'Ecliptic',
-    text: 'The Sun’s apparent path across the sky over a year, which marks the plane of the solar system. The app keeps this plane level unless you change the Orientation setting.',
+    text: 'The Sun’s apparent path across the sky over a year, which marks the plane of Earth’s orbit, close to the plane the other planets move in. The app keeps this plane level unless you change the Orientation setting.',
     facts: ['gloss-ecliptic', 'orientation-setting'],
     see: ['orientation'],
   },
@@ -276,7 +283,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'filament',
     term: 'Filament',
-    text: 'A long thread of galaxies, one of the strands of the cosmic web. The app’s filaments are traced by a program from the 2MRS and GLADE galaxies and are switched off at first.',
+    text: 'A long thread of galaxies, one of the strands of the cosmic web. The app’s filaments are traced by a program from the 2MRS and GLADE galaxies and are off at first.',
     facts: ['sci-filaments', 'scene-filaments-off'],
     see: ['cosmic-web', 'disperse'],
   },
@@ -311,7 +318,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'gaia',
     term: 'Gaia',
-    text: 'A mission of the European Space Agency that measures the positions, brightness and colours of stars. The app’s stars are Gaia’s, down to magnitude 14.',
+    text: 'A mission of the European Space Agency that measures the positions, brightness and colours of stars. The app’s stars are Gaia’s: the brightest of those brighter than magnitude 14, up to 12.9 million of them, depending on the data size.',
     facts: ['sci-star-observables', 'sim-star-coverage'],
     source: 'gaia',
   },
@@ -493,7 +500,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'measured',
     term: 'Measured',
-    text: `One of the site’s three words for what the app shows. ${gloss('measured')} The direction to a galaxy and its redshift are measured.`,
+    text: `${gloss('measured')} The direction to a galaxy and its redshift are measured. One of the site’s three sorting words.`,
     facts: ['gloss-honesty-words', 'sci-directions', 'sci-redshifts'],
     more: BINS,
     see: ['derived', 'drawn'],
@@ -535,9 +542,16 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     source: 'mscc',
   },
   {
+    id: 'ngc',
+    term: 'NGC',
+    text: 'The New General Catalogue of Nebulae and Clusters of Stars, compiled by J. L. E. Dreyer in 1888 and extended by two Index Catalogues (IC). Together they have about 13,000 objects, galaxies among them, written NGC or IC with a number.',
+    facts: ['gloss-ngc', 'search-catalogue-galaxies'],
+    see: ['designation', 'messier-catalogue'],
+  },
+  {
     id: 'observable-universe',
     term: 'Observable universe',
-    text: 'The part of the universe from which light has had time to reach us. Its edge is about 46 thousand million light-years away today; the app draws a sphere there.',
+    text: 'The part of the universe from which light has had time to reach us. Its edge is about 46.6 billion (46.6 thousand million) light-years away today; the app draws a sphere there.',
     facts: ['observable-edge', 'sci-horizon-shell'],
     see: ['particle-horizon'],
   },
@@ -552,7 +566,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Orientation',
     text: 'The app’s setting for which way is up: the plane of the solar system, Earth’s equator, the plane of the Milky Way or the plane of the local superclusters.',
     facts: ['orientation-setting'],
-    more: { label: 'Settings', path: '/docs/reference/settings/#display' },
+    more: { label: 'All settings', path: '/docs/reference/settings/#display' },
     see: ['ecliptic', 'supergalactic-plane'],
   },
   {
@@ -583,6 +597,14 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     facts: ['sim-redshift-space'],
     more: SIMPLE,
     see: ['redshift', 'finger-of-god'],
+  },
+  {
+    id: 'pgc',
+    term: 'PGC',
+    text: 'The Catalogue of Principal Galaxies, published in 1989 with 73,197 galaxies and the names each has in other catalogues. A link to a GLADE or 2MRS galaxy names it by its PGC number, as in pgc-2.',
+    facts: ['gloss-pgc', 'ref-focus-galaxy-ids'],
+    more: { label: 'URL parameters', path: '/docs/reference/url-parameters/#object-ids' },
+    see: ['designation'],
   },
   {
     id: 'photometric-redshift',
@@ -651,8 +673,9 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'scale-bar',
     term: 'Scale bar',
-    text: 'The line at the lower right of the app with a length written over it: what that line spans at the distance of the camera’s target.',
+    text: 'The line at the lower right of the app with a length written over it: what that line spans at the distance of the camera’s focus.',
     facts: ['scale-bar'],
+    more: { label: 'Finding things', path: '/docs/guide/finding/' },
   },
   {
     id: 'sdss',
@@ -700,14 +723,21 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'tour',
     term: 'Tour',
-    text: 'A flight the app steers, step by step, with a caption at each stop.',
+    text: 'A flight the app steers, step by step, with a caption at each step.',
     facts: ['tour-what'],
     more: { label: 'Tours and exhibits', path: '/docs/guide/tours/' },
   },
   {
+    id: 'ugc',
+    term: 'UGC',
+    text: 'The Uppsala General Catalogue of Galaxies, published in 1973: 12,921 galaxies of the northern sky that are at least 1 arcminute across or brighter than magnitude 14.5. Its galaxies are written UGC with a number.',
+    facts: ['gloss-ugc', 'search-catalogue-galaxies'],
+    see: ['designation'],
+  },
+  {
     id: 'utc',
     term: 'UTC',
-    text: 'Coordinated Universal Time: the time at Greenwich without summer time. The app’s clock shows it and reads typed dates in it, not in your computer’s local time.',
+    text: 'Coordinated Universal Time: the world’s standard clock time, which is the time at Greenwich without summer time. The app’s clock shows it and reads typed dates in it, not in your computer’s local time.',
     facts: ['date-entry-utc'],
     more: { label: 'Time', path: '/docs/guide/time/' },
   },
@@ -721,7 +751,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'void',
     term: 'Void',
-    text: 'A region of space with very few galaxies. The Boötes Void is about 400 million light-years across; the app marks a void with a ring only.',
+    text: 'A region of space with very few galaxies. The Boötes Void is 330 to 400 million light-years across, depending on how its edge is drawn; the app marks a void with a ring only.',
     facts: ['bootes-void', 'sci-markers'],
     see: ['cosmic-web'],
   },
@@ -737,6 +767,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     term: 'Welcome screen',
     text: 'The screen the app opens on at a first visit, with two buttons: Explore and Tour.',
     facts: ['start-welcome'],
+    more: { label: 'First flight', path: '/docs/start/first-flight/' },
   },
   {
     id: 'zone-of-avoidance',
