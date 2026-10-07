@@ -3,6 +3,7 @@ import { ABOUT_FACTS } from './aboutFacts';
 import { CLASSROOM_FACTS } from './classroomFacts';
 import { DOCS_DATA_FACTS } from './docsDataFacts';
 import { DOCS_GUIDE_FACTS } from './docsGuideFacts';
+import { DOCS_PROJECT_FACTS } from './docsProjectFacts';
 import { DOCS_REFERENCE_FACTS } from './docsReferenceFacts';
 import { DOCS_RENDERING_FACTS } from './docsRenderingFacts';
 import { DOCS_SCIENCE_FACTS } from './docsScienceFacts';
@@ -474,6 +475,7 @@ export const FACTS: readonly Fact[] = [
   ...DOCS_REFERENCE_FACTS,
   ...DOCS_START_FACTS,
   ...DOCS_DATA_FACTS,
+  ...DOCS_PROJECT_FACTS,
   ...DOCS_RENDERING_FACTS,
   ...DOCS_SCIENCE_FACTS,
 ];

@@ -1,0 +1,85 @@
+---
+description: The npm run commands of the skymap repository, by task, each with what it does in one line and the file that documents it.
+facts: [cli-unlisted-deploy]
+---
+
+import { DOCS_COMMANDS, DOCS_COMMANDS_UNLISTED } from '../../../data/docsCommands';
+import { REPO_BLOB } from '../../../data/siteIdentity';
+
+export const commands = (id) => ({
+  cols: 'detail',
+  head: ['Command', 'What it does', 'Manual'],
+  rows: DOCS_COMMANDS.find((group) => group.id === id).rows.map((row) => [
+    { codes: row.scripts },
+    row.does,
+    { href: `${REPO_BLOB}/${row.manual}`, label: row.manual },
+  ]),
+});
+
+export const Unlisted = () => (
+  <ul>
+    {DOCS_COMMANDS_UNLISTED.map((kind) => (
+      <li>
+        {kind.scripts.map((name, i) => (
+          <>
+            {i > 0 && ', '}
+            <code>{name}</code>
+          </>
+        ))}
+        : {kind.why}.
+      </li>
+    ))}
+  </ul>
+);
+
+<Fact id="cli-scripts" />
+
+```
+npm run shot -- 'focus=body-saturn' --url http://localhost:5173
+```
+
+<p>
+  <Fact id="cli-arguments" inline /> <Fact id="cli-running-app" inline />
+</p>
+
+How the data is built, and in what order to run the data commands, is in the repository’s <Repo path="docs/DATA.md">data pipeline notes</Repo>; [From catalogue to pixels](/docs/data/pipeline/) tells the same story without the flags. The renderer has its own notes, <Repo path="docs/RENDERER.md" />.
+
+## Run and build
+
+<Table {...commands('run-and-build')} />
+
+## Data
+
+Most of these read raw files that are not in the repository. `fetch-data` is the only one needed to run the app.
+
+<Table {...commands('data')} />
+
+## Pictures and films
+
+<Table {...commands('pictures-and-films')} />
+
+## Measuring
+
+<Table {...commands('measuring')} />
+
+## Code
+
+<Table {...commands('code')} />
+
+## Workbenches
+
+What each one is for is on [Developer workbenches](/docs/developers/workbenches/).
+
+<Table {...commands('workbenches')} />
+
+## This site
+
+<Table {...commands('this-site')} />
+
+## Left out
+
+The tables leave out these scripts of `package.json`:
+
+<Unlisted />
+
+The steps of publishing are in the repository’s <Repo path="docs/DEPLOY.md">deployment notes</Repo>.

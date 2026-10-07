@@ -110,7 +110,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
       {
         title: 'Command-line tools',
         path: '/docs/developers/cli/',
-        status: 'planned',
+        status: 'live',
       },
       {
         title: 'Debug panel and flags',

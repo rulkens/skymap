@@ -69,6 +69,13 @@ const SPACE = ' ';
                         <Keys of={chord} />
                       </>
                     ))
+                  ) : 'codes' in cell ? (
+                    cell.codes.map((code, k) => (
+                      <>
+                        {k > 0 && ', '}
+                        <code>{code}</code>
+                      </>
+                    ))
                   ) : 'use' in cell ? (
                     <UseTerms use={cell.use} />
                   ) : 'href' in cell ? (
