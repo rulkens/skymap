@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { stepTimelineEvent } from '../../../src/state/exhibits/stepTimelineEvent';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
-import { setSimDays } from '../../../src/state/time/timeSlice';
+import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
@@ -26,10 +26,10 @@ const stateAt = (
     },
   }) as unknown as RootState;
 
-const jumpTo = (ms: number) =>
+const stepsTo = (e: { id: string }) =>
   expect.objectContaining({
-    type: setSimDays.type,
-    payload: expect.objectContaining({ simDays: expect.closeTo(unixMsToJulianDays(ms), 9) }),
+    type: stepToMissionEvent.type,
+    payload: expect.objectContaining({ eventId: e.id }),
   });
 
 describe('stepTimelineEvent', () => {
@@ -37,15 +37,15 @@ describe('stepTimelineEvent', () => {
     const state = stateAt('1980-01-01', 'voyager');
     const before = SAVED.filter((e) => missionEventMs(e) < Date.parse('1980-01-01')).at(-1)!;
     const after = SAVED.find((e) => missionEventMs(e) > Date.parse('1980-01-01'))!;
-    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(after)));
-    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(before)));
+    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(after));
+    expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(before));
   });
 
   it('steps past an event the clock already sits on', () => {
     const second = SAVED[1]!;
     const state = stateAt(second.iso, 'voyager');
-    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(SAVED[0]!)));
-    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(SAVED[2]!)));
+    expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(SAVED[0]!));
+    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(SAVED[2]!));
   });
 
   it('does nothing at the ends, or outside a timeline exhibit', () => {
@@ -60,8 +60,8 @@ describe('stepTimelineEvent with a craft emphasised', () => {
   it("steps only through that craft's events", () => {
     const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
     const state = stateAt(v2[1]!.iso, 'voyager', 'voyager2');
-    expect(stepTimelineEvent(state, 1)).toEqual(jumpTo(missionEventMs(v2[2]!)));
-    expect(stepTimelineEvent(state, -1)).toEqual(jumpTo(missionEventMs(v2[0]!)));
+    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v2[2]!));
+    expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v2[0]!));
     expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager', 'voyager2'), 1)).toBeNull();
   });
 });

@@ -18,6 +18,10 @@ import reducer, {
   resume,
   goLive,
 } from '../../../src/state/time/timeSlice';
+import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
+import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
+import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 
@@ -106,5 +110,17 @@ describe('timeSlice goLive lands the ladder on the truthful detent', () => {
 
     const next = reducer(fastManual, goLive({ simDays: 2451545.0, nowMs: 1_000 }));
     expect(next.rateIndex).toBe(0);
+  });
+});
+
+describe('stepToMissionEvent', () => {
+  it('lands a manual clock on the event instant, anchored at the action time', () => {
+    const event = MISSION_EVENTS[3]!;
+    const next = reducer(liveStart, stepToMissionEvent({ eventId: event.id, nowMs: 777 }));
+    expect(next.mode).toBe('manual');
+    expect(next.anchor).toEqual({
+      simDays: unixMsToJulianDays(missionEventMs(event)),
+      realMs: 777,
+    });
   });
 });

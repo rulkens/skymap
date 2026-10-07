@@ -3,7 +3,7 @@
  * chapter bar and event card with Previous / Next for the selected craft, and a subdued
  * `TimelineTrack` scrubber of that craft's lane. Presentational: the container hands it the
  * sim instant (throttled, never per-frame) and the selection, and takes `onSeek`/`onSelect`
- * back. Seeking sets the clock only; rate, play state and camera are the visitor's own.
+ * back; `onSeek` is the free scrub, `onStep` every chapter step. Seeking sets the clock only; rate, play state and camera are the visitor's own.
  */
 
 import { useId, useMemo } from 'react';
@@ -14,7 +14,7 @@ import TimelineCraftTabs from './TimelineCraftTabs';
 import TimelineEventCard from './TimelineEventCard';
 import TimelineStepper from './TimelineStepper';
 import TimelineTrack from './TimelineTrack';
-import { adjacentMissionEvent } from '../../utils/exhibits/timeline/adjacentMissionEvent';
+import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { currentMissionEvent } from '../../utils/exhibits/timeline/currentMissionEvent';
 import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
 import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
@@ -22,7 +22,6 @@ import { timelineAxis } from '../../utils/exhibits/timeline/timelineAxis';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
-import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
 import { DAY_MS } from '../../data/time/dayMs';
 import styles from './ExhibitTimeline.module.css';
@@ -37,6 +36,7 @@ export type ExhibitTimelineProps = {
   /** Wall-clock now in Unix ms: the axis's right edge. */
   readonly endMs: number;
   readonly onSeek: (simDays: number) => void;
+  readonly onStep: (eventId: string) => void;
   readonly onSelect: (bodyId: string) => void;
 };
 
@@ -47,6 +47,7 @@ function ExhibitTimeline({
   simDays,
   endMs,
   onSeek,
+  onStep,
   onSelect,
 }: ExhibitTimelineProps): ReactNode {
   const { eras, captions } = section;
@@ -64,11 +65,11 @@ function ExhibitTimeline({
 
   const simMs = julianDaysToUnixMs(simDays);
   const current = currentMissionEvent(events, simMs);
-  const prev = adjacentMissionEvent(events, simMs, -1);
-  const next = adjacentMissionEvent(events, simMs, 1);
+  const prevId = adjacentEventId(events, simMs, -1);
+  const nextId = adjacentEventId(events, simMs, 1);
   const daysSinceLaunch = Math.floor((simMs - missionEventMs(events[0]!)) / DAY_MS);
   const onSeekMs = (ms: number) => onSeek(unixMsToJulianDays(ms));
-  const seekTo = (e: MissionEvent | null) => (e ? () => onSeekMs(missionEventMs(e)) : null);
+  const stepTo = (id: string | null) => (id ? () => onStep(id) : null);
 
   return (
     <div className={styles.root} role="group" aria-labelledby={headingId}>
@@ -97,7 +98,7 @@ function ExhibitTimeline({
           events={events}
           currentId={current?.id ?? null}
           simMs={simMs}
-          onSeekMs={onSeekMs}
+          onStep={onStep}
         />
         <TimelineEventCard
           craftLabel={lane.label}
@@ -107,8 +108,8 @@ function ExhibitTimeline({
         <TimelineStepper
           index={current ? events.indexOf(current) + 1 : 0}
           total={events.length}
-          onPrev={seekTo(prev)}
-          onNext={seekTo(next)}
+          onPrev={stepTo(prevId)}
+          onNext={stepTo(nextId)}
         />
       </div>
 
@@ -122,6 +123,7 @@ function ExhibitTimeline({
           endMs={endMs}
           currentId={current?.id ?? null}
           onSeekMs={onSeekMs}
+          onStep={onStep}
         />
       </div>
 

@@ -107,6 +107,14 @@
   margin: -2.5px 0 0 -2.5px;
   border-radius: 50%;
   background: rgba(168, 208, 255, 0.18);
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+.tick::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 .tick.passed {
   background: var(--color-fg-label);

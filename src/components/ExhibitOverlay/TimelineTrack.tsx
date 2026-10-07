@@ -1,14 +1,16 @@
 /**
  * TimelineTrack — the scrubber of the exhibit timeline: era headers, the selected craft's lane
- * with its fill and event ticks, the thumb, and the year axis. Pointer drag and keys both
- * report instants through `onSeekMs`; the parent owns the clock.
+ * with its fill and event ticks, the thumb, and the year axis. Pointer drag and the free keys
+ * report instants through `onSeekMs`; PageUp / PageDown and the event dots step through `onStep`.
+ * The parent owns the clock.
  */
 
 import { useMemo } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import cx from 'classnames';
 
-import { adjacentMissionEvent } from '../../utils/exhibits/timeline/adjacentMissionEvent';
+import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
+import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
 import { describeTimelineInstant } from '../../utils/exhibits/timeline/describeTimelineInstant';
 import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
 import { timelineAxisLabels } from '../../utils/exhibits/timeline/timelineAxisLabels';
@@ -31,6 +33,7 @@ export type TimelineTrackProps = {
   readonly endMs: number;
   readonly currentId: string | null;
   readonly onSeekMs: (ms: number) => void;
+  readonly onStep: (eventId: string) => void;
 };
 
 const MONTH_MS = 30.4375 * DAY_MS;
@@ -46,6 +49,7 @@ function TimelineTrack({
   endMs,
   currentId,
   onSeekMs,
+  onStep,
 }: TimelineTrackProps): ReactNode {
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
   const thumb = timelineFraction(simMs, axis);
@@ -81,8 +85,8 @@ function TimelineTrack({
         break;
       case 'PageUp':
       case 'PageDown': {
-        const hit = adjacentMissionEvent(events, simMs, e.key === 'PageUp' ? -1 : 1);
-        if (hit) next = missionEventMs(hit);
+        const id = adjacentEventId(events, simMs, e.key === 'PageUp' ? -1 : 1);
+        if (id) onStep(id);
         break;
       }
       case 'Home':
@@ -139,8 +143,13 @@ function TimelineTrack({
                 style={{ left: pct(from), width: pct(simMs > launchMs ? to - from : 0) }}
               />
               {mine.map((e) => (
-                <span
+                <button
+                  type="button"
                   key={e.id}
+                  aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
+                  title={`${e.label} · ${formatEventDate(e.iso)}`}
+                  onPointerDown={(ev) => ev.stopPropagation()}
+                  onClick={() => onStep(e.id)}
                   className={cx(
                     styles.tick,
                     styles[e.kind],

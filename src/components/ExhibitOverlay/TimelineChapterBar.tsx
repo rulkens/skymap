@@ -1,6 +1,6 @@
 /**
  * TimelineChapterBar — one clickable segment per event of the selected craft, marked past,
- * current or ahead of the clock. A click seeks to that event.
+ * current or ahead of the clock. A click steps to that event.
  */
 
 import type { ReactNode } from 'react';
@@ -15,14 +15,14 @@ export type TimelineChapterBarProps = {
   readonly events: readonly MissionEvent[];
   readonly currentId: string | null;
   readonly simMs: number;
-  readonly onSeekMs: (ms: number) => void;
+  readonly onStep: (eventId: string) => void;
 };
 
 function TimelineChapterBar({
   events,
   currentId,
   simMs,
-  onSeekMs,
+  onStep,
 }: TimelineChapterBarProps): ReactNode {
   return (
     <ol className={styles.chapters}>
@@ -41,7 +41,7 @@ function TimelineChapterBar({
               aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
               aria-current={isCurrent ? 'step' : undefined}
               title={`${e.label} · ${formatEventDate(e.iso)}`}
-              onClick={() => onSeekMs(missionEventMs(e))}
+              onClick={() => onStep(e.id)}
             />
           </li>
         );

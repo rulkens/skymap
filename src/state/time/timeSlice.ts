@@ -35,10 +35,14 @@
 
 import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
+import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { timeRoute } from '../../store/constants';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
+import { MISSION_EVENTS } from '../../data/missions/missionEvents.generated';
 
 const initialState: TimeState = {
   mode: 'live',
@@ -131,6 +135,18 @@ const timeSlice = createSlice({
       time.direction = captured.direction;
       time.paused = captured.paused;
     },
+  },
+  // A chapter step lands the clock on the event exactly as a scrub to it would.
+  extraReducers: (builder) => {
+    builder.addCase(stepToMissionEvent, (time, action) => {
+      const event = MISSION_EVENTS.find((e) => e.id === action.payload.eventId);
+      if (!event) return;
+      time.mode = 'manual';
+      time.anchor = {
+        simDays: unixMsToJulianDays(missionEventMs(event)),
+        realMs: action.payload.nowMs,
+      };
+    });
   },
 });
 
