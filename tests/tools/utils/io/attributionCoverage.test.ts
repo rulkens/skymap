@@ -1,18 +1,22 @@
 /**
  * The attribution gate: every `###` heading of `ATTRIBUTIONS.md` is a complete
- * entry, every key of `rawDataRegistry.ts` (with its upstream host) belongs to
+ * entry with a `Use` term of the closed vocabulary, every key of `rawDataRegistry.ts` (with its upstream host) belongs to
  * exactly one entry, and every outside host the app's source names, comments
  * included, is on an entry.
  * Limits: it cannot see a host assembled at run time, `packages/website/`,
  * fetchers under `tools/` that bypass the registry, files under `public/`, npm
  * packages, an entry with no key and no host that is deleted whole, or
- * whether a licence text is true.
+ * whether a licence text is true. The `Use` check reads words, not terms: it
+ * catches a free term beside a Licence text that says "non-commercial", "NC"
+ * or "permission", and misses a restriction worded any other way ("all rights
+ * reserved", "scientific use", a copyleft, a licence named only by its URL).
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { ATTRIBUTION_USES } from '../../../../tools/utils/io/attributionUses';
 import { parseAttributions } from '../../../../tools/utils/io/parseAttributions';
 import { RAW_DATA, type RawDataEntry } from '../../../../tools/utils/io/rawDataRegistry';
 
@@ -25,6 +29,7 @@ const REQUIRED_LABELS = [
   'What',
   'By',
   'Licence',
+  'Use',
   'Attribution',
   'Upstream',
   'Enters skymap',
@@ -33,6 +38,13 @@ const REQUIRED_LABELS = [
 ];
 /** A licence line that says nothing: a marker word, or "unknown" with no reason after it. */
 const PLACEHOLDER = /\b(TODO|TBD|FIXME)\b|^(unknown|n\/a|none|\W*)\W*$/i;
+/** Words of a Licence text that a free `Use` term cannot stand beside. */
+const RESTRICTS = /non-?commercial|\bNC\b|permission/i;
+/** Entries whose Licence text has such a word and is free all the same, each with why. */
+const FREE_ALL_THE_SAME: Readonly<Record<string, string>> = {
+  'hoskins-hash':
+    'MIT opens "Permission is hereby granted"; the NC licence named is the sound tab\u2019s',
+};
 /** A prefix shorter than this is a catch-all (`*`, `a*`), not a catalogue. */
 const MIN_PREFIX = 4;
 
@@ -97,6 +109,32 @@ describe('ATTRIBUTIONS.md entries', () => {
       return missing.map((label) => `${entry.id}: ${label}`);
     });
     expect(incomplete).toEqual([]);
+  });
+});
+
+describe('the Use bullet', () => {
+  it('refuses a term outside the vocabulary', () => {
+    expect(() =>
+      parseAttributions(
+        '### Thing\n\n<!-- attribution: id=thing -->\n\n- **Use:** Free with credit; Free for all\n',
+      ),
+    ).toThrow(/unknown Use term "Free for all"/);
+  });
+
+  it('is defined, term by term, at the head of the file', () => {
+    const head = MARKDOWN.slice(0, MARKDOWN.indexOf('\n## Catalogue data'));
+    expect(
+      Object.keys(ATTRIBUTION_USES).filter((term) => !head.includes(`- \`${term}\`:`)),
+    ).toEqual([]);
+  });
+
+  it('is never only free terms where the Licence text speaks of non-commercial use or permission', () => {
+    const free = ENTRIES.filter(
+      (entry) =>
+        RESTRICTS.test(entry.fields.Licence ?? '') &&
+        entry.use.every((term) => ATTRIBUTION_USES[term] === 'free'),
+    ).map((entry) => entry.id);
+    expect(free.sort()).toEqual(Object.keys(FREE_ALL_THE_SAME).sort());
   });
 });
 

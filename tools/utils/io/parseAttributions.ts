@@ -7,14 +7,20 @@
  * skipped in silence is a licence nobody checks.
  */
 import type { AttributionEntry } from '../../@types/io/AttributionEntry';
+import type { AttributionUse } from '../../@types/io/AttributionUse';
+import { ATTRIBUTION_USES } from './attributionUses';
 
 const MARKER = /^<!--\s*attribution:\s*(.*?)\s*-->$/;
 const BULLET = /^- \*\*(.+?):\*\*\s*(.*)$/;
 const CHECKED = /^(\d{4}-\d{2}-\d{2})/;
 const MARKER_NAMES = ['id', 'keys', 'hosts'];
 
-function list(value: string | undefined): readonly string[] {
-  return (value ?? '').split(',').flatMap((item) => (item.trim() ? [item.trim()] : []));
+function list(value: string | undefined, by = ','): readonly string[] {
+  return (value ?? '').split(by).flatMap((item) => (item.trim() ? [item.trim()] : []));
+}
+
+function isUse(term: string): term is AttributionUse {
+  return Object.hasOwn(ATTRIBUTION_USES, term);
 }
 
 export function parseAttributions(markdown: string): readonly AttributionEntry[] {
@@ -49,8 +55,13 @@ export function parseAttributions(markdown: string): readonly AttributionEntry[]
         label = '';
       }
     }
+    const use = list(fields.Use, ';');
+    const unknown = use.find((term) => !isUse(term));
+    if (unknown !== undefined)
+      throw new Error(`ATTRIBUTIONS.md: unknown Use term "${unknown}" under "${heading}"`);
     entries.push({
       id: attrs.id ?? '',
+      use: use.filter(isUse),
       keys: list(attrs.keys),
       hosts: list(attrs.hosts),
       fields,
