@@ -102,11 +102,11 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   {
     id: 'body-card',
     about: 'app',
-    text: 'A planet’s card lists its radius, mass, surface gravity, day and year length, distance from the Sun, mean temperature, number of moons, axial tilt and atmosphere. All but the radius come from a fact sheet typed into the app by hand. The sheet names no source of its own; the card links to Wikipedia.',
+    text: 'A planet’s card lists its radius, mass, surface gravity, day and year length, distance from the Sun, mean temperature, number of moons, axial tilt and atmosphere. All but the radius come from a fact sheet typed into the app by hand; the card links to Wikipedia.',
     source: `${REPO_BLOB}/data/seeds/planet_facts.seed.json`,
     sourceLabel: `the planets’ fact sheet, ${IN_REPO}`,
     checked: CHECKED,
-    short: 'A planet’s card lists its size, mass, gravity, day, year, temperature, moons and air. The values were typed in by hand and the sheet names no source, so checking one against another source is a lesson too.',
+    short: 'A planet’s card lists its size, mass, gravity, day, year, temperature, moons and air. The values were typed in by hand, so checking one against another source is a lesson too.',
   },
   {
     id: 'card-tooltips',
