@@ -80,7 +80,7 @@ export const DOCS_TREE: readonly DocsGroup[] = [
     up: '/science/',
     pages: [
       { title: 'Measured, derived, modelled, drawn', path: '/docs/science/', status: 'live' },
-      { title: 'Known simplifications', path: '/docs/simplifications/', status: 'planned' },
+      { title: 'Known simplifications', path: '/docs/simplifications/', status: 'live' },
     ],
   },
   {
