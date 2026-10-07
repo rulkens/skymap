@@ -79,10 +79,7 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
           <h1 class="word">skymap</h1>
           <p class="tag">The mapped universe at true scale. You hold the camera.</p>
         </div>
-        <div class="start">
-          <OpenApp />
-          <small>Free. No account, nothing to install.</small>
-        </div>
+        <p class="start small">Run for free in your browser</p>
         <p class="hint small" aria-hidden="true">Scroll to pull back</p>
       </div>
 
@@ -178,9 +175,9 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     color: var(--site-text);
   }
 
-  .start small {
-    display: block;
-    margin-top: 0.625rem;
+  .start {
+    margin: 0;
+    font-style: italic;
     color: var(--site-text-muted);
   }
 
