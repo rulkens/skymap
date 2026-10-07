@@ -5,10 +5,12 @@
  * left out where neither the build nor the catalogue's own record gives it.
  * `href` is the primary source and `evidence` the repository file the row was
  * checked against. `ask` is the acknowledgement the source requires or
- * requests, quoted from `askHref`.
+ * requests, quoted from `askHref`. `entries` are the ids of the row's entries
+ * in ATTRIBUTIONS.md, which have the terms in full on their data pages.
  */
 export type DataSource = {
   id: string;
+  entries: readonly string[];
   group: string;
   name: string;
   gives: string;

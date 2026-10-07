@@ -30,10 +30,14 @@ const IMAGERY = 'Imagery';
  * download record or the catalogue's own ReadMe; `drawn` from the published
  * galaxy files (16-byte header, 64 bytes per object). Terrain heights, Mars
  * data, 3D models and fonts are not listed: they belong to the credits page.
+ * `entries` names each row's entries of ATTRIBUTIONS.md, whose data pages the
+ * table links to; tests/packages/website/dataPages.test.ts fails when a row
+ * names a licence its entries do not.
  */
 export const DATA_SOURCES: readonly DataSource[] = [
   {
     id: 'sdss',
+    entries: ['sdss'],
     group: GALAXIES,
     name: 'SDSS, the Sloan Digital Sky Survey',
     gives: 'Sky positions, spectroscopic redshifts, five-band magnitudes and shapes of galaxies',
@@ -48,6 +52,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: '2mrs',
+    entries: ['2mrs'],
     group: GALAXIES,
     name: '2MRS, the 2MASS Redshift Survey',
     gives: 'Positions, spectroscopic velocities and infrared magnitudes of nearby galaxies over 91 per cent of the sky',
@@ -60,6 +65,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'glade',
+    entries: ['glade'],
     group: GALAXIES,
     name: 'GLADE, the Galaxy List for the Advanced Detector Era',
     gives: 'An all-sky compilation of galaxies with spectroscopic and photometric redshifts',
@@ -72,6 +78,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'milliquas',
+    entries: ['milliquas'],
     group: GALAXIES,
     name: 'Milliquas, the Million Quasars catalogue',
     gives: 'Positions and redshifts of quasars and other active galactic nuclei, the most distant objects in the scene',
@@ -84,6 +91,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'desi',
+    entries: ['desi'],
     group: GALAXIES,
     name: 'DESI, the Dark Energy Spectroscopic Instrument',
     gives: 'Positions and spectroscopic redshifts in three small regions, one of them a deep cone',
@@ -98,6 +106,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'cf4',
+    entries: ['cf4-distances'],
     group: GALAXIES,
     name: 'Cosmicflows-4',
     gives: 'Distances measured without redshift, used for galaxies inside 30 megaparsecs',
@@ -109,6 +118,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'hyperleda',
+    entries: ['hyperleda'],
     group: GALAXIES,
     name: 'HyperLEDA',
     gives: 'Fallback distances inside 30 megaparsecs, and the tilt and size of GLADE galaxies',
@@ -119,6 +129,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: '2mass-xsc',
+    entries: ['2mass-xsc'],
     group: GALAXIES,
     name: '2MASS Extended Source Catalog',
     gives: 'The tilt of 2MRS galaxies on the sky',
@@ -131,6 +142,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'gaia',
+    entries: ['gaia'],
     group: STARS,
     name: 'Gaia',
     gives: 'Positions, brightness and colour of stars brighter than magnitude 14',
@@ -145,6 +157,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'bailer-jones',
+    entries: ['bailer-jones'],
     group: STARS,
     name: 'Bailer-Jones distances',
     gives: 'A distance estimate for each Gaia star',
@@ -155,6 +168,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'gcns',
+    entries: ['gcns'],
     group: STARS,
     name: 'Gaia Catalogue of Nearby Stars',
     gives: 'Every Gaia star within 100 parsecs, including those fainter than magnitude 14',
@@ -166,6 +180,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'hipparcos',
+    entries: ['hipparcos'],
     group: STARS,
     name: 'Hipparcos',
     gives: 'The bright stars that saturate Gaia’s detectors',
@@ -177,6 +192,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'jpl-elements',
+    entries: ['jpl-elements'],
     group: SOLAR,
     name: 'JPL orbital elements',
     gives: 'The orbits of the planets, the Moon and the other moons',
@@ -187,6 +203,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'horizons',
+    entries: ['horizons'],
     group: SOLAR,
     name: 'JPL Horizons',
     gives: 'Reference positions that our orbits are corrected to, for 8 planets and 18 moons',
@@ -197,6 +214,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 's-stars',
+    entries: ['s-stars'],
     group: STARS,
     name: 'Stars orbiting Sagittarius A*',
     gives: 'The orbits of 40 stars around the black hole at the centre of the Milky Way',
@@ -208,6 +226,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'mcpm',
+    entries: ['mcpm-vac'],
     group: FIELDS,
     name: 'SDSS Cosmic Slime catalogue',
     gives: 'The density field drawn as the cosmic web glow',
@@ -218,6 +237,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'cf4pp',
+    entries: ['cf4pp'],
     group: FIELDS,
     name: 'CF4++ flow field',
     gives: 'The motion of galaxies apart from the expansion, drawn in the Cosmic Flows exhibit',
@@ -228,6 +248,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'mcxc',
+    entries: ['mcxc'],
     group: FIELDS,
     name: 'MCXC, a catalogue of X-ray galaxy clusters',
     gives: 'Positions, redshifts and sizes for the cluster markers',
@@ -239,6 +260,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'mscc',
+    entries: ['mscc'],
     group: FIELDS,
     name: 'MSCC, the Main SuperCluster Catalogue',
     gives: 'Positions and extents for the supercluster markers',
@@ -250,6 +272,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'blue-marble',
+    entries: ['nasa-blue-marble'],
     group: IMAGERY,
     name: 'NASA Blue Marble',
     gives: 'Earth’s surface, clouds and night lights',
@@ -260,6 +283,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'eox',
+    entries: ['eox'],
     group: IMAGERY,
     name: 'EOxCloudless',
     gives: 'Sharper satellite imagery of Earth in chosen regions',
@@ -270,6 +294,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'geodanmark',
+    entries: ['geodanmark'],
     group: IMAGERY,
     name: 'GeoDanmark orthophoto',
     gives: 'Aerial photography of one park in Copenhagen at 10 centimetres per pixel',
@@ -280,6 +305,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'solar-system-scope',
+    entries: ['solar-system-scope'],
     group: IMAGERY,
     name: 'Solar System Scope',
     gives: 'Surface maps of seven planets and the Moon, and Saturn’s rings',
@@ -290,6 +316,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'usgs-nasa-moons',
+    entries: ['usgs-galilean', 'usgs-enceladus', 'photojournal-saturn-moons', 'usgs-pluto-charon', 'usgs-triton', 'schenk-uranian'],
     group: IMAGERY,
     name: 'USGS and NASA moon mosaics',
     gives: 'Surface maps of Pluto, Charon and the moons of Jupiter, Saturn, Uranus and Neptune',

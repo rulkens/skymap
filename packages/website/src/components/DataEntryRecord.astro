@@ -1,0 +1,177 @@
+---
+/*
+ * DataEntryRecord — one entry of the licence record as a data page prints it:
+ * what it is and who made it, its terms and the credit it asks for (each set
+ * apart as the record's own words, with the day they were read), what could
+ * not be verified, where its files enter the build, and what it becomes in
+ * the app. Everything but that last part is the record's text or the raw
+ * data registry's; the last part is the entry's row of data/dataSourceNotes.ts.
+ * `level` is the depth of its headings: 2 on a page of its own, 3 where it is
+ * one section of its family's page.
+ */
+import type { DataEntry } from '../@types/DataEntry';
+import { DATA_FAMILIES_USED, DATA_TERMS, dataEntry } from '../data/dataPages';
+import { DATA_SOURCE_NOTES } from '../data/dataSourceNotes';
+import { DATA_SOURCES } from '../data/dataSources';
+import { fitText } from '../utils/fitText';
+import { plainText } from '../utils/plainText';
+import { recordParagraphs } from '../utils/recordParagraphs';
+import Caveat from './Caveat.astro';
+import DocFigure from './DocFigure.astro';
+import DocLink from './DocLink.astro';
+import DocTable from './DocTable.astro';
+import FactText from './FactText.astro';
+import RecordText from './RecordText.astro';
+import Recorded from './Recorded.astro';
+import View from './View.astro';
+
+type Props = { entry: DataEntry; level: 2 | 3 };
+
+const { entry, level } = Astro.props;
+const H = `h${level}` as 'h2' | 'h3';
+const { bullets, notes: sectionNotes } = entry.record;
+const note = DATA_SOURCE_NOTES[entry.id];
+const family = DATA_FAMILIES_USED.find((row) => row.id === entry.family)!;
+// On a page of its own a heading's anchor is its words; on a shared page it carries the entry's id, to stay one of a kind.
+const anchor = (name: string) => (level === 2 ? name : `${entry.id}-${name}`);
+const said = plainText(`${bullets.Licence ?? ''} ${bullets.Attribution ?? ''}`).toLowerCase();
+// A text the record gives once for several entries, where this entry's own words point at it by its name.
+const terms = DATA_TERMS.filter((term) => said.includes(term.term.toLowerCase()));
+const inTable = DATA_SOURCES.some((row) => row.entries.includes(entry.id));
+// The Checked bullet opens with the date, which the line above it already gives in words.
+const read = (bullets.Checked ?? '').replace(/^\d{4}-\d{2}-\d{2}[:;,.]?\s*/, '');
+// On a page of its own the page's opening line is this bullet, unless it was too long to stand there whole.
+const what = plainText(bullets.What ?? '');
+const facts = [
+  ['What it is', level === 2 && fitText(what, 155) === what ? '' : bullets.What],
+  ['Made by', bullets.By],
+  ['Where it comes from', bullets.Upstream],
+  ['Changed by us', bullets.Modified],
+].filter(([, text]) => text);
+---
+
+{note?.about && <p>{note.about}</p>}
+{note?.facts?.map((id) => <FactText id={id} />)}
+{note?.figure && <DocFigure id={note.figure} />}
+
+<dl>
+  {
+    facts.map(([label, text]) => (
+      <>
+        <dt>{label}</dt>
+        <dd>
+          <RecordText text={recordParagraphs(text!)} />
+        </dd>
+      </>
+    ))
+  }
+</dl>
+
+<H id={anchor('licence')}>Licence and terms</H>
+<Recorded checked={entry.checked}>
+  <RecordText text={recordParagraphs(bullets.Licence ?? '')} lift />
+  <Fragment slot="foot">
+    {' '}
+    Read that day: <RecordText text={read} phrase />
+  </Fragment>
+</Recorded>
+{
+  terms.map((term) => (
+    <>
+      <p>The record gives “{term.term}” once, for every entry that names them:</p>
+      <Recorded checked={entry.checked}>
+        <RecordText text={term.text} lift />
+      </Recorded>
+    </>
+  ))
+}
+{
+  entry.names.length > 0 && (
+    <p>
+      Other entries this text names:{' '}
+      {entry.names.map((id, i) => (
+        <>
+          {i > 0 && ', '}
+          <DocLink href={dataEntry(id).href}>{dataEntry(id).title}</DocLink>
+        </>
+      ))}
+      .
+    </p>
+  )
+}
+
+<H id={anchor('credit')}>Credit to give</H>
+<Recorded checked={entry.checked}>
+  <RecordText text={recordParagraphs(bullets.Attribution ?? '')} lift />
+</Recorded>
+
+{
+  bullets['Not verified'] && (
+    <Caveat title="Not verified">
+      <RecordText text={`Not verified: ${bullets['Not verified']}`} />
+    </Caveat>
+  )
+}
+
+<H id={anchor('pipeline')}>Where it enters skymap</H>
+<RecordText text={recordParagraphs(bullets['Enters skymap'] ?? '')} />
+{
+  entry.files.length > 0 && (
+    <DocTable
+      cols="stack"
+      head={['Registry key', 'Path', 'Kept', 'Fetched by']}
+      rows={entry.files.map((file) => [
+        { code: file.key },
+        { code: file.path },
+        file.kept === 'committed' ? 'In the repository' : 'Fetched or built, not in the repository',
+        file.fetcher ? { code: file.fetcher } : 'By hand, or by the step named above',
+      ])}
+    />
+  )
+}
+{
+  level === 2 && sectionNotes.length > 0 && (
+    <>
+      <p>The record says of this part of the data:</p>
+      <Recorded checked={entry.checked}>
+        {sectionNotes.map((text) => (
+          <RecordText text={text} lift />
+        ))}
+      </Recorded>
+    </>
+  )
+}
+{
+  family.step && (
+    <p>
+      What happens to these files next is in <DocLink href={`/docs/data/pipeline/#${family.step}`}>From catalogue to pixels</DocLink>.
+    </p>
+  )
+}
+
+{
+  note?.shows && (
+    <>
+      <H id={anchor('in-the-app')}>What it becomes in the app</H>
+      <p>{note.shows}</p>
+      <ul>
+        {note.scene && (
+          <li>
+            In the scene: <DocLink href={`/docs/start/scene/#${note.scene}`}>What is in the scene</DocLink>.
+          </li>
+        )}
+        {note.setting && (
+          <li>
+            Its switch: <DocLink href={`/docs/reference/settings/#${note.setting}`}>All settings</DocLink>.
+          </li>
+        )}
+        {inTable && (
+          <li>
+            The release we read and how many rows we draw: <DocLink href="/science/#sources">the table of sources</DocLink>.
+          </li>
+        )}
+      </ul>
+      {note.view && <View to={note.view.to}>{note.view.label}</View>}
+    </>
+  )
+}

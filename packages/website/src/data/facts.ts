@@ -1,6 +1,7 @@
 import type { Fact } from '../@types/Fact';
 import { ABOUT_FACTS } from './aboutFacts';
 import { CLASSROOM_FACTS } from './classroomFacts';
+import { DOCS_DATA_FACTS } from './docsDataFacts';
 import { DOCS_GUIDE_FACTS } from './docsGuideFacts';
 import { DOCS_REFERENCE_FACTS } from './docsReferenceFacts';
 import { DOCS_START_FACTS } from './docsStartFacts';
@@ -470,4 +471,5 @@ export const FACTS: readonly Fact[] = [
   ...DOCS_GUIDE_FACTS,
   ...DOCS_REFERENCE_FACTS,
   ...DOCS_START_FACTS,
+  ...DOCS_DATA_FACTS,
 ];

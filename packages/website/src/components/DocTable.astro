@@ -12,6 +12,7 @@
 import type { DocCell } from '../@types/DocCell';
 import type { DocTableCols } from '../@types/DocTableCols';
 import { tableCells } from '../utils/tableCells';
+import DocLink from './DocLink.astro';
 import Keys from './Keys.astro';
 import View from './View.astro';
 
@@ -67,6 +68,8 @@ const SPACE = ' ';
                         <Keys of={chord} />
                       </>
                     ))
+                  ) : 'href' in cell ? (
+                    <DocLink href={cell.href}>{cell.label}</DocLink>
                   ) : 'to' in cell ? (
                     <View to={cell.to} query={cell.query}>
                       {cell.label}

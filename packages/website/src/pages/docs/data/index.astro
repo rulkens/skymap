@@ -1,0 +1,82 @@
+---
+/*
+ * All sources at a glance: every entry of the licence record in one list, by
+ * family, made from data/dataPages.ts. A row's name, what it is and the
+ * opening of its licence line are the record's words; the counts are counted.
+ */
+import DocLink from '../../../components/DocLink.astro';
+import DocTable from '../../../components/DocTable.astro';
+import { DATA_ENTRIES, DATA_FAMILIES_USED } from '../../../data/dataPages';
+import { REPO_BLOB } from '../../../data/siteIdentity';
+import Docs from '../../../layouts/Docs.astro';
+import { fitText } from '../../../utils/fitText';
+import { formatDate } from '../../../utils/formatDate';
+import { licenceLead } from '../../../utils/licenceLead';
+import { plainText } from '../../../utils/plainText';
+
+/** As much of an entry's "What" as a row of the list holds. */
+const WHAT_MAX = 150;
+const families = DATA_FAMILIES_USED.map((family) => ({
+  ...family,
+  entries: DATA_ENTRIES.filter((entry) => entry.family === family.id),
+}));
+const dates = [...new Set(DATA_ENTRIES.map((entry) => entry.checked))].sort();
+const unverified = DATA_ENTRIES.filter((entry) => entry.record.bullets['Not verified']).length;
+---
+
+<Docs
+  path="/docs/data/"
+  description="Every catalogue, image, model, font and piece of code skymap is built from, by family, each with the opening of its licence and a page of its own."
+  headings={families.map((family) => ({ depth: 2, slug: family.id, text: family.name }))}
+  factIds={[]}
+>
+  <p>
+    A source, here, is anything in skymap that somebody else made: a catalogue, a picture, a height map, a 3D model, a typeface, a
+    function we ported, a service the app asks while it runs. There are {DATA_ENTRIES.length} of them, in {families.length} families. A few
+    entries at the end are our own files, listed because they hold other people’s figures.
+  </p>
+  <p>
+    Each row gives the source’s name, what it is, and the opening words of its licence line in our record. The name leads to the full
+    text: the terms as the rights holder states them, the credit it asks for, where its files enter the build and what it becomes in the
+    app. How the files become what the app loads is on <DocLink href="/docs/data/pipeline/">From catalogue to pixels</DocLink>.
+  </p>
+  <p>
+    The record is one file in the repository, the <a href={`${REPO_BLOB}/ATTRIBUTIONS.md`}>attributions file</a>, and these pages are
+    made from it each time the site is built. Its terms are quoted from the rights holders’ own pages as we read them{' '}
+    {dates.length === 1 ? `on ${formatDate(dates[0]!)}` : `between ${formatDate(dates[0]!)} and ${formatDate(dates.at(-1)!)}`}; each
+    entry’s page gives its date and the pages read. For {unverified} entries something could not be opened that day, and the entry’s page
+    says what. The pages state terms. They are not legal advice.
+  </p>
+  <p>
+    A picture or film made with skymap carries the terms of every source visible in it. What that means for reusing our own pictures is
+    under <DocLink href="/about/#press">Pictures and their terms</DocLink> on the About page, and the credit line each source asks for
+    is on the <DocLink href="/docs/credits/">credits page</DocLink>.
+  </p>
+
+  {
+    families.map((family) => (
+      <>
+        <h2 id={family.id}>{family.name}</h2>
+        <p>
+          {family.about}{' '}
+          {family.pages === 'one' ? (
+            <>
+              These {family.entries.length} share <DocLink href={`/docs/data/${family.id}/`}>one page</DocLink>.
+            </>
+          ) : (
+            `${family.entries.length} ${family.entries.length === 1 ? 'source' : 'sources'}.`
+          )}
+        </p>
+        <DocTable
+          cols="detail"
+          head={['Source', 'What it is', 'Licence']}
+          rows={family.entries.map((entry) => [
+            { href: entry.href, label: entry.title },
+            fitText(plainText(entry.record.bullets.What ?? ''), WHAT_MAX),
+            licenceLead(entry.record.bullets.Licence ?? ''),
+          ])}
+        />
+      </>
+    ))
+  }
+</Docs>

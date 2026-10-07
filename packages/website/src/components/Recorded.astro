@@ -1,0 +1,36 @@
+---
+/*
+ * Recorded — a passage of the repository's licence record set apart from the
+ * page's own words: between two rules, with the day its holder's pages were
+ * read under it. What stands inside (the slot) is the record's text, printed
+ * as it is; the `foot` slot adds to the dated line, for the pages that were
+ * read. A reader must be able to tell at a glance which words are ours.
+ */
+import { formatDate } from '../utils/formatDate';
+
+type Props = { checked: string };
+
+const { checked } = Astro.props;
+---
+
+<div class="recorded" data-embed>
+  <slot />
+  <p class="when small tap-links">
+    From our licence record, as read on {formatDate(checked)}.<slot name="foot" />
+  </p>
+</div>
+
+<style>
+  .recorded {
+    margin: 0 0 var(--stack);
+    padding-block: 1.25rem 1rem;
+    border-block: 1px solid var(--border-divider);
+  }
+
+  .when {
+    max-width: var(--doc-measure);
+    margin: 1rem 0 0;
+    color: var(--site-text-dim);
+    overflow-wrap: anywhere;
+  }
+</style>

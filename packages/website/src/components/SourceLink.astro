@@ -1,0 +1,16 @@
+---
+/*
+ * SourceLink — `<Source id="gaia">Gaia</Source>` on a docs page: a source's
+ * name as a link to its data page, by its entry id in ATTRIBUTIONS.md. The
+ * address comes from the pages' own table, so a mention cannot point at a
+ * page that is not there; with no words inside, it prints the page's title.
+ */
+import { dataEntry } from '../data/dataPages';
+import { sitePath } from '../utils/sitePath';
+
+type Props = { id: string };
+
+const entry = dataEntry(Astro.props.id);
+---
+
+<a href={sitePath(entry.href)}><slot>{entry.title}</slot></a>

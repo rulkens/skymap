@@ -1,0 +1,85 @@
+---
+/*
+ * Flow — `<Flow steps={[…]} />` on a docs page: a process as a line of rings
+ * read downwards, one ring a step, with what goes in and what comes out
+ * under each name. The ring is the site's own mark for a place you can go;
+ * a step with `href` is a link to its section. The words are text, not part
+ * of the drawing, so they keep the page's sizes at every width.
+ */
+type Props = { label: string; steps: readonly { name: string; text: string; href?: string }[] };
+
+const { label, steps } = Astro.props;
+---
+
+<ol class="flow" data-embed aria-label={label}>
+  {
+    steps.map((step) => (
+      <li>
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" />
+        </svg>
+        {step.href ? <a href={step.href}>{step.name}</a> : <b>{step.name}</b>}
+        <span class="small">{step.text}</span>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .flow {
+    margin: 2rem 0 2.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    padding: 0 0 1.25rem 2.25rem;
+  }
+
+  li:last-child {
+    padding-bottom: 0;
+  }
+
+  /* The line from one ring to the next: it starts under a ring and ends on the next one. */
+  li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: calc(0.5rem - 0.5px);
+    top: 1.5rem;
+    bottom: -0.3125rem;
+    border-left: 1px solid var(--border-divider);
+  }
+
+  svg {
+    position: absolute;
+    left: 0;
+    top: 0.3125rem;
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 1;
+  }
+
+  a,
+  b {
+    font: var(--weight-display) 1.25rem / 1.3 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  a {
+    justify-self: start;
+    text-decoration-color: var(--border-divider);
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    color: var(--color-accent);
+  }
+
+  span {
+    max-width: var(--doc-measure);
+    color: var(--site-text-muted);
+    line-height: 1.45;
+  }
+</style>
