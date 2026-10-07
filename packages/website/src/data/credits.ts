@@ -58,7 +58,7 @@ export const DATA_CREDITS: readonly Credit[] = [
     entry: '2mrs',
     name: '2MRS, Huchra et al. 2012',
     href: 'https://arxiv.org/abs/1108.0669',
-    licence: 'no licence stated by the authors; CC BY-NC (non-commercial) as CDS serves it',
+    licence: 'no licence stated, by the authors or by CDS, which serves our copy for use in a scientific context',
     licenceHref: 'https://cds.unistra.fr/vizier-org/licences_vizier.html',
   },
   {

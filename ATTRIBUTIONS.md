@@ -38,19 +38,31 @@ The entries state terms; they are not legal advice.
 ## Catalogue data
 
 Several catalogues below reach skymap through CDS (VizieR or its FTP mirror).
-CDS states its own terms for what it serves, quoted once here and referred to
-as "the CDS terms" in the entries: "The data retrieved with VizieR are free of
-usage in a scientific context; however, as it is the usage in scientific
-publication, the original authors and publication references including the
-publisher have to be explicitely cited", "The commercial usage of the data is
-subject to rules depending of the origin", "Tabular data, spectra or images
-coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under CC-BY-NC licence",
-"Tabular data, spectra or images coming from A&A (J/A+A) are free for a
-scientific usage", and for other catalogues "Please refer to the ReadMe file
-associated to the catalogue to verify if a 'copyright' exists. Else, see the
-policy section of the journals."
-(<https://cds.unistra.fr/vizier-org/licences_vizier.html>, read 2026-10-07; the
-link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
+What CDS displays about reuse on its page "Rules of usage of VizieR data" is
+referred to as "the CDS terms" in the entries: "The data retrieved with VizieR
+are free of usage in a scientific context; however, as it is the usage in
+scientific publication, the original authors and publication references
+including the publisher have to be explicitely cited", "The commercial usage
+of the data is subject to rules depending of the origin" and "The copyrights
+of a catalogue depend on the data origin." For those rules the page sends the
+reader to a copyright statement in the catalogue's ReadMe and, where there is
+none, to "the policy section of the journals", with links to the policies of
+the AAS journals, A&A and MNRAS. It displays no licence of its own for any of
+them. (<https://cds.unistra.fr/vizier-org/licences_vizier.html>, read
+2026-10-07 as a browser shows it and as HTML source.) CDS's general terms
+add: "All Users must comply with the User licence specific to each Dataset"
+and "Datasets subject to a specific licence from the data Contributor are
+distributed in accordance with the licence rights. This specific licence is
+provided on the Dataset page." (<https://cds.unistra.fr/legals/>, read
+2026-10-07.) The VizieR page of each of the eight catalogues used here shows
+no licence line, and none of their ReadMe files has a copyright or licence
+section. Not displayed by CDS: the source of the rules page also holds, inside
+HTML comments that a browser does not show, the sentences "Tabular data,
+spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
+CC-BY-NC licence (http://creativecommons.org/licenses/by-nc-nd/)" and "Tabular
+data, spectra or images coming from A&A (J/A+A) are free for a scientific
+usage". CDS has commented both out, so whether they still state its position
+is unclear, and no entry here reads them as a licence.
 
 ### SDSS, the Sloan Digital Sky Survey (DR17 spectra and photometry)
 
@@ -87,12 +99,22 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** Positions, velocities and J/H/K magnitudes of 44,599 nearby
   galaxies (table 3).
 - **By:** Huchra et al. 2012, ApJS 199, 26.
-- **Licence:** Two statements, and skymap uses the CDS copy. The authors:
-  none; the survey's own page and the VizieR ReadMe (J/ApJS/199/26) carry no
-  licence or copyright section. CDS, of the copy it serves: "Tabular data,
-  spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
-  CC-BY-NC licence", a non-commercial licence (the link CDS attaches points
-  at by-nc-nd).
+- **Licence:** Not stated. The authors state none: the survey's own page and
+  the VizieR ReadMe (J/ApJS/199/26) carry no licence or copyright section, and
+  the catalogue's VizieR page shows no licence line. skymap uses the copy CDS
+  serves, and the CDS terms apply to it: "The data retrieved with VizieR are
+  free of usage in a scientific context", and "The commercial usage of the
+  data is subject to rules depending of the origin". For a table from an AAS
+  journal CDS points to the journal's policy, which says: "The AAS holds the
+  copyright for all non-gold-OA articles published in the Astronomical
+  Journal, the Astrophysical Journal, Astrophysical Journal Letters, and the
+  Astrophysical Journal Supplement Series prior to 11 Oct 2021", "the Society
+  grants control of the right to reproduce the material to the original
+  authors as long as they are alive" and "Permission to reproduce material
+  from articles for which the AAS holds the copyright is managed on behalf of
+  the AAS by IOP Publishing." An older sentence about tables from AAS
+  journals is commented out of CDS's page and not displayed; it is quoted
+  with the CDS terms and is not read as a licence here.
 - **Attribution:** Cite Huchra et al. 2012. 2MASS, on which the survey rests,
   asks for: "This publication makes use of data products from the Two Micron
   All Sky Survey, which is a joint project of the University of Massachusetts
@@ -107,7 +129,12 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Modified:** Yes. Cross-matched, given distances and re-encoded.
 - **Checked:** 2026-10-07: <http://tdc-www.harvard.edu/2mrs/>,
   <https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html>,
-  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cds.unistra.fr/legals/>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/J/ApJS/199/26>,
+  <https://cdsarc.cds.unistra.fr/ftp/J/ApJS/199/26/ReadMe>,
+  <https://journals.aas.org/article-charges-and-copyright/> (where CDS's
+  link for AAS journals leads)
 
 ### 2MASS Extended Source Catalog (XSC)
 
@@ -117,23 +144,35 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   galaxies, from VizieR `VII/233/xsc`.
 - **By:** Jarrett et al. 2000, AJ 119, 2498; the 2MASS project (University of
   Massachusetts and IPAC/Caltech).
-- **Licence:** Two statements, and skymap uses the CDS copy. The survey's own
-  archive, IRSA: "Most data served by IRSA is public, with no usage
-  restrictions." (it does not name 2MASS in that sentence; the 2MASS pages
-  read state no licence for the catalogue). CDS, of the copy it serves
-  (VII/233, not a journal table): "Please refer to the ReadMe file associated
-  to the catalogue to verify if a 'copyright' exists. Else, see the policy
-  section of the journals", and "The commercial usage of the data is subject
-  to rules depending of the origin".
-- **Attribution:** The 2MASS acknowledgement quoted under 2MRS, and the VizieR
-  acknowledgement (see VizieR below).
+- **Licence:** Not stated for the catalogue. The 2MASS pages read state no
+  licence for it, and the ReadMe of the copy CDS serves (VII/233) has no
+  copyright or licence section. The survey's own archive, IRSA, says: "Most
+  data served by IRSA is public, with no usage restrictions." (it does not
+  name 2MASS in that sentence). skymap uses the CDS copy, and the CDS terms
+  apply to it: "The data retrieved with VizieR are free of usage in a
+  scientific context", and "The commercial usage of the data is subject to
+  rules depending of the origin"; for those rules CDS points to the
+  catalogue's ReadMe, which states none.
+- **Attribution:** Cite Jarrett et al. 2000. The ReadMe asks for "the
+  following standard acknowledgement in any published material that makes
+  use of the 2MASS data products": "This publication makes use of data
+  products from the Two Micron All Sky Survey, which is a joint project of
+  the University of Massachusetts and the Infrared Processing and Analysis
+  Center/California Institute of Technology, funded by the National
+  Aeronautics and Space Administration and the National Science
+  Foundation." 2MASS's own page names as "The primary journal reference for
+  2MASS and its image and catalog data products" Skrutskie et al. 2006, AJ
+  131, 1163. CDS adds, for the service: "If the access to catalogues with
+  VizieR was helpful for your research work, the following acknowledgment
+  would be appreciated" (see entry: vizier).
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/233>
 - **Enters skymap:** `tools/fetch/fetch2massXsc.ts` → `data/raw/2mrs/2mass_xsc_pa.csv`.
 - **Modified:** Yes. Two columns kept, joined to 2MRS by 2MASS id.
 - **Checked:** 2026-10-07: <https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html>,
   <https://irsa.ipac.caltech.edu/data_use_terms.html>,
-  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
-- **Not verified:** whether the ReadMe of VII/233 carries a copyright section.
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/VII/233/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/VII/233>
 
 ### GLADE v2.3, the Galaxy List for the Advanced Detector Era
 
@@ -143,8 +182,11 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   photometric redshifts, B-band photometry and PGC numbers.
 - **By:** Dálya et al. 2018, MNRAS 479, 2374.
 - **Licence:** Not stated. The catalogue's page carries "© Copyright Gergely
-  Dálya" and no licence; the VizieR ReadMe (VII/281) has no copyright section.
-  The CDS terms above apply to the copy served by CDS.
+  Dálya" and no licence; the VizieR ReadMe (VII/281) has no copyright section
+  and the catalogue's VizieR page shows no licence line. skymap uses the copy
+  CDS serves, and the CDS terms apply to it: "The data retrieved with VizieR
+  are free of usage in a scientific context", and "The commercial usage of
+  the data is subject to rules depending of the origin".
 - **Attribution:** Cite the paper. (The page asks this in words for GLADE+,
   "Please cite this paper when using GLADE+ data", and names the 2018 paper as
   the description of v2.3.)
@@ -153,7 +195,9 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Enters skymap:** `data/raw/glade/glade2.3.dat` → `tools/parsers/glade.ts`.
 - **Modified:** Yes. Deduplicated against SDSS and 2MRS, subsampled, re-encoded.
 - **Checked:** 2026-10-07: <https://glade.elte.hu/>,
-  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/VII/281/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/VII/281>
 
 ### HyperLEDA
 
@@ -228,18 +272,34 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   used for galaxies inside 30 Mpc.
 - **By:** Tully et al. 2023, ApJ 944, 94
   ([arXiv:2209.11238](https://arxiv.org/abs/2209.11238)).
-- **Licence:** The authors state none; the VizieR ReadMe (J/ApJ/944/94)
-  carries no copyright section. CDS, whose copy skymap uses: "Tabular data,
-  spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
-  CC-BY-NC licence", a non-commercial licence (the link CDS attaches points
-  at by-nc-nd).
+- **Licence:** Not stated for the table. The authors state none; the VizieR
+  ReadMe (J/ApJ/944/94) carries no copyright or licence section and the
+  catalogue's VizieR page shows no licence line. skymap uses the copy CDS
+  serves, and the CDS terms apply to it: "The data retrieved with VizieR are
+  free of usage in a scientific context", and "The commercial usage of the
+  data is subject to rules depending of the origin". For a table from an AAS
+  journal CDS points to the journal's policy, which says: "Authors of all AAS
+  Journal articles accepted after 11 October 2021 will retain copyright in
+  the published article and grant the AAS a non-exclusive CC-BY license to
+  publish the article". The article's Crossref record names
+  `creativecommons.org/licenses/by/4.0/` for the published article; whether
+  that licence covers the copy of table 2 that CDS serves is said on neither
+  page. An older sentence about tables from AAS journals is commented out of
+  CDS's page and not displayed; it is quoted with the CDS terms and is not
+  read as a licence here.
 - **Attribution:** Cite Tully et al. 2023.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/>
 - **Enters skymap:** `npm run fetch-cf4` → `data/raw/cf4/table2.dat` →
   `tools/parsers/cosmicflows4.ts` → `tools/catalog/catalogDistanceFor.ts`.
 - **Modified:** Yes. One distance per PGC number is read; it moves a galaxy's
   position.
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94>,
+  <https://journals.aas.org/article-charges-and-copyright/>,
+  <https://api.crossref.org/works/10.3847/1538-4357/ac94d8>
+- **Not verified:** the licence line on the article's own page (the
+  publisher's site asked for a human check).
 
 ### Gaia DR3
 
@@ -307,8 +367,13 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** The bright stars that saturate Gaia (`hip2.dat`, VizieR I/311), and
   the Gaia archive's Hipparcos cross-match table.
 - **By:** van Leeuwen 2007, A&A 474, 653.
-- **Licence:** The ReadMe (I/311) carries no copyright section. The CDS terms
-  above apply.
+- **Licence:** Not stated. The ReadMe (I/311) carries no copyright or licence
+  section and the catalogue's VizieR page shows no licence line. skymap uses
+  the copy CDS serves, and the CDS terms apply to it: "The data retrieved
+  with VizieR are free of usage in a scientific context", and "The
+  commercial usage of the data is subject to rules depending of the origin".
+  The policy of A&A, to which CDS points for a catalogue with no copyright
+  statement, could not be opened.
 - **Attribution:** Cite van Leeuwen 2007.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/I/311/>; the cross-match
   table comes from the Gaia archive (`gea.esac.esa.int`), under the terms
@@ -316,7 +381,11 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **Enters skymap:** `npm run fetch-gaia` → `data/raw/gaia/hip2.dat` →
   `tools/parsers/hipparcos2.ts`.
 - **Modified:** Yes. Merged into the star set in place of the matching Gaia rows.
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/I/311/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/I/311>
+- **Not verified:** A&A's copyright and open-access policy pages
+  (`www.aanda.org` answered HTTP 403, to a browser too).
 
 ### Stars orbiting Sagittarius A\* (Gillessen et al. 2017)
 
@@ -326,17 +395,31 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
   astrometry of S2, S12 and S38 (`table5`) held as a test fixture only.
 - **By:** Gillessen et al. 2017, ApJ 837, 30. The fixture's origin follows
   Plewa et al. 2015, MNRAS 453, 3234.
-- **Licence:** The authors state none. CDS, from whose copy the rows were
-  typed: "Tabular data, spectra or images coming from AAS journals (J/ApJ,
-  J/ApJS, J/AJ) are under CC-BY-NC licence", a non-commercial licence (the
-  link CDS attaches points at by-nc-nd).
+- **Licence:** Not stated for the tables. The authors state none; the VizieR
+  ReadMe (J/ApJ/837/30) carries no copyright or licence section and the
+  catalogue's VizieR page shows no licence line. The rows were typed from
+  the copy CDS serves, and the CDS terms apply to it: "The data retrieved
+  with VizieR are free of usage in a scientific context", and "The
+  commercial usage of the data is subject to rules depending of the origin".
+  For a table from an AAS journal CDS points to the journal's policy, which
+  says: "The AAS holds the copyright for all non-gold-OA articles published
+  in the Astronomical Journal, the Astrophysical Journal, Astrophysical
+  Journal Letters, and the Astrophysical Journal Supplement Series prior to
+  11 Oct 2021" and "Permission to reproduce material from articles for which
+  the AAS holds the copyright is managed on behalf of the AAS by IOP
+  Publishing." An older sentence about tables from AAS journals is commented
+  out of CDS's page and not displayed; it is quoted with the CDS terms and
+  is not read as a licence here.
 - **Attribution:** Cite Gillessen et al. 2017.
 - **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJ/837/30>
 - **Enters skymap:** typed by hand into `src/data/bodies/sStarElements.ts`
   (one source line per row) and `tests/fixtures/sStarAstrometry.json`.
 - **Modified:** No values changed. The 40th published row, S111, is left out as
   unbound.
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/J/ApJ/837/30/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/J/ApJ/837/30>,
+  <https://journals.aas.org/article-charges-and-copyright/>
 
 ### S301 (GRAVITY Collaboration 2026)
 
@@ -437,15 +520,26 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** Positions, redshifts, masses and radii of 1,743 galaxy clusters
   (VizieR J/A+A/534/A109).
 - **By:** Piffaretti et al. 2011, A&A 534, A109.
-- **Licence:** The ReadMe carries no copyright section. The CDS terms above
-  apply: data from A&A "are free for a scientific usage".
+- **Licence:** Not stated. The ReadMe carries no copyright or licence section
+  and the catalogue's VizieR page shows no licence line. skymap uses the copy
+  CDS serves, and the CDS terms apply to it: "The data retrieved with VizieR
+  are free of usage in a scientific context", and "The commercial usage of
+  the data is subject to rules depending of the origin". The policy of A&A,
+  to which CDS points for a table from that journal, could not be opened. An
+  older sentence about tables from A&A is commented out of CDS's page and
+  not displayed; it is quoted with the CDS terms and is not read as a
+  licence here.
 - **Attribution:** Cite Piffaretti et al. 2011.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/>
 - **Enters skymap:** `npm run fetch-structures` → `data/raw/mcxc/mcxc.dat` →
   `tools/structures/buildStructures.ts` → `public/data/structure-catalog/`.
 - **Modified:** Yes. Filtered by mass; hand-placed anchors win over catalogue
   rows near them.
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/J/A+A/534/A109>
+- **Not verified:** A&A's copyright and open-access policy pages
+  (`www.aanda.org` answered HTTP 403, to a browser too).
 
 ### MSCC, the Main SuperCluster Catalogue
 
@@ -453,15 +547,23 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 
 - **What:** 601 superclusters of Abell/ACO clusters (VizieR J/MNRAS/445/4073).
 - **By:** Chow-Martínez et al. 2014, MNRAS 445, 4073.
-- **Licence:** The ReadMe carries no copyright section. The CDS terms above
-  refer to the journal's policy for MNRAS catalogues, which was not read.
+- **Licence:** Not stated. The ReadMe carries no copyright or licence section
+  and the catalogue's VizieR page shows no licence line. skymap uses the copy
+  CDS serves, and the CDS terms apply to it: "The data retrieved with VizieR
+  are free of usage in a scientific context", and "The commercial usage of
+  the data is subject to rules depending of the origin". The policy of
+  MNRAS, to which CDS points for a table from that journal, could not be
+  opened.
 - **Attribution:** Cite Chow-Martínez et al. 2014.
 - **Upstream:** <https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/>
 - **Enters skymap:** `npm run fetch-structures` → `data/raw/mscc/mscc.dat` →
   `tools/structures/buildStructures.ts`.
 - **Modified:** Yes. Filtered by richness.
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
-- **Not verified:** the MNRAS policy on catalogues.
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ReadMe>,
+  <https://vizier.cds.unistra.fr/viz-bin/cat/J/MNRAS/445/4073>
+- **Not verified:** the MNRAS policy on catalogues (`academic.oup.com`
+  answered HTTP 403, and a security check to a browser).
 
 ### Constellation lines (d3-celestial)
 
@@ -488,15 +590,28 @@ link CDS attaches to "CC-BY-NC" on that page points at the by-nc-nd licence.)
 - **What:** The catalogue service through which 2MASS XSC, Cosmicflows-4,
   Hipparcos, MCXC, MSCC and the S-star tables were fetched.
 - **By:** CDS, Strasbourg. Ochsenbein, Bauer & Marcout 2000, A&AS 143, 23.
-- **Licence:** The CDS terms quoted at the head of this section.
-- **Attribution:** "This research has made use of the VizieR catalogue access
+- **Licence:** The CDS terms, which state no licence: "The data retrieved
+  with VizieR are free of usage in a scientific context; however, as it is
+  the usage in scientific publication, the original authors and publication
+  references including the publisher have to be explicitely cited", and "The
+  commercial usage of the data is subject to rules depending of the origin".
+  Of the service itself: "The Information system including the metadata is
+  private and reserved to the CDS."
+- **Attribution:** Optional. "If the access to catalogues with VizieR was
+  helpful for your research work, the following acknowledgment would be
+  appreciated": "This research has made use of the VizieR catalogue access
   tool, CDS, Strasbourg, France (DOI : 10.26093/cds/vizier). The original
-  description of the VizieR service was published in 2000, A&AS 143, 23"
+  description of the VizieR service was published in 2000, A&AS 143, 23".
+  CDS's general terms ask more firmly: "The Data Sets must be cited in any
+  work or product that uses them by including - if available - the DOI
+  (Digital Object Identifier), as well as the source by mentioning the CDS
+  service that supplied them".
 - **Upstream:** <https://vizier.cds.unistra.fr/>
 - **Enters skymap:** `tools/fetch/fetch2massXsc.ts`, `fetchCosmicflows4.ts`,
   `fetchStructureCatalogs.ts`, `fetchGaia.ts` (build time only).
 - **Modified:** Not applicable (a service).
-- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+- **Checked:** 2026-10-07: <https://cds.unistra.fr/vizier-org/licences_vizier.html>,
+  <https://cds.unistra.fr/legals/>
 
 ## Fields, volumes and structures
 
@@ -2028,12 +2143,13 @@ and where they come from".
     shall be made". The brightest stars are Hipparcos rows, whose catalogue
     states no licence.
   - Galaxy and quasar points: SDSS (public domain, as SDSS states), DESI (CC
-    BY 4.0), 2MRS and Cosmicflows-4 distances (no licence from the authors;
-    CC-BY-NC as CDS serves them), GLADE, Milliquas and HyperLEDA (no licence
-    stated).
-  - The cosmic web glow: an SDSS DR17 product (see its entry). Structure
-    markers: MCXC (CDS: "free for a scientific usage") and MSCC (no licence
-    stated).
+    BY 4.0), and 2MRS, Cosmicflows-4 distances, GLADE, Milliquas and
+    HyperLEDA (no licence stated; of the copies taken from CDS, CDS says
+    "The commercial usage of the data is subject to rules depending of the
+    origin").
+  - The cosmic web glow: an SDSS DR17 product (see entry: mcpm-vac).
+    Structure markers: MCXC and MSCC (no licence stated; taken from CDS,
+    under the same sentence).
   - Planets and moons: per map, as "Solar-system textures" lists; the maps of
     the moons of Uranus state no licence.
   - Earth close up: EOxCloudless 2025, CC BY-NC-SA 4.0 (non-commercial,

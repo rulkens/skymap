@@ -7,15 +7,13 @@ const GAIA_RECORD = `${REPO_BLOB}/data/raw/gaia/README.md`;
 const VIZIER = 'https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=';
 const CITE_PAPER = 'No licence stated. Cite the paper.';
 /*
- * Catalogues we take from CDS. Their authors state no licence; CDS states its
- * own terms for the copy it serves, by the journal the table came from.
+ * Catalogues we take from CDS. Neither their authors nor CDS state a licence
+ * for them; CDS displays one rule for all it serves. Its page's source also
+ * holds commented-out sentences on AAS and A&A tables, which are not shown
+ * and are not restated here (ATTRIBUTIONS.md, "Catalogue data").
  */
-const CDS_AAS =
-  'No licence stated by the authors. CDS, which serves the copy we use, classes tables from AAS journals as CC BY-NC (non-commercial). Cite the paper.';
-const CDS_AA =
-  'No licence stated by the authors. CDS, which serves the copy we use, says tables from A&A are free for scientific use. Cite the paper.';
-const CDS_OTHER =
-  'No licence stated by the authors or in the catalogue’s ReadMe. CDS, which serves the copy we use, allows scientific use and refers commercial use to the journal. Cite the paper.';
+const CDS_COPY =
+  'No licence stated: none by the authors, none in the catalogue’s ReadMe and none on the page of the copy we use, which CDS serves. CDS says its data are free to use in a scientific context, with the paper cited, and that commercial use follows rules that depend on where the data come from. Ask the authors before any other use. Cite the paper.';
 
 const GALAXIES = 'Galaxies and quasars';
 const STARS = 'Stars';
@@ -59,7 +57,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     release: 'Huchra et al. 2012, table 3 (VizieR J/ApJS/199/26)',
     rows: '44,599 galaxies',
     drawn: '34,974',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: `${VIZIER}J/ApJS/199/26`,
     evidence: REGISTRY,
   },
@@ -112,7 +110,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Distances measured without redshift, used for galaxies inside 30 megaparsecs',
     release: 'Tully et al. 2023, table 2 (VizieR J/ApJ/944/94)',
     rows: '55,877 galaxies',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: 'https://arxiv.org/abs/2209.11238',
     evidence: REGISTRY,
   },
@@ -134,7 +132,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     name: '2MASS Extended Source Catalog',
     gives: 'The tilt of 2MRS galaxies on the sky',
     release: 'VizieR VII/233, fetched through the VizieR service',
-    licence: 'No licence stated for the catalogue on the 2MASS pages. We take it from CDS, which allows scientific use and refers commercial use to the catalogue’s ReadMe and journal. Cite Jarrett et al. 2000 and VizieR.',
+    licence: 'No licence stated for the catalogue, on the 2MASS pages or in the ReadMe of the copy we use, which CDS serves. CDS says its data are free to use in a scientific context and that commercial use follows rules that depend on where the data come from. Cite Jarrett et al. 2000, with the 2MASS acknowledgement.',
     href: `${VIZIER}VII/233`,
     evidence: ATTRIBUTIONS,
     ask: 'This research has made use of the VizieR catalogue access tool, CDS, Strasbourg, France (DOI: 10.26093/cds/vizier).',
@@ -186,7 +184,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'The bright stars that saturate Gaia’s detectors',
     release: 'The 2007 re-reduction, van Leeuwen (VizieR I/311)',
     rows: '117,955 stars',
-    licence: CDS_OTHER,
+    licence: CDS_COPY,
     href: `${VIZIER}I/311`,
     evidence: GAIA_RECORD,
   },
@@ -220,7 +218,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'The orbits of 40 stars around the black hole at the centre of the Milky Way',
     release: 'Gillessen et al. 2017, table 3, plus one star from the GRAVITY Collaboration 2026',
     rows: '40 orbits',
-    licence: CDS_AAS,
+    licence: CDS_COPY,
     href: 'https://arxiv.org/abs/1611.09144',
     evidence: ATTRIBUTIONS,
   },
@@ -254,7 +252,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Positions, redshifts and sizes for the cluster markers',
     release: 'Piffaretti et al. 2011 (VizieR J/A+A/534/A109)',
     rows: '1,743 clusters',
-    licence: CDS_AA,
+    licence: CDS_COPY,
     href: `${VIZIER}J/A%2BA/534/A109`,
     evidence: REGISTRY,
   },
@@ -266,7 +264,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Positions and extents for the supercluster markers',
     release: 'Chow-Martínez et al. 2014 (VizieR J/MNRAS/445/4073)',
     rows: '601 superclusters',
-    licence: CDS_OTHER,
+    licence: CDS_COPY,
     href: `${VIZIER}J/MNRAS/445/4073`,
     evidence: REGISTRY,
   },
