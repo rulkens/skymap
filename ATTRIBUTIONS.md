@@ -91,12 +91,13 @@ provided on the Dataset page." (<https://cds.unistra.fr/legals/>, read
 2026-10-07.) The VizieR page of each of the eight catalogues used here shows
 no licence line, and none of their ReadMe files has a copyright or licence
 section. Not displayed by CDS: the source of the rules page also holds, inside
-HTML comments that a browser does not show, the sentences "Tabular data,
-spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under
-CC-BY-NC licence (http://creativecommons.org/licenses/by-nc-nd/)" and "Tabular
-data, spectra or images coming from A&A (J/A+A) are free for a scientific
-usage". CDS has commented both out, so whether they still state its position
-is unclear, and no entry here reads them as a licence.
+HTML comments that a browser does not show, two sentences, given here in code
+marks because they are source and not page:
+`Tabular data, spectra or images coming from AAS journals (J/ApJ, J/ApJS, J/AJ) are under CC-BY-NC licence (http://creativecommons.org/licenses/by-nc-nd/)`
+and
+`Tabular data, spectra or images coming from A&A (J/A+A) are free for a scientific usage`.
+CDS has commented both out, so whether they still state its position is
+unclear, and no entry here reads them as a licence.
 
 ### SDSS, the Sloan Digital Sky Survey (DR17 spectra and photometry)
 
