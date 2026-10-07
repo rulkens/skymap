@@ -33,6 +33,9 @@ const PAIR_WIDTHS = [1120, 640];
 // Aimed 250 Mpc out towards Coma, inside the volume the density map covers, so both layers fill the frame.
 const WEB_POSE = 'pose=a,-211,-56,116,2.1,0.35,420,0';
 const POINTS_ONLY: SiteShotSettings = { hideLabels: true, hideStructures: true, hideCosmicWeb: true, hideZoneOfAvoidance: true };
+// The Settings page's pairs: 60 Mpc out, where the spokes the density correction dims are plain, and 900 Mpc out, where the SDSS fans show.
+const NEAR_WEB_POSE = 'pose=a,0,0,0,2.1,0.35,60,0';
+const FAR_POSE = 'pose=a,0,0,0,2.1,0.35,900,0';
 
 /**
  * Every picture of the app the site publishes, apart from the flight's stills
@@ -791,6 +794,70 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     caption: 'Cut from a wider window. Galaxies is a count of the points the app has loaded inside the cluster’s sphere.',
     drawn: 'Distance and radius are those of the sphere drawn for the cluster.',
     alt: 'A card headed Virgo (M87) and tagged Galaxy Cluster, with rows for distance, radius and galaxies above a paragraph of text.',
+  },
+  // The Settings page. The density pair and the size pair each share a camera, so the frames differ by the one setting.
+  {
+    id: 'guide-settings-panel',
+    link: `${NEAR_WEB_POSE}&${NOON}`,
+    settings: { ui: true, open: ['Galaxies'], settleMs: 4000, crop: { left: 0, top: 0, width: 860, height: 750 } },
+    size: FEATURE,
+    widths: [1720, 960],
+    title: 'The Settings panel with Galaxies opened',
+    caption: 'Cut from a wider window. The number beside a catalogue is how many of its galaxies are loaded.',
+    drawn: 'The points are catalogued galaxies; the rings and names mark clusters, superclusters and voids.',
+    alt: 'Two panels at the left of the app’s window, Navigation and under it Settings. Under the heading Galaxies are eight catalogues, each with a switch: Famous, 2MRS, SDSS, GLADE and Milliquas on, the three DESI regions off.',
+  },
+  {
+    id: 'guide-settings-panel-phone',
+    link: `${NEAR_WEB_POSE}&${NOON}`,
+    settings: { ui: true, open: ['Galaxies'], settleMs: 4000, crop: { left: 0, top: 212, width: 400, height: 538 } },
+    size: FEATURE,
+    widths: PHONE_WIDTHS,
+    title: 'The Settings panel with Galaxies opened',
+    caption: 'Cut from a wider window.',
+    alt: 'A panel headed Settings. Under the heading Galaxies are eight catalogues, each with a switch.',
+  },
+  {
+    id: 'guide-density-corrected',
+    link: NEAR_WEB_POSE,
+    settings: POINTS_ONLY,
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    title: 'Galaxies out to some 200 million light-years, as the app opens',
+    caption: 'Density correction is on Angular re-weight.',
+    drawn: 'Every point is a catalogued galaxy at its measured place. Its brightness has been turned down where its catalogue is crowded.',
+    alt: 'A field of points with the Milky Way’s place at the centre and faint spokes running out from it.',
+  },
+  {
+    id: 'guide-density-raw',
+    link: NEAR_WEB_POSE,
+    settings: { ...POINTS_ONLY, rawDensity: true },
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    title: 'The same view with Density correction on None',
+    caption: 'The spokes that point at the centre are directions a catalogue recorded more galaxies in.',
+    drawn: 'Every point is a catalogued galaxy at its measured place, at the brightness the app gives it without the correction.',
+    alt: 'The same field of points, brighter at the centre, with bright spokes running out from it.',
+  },
+  {
+    id: 'guide-size-small',
+    link: FAR_POSE,
+    settings: { ...POINTS_ONLY, dataSize: 'small', settleMs: 9000 },
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    title: 'The smallest data size from 900 megaparsecs out',
+    drawn: 'Every point is a catalogued galaxy or quasar.',
+    alt: 'A round cloud of points on black, dense at the centre and thin at the edge.',
+  },
+  {
+    id: 'guide-size-large',
+    link: FAR_POSE,
+    settings: { ...POINTS_ONLY, dataSize: 'large', settleMs: 14000 },
+    size: PAIR,
+    widths: PAIR_WIDTHS,
+    title: 'The largest data size from the same place',
+    drawn: 'Every point is a catalogued galaxy or quasar.',
+    alt: 'The same cloud of points, several times as wide and so dense at the centre that it runs to white.',
   },
   // The docs' Reference pages.
   {

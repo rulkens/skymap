@@ -28,6 +28,8 @@ const WEBP = { quality: 76, effort: 6 };
 // Typed as a person types, then long enough for the palette's results to land.
 const KEY_DELAY_MS = 60;
 const RESULTS_SETTLE_MS = 1200;
+// A panel section unfolds over a short transition.
+const PANEL_SETTLE_MS = 600;
 
 const args = process.argv.slice(2);
 const valueOf = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
@@ -65,6 +67,11 @@ try {
           await page.keyboard.press('/');
           await page.keyboard.type(shot.settings.searchFor, { delay: KEY_DELAY_MS });
           await page.waitForTimeout(RESULTS_SETTLE_MS);
+        }
+        for (const heading of shot.settings?.open ?? []) {
+          // The heading's own text, not the button's name: a heading with a switch is named after both.
+          await page.locator('button', { has: page.locator(`span:text-is("${heading}")`) }).click();
+          await page.waitForTimeout(PANEL_SETTLE_MS);
         }
         // A `ui` shot is the page as a visitor sees it; the rest are the canvas alone.
         writeFileSync(
