@@ -509,7 +509,8 @@ const stops = FLIGHT_STOPS.map((stop, i) => ({
     top: 50%;
     transform: translateY(-50%);
     white-space: nowrap;
-    font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+    /* The display face is small on the body: a size up keeps the label as readable as the small text it replaced. */
+    font: var(--weight-display) 1.25rem / 1 var(--font-family-display);
     color: var(--color-fg);
     opacity: 0;
     pointer-events: none;
