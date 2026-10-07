@@ -19,8 +19,7 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';
-import { FOCUS_PICK_EXCLUDE_BELOW } from '../../../data/focusPickExcludeBelow';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { STAR_CAPTION_KIND } from './starCaptionKinds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -100,9 +99,9 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       );
       // A name is a click target for its star, so it leaves the pick with the
       // star: nothing the focus dims is selectable.
-      return focusAlphaMultiplier(label.worldPos, focus) < FOCUS_PICK_EXCLUDE_BELOW
-        ? { ...composed, pickId: undefined }
-        : composed;
+      return isPickableUnderFocus(label.worldPos, focus)
+        ? composed
+        : { ...composed, pickId: undefined };
     });
 
     return { labels, awake: false };

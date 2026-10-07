@@ -1,3 +1,4 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { produceStructureLabels } from '../../../../src/services/engine/presentation/produceStructureLabels';
@@ -12,6 +13,7 @@ import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
 function makeRegistry(): FadeRegistry {
@@ -90,7 +92,7 @@ function makeCtx(
 ): FrameView {
   const { focusBlend = 0, ...viewOver } = over;
   return {
-    snapshot: { focusBlend, nowMs: 0 },
+    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, CAM_Z],
     // Identity pose: screen-up is world +Y.
     cam: { yaw: 0, pitch: 0, roll: 0, poseBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
@@ -348,5 +350,30 @@ describe('produceStructureLabels', () => {
       expect(pick.sourceCode).toBe(STRUCTURE_ID_CODES[record.category]);
       expect(state.data.structures.byCategory(record.category)[pick.localIdx]?.id).toBe(label.id);
     }
+  });
+
+  it('outside the focused sphere a label draws but carries no pick; inside and at rest it keeps it', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('in', { worldPos: [10, 0, CAM_Z] }),
+      rec('out', { worldPos: [0, 10, CAM_Z] }),
+    ]);
+    const focus = {
+      center: [10, 0, CAM_Z],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    } as const;
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const byId = (labels: readonly Label2D[], id: string) => labels.find((l) => l.id === id)!;
+
+    const rest = produceStructureLabels(state, ctx, 'cosmo').labels;
+    expect(byId(rest, 'out').pickId).toBeDefined();
+
+    const under = produceStructureLabels(state, focused, 'cosmo').labels;
+    expect(byId(under, 'in').pickId).toBeDefined();
+    expect(byId(under, 'out').pickId).toBeUndefined();
+    expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
   });
 });

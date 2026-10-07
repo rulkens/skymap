@@ -1,3 +1,4 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
@@ -71,7 +72,7 @@ const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
 
 function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
   return {
-    snapshot: { focusBlend, nowMs: 0 },
+    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -255,5 +256,30 @@ describe('produceStructureMarkers', () => {
     expect(expected).toBeGreaterThan(0);
     expect(expected).toBeLessThan(1);
     expect(m!.ringColor[3]).toBeCloseTo(style.ringColor[3] * expected, 5);
+  });
+
+  it('outside the focused sphere a ring draws but is not pickable; inside and at rest it is', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('in', 'cluster', { worldPos: [10, 0, 0] }),
+      rec('out', 'cluster', { worldPos: [0, 10, 0] }),
+    ]);
+    const focus = {
+      center: [10, 0, 0],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    } as const;
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+
+    expect(produceStructureMarkers(state, ctx).map((m) => m.pickable)).toEqual([true, true]);
+
+    const under = produceStructureMarkers(state, focused);
+    // Both descriptors stay, in order: the pick decodes by per-category index.
+    expect(under.map((m) => [m.id, m.pickable])).toEqual([
+      ['in', true],
+      ['out', false],
+    ]);
   });
 });

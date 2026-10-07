@@ -65,6 +65,7 @@ import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
 import type { StructureSlab } from '../../../@types/data/structure/StructureSlab';
 import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
@@ -223,10 +224,12 @@ export function produceStructureLabels(
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
       // marker ring — the category's source code over the per-category index,
       // both read from the store's single-sourced `categoryIndexOf`.
-      pickId: packSelection(
-        STRUCTURE_ID_CODES[p.category],
-        structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
-      ),
+      pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
+        ? packSelection(
+            STRUCTURE_ID_CODES[p.category],
+            structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
+          )
+        : undefined,
       worldPos: above
         ? aboveRingAnchor(
             [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],

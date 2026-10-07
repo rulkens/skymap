@@ -15,6 +15,7 @@
  * the id survived into the drawn/decluttered set.
  */
 
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
@@ -33,6 +34,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/layers/blackHoles/sources/sgrA
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
@@ -60,7 +62,7 @@ const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
 
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0 },
+    snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     cam: { distance },
     drawCamPos: camPos,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
@@ -315,7 +317,7 @@ describe('produceSceneBodyCaptions', () => {
       },
     } as unknown as EngineState;
     const ctx = {
-      snapshot: { focusBlend: 0, nowMs: 0 },
+      snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
     } as unknown as FrameView;
@@ -396,5 +398,47 @@ describe('produceSceneBodyCaptions occlude weight', () => {
     // Earth's own caption is anchored at Earth's centre — it must never be
     // occluded by the body it names.
     expect(occludeWeightOf(camPos, EARTH_LABEL_ID)).toBe(0);
+  });
+});
+
+describe('produceSceneBodyCaptions focus pick', () => {
+  it('outside the focused sphere a caption draws but carries no pick; inside and at rest it keeps it', () => {
+    const earth = worldPosOf(EARTH_LABEL_ID);
+    const ctx = makeCtx(earth);
+    const focus: FocusUniformsValue = {
+      center: earth,
+      apparentRadiusMpc: 1e-13,
+      physicalRadiusMpc: 1e-13,
+      blend: 1,
+    };
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const pickOf = (labels: readonly Label2D[], id: string) =>
+      labels.find((l) => l.id === id)!.pickId;
+    const venus = 'sceneBody-venus';
+
+    const rest = produceSceneBodyCaptions(makeState(), ctx).labels;
+    expect(pickOf(rest, venus)).toBeDefined();
+
+    const under = produceSceneBodyCaptions(makeState(), focused).labels;
+    expect(pickOf(under, EARTH_LABEL_ID)).toBeDefined();
+    expect(pickOf(under, venus)).toBeUndefined();
+  });
+});
+
+describe('produceBlackHoleCaptions focus pick', () => {
+  it('a hole outside the focused sphere keeps its caption but not its pick', () => {
+    const ctx = makeCtx([0, 0, 0]);
+    const focus: FocusUniformsValue = {
+      center: [1, 0, 0],
+      apparentRadiusMpc: 1e-3,
+      physicalRadiusMpc: 1e-3,
+      blend: 1,
+    };
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const [rest] = produceBlackHoleCaptions()(makeState(), ctx).labels;
+    const [under] = produceBlackHoleCaptions()(makeState(), focused).labels;
+    expect(rest!.pickId).toBeDefined();
+    expect(under!.id).toBe(rest!.id);
+    expect(under!.pickId).toBeUndefined();
   });
 });

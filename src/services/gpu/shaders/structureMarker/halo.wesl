@@ -47,6 +47,7 @@ fn vs(
   // initialised, so we pass 0u.  All six vertices of one instance share
   // the same value (flat-interpolated in io.wesl); never read here.
   out.structureIndex = 0u;
+  out.pickable = 0.0;
   return out;
 }
 

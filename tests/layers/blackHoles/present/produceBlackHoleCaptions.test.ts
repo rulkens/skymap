@@ -5,6 +5,7 @@
  * (Its caption kind's gates are pinned in `sources/sgrAStar.test.ts`.)
  */
 
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, it, expect, vi } from 'vitest';
 
 import { produceBlackHoleCaptions } from '../../../../src/layers/blackHoles/present/produceBlackHoleCaptions';
@@ -30,7 +31,7 @@ const STATE = {
 } as unknown as EngineState;
 
 const CTX = {
-  snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0 },
+  snapshot: { simDays: CONST_J2000, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
   cam: { distance: 1e-3 },
   drawCamPos: [0, 0, 0],
   drawPxPerRad: 720,

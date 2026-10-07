@@ -39,6 +39,7 @@ const cluster = (id: number): StructureMarkerDescriptor => ({
   radiusMpc: 2,
   haloColor: [1, 0.85, 0.4, 1],
   ringColor: [1, 0.85, 0.4, 1],
+  pickable: true,
 });
 
 // `void` is a JS reserved word; use void_ to avoid a syntax error.
@@ -49,6 +50,7 @@ const void_ = (id: number): StructureMarkerDescriptor => ({
   radiusMpc: 5,
   haloColor: [0, 0, 0, 0], // haloAlpha = 0 per spec — no halo for voids
   ringColor: [0, 0.9, 0.9, 1],
+  pickable: true,
 });
 
 const group = (id: number): StructureMarkerDescriptor => ({
@@ -58,6 +60,7 @@ const group = (id: number): StructureMarkerDescriptor => ({
   radiusMpc: 1,
   haloColor: [0.5, 0.9, 0.6, 0.8], // soft green — colour irrelevant for CPU bucketing
   ringColor: [0.5, 0.9, 0.6, 1],
+  pickable: true,
 });
 
 describe('StructureMarkerRenderer (CPU state)', () => {
@@ -374,6 +377,45 @@ describe('StructureMarkerRenderer instance eye', () => {
     renderer.setMarkers([{ ...cluster(1), worldPos: [100, 0, 0] }], [99.5, 0, 0]);
     const packed = writes.at(-1)!;
     expect(Array.from(packed.subarray(0, 3))).toEqual([0.5, 0, 0]);
+  });
+
+  it('setMarkers carries pickability in the lane after the ring colour', () => {
+    const writes: Float32Array[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createPipelineLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
+      createBindGroup: vi.fn(() => ({})),
+      queue: {
+        writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
+      },
+    } as unknown as GPUDevice;
+    const renderer = createStructureMarkerRenderer(
+      {
+        device,
+        context: null as unknown as GPUCanvasContext,
+        format: 'bgra8unorm' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      false,
+      'depth24plus',
+      false,
+      STRUCTURE_IDS,
+    );
+    renderer.setMarkers([cluster(1), { ...cluster(2), pickable: false }], [0, 0, 0]);
+    const packed = writes.at(-1)!;
+    // Two 13-float instances: the flag is the last lane of each, and the
+    // descriptor order (the pick index) is untouched.
+    expect(packed[12]).toBe(1);
+    expect(packed[25]).toBe(0);
+    expect(packed[13]).toBe(2);
   });
 
   it("pickRing rebases against the eye the instances were packed with, not the pick view's", () => {

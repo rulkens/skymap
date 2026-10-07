@@ -101,7 +101,7 @@ import { regionById } from '../../../utils/regions/regionById';
 import { regionOfBody } from '../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../utils/camera/projectToScreenPx';
 import { focusAlphaMultiplier } from '../../../utils/structure/focusAlphaMultiplier';
-import { FOCUS_PICK_EXCLUDE_BELOW } from '../../../data/focusPickExcludeBelow';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
@@ -293,9 +293,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass {
 
       for (const star of points) {
         // A star dimmed out by the focus is not aimable, as for the survey.
-        if (focusAlphaMultiplier(star.positionMpc, ctx.snapshot.focus) < FOCUS_PICK_EXCLUDE_BELOW) {
-          continue;
-        }
+        if (!isPickableUnderFocus(star.positionMpc, ctx.snapshot.focus)) continue;
         const packedId = packSelection(star.source, star.seedIndex + PICK_SENTINEL_OFFSET);
         const posRelCamMpc = relToCam(star.positionMpc);
         // A satellite inside its anchor's click target is not separately

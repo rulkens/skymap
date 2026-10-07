@@ -15,6 +15,7 @@ import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -60,9 +61,13 @@ export function produceSceneBodyCaptions(
     occluders: sceneOccluderBodies(state, ctx),
   };
 
-  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
-    composeForegroundCaption(composeCtx, label, clipFactorBody),
-  );
+  const { focus } = ctx.snapshot;
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) => {
+    const composed = composeForegroundCaption(composeCtx, label, clipFactorBody);
+    return isPickableUnderFocus(label.worldPos, focus)
+      ? composed
+      : { ...composed, pickId: undefined };
+  });
 
   return { labels, awake: false };
 }

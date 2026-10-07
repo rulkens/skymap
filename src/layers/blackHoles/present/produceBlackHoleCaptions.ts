@@ -18,6 +18,7 @@ import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOcclude
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { BLACK_HOLE_SOURCE_ROWS } from '../sources/blackHoleSourceRows';
@@ -51,20 +52,21 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
     };
     const states = sceneBodyStates(state, ctx);
 
-    const labels = BLACK_HOLES.map((row, i) =>
-      composeForegroundCaption(
-        composeCtx,
-        bodyCaption(
-          findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
-          schwarzschildRadiusM(row.massSolar),
-          states.get(blackHoleAnchorId(row))!.positionMpc,
-          BLACK_HOLE_CAPTION_TINT,
-          'sgrAStar',
-          packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
-        ),
-        clipFactor,
-      ),
-    );
+    const { focus } = ctx.snapshot;
+    const labels = BLACK_HOLES.map((row, i) => {
+      const caption = bodyCaption(
+        findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
+        schwarzschildRadiusM(row.massSolar),
+        states.get(blackHoleAnchorId(row))!.positionMpc,
+        BLACK_HOLE_CAPTION_TINT,
+        'sgrAStar',
+        packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
+      );
+      const composed = composeForegroundCaption(composeCtx, caption, clipFactor);
+      return isPickableUnderFocus(caption.worldPos, focus)
+        ? composed
+        : { ...composed, pickId: undefined };
+    });
 
     return { labels, awake: false };
   };

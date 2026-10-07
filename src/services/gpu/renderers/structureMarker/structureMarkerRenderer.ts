@@ -72,13 +72,14 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 
 /**
- * 12 floats per instance × 4 bytes = 48 bytes/instance.
+ * 13 floats per instance × 4 bytes = 52 bytes/instance.
  *
  * Layout (matches VsIn in structureMarker/io.wesl):
  *   [0..2]   position.xyz       — centre relative to the eye (f64-subtracted)
  *   [3]      radiusMpc          — world-space half-extent (ring + halo)
  *   [4..7]   haloColor.rgba     — additive halo tint + final alpha
  *   [8..11]  ringColor.rgba     — ring tint + final alpha
+ *   [12]     pickable           — 1 when the ring takes a click, else 0
  *
  * Halo and ring carry independent RGB tints so voids — which opt out
  * of the additive halo entirely (haloAlpha = 0) — can still display
@@ -86,7 +87,9 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
  * halo's RGB across both pipelines would save stride but can't
  * express that void colour split.
  */
-const MARKER_INSTANCE_FLOATS = 12;
+const MARKER_INSTANCE_FLOATS = 13;
+const MARKER_PICKABLE_FLOAT = 12;
+const MARKER_PICKABLE_BYTE_OFFSET = MARKER_PICKABLE_FLOAT * 4;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
@@ -162,7 +165,7 @@ export function createStructureMarkerRenderer(
   // saturate the buffer first, so superclusters and voids never get
   // packed — visible only with clusters toggled off) AND desyncing the
   // per-category pick index.  Growing keeps the renderer correct for
-  // any catalog size; the buffer is tiny (660 × 48 B ≈ 31 KB).
+  // any catalog size; the buffer is tiny (660 × 52 B ≈ 34 KB).
   let capacity = initialCapacity;
   let instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
   let currentMarkerCount = 0;
@@ -256,6 +259,7 @@ export function createStructureMarkerRenderer(
           { shaderLocation: 0, offset: 0, format: 'float32x4' }, // positionAndRadius
           { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
           { shaderLocation: 2, offset: 32, format: 'float32x4' }, // ringColorAndAlpha
+          { shaderLocation: 3, offset: MARKER_PICKABLE_BYTE_OFFSET, format: 'float32' }, // pickable
         ],
       },
     ];
@@ -480,6 +484,7 @@ export function createStructureMarkerRenderer(
       instanceBuf[base + 9] = d.ringColor[1];
       instanceBuf[base + 10] = d.ringColor[2];
       instanceBuf[base + 11] = d.ringColor[3];
+      instanceBuf[base + MARKER_PICKABLE_FLOAT] = d.pickable ? 1 : 0;
       currentMarkerCount++;
     }
 

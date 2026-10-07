@@ -32,12 +32,16 @@
 
 import package::galaxyCatalog::proceduralDisks::io::VsOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
+import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 @fragment
 fn fsPick(in: VsOut) -> @location(0) vec4<u32> {
   // Exact unit-circle discard — matches the visual fragment's 'r > 1.0'
   // test so the pick edge equals the visible disk edge.
   if (length(in.uv) > 1.0) { discard; }
+
+  // A disc the focus dims is not aimable, same cut as the point pick.
+  if (in.focusDim < FOCUS_PICK_EXCLUDE_BELOW) { discard; }
 
   // Write the 1-based packed identity into the r channel. g/b/a are unused;
   // the JS pick decoder reads only r. The +offset keeps 0 as 'no hit'.

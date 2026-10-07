@@ -41,6 +41,7 @@ import {
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 export function produceStructureMarkers(
   state: PassState,
@@ -175,6 +176,7 @@ export function produceStructureMarkers(
       radiusMpc,
       haloColor,
       ringColor,
+      pickable: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus),
     });
   }
   return out;

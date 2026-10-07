@@ -44,12 +44,13 @@ const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 // ── per-instance attributes ───────────────────────────────────────
 //
 // One instance per structure marker.  The CPU writer in
-// structureMarkerRenderer.ts packs each instance into 48 bytes
-// (12 f32 slots) laid out as:
+// structureMarkerRenderer.ts packs each instance into 52 bytes
+// (13 f32 slots) laid out as:
 //
 //   [0..15]  positionAndRadius   vec4<f32>  (eye-relative centre.xyz, physicalRadiusMpc)
 //   [16..31] haloColorAndAlpha   vec4<f32>  (haloRgb, haloAlpha)
 //   [32..47] ringColorAndAlpha   vec4<f32>  (ringRgb, ringAlpha)
+//   [48..51] pickable            f32        (1 = takes a click, 0 = excluded by the focus)
 //
 // Packing the radius into the trailing slot of the world-position
 // vec4 saves a vertex-attribute slot — same trick as markerLines'
@@ -71,6 +72,9 @@ struct VsIn {
   // haloColorAndAlpha's layout exactly so halo and ring vertex stages
   // pull from symmetric slots.
   @location(2) ringColorAndAlpha: vec4<f32>,
+  // shaderLocation 3: 1 when the ring may be picked, 0 when the focus sphere
+  // excludes its centre.  Read only by the ringPick fragment.
+  @location(3) pickable: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────
@@ -108,4 +112,6 @@ struct VsOut {
   // vertices of one instance share the same value — same idiom as
   // points/io.wesl's `instanceIdx`.
   @location(4) @interpolate(flat) structureIndex: u32,
+  // VsIn.pickable, forwarded flat for the ringPick fragment.
+  @location(5) @interpolate(flat) pickable: f32,
 };

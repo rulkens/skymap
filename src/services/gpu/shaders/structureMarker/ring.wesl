@@ -82,6 +82,7 @@ fn vs(
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
   out.structureIndex = ii;
+  out.pickable = input.pickable;
   return out;
 }
 

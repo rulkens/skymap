@@ -98,6 +98,10 @@ fn ringPickId(in: VsOut) -> vec4<u32> {
   // become pick targets while still occupying their instance slot.
   if (in.alpha <= 0.0) { discard; }
 
+  // Outside the focus sphere the ring still draws but takes no click.  Same
+  // per-instance slot as above, so the pick index alignment is untouched.
+  if (in.pickable < 0.5) { discard; }
+
   // 'in.structureIndex' was assembled in the vertex stage as
   // 'u32(@builtin(instance_index))'.  The shared VsOut carries it so
   // both the visible-ring fragment (which doesn't use it) and this
