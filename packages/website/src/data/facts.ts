@@ -288,7 +288,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'phone-data-size',
     about: 'app',
-    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A wider screen starts with the middle one.',
+    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A screen 768 pixels wide or wider starts with the medium one.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: 'how the data size is chosen, in the skymap repository',
     checked: CHECKED,
@@ -418,7 +418,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'dome-tilt',
     about: 'app',
-    text: 'The top of the dome sits 60 degrees above the direction the camera looks. The angle is one constant in the code, not a setting.',
+    text: 'The top of the dome sits 60 degrees above the direction the camera looks. The app has no setting for the angle.',
     source: `${REPO_BLOB}/src/data/rendering/domeParams.ts`,
     sourceLabel: 'the dome constants, in the skymap repository',
     checked: CHECKED,

@@ -123,27 +123,11 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'one-camera',
-    about: 'app',
-    text: 'The camera always turns about its focus. The keyboard does not fly it, and there is no second camera mode to switch to.',
-    source: `${REPO_BLOB}/src/services/engine/camera/controlSchemes.ts`,
-    sourceLabel: `the app’s one control scheme, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'touch-gestures',
     about: 'app',
     text: 'On a touch screen two fingers zoom and do nothing else: they do not rotate the view or slide it. Sliding the view and tilting it near a surface need the right or the middle mouse button, so a touch screen has neither.',
     source: `${REPO_BLOB}/src/services/camera/orbitControls.ts`,
     sourceLabel: `the pointer and wheel handling, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'navigation-panel',
-    about: 'app',
-    text: 'The Navigation panel in the app lists six controls on a computer and five gestures on a phone. It is a reminder, not the whole list.',
-    source: `${REPO_BLOB}/src/components/NavigationPanel/NavigationPanel.tsx`,
-    sourceLabel: `the Navigation panel, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
@@ -751,7 +735,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'card-phone-sheet',
     about: 'app',
-    text: 'On a screen 768 pixels wide or narrower the card is a sheet at the foot of the screen that shows its first lines; drag it up to read the rest. There is no hover card.',
+    text: 'On a phone, and on any screen 768 pixels wide or narrower, the card is a sheet at the foot of the screen that shows its first lines; drag it up to read the rest. There is no hover card.',
     source: `${REPO_BLOB}/src/components/InfoCard/MobileSheet/MobileSheet.tsx`,
     sourceLabel: `the card on a phone, ${IN_REPO}`,
     checked: CHECKED,
@@ -951,7 +935,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'settings-phone',
     about: 'app',
-    text: 'On a phone the Navigation and Settings panels are two folded title bars at the lower left. Tap the word Settings to open the panel and tap it again to fold it. While a card is open neither panel is shown: close the card with its cross and they come back.',
+    text: 'On a phone the Navigation and Settings panels are two folded titles at the lower left. Tap the word Settings to open the panel and tap it again to fold it. While a card is open neither panel is shown. To close the card, drag it up by the bar at its top and tap the cross, which the clock covers while the card is folded. The panels then come back.',
     source: `${REPO_BLOB}/src/components/App/App.module.css`,
     sourceLabel: `the phone layout of the panels, ${IN_REPO}`,
     checked: CHECKED,
@@ -1079,7 +1063,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-tablet',
     about: 'app',
-    text: 'A tablet held upright is usually wider than 768 pixels, and then gets what a computer gets: the middle data size, both panels open and the card at the right. Touch works as on a phone.',
+    text: 'A tablet held upright that is wider than 768 pixels gets what a computer gets: the medium data size, both panels open and the card at the right. One that is exactly 768 pixels wide, as many older iPads are, gets the medium data size with the phone’s layout. Touch works as on a phone.',
     source: `${REPO_BLOB}/src/hooks/useIsMobile.ts`,
     sourceLabel: `the width at which the layout changes, ${IN_REPO}`,
     checked: CHECKED,
@@ -1087,23 +1071,15 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-size-once',
     about: 'app',
-    text: 'The data size is chosen once, as the app opens. Turning a phone on its side or resizing the window afterwards does not change it; the card does follow the new width.',
+    text: 'The data size is chosen once, as the app opens. Turning a phone on its side afterwards does not change it.',
     source: `${REPO_BLOB}/src/main.tsx`,
     sourceLabel: `how the app starts, ${IN_REPO}`,
     checked: CHECKED,
   },
   {
-    id: 'screens-pixel-cap',
-    about: 'app',
-    text: 'The app draws one pixel for each pixel of the screen up to two per CSS pixel and no finer. A phone that has three device pixels to a CSS pixel is drawn at two, which spares it more than half the work for a difference too small to see in a field of stars.',
-    source: `${REPO_BLOB}/src/services/gpu/device.ts`,
-    sourceLabel: `how the drawing surface is sized, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
     id: 'screens-interface-size',
     about: 'app',
-    text: 'The panels and cards keep their size whatever the window: on a screen 2,560 pixels wide at 100 per cent zoom the Settings panel is still about 300 pixels wide and its text 11 pixels high.',
+    text: 'The panels and cards do not grow with the screen, so from the back of a room their text is too small to read.',
     source: `${REPO_BLOB}/src/components/common/Panel/Panel.module.css`,
     sourceLabel: `the panel’s styles, ${IN_REPO}`,
     checked: CHECKED,
@@ -1111,7 +1087,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-no-fullscreen',
     about: 'app',
-    text: 'The app has no full-screen button and no key for it. The browser’s own full screen does the job.',
+    text: 'The app has no full-screen button and no key for it. Use the browser’s own full screen.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: `the app’s keyboard shortcuts, ${IN_REPO}`,
     checked: CHECKED,
@@ -1135,7 +1111,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-no-quality-setting',
     about: 'app',
-    text: 'The app has no quality setting and no control for resolution. What a frame costs is set by the data size, the size of the window and the layers that are on. One slider trades detail for work directly: Detail, under Stars and then Advanced, where a lower value draws more distant stars one by one.',
+    text: 'The app has no quality setting and no control for resolution. What a frame costs is set by the data size, the size of the window and the layers that are on.',
     source: `${REPO_BLOB}/src/layers/starCatalog/ui/StarsSection.tsx`,
     sourceLabel: `the Stars section, ${IN_REPO}`,
     checked: CHECKED,
@@ -1159,7 +1135,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-interface',
     about: 'app',
-    text: 'In dome mode the panels, the card, the clock, a tour’s captions and an exhibit’s notes are drawn flat over the window as on any screen, not bent into the disc. Tab hides the panels, the card and the clock.',
+    text: 'The panels, the card, the clock, a tour’s captions and an exhibit’s notes are drawn flat over the window, as on any screen. Nothing bends them into the disc.',
     source: `${REPO_BLOB}/src/components/App/App.tsx`,
     sourceLabel: `how the app lays out its interface, ${IN_REPO}`,
     checked: CHECKED,
@@ -1167,7 +1143,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-pointer',
     about: 'app',
-    text: 'In dome mode the pointer picks nothing. Pointing shows no card, a click counts as a click on empty space and unpins the open card, and a double-click lets go of the focus as well. Drag, wheel, the keys and the search work as usual, so objects are chosen by name.',
+    text: 'In dome mode the pointer selects nothing, and pointing shows no card. Drag and scroll as usual, but do not click: a click unpins the card, and a double-click lets go of the focus as well. The keys and the search work as on a flat screen, so choose objects by name.',
     source: `${REPO_BLOB}/src/data/rendering/viewRigs.ts`,
     sourceLabel: `the two ways of drawing a frame, ${IN_REPO}`,
     checked: CHECKED,
@@ -1175,7 +1151,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-cost',
     about: 'app',
-    text: 'A dome frame is the scene drawn five times, so it asks several times as much of the graphics processor as the flat view in the same window.',
+    text: 'A dome frame is the scene drawn five times, so it is more work for the graphics processor than the flat view in the same window.',
     source: `${REPO_BLOB}/src/utils/camera/domeFaceSpecs.ts`,
     sourceLabel: `the dome’s five views, ${IN_REPO}`,
     checked: CHECKED,
@@ -1183,7 +1159,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'screens-dome-fixed',
     about: 'app',
-    text: 'The Field of view setting does not change the disc, and neither the 180 degrees nor the direction of the front has a setting. Every other setting works as on a flat screen.',
+    text: 'The Field of view setting does not change the disc. Every other setting works as on a flat screen.',
     source: `${REPO_BLOB}/src/utils/camera/domeFaceSpecs.ts`,
     sourceLabel: `the dome’s five views, ${IN_REPO}`,
     checked: CHECKED,
