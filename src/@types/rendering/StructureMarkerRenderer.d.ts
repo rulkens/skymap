@@ -14,14 +14,8 @@ export type StructureMarkerRenderer = {
    * Replace the marker set (`[]` clears); partitioned by `category`, one draw each.
    * Positions are packed relative to `camPos`, which the renderer remembers:
    * `draw` and `pickRing` take the f64 view-projection and rebase it on that eye.
-   * An instance farther than `maxDistanceMpc` (default none) is pulled in along its
-   * line of sight with its radius scaled alike: depth changes, apparent size does not.
    */
-  setMarkers(
-    descriptors: readonly StructureMarkerDescriptor[],
-    camPos: Vec3,
-    maxDistanceMpc?: number,
-  ): void;
+  setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void;
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float64Array,

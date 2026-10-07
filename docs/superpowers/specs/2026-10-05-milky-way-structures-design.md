@@ -152,7 +152,7 @@ Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centaur
 
 ## 9. Risks
 
-- **NEAR0 far plane moves with the camera.** It is 100× the orbit distance, so orbiting the Pleiades at 10 pc puts a 10 kpc globular beyond it. P1's far-plane clamp is the mitigation and is the least certain part until it is on screen.
+- **NEAR0 far plane moves with the camera.** Does not apply: NEAR0 is a reversed-Z slab with an infinite far plane, so no ring is ever beyond it.
 - **Label crowding near the Sun.** 71 new labels in a volume that already holds constellation captions and star names. Declutter priority and the default-on state per category are judged on screen.
 - **P7 touches the pick shader.** Pick and draw must use the same camera-relative instances, or rings are clicked where they are not drawn.
 - **Seed migration (P9) touches every existing row.** The existing seed-sanity tests pin positions before and after.

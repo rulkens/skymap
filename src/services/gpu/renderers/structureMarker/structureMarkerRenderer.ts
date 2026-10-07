@@ -449,11 +449,7 @@ export function createStructureMarkerRenderer(
     }
   }
 
-  function setMarkers(
-    descriptors: readonly StructureMarkerDescriptor[],
-    camPos: Vec3,
-    maxDistanceMpc = Infinity,
-  ): void {
+  function setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void {
     // Partition descriptors by category — preserves order within each
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
@@ -492,14 +488,10 @@ export function createStructureMarkerRenderer(
       const rx = d.worldPos[0] - camPos[0];
       const ry = d.worldPos[1] - camPos[1];
       const rz = d.worldPos[2] - camPos[2];
-      // Beyond the slab's far plane the whole quad is clipped. Position and
-      // radius scale together, so direction and angular size hold; only depth moves.
-      const dist = Math.hypot(rx, ry, rz);
-      const k = dist > maxDistanceMpc ? maxDistanceMpc / dist : 1;
-      instanceBuf[base + 0] = rx * k;
-      instanceBuf[base + 1] = ry * k;
-      instanceBuf[base + 2] = rz * k;
-      instanceBuf[base + 3] = d.radiusMpc * k;
+      instanceBuf[base + 0] = rx;
+      instanceBuf[base + 1] = ry;
+      instanceBuf[base + 2] = rz;
+      instanceBuf[base + 3] = d.radiusMpc;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
       instanceBuf[base + 6] = d.haloColor[2];

@@ -141,6 +141,7 @@ An instance whose camera-relative length `d` exceeds `maxDistanceMpc` is packed 
 - [x] Implement in the f64 packing step, before narrowing. Pick reads the same buffer, so it needs no change; say so in the commit body after checking `pickRing`.
 - [x] `frameSections.ts`: the `(hdr, NEAR0)` roster comment near line 168 says the remaining rows are "additive and so a listing choice". Near rings blend premultiplied-over, so their position matters. Reword the comment to say which rows that holds for.
 - [x] Commit.
+- The clamp was removed after review: NEAR0 is a reversed-Z slab with an infinite far plane, so nothing is ever beyond it and `maxDistanceMpc` was inert.
 
 ### Tasks 4–7: Seed rows
 
@@ -336,7 +337,7 @@ Smoke pass, one link each on this worktree's dev server (`http://localhost:<port
 - `#focus=nebula-orion`: the card shows "Type: Emission nebula".
 - `#focus=galactic-centre-arches`: the card shows the "Line of sight" row; the ring is visible near Sgr A\* and hidden from the Sun.
 - From about 50 kpc with all four categories on: rings sit on the Galaxy and fade out together as the camera leaves; none pops at the foreground gate.
-- Orbit the Pleiades at about 10 pc and look toward a globular: its ring is still drawn at the right place and size (the far-plane clamp), and clicking it selects it.
+- Orbit the Pleiades at about 10 pc and look toward a globular: its ring is drawn and clickable.
 - `#focus=cluster-virgo-m87`: framing, ring and label as on main.
 - Settings shows the four toggles with counts 25 / 21 / 22 / 3; search finds "Pleiades" and "M13".
 - `#focus=nebula-orion`: the card's Wikipedia link opens the Orion Nebula article.
