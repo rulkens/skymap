@@ -7,11 +7,7 @@
  * (scripts/initDocsSearch.ts). The `/` key opens it from anywhere on the page.
  * `big` is the control at a page's own size, for the docs index.
  */
-import pkg from '../../package.json';
 import { sitePath } from '../utils/sitePath';
-
-// The module's name carries no hash and the host caches every `.js` for a year, so its address changes with Pagefind's version.
-const indexUrl = `${sitePath('/pagefind/pagefind.js')}?v=${pkg.dependencies.pagefind}`;
 
 type Props = { big?: boolean };
 
@@ -22,7 +18,7 @@ const { big = false } = Astro.props;
   Search the docs <kbd aria-hidden="true">/</kbd>
 </button>
 
-<dialog class="sheet" data-search data-index={indexUrl} aria-labelledby="search-label">
+<dialog class="sheet" data-search data-index={sitePath('/pagefind/pagefind.js')} aria-labelledby="search-label">
   <div class="wrap grid">
     <div class="ask">
       <label class="small" id="search-label" for="search-field">Search the docs</label>

@@ -50,6 +50,9 @@ describe('preview mode (the default)', () => {
     expect(preview.html).toContain('/home/_astro/');
     const headers = readFileSync(resolve(siteDir, '../../public/_headers'), 'utf8');
     expect(headers).toMatch(/^\/home\/_astro\/\*\n\s+Cache-Control: .*immutable/m);
+    // Below `/*.js`, or the search worker keeps that rule's year (public/_headers says why).
+    expect(headers).toMatch(/^\/\*\.js\n[\s\S]*^\/home\/pagefind\/\*\n\s+! Cache-Control\n/m);
+    expect(existsSync(join(preview.out, 'pagefind/pagefind-worker.js'))).toBe(true);
   });
 
   it('structured data names the preview URL', () => {

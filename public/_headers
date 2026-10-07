@@ -22,6 +22,15 @@
 /home/_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
+# The website's search (Pagefind): its worker and module keep their names from
+# one version to the next, so they are checked on every load. A request takes
+# the headers of every rule it matches, joined with commas, in the order of
+# this file: the rule detaches the year set by /*.js and must stay below it.
+# Moves to /pagefind/* at the root swap.
+/home/pagefind/*
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate
+
 # Famous-galaxy thumbnails — not hash-fingerprinted (the URL is part of
 # the seed JSON and stable), so cap at one day to allow refreshes if the
 # atlas is regenerated.
