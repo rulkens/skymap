@@ -41,6 +41,8 @@
   /* Capped by a short window, so an opening section's title still fits it and no heading under it is larger. */
   --text-h2: min(clamp(2.5rem, 5.2vw, 5.25rem), 9svh);
   --text-ring-big: clamp(1.875rem, 3.4vw, 3rem);
+  /* The title of a docs page, and of the docs' front page: a reading page's, well under a landing page's. */
+  --text-doc-title: clamp(2.5rem, 4.2vw, 3.5rem);
   --leading-body: 1.6;
   --leading-display: 1.05;
   --measure: 44ch;
@@ -168,6 +170,28 @@ img {
 /* A date is one word: it never breaks across two lines. */
 .date {
   white-space: nowrap;
+}
+
+/* Words for a screen reader only: what a sighted reader takes from where a thing stands or how it is set. */
+.unseen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A key of the keyboard, drawn as a key: the one outlined thing in running text. */
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.3em;
+  border: 1px solid rgb(232 238 255 / 0.3);
+  border-radius: 0.1875rem;
+  font: var(--weight-small) 0.8125em / 1.45 var(--font-family-mono);
+  color: var(--color-fg);
+  text-align: center;
 }
 
 /*
@@ -308,6 +332,23 @@ img {
   z-index: -1;
   inset: 0 calc(50% - 50vw) -2rem;
   background: linear-gradient(180deg, rgb(0 0 0 / 0) 0, #000 var(--caption-rise, 4rem));
+}
+
+/*
+ * A sheet over the page (DocsSearch, FigureSheet): a modal dialog with none of the browser's own box. The page
+ * behind does not scroll while one is open.
+ */
+dialog.sheet {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  background: var(--color-bg);
+  color: inherit;
+}
+
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 
 /* One gap above every section of a page; the page's last block closes it. */
@@ -495,9 +536,11 @@ img {
   }
 }
 
+/* As specific as the rules that set the transitions, or it would lose to them. */
 @media (prefers-reduced-motion: reduce) {
   .ring::before,
-  .glyph {
+  :is(.ring, .glyph-ring) > .glyph,
+  .ring > .glyph[data-icon='view'] {
     transition: none;
   }
 }

@@ -1,0 +1,134 @@
+---
+description: The Settings panel shows and hides parts of the scene, sets the picture’s brightness, turns names off and chooses how much data loads. A reload undoes it.
+facts:
+  [
+    ref-settings-place,
+    ref-settings-kinds,
+    ref-settings-kept,
+    ref-settings-orientation,
+    ref-settings-tier-reload,
+    app-data-size-choice,
+    share-settings,
+    sim-reweight,
+  ]
+---
+
+Every control, with its values and where it starts, is in [All settings](/docs/reference/settings/).
+
+## Find the panel
+
+The Settings panel is at the lower left. Click a heading to open it; a change shows at once. There is no reset button: reload the page to put everything back.
+
+{/* Below 700 px the figure shows the manifest row 'guide-settings-panel-phone', which it finds by name. */}
+
+<Figure id="guide-settings-panel" />
+
+<Fact id="settings-panel-grows" />
+
+On a phone the panel is folded, and hidden while a card is open; see [Screens, quality and domes](/docs/guide/screens-and-domes/#phones-and-tablets).
+
+## Show or hide things
+
+Each heading in the panel is one layer of the scene, and most carry a switch.
+
+| To show or hide | Use |
+| --- | --- |
+| Galaxies, one catalogue at a time | The eight switches under Galaxies |
+| Stars | The switch on Stars, or the four under it: named stars, Gaia stars, the Sun, the stars round the black hole |
+| The glow of the cosmic web | The switch on Cosmic web density |
+| The filaments | The switch on Cosmic web filaments |
+| The flow ribbons | The switch on Flow |
+| The markers of clusters, superclusters, voids and groups | The switches under Structures |
+| Orbits, the Zone of Avoidance band, the Local Bubble, the constellations | The last four switches under Labels & Guides |
+
+<Fact id="settings-structures-names" />
+
+<Fact id="settings-fetched-on-switch" />
+
+The three DESI regions, the filaments, the flow ribbons, the Local Bubble and the constellations are off at first. Planets, moons and spacecraft have no switch, and neither has the Milky Way. See [What is in the scene](/docs/start/scene/) for what each layer is.
+
+## Make it brighter or calmer
+
+All of this is under Display, the last heading.
+
+<Fact id="settings-exposure" />
+
+For a dark room, lower it by one or two EV. For a projector in a room that is not dark, raise it.
+
+<Fact id="settings-bloom" />
+
+<Fact id="settings-tone-curve" />
+
+<Fact id="settings-hdr" />
+
+To change one layer and leave the rest, use that layer’s own sliders: Galaxy brightness and Point size under Galaxies and then Advanced, Star brightness and Star size under Stars and then Advanced, and Intensity under Cosmic web filaments and under Flow.
+
+## Turn names on or off
+
+<Fact id="label-switches" />
+
+<Fact id="settings-names-off" />
+
+With the names off, a planet or a star can still be clicked itself, and found with the [search](/docs/guide/finding/).
+
+## See more or fewer galaxies
+
+The data size is set in the title of the Settings panel. The control is marked Tier and offers Small, Medium and Large.
+
+<Fact id="phone-data-size" />
+
+<Fact id="settings-size-large-choice" />
+
+<Fact id="settings-size-totals" />
+
+<Figure id="guide-size-small" />
+
+<Figure id="guide-size-large" />
+
+The link under each picture opens the same place at the size your screen starts with; set Tier to see the others. The second picture is brighter as well as fuller: the light of every galaxy is added to the picture, so more galaxies in one place make a brighter place. Lower Galaxy brightness, or Exposure, if the middle runs to white.
+
+<Fact id="settings-size-cost" />
+
+A larger size also takes more of the graphics processor’s memory and more work for each frame. If the app stutters after a change, go back down; see [Screens, quality and domes](/docs/guide/screens-and-domes/#when-it-stutters).
+
+<Fact id="settings-size-address" />
+
+What each size holds, catalogue by catalogue, is in [All settings](/docs/reference/settings/#data-size).
+
+## Change which way is up
+
+<Fact id="orientation-setting" />
+
+A change moves nothing in the scene, only the camera. Choose Galactic to see the Milky Way’s disc lie level, and Supergalactic for the sheet of nearby superclusters.
+
+<View to="focus=milkyWay&orientation=galactic">Open the Milky Way with its plane level</View>
+
+<Fact id="settings-fov" />
+
+## Even out the surveys
+
+No survey looked at the whole sky to the same depth, and the map shows it. One setting takes some of that unevenness out of the picture, and it is on when the app opens.
+
+<Fact id="settings-density-how" />
+
+<Fact id="settings-density-why" />
+
+<Figure id="guide-density-corrected" />
+
+<Figure id="guide-density-raw" />
+
+The link under each picture opens the app as it starts, with the correction on. To see the second picture yourself, open Galaxies, then Advanced, and set Density correction to “None — raw catalogue”.
+
+<Fact id="settings-density-limits" />
+
+So neither picture is the true one. With the correction, a real crowd of galaxies is toned down along with a crowd that only the catalogue made. Without it, you see each catalogue as it is, its habits included. For anything you mean to measure or to show as evidence, choose None and say so.
+
+<Fact id="settings-density-others" />
+
+No correction touches the two fans of SDSS, the empty band behind the Milky Way or the thinning of the map with distance. See [where the map is blind](/science/#simplifications) on The science behind skymap.
+
+## What is kept, and what a link carries
+
+The app keeps no settings. A reload, or a new visit, starts every one where [All settings](/docs/reference/settings/) says, and the data size goes back to the one the screen’s width chooses. A link carries the orientation and no other setting; see [Sharing a view](/docs/guide/sharing/#what-a-link-does-not-carry).
+
+If a lesson needs the names off or the large size, say so beside the link, or set it on the room’s computer before the class comes in and leave the page open.

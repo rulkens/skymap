@@ -1,0 +1,129 @@
+---
+description: Every key, mouse action, trackpad gesture and touch gesture that skymap responds to, in tables, each with what it does and where it applies.
+facts:
+  [
+    ref-keys-camera,
+    ref-keys-search,
+    ref-keys-search-open,
+    ref-keys-clock,
+    ref-keys-clock-boxes,
+    ref-keys-tours,
+    ref-keys-interface,
+    ref-keys-welcome,
+    ref-keys-under-welcome,
+    ref-keys-development,
+    ref-mouse,
+    ref-trackpad,
+    ref-touch,
+    tour-no-steering,
+    site-view,
+    surface-controls,
+    touch-gestures,
+  ]
+---
+
+import { DOCS_CONTROLS } from '../../../data/docsControls';
+
+export const controls = (id) => {
+  const group = DOCS_CONTROLS.find((candidate) => candidate.id === id);
+  return {
+    cols: 'detail',
+    head: [group.kind === 'keys' ? 'Key' : 'What you do', 'What it does', 'Where it applies'],
+    rows: group.rows.map((row) => [
+      group.kind === 'keys' ? { keys: row.input } : row.input[0],
+      row.does,
+      row.where,
+    ]),
+  };
+};
+
+The Guide explains the same controls by what you want to do, starting with [Moving around](/docs/guide/moving/).
+
+<Figure id="guide-controls" eager />
+
+## Where a control applies
+
+The last column of each table uses these words.
+
+- **Anywhere** is the scene, a tour, an exhibit and the welcome screen, as long as no text field has the keyboard.
+- **The scene and exhibits** takes in a tour while it is paused. While a tour plays, the tour steers the camera.
+- **A text field** is the search field or the date field of the clock.
+
+<p>
+  <Fact id="ref-text-fields" inline /> <Fact id="ref-esc-always" inline />
+</p>
+
+<Fact id="ref-keys-read" inline /> On a keyboard that types one of those four with Shift or Alt Gr, use the button on the screen: the search box, or the arrows and the pause button on the clock.
+
+## Keyboard
+
+### Camera and selection
+
+<Table {...controls('keys-camera')} />
+
+See [Moving around](/docs/guide/moving/) for what the focus is.
+
+### Search
+
+To open the search:
+
+<Table {...controls('keys-search')} />
+
+Once it is open:
+
+<Table {...controls('keys-search-open')} />
+
+See [Finding things](/docs/guide/finding/) for what the search finds.
+
+### Clock
+
+<Table {...controls('keys-clock')} />
+
+<Fact id="clock-hidden" inline /> The list of speeds closes on a click outside it. See [Time](/docs/guide/time/) for the speeds and what the clock moves.
+
+### Tours and exhibits
+
+<Table {...controls('keys-tours')} />
+
+An exhibit has no keys of its own but <Keys of="Esc" />. The same controls are on screen as buttons; see [Tours and exhibits](/docs/guide/tours/).
+
+### Interface
+
+<Table {...controls('keys-interface')} />
+
+<Fact id="ref-tab-taken" inline /> If the panels are missing, press <Keys of="Tab" />.
+
+### For development
+
+<Fact id="ref-keys-development" />
+
+<Table {...controls('keys-development')} />
+
+The link that <Keys of="L" /> prints holds the camera position; see [Camera positions](/docs/reference/url-parameters/#camera-positions).
+
+## Mouse
+
+<Table {...controls('mouse')} />
+
+<Fact id="ref-gesture-start" inline /> Which way the wheel zooms follows the scroll direction set on your computer; the table gives the usual one.
+
+Near a surface means lower over the focused planet or moon than about half its radius.
+
+## Trackpad
+
+<Table {...controls('trackpad')} />
+
+## Touch screen
+
+<Table {...controls('touch')} />
+
+A touch screen has no pointer to rest, so it shows no hover card.
+
+## What has no control
+
+- **Flying with the keyboard.** The keys choose a focus, and the mouse, the trackpad or a finger does the rest.
+- **Auto-rotate.** It has a button in the top bar and no key.
+- **Sliding the view and tilting it, on a touch screen.** Both need the right or the middle mouse button.
+- **Moving from button to button with <Keys of="Tab" />.**
+
+Every parameter a link can carry is on the next page, [URL parameters](/docs/reference/url-parameters/).

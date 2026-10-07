@@ -5,12 +5,13 @@
  *
  *   npm run site:fold -- --url http://localhost:4321/home/
  *
- * Pages are the files of the site's `pages/` folder, so a new page is checked
- * without being listed here.
+ * Pages are the files of the site's `pages/` folder and the written pages of
+ * the docs tree, so a new page is checked without being listed here.
  */
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { DOCS_TREE } from '../../packages/website/src/data/docsTree';
 import { launchChromium } from '../utils/browser/launchChromium';
 import type { FoldMeasure } from './@types/FoldMeasure';
 import { FOLD_SIZES } from './foldSizes';
@@ -27,10 +28,16 @@ if (!base) {
   process.exit(1);
 }
 
+// A file with a bracket in its name is a pattern, not a page: the docs pages it makes come from the tree.
 const routes = readdirSync(PAGES_DIR, { recursive: true, encoding: 'utf8' })
-  .filter((name) => name.endsWith('.astro'))
+  .filter((name) => name.endsWith('.astro') && !name.includes('['))
   .map((name) => name.replace(/(index)?\.astro$/, ''))
-  .map((name) => (name === '' || name.endsWith('/') ? name : `${name}/`));
+  .map((name) => (name === '' || name.endsWith('/') ? name : `${name}/`))
+  .concat(
+    DOCS_TREE.flatMap((group) => group.pages)
+      .filter((page) => page.status === 'live')
+      .map((page) => page.path.slice(1)),
+  );
 
 const failures: string[] = [];
 const browser = await launchChromium();

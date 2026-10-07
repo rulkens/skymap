@@ -1,0 +1,171 @@
+---
+/*
+ * DocBody — the running text of a docs page: what the pages' Markdown emits,
+ * set for reading at length on black. Jost 400 at 18px, about 65 characters
+ * to the line; headings in the display face, never under 20px; a list's
+ * bullets are the site's ring, small. The rules reach into the slot because
+ * compiled Markdown carries no component scope, and they stop at `data-embed`:
+ * a component set into the text (a figure, a table, an example) marks its
+ * root with it and keeps its own look. The stop adds no weight (`:where`).
+ */
+---
+
+<div class="doc-body"><slot /></div>
+
+<style>
+  .doc-body {
+    /* The longest line of running text; a column sets it on a wide window, this on one of 600 to 900px. */
+    --doc-measure: none;
+    font: var(--weight-small) 1.125rem / 1.65 var(--font-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .doc-body > :global(:first-child) {
+    margin-top: 0;
+  }
+
+  .doc-body :global(:is(p, li, dd):where(:not([data-embed] *))) {
+    max-width: var(--doc-measure);
+    text-wrap: pretty;
+  }
+
+  /* The gap above a heading is always larger than the one below it. */
+  .doc-body :global(h2) {
+    margin: 3.5rem 0 1rem;
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .doc-body :global(h3:where(:not([data-embed] *))) {
+    margin: 2.5rem 0 0.75rem;
+  }
+
+  /*
+   * A heading or a term a link landed on stands clear of the bars above it. The contents' bar is counted here and
+   * not in the page's scroll padding, which would move the page whenever the bar itself took the keyboard.
+   */
+  .doc-body :global(:is(h2, h3, dt)) {
+    scroll-margin-top: calc(1.5rem + var(--docs-bar));
+  }
+
+  .doc-body :global(strong:where(:not([data-embed] *))) {
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .doc-body :global(:is(ul, ol):where(:not([data-embed] *))) {
+    margin: 0 0 var(--stack);
+    padding-left: 1.5rem;
+    color: var(--site-text-muted);
+  }
+
+  .doc-body :global(li:where(:not([data-embed] *))) {
+    margin-block: 0.5rem;
+  }
+
+  .doc-body :global(li > :is(ul, ol)) {
+    margin-bottom: 0;
+  }
+
+  .doc-body :global(ul:where(:not([data-embed] *))) {
+    list-style: none;
+  }
+
+  .doc-body :global(ul:where(:not([data-embed] *)) > li) {
+    position: relative;
+  }
+
+  .doc-body :global(ul:where(:not([data-embed] *)) > li::before) {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 0.65em;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+  }
+
+  .doc-body :global(ol > li::marker) {
+    color: var(--site-text-dim);
+  }
+
+  /* One size for code and one for a key wherever they stand, so a page does not gain a size for each place. */
+  .doc-body :global(:is(code, pre, kbd)) {
+    font-size: 0.9375rem;
+  }
+
+  .doc-body :global(:is(code, pre)) {
+    font-family: var(--font-family-mono);
+    color: var(--color-fg);
+  }
+
+  /* A block of code scrolls inside its own rules; the page never scrolls sideways. */
+  .doc-body :global(pre) {
+    margin: 0 0 var(--stack);
+    padding-block: 1rem;
+    border-block: 1px solid var(--border-divider);
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+
+  .doc-body :global(dl:where(:not([data-embed] *))) {
+    margin: 0 0 var(--stack);
+  }
+
+  .doc-body :global(dt:where(:not([data-embed] *))) {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-divider);
+    color: var(--color-fg);
+  }
+
+  /* The term a link or the search landed on, marked as the catalogue marks its row. */
+  .doc-body :global(dt:target) {
+    border-top-color: var(--color-accent);
+  }
+
+  .doc-body :global(dd:where(:not([data-embed] *))) {
+    margin: 0 0 0.75rem;
+    color: var(--site-text-muted);
+  }
+
+  /* `--figure-out` is how far a wide figure runs past the text's right edge (components/DocFigure.astro). */
+  .doc-body :global(figure) {
+    margin: 2.5rem var(--figure-out, 0) 2.5rem 0;
+  }
+
+  .doc-body :global(.caveat) {
+    margin-block: 2.5rem;
+  }
+
+  .doc-body :global(.caveat h3) {
+    margin-top: 0;
+  }
+
+  /*
+   * A view link standing by itself in the text (components/View.astro): a line of its own, as far from the
+   * paragraph above as from the one below, and one under another they make a list with no gap. Its 44px for
+   * the thumb is more than a line of text, so the margins take the difference back.
+   */
+  .doc-body > :global(:is(a.ring, .link-row)) {
+    display: flex;
+    width: fit-content;
+    margin: -0.75rem 0 0.75rem;
+  }
+
+  /* In a cell or a sentence the ring keeps its 44px and the line keeps its height. */
+  .doc-body :global(:is(td, th, p:not(.link-row)) > a.ring) {
+    margin-block: -0.75rem;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 900px) {
+    .doc-body {
+      --doc-measure: 35rem;
+    }
+
+    .doc-body > :global(:is(pre, .caveat, .example)) {
+      max-width: var(--doc-measure);
+    }
+  }
+</style>

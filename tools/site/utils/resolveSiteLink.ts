@@ -9,8 +9,8 @@ const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * Three kinds of target: external (skipped), under the site's base (must be a
  * built file, a directory with an `index.html`, or an allow-listed page that
  * is not built yet), and root-absolute outside the base, which belongs to the
- * main shell: `/` is the app itself (its `#` is the app's, never checked) and
- * anything else must be a file in the repo's `public/`.
+ * main shell: `/` is the app itself, where a `#` must be a view the app has,
+ * and anything else must be a file in the repo's `public/`.
  */
 export function resolveSiteLink(
   pagePath: string,
@@ -27,7 +27,11 @@ export function resolveSiteLink(
   const path = pathPart === '' ? pagePath : new URL(pathPart, `http://site${pagePath}`).pathname;
 
   if (!path.startsWith(ctx.base)) {
-    if (path === '/') return { kind: 'ok' };
+    if (path === '/') {
+      // A built page writes `&` as an entity; the app is handed the character.
+      const problem = hash === '' ? null : ctx.appProblem(hash.replaceAll('&amp;', '&'));
+      return problem === null ? { kind: 'ok' } : { kind: 'broken', reason: problem };
+    }
     return ctx.hasPublic(path.slice(1))
       ? { kind: 'ok' }
       : { kind: 'broken', reason: `${path} is not a file in public/` };

@@ -1,11 +1,13 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
+import { BiasMode } from '../../../src/data/galaxyCatalog/biasMode';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { setBlackHoleLabelEnabled } from '../../../src/layers/blackHoles/state/blackHoles/slice';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setCosmicWebFilamentsEnabled } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/slice';
+import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import {
   setStructureItemEnabled,
@@ -15,6 +17,7 @@ import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/s
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
 import { setOrbitTrailsEnabled } from '../../../src/state/settings/core/orbitTrails/slice';
+import { requestTier } from '../../../src/state/tier/requestTier';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
 import { dismissSplash } from '../../../src/state/ui/uiSlice';
@@ -51,6 +54,9 @@ export function siteShotActions({
   if (settings.hideZoneOfAvoidance) actions.push(setZoneOfAvoidanceEnabled(false));
   if (settings.filaments) actions.push(setCosmicWebFilamentsEnabled(true));
   if (settings.fovDeg !== undefined) actions.push(setFovDeg(settings.fovDeg));
+  if (settings.rawDensity) actions.push(setBiasMode(BiasMode.None));
+  // The new size's files load after this; the row's `settleMs` is the wait for them.
+  if (settings.dataSize !== undefined) actions.push(requestTier(settings.dataSize));
   if (settings.hideLabels) {
     actions.push(
       ...labelDeclutterActions(),

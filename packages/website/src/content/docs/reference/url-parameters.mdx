@@ -1,0 +1,258 @@
+---
+description: The parameters a link to skymap can carry, each with the form of its value, a worked example, what it does and whether the app writes it back.
+facts:
+  [
+    takeover-links,
+    dome-flag,
+    lesson-link,
+    link-pose,
+    link-time-write,
+    ref-focus-places,
+    ref-pose-forms,
+    ref-params-unknown-wait,
+    ref-tour-link-writes,
+    sondermarken-flyout,
+  ]
+---
+
+import { BODY_PICK_ROWS } from '../../../../../../src/data/bodies/bodyPickRows';
+import { SURFACE_FIXED_SITES } from '../../../../../../src/data/bodies/surfaceFixedSites';
+import {
+  DOCS_EXHIBIT_IDS,
+  DOCS_FOCUS_IDS,
+  DOCS_ORIENTATIONS,
+  DOCS_TOUR_IDS,
+  DOCS_URL_PARAMS,
+} from '../../../data/docsUrlParams';
+
+export const Codes = ({ of }) => (
+  <>
+    {of.map((name, i) => (
+      <>
+        {i > 0 && ', '}
+        <code>{name}</code>
+      </>
+    ))}
+  </>
+);
+
+export const HASH = DOCS_URL_PARAMS.filter((param) => param.part === 'hash');
+export const FLAGS = DOCS_URL_PARAMS.filter((param) => param.part === 'query' && !param.development);
+export const DEV_FLAGS = DOCS_URL_PARAMS.filter((param) => param.development);
+export const TOURS = DOCS_TOUR_IDS.filter((row) => row.id !== 'demo');
+
+A link to skymap is the app’s address with parameters added to it. [Sharing a view](/docs/guide/sharing/) is about copying one from the app; this page is for writing one by hand.
+
+## The parts of an address
+
+```
+/?dome#focus=body-saturn&t=2017-10-15T12:00:00Z
+```
+
+- `?dome` is a flag. Flags come first, after a `?`.
+- `#` begins the parameters. Nothing after it is sent to the server: the app reads it in your browser.
+- `focus=body-saturn` is one parameter, a name and a value with `=` between them.
+- `&` joins one parameter to the next.
+
+<Fact id="ref-params-spelling" />
+
+<Figure id="guide-share-pose" />
+
+## The parameters
+
+These go after the `#`.
+
+<Table
+  cols="stack"
+  head={['Parameter', 'Value', 'What it does', 'Does the app write it?']}
+  rows={HASH.map((param) => [
+    { code: param.name },
+    { text: param.value, code: param.example },
+    param.does,
+    param.written,
+  ])}
+/>
+
+<Fact id="ref-params-welcome" />
+
+## The flags
+
+These go after the `?`, before the `#`.
+
+<Table
+  cols="detail"
+  head={['Flag', 'What it does', 'Does the app write it?']}
+  rows={FLAGS.map((param) => [{ code: param.example }, param.does, param.written])}
+/>
+
+<Fact id="ref-dome-spelling" inline /> See [Screens, quality and domes](/docs/guide/screens-and-domes/) for dome mode. Four more flags are [at the foot of this page](#for-development).
+
+## Object ids
+
+The value of `focus` is the id of one object.
+
+<Table
+  cols="stack"
+  head={['Form', 'Example', 'What it names']}
+  rows={DOCS_FOCUS_IDS.map((row) => [
+    { code: row.form },
+    { code: `focus=${row.example}` },
+    row.names,
+  ])}
+/>
+
+<Fact id="ref-focus-ids" />
+
+The names that follow `body-` are: <Codes of={Object.values(BODY_PICK_ROWS).flatMap((rows) => rows.map((row) => row.id))} />.
+
+### Where to find an id
+
+Go to the object in the app, from the search or with a double-click, and read `focus=` in the address bar. The app writes the id it would read. The [Object catalogue](/docs/reference/objects/) has the id of every named object.
+
+<p>
+  <Fact id="ref-focus-galaxy-ids" inline /> <Fact id="ref-focus-pos-famous" inline />
+</p>
+
+The band of the Zone of Avoidance has no id: it is a direction on the sky, so the camera cannot fly to it. A place on Earth has none either; a link to a place is a [camera position](#camera-positions).
+
+## Instants
+
+The value of `t` is an instant, a date and time.
+
+| Written as | Read as |
+| --- | --- |
+| `t=2020-12-21T18:00:00Z` | 21 December 2020 at 18:00 UTC |
+| `t=2020-12-21T18:00:00+01:00` | 17:00 UTC on that day |
+| `t=2020-12-21` | Midnight UTC at the start of that day |
+| `t=2020` | Midnight UTC at the start of 1 January 2020 |
+| `t=2020-12-21T18:00` | 18:00 on the clock of the computer that opens the link |
+
+Always end a time in `Z`. <Fact id="ref-time-forms" inline />
+
+When the app writes `t`, and the years the positions of the planets hold for, are under [Sharing a view](/docs/guide/sharing/) and [Time](/docs/guide/time/).
+
+## Orientations
+
+<Table
+  cols="3 3"
+  head={['Value', 'What lies flat']}
+  rows={DOCS_ORIENTATIONS.map((row) => [{ code: `orientation=${row.id}` }, row.flat])}
+/>
+
+The same choice is Orientation, under Display in the Settings panel; see [All settings](/docs/reference/settings/#display).
+
+## Exhibits and tours
+
+<Table
+  cols="3 3"
+  head={['Value', 'Opens']}
+  rows={[
+    ...DOCS_EXHIBIT_IDS.map((row) => [{ code: `exhibit=${row.id}` }, `The exhibit ${row.name}`]),
+    ...TOURS.map((row) => [{ code: `tour=${row.id}` }, `The tour “${row.name}”`]),
+  ]}
+/>
+
+A link copied during a tour starts the tour from its first step. See [Tours and exhibits](/docs/guide/tours/) for what each one shows.
+
+## Camera positions
+
+The value of `pose` is an exact camera position. <Fact id="link-pose" inline />
+
+<Table
+  cols="detail"
+  head={['Form', 'What it is', 'Example']}
+  rows={[
+    [{ code: 'a' }, 'A view about a point in space: the letter and seven numbers, or nine.', { code: 'pose=a,0,0,0,2.1,0.35,260,0' }],
+    [{ code: 's' }, 'A view round a rover or Søndermarken: the letter, the name of a site and three numbers.', { code: 'pose=s,perseverance,0.5,0.3,50' }],
+    [{ code: 'b' }, 'A view fixed to a planet or a moon as it turns, which is how a view close to a surface is written: the letter, the name of a body and 15 numbers.', 'Take it from the app'],
+  ]}
+/>
+
+The seven numbers of the `a` form are, in order:
+
+1. Three for the point the camera turns about, in megaparsecs from the Sun.
+2. Two angles for the side the camera looks from, in radians.
+3. The distance from that point to the camera, in megaparsecs. It has to be more than zero.
+4. The roll of the picture, in radians. Write 0.
+
+The two more that may follow turn the view away from that point, in radians, so that the focus sits off-centre. <Fact id="ref-pose-with-focus" inline />
+
+The three numbers of the `s` form are the direction the camera stands in and its height above the horizon, both in radians, and its distance from the site in metres, which has to be more than zero. The sites are <Codes of={SURFACE_FIXED_SITES.map((site) => site.id)} />.
+
+<Fact id="ref-pose-from-app" inline /> The key is in the [Controls](/docs/reference/controls/#for-development) tables. <Fact id="ref-pose-body-focus" inline />
+
+A pose with the wrong number of values, a value that is not a number or a name the app does not know is ignored whole.
+
+## How parameters combine
+
+<Fact id="ref-params-combine" />
+
+<p>
+  <Fact id="ref-params-hash" inline /> <Fact id="exhibit-link-time" inline />
+</p>
+
+## Values the app does not know
+
+<p>
+  <Fact id="ref-params-unknown" inline /> <Fact id="ref-params-unknown-wait" inline />
+</p>
+
+## In a running app
+
+<Fact id="ref-params-running" />
+
+<Fact id="ref-params-history" />
+
+## Example links
+
+<Example to="focus=body-saturn" address label="Open Saturn">
+  Saturn.
+</Example>
+
+<Example to="focus=body-jupiter&t=2020-12-21T18:00:00Z" address label="Open Jupiter on that evening">
+  Jupiter on the evening of 21 December 2020, with the clock paused.
+</Example>
+
+<Example to="exhibit=solarSystem&t=2020-12-21T18:00:00Z" address label="Open the exhibit at that instant">
+  The Solar System exhibit at the same instant.
+</Example>
+
+<Example to="focus=m31&orientation=galactic" address label="Open the Andromeda galaxy">
+  The Andromeda galaxy, with the plane of the Milky Way laid flat.
+</Example>
+
+<Example to="focus=cluster-virgo-m87" address label="Open the Virgo Cluster">
+  The Virgo Cluster.
+</Example>
+
+<Example to="pose=a,0,0,0,2.1,0.35,260,0" address>
+  A camera 260 megaparsecs from the Sun, with nothing selected.
+</Example>
+
+<Example to="pose=s,perseverance,0.5,0.3,50" address label="Open the rover’s site">
+  The Perseverance rover from 50 metres.
+</Example>
+
+<Example to="tour=webShowcase" address label="Start the tour">
+  The tour “Named Cosmic Web”.
+</Example>
+
+<Example to="focus=body-saturn" query="dome" address label="Open Saturn as a fisheye disc">
+  Saturn in dome mode.
+</Example>
+
+## For development
+
+These flags are for the people who build skymap. They work in the published app, so a link you are sent may carry one. <Fact id="ref-params-query" inline />
+
+<Table
+  cols="detail"
+  head={['Flag', 'What it does', 'Skips the welcome screen']}
+  rows={DEV_FLAGS.map((param) => [
+    { code: param.example },
+    param.does,
+    param.skipsWelcome ? 'Yes' : 'No',
+  ])}
+/>
+
+Such a link may also carry `clip`, which plays one flight of the camera with no captions and no steps: `clip=sondermarkenFlyout` is the flight the home page of this site opens. The keys for development are in the [Controls](/docs/reference/controls/#for-development) tables.

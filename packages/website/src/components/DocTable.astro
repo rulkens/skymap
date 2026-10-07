@@ -1,0 +1,237 @@
+---
+/*
+ * DocTable — every table of a docs page: a Markdown table (its slot) or, as
+ * `<Table head={…} rows={…} />`, one fed from data. Each row is laid on the
+ * text column's own grid columns by one of five layouts (@types/DocTableCols),
+ * chosen by the number of columns unless `cols` names one, so tables with the
+ * same headings share their column edges down a page. Under 700px a row is a
+ * block: its first cell as its name, the others under it, led by their
+ * headings. The roles say again what the elements are, because a row that is
+ * a grid would otherwise stop being a table row to a screen reader.
+ */
+import type { DocCell } from '../@types/DocCell';
+import type { DocTableCols } from '../@types/DocTableCols';
+import { tableCells } from '../utils/tableCells';
+import Keys from './Keys.astro';
+import View from './View.astro';
+
+type Props = { cols?: DocTableCols; head?: readonly string[]; rows?: readonly (readonly DocCell[])[] };
+
+type Cell = DocCell | { html: string };
+
+const fromSlot = Astro.props.rows ? undefined : tableCells(await Astro.slots.render('default'));
+const head: readonly Cell[] = Astro.props.head ?? fromSlot!.head.map((html) => ({ html }));
+const rows: readonly (readonly Cell[])[] = Astro.props.rows ?? fromSlot!.rows.map((row) => row.map((html) => ({ html })));
+const labels = Astro.props.head ?? fromSlot!.head.map((html) => html.replace(/<[^>]+>/g, '').trim());
+const cols = Astro.props.cols ?? (head.length === 2 ? '2 4' : head.length === 3 ? '2 2 2' : 'stack');
+// A table with no heading over its first column names its rows there: those cells are the rows' headers.
+const named = labels[0] === '';
+// Ends every cell: the search index joins the words of neighbouring cells where nothing stands between them.
+const SPACE = ' ';
+---
+
+<div class="doc-table" data-embed data-cols={cols}>
+  <table role="table">
+    <thead role="rowgroup">
+      <tr role="row">
+        {
+          head.map((cell, i) =>
+            named && i === 0 ? (
+              <td role="presentation" />
+            ) : (
+              <th role="columnheader" scope="col">
+                {typeof cell === 'object' && 'html' in cell ? <Fragment set:html={cell.html} /> : cell}
+                {SPACE}
+              </th>
+            ),
+          )
+        }
+      </tr>
+    </thead>
+    <tbody role="rowgroup">
+      {
+        rows.map((row) => (
+          <tr role="row">
+            {row.map((cell, i) => {
+              const Tag = named && i === 0 ? 'th' : 'td';
+              return (
+                <Tag role={Tag === 'th' ? 'rowheader' : 'cell'} scope={Tag === 'th' ? 'row' : undefined} data-label={i > 0 ? labels[i] : undefined}>
+                  {typeof cell === 'string' ? (
+                    cell
+                  ) : 'html' in cell ? (
+                    <Fragment set:html={cell.html} />
+                  ) : 'keys' in cell ? (
+                    cell.keys.map((chord, k) => (
+                      <>
+                        {k > 0 && (k === cell.keys.length - 1 ? ' or ' : ', ')}
+                        <Keys of={chord} />
+                      </>
+                    ))
+                  ) : 'to' in cell ? (
+                    <View to={cell.to} query={cell.query}>
+                      {cell.label}
+                    </View>
+                  ) : 'text' in cell ? (
+                    <>
+                      {cell.text}
+                      {SPACE}
+                      {cell.sub && <small>{cell.sub}</small>}
+                      {cell.code && <code class="eg">{cell.code}</code>}
+                    </>
+                  ) : (
+                    <code>{cell.code}</code>
+                  )}
+                  {SPACE}
+                </Tag>
+              );
+            })}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .doc-table {
+    margin: 0 0 var(--stack);
+    font-size: var(--text-small);
+    line-height: 1.45;
+  }
+
+  table,
+  thead,
+  tbody {
+    display: block;
+  }
+
+  /* The text column's own columns (layouts/Docs.astro); where it has none, six: every second line of the page's twelve. */
+  tr {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+    column-gap: var(--col-gap);
+    padding-block: 0.75rem;
+  }
+
+  thead tr {
+    border-bottom: 1px solid rgb(232 238 255 / 0.2);
+  }
+
+  tbody tr + tr {
+    border-top: 1px solid var(--border-divider);
+  }
+
+  th,
+  td {
+    min-width: 0;
+    padding: 0;
+    font-weight: var(--weight-small);
+    text-align: left;
+    color: var(--site-text-muted);
+  }
+
+  /* The first cell names its row. */
+  th,
+  td:first-child {
+    color: var(--color-fg);
+  }
+
+  small,
+  .eg {
+    display: block;
+  }
+
+  small {
+    color: var(--site-text-dim);
+  }
+
+  .eg {
+    margin-top: 0.25rem;
+  }
+
+  /* True columns: the first cell's span, the last cell's from the right, and what is between takes the rest. */
+  tr > * {
+    grid-column-end: span 2;
+  }
+
+  [data-cols='2 4'] tr > :last-child {
+    grid-column: 3 / -1;
+  }
+
+  [data-cols='3 3'] tr > :first-child {
+    grid-column-end: span 3;
+  }
+
+  [data-cols='3 3'] tr > :last-child {
+    grid-column: 4 / -1;
+  }
+
+  [data-cols='2 2 2'] tr > :nth-child(2) {
+    grid-column: 3 / -3;
+  }
+
+  /* A name beside a stack: the name spans the rows of the cells stacked right of it. */
+  :is([data-cols='detail'], [data-cols='stack']) tr > :first-child {
+    grid-row: 1 / span 9;
+  }
+
+  :is([data-cols='detail'], [data-cols='stack']) tr > :nth-child(n + 2) {
+    grid-column: 3 / -1;
+  }
+
+  :is([data-cols='detail'], [data-cols='stack']) tbody tr > :nth-child(n + 3) {
+    margin-top: 0.375rem;
+  }
+
+  /* A stacked cell is led by its column's heading, so the heading row keeps only the headings of true columns. */
+  [data-cols='detail'] td:nth-child(n + 3)::before,
+  [data-cols='stack'] td:nth-child(n + 2)::before {
+    content: attr(data-label);
+    /* Read once, from the heading cell: not again here. */
+    content: attr(data-label) / '';
+    margin-right: 0.75rem;
+    color: var(--site-text-dim);
+  }
+
+  [data-cols='detail'] thead th:nth-child(n + 3),
+  [data-cols='stack'] thead th:nth-child(n + 2) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Narrow: only a short name beside its words stays side by side. Every other row is a block. */
+  @media (max-width: 699px) {
+    .doc-table:not([data-cols='2 4']) tr > * {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+
+    .doc-table:not([data-cols='2 4']) tbody tr > :nth-child(n + 2) {
+      margin-top: 0.375rem;
+    }
+
+    [data-cols='2 2 2'] td:nth-child(n + 2)::before {
+      content: attr(data-label);
+      content: attr(data-label) / '';
+      margin-right: 0.75rem;
+      color: var(--site-text-dim);
+    }
+
+    /* Each block carries its own headings, so the heading row is for a screen reader only. */
+    .doc-table:not([data-cols='2 4']) thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .doc-table:not([data-cols='2 4']) tbody tr:first-child {
+      border-top: 1px solid rgb(232 238 255 / 0.2);
+    }
+  }
+</style>

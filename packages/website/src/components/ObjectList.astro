@@ -1,0 +1,146 @@
+---
+/*
+ * ObjectList — one section of the object catalogue (data/objectCatalogue.ts):
+ * its count, then a compact row for each object, with the name, its other
+ * names, the id a link uses and the link itself. Each row is an anchor of its
+ * own, so a page or the docs search can land on it; names weigh more in that
+ * search than running text, since a name typed there is most likely looked
+ * for here, and the spaces between a row’s parts keep them apart in the text
+ * the search reads. ObjectFinder narrows the rows; without script this is a
+ * plain list.
+ */
+import { appLink } from '../data/appLink';
+import { OBJECT_ROWS, OBJECT_SECTIONS } from '../data/objectCatalogue';
+import { objectSectionRows } from '../utils/objectSectionRows';
+import { objectSubLists } from '../utils/objectSubLists';
+import ViewLink from './ViewLink.astro';
+
+type Props = { section: string };
+
+const section = OBJECT_SECTIONS.find((candidate) => candidate.id === Astro.props.section);
+if (!section) throw new Error(`ObjectList: no section "${Astro.props.section}"`);
+const rows = objectSectionRows(section, OBJECT_ROWS);
+const lists = objectSubLists(section, rows);
+---
+
+<div class="objects" data-objects data-pagefind-weight="4">
+  <p class="count small" data-pagefind-ignore>
+    {`${rows.length} ${rows.length === 1 ? section.one : section.many}`}
+  </p>
+  {
+    lists.map((list) => (
+      <div data-object-sub>
+        {list.label && <h3>{list.label}</h3>}
+        <ul>
+          {list.rows.map((row) => (
+            <li id={row.anchor} data-object>
+              <span class="name">
+                <b>{row.name}</b>{' '}
+                {row.aliases && <span class="also">{row.aliases.join(', ')}</span>}
+                {!section.split && row.parent && <span class="also">{row.parent}</span>}
+                {row.note && <span class="also">{row.note}</span>}
+              </span>{' '}
+              <code>{row.id}</code>
+              {row.link ? (
+                <ViewLink href={appLink(row.link)} aria-label={`Open ${row.name} in the app`} data-pagefind-ignore>Open</ViewLink>
+              ) : (
+                <span class="none small" data-pagefind-ignore>By search</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</div>
+
+<!-- Global under the root class, not scoped: a scope attribute on each of some 1,400 elements would add 35 KB to the page. Each selector is one step more specific than DocBody’s rule for the same element. -->
+<style is:global>
+  .doc-body div.objects .count {
+    margin-bottom: 0.5rem;
+    color: var(--site-text-dim);
+  }
+
+  .doc-body div.objects h3 {
+    margin: 1.75rem 0 0.25rem;
+    font: var(--weight-small) var(--text-small) / 1.5 var(--font-body);
+    letter-spacing: 0.04em;
+    color: var(--site-text-dim);
+  }
+
+  .doc-body div.objects ul {
+    margin-bottom: 0;
+    padding-left: 0;
+  }
+
+  /* Name and other names, the id, the link: one line where the column has room, two on a phone. */
+  .doc-body div.objects li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 4.75rem;
+    align-items: center;
+    column-gap: 1.25rem;
+    margin-block: 0;
+    border-top: 1px solid var(--border-divider);
+    font-size: var(--text-small);
+    line-height: 1.35;
+    scroll-margin-top: calc(1.5rem + var(--docs-bar));
+  }
+
+  /* The grid above would show a row that ObjectFinder has hidden. */
+  .doc-body div.objects li[hidden] {
+    display: none;
+  }
+
+  .doc-body div.objects ul > li::before {
+    content: none;
+  }
+
+  /* The row a link or the docs search landed on. */
+  .doc-body div.objects li:target {
+    border-top-color: var(--color-accent);
+    box-shadow: inset 0 -1px var(--color-accent);
+  }
+
+  .doc-body div.objects b {
+    margin-right: 0.625rem;
+    font-weight: 500;
+    color: var(--color-fg);
+  }
+
+  .doc-body div.objects .also {
+    color: var(--site-text-dim);
+  }
+
+  /* A parent or a note after the other names: set apart by room, not by a mark. */
+  .doc-body div.objects .also + .also {
+    margin-left: 0.625rem;
+  }
+
+  .doc-body div.objects code {
+    color: var(--site-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  /* As tall as the link it stands in for, so every row of a list has one height. */
+  .doc-body div.objects .none {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
+    color: var(--site-text-dim);
+  }
+
+  .doc-body div.objects li > .ring {
+    justify-self: start;
+  }
+
+  @media (max-width: 699px) {
+    .doc-body div.objects li {
+      grid-template-columns: minmax(0, 1fr) 4.75rem;
+      padding-top: 0.375rem;
+    }
+
+    .doc-body div.objects .name {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

@@ -28,6 +28,28 @@ describe('website facts', () => {
     expect(() => fact('no-such-fact')).toThrow(/no-such-fact/);
   });
 
+  // Every page and most site tests load the fact tables: an app module behind them would let an app change break the website's build.
+  it('only the object catalogue page loads the app, and no fact table does', () => {
+    const importers = (pattern: RegExp) =>
+      readdirSync(SITE, { recursive: true, encoding: 'utf8' })
+        .filter((name) => /\.(ts|astro|mdx)$/.test(name) && !name.startsWith('dev/'))
+        .filter((name) => pattern.test(readFileSync(join(SITE, name), 'utf8')))
+        .sort();
+    // heroVideoUrl takes one function with no imports of its own: the address of the data host.
+    expect(importers(/from '(\.\.\/)+src\//)).toEqual([
+      // Two tables of ids, for the lists of body and site names.
+      'content/docs/reference/url-parameters.mdx',
+      'data/objectCatalogue.ts',
+      'utils/heroVideoUrl.ts',
+    ]);
+    expect(importers(/from '[./]+\/(data\/objectCatalogue|utils\/objectCount)'/)).toEqual([
+      'components/ObjectFinder.astro',
+      'components/ObjectList.astro',
+      'content/docs/reference/objects.mdx',
+      'utils/objectCount.ts',
+    ]);
+  });
+
   // `npm run move-files` does not rewrite a path inside a string, so a moved file would leave a published dead link.
   it('every repository path cited as a source exists', () => {
     const cited = readdirSync(SITE, { recursive: true, encoding: 'utf8' })

@@ -1,0 +1,151 @@
+---
+description: What changes between a phone, a laptop and a projector, what to do when the picture stutters, and how dome mode draws a fisheye disc for a planetarium.
+facts:
+  [
+    phone-data-size,
+    touch-gestures,
+    hide-interface,
+    dome-flag,
+    dome-rig,
+    dome-tilt,
+    share-dome,
+    screens-dome-disc,
+    screens-dome-front,
+    screens-dome-cost,
+    screens-dome-one-disc,
+    film-recorder,
+    film-silent,
+  ]
+---
+
+## Phones and tablets
+
+A phone starts with the smallest data size; see [Settings](/docs/guide/settings/#see-more-or-fewer-galaxies).
+
+<Fact id="card-phone-sheet" />
+
+<Fact id="settings-phone" />
+
+<Figure id="guide-phone" />
+
+Two fingers zoom and do nothing else; [Moving around](/docs/guide/moving/) has the gestures. A phone has no <Keys of="Tab" /> key, so the interface cannot be hidden.
+
+<Fact id="screens-tablet" />
+
+<Fact id="screens-size-once" />
+
+To load more on a phone that can take it, open the Settings panel and set Tier to Medium.
+
+## Laptops and desktops
+
+A window wider than 768 pixels opens with the medium data size, both panels at the lower left and the card at the upper right. Every key and mouse action is in [Controls](/docs/reference/controls/).
+
+<Fact id="screens-gpu-choice" />
+
+<Fact id="screens-draws-on-change" />
+
+Auto-rotate, and a clock set faster than real time, keep it drawing.
+
+## Big screens and projectors
+
+<Fact id="screens-no-fullscreen" />
+
+That is <Keys of="F11" /> on Windows and Linux, and on a Mac <Keys of="Ctrl+Cmd+F" /> or the green button of the window.
+
+<Fact id="screens-interface-size" />
+
+The browser’s zoom, <Keys of="Ctrl" /> or <Keys of="Cmd" /> with the plus key, enlarges the panels, the cards and the search.
+
+For a dark room:
+
+1. Open the view you want and make the window fill the screen.
+2. Under Display, lower Exposure by one or two EV. A picture set for a lit office is harsh on a wall in the dark.
+3. Turn off the names you do not need, or all of them with the switch on Labels & Guides.
+4. Press <Keys of="Tab" /> to hide the interface. The clock’s keys and <Keys of="H" /> for Home still work with it hidden. Press <Keys of="Tab" /> again before you search: the search is part of the interface.
+
+No setting survives a reload, so set them once the page is open and leave it open. See [Settings](/docs/guide/settings/#make-it-brighter-or-calmer).
+
+<Fact id="kiosk-planned" />
+
+## When it stutters
+
+<Fact id="screens-no-quality-setting" />
+
+We have not measured how much each of these steps gains on any machine. Each takes away work in the way it says, so try them in order and stop when the picture moves smoothly.
+
+1. **Choose a smaller data size.** Set Tier, in the title of the Settings panel, to Medium or Small. The app then draws fewer points and holds less in the graphics processor’s memory.
+2. **Make the window smaller.** The work for a frame grows with the number of pixels, and a window half as wide and half as high has a quarter of them.
+3. **Switch layers off.** The glow of the cosmic web, the filaments, the flow ribbons and Bloom are each drawn in a step of their own, which a switch leaves out. A catalogue of galaxies that is switched off is not drawn either.
+4. **Raise Detail**, under Stars and then Advanced. At a higher value fewer of the far stars are drawn one by one.
+5. **Close what else is using the graphics processor**: other tabs with video or 3D, and other programs.
+
+Dome mode costs more than a flat view of the same window. If the app does not start at all, or stops with a message, see [Browser support and troubleshooting](/docs/start/browsers/#when-the-app-does-not-start).
+
+## Dome mode
+
+<Table
+  cols="detail"
+  head={['', 'In dome mode']}
+  rows={[
+    [
+      'Start it',
+      {
+        text: 'Put ?dome before the #, in small letters and with no value.',
+        code: 'skymap.rulkens.com/?dome#focus=body-saturn',
+      },
+    ],
+    [
+      'What comes out',
+      'One equidistant fisheye disc of 180 degrees, as wide as the window’s shorter side, with black outside it. A full-screen window on a display of 3,840 by 2,160 pixels gives a disc 2,160 pixels across.',
+    ],
+    [
+      'Where things sit',
+      'The front of the dome is the bottom of the disc, and the top of the dome is its centre. The focus sits 30 degrees above the front edge. Neither can be changed.',
+    ],
+    [
+      'Clear the picture',
+      'Tab hides the interface. Full screen is the browser’s own: F11, or Ctrl + Cmd + F on a Mac.',
+    ],
+    [
+      'Choose an object',
+      'By name, with the / key. The pointer selects nothing: a click unpins the card, and a double-click lets go of the focus as well.',
+    ],
+    [
+      'What it does not do',
+      'Cut the picture up for several projectors, warp it to a screen or blend edges. Your dome system takes the disc as its input.',
+    ],
+    [
+      'What it costs',
+      'The scene is drawn five times for each frame, so a frame is more work than a flat view in the same window.',
+    ],
+  ]}
+/>
+
+<View to="focus=body-saturn&t=2017-10-15T12:00:00Z" query="dome">Open Saturn in dome mode</View>
+
+<Figure id="guide-dome-window" />
+
+With the camera on a planet, the planet stands in front of the audience, a little above eye level, and the sky fills the rest of the dome. A drag turns the whole sky about the planet.
+
+<Fact id="screens-dome-pointer" />
+
+<Fact id="screens-dome-interface" />
+
+<Fact id="screens-dome-fixed" />
+
+<Figure id="dome-earth" />
+
+A link copied in dome mode opens in dome mode, and a tour or an exhibit opened by such a link plays with its captions or notes flat over the disc.
+
+<View to="exhibit=cosmicWeb" query="dome">Open the Cosmic Web exhibit in dome mode</View>
+
+If the picture stutters, the steps under [When it stutters](#when-it-stutters) apply, the data size first.
+
+### Live or as a film
+
+<Fact id="screens-no-capture" />
+
+- **Live.** Show the browser window, full screen and with the interface hidden, on the output your system takes a fisheye from. Someone flies the app while the audience watches.
+- **As a film.** The recorder writes a fisheye disc of 4,096 by 4,096 pixels at 30 or 60 frames a second, without sound.
+
+What we would build for a dome, and what is still missing for one, is on [Domes and museums](/domes/#deliver).

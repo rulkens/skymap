@@ -125,6 +125,7 @@ export const DATA_SOURCES: readonly DataSource[] = [
     gives: 'Positions, brightness and colour of stars brighter than magnitude 14',
     release: 'DR3, table gaia_source_lite, fetched 14 and 15 July 2026',
     rows: '16,844,156 stars',
+    drawn: '12,853,984',
     licence: 'CC BY-NC 3.0 IGO. Acknowledgement text required.',
     href: 'https://www.cosmos.esa.int/web/gaia/dr3',
     evidence: GAIA_RECORD,

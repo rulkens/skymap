@@ -58,8 +58,8 @@ const rows = listedSources([...new Set(ids)].map(fact), all);
     padding-block: 0.25rem;
   }
 
-  /* When we last looked is a footnote to the footnote: the quietest text that still passes 4.5:1 on black. */
+  /* When we last looked is a footnote to the footnote: the site's dimmest text. */
   .checked {
-    color: color-mix(in srgb, var(--site-text-dim) 72%, #000);
+    color: var(--site-text-faint);
   }
 </style>

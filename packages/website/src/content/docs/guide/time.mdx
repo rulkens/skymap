@@ -1,0 +1,111 @@
+---
+description: skymap has a clock, and the planets, moons and spacecraft are drawn where they are at the time it shows. How to read it, run it, set a date and link to it.
+facts: [start-clock-now, clock-controls, clock-keys, clock-speeds, clock-speed-list, clock-speed-controls, clock-forwards, clock-now, date-entry, date-entry-utc, date-entry-paused, focus-follows, sim-star-epoch, time-galaxies-still, sci-earth-clouds, real-seconds, ephemeris-span, sim-ephemeris-span, link-time-write, link-time-read, great-conjunction-2020]
+---
+
+Ready-made lesson links are on [Use skymap in the classroom](/classroom/).
+
+## Read the clock
+
+<Fact id="clock-readout" />
+
+UTC is the time at Greenwich, without summer time. The clock never shows your local time. The scene starts on the present and runs at real speed.
+
+While the scene is on the present the clock shows the date alone. Point at it, or tap it on a touch screen, and its controls open. Once the speed or the date has been changed they stay open.
+
+<Figure id="guide-clock" />
+
+## Run, pause and change speed
+
+| | Faster | Slower | Pause or run | Back to the present |
+| --- | --- | --- | --- | --- |
+| On the clock | The right arrow | The left arrow | The button between the arrows | The Now button |
+| Keyboard | <Keys of="]" /> | <Keys of="[" /> | <Keys of="\" /> | <Keys of="Shift+N" /> |
+
+The clock has 15 speeds, from real time to 10 years a second. It prints the speed beside the date: 6 hr/s is six hours of the scene for each second you wait. A year here is 365.25 days, and a month is a twelfth of that. A click on the speed opens the whole list. Changing the speed does not start a paused clock.
+
+<Fact id="clock-forwards" />
+
+<Keys of="Shift+N" /> and the Now button put the scene back on the present, running at real speed. After a pause on the present, either one catches the clock up. Every key the app has is in [Controls](/docs/reference/controls/).
+
+## Set a date and time
+
+1. Click the date on the clock. A box opens above it.
+2. Type a date and a time. The field is the browser’s own, so the order of day, month and year follows your browser’s language.
+3. Press <Keys of="Enter" />, or the Set button.
+
+The date is read in UTC. Setting it leaves the clock paused: press <Keys of="\" /> to let it run.
+
+## What moves when the clock runs
+
+<Fact id="time-moves" />
+
+A planet you have flown to stays in the middle of the screen while its moons go round it and the stars pass behind, because the camera travels with its focus: see [Moving around](/docs/guide/moving/#go-somewhere-else).
+
+<Fact id="time-spacecraft" />
+
+<Fact id="time-s-stars" />
+
+## What does not move
+
+The stars stand where they were at the start of 2016, every galaxy, cluster and void has one position, and Earth’s clouds are one fixed picture, whatever the date. [What is in the scene](/docs/start/scene/) says what each is made from.
+
+The flow ribbons, and the camera in a tour, move in real seconds: the clock’s speed does not change them and pausing it does not stop them. During a tour or an exhibit the clock is hidden with the rest of the interface, but it keeps running and its keys still work.
+
+## The years the positions hold for
+
+For dates from 1900 to 2100 the planets, and 18 moons of Jupiter, Saturn, Uranus and Neptune, are placed within 1,000 km of the positions NASA’s JPL Horizons service gives. A planet here means the centre of mass of the planet with its moons. Outside those years the planets keep the correction from the nearest end of the span, and the 18 moons fall back to average orbits. Earth’s Moon, Pluto and the smaller moons follow average orbits (mean orbital elements) at every date.
+
+The clock does not stop or warn you at either end. A date in 1610 or 3000 gives a scene that looks as sure of itself as today’s, and is not. How the positions are computed is in [The science behind skymap](/science/).
+
+<Fact id="probe-one-orbit" />
+
+## A date in a link
+
+Once you change the speed or set a date, the app writes the date and time into the address as `t`, in UTC. It is the moment of the last change of speed, pause or date, and it does not tick. Pausing a clock that is still on the present writes nothing, and Now takes `t` away again.
+
+So pause the clock before you copy the address, and the link opens on the moment you were looking at, with the clock paused. By hand, add the date after the `#`:
+
+<Example to="focus=body-jupiter&t=2033-03-14T21:00:00Z" address label="Open Jupiter on that evening">
+  Jupiter on 14 March 2033 at 21:00 UTC.
+</Example>
+
+Always end the time in Z: a time without it is read in the local time of the computer that opens the link. [Sharing a view](/docs/guide/sharing/) has the rest of the address.
+
+## Four things to watch
+
+Each link below opens with the clock paused on a date. Press <Keys of="]" /> until the clock reads the speed named, then <Keys of="\" /> to let it run.
+
+### Io going round Jupiter
+
+<Fact id="io-lap" />
+
+<Figure id="class-time" />
+
+Set the speed to 6 hr/s. The four moons keep their order outwards, and each one out is slower than the one inside it.
+
+### A day on Earth
+
+<Fact id="earth-rotation" />
+
+At 1 hr/s that is one turn in about 24 seconds. Watch the line between day and night stay where it is while the continents pass under it, and the city lights come on behind it.
+
+<View to="focus=body-earth&t=2026-10-05T12:00:00Z&pose=a,0,0,0,6.14,0.2,7.5e-16,0">Open Earth on 5 October 2026</View>
+
+### The two solstices
+
+<Fact id="solstices-2026" />
+
+<Figure id="lesson-earth-june" />
+
+<Figure id="lesson-earth-december" />
+
+Both pictures are taken from the Sun’s side at 12:00 UTC. In June the Arctic is turned towards the Sun and in December Antarctica is. To pass from one to the other, open the first and run the clock at 1 wk/s: six months go by in under half a minute.
+
+### Jupiter and Saturn in line
+
+<Fact id="conjunction-in-app" />
+
+<Figure id="guide-conjunction" />
+
+The Solar System exhibit shows it from above. Run the clock at 1 mo/s and Jupiter, on the inner orbit, draws ahead of Saturn. See [Tours and exhibits](/docs/guide/tours/).

@@ -1,0 +1,224 @@
+---
+/*
+ * DocsSearch — the control that opens search, and the sheet it opens: a field
+ * set in the display face, as the title of a page of results, over the pages
+ * that match. The index is Pagefind's, cut from the built pages by the site's
+ * build (astro.config.mjs) and fetched when the sheet first opens
+ * (scripts/initDocsSearch.ts). The `/` key opens it from anywhere on the page.
+ * `big` is the control at a page's own size, for the docs index.
+ */
+import { sitePath } from '../utils/sitePath';
+
+type Props = { big?: boolean };
+
+const { big = false } = Astro.props;
+---
+
+<button class:list={['ring search-open', { small: !big }]} type="button" data-search-open aria-haspopup="dialog">
+  Search the docs <kbd aria-hidden="true">/</kbd>
+</button>
+
+<dialog class="sheet" data-search data-index={sitePath('/pagefind/pagefind.js')} aria-labelledby="search-label">
+  <div class="wrap grid">
+    <div class="ask">
+      <label class="small" id="search-label" for="search-field">Search the docs</label>
+      <input id="search-field" type="text" inputmode="search" autocomplete="off" spellcheck="false" enterkeyhint="search" />
+    </div>
+    <button class="ring small shut" type="button" data-search-close>Close</button>
+    <p class="status small" role="status"></p>
+    <ol></ol>
+  </div>
+</dialog>
+<!-- The import is the browser's own, of an address only the build knows: Vite would rewrite one it bundled. -->
+<script is:inline>
+  document.currentScript.previousElementSibling.loadIndex = function () {
+    return import(this.dataset.index);
+  };
+</script>
+
+<script>
+  import type { SearchSheet } from '../@types/SearchSheet';
+  import { initDocsSearch } from '../scripts/initDocsSearch';
+
+  const sheet = document.querySelector<SearchSheet>('[data-search]');
+  const opener = document.querySelector<HTMLElement>('[data-search-open]');
+  if (sheet && opener) initDocsSearch(sheet, opener);
+</script>
+
+<style>
+  .search-open {
+    color: var(--site-text-muted);
+  }
+
+  /* The key is of use to a keyboard only. */
+  .search-open kbd {
+    margin-left: 0.25rem;
+  }
+
+  @media not ((hover: hover) and (pointer: fine)) {
+    .search-open kbd {
+      display: none;
+    }
+  }
+
+  /* A sheet let down from the top of the window over the dimmed page; a phone gives it the whole screen. */
+  .sheet {
+    inset: 0 0 auto;
+    max-height: 100dvh;
+    padding: 2.5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border-divider);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sheet::backdrop {
+    background: rgb(0 0 0 / 0.72);
+  }
+
+  .grid {
+    align-items: end;
+    row-gap: 0.75rem;
+  }
+
+  label {
+    display: block;
+    color: var(--site-text-dim);
+  }
+
+  /* The query is the sheet's heading; the rule under it is the field, and takes the accent while it is typed in. */
+  input {
+    width: 100%;
+    padding: 0.25rem 0 0.5rem;
+    border: 0;
+    border-bottom: 1px solid rgb(232 238 255 / 0.2);
+    border-radius: 0;
+    background: none;
+    color: var(--color-fg);
+    font: var(--weight-display) 2rem / 1.2 var(--font-family-display);
+    appearance: none;
+  }
+
+  input:focus-visible {
+    outline: none;
+    border-bottom-color: var(--color-accent);
+    box-shadow: 0 1px 0 var(--color-accent);
+  }
+
+  .shut {
+    justify-self: end;
+  }
+
+  .status {
+    max-width: none;
+    min-height: 1.5em;
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A result is made by script, so its rules cannot be scoped to this component. */
+  ol :global(a) {
+    --mark: 0.6875rem;
+    position: relative;
+    display: grid;
+    gap: 0.25rem;
+    padding-block: 1rem;
+    border-top: 1px solid var(--border-divider);
+    color: var(--site-text-muted);
+    text-decoration: none;
+  }
+
+  ol :global(a::before) {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--mark) - 0.75rem);
+    top: 1.625rem;
+    width: var(--mark);
+    height: var(--mark);
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  ol :global(a:hover::before),
+  ol :global(a:focus-visible::before) {
+    opacity: 1;
+  }
+
+  ol :global(a:focus-visible) {
+    outline: none;
+  }
+
+  ol :global(a:focus-visible::before) {
+    background: var(--color-accent);
+  }
+
+  /* The marker alone is easy to lose among eight results. */
+  ol :global(a:focus-visible .title) {
+    color: var(--color-accent);
+  }
+
+  ol :global(.title) {
+    font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+    color: var(--color-fg);
+  }
+
+  ol :global(.where) {
+    font-size: var(--text-small);
+    color: var(--site-text-dim);
+  }
+
+  ol :global(.excerpt) {
+    font-size: var(--text-small);
+    font-weight: var(--weight-small);
+    line-height: 1.5;
+  }
+
+  ol :global(mark) {
+    background: none;
+    color: var(--color-fg);
+    text-decoration: underline 1px var(--color-accent);
+    text-underline-offset: 0.25em;
+  }
+
+  @media (min-width: 901px) {
+    .ask,
+    .status,
+    ol {
+      grid-column: 3 / span 8;
+    }
+
+    .shut {
+      grid-column: 11 / -1;
+    }
+  }
+
+  /* Narrow: the whole screen, Close above the field at the thumb's corner, results indented by their marker. */
+  @media (max-width: 900px) {
+    .sheet {
+      min-height: 100dvh;
+      padding-top: 0.5rem;
+    }
+
+    .shut {
+      order: -1;
+    }
+
+    input {
+      font-size: 1.75rem;
+    }
+
+    ol :global(a) {
+      padding-left: calc(var(--mark) + 0.75rem);
+    }
+
+    ol :global(a::before) {
+      left: 0;
+    }
+  }
+</style>

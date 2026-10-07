@@ -1,0 +1,56 @@
+---
+description: skymap runs in any browser that has WebGPU. Which browsers those are, what you see in one that does not, and what to try when the app will not start.
+facts: [webgpu-what, webgpu-required, webgpu-browsers, app-browser-advice, ref-keys-under-welcome, phone-data-size]
+---
+
+import { ISSUES_URL } from '../../../data/contact';
+
+## What skymap needs
+
+skymap draws with WebGPU, a web standard that lets a page use the computer’s graphics processor. Nothing has to be installed.
+
+## Browsers that have WebGPU
+
+As of 6 October 2026, WebGPU is switched on by default in the browsers below. On Linux it depends on the graphics card and its driver, so the only test there is to open the app.
+
+| Browser | Runs on | WebGPU from version |
+| --- | --- | --- |
+| Chrome | Windows, macOS and ChromeOS | 113 |
+| Chrome | Android 12 and later | 121 |
+| Safari | Mac, iPhone and iPad | 26 |
+| Firefox | Windows | 141 |
+| Firefox | Macs with Apple silicon | 147 |
+
+The table follows the [implementation status page](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) kept by the group that writes the standard. Check a browser that is not listed there. If in doubt, use a recent Chrome or Edge on a desktop computer.
+
+## What you see without WebGPU
+
+In a browser without WebGPU the app does not start. In place of the map there is a short page headed “Skymap needs WebGPU”. It gives the advice above and links to a [table of browser support](https://caniuse.com/webgpu). None of the map’s data is downloaded.
+
+## When the app does not start
+
+A browser can have WebGPU and still fail to start it on a particular machine, and a download can fail on any machine.
+
+<Fact id="app-start-errors" />
+
+What to do about each:
+
+- **WebGPU failed to initialise.** Reload the page once. If the message returns, open the same link in a recent version of Chrome or Edge.
+- **The galaxy data failed to load.** Check the connection, then reload.
+- **skymap was updated.** Reload the page. The reload fetches data that matches the new version.
+
+<Fact id="app-continue-anyway" inline /> The link closes the welcome screen while the data is still arriving.
+
+## When the panels are missing
+
+Press <Keys of="Tab" />. That key hides the interface and brings it back; see [Controls](/docs/reference/controls/#interface).
+
+## Phones and small screens
+
+A phone starts with the smallest of the three data sizes, which holds fewer stars and galaxies. You can change it in the Settings panel; see [Settings](/docs/guide/settings/).
+
+<Figure id="guide-phone" />
+
+## If none of this helps
+
+Tell us on the <a href={ISSUES_URL}>issue list on GitHub</a>. Name the browser with its version and the operating system, and quote the message the app showed. An issue is public and carries your GitHub name.

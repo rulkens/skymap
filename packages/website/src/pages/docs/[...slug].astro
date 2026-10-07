@@ -1,0 +1,53 @@
+---
+/*
+ * One docs page per file of the docs collection, at the file's path. The
+ * names a page's text may use without importing them are listed here once.
+ * A page's sources are the fact rows it prints through `<Fact>`, found in its
+ * text, and the ones its frontmatter adds.
+ */
+import { getCollection, render } from 'astro:content';
+
+import Caveat from '../../components/Caveat.astro';
+import DocFigure from '../../components/DocFigure.astro';
+import DocLink from '../../components/DocLink.astro';
+import DocTable from '../../components/DocTable.astro';
+import Example from '../../components/Example.astro';
+import FactText from '../../components/FactText.astro';
+import Keys from '../../components/Keys.astro';
+import Links from '../../components/Links.astro';
+import Note from '../../components/Note.astro';
+import View from '../../components/View.astro';
+import Docs from '../../layouts/Docs.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const printed = [...(entry.body ?? '').matchAll(/<Fact\b[^>]*?\bid="([^"]+)"/g)].map((match) => match[1]!);
+---
+
+<Docs
+  path={`/docs/${entry.id}/`}
+  description={entry.data.description}
+  headings={headings}
+  factIds={[...printed, ...entry.data.facts]}
+>
+  <Content
+    components={{
+      a: DocLink,
+      table: DocTable,
+      Table: DocTable,
+      Figure: DocFigure,
+      Fact: FactText,
+      Example,
+      View,
+      Links,
+      Keys,
+      Note,
+      Caveat,
+    }}
+  />
+</Docs>

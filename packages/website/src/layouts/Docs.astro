@@ -1,0 +1,259 @@
+---
+/*
+ * Docs — one docs page on the site's twelve columns: the docs' contents in
+ * the first three, the text in the next six (seven until the window has room
+ * for the third part), and the page's own headings in the last three when it
+ * has four or more. Narrow, the contents are a bar that stays under the top
+ * bar, with those headings at the head of its list. The page's place comes
+ * from its row in data/docsTree.ts: the group over its title, previous and
+ * next within the group, and the landing page it links back up to.
+ */
+import type { MarkdownHeading } from 'astro';
+
+import Base from './Base.astro';
+import DocBody from '../components/DocBody.astro';
+import DocsNav from '../components/DocsNav.astro';
+import FigureSheet from '../components/FigureSheet.astro';
+import ObjLink from '../components/ObjLink.astro';
+import PageSections from '../components/PageSections.astro';
+import Sources from '../components/Sources.astro';
+import { DOCS_TREE } from '../data/docsTree';
+import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
+import { docsPlace } from '../utils/docsPlace';
+import { landingLabel } from '../utils/landingLabel';
+import { sitePath } from '../utils/sitePath';
+
+type Props = {
+  path: string;
+  description: string;
+  headings: readonly MarkdownHeading[];
+  factIds: readonly string[];
+};
+
+// A shorter page is read in less time than its list of headings would take to scan.
+const TOC_FROM = 4;
+
+const { path, description, headings, factIds } = Astro.props;
+const { group, page, previous, next } = docsPlace(DOCS_TREE, path);
+const { title } = page;
+const up = page.up ?? group.up;
+const all = headings.filter((heading) => heading.depth === 2);
+const sections = all.length >= TOC_FROM ? all : [];
+const turns = [
+  { page: previous, rel: 'prev', label: `Before this, in ${group.name}` },
+  { page: next, rel: 'next', label: `After this, in ${group.name}` },
+].flatMap((turn) => (turn.page ? [{ ...turn, page: turn.page }] : []));
+---
+
+<Base
+  title={`${title} | skymap docs`}
+  description={description}
+  skipTo="page"
+  jsonLd={[
+    breadcrumbJsonLd(Astro.site!, [
+      { name: 'Docs', path: '/docs/' },
+      { name: title, path },
+    ]),
+  ]}
+>
+  <div class="wrap grid docs">
+    <DocsNav current={path} sections={sections} />
+
+    <article class="page" id="page" data-pagefind-body data-pagefind-meta={`group:${group.name}`}>
+      <header data-opening>
+        <p class="where small tap-links" data-pagefind-ignore>
+          <a href={sitePath('/docs/')}>Docs</a>
+          <span aria-hidden="true">/</span>
+          <a href={`${sitePath('/docs/')}#${group.name.toLowerCase()}`}>
+            {group.name}<span class="unseen">, a group of the docs</span>
+          </a>
+        </p>
+        <h1>{title}</h1>
+        <p class="say">{description}</p>
+      </header>
+
+      <DocBody><slot /></DocBody>
+
+      <footer data-pagefind-ignore>
+        {
+          turns.length > 0 && (
+            <nav class="turns grid" aria-label="Previous and next page">
+              {turns.map((turn) => (
+                <p>
+                  <span class="small">{turn.label}</span>
+                  <ObjLink hang rel={turn.rel} href={sitePath(turn.page.path)}>
+                    {turn.page.title}
+                  </ObjLink>
+                </p>
+              ))}
+            </nav>
+          )
+        }
+        <div class="link-row">
+          <ObjLink hang size="small" href={sitePath(up)}>{landingLabel(up)}</ObjLink>
+          <ObjLink hang size="small" href={sitePath('/docs/')}>All of the docs</ObjLink>
+        </div>
+        <Sources ids={factIds} />
+      </footer>
+    </article>
+
+    {
+      sections.length > 0 && (
+        <nav class="toc small" aria-labelledby="toc-label">
+          <p id="toc-label">On this page</p>
+          <PageSections sections={sections} />
+        </nav>
+      )
+    }
+  </div>
+  <FigureSheet />
+</Base>
+
+<script>
+  import { initSectionMark } from '../scripts/initSectionMark';
+
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-sections] a')];
+  if (links.length > 0) initSectionMark(links);
+</script>
+
+<style>
+  /* A layer of its own under the top bar's: what stands in front of what below (the contents' bar, a wide figure over the list) stays in here. */
+  .docs {
+    position: relative;
+    z-index: 0;
+    --docs-bar: 0rem;
+  }
+
+  /* `--docs-bar` is the height of the contents' bar where it stays under the top bar (components/DocsNav.astro). */
+  @media (max-width: 900px) {
+    .docs {
+      --docs-bar: 3.75rem;
+    }
+
+    /* Where the window would set the line, the text's own measure does (DocBody has the same). */
+    header .say {
+      max-width: 35rem;
+    }
+  }
+
+  .page {
+    padding-block: 2rem 5rem;
+  }
+
+  header {
+    margin-bottom: 3rem;
+  }
+
+  .where {
+    display: flex;
+    gap: 0.5rem;
+    max-width: none;
+    margin: 0 0 1.25rem;
+    color: var(--site-text-faint);
+  }
+
+  .where a {
+    color: var(--site-text-dim);
+    text-decoration: none;
+  }
+
+  .where a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  /* A reading page's title: the largest type on it, and well under a landing page's, whose title has a picture to hold. */
+  header h1 {
+    margin-bottom: 1.25rem;
+    font-size: var(--text-doc-title);
+  }
+
+  header .say {
+    max-width: none;
+    margin: 0;
+    font-size: var(--text-body);
+    text-wrap: pretty;
+  }
+
+  footer {
+    margin-top: 4.5rem;
+  }
+
+  .turns {
+    row-gap: 1.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .turns p {
+    display: grid;
+    max-width: none;
+    margin: 0;
+  }
+
+  .turns span {
+    color: var(--site-text-dim);
+  }
+
+  footer .link-row {
+    margin-block: 2rem 2.5rem;
+  }
+
+  .toc {
+    display: none;
+  }
+
+  @media (min-width: 901px) {
+    .docs > :global(.docs-nav) {
+      grid-column: span 3;
+    }
+
+    .page {
+      grid-column: 4 / span 7;
+      --cols: 7;
+      padding-block: 3.5rem 7.5rem;
+    }
+
+    .turns p {
+      grid-column: span 3;
+    }
+
+    /* A next page with no previous one keeps the right half, where next always is. */
+    .turns p:only-child:has([rel='next']) {
+      grid-column: 4 / span 3;
+    }
+  }
+
+  /* Room for the third part: the text gives up a column and the page's headings stand beside it. */
+  @media (min-width: 1200px) {
+    .page {
+      grid-column: 4 / span 6;
+      --cols: 6;
+    }
+
+    .toc {
+      display: block;
+      grid-column: 10 / -1;
+      position: sticky;
+      top: var(--nav-height);
+      align-self: start;
+      max-height: calc(100svh - var(--nav-height));
+      padding-block: 3.625rem 3rem;
+      /* Room for the mark of the section being read, which hangs left of the text edge. */
+      margin-left: -1rem;
+      padding-left: 1rem;
+      overflow-y: auto;
+      line-height: 1.3;
+    }
+
+    /* A wide figure passes in front of the list (components/DocFigure.astro); the keyboard brings it back to the front. */
+    .toc:focus-within {
+      z-index: 2;
+    }
+  }
+
+  .toc p {
+    margin: 0 0 0.5rem;
+    color: var(--site-text-dim);
+  }
+</style>

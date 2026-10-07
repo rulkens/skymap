@@ -1,6 +1,9 @@
 import type { Fact } from '../@types/Fact';
 import { ABOUT_FACTS } from './aboutFacts';
 import { CLASSROOM_FACTS } from './classroomFacts';
+import { DOCS_GUIDE_FACTS } from './docsGuideFacts';
+import { DOCS_REFERENCE_FACTS } from './docsReferenceFacts';
+import { DOCS_START_FACTS } from './docsStartFacts';
 import { PRIVACY_FACTS } from './privacyFacts';
 import { SCIENCE_FACTS } from './scienceFacts';
 import { REPO_BLOB } from './siteIdentity';
@@ -236,7 +239,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'lesson-link',
     about: 'app',
-    text: 'An address written by skymap names the object the camera is on (focus) and, once the clock has been paused or set, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
+    text: 'An address written by skymap names the object the camera is on (focus) and, once you have set a date or changed the clock’s speed, the instant (t). If you have changed which pole is up, it names that too (orientation). A link with an instant opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/url/hashParamSources.ts`,
     sourceLabel: 'the address parameters, in the skymap repository',
     checked: CHECKED,
@@ -244,10 +247,10 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'link-pose',
     about: 'app',
-    text: 'An address can also carry the exact camera position (pose). The app reads it but does not write it into the address bar by itself, so a link you copy opens on the app’s standard view of the object.',
-    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose), which the app reads but does not write.',
-    source: `${REPO_BLOB}/src/utils/url/decodeFramedPose.ts`,
-    sourceLabel: 'the camera-position parameter, in the skymap repository',
+    text: 'An address can also carry the exact camera position (pose). The app reads it when the link opens and then takes it out of the address, and it never writes one by itself, so a link you copy from the address bar opens on the app’s standard view of the object.',
+    short: 'A copied link opens the app’s standard view of the object. An address can also carry an exact camera position (pose): the app reads it when the link opens, then removes it from the address, and never writes one itself.',
+    source: `${REPO_BLOB}/src/state/url/watchHashWriteSaga.ts`,
+    sourceLabel: 'how the app rewrites the address, in the skymap repository',
     checked: CHECKED,
   },
   {
@@ -285,10 +288,41 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'phone-data-size',
     about: 'app',
-    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A wider screen starts with the middle one.',
+    text: 'On a screen narrower than 768 pixels the app starts with the smallest of its three data sizes, which holds fewer stars and galaxies. A screen 768 pixels wide or wider starts with the medium one.',
     source: `${REPO_BLOB}/src/utils/initialTierFromViewport.ts`,
     sourceLabel: 'how the data size is chosen, in the skymap repository',
     checked: CHECKED,
+  },
+  {
+    id: 'webgpu-what',
+    text: 'WebGPU is a web standard that lets a page use the computer’s graphics processor, for drawing and for computation.',
+    source: 'https://www.w3.org/TR/webgpu/',
+    sourceLabel: 'the WebGPU specification, W3C',
+    checked: '2026-10-07',
+  },
+  {
+    id: 'app-start-errors',
+    about: 'app',
+    text: 'When the app cannot start, it shows one of three messages over a Reload button: that WebGPU failed to initialise on this device, that the galaxy data failed to load, or that skymap was updated and the page must be reloaded to fetch matching data.',
+    source: `${REPO_BLOB}/src/components/Splash/Splash.constants.ts`,
+    sourceLabel: 'the app’s start-up messages, in the skymap repository',
+    checked: '2026-10-07',
+  },
+  {
+    id: 'app-continue-anyway',
+    about: 'app',
+    text: 'While the app’s data loads, the two buttons on its welcome screen cannot be pressed. If loading takes longer than 8 seconds, a “Continue anyway” link appears.',
+    source: `${REPO_BLOB}/src/hooks/useSplash.ts`,
+    sourceLabel: 'the welcome screen’s waiting rule, in the skymap repository',
+    checked: '2026-10-07',
+  },
+  {
+    id: 'app-data-size-choice',
+    about: 'app',
+    text: 'The data size can be changed with the control in the title strip of the app’s Settings panel.',
+    source: `${REPO_BLOB}/src/components/SettingsPanel/TierChip.tsx`,
+    sourceLabel: 'the data size control, in the skymap repository',
+    checked: '2026-10-07',
   },
   {
     id: 'english-only',
@@ -301,7 +335,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'exhibits',
     about: 'app',
-    text: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a framed view with its own notes and sources, and each opens from its own address.',
+    text: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe. Each is a prepared view with its own notes and sources, and each opens from its own address.',
     short: 'skymap has five exhibits: Solar System, Cosmic Flows, Cosmic Web, Zone of Avoidance and Observable Universe.',
     source: `${REPO_BLOB}/src/data/exhibits/exhibitRegistry.ts`,
     sourceLabel: 'the exhibits, in the skymap repository',
@@ -335,7 +369,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'search-key',
     about: 'app',
-    text: 'The / key opens the app’s search, as Ctrl+K and Cmd+K do.',
+    text: 'The / key opens the app’s search, as Ctrl + K and Cmd + K do.',
     source: `${REPO_BLOB}/src/state/input/keyboardShortcuts.ts`,
     sourceLabel: 'the keyboard shortcuts, in the skymap repository',
     checked: CHECKED,
@@ -384,7 +418,7 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'dome-tilt',
     about: 'app',
-    text: 'The top of the dome sits 60 degrees above the direction the camera looks. The angle is one constant in the code, not a setting.',
+    text: 'The top of the dome sits 60 degrees above the direction the camera looks. The app has no setting for the angle.',
     source: `${REPO_BLOB}/src/data/rendering/domeParams.ts`,
     sourceLabel: 'the dome constants, in the skymap repository',
     checked: CHECKED,
@@ -433,4 +467,7 @@ export const FACTS: readonly Fact[] = [
   ...ABOUT_FACTS,
   ...CLASSROOM_FACTS,
   ...PRIVACY_FACTS,
+  ...DOCS_GUIDE_FACTS,
+  ...DOCS_REFERENCE_FACTS,
+  ...DOCS_START_FACTS,
 ];

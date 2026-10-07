@@ -1,0 +1,103 @@
+---
+/*
+ * The glossary: a page made from data/glossary.ts and not written as text,
+ * so its headings (one for each first letter), its terms and the sources it
+ * lists are the data's own and need no copy kept level with it.
+ */
+import DocFigure from '../../../components/DocFigure.astro';
+import DocLink from '../../../components/DocLink.astro';
+import DocTable from '../../../components/DocTable.astro';
+import { DATA_SOURCES } from '../../../data/dataSources';
+import { GLOSSARY } from '../../../data/glossary';
+import Docs from '../../../layouts/Docs.astro';
+
+const letters = [...new Set(GLOSSARY.map((term) => term.term[0]!.toUpperCase()))];
+// The picture that closes a letter's terms: of the cosmic web, of a void, of the Zone of Avoidance.
+const FIGURES: Record<string, string> = { C: 'science-web-density', V: 'void-bootes', Z: 'science-zoa' };
+const UNITS = 'Units of distance';
+const headings = [
+  { depth: 2, slug: 'units-of-distance', text: UNITS },
+  // A letter's anchor is the letter, which tests/packages/website/glossary.test.ts keeps free of terms.
+  ...letters.map((letter) => ({ depth: 2, slug: letter.toLowerCase(), text: letter })),
+];
+---
+
+<Docs
+  path="/docs/reference/glossary/"
+  description="The terms you meet on this site and in skymap, each in a sentence or two, with the units of distance, the catalogues and the app’s own words."
+  headings={headings}
+  factIds={[...new Set(GLOSSARY.flatMap((term) => term.facts))]}
+>
+  <p>
+    Each of the {GLOSSARY.length} terms has an address of its own: <code>/docs/reference/glossary/#redshift</code> opens at Redshift.
+  </p>
+  <p>
+    Three words have one fixed meaning across the site: <a href="#measured">measured</a>, <a href="#derived">derived</a> and{' '}
+    <a href="#drawn">drawn</a>. <DocLink href="/science/#bins">The science behind skymap</DocLink> sorts everything the app shows under
+    them.
+  </p>
+
+  <h2 id="units-of-distance">{UNITS}</h2>
+  <DocTable
+    head={['Unit', 'In smaller units', 'In kilometres']}
+    rows={[
+      ['Light-second', '', '299,792.458'],
+      ['Light-minute', '60 light-seconds', 'about 18 million'],
+      ['Astronomical unit (AU)', '8.3 light-minutes', 'about 150 million'],
+      ['Light-day', '173 AU', 'about 25.9 thousand million'],
+      ['Light-year (ly)', '63,241 AU', 'about 9.46 million million'],
+      ['Parsec (pc)', '3.26 light-years, or 206,265 AU', 'about 30.9 million million'],
+      ['Kiloparsec (kpc)', '1,000 parsecs', ''],
+      ['Megaparsec (Mpc)', '1,000 kiloparsecs, or 3.26 million light-years', ''],
+      ['Gigaparsec (Gpc)', '1,000 megaparsecs, or 3.26 thousand million light-years', ''],
+    ]}
+  />
+
+  {
+    letters.map((letter) => (
+      <>
+        <h2 id={letter.toLowerCase()}>{letter}</h2>
+        <dl>
+          {GLOSSARY.filter((term) => term.term[0]!.toUpperCase() === letter).map((term) => {
+            const source = DATA_SOURCES.find((row) => row.id === term.source);
+            return (
+              <>
+                <dt id={term.id}>{term.term}</dt>{' '}
+                <dd>
+                  {term.text}
+                  {source && (
+                    <>
+                      {' '}
+                      Source: <a href={source.href}>{source.name}</a>. Our use of it:{' '}
+                      <DocLink href="/science/#sources">The sources</DocLink>.
+                    </>
+                  )}
+                  {term.more && (
+                    <>
+                      {' '}
+                      More: <DocLink href={term.more.path}>{term.more.label}</DocLink>.
+                    </>
+                  )}
+                  {term.see && (
+                    <>
+                      {' '}
+                      See also{' '}
+                      {term.see.map((id, i) => (
+                        <>
+                          {i > 0 && ', '}
+                          <a href={`#${id}`}>{GLOSSARY.find((other) => other.id === id)!.term}</a>
+                        </>
+                      ))}
+                      .
+                    </>
+                  )}
+                </dd>
+              </>
+            );
+          })}
+        </dl>
+        {FIGURES[letter] && <DocFigure id={FIGURES[letter]} />}
+      </>
+    ))
+  }
+</Docs>

@@ -9,6 +9,8 @@ export type SiteLinkContext = {
   hasBuilt: (distRel: string) => boolean;
   hasPublic: (publicRel: string) => boolean;
   idsOf: (distRel: string) => ReadonlySet<string>;
+  /** What is wrong with a link into the app, from what follows its `#`; null when nothing is. */
+  appProblem: (hash: string) => string | null;
   /** Site paths (no base, trailing slash) of planned pages that do not exist yet. */
   notYetBuilt: readonly string[];
 };

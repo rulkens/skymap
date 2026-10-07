@@ -33,7 +33,7 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     id: 'exhibit-notes',
     about: 'app',
     text: 'An exhibit prints its notes beside the view: a headline, what you are seeing, a few figures, and links to its sources.',
-    short: 'Each is one framed view with notes beside it: what you are seeing, a few figures and links to the sources.',
+    short: 'Each is one prepared view with notes beside it: what you are seeing, a few figures and links to the sources.',
     source: `${REPO_BLOB}/src/components/ExhibitOverlay/ExhibitOverlay.tsx`,
     sourceLabel: `the exhibit’s layout, ${IN_REPO}`,
     checked: CHECKED,

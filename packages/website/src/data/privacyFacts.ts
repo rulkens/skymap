@@ -97,10 +97,10 @@ export const PRIVACY_FACTS: readonly Fact[] = [
   {
     id: 'privacy-thumbnails',
     about: 'app',
-    text: 'For a galaxy without a photograph of its own in skymap, the app asks an astronomy archive for a small picture of that patch of sky when the camera comes close or when you open the galaxy’s card: first the Sloan Digital Sky Survey’s SkyServer, then the CDS in Strasbourg. The request carries the sky coordinates and, as every request does, your IP address.',
-    source: `${REPO_BLOB}/src/utils/network/fetchGalaxyBitmap.ts`,
-    sourceLabel: `where the app fetches galaxy pictures, ${IN_REPO}`,
-    checked: CHECKED,
+    text: 'The app fetches small pictures of galaxies from two astronomy archives outside skymap: the Sloan Digital Sky Survey’s SkyServer (skyserver.sdss.org) and the CDS in Strasbourg (alasky.cds.unistra.fr). It does so in two cases, for a galaxy that has no photograph of its own in skymap. First, whenever such a galaxy is drawn about 24 pixels across or larger, the app asks SkyServer for a picture to lay over it, and asks the CDS if SkyServer sends none. How large a galaxy is drawn depends on the window, so this can happen as the app opens, before you have touched anything: in a window 900 pixels high one such request went to each archive, and in one 720 pixels high none did. A tour sends them as it passes galaxies. Second, when the card of such a galaxy is pinned, by a click, a search or a link, its picture comes from SkyServer for a galaxy of the Sloan catalogue and from the CDS for any other. Pointing at a galaxy sends nothing. Each request holds the galaxy’s sky coordinates, so the archive can tell which patch of sky was on your screen, and, as every request does, it reaches the archive with your IP address and your browser’s description of itself. The 81 named galaxies use photographs kept with skymap, and the app turns to an archive for one of them only if that file fails to load.',
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.ts`,
+    sourceLabel: `when the app fetches a galaxy’s picture, ${IN_REPO}`,
+    checked: '2026-10-07',
   },
   {
     id: 'privacy-form-closed',

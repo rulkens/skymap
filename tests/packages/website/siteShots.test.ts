@@ -16,7 +16,7 @@ import { siteShotUrl } from '../../../tools/site/utils/siteShotUrl';
 const ROOT = resolve(import.meta.dirname, '../../..');
 const sourceOf = (dir: string): string =>
   readdirSync(join(ROOT, dir), { recursive: true, encoding: 'utf8' })
-    .filter((file) => /\.(astro|ts)$/.test(file) && !file.endsWith('siteShots.ts'))
+    .filter((file) => /\.(astro|mdx|ts)$/.test(file) && !file.endsWith('siteShots.ts'))
     .map((file) => readFileSync(join(ROOT, dir, file), 'utf8'))
     .join('\n');
 const consumers = sourceOf('packages/website/src') + sourceOf('tools/site');

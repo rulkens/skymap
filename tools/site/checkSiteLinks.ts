@@ -1,22 +1,24 @@
 /**
  * Internal link check over the built website: every `href`/`src` in
- * `dist/<base>/**.html` must resolve (see resolveSiteLink for the rules).
+ * `dist/<base>/**.html` must resolve (see resolveSiteLink for the rules), and
+ * every link into the app must be a view the app's own parser and tables know.
  * Run after `npm run site:build`; CI does. Exits 1 on any broken link, or on
- * an allow-listed not-yet-built page that now exists (notYetBuilt.ts).
+ * a docs page that is built while its row in the docs tree still says planned.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, posix, relative, resolve, sep } from 'node:path';
 
 import { distDir } from '../utils/io/distDir';
 import { toolPages } from '../utils/io/toolPages';
-import { NOT_YET_BUILT } from './notYetBuilt';
+import { DOCS_TREE } from '../../packages/website/src/data/docsTree';
+import { appViewProblem } from './utils/appViewProblem';
 import { extractIds } from './utils/extractIds';
 import { extractLinks } from './utils/extractLinks';
 import { resolveSiteLink } from './utils/resolveSiteLink';
 
 const base = `/${toolPages.website}/`;
 const siteDir = resolve(distDir, toolPages.website);
-const publicDir = resolve('public');
+const publicDir = resolve(import.meta.dirname, '../../public');
 
 if (!existsSync(siteDir)) {
   console.error(`No build at ${siteDir}. Run "npm run site:build" first.`);
@@ -39,7 +41,11 @@ const ctx = {
     if (!idCache.has(rel)) idCache.set(rel, extractIds(readFileSync(join(siteDir, rel), 'utf8')));
     return idCache.get(rel)!;
   },
-  notYetBuilt: NOT_YET_BUILT,
+  appProblem: appViewProblem,
+  // The only pages a link may point at before they exist: the docs tree's planned rows.
+  notYetBuilt: DOCS_TREE.flatMap((group) => group.pages)
+    .filter((page) => page.status === 'planned')
+    .map((page) => page.path),
 };
 
 const failures: string[] = [];
@@ -56,7 +62,7 @@ for (const file of htmlFiles(siteDir)) {
     if (verdict.kind === 'broken') failures.push(`${pagePath}  ${href}  ${verdict.reason}`);
     if (verdict.kind === 'stale-pending') {
       failures.push(
-        `${pagePath}  ${href}  ${verdict.path} exists now: delete it from tools/site/notYetBuilt.ts`,
+        `${pagePath}  ${href}  ${verdict.path} exists now: set its row to live in packages/website/src/data/docsTree.ts`,
       );
     }
     if (verdict.kind === 'pending')
