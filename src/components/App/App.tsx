@@ -5,8 +5,7 @@
  * chrome as leaf container components — LoadingBarContainer, StatusBarContainer,
  * InfoCardContainer, ScaleBarContainer, TimeBarContainer, NavigationPanelContainer,
  * SettingsPanelContainer, TopBarContainer, CommandPaletteContainer,
- * SplashContainer, ArrivalVeilContainer, and `DebugPanel` (memo-boundary, its
- * sections mount their own containers).
+ * SplashContainer, ArrivalVeilContainer, and DebugPanelContainer.
  * Each container owns its own store reach; App just arranges them.
  *
  * `handleRef` is a ref, not state: engine hooks call methods on it, and
@@ -45,7 +44,7 @@ import SplashContainer from '../containers/SplashContainer';
 import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
 import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
 import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
-import LazyDebugPanel from '../DebugPanel/LazyDebugPanel';
+import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import appStyles from './App.module.css';
 import { useAppSelector } from '../../store/hooks';
@@ -175,14 +174,7 @@ export function App(): React.ReactElement {
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
           <Suspense>
-            <LazyDebugPanel
-              slots={handleRef.current.debug.assetSlots}
-              timingService={handleRef.current.debug.timingService}
-              frameStats={handleRef.current.debug.frameStats}
-              passNames={handleRef.current.debug.passOverrides.allNames}
-              assetPriorities={handleRef.current.debug.assetPriorities}
-              engineHandleRef={handleRef}
-            />
+            <LazyDebugPanelContainer engineHandleRef={handleRef} />
           </Suspense>
         )}
       </div>
