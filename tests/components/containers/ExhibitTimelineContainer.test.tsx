@@ -36,6 +36,13 @@ function mount(simIso: string) {
 }
 
 describe('ExhibitTimelineContainer', () => {
+  it('lists Voyager 1 then Voyager 2, each with its authored route', () => {
+    mount('1989-08-26');
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs[0]).toHaveTextContent(/Voyager 1.*Jupiter · Saturn · Titan/);
+    expect(tabs[1]).toHaveTextContent(/Voyager 2.*Uranus · Neptune/);
+  });
+
   it('shows only the selected craft: one card with its caption and measured distance', () => {
     mount('1989-08-26');
     const v1 = section.events.filter((e) => e.bodyId === 'voyager1');

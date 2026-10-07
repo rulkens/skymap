@@ -56,14 +56,8 @@ function ExhibitTimeline({
     [section.events, lane.bodyId],
   );
   const subtitles = useMemo(
-    () =>
-      Object.fromEntries(
-        lanes.map((l) => {
-          const mine = section.events.filter((e) => e.bodyId === l.bodyId);
-          return [l.bodyId, `launched ${formatEventDate(mine[0]!.iso)} · ${mine.length} events`];
-        }),
-      ),
-    [lanes, section.events],
+    () => Object.fromEntries(section.crafts.map((c) => [c.bodyId, c.route])),
+    [section.crafts],
   );
   const axis = useMemo(() => timelineAxis(eras, endMs), [eras, endMs]);
   const headingId = useId();

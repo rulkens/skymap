@@ -97,6 +97,10 @@ export const voyager: Exhibit = {
       kind: 'timeline',
       heading: 'Timeline',
       events: MISSION_EVENTS,
+      crafts: [
+        { bodyId: 'voyager1', route: 'Jupiter · Saturn · Titan' },
+        { bodyId: 'voyager2', route: 'Jupiter · Saturn · Uranus · Neptune' },
+      ],
       eras: [
         { label: 'Planetary · 1977–1989', fromIso: '1977-08-20' },
         { label: 'Interstellar · 1990–now', fromIso: '1990-01-01' },

@@ -29,7 +29,10 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const emphasis = useAppSelector(selectMissionEmphasis);
-  const lanes = useMemo(() => timelineLanes(section.events), [section.events]);
+  const lanes = useMemo(() => {
+    const all = timelineLanes(section.events);
+    return section.crafts.map((c) => all.find((l) => l.bodyId === c.bodyId)!);
+  }, [section.events, section.crafts]);
   // The axis ends at the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => Date.now(), []);
 
