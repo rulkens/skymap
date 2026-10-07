@@ -2,7 +2,7 @@ import type { PressPicture } from '../@types/PressPicture';
 
 /**
  * The pictures the About page offers for reuse, with what each one contains.
- * Terms come from ATTRIBUTIONS.md and the data table (data/dataSources.ts).
+ * Terms come from ATTRIBUTIONS.md as checked on 2026-10-07.
  * Only pictures whose every ingredient we can name are here: none shows Earth
  * close up (EOX imagery, non-commercial) or a galaxy photograph (mixed terms).
  */
@@ -12,7 +12,7 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     title: 'Every catalogued galaxy and quasar',
     credit: 'skymap / Alexander Rulkens. Data: SDSS, 2MRS, GLADE, DESI, Milliquas',
     terms:
-      'Contains catalogue positions only. DESI is CC BY 4.0; the others are public releases that ask to be cited (GLADE’s page states no licence), so the credit line is the condition.',
+      'Contains catalogue positions only. DESI is CC BY 4.0 and SDSS calls its data public domain. 2MRS, GLADE and Milliquas state no licence; their authors ask to be cited.',
     nonCommercial: false,
   },
   {
@@ -20,7 +20,7 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     title: 'The cosmic web around us',
     credit: 'skymap / Alexander Rulkens. Density map: Wilde et al. 2023, from SDSS. Superclusters: MSCC',
     terms:
-      'Contains a density map and a supercluster catalogue, both public releases that ask to be cited, so the credit line is the condition.',
+      'Contains a density map, which SDSS calls public domain, and a supercluster catalogue that states no licence. Both ask to be cited.',
     nonCommercial: false,
   },
   {
@@ -36,7 +36,7 @@ export const PRESS_PICTURES: readonly PressPicture[] = [
     title: 'Earth, day into night',
     credit: 'skymap / Alexander Rulkens. Earth: NASA Earth Observatory, Blue Marble. Stars: ESA/Gaia/DPAC',
     terms:
-      'The surface is NASA imagery in the public domain. The stars behind it are Gaia data, CC BY-NC 3.0 IGO, so this picture is for non-commercial use unless ESA agrees otherwise.',
+      'The surface is NASA imagery, which NASA says is not subject to copyright in the United States. The stars behind it are Gaia data, CC BY-NC 3.0 IGO, so this picture is for non-commercial use unless ESA agrees otherwise.',
     nonCommercial: true,
   },
 ];
