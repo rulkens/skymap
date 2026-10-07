@@ -1,4 +1,6 @@
 import type { DocsFocusId } from '../@types/DocsFocusId';
+import type { DocsNamedId } from '../@types/DocsNamedId';
+import type { DocsOrientation } from '../@types/DocsOrientation';
 import type { DocsUrlParam } from '../@types/DocsUrlParam';
 
 const NOT_WRITTEN = 'Never. It stays in the address as long as you leave it there.';
@@ -146,7 +148,7 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
 ];
 
 /** The values of `orientation`, with the plane each one lays flat. */
-export const DOCS_ORIENTATIONS: readonly { id: string; flat: string }[] = [
+export const DOCS_ORIENTATIONS: readonly DocsOrientation[] = [
   { id: 'ecliptic', flat: 'The plane of the solar system. The app starts with it.' },
   { id: 'equatorial', flat: 'Earth’s equator, so that Polaris is up.' },
   { id: 'galactic', flat: 'The plane of the Milky Way.' },
@@ -154,7 +156,7 @@ export const DOCS_ORIENTATIONS: readonly { id: string; flat: string }[] = [
 ];
 
 /** The values of `exhibit`, with the name the app gives each. */
-export const DOCS_EXHIBIT_IDS: readonly { id: string; name: string }[] = [
+export const DOCS_EXHIBIT_IDS: readonly DocsNamedId[] = [
   { id: 'solarSystem', name: 'Solar System' },
   { id: 'cosmicFlows', name: 'Cosmic Flows' },
   { id: 'cosmicWeb', name: 'Cosmic Web' },
@@ -163,7 +165,7 @@ export const DOCS_EXHIBIT_IDS: readonly { id: string; name: string }[] = [
 ];
 
 /** The values of `tour`. The search lists the first two; `demo` opens from a link only. */
-export const DOCS_TOUR_IDS: readonly { id: string; name: string }[] = [
+export const DOCS_TOUR_IDS: readonly DocsNamedId[] = [
   { id: 'grandTour', name: 'The Long Way Out' },
   { id: 'webShowcase', name: 'Named Cosmic Web' },
   { id: 'demo', name: 'Demo Tour' },

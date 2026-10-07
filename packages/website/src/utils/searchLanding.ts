@@ -8,15 +8,12 @@ const words = (text: string) =>
     .trim()} `;
 
 /**
- * Where a search result opens: at the top of its page, unless one element
- * with an id names what was asked for (a glossary term, a row of the object
- * catalogue, a heading) and the page's own title does not. Of those elements,
- * the first whose text is the query, else begins with it, else holds it as
- * whole words. Whole words, because "andromeda" must open M31's row and not
- * the star Gamma Andromedae that comes earlier on the page; the query itself
- * first, because "redshift" is a term of its own after "photometric
- * redshift". Words found only in a page's running text open the page, not
- * the heading that happens to stand before them.
+ * Where a search result opens: the top of its page, unless an element with an
+ * id (a glossary term, a catalogue row, a heading) names what was asked for
+ * and the page's title does not. The element that is the query wins over one
+ * that begins with it ("redshift" after "photometric redshift"), and that over
+ * one that holds it as whole words ("andromeda" is M31, not Gamma Andromedae).
+ * Words found only in running text open the page.
  */
 export function searchLanding(page: PagefindPage, query: string): string {
   const asked = words(query);
