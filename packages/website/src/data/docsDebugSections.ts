@@ -104,13 +104,13 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   },
   {
     heading: 'Clips & Tours',
-    shows: 'A button for every camera flight and every step of the long tour, and for the three tours.',
+    shows: 'A button for every clip and every step of the long tour, and for the three tours.',
     file: `${PANEL}/ClipTriggersSection.tsx`,
   },
   {
     heading: 'Clip Path Inspector',
     shows:
-      'Draws the path a camera flight will take as a line in the scene, with sliders for its timing and curve, and plays it.',
+      'Draws the path a clip will take as a line in the scene, with sliders for its timing and curve, and plays it.',
     file: `${PANEL}/ClipPathInspectorSection.tsx`,
   },
 ];
