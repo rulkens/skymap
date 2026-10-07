@@ -1,26 +1,47 @@
 ---
-title: Settings
-description: Every setting of skymap’s Settings panel, in the panel’s order and under its headings, each with what it does, the values it takes, where it starts and whether it is kept.
+title: All settings
+description: Every setting of skymap’s Settings panel, in the panel’s order and under its headings, each with what it does, the values it takes and where it starts.
 group: Reference
 order: 3
-facts: [ref-settings-panel, privacy-app-storage]
+facts:
+  [
+    ref-settings-panel,
+    privacy-app-storage,
+    ref-settings-labels,
+    ref-settings-earth,
+    hide-interface,
+    auto-rotate,
+    dome-flag,
+    sim-desi-patches,
+    sim-reweight,
+    sim-flux-limits,
+    sim-exposure,
+    sci-density-field,
+    sci-filaments,
+    sci-flows,
+    sci-markers,
+    sci-tone,
+  ]
 ---
 
 import { DOCS_SETTINGS } from '../../../data/docsSettings';
 import { DOCS_SETTING_SIZES } from '../../../data/docsSettingSizes';
 
-export const settings = (id) => ({
-  cols: 'detail',
-  head: ['Setting', 'What it does', 'Values', 'At first'],
-  rows: DOCS_SETTINGS.find((group) => group.id === id).rows.map((row) => [
-    { text: row.name, sub: row.control },
-    row.does,
-    row.values,
-    row.first,
-  ]),
-});
+export const settings = (id) => {
+  const rows = DOCS_SETTINGS.find((group) => group.id === id).rows;
+  const switches = rows.every((row) => row.values === 'On or off');
+  return {
+    cols: 'detail',
+    head: switches ? ['Switch', 'What it shows', 'At first'] : ['Setting', 'What it does', 'Values', 'At first'],
+    rows: rows.map((row) =>
+      switches
+        ? [row.name, row.does, row.first]
+        : [{ text: row.name, sub: row.control }, row.does, row.values, row.first],
+    ),
+  };
+};
 
-This page is for looking a setting up. [Settings](/docs/guide/settings/) in the Guide goes through the same panel by what you want to change, and [Controls](/docs/reference/controls/) lists the keys and gestures.
+The [Settings](/docs/guide/settings/) page of the Guide goes through the same panel by what you want to change.
 
 {/* Below 700 px the figure shows the manifest row 'ref-settings-phone', which it finds by name. */}
 
@@ -36,54 +57,50 @@ This page is for looking a setting up. [Settings](/docs/guide/settings/) in the 
 
 <Fact id="ref-settings-counts" />
 
-The keys a slider takes are under [Controls](/docs/reference/controls/#interface).
-
 ## What is kept
 
 <Fact id="ref-settings-kept" />
 
-| What | Where it is kept | How long |
-| --- | --- | --- |
-| Orientation, when it is not Ecliptic | In the address, as `orientation=` | As long as the link |
-| Every other setting on this page | Nowhere | Until the page is reloaded or closed |
-| That you have closed the welcome screen | In the browser’s storage | Until the browser’s data for the site is cleared |
+<Table
+  cols="detail"
+  head={['What', 'Where it is kept', 'How long']}
+  rows={[
+    ['Orientation, when it is not Ecliptic', { text: 'In the address', code: 'orientation=' }, 'As long as the link'],
+    ['Every other setting on this page', 'Nowhere', 'Until the page is reloaded or closed'],
+    ['That you have closed the welcome screen', 'In the browser’s storage', 'Until the browser’s data for the site is cleared'],
+  ]}
+/>
 
-<Fact id="ref-settings-takeover" />
-
-The `orientation` parameter is under [URL parameters](/docs/reference/url-parameters/), and what a link does and does not carry is under [Sharing a view](/docs/guide/sharing/).
+<Fact id="ref-settings-takeover" inline /> See [URL parameters](/docs/reference/url-parameters/#orientations) for `orientation`, and [Sharing a view](/docs/guide/sharing/) for what a link carries.
 
 ## Data size
 
-The control marked Tier, in the panel’s title strip.
+The control marked Tier, in the panel’s title.
 
 <Table {...settings('data-size')} />
 
-<Fact id="phone-data-size" />
-
 <Fact id="ref-settings-tier-reload" />
 
-What each size holds, as the panel counts it:
+What each size holds:
 
 <Table
   head={['What is loaded', 'Small', 'Medium', 'Large']}
   rows={DOCS_SETTING_SIZES.map((row) => [row.what, row.small, row.medium, row.large])}
 />
 
-<Fact id="ref-settings-sizes" />
-
-<Fact id="sim-data-sizes" />
+<Fact id="ref-settings-sizes" inline /> <Fact id="sim-data-sizes" inline />
 
 ## Galaxies
 
 <Table {...settings('galaxies')} />
 
+<Figure id="guide-settings-panel" />
+
 ### Galaxy catalogs
 
 <Table {...settings('galaxy-catalogs')} />
 
-<Fact id="sim-desi-patches" />
-
-Each catalogue is described under [The sources](/science/#sources) on the Science page.
+Each catalogue is described under [The sources](/science/#sources) of The science behind skymap.
 
 ### Advanced
 
@@ -91,9 +108,7 @@ The second heading under Galaxies, folded at first.
 
 <Table {...settings('galaxies-advanced')} />
 
-<Fact id="sim-reweight" />
-
-<Fact id="sim-flux-limits" />
+Which correction to choose, and when to say so, is under [Even out the surveys](/docs/guide/settings/) in the Guide.
 
 ## Stars
 
@@ -109,47 +124,35 @@ The second heading under Stars, folded at first.
 
 <Table {...settings('stars-advanced')} />
 
-<Fact id="sim-exposure" />
-
 ## Cosmic web density
 
 <Table {...settings('cosmic-web-density')} />
-
-<Fact id="sci-density-field" />
 
 ## Cosmic web filaments
 
 <Table {...settings('cosmic-web-filaments')} />
 
-<Fact id="sci-filaments" />
-
 ## Flow
 
 <Table {...settings('flow')} />
 
-<Fact id="sci-flows" />
+How the density field, the filaments and the flow are made: [The science behind skymap](/science/#bins).
 
 ## Structures
 
 <Table {...settings('structures')} />
 
-<Fact id="sci-markers" />
-
 ## Labels & Guides
 
 <Table {...settings('labels-and-guides')} />
 
-<Fact id="ref-settings-labels" />
-
-Names in the scene, and what a click on one does, are under [Finding things](/docs/guide/finding/#names-in-the-scene).
+The first twelve switches show and hide names only: the object stays in the scene. The last four show and hide a drawing. The markers of clusters, superclusters, voids and groups are under Structures, apart from their names. See [Finding things](/docs/guide/finding/#names-in-the-scene) for what a click on a name does.
 
 ## Display
 
 <Table {...settings('display')} />
 
 <Fact id="ref-settings-orientation" />
-
-<Fact id="sci-tone" />
 
 ### Bloom
 
@@ -163,7 +166,7 @@ Names in the scene, and what a click on one does, are under [Finding things](/do
 
 <Table {...settings('earth')} />
 
-<Fact id="ref-settings-earth" />
+The three sliders change Earth alone.
 
 ## Outside the Settings panel
 
@@ -172,19 +175,11 @@ These are not in the panel, and none of them is kept over a reload either.
 | What | Where | Values | At first |
 | --- | --- | --- | --- |
 | Each panel, folded or open | A click on the panel’s title: Settings or Navigation | Open or folded | Open; folded on a screen narrower than 768 pixels |
-| The whole interface, shown or hidden | The Tab key | Shown or hidden | Shown |
-| Auto-rotate | The play button in the top bar | On or off | Off |
-| The clock: its speed, and running or paused | The clock at the lower right | See [Time](/docs/guide/time/) | Running on the present at 1 s/s |
+| The interface, shown or hidden | The Tab key | Shown or hidden | Shown |
+| Auto-rotate | The Auto-rotate button in the top bar | On or off | Off |
+| The clock: its speed, and running or paused | The clock at the lower right; see [Time](/docs/guide/time/) | 15 speeds; running or paused | Running on the present at 1 s/s |
 | Dome mode | `?dome` in the address | On or off | Off |
-
-<Fact id="hide-interface" />
-
-<Fact id="auto-rotate" />
-
-<Fact id="dome-flag" />
 
 ## What the panel does not hold
 
 <Fact id="ref-settings-debug" />
-
-That panel is described under [Debug panel and flags](/docs/developers/debug/).

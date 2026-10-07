@@ -195,7 +195,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Density correction',
         control: 'list',
-        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim. 1/V_max and Schechter LF dim each galaxy by a weight computed from its luminosity. Angular re-weight dims the directions a catalogue sampled more densely than its median.',
+        does: 'Chooses how the galaxies are thinned or dimmed to make up for what the surveys missed. None draws every galaxy as catalogued. Volume-limited hides every galaxy less luminous than M_lim, the limit the slider under it sets. 1/V_max and Schechter LF dim each galaxy by a weight computed from its luminosity: the first from the volume in which the survey could have seen it, the second from a standard curve of how many galaxies there are at each luminosity. Angular re-weight dims the directions a catalogue sampled more densely than its median; HEALPix is the grid of equal patches of sky it counts in.',
         values:
           'None — raw catalogue, Volume-limited, 1/V_max, Schechter LF, Angular re-weight (HEALPix)',
         first: 'Angular re-weight (HEALPix)',
@@ -388,7 +388,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'MCPM Workbench (promoted)',
         control: 'switch',
-        does: 'A place for a density field made with the project’s own development tool. The published data has no such field, and without one the switch shows nothing.',
+        does: 'For development. It shows nothing in the published app.',
         values: SWITCH,
         first: OFF,
         state: 'cosmicWebDensity.items.mcpm-workbench.enabled',
@@ -404,7 +404,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Cosmic web filaments',
         control: 'switch',
-        does: 'Shows the traced filaments as lines. Their file is fetched the first time the switch goes on.',
+        does: 'Shows the filaments as lines. Their file is fetched the first time the switch goes on.',
         values: SWITCH,
         first: OFF,
         state: 'cosmicWebFilaments.enabled',
@@ -429,7 +429,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Flow',
         control: 'switch',
-        does: 'Shows moving streaks that follow the CF4++ flow field: the motion of galaxies apart from the expansion. Its files are fetched the first time the switch goes on.',
+        does: 'Shows flow ribbons that follow the CF4++ flow field: the motion of galaxies apart from the expansion. Its files are fetched the first time the switch goes on.',
         values: SWITCH,
         first: OFF,
         state: 'flow.enabled',
@@ -438,7 +438,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Intensity',
         control: 'slider',
-        does: 'Sets how bright the streaks are. The slider is greyed while Flow is off.',
+        does: 'Sets how bright the ribbons are. The slider is greyed while Flow is off.',
         values: '0 to 1, in steps of 0.01',
         first: '0.18',
         state: 'flow.intensity',
