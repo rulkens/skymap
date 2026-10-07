@@ -1,6 +1,6 @@
 ---
 name: add-data-source
-description: Use when adding a new data source or featured category to skymap — a new survey catalog feeding the point cloud, or (the common case) a new featured structure category / POI type rendered as marker rings + labels (cluster / supercluster / void / group are the existing four). Triggers like "add a data source", "add a new structure category", "add galaxy groups / walls / a new POI layer", "wire up a new survey". Maps the full edit surface so no parallel site is missed.
+description: Use when adding a new data source or featured category to skymap — a new survey catalog feeding the point cloud, or (the common case) a new featured structure category / POI type rendered as marker rings + labels (cluster / supercluster / void / group and the four Milky Way categories are the existing eight). Triggers like "add a data source", "add a new structure category", "add galaxy groups / walls / a new POI layer", "wire up a new survey". Maps the full edit surface so no parallel site is missed.
 ---
 
 # `/add-data-source` — add a new data source or featured category
@@ -15,28 +15,23 @@ skymap has two kinds of "data source", with very different edit surfaces:
   cross-references that and adds the `Source`-enum touchpoints.
 
 - **Path B — a new featured structure category / POI type** rendered as marker
-  rings + text labels (the existing four are `cluster` / `supercluster` /
-  `void` / `group`). This is the common case and the one this skill maps in
-  detail, because the edit surface is **wide, parallel, and only partly caught
-  by the type system**. The `group` category (PR for nearby-galaxy-groups,
-  2026-06-04) touched ~20 sites; this skill is the checklist distilled from it.
+  rings + text labels (the existing eight are `cluster` / `supercluster` /
+  `void` / `group` and `open-cluster` / `globular-cluster` / `nebula` /
+  `galactic-centre`). This is the common case and the one this skill maps in
+  detail. The edit surface is a registry row plus a handful of typed tables;
+  the rest derives from the registry.
 
-**The core hazard (read this first).** A structure category's identity is
-re-encoded across many files. Some sites are **totality-checked** —
-`Record<StructureCategory, …>` / `Record<PoiCategory, …>` tables that **fail to
-compile** when you add a category. Those are your friends: the red typecheck is
-a checklist that walks you to each one. But several sites are **silent** — `||`
-chains, hand-maintained inverse maps, `Partial<Record>` lookups, runtime
-enumeration tests, copy-pasted defaults. Nothing forces those to agree, and a
-miss is a runtime bug (wrong ring clicked, no count shown, category invisible).
-**Lean on the compiler for the loud sites; use the table below for the silent
-ones.** When you find yourself editing a second hand-maintained list, that is
-the duplication a single `STRUCTURE_CATEGORY_META` registry would kill by
-deriving the source-code maps, category lists, and marker buckets from one
-table (no such registry exists yet — not filed in `docs/BACKLOG.md` either).
-Note the duplication rather than inventing a third hand-maintained list; file
-the consolidation if you're adding the third category (see "Known debt"
-below).
+**The core hazard (read this first).** The `SOURCE_REGISTRY` row is the single
+home of a structure category's identity; settings, counts, pick decode, search,
+deep links and the marker and label passes derive from it. What remains
+hand-edited is a short list: the source code, the row, the style row, the record
+arm, the build switch and the seed parser. The first four are
+**totality-checked** (`Record<StructureId, …>` tables and exhaustive `switch`es
+that **fail to compile** when you add a category), so a red typecheck walks you
+to them. The seed parser's per-category rules are **silent**: nothing forces a
+new category's fields to be validated, and a miss is a bad seed row reaching the
+renderer. If you find yourself adding a second hand-maintained list of
+categories, derive it from `STRUCTURE_IDS` or the registry instead.
 
 ## When to use
 
@@ -48,7 +43,7 @@ below).
 
 ## First principle: seed real data early
 
-Before wiring the 20 sites, get **real data on screen**. Add the seed/parser and
+Before wiring the rest, get **real data on screen**. Add the seed/parser and
 a handful of real entries **right after the parser**, not as a final task — the
 rest of the work (styles, fades, framing, counts) is impossible to judge without
 something to look at. This was the single biggest process lesson from the group
@@ -80,7 +75,7 @@ folder shape, and don't start one for what's really a tenth catalog.
    offsets — they live next to the data file).
 3. Add a `Source` enum member + a `sources/<id>.ts` row inside the Layer whose
    family it joins (galaxy catalogs: `src/layers/galaxyCatalog/sources/`; see
-   Path B step 3 for a structure-category row — the rule is identical). A
+   Path B step 2 for a structure-category row — the rule is identical). A
    survey source persists to `.bin`, so its code is **append-only and
    load-bearing forever**.
 4. Wire it into `crossMatch` / `buildAllBins`. If the per-galaxy layout changes,
@@ -168,75 +163,104 @@ renderer/layer order the galaxy catalogs use:
 
 ## Path B — a new featured structure category
 
-Worked against adding `group`. Replace `X` / `Xs` with your category. Do them
-roughly in this order; run `npm run typecheck` after step 1 and let the red
-errors guide you to the totality sites.
+Worked against the four Milky Way categories (`open-cluster`, `globular-cluster`,
+`nebula`, `galactic-centre`, 2026-10). Replace `X` with your category. A category
+is a registry row plus a few typed tables; most of what used to be hand-listed is
+now derived from the registry. Edit in this order and let `npm run typecheck`
+walk you to anything missed.
 
-### The edit-surface checklist
+### The edit surface
 
-| #   | Site                      | File                                                                                             | Caught by compiler?                      |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| 1   | Category union            | `src/@types/engine/data/StructureCategory.d.ts`                                                  | — (the source of truth)                  |
-| 2   | Record arm                | `src/@types/engine/data/StructureRecord.d.ts` (`XRecord` + union)                                | ✅ downstream                            |
-| 3   | `Source` enum + registry  | `src/data/sources.ts` (append code, registry row)                                                | partial                                  |
-| 3b  | Non-survey guard          | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                 | ✅                                       |
-| 4   | Pick decode               | `src/data/selectionEncoding.ts` (`PickResult` kind + `unpackPick`)                               | ⚠️ **silent** inverse map                |
-| 4b  | WESL pick parity          | `src/services/gpu/shaders/lib/selectionEncoding.wesl` (`SOURCE_CODE_X`)                          | ⚠️ parity test only                      |
-| 6   | Seed parser               | `tools/parsers/parseStructureSeed.ts` (`VALID_CATEGORIES`)                                       | ⚠️ **silent**                            |
-| 7   | Marker style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                      | ✅ totality Record                       |
-| 8   | Build records             | `src/data/buildStaticAnchorStructures.ts` (`SeedEntry.category` + switch)                        | ✅ switch exhaustiveness                 |
-| 9   | Marker renderer           | `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts` (**~11 sites**, below)   | mixed                                    |
-| 10  | UI naming                 | `src/data/poiCategoryInfo.ts` (`label` / `shortLabel` / `plural`)                                | ✅ totality Record                       |
-| 11  | Settings lists            | `src/components/SettingsPanel/SettingsPanel.tsx` (`STRUCTURE_CATEGORIES`, `LABEL_CATEGORIES`)    | ⚠️ **silent** arrays                     |
-| 12  | Bulk-fetch gate           | `src/services/engine/wiring/assetWiring.ts` (`BULK_CATALOG_CATEGORIES`)                          | ⚠️ include **only if** it has a `.ccat`  |
-| 13  | Focus predicate           | `src/services/engine/subsystems/structureFocusSubsystem.ts` (`\|\| category === 'X'`)            | ⚠️ **silent**                            |
-| 14  | Settings count            | `src/services/engine/wiring/wireStructureProjection.ts` (`emitCounts`)                           | ⚠️ **silent** — no count shown if missed |
-| 15  | Visibility defaults       | `useEngineSettings.ts` ×2, `engine.ts` ×2, **+ test fixtures**                                   | ⚠️ **copy-paste ×8**                     |
-| 16  | Debug panel               | `src/components/DebugPanel/LabelEffectsSection.tsx` (`CATEGORIES`)                               | ⚠️ **silent**                            |
-| 17  | Seed data                 | `data/seeds/structure_anchors.seed.json` (re-included by `!/data/seeds/*.json`; plain `git add`) | —                                        |
-| 18  | Runtime enumeration tests | `tests/data/poiCategories.test.ts` (key counts, "N-category" titles)                             | ⚠️ **silent** — assert the new total     |
+| #   | Site               | File                                                                                                                                                | What it decides                                                                                 |
+| --- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | Source code        | `src/data/source.ts`                                                                                                                                | The append-only pick code (rules below)                                                         |
+| 2   | Registry row       | `src/data/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/data/sources.ts`                                                | `id`, `slab`, `galaxyMembers`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
+| 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
+| 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`, `lineOfSightAssumed`)                          |
+| 5   | Style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 6   | Fade band (if new) | `src/services/engine/presentation/scaleFadeBands.ts`                                                                                                | Only when no existing band fits; otherwise point `visibleBand` at one                           |
+| 7   | Build switch       | `src/data/structure/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
+| 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
+| 9   | Card row (if any)  | `src/components/InfoCard/StructureDetailCard/StructureDetailCard.tsx`; copy beside it in `src/data/structure/` (`nebulaKindLabels.ts`)                       | A per-category fact such as a nebula's Type                                                     |
+| 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
+| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/data/structure/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm; a band test in `structureVisibleBands.test.ts` if the band is new |
 
-`structureMarkerRenderer.ts` is the densest — the ~11 sites: `SOURCE_CODE_BY_CATEGORY`,
-`POI_CATEGORIES_WITH_MARKERS`, the per-category `Record` literals
-(`bucketOffsets` / `bucketCounts` / `sourceBuffers` / `sourceBindGroups` /
-`writeCursor`), the `setMarkers` reset / count-guard / write-guard, and the
-**bucket-offset ordering** (`bucketOffsets.X = bucketOffsets.<prev> + bucketCounts.<prev>`
-— append the new bucket **last**). Decide the halo policy: `void` skips its halo
-(`if (cat === 'void') continue` near the halo pass); a normal category does not.
+### Source code (step 1)
 
-### Source-code rules (steps 3, 4)
+- **Append-only, never renumber.** Codes are packed into the pick texture in a
+  **6-bit** field, and the all-ones value **63 is the reserved sentinel**
+  (`selectionEncoding.ts`). Structure codes are pick-only, never persisted, but
+  the discipline is the same. The last code in use is 36
+  (`GalacticCentrePlace`); **37..62 are free**. Re-read `source.ts` rather than
+  trusting this line, and update the remaining-range note in its docblock.
+- The pick decode (`unpackPick`) does not map codes to categories, so there is
+  no inverse table to keep in step.
 
-- **Append-only, never renumber.** Source codes are packed into the pick texture
-  and (for surveys) persisted to `.bin`. Take the next free integer. POI-only
-  codes are pick-only (not persisted) but still append-only — code 31 is the
-  reserved all-ones sentinel; don't use it. See the docstring in `sources.ts`.
-- **`unpackPick` is a hand-maintained inverse** of `SOURCE_CODE_BY_CATEGORY`.
-  Nothing makes them agree — get them consistent and trust the
-  `selectionEncoding` parity test (TS ⋈ WESL) to catch the WESL half.
+### Registry row (step 2)
 
-### Presentation knobs (step 7)
+- `slab` — which projection slab's marker pass and label director draw the
+  category: `'cosmo'` for Mpc-scale structures, `'near0'` for parsec-scale ones
+  (COSMO's near plane is 10 kpc, so anything smaller needs NEAR0's adaptive
+  planes). `STRUCTURE_IDS_BY_SLAB` is read from it, so the two marker passes and
+  the label producers partition the categories the same way.
+- `galaxyMembers` — `true` when the category is a region of the extragalactic
+  galaxy distribution: the InfoCard counts member galaxies inside it. It does
+  **not** decide focus dimming, which applies to every structure; only the count
+  is tied to it. Parsec-scale categories say `false`.
+- `bearsLabel` and `bearsMarker` are `true` and `labelLayer` is `'structure'`
+  for every structure row; copy the neighbour's row.
 
-`structurePoiStyles.ts` carries label/ring/halo colour, the close-approach
-fade-out (`markerMaxApparentRadiusPx` + band), and the far-distance fade-out
-(`markerMinApparentRadiusPx` + band). Tuning notes from the group work:
+### Style row (steps 5, 6)
 
-- **Far-distance fade** (`markerMinApparentRadiusPx`): higher = fades out at a
-  _nearer_ distance. Groups use a high floor (Local Volume feature, read up
-  close); clusters a low one (visible far out).
-- **Focus framing** auto-frames the structure so its _apparent_ radius lands just
-  past the close-approach fade — handled uniformly in `poiFocusDistance.ts`
-  (`FOCUS_FILL`), no per-category edit needed.
-- Colour: keep a deliberate ramp; alpha < 1 + lower luminance to recede a busy
-  near-volume category under the brighter ones.
+Colour, size and fade fields as for any structure; the two that carry a decision:
+
+- `visibleBand` — the camera-distance band over which the category's rings, halos
+  and labels are visible. Cosmic categories use `surveyDeepZoom`, Milky Way ones
+  `galacticStructures` (full inside the Galaxy, gone at the foreground gate).
+- `labelPlacement` — `'centre'` puts the label on the ring; `'above'` puts it
+  just over the ring's top edge with a fixed pixel gap
+  (`STRUCTURE_LABEL_ABOVE_GAP_PX`), for categories whose rings stay on screen
+  at large sizes. A focused structure's label can leave the screen; that is accepted.
+
+Tuning: a higher `markerMinApparentRadiusPx` makes the marker fade out at a
+_nearer_ distance. Focus framing is uniform (`structureFocusDistance.ts`,
+`FOCUS_FILL` times the apparent radius); no per-category edit.
+
+### Seed parser and seed rows (steps 8, 10)
+
+- Add the category's own fields to `StructureSeedEntry` and validate them beside
+  the existing checks: `nebulaKind` is required on `nebula` and rejected
+  elsewhere; `lineOfSightAssumed` is accepted on `galactic-centre` only.
+  `SeedEntry` in `buildStaticAnchorStructures.ts` mirrors the fields it reads.
+- Every row has `distance`, `physicalRadius` and `apparentRadius` as
+  `{ value, unit }` (`pc` / `kpc` / `Mpc`), in the unit the source publishes.
+- `source` — the paper, survey or bibcode the numbers came from. **Required for
+  every category on the `near0` slab** (derived from the registry, not a list in
+  the parser); build-time documentation only, never shipped.
+- `wikipedia` — the exact English article title after redirects, for the card's
+  link. Optional; verify it, never derive it from the name. A row without one
+  shows no link.
+
+### Derived: no edit needed
+
+Everything below reads `STRUCTURE_IDS` or the registry and widens with your row:
+the Settings toggles and their counts, `emitCounts`, the pick decode, the
+selection row's deep-link claim (`${category}-${seed.id}`, matched by category
+prefix; add a test only if your id could collide with another category's
+prefix), the search chip and palette rows, default marker and label visibility,
+`StructureId`, the marker renderers' buckets, and the marker and label passes
+(chosen by `slab`). `BULK_CATALOG_CATEGORIES` in `assetWiring.ts` is the one
+list not derived: add the category **only if** it has a bulk `.ccat`, which a
+seed-only category does not.
 
 ## Verify
 
 - `npm run typecheck` clean (this is what flushes the totality sites).
-- `npm test` — add/extend per-site behavioral tests **and** the runtime
-  enumeration test (#18); update any "N categories" count/title.
+- `npm test` — add the parser, seed-sanity and build tests from step 11.
 - Visual: `/dev` + `/link-data`, then confirm the category renders (rings +
-  labels in the right place), the **Settings toggle shows a count** (#14), and
-  clicking a ring opens the InfoCard (pick path, #4/#9).
+  labels where `labelPlacement` says), the **Settings toggle shows a count**,
+  clicking a ring opens the InfoCard, the card's Wikipedia link opens the right
+  article, and the selected ring brightens.
 
 ## Commit & ship
 
@@ -244,17 +268,7 @@ fade-out (`markerMaxApparentRadiusPx` + band), and the far-distance fade-out
   gitignored build artifacts). Format **only** touched files.
 - Branch + PR; commit under the user's git identity with the
   `Co-Authored-By: Claude …` trailer (project rules).
-- A seed-only category (like `group`) ships no `.bin` — code + seed only. A new
+- A seed-only category (like `group` or the Milky Way ones) ships no `.bin` — code + seed only. A new
   survey or a category with a bulk `.ccat` also needs `build-tiers` +
   `sync-r2-secure` **from the main checkout** (worktrees have throwaway
   `public/data/`).
-
-## Known debt this skill should eventually lean on
-
-The parallel-sites problem has no backlog item yet: a single
-`STRUCTURE_CATEGORY_META` registry would _derive_ the source-code maps, the
-category lists, and the marker buckets, turning many silent sites into one
-table. (The seed file, parser, and renderer are already named `structure*`
-throughout, not `cluster*` — that earlier rename is done.) If you're adding
-the _third_ category, file and do that consolidation before paying the
-duplication tax a third time.

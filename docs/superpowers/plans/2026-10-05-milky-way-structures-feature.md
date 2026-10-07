@@ -232,7 +232,7 @@ Not a subagent task. With the dev server up and all rows in, tune and commit:
 
 **Files:** `.claude/skills/add-data-source/SKILL.md` (modify), `docs/DATA.md` (modify if Task 2 left gaps)
 
-- [ ] Rewrite the skill's Path B table against the files this PR actually touched for a new structure category (Task 1's file list is the truth), and fix the sentinel width (6-bit, sentinel 63).
+- [x] Rewrite the skill's Path B table against the files this PR actually touched for a new structure category (Task 1's file list is the truth), and fix the sentinel width (6-bit, sentinel 63).
 - [ ] Perf: `npm run perf -- --url http://localhost:<this worktree's port>` on the `local-group` and a Sun-neighbourhood scenario, before (main) and after. The `local-group` total is bimodal on this machine (about 9.9 or 10.9 ms run to run), so compare several runs each side before reading a 1 ms difference as real.
 - [ ] Commit.
 
@@ -248,9 +248,9 @@ How focus works today, for all four tasks: `structureFocusSubsystem` turns the f
 
 **Files:** `src/services/engine/subsystems/structureFocusSubsystem.ts` and its type (modify), its test (modify), `docs/superpowers/specs/2026-10-05-milky-way-structures-design.md` (modify §6 and the §8 membership bullet)
 
-- [ ] Remove the `hasGalaxyMembers` gate and its injectable dep from the focus subsystem (`structureFocusSubsystem.ts:70-86`): any focused structure yields an `ActiveFocus`. `structureHasGalaxyMembers` keeps its one other reader, the card's member count (`layers/galaxyCatalog/frame.ts:69-78`).
-- [ ] Test `a category without galaxy members still drives the focus blend`, replacing the test that asserted the opposite. The member-count test stays.
-- [ ] Spec §6: focusing a Milky Way structure dims what lies outside its sphere, as for clusters. Commit.
+- [x] Remove the `hasGalaxyMembers` gate and its injectable dep from the focus subsystem (`structureFocusSubsystem.ts:70-86`): any focused structure yields an `ActiveFocus`. `structureHasGalaxyMembers` keeps its one other reader, the card's member count (`layers/galaxyCatalog/frame.ts:69-78`).
+- [x] Test `a category without galaxy members still drives the focus blend`, replacing the test that asserted the opposite. The member-count test stays.
+- [x] Spec §6: focusing a Milky Way structure dims what lies outside its sphere, as for clusters. Commit.
 
 ### Task 12: Layers that recede on focus
 
@@ -260,17 +260,19 @@ How focus works today, for all four tasks: `structureFocusSubsystem` turns the f
 
 **Contract:** in the recession tables, `milkyWay` and `constellations` (kinds) and `starCatalog`, `body`, `blackHoles` (label layers) take a recession target; reuse the existing constants (`FILAMENT_RECESSION` for the two kinds, `LABEL_RECESSION` for the label layers) unless one is plainly wrong on reading. The `milkyWay` label layer (the "You are here" pin) and `scaleBar` stay unreceded.
 
-- [ ] Near-field captions do not pass through `resolveLayerOpacity`: `composeForegroundCaption.ts:50-56` multiplies registry opacity and clip factor itself. Add the recession factor there, from the same `focusRecession(fadeId, snapshot.focusBlend)`, so one function still owns the dimming rule.
-- [ ] Rewrite the table comments that explain why these rows do not recede (`focusRecession.ts:39-46` and the `milkyWay` / `constellations` row comments): the focus blend is now also driven at parsec scales.
-- [ ] Test `a star caption recedes with the focus blend and is full at blend 0`.
-- [ ] Test `the Milky Way kind and the constellations kind recede; the You-are-here label does not`.
-- [ ] Commit.
+- [x] Near-field captions do not pass through `resolveLayerOpacity`: `composeForegroundCaption.ts:50-56` multiplies registry opacity and clip factor itself. Add the recession factor there, from the same `focusRecession(fadeId, snapshot.focusBlend)`, so one function still owns the dimming rule.
+- [x] Rewrite the table comments that explain why these rows do not recede (`focusRecession.ts:39-46` and the `milkyWay` / `constellations` row comments): the focus blend is now also driven at parsec scales.
+- [x] Test `a star caption recedes with the focus blend and is full at blend 0`.
+- [x] Test `the Milky Way kind and the constellations kind recede; the You-are-here label does not`.
+- [x] Commit.
 
 ### Task 13: Survey stars dim outside the focus sphere
 
 **review: yes** (shader, TS↔WGSL uniform layout, pick)
 
-**Files:** `src/services/gpu/shaders/starCatalog/{io,vertex}.wesl` (modify), `src/layers/starCatalog/render/starCatalogRenderer.ts`, `render/cut/computeStarCut.ts`, `render/cut/drawStarStream.ts`, the star pick renderer if it packs its own `StarUniforms` (modify), their tests (modify)
+**Re-implemented after the merge of main's GPU star-cut renderer; the file list is what the re-implementation touched.**
+
+**Files:** `src/services/gpu/shaders/starCatalog/{io,vertex}.wesl`, `src/layers/starCatalog/render/starCatalogLayout.ts`, `render/starCatalogRenderer.ts`, `render/starCatalogPickRenderer.ts`, `render/cut/drawStarCut.ts`, `render/cut/drawStarPick.ts`, `passes/starCatalogPass.ts`, `@types/StarCatalogCutDrawArgs.d.ts`, `@types/StarCatalogPickDrawArgs.d.ts`, `@types/StarFocusSphere.d.ts` (modify), their tests, and the new `starUniformsLayout.test.ts`
 
 **Contract:** `StarUniforms` gains the focus sphere in the shader's own space, which is camera-relative Mpc:
 
@@ -283,12 +285,12 @@ focusBlend: f32,
 
 The byte offsets follow WGSL alignment rules; state the final offsets and total size in a table in the commit body and keep the TS packing in lockstep (a `vec3<f32>` aligns to 16 and the scalar after it may share its tail). The camera position subtracted is the same one the cut rebases against (`computeStarCut.ts:160`).
 
-- [ ] The dim factor is the existing `focusAlphaMultiplier` rule. Reuse the function from `lib/focusUniforms.wesl` by building a `FocusUniforms` value from the new fields, rather than writing a second copy of the smoothstep.
-- [ ] Multiply it into per-star intensity (`vertex.wesl:373-388`) and into aggregate nodes by their own position, so the half-res aggregate glow dims too.
-- [ ] Pick: a star dimmed below the level the galaxy shader excludes at is not pickable. Mirror how `galaxyCatalog/points/vertex.wesl:228-236` excludes dimmed galaxies from the pick pass; use the same threshold symbol, not a new literal.
-- [ ] At blend 0 the output is bit-identical to before: the multiplier is exactly 1.
-- [ ] Test on the TS side: `the packed focus centre is camera-relative` and `blend 0 packs a multiplier-neutral sphere` (non-degenerate radii, as `ZERO_FOCUS` does, so the smoothstep edges never coincide).
-- [ ] Commit.
+- [x] The dim factor is the existing `focusAlphaMultiplier` rule. Reuse the function from `lib/focusUniforms.wesl` by building a `FocusUniforms` value from the new fields, rather than writing a second copy of the smoothstep.
+- [x] Multiply it into per-star intensity (`vertex.wesl:373-388`) and into aggregate nodes by their own position, so the half-res aggregate glow dims too.
+- [x] Pick: a star dimmed below the level the galaxy shader excludes at is not pickable. Mirror how `galaxyCatalog/points/vertex.wesl:228-236` excludes dimmed galaxies from the pick pass; use the same threshold symbol, not a new literal.
+- [x] At blend 0 the output is bit-identical to before: the multiplier is exactly 1.
+- [x] Test on the TS side: `the packed focus centre is camera-relative` and `blend 0 packs a multiplier-neutral sphere` (non-degenerate radii, as `ZERO_FOCUS` does, so the smoothstep edges never coincide).
+- [x] Commit.
 
 ### Task 14: Curated stars dim outside the focus sphere
 
@@ -296,9 +298,9 @@ The byte offsets follow WGSL alignment rules; state the final offsets and total 
 
 **Contract:** `focusAlphaMultiplier(worldPos: Vec3, focus: FocusUniformsValue): number`, the TS statement of the WGSL rule, with the same `0.6` core fraction and `0.08` floor. Name the WGSL file in its header as the twin it must match.
 
-- [ ] `starPointsPass` already multiplies each star's uploaded colour by a CPU fade (`starPointsPass.ts:166-196`); multiply by the focus factor there, from `ctx.snapshot.focus`. Its pick stamp excludes a star at the same threshold as Task 13.
-- [ ] Tests: `inside the physical radius the multiplier is 1`, `far outside it is 0.08 at blend 1`, `at blend 0 it is 1 everywhere`.
-- [ ] Commit.
+- [x] `starPointsPass` already multiplies each star's uploaded colour by a CPU fade (`starPointsPass.ts:166-196`); multiply by the focus factor there, from `ctx.snapshot.focus`. Its pick stamp excludes a star at the same threshold as Task 13.
+- [x] Tests: `inside the physical radius the multiplier is 1`, `far outside it is 0.08 at blend 1`, `at blend 0 it is 1 everywhere`.
+- [x] Commit.
 
 Smoke for these four, added to the list below:
 
@@ -336,5 +338,8 @@ Smoke pass, one link each on this worktree's dev server (`http://localhost:<port
 - Orbit the Pleiades at about 10 pc and look toward a globular: its ring is still drawn at the right place and size (the far-plane clamp), and clicking it selects it.
 - `#focus=cluster-virgo-m87`: framing, ring and label as on main.
 - Settings shows the four toggles with counts 25 / 21 / 22 / 3; search finds "Pleiades" and "M13".
+- `#focus=nebula-orion`: the card's Wikipedia link opens the Orion Nebula article.
+- Click a ring: the selected ring brightens, at full-opacity categories too.
+- A Milky Way label (for example Pleiades) sits above its ring with a clear gap.
 
 Out of scope: published catalogues as bulk rows (Hunt & Reffert, Harris), molecular clouds, OB associations, spiral-arm labels, the Central Molecular Zone, path-based object links, a `structure` Layer, and the hand-listed `SOURCE_CODE_*` constants in `selectionEncoding.wesl`.

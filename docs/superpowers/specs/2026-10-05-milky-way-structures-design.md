@@ -7,7 +7,7 @@ Rulings came from the brainstorm of 2026-10-04 → 2026-10-05 (dash asks B28N an
 ## 1. What this is
 
 - Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`.
-- About 70 hand-authored seed rows (§5), each a ring plus label at its true 3D position, focusable, pickable and searchable.
+- 71 hand-authored seed rows (§5: 25 open clusters, 21 globular clusters, 22 nebulae, 3 Galactic Centre places), each a ring plus label at its true 3D position, focusable, pickable and searchable.
 - The rings and labels are visible while the camera is inside or near the Milky Way and fade out in intergalactic space. The existing four categories keep fading out on the way in, as today.
 - Focusing a row frames it by its radius: the Pleiades from tens of parsecs, not from 100 kpc.
 - A nebula's card shows its kind (emission, reflection, planetary, supernova remnant, dark). A Galactic Centre place's card says when its line-of-sight distance is assumed, not measured.
@@ -40,7 +40,7 @@ OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GalacticCentrePlace: 36
 type StructureSourceEntry = SourceEntryBase & {
   readonly type: 'structure'; readonly code: number;
   readonly slab: 'cosmo' | 'near0';       // which depth slab its rings and labels draw on
-  readonly galaxyMembers: boolean;        // focus dims non-members; card shows a galaxy count
+  readonly galaxyMembers: boolean;        // card shows a galaxy count (focus dims for every category)
 };
 
 // structureMarkerStyles.ts — the style row gains the band it fades on
@@ -104,13 +104,13 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - Forming the `structure` Layer (layer-composition spec §9) is not needed here.
 - Path-based object links with share previews: [`docs/backlog/2026-10-05-path-based-object-links.md`](../../backlog/2026-10-05-path-based-object-links.md).
 
-The `add-data-source` skill's Path B table is stale (files that no longer exist, a 5-bit sentinel). It is refreshed in PR 2, since that PR walks it.
+The `add-data-source` skill's Path B table was stale (files that no longer exist, a 5-bit sentinel); PR 2 rewrote it against the files it touched.
 
 ## 4. Registry, style and records
 
 - Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=galactic-centre-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `galactic-centre-…` does not collide with the `galactic-centre` place id.
 - All four rows: `slab: 'near0'`, `galaxyMembers: false`, `bearsLabel` and `bearsMarker` true, `labelLayer: 'structure'`. They share the structure fade and recession channel, so existing tour cues on structure rings and labels apply to them too.
-- Display copy: "Open cluster / Open clusters", "Globular cluster / Globular clusters", "Nebula / Nebulae", "Galactic Centre place / Galactic Centre".
+- Display copy (card label; short label and plural where they differ): "Open Cluster" / "Open clusters", "Globular Cluster" (short "Globular") / "Globular clusters", "Nebula" / "Nebulae", "Galactic Centre Place" (short and plural "Galactic Centre").
 - Style rows: all four use `galacticStructures`. Colours form a ramp distinct from the existing warm cluster ramp; the exact values and the min/max apparent-radius thresholds are tuned on screen with real rows (§8).
 - None joins `BULK_CATALOG_CATEGORIES`; there is no `.ccat` for them.
 
@@ -118,18 +118,18 @@ The `add-data-source` skill's Path B table is stale (files that no longer exist,
 
 Rows are added to `data/seeds/structure_anchors.seed.json` with lengths in the unit the source publishes. Every value is taken from a cited source at authoring time, not from memory; the description names what the object is and why it is notable.
 
-- **Open clusters (~25):** Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, Double Cluster (two rows), Jewel Box, Wild Duck, Butterfly, Ptolemy, M35–M38, M41, M46, M47, M50, M67, NGC 752, IC 2602, IC 2391, Trumpler 14, Westerlund 1.
-- **Globular clusters (~20):** ω Centauri, 47 Tucanae, M2, M3, M4, M5, M10, M12, M13, M15, M22, M30, M53, M54, M55, M71, M79, M80, M92, NGC 6397, NGC 2419.
-- **Nebulae (~22):** Orion, Carina, Lagoon, Trifid, Eagle, Omega, Rosette, North America, California (emission); Horsehead, Coalsack (dark); Ring, Dumbbell, Helix, Cat's Eye, Owl (planetary); Crab, Veil, Vela, Cassiopeia A, Tycho, Kepler (supernova remnant). The Tarantula is left out: it is in the Large Magellanic Cloud.
+- **Open clusters (25):** Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, Double Cluster (two rows), Jewel Box, Wild Duck, Butterfly, Ptolemy, M35–M38, M41, M46, M47, M50, M67, NGC 752, IC 2602, IC 2391, Trumpler 14, Westerlund 1.
+- **Globular clusters (21):** ω Centauri, 47 Tucanae, M2, M3, M4, M5, M10, M12, M13, M15, M22, M30, M53, M54, M55, M71, M79, M80, M92, NGC 6397, NGC 2419.
+- **Nebulae (22):** Orion, Carina, Lagoon, Trifid, Eagle, Omega, Rosette, North America, California (emission); Horsehead, Coalsack (dark); Ring, Dumbbell, Helix, Cat's Eye, Owl (planetary); Crab, Veil, Vela, Cassiopeia A, Tycho, Kepler (supernova remnant). The Tarantula is left out: it is in the Large Magellanic Cloud.
 - **Galactic Centre places (3):** central cluster, Arches, Quintuplet. Arches and Quintuplet carry `lineOfSightAssumed: true` and sit at Sgr A\*'s distance (`GALACTIC_CENTRE_ANCHOR`), with their published RA/Dec.
 
-Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `lineOfSightAssumed` is accepted only on a Galactic Centre place; `Length.unit` must be one of the three units and `value > 0`.
+Every Milky Way row also carries a `source` (see "Decided during review"). Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `lineOfSightAssumed` is accepted only on a Galactic Centre place; `Length.unit` must be one of the three units and `value > 0`.
 
 ## 6. Visibility and focus
 
 - `galacticStructures` is keyed on camera distance from the render origin, like `surveyDeepZoom`, and is its mirror: full inside the Galaxy, gone at `FOREGROUND_MAX_DISTANCE_MPC`, where NEAR0 content switches off anyway. `fullAt` is tuned on screen.
 - The per-marker apparent-radius fades do the rest: from the Sun, a Galactic Centre place 8 kpc away is far below the minimum on-screen radius and stays hidden until the camera approaches.
-- Focus frames at `FOCUS_FILL × apparentRadius` (P5). Focusing a Milky Way structure dims what lies outside its sphere, as for clusters; `galaxyMembers: false` only means the card shows no galaxy count.
+- Focus frames at `FOCUS_FILL × apparentRadius` (P5). Focusing any structure, a Milky Way one included, dims everything outside its sphere (see "Decided during review"); `galaxyMembers: false` only means the card shows no galaxy count.
 
 ## 7. Card and search
 
@@ -153,7 +153,7 @@ Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centaur
 ## 9. Risks
 
 - **NEAR0 far plane moves with the camera.** It is 100× the orbit distance, so orbiting the Pleiades at 10 pc puts a 10 kpc globular beyond it. P1's far-plane clamp is the mitigation and is the least certain part until it is on screen.
-- **Label crowding near the Sun.** About 70 new labels in a volume that already holds constellation captions and star names. Declutter priority and the default-on state per category are judged on screen.
+- **Label crowding near the Sun.** 71 new labels in a volume that already holds constellation captions and star names. Declutter priority and the default-on state per category are judged on screen.
 - **P7 touches the pick shader.** Pick and draw must use the same camera-relative instances, or rings are clicked where they are not drawn.
 - **Seed migration (P9) touches every existing row.** The existing seed-sanity tests pin positions before and after.
 
@@ -165,3 +165,15 @@ Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centaur
 - `npm run typecheck`, `npm test` and `npm run build` are green.
 - `docs/DATA.md` describes the unit-tagged seed; the `add-data-source` skill's Path B table matches the code.
 - The backlog index line and `docs/backlog/2026-07-30-galactic-center-place-labels.md` are gone.
+
+## 11. Decided during review (2026-10-06/07)
+
+Rulings from the on-screen checks. Where they differ from §6–§8 as first drafted, those sections now say what was built.
+
+- **Focus dims everything not part of the structure.** Focusing any structure dims stars outside its sphere, galaxies, the Milky Way glow, constellation lines and captions, and star and body names. Dimmed stars and their name labels are not pickable, so a click cannot land on something faded out. Reason: a parsec-scale focus is unreadable against a full-brightness sky, and the cluster rule already worked. The card's galaxy count still follows `galaxyMembers`.
+- **The Milky Way glow recedes on every focus**, galaxy-cluster focus included. Reason: it is scenery behind any focused subject.
+- **Milky Way labels sit above their ring.** `labelPlacement: 'above'` on the style row places the label over the ring's top edge with a fixed pixel gap (`STRUCTURE_LABEL_ABOVE_GAP_PX`). These rings stay on screen at large sizes, and a centred label would sit on the ring line. A focused structure's label may fall off-screen; that is accepted.
+- **The selected ring brightens by a colour gain of 1.6×** (`SELECTED_RING_BRIGHTEN`) for every category, replacing the capped opacity boost. Reason: most rings rest at full opacity, where an alpha boost has nowhere to go.
+- **Structure cards link to Wikipedia** from a per-row `wikipedia` title, verified against the article rather than derived from the name. Five existing rows have none (`cluster-ophiuchus`, `cluster-shapley-a3558`, `cluster-a3571`, `group-cvn-i-cloud`, `group-ngc-6946-group`), and their cards show no link.
+- **Each Milky Way seed row carries a `source`** naming the paper or survey its distance and radii came from, required by the parser for every `near0` category. Reason: these rows have no catalogue in the pipeline to audit against.
+- **Known limitation, not fixed here:** globular clusters' Gaia member stars smear into a radial line toward the Sun, because each star keeps its own noisy distance. Backlogged at `docs/backlog/2026-10-06-cluster-member-star-distances.md`.
