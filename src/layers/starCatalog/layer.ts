@@ -15,6 +15,7 @@ import { destroy } from './destroy';
 import { starCatalogPlanner } from './frame';
 import { starCatalogAssetRows } from './load/starCatalogAssetRows';
 import { starCatalogSourceCounts } from './load/starCatalogSourceCounts';
+import { starCutCompute } from './computes/starCutCompute';
 import { starAggregatesPass } from './passes/starAggregatesPass';
 import { starPointsPass } from './passes/starPointsPass';
 import { starCatalogPass } from './passes/starCatalogPass';
@@ -45,6 +46,7 @@ export const starCatalogLayer = defineLayer({
     starSpheresPass(runtime),
     fieldStarSpherePass(runtime),
   ],
+  computes: (runtime) => [starCutCompute(runtime)],
   assets: starCatalogAssetRows,
   sourceCounts: starCatalogSourceCounts,
   fades: starCatalogFadeRows,

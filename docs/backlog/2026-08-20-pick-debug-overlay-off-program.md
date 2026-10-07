@@ -32,8 +32,8 @@ file names: `renderForDebug()` submits its own encoder from inside a layer's
 `draw()`, and every `queue.writeBuffer` call issued there lands on the GPU
 **before** the outer frame's already-recorded commands execute — the same trap
 `bodyPickRenderer.ts` documents for the real pick path — and it was read as
-breaking the non-reentrancy discipline `drawStarStream.ts`'s module-scratch
-`frustumScratch` relies on. The exhaustive renderer/layer sweep
+breaking the non-reentrancy discipline the star cut's per-frame state
+(`render/cut/starCutInputs.ts`, `render/starCutGpu.ts`) relies on. The exhaustive renderer/layer sweep
 (`renderer-layer-outliers.md:27`) never captured this site: it lists
 `pickDebugOverlay` only as a factory-signature outlier, never as an
 off-program draw.

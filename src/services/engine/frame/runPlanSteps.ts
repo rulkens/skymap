@@ -14,6 +14,7 @@ import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameCont
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { PlannerScopeTarget } from '../../../@types/engine/frame/PlannerScopeTarget';
+import { cpuSpans } from '../../../utils/perf/cpuSpans';
 
 export function runPlanSteps(
   steps: readonly FrameStepSpec[],
@@ -30,6 +31,7 @@ export function runPlanSteps(
     // `checkFrameOrder` rejects a scope mismatch at boot; the two branches
     // below are what narrow planner and target to each other, and the throw is
     // the leftover pairing no narrowing can rule out.
+    const startMs = cpuSpans.on ? performance.now() : 0;
     if (target.scope === 'once') {
       if (planner.scope === 'once') {
         target.snapshot.plans.put(
@@ -37,10 +39,12 @@ export function runPlanSteps(
           undefined,
           planner.plan(target.snapshot, target.views, state),
         );
+        if (cpuSpans.on) cpuSpans.add(`plan:${step.name}`, startMs);
         continue;
       }
     } else if (planner.scope === 'perView') {
       target.view.snapshot.plans.put(planner, target.view, planner.plan(target.view, state));
+      if (cpuSpans.on) cpuSpans.add(`plan:${step.name}`, startMs);
       continue;
     }
     throw new Error(

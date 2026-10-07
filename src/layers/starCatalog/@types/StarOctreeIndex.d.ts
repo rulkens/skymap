@@ -1,6 +1,6 @@
 /**
  * A star catalog's load-time index: flat, parallel-to-`catalog.nodes` typed
- * arrays the per-frame walk reads — see `utils/star/starOctreeIndex.ts`.
+ * arrays built once per catalog — see `utils/star/starOctreeIndex.ts`.
  * Indexed by node `i`, except `childIndex` (8 octant slots/node) and
  * `boxOriginPc` (3 axes/node).
  */

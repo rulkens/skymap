@@ -6,8 +6,7 @@
  * AtmosphereUniforms` out of `sphere.wesl`, derives its std140 float offsets,
  * then drives the REAL packer with a distinct sentinel per field and asserts
  * each sentinel lands where the struct — not the packer — says it should.
- * Follows the `nodeParamsLayout.test.ts` precedent for locating/parsing the
- * struct and computing WGSL alignment.
+ * Locates/parses the struct and computes WGSL alignment itself.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -25,8 +24,7 @@ const sphereWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/lib/sphere.we
 
 /** std140 alignment + size for the subset AtmosphereUniforms uses. `lanes: 0`
  *  marks a type the packer never writes scalar-by-scalar (mat4x4) — its block
- *  offset still comes from this table, but is checked whole, not per-float,
- *  mirroring how the nodeParams precedent treats its opaque `CameraUniforms`. */
+ *  offset still comes from this table, but is checked whole, not per-float. */
 const WESL_TYPES: Record<string, { align: number; size: number; lanes: number }> = {
   f32: { align: 4, size: 4, lanes: 1 },
   'vec3<f32>': { align: 16, size: 12, lanes: 3 },

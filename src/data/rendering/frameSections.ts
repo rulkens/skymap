@@ -13,12 +13,11 @@ export const PRELUDE: FrameSection = {
   steps: [
     // The section's plan rows, always first (`checkFrameOrder`'s boot rule):
     // the galaxy catalog's disk-planner walk, the flow renderer's
-    // reconcile-and-vote, the star LOD fade advance, and the Milky Way
+    // reconcile-and-vote, the star cut's inputs, and the Milky Way
     // cloud's star-count reconcile, before any GPU step reads what they
     // publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
     { kind: 'plan', name: 'flow' },
-    // Ahead of the sky captures below, which read the cut it sets.
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
@@ -32,6 +31,9 @@ export const PRELUDE: FrameSection = {
     // `SCENE` — the froxel bake is per-view now, not once here.
     { kind: 'compute', name: 'flow' },
     { kind: 'compute', name: 'sky-view' },
+    // The survey stars' octree cut, from the inputs the `star-catalog` plan
+    // row set; any line ahead of SCENE's star draws would do.
+    { kind: 'compute', name: 'star-cut' },
     // The sky captures, in the compute prelude's wake and ahead of every
     // other render step so a same-frame lensing draw can sample a cubemap this
     // frame actually wrote. The frame's face list for a key is empty most
