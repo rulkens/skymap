@@ -71,6 +71,25 @@ export const RAW_DATA = {
     description: 'VizieR ReadMe for GLADE v2.3 — byte-offset specs for the parser.',
   },
 
+  // ─── REGALADE v2 — Tranin+ 2026 ─────────────────────────────────────────
+
+  'regalade.dat': {
+    path: 'data/raw/regalade/regalade.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'REGALADE v2 all-sky galaxy compilation to 2000 Mpc — 348-byte fixed-width, 71.5 M rows, ~25 GB gunzipped. Manual download, see README.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/706/A284/regalade.dat.gz',
+    readme: 'regalade.readme',
+  },
+  'regalade.readme': {
+    path: 'data/raw/regalade/J_A+A_706_A284_ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description: 'VizieR ReadMe for REGALADE — byte-offset specs the parser relies on.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/706/A284/ReadMe',
+  },
+
   // ─── HyperLEDA — orientation + designation cross-walk ─────────────────
 
   'hyperleda.pa': {
