@@ -8,4 +8,10 @@ export type ReviewPanelActions = {
   go: (target: DocsReviewMark | Element) => void;
   deleteNote: (id: string) => void;
   whole: (state: 'cut' | 'good') => void;
+  /** The consequence of applying the open section, for the confirm line. */
+  applyText: () => { text: string; nothing: boolean };
+  /** Asks the agent that watches the review file to carry out the open section. */
+  apply: () => void;
+  /** True from a confirm until the agent has made the edit. */
+  applying: () => boolean;
 };

@@ -56,6 +56,17 @@ describe('isDocsReview', () => {
     expect(isDocsReview({ ...review, marks: [{ ...good, why: 1 }] })).toBe(false);
   });
 
+  it('accepts an apply request and an applied history, and refuses ones of the wrong shape', () => {
+    const apply = { scope: 'page', requested: '2026-10-08T19:00:00Z' };
+    const applied = [{ commit: 'abc1234', at: '2026-10-08T19:05:00Z', markIds: ['m1'] }];
+    expect(isDocsReview({ ...review, apply, applied })).toBe(true);
+    expect(isDocsReview({ ...review, apply: { scope: 'page' } })).toBe(false);
+    expect(
+      isDocsReview({ ...review, applied: [{ commit: 'abc1234', at: 'x', markIds: [1] }] }),
+    ).toBe(false);
+    expect(isDocsReview({ ...review, applied: 'abc1234' })).toBe(false);
+  });
+
   it('refuses two marks with one id, which the page could not tell apart', () => {
     expect(isDocsReview({ ...review, marks: [review.marks[0], review.marks[0]] })).toBe(false);
   });

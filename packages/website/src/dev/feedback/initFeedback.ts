@@ -321,7 +321,7 @@ function initFeedback(): void {
 
   capture.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    if (devOverlay.press(e.clientX, e.clientY)) return;
+    if (devOverlay.press(e.clientX, e.clientY)) return e.preventDefault();
     if (selection) return text.focus();
     press = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false, drawing: false };
   });

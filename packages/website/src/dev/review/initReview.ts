@@ -16,6 +16,7 @@ import type { ReviewPanel } from './@types/ReviewPanel';
 import type { ReviewPanelActions } from './@types/ReviewPanelActions';
 import type { ReviewSection } from './@types/ReviewSection';
 import { clearMarks } from './clearMarks';
+import { describeApply } from './describeApply';
 import { flashMark } from './flashMark';
 import { locateNotes } from './locateNotes';
 import { openSectionPanel } from './openSectionPanel';
@@ -25,6 +26,8 @@ import { placeSectionIcons } from './placeSectionIcons';
 import { sectionsOf } from './sectionsOf';
 import { sectionText } from './sectionText';
 import { setNote } from './setNote';
+import { wordsAfter } from './wordsAfter';
+import { wordsIn } from './wordsIn';
 import './review.css';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -32,7 +35,7 @@ const ROUTE = `${BASE}__review`;
 const HIDE_KEY = 'skymap-review-hide-cut';
 const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' } as const;
 
-const wordsIn = (text: string): number => text.split(/\s+/).filter(Boolean).length;
+const APPLY_POLL_MS = 3000;
 
 async function initReview(): Promise<void> {
   const article = document.getElementById('page');
@@ -50,14 +53,42 @@ async function initReview(): Promise<void> {
   const job = make('input', 'review-job', bar);
   const words = make('span', 'review-words', bar);
   const counts = make('span', 'review-counts', bar);
-  make('span', 'review-keys', bar).textContent = overlayKeys(true);
+  const keys = make('span', 'review-keys', bar);
+  keys.textContent = overlayKeys(true);
+  // The confirm line takes the keys' place until the owner answers it.
+  const confirm = make('span', 'review-confirm-bar', bar);
+  const confirmText = make('span', 'review-confirm-text', confirm);
+  const yes = make('button', 'review-bar-button', confirm);
+  const no = make('button', 'review-bar-button', confirm);
   const missing = make('span', 'review-missing', bar);
+  const applyButton = make('button', 'review-bar-button', bar);
+  const applyState = make('button', 'review-bar-button review-apply-state', bar);
+  const cancelApply = make('button', 'review-bar-button', bar);
   const toggle = make('button', 'review-toggle', bar);
   const flag = make('span', 'review-flag', bar);
   job.value = review.job;
   job.setAttribute('aria-label', 'The question a reader comes to this page with');
-  toggle.type = 'button';
+  confirm.hidden = true;
+  confirmText.setAttribute('role', 'status');
+  for (const [button, label] of [
+    [yes, 'Confirm'],
+    [no, 'Cancel'],
+    [applyButton, 'Apply page'],
+    [cancelApply, 'Cancel apply'],
+    [toggle, ''],
+    [applyState, ''],
+  ] as const) {
+    button.type = 'button';
+    if (label) button.textContent = label;
+  }
   toggle.title = 'Show the result: cut passages gone, rewrites in place (H)';
+  // The bar wraps on a narrow screen: the page is pushed down by what it measures, not by a guess.
+  new ResizeObserver(() =>
+    document.documentElement.style.setProperty(
+      '--review-bar',
+      `${Math.ceil(bar.getBoundingClientRect().height)}px`,
+    ),
+  ).observe(bar);
 
   let hiding = false;
   try {
@@ -93,15 +124,37 @@ async function initReview(): Promise<void> {
     panel = null;
   }
 
+  // What earlier applies carried out is history: out of the text, the counts and the section panels.
+  const appliedIds = (): Set<string> =>
+    new Set((review.applied ?? []).flatMap((entry) => entry.markIds));
+  const liveMarks = (): DocsReviewMark[] => review.marks.filter((m) => !appliedIds().has(m.id));
+  // The page's words now: the cutter's count less what applies took out, which is the last apply's "after".
+  const liveBefore = (): number =>
+    wordsAfter(
+      review.marks.filter((m) => appliedIds().has(m.id)),
+      review.words.before,
+    );
+  const historySection = (): ReviewSection => ({
+    heading: applyState,
+    start: applyState,
+    end: null,
+    title: 'Applied',
+    items: review.marks
+      .filter((m) => appliedIds().has(m.id))
+      .map((mark) => ({ kind: 'mark' as const, mark })),
+  });
+  const openSectionOf = (): ReviewSection | undefined =>
+    sections.find((s) => s.heading === panel?.heading);
+  const marksOf = (section: ReviewSection): DocsReviewMark[] =>
+    section.items.flatMap((item) => (item.kind === 'mark' ? [item.mark] : []));
+
   function refreshPanel(): void {
     if (!panel) return;
-    const section = sections.find((s) => s.heading === panel!.heading);
+    if (panel.heading === applyState) return panel.refresh(historySection(), 0, 0);
+    const section = openSectionOf();
     if (!section) return closePanel();
     const before = wordsIn(sectionText(article!, section));
-    const cut = section.items
-      .filter((item) => item.kind === 'mark' && item.mark.state === 'cut')
-      .reduce((sum, item) => sum + (item.kind === 'mark' ? wordsIn(item.mark.text) : 0), 0);
-    panel.refresh(section, before, before - cut);
+    panel.refresh(section, before, wordsAfter(marksOf(section), before));
   }
 
   function render(): void {
@@ -115,27 +168,32 @@ async function initReview(): Promise<void> {
       sections = [];
       return closePanel();
     }
-    const notFound = review.marks
-      .filter((mark) => !paintMark(article!, mark))
-      .map((mark) => mark.id);
+    const live = liveMarks();
+    const notFound = live.filter((mark) => !paintMark(article!, mark)).map((mark) => mark.id);
     // Notes are found by selectors that count siblings: before the replacements are added.
     const noteEls = locateNotes(article!, pageNotes.list());
-    placeAfter(article!, review.marks);
-    sections = sectionsOf(article!, review.marks, pageNotes.list(), noteEls);
+    placeAfter(article!, live);
+    sections = sectionsOf(article!, live, pageNotes.list(), noteEls);
     placeSectionIcons(sections);
     // The marks are painted either way (the panel finds its passages by them); unshown, they leave no trace, tooltips included.
     if (!marksShown)
       for (const el of article!.querySelectorAll('.review-mark')) el.removeAttribute('title');
     const count = (state: DocsReviewMark['state']): number =>
-      review.marks.filter((mark) => mark.state === state).length;
-    const cutWords = review.marks
-      .filter((mark) => mark.state === 'cut')
-      .reduce((sum, mark) => sum + wordsIn(mark.text), 0);
-    words.textContent = `${review.words.before} → ${review.words.before - cutWords} words`;
+      live.filter((mark) => mark.state === state).length;
+    const before = liveBefore();
+    words.textContent = `${before} → ${wordsAfter(live, before)} words`;
     counts.textContent = `${count('cut')} cut · ${count('keep')} keep · ${count('rewrite')} rewrite · ${count('good')} good`;
     missing.textContent = notFound.map((id) => `not found: ${id}`).join(', ');
     toggle.textContent = hiding ? 'Show original (H)' : 'Show result (H)';
     toggle.setAttribute('aria-pressed', String(hiding));
+    const last = review.applied?.at(-1);
+    applyButton.disabled = !!review.apply;
+    cancelApply.hidden = !review.apply;
+    applyState.hidden = !review.apply && !last;
+    applyState.disabled = !!review.apply;
+    applyState.textContent = review.apply
+      ? `applying ${review.apply.scope === 'page' ? 'the page' : `“${review.apply.scope}”`}…`
+      : `applied · ${last?.commit.slice(0, 7)}`;
     refreshPanel();
   }
 
@@ -185,14 +243,86 @@ async function initReview(): Promise<void> {
       ),
     deleteNote: (id) => void pageNotes.remove(id).catch((e: unknown) => console.error(e)),
     whole(state) {
-      const section = sections.find((s) => s.heading === panel?.heading);
+      const section = openSectionOf();
       if (!section) return;
       const mark = pushOwnerMark(sectionText(article!, section), state);
       render();
       save();
       panel?.reveal(`mark:${mark.id}`, true);
     },
+    applyText() {
+      const section = openSectionOf();
+      return describeApply(
+        section ? marksOf(section) : [],
+        section ? wordsIn(sectionText(article!, section)) : 0,
+      );
+    },
+    apply() {
+      const section = openSectionOf();
+      if (section) requestApply(section.title);
+    },
+    applying: () => !!review.apply,
   };
+
+  // The owner's confirm writes `apply` into the file; the agent that watches it edits the page, removes `apply` and adds an `applied` entry.
+  let poll: number | undefined;
+  function watchApply(): void {
+    window.clearInterval(poll);
+    if (!review.apply) return;
+    poll = window.setInterval(async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const fresh = (await res.json()) as DocsReview;
+        if (fresh.apply) return;
+        window.clearInterval(poll);
+        // The agent's file is the newer one: take it whole, marks included.
+        review.apply = undefined;
+        if ((fresh.applied?.length ?? 0) > (review.applied?.length ?? 0))
+          Object.assign(review, fresh);
+        render();
+      } catch {
+        /* server restarting: the next tick asks again */
+      }
+    }, APPLY_POLL_MS);
+  }
+  function requestApply(scope: string): void {
+    review.apply = { scope, requested: new Date().toISOString() };
+    save();
+    watchApply();
+    render();
+  }
+  const closeConfirm = (): void => {
+    confirm.hidden = true;
+    keys.hidden = false;
+    applyButton.focus();
+  };
+  applyButton.addEventListener('click', () => {
+    const { text, nothing } = describeApply(liveMarks(), liveBefore());
+    confirmText.textContent = text;
+    yes.hidden = nothing;
+    confirm.hidden = false;
+    keys.hidden = true;
+    (nothing ? no : yes).focus();
+  });
+  yes.addEventListener('click', () => {
+    closeConfirm();
+    requestApply('page');
+  });
+  no.addEventListener('click', closeConfirm);
+  cancelApply.addEventListener('click', () => {
+    review.apply = undefined;
+    window.clearInterval(poll);
+    save();
+    render();
+  });
+  applyState.addEventListener('click', () => {
+    if (panel?.heading === applyState) return closePanel();
+    closePanel();
+    panel = openSectionPanel(historySection(), actions, true);
+    refreshPanel();
+  });
+  watchApply();
 
   function pushOwnerMark(text: string, state: DocsReviewMark['state']): DocsReviewMark {
     const taken = review.marks.map((mark) => Number(/^owner-(\d+)$/.exec(mark.id)?.[1] ?? 0));
@@ -231,8 +361,16 @@ async function initReview(): Promise<void> {
   devOverlay.onEscape((e) => {
     // A field's own Escape drops its edit; the panel stays for the next one.
     if ((e.target as Element | null)?.closest('.review-panel textarea')) return true;
+    if (!confirm.hidden) {
+      closeConfirm();
+      return true;
+    }
     if (!panel) return false;
+    if (panel.escape()) return true;
+    const opener =
+      panel.heading.querySelector<HTMLElement>('.review-section-icon') ?? panel.heading;
     closePanel();
+    (opener as HTMLElement).focus();
     return true;
   });
   // The capture layer sits over the article: an icon under a press opens its panel from here.

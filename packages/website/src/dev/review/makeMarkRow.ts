@@ -22,7 +22,11 @@ function div(className: string): HTMLDivElement {
   return el;
 }
 
-export function makeMarkRow(mark: DocsReviewMark, actions: ReviewPanelActions): ReviewRow {
+export function makeMarkRow(
+  mark: DocsReviewMark,
+  actions: ReviewPanelActions,
+  readOnly = false,
+): ReviewRow {
   const el = div('review-row');
   el.dataset.reviewRow = mark.id;
   const head = div('review-row-head');
@@ -76,6 +80,13 @@ export function makeMarkRow(mark: DocsReviewMark, actions: ReviewPanelActions): 
   given.append(noteLine, replacementLine);
   rewrite.append(segments, field.el, given);
   el.append(why.el, rewrite);
+  // History: what an apply carried out is shown as it was ruled, greyed and not editable.
+  if (readOnly) {
+    el.classList.add('review-row-applied');
+    for (const control of el.querySelectorAll('button, textarea')) {
+      (control as HTMLButtonElement | HTMLTextAreaElement).disabled = true;
+    }
+  }
 
   function sync(): void {
     buttons.forEach((b, i) => b.setAttribute('aria-pressed', String(KINDS[i] === kind)));

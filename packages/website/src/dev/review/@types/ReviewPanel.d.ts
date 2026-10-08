@@ -6,5 +6,7 @@ export type ReviewPanel = {
   refresh: (section: ReviewSection, wordsBefore: number, wordsAfter: number) => void;
   /** Scrolls an item's row into view and, with `focus`, puts the cursor in its first note field. */
   reveal: (key: string, focus: boolean) => void;
+  /** Cancels a pending apply confirm; false when there was none, so the caller closes the panel instead. */
+  escape: () => boolean;
   close: () => void;
 };
