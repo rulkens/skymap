@@ -6,7 +6,7 @@
  * a moon's correction also shifts M before Kepler, so it stays on its conic.
  * `orbit` is the PROPAGATED element set at `t` the body was placed with, so
  * the orbit trail draws the same conic instead of re-deriving its own.
- * Memoized on `simDays`: every pass (draw, pick, labels) reads the same
+ * Memoized on `simDays` and the trajectory registry version: every pass (draw, pick, labels) reads the same
  * snapshot each frame, so recomputing per reader would tear a mid-frame
  * clock tick between passes.
  */
@@ -31,6 +31,7 @@ import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
 import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../data/bodies/barycentricPairs';
 import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
+import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 
 // The focus graph is authored, static data, so its order is resolved once at
 // module load and replayed every instant: the per-frame cost stays one linear
@@ -38,15 +39,16 @@ import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
 // mistake belongs — instead of on whichever frame first reaches the bad row.
 const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 
-// The last computed snapshot, keyed by the instant it was computed at. A frame
-// re-reads the same instant from several passes and a paused clock re-reads it
-// every frame, so a one-deep cache makes both free; a new instant recomputes.
-let cachedSimDays: number | undefined;
-let cachedStates: ReadonlyMap<string, BodyState> | undefined;
+// The last computed snapshot, keyed by the instant and the trajectory registry
+// version it was computed at. A frame re-reads the same instant from several
+// passes and a paused clock re-reads it every frame, so a one-deep cache makes
+// both free; a new instant, or a track arriving on a paused clock, recomputes.
+let cache: { simDays: number; version: number; states: ReadonlyMap<string, BodyState> } | undefined;
 
 export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
-  if (cachedStates !== undefined && simDays === cachedSimDays) {
-    return cachedStates;
+  const version = trajectoryRegistry.version();
+  if (cache !== undefined && simDays === cache.simDays && version === cache.version) {
+    return cache.states;
   }
 
   // Phase 1 — positions only, so phase 2 can orient a body against where the
@@ -133,7 +135,6 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     });
   }
 
-  cachedSimDays = simDays;
-  cachedStates = states;
+  cache = { simDays, version, states };
   return states;
 }

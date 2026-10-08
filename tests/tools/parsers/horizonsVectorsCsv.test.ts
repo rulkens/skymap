@@ -27,4 +27,20 @@ describe('parseHorizonsVectorsCsv', () => {
     });
     expect(rows[2]).toMatchObject({ jd: 2415022.5, zKm: -1.016666302505421e7 });
   });
+
+  it('reads the velocity columns of a VEC_TABLE=2 result and omits them for VEC_TABLE=1', () => {
+    const state = `$$SOE
+2444124.500000000, A.D. 1977-Sep-05 00:00:00.0000, 1.5E+08, -2.5E+07, -1.1E+07, 1.5E+00, 2.9E+01, 1.2E+01,
+$$EOE`;
+    expect(parseHorizonsVectorsCsv(state)[0]).toEqual({
+      jd: 2444124.5,
+      xKm: 1.5e8,
+      yKm: -2.5e7,
+      zKm: -1.1e7,
+      vxKmS: 1.5,
+      vyKmS: 29,
+      vzKmS: 12,
+    });
+    expect(Object.keys(parseHorizonsVectorsCsv(RESULT)[0]!)).toEqual(['jd', 'xKm', 'yKm', 'zKm']);
+  });
 });
