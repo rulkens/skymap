@@ -82,6 +82,14 @@
   color: var(--color-fg);
 }
 
+.fb-keys {
+  margin: 0;
+  max-width: 24rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+}
+
 .fb-list,
 .fb-panel {
   pointer-events: auto;

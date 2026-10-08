@@ -92,12 +92,21 @@ async function answer(req: IncomingMessage): Promise<[number, object]> {
     return [200, { id }];
   }
   if (req.method === 'GET') {
-    // The page asks which notes still exist, to drop the pins of applied ones.
+    // The page asks which notes still exist, to drop the pins of applied ones; with
+    // `path` it also gets that page's notes whole, for the review's section panels.
     const names = existsSync(FEEDBACK_DIR) ? readdirSync(FEEDBACK_DIR) : [];
     const ids = names
       .filter((name) => name.endsWith('.json') && !name.startsWith('.'))
       .map((name) => name.slice(0, -'.json'.length));
-    return [200, { ids }];
+    const path = new URL(req.url ?? '', 'http://localhost').searchParams.get('path');
+    if (path === null) return [200, { ids }];
+    const notes = ids.flatMap((id) => {
+      const note = JSON.parse(
+        readFileSync(join(FEEDBACK_DIR, `${id}.json`), 'utf8'),
+      ) as FeedbackNote;
+      return note.page.path === path ? [{ id, note }] : [];
+    });
+    return [200, { ids, notes }];
   }
   return [405, { error: 'GET, POST or DELETE only' }];
 }

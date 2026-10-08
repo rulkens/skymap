@@ -9,6 +9,12 @@ import type { FeedbackFlight } from '../../../../../tools/site/@types/FeedbackFl
 import type { FeedbackRect } from '../../../../../tools/site/@types/FeedbackRect';
 import type { FlightTimeline } from '../../@types/FlightTimeline';
 import { flightAt } from '../../utils/flightAt';
+import { devOverlay } from '../overlay/devOverlay';
+import { make } from '../overlay/make';
+import { overlayKeys } from '../overlay/overlayKeys';
+import { pageNotes } from '../overlay/pageNotes';
+import { recall } from '../overlay/recall';
+import { remember } from '../overlay/remember';
 import type { FeedbackPin } from './@types/FeedbackPin';
 import type { FeedbackSelection } from './@types/FeedbackSelection';
 import { describeElement } from './describeElement';
@@ -21,39 +27,10 @@ const DRAG_PX = 6;
 const PANEL_GAP = 12;
 const VIEW_MARGIN = 8;
 
-function make<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  parent?: Element,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  node.className = className;
-  parent?.append(node);
-  return node;
-}
-
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
-// An edit to the page reloads it under the dev server; the mode and a half-written note must survive that.
-const MODE_KEY = 'skymap-feedback-on';
+// An edit to the page reloads it under the dev server; a half-written note must survive that.
 const DRAFT_KEY = 'skymap-feedback-draft';
-
-function remember(key: string, value: string | null): void {
-  try {
-    if (value === null) sessionStorage.removeItem(key);
-    else sessionStorage.setItem(key, value);
-  } catch {
-    /* private window: nothing survives a reload */
-  }
-}
-
-function recall(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
 
 function loadPins(): FeedbackPin[] {
   try {
@@ -95,6 +72,8 @@ function initFeedback(): void {
   const mark = make('div', 'fb-mark', root);
   const panel = make('form', 'fb-panel', root);
   const dock = make('div', 'fb-dock', root);
+  // On a page with a review the review bar carries the keys instead (review.css hides this line).
+  const keys = make('p', 'fb-keys', dock);
   const list = make('section', 'fb-list', dock);
   const toggle = make('button', 'ring small', dock);
   const layer = make('div', 'fb-pins');
@@ -105,6 +84,7 @@ function initFeedback(): void {
   const cancel = make('button', 'ring small', actions);
   make('p', 'fb-hint', actions).textContent = '⌘/Ctrl+Enter saves, Esc cancels';
 
+  keys.textContent = overlayKeys(false);
   toggle.type = 'button';
   toggle.textContent = 'Feedback';
   toggle.setAttribute('aria-pressed', 'false');
@@ -119,15 +99,24 @@ function initFeedback(): void {
   save.textContent = 'Save';
   cancel.type = 'button';
   cancel.textContent = 'Cancel';
-  capture.hidden = hover.hidden = mark.hidden = panel.hidden = list.hidden = layer.hidden = true;
+  capture.hidden =
+    hover.hidden =
+    mark.hidden =
+    panel.hidden =
+    list.hidden =
+    layer.hidden =
+    keys.hidden =
+      true;
   document.body.append(root);
   document.documentElement.append(layer);
 
-  const isOverlay = (node: Element): boolean => !!node.closest('[data-feedback-ui], .fb-pins');
+  const isOverlay = (node: Element): boolean =>
+    !!node.closest('[data-feedback-ui], [data-review-ui], .fb-pins');
   const shown = (el: Element): boolean => {
     for (let node: Element | null = el; node; node = node.parentElement) {
       const style = getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < 0.3) return false;
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < 0.3)
+        return false;
     }
     return true;
   };
@@ -218,24 +207,26 @@ function initFeedback(): void {
   }
 
   // A note the agent has applied is deleted on the server; its pin goes with it.
-  async function prune(): Promise<void> {
-    try {
-      const { ids } = (await (await fetch(ROUTE)).json()) as { ids: string[] };
-      if (pins.every((pin) => ids.includes(pin.id))) return;
-      pins = pins.filter((pin) => ids.includes(pin.id));
-      renderPins();
-    } catch {
-      /* server restarting: keep the pins, the next focus tries again */
-    }
+  function prune(): void {
+    if (!pageNotes.loaded()) return;
+    const ids = pageNotes.ids();
+    if (pins.every((pin) => ids.includes(pin.id))) return;
+    pins = pins.filter((pin) => ids.includes(pin.id));
+    renderPins();
   }
-  window.addEventListener('focus', () => void prune());
-  void prune();
+  // A note deleted from a review panel goes through the same store, so its pin goes too.
+  pageNotes.subscribe(prune);
+  const refresh = (): void =>
+    void pageNotes.refresh().catch(() => {
+      /* server restarting: keep the pins, the next focus tries again */
+    });
+  window.addEventListener('focus', refresh);
+  refresh();
 
   function setMode(next: boolean): void {
     on = next;
-    remember(MODE_KEY, on ? '1' : null);
     toggle.setAttribute('aria-pressed', String(on));
-    capture.hidden = layer.hidden = !on;
+    capture.hidden = layer.hidden = keys.hidden = !on;
     if (!on) endSelection();
     renderPins();
     showHover();
@@ -306,6 +297,7 @@ function initFeedback(): void {
       if (!res.ok) throw new Error(`the server said ${res.status}`);
       const { id } = (await res.json()) as { id: string };
       pins.push({ id, n: Math.max(0, ...pins.map((p) => p.n)) + 1, text: note.text, rect });
+      pageNotes.add(id, note);
       endSelection();
       renderPins();
       toggle.focus();
@@ -319,8 +311,7 @@ function initFeedback(): void {
 
   async function remove(pin: FeedbackPin): Promise<void> {
     try {
-      const res = await fetch(`${ROUTE}?id=${encodeURIComponent(pin.id)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`the server said ${res.status}`);
+      await pageNotes.remove(pin.id);
       pins = pins.filter((p) => p !== pin);
       renderPins();
     } catch (error) {
@@ -330,6 +321,7 @@ function initFeedback(): void {
 
   capture.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
+    if (devOverlay.press(e.clientX, e.clientY)) return;
     if (selection) return text.focus();
     press = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false, drawing: false };
   });
@@ -405,26 +397,16 @@ function initFeedback(): void {
     endSelection();
     toggle.focus();
   });
-  toggle.addEventListener('click', () => setMode(!on));
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      const target = e.target as HTMLElement | null;
-      const typing = !!target?.closest('input, textarea, select, [contenteditable]');
-      if (e.key === 'Escape' && on) {
-        e.preventDefault();
-        if (selection) {
-          endSelection();
-          toggle.focus();
-        } else setMode(false);
-      } else if (e.key.toLowerCase() === 'f' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        setMode(!on);
-      }
-    },
-    true,
-  );
+  toggle.addEventListener('click', () => devOverlay.setOn(!on));
+  devOverlay.subscribe(setMode);
+  devOverlay.onEscape(() => {
+    if (!selection) return false;
+    endSelection();
+    toggle.focus();
+    return true;
+  });
   renderPins();
-  if (recall(MODE_KEY)) {
+  if (devOverlay.isOn()) {
     setMode(true);
     // The browser puts the scroll position back after load; the draft is placed once it has.
     const restore = (): void =>

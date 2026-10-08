@@ -17,7 +17,7 @@ html.review-on main {
   top: var(--nav-height);
   left: 0;
   right: 0;
-  z-index: 5;
+  z-index: 2147483001;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -29,6 +29,10 @@ html.review-on main {
   color: var(--site-text);
   font: 400 0.8125rem / 1.2 var(--font-body);
   white-space: nowrap;
+}
+
+.review-bar[hidden] {
+  display: none;
 }
 
 .review-name {
@@ -211,12 +215,13 @@ html.review-on #page :is(h1, h2, h3) {
 /* Beside the article, never over it: its rows scroll to passages that must stay visible. */
 .review-panel {
   position: fixed;
-  z-index: 6;
+  z-index: 2147483001;
   top: calc(var(--nav-height) + var(--review-bar) + 1rem);
   right: 1rem;
   box-sizing: border-box;
   width: min(28rem, calc(100vw - 2rem));
-  max-height: calc(100vh - var(--nav-height) - var(--review-bar) - 2rem);
+  /* Leaves the feedback dock's corner free under it. */
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar) - 9rem);
   overflow-y: auto;
   padding: 0.75rem;
   background: #05070d;
@@ -280,10 +285,66 @@ html.review-on #page :is(h1, h2, h3) {
 }
 
 .review-note {
-  display: block;
   margin-top: 0.375rem;
   color: var(--site-text-dim);
   font-size: 0.75rem;
+}
+
+.review-note-save {
+  margin-top: 0.25rem;
+  padding: 0.125rem 0.4rem;
+  border: 1px solid rgba(168, 208, 255, 0.4);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Two-way control above the one rewrite field: it says which of the two values the field is. */
+.review-segment {
+  display: flex;
+  margin-top: 0.375rem;
+}
+
+.review-segment button {
+  flex: 1;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid rgba(168, 208, 255, 0.4);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.review-segment button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.review-row-line {
+  margin-top: 0.25rem;
+  color: var(--site-text);
+  font-size: 0.75rem;
+}
+
+.review-row-line[hidden] {
+  display: none;
+}
+
+.review-row-words {
+  margin: 0.25rem 0;
+  font-size: 0.8125rem;
+}
+
+/* The keys line of the feedback dock gives way to the review bar's when the page has a review. */
+html.review-on .fb-keys {
+  display: none;
+}
+
+/* Shift lets the pointer through the feedback capture layer, so text can be selected for a mark. */
+html.review-select .fb-capture {
+  pointer-events: none;
 }
 
 .review-note textarea {

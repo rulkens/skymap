@@ -1,8 +1,8 @@
-import type { DocsReviewMark } from '../../../../../../tools/site/@types/DocsReviewMark';
+import type { ReviewItem } from './ReviewItem';
 
-/** One mark's row in the section panel. */
+/** One item's row in the section panel. */
 export type ReviewRow = {
   el: HTMLElement;
-  update: (mark: DocsReviewMark) => void;
+  update: (item: ReviewItem) => void;
   focus: () => void;
 };

@@ -4,6 +4,8 @@ import type { DocsReviewMark } from '../../../../../../tools/site/@types/DocsRev
 export type ReviewPanelActions = {
   setState: (mark: DocsReviewMark, state: DocsReviewMark['state']) => void;
   setNote: (mark: DocsReviewMark, key: 'why' | 'how' | 'after', value: string) => void;
-  go: (mark: DocsReviewMark) => void;
+  /** Scrolls to a mark's text, or to a note's element, and lights it. */
+  go: (target: DocsReviewMark | Element) => void;
+  deleteNote: (id: string) => void;
   whole: (state: 'cut' | 'good') => void;
 };

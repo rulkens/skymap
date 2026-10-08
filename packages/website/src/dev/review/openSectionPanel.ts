@@ -1,8 +1,11 @@
+import type { ReviewItem } from './@types/ReviewItem';
 import type { ReviewPanel } from './@types/ReviewPanel';
 import type { ReviewPanelActions } from './@types/ReviewPanelActions';
 import type { ReviewRow } from './@types/ReviewRow';
 import type { ReviewSection } from './@types/ReviewSection';
+import { itemKey } from './itemKey';
 import { makeMarkRow } from './makeMarkRow';
+import { makeNoteRow } from './makeNoteRow';
 
 function add<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -15,9 +18,12 @@ function add<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
+const rowOf = (item: ReviewItem, actions: ReviewPanelActions): ReviewRow =>
+  item.kind === 'mark' ? makeMarkRow(item.mark, actions) : makeNoteRow(item.note, item.el, actions);
+
 /**
  * The review's one panel for a section, fixed beside the article so it never covers the
- * text its rows point at. `refresh` brings it in step with the marks after every render.
+ * text its rows point at. `refresh` brings it in step with the marks and notes after every render.
  */
 export function openSectionPanel(section: ReviewSection, actions: ReviewPanelActions): ReviewPanel {
   const root = add('div', 'review-panel', document.body);
@@ -42,17 +48,16 @@ export function openSectionPanel(section: ReviewSection, actions: ReviewPanelAct
     refresh(current, before, after) {
       title.textContent = current.title;
       words.textContent = `${before} → ${after} words`;
-      const same =
-        current.marks.length === rows.size && current.marks.every((mark) => rows.has(mark.id));
-      if (!same) {
+      const keys = current.items.map(itemKey);
+      if (keys.length !== rows.size || keys.some((key) => !rows.has(key))) {
         list.replaceChildren();
-        rows = new Map(current.marks.map((mark) => [mark.id, makeMarkRow(mark, actions)]));
-        for (const row of rows.values()) list.append(row.el);
+        rows = new Map(current.items.map((item) => [itemKey(item), rowOf(item, actions)]));
+        for (const key of keys) list.append(rows.get(key)!.el);
       }
-      for (const mark of current.marks) rows.get(mark.id)!.update(mark);
+      for (const item of current.items) rows.get(itemKey(item))!.update(item);
     },
-    reveal(id, focus) {
-      const row = rows.get(id);
+    reveal(key, focus) {
+      const row = rows.get(key);
       if (!row) return;
       row.el.scrollIntoView({ block: 'nearest' });
       if (focus) row.focus();
