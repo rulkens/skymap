@@ -99,26 +99,4 @@ describe('StructureDetailCard', () => {
     const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
     expect(container.textContent).not.toMatch(/Type/);
   });
-
-  it('the Line of sight row appears only when lineOfSightAssumed', () => {
-    const arches: StructureInfo = {
-      type: 'structure',
-      id: 'galactic-centre-arches',
-      name: 'Arches Cluster',
-      category: 'galactic-centre',
-      lineOfSightAssumed: true,
-      worldPos: [0, 0.008, 0],
-      featured: true,
-      physicalRadiusMpc: 1e-6,
-    };
-    render(createElement(StructureDetailCard, { target: arches }));
-    expect(screen.getByText('Line of sight')).toBeInTheDocument();
-    cleanup();
-    const { container } = render(
-      createElement(StructureDetailCard, {
-        target: { ...arches, lineOfSightAssumed: false },
-      }),
-    );
-    expect(container.textContent).not.toMatch(/Line of sight/);
-  });
 });

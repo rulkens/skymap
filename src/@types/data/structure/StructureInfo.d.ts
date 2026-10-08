@@ -122,13 +122,9 @@ type NebulaRecord = StructureBase & {
   readonly nebulaKind: NebulaKind;
 };
 
-/**
- * A place around the Galactic Centre. `lineOfSightAssumed` marks a row whose
- * distance is assumed to be the Centre's rather than measured.
- */
+/** A place around the Galactic Centre. */
 type GalacticCentrePlaceRecord = StructureBase & {
   readonly category: 'galactic-centre';
-  readonly lineOfSightAssumed: boolean;
 };
 
 /**

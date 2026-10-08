@@ -52,12 +52,11 @@ type StructureSeedEntry = {
   distance: Length; physicalRadius: Length; apparentRadius: Length;
   abell?: string;                    // cluster
   nebulaKind?: NebulaKind;           // nebula, required there
-  lineOfSightAssumed?: boolean;      // galactic-centre
 };
 
 // StructureInfo arms
 NebulaRecord              = StructureBase & { category: 'nebula'; nebulaKind: NebulaKind };
-GalacticCentrePlaceRecord = StructureBase & { category: 'galactic-centre'; lineOfSightAssumed: boolean };
+GalacticCentrePlaceRecord = StructureBase & { category: 'galactic-centre' };
 OpenClusterRecord, GlobularClusterRecord = StructureBase & { category: 'open-cluster' | 'globular-cluster' };
 
 // scaleFadeBands.ts
@@ -120,9 +119,9 @@ Rows are added to `data/seeds/structure_anchors.seed.json` with lengths in the u
 - **Open clusters (25):** Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, Double Cluster (two rows), Jewel Box, Wild Duck, Butterfly, Ptolemy, M35–M38, M41, M46, M47, M50, M67, NGC 752, IC 2602, IC 2391, Trumpler 14, Westerlund 1.
 - **Globular clusters (21):** ω Centauri, 47 Tucanae, M2, M3, M4, M5, M10, M12, M13, M15, M22, M30, M53, M54, M55, M71, M79, M80, M92, NGC 6397, NGC 2419.
 - **Nebulae (22):** Orion, Carina, Lagoon, Trifid, Eagle, Omega, Rosette, North America, California (emission); Horsehead, Coalsack (dark); Ring, Dumbbell, Helix, Cat's Eye, Owl (planetary); Crab, Veil, Vela, Cassiopeia A, Tycho, Kepler (supernova remnant). The Tarantula is left out: it is in the Large Magellanic Cloud.
-- **Galactic Centre places (3):** central cluster, Arches, Quintuplet. Arches and Quintuplet carry `lineOfSightAssumed: true` and sit at Sgr A\*'s distance (`GALACTIC_CENTRE_ANCHOR`), with their published RA/Dec.
+- **Galactic Centre places (3):** central cluster, Arches, Quintuplet. Arches and Quintuplet sit at Sgr A\*'s distance (`GALACTIC_CENTRE_ANCHOR`), with their published RA/Dec.
 
-Every Milky Way row also carries a `source` (see "Decided during review"). Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `lineOfSightAssumed` is accepted only on a Galactic Centre place; `Length.unit` must be one of the three units and `value > 0`.
+Every Milky Way row also carries a `source` (see "Decided during review"). Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `Length.unit` must be one of the three units and `value > 0`.
 
 ## 6. Visibility and focus
 
@@ -132,7 +131,7 @@ Every Milky Way row also carries a `source` (see "Decided during review"). Parse
 
 ## 7. Card and search
 
-- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`), and a "Line of sight" row reading "assumed at the Galactic Centre's distance" when `lineOfSightAssumed`. The "Galaxies" row and its tooltip render only when the category's `scale` is `'cosmic'`.
+- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`). The "Galaxies" row and its tooltip render only when the category's `scale` is `'cosmic'`.
 - `CompactStructureCard` and the palette rows need no change beyond the derived badge.
 
 ## 8. Testing
@@ -181,7 +180,7 @@ Rulings from the on-screen checks. Where they differ from §6–§8 as first dra
 - **Hover highlights the ring and its label together**: the ring by a colour gain of 1.3× (`HOVERED_RING_BRIGHTEN`), the label by a blend toward white (`HOVERED_LABEL_WHITEN`). The selected label whitens further (`SELECTED_LABEL_WHITEN`).
 - **The far-plane clamp planned for the NEAR0 marker pass was removed.** NEAR0 has an infinite far plane, so the clamp never acted.
 - **Open-cluster colours are muted** so the many rings near the Sun do not dominate the star field.
-- **One scale word, `scale: 'cosmic' | 'milkyWay'`, replaces `slab` and `galaxyMembers` on the registry row.** This revises R6 and §3: the two flags agreed on every row, and "galactic" read both ways. The scale picks the depth slab (one lookup) and whether the card counts galaxies; the visible band and focus distance stay independent, which is what R6 was protecting. §3 is kept as the record of the prep PR as it was built.
+- **One scale word, `scale: 'cosmic' | 'milkyWay'`, replaces `slab` and `galaxyMembers` on the registry row.** This revises R6 and §3: the two flags agreed on every row, and "galactic" read both ways. The scale picks the depth slab and whether the card counts galaxies; the visible band and focus distance stay independent, which is what R6 was protecting. §3 is kept as the record of the prep PR as it was built.
 - **`cluster` and `group` became `galaxy-cluster` and `galaxy-group`** (ids, `Source` names, labels), so they no longer read as siblings of the star-cluster categories. Structure ids are `category-seedId`, so `#focus=cluster-…` and `#focus=group-…` links from before this change no longer resolve; the user accepted that without a redirect. Numeric source codes are unchanged, so no data was re-baked.
 - **Settings list the categories under two headings, Cosmic and Milky Way.** The Labels & Guides list stays flat.
 - **Globular rings stay at the tidal radius**, though it is far larger than the visible cluster: the ring marks the cluster's extent, not its bright core.

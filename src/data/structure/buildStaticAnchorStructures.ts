@@ -72,7 +72,6 @@ type SeedEntry = {
   readonly apparentRadius: Length;
   readonly abell?: string;
   readonly nebulaKind?: NebulaKind;
-  readonly lineOfSightAssumed?: boolean;
   readonly description?: string;
   readonly wikipedia?: string;
 };
@@ -134,11 +133,7 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
       // The parser requires `nebulaKind` on every nebula row.
       return { ...common, category: 'nebula', nebulaKind: a.nebulaKind! };
     case 'galactic-centre':
-      return {
-        ...common,
-        category: 'galactic-centre',
-        lineOfSightAssumed: a.lineOfSightAssumed ?? false,
-      };
+      return { ...common, category: 'galactic-centre' };
   }
 }
 

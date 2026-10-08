@@ -28,7 +28,7 @@ import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByS
 const NEBULA_KINDS: readonly string[] = Object.keys(NEBULA_KIND_LABELS);
 
 // Rows inside the Milky Way have no catalogue in this pipeline, so each names
-// the paper its numbers came from; the slab marks exactly those categories.
+// the paper its numbers came from; the Milky Way scale marks exactly those categories.
 const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SCALE.milkyWay;
 
 const LENGTH_UNITS: readonly string[] = Object.keys(MPC_PER_LENGTH_UNIT);
@@ -78,8 +78,6 @@ export type StructureSeedEntry = {
   description: string;
   /** What a nebula is; required on `nebula`, rejected on every other category. */
   nebulaKind?: NebulaKind;
-  /** Distance is assumed equal to the Galactic Centre's; accepted on `galactic-centre` only. */
-  lineOfSightAssumed?: boolean;
   /**
    * Where the row's distance and radii come from (survey, paper or bibcode).
    * Required on the Milky Way categories; build-time documentation only.
@@ -149,14 +147,6 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
     }
   } else if (e.nebulaKind !== undefined) {
     throw new Error(`structure seed: ${e.id} has nebulaKind but is not a nebula`);
-  }
-  if (e.lineOfSightAssumed !== undefined) {
-    if (e.category !== 'galactic-centre') {
-      throw new Error(`structure seed: ${e.id} has lineOfSightAssumed outside galactic-centre`);
-    }
-    if (typeof e.lineOfSightAssumed !== 'boolean') {
-      throw new Error(`structure seed: ${e.id} has non-boolean lineOfSightAssumed`);
-    }
   }
   if (SOURCE_REQUIRED.includes(e.category)) {
     if (typeof e.source !== 'string' || e.source.trim().length === 0) {

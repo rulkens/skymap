@@ -71,9 +71,6 @@ function StructureDetailCard({
         {target.category === 'nebula' && (
           <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
         )}
-        {target.category === 'galactic-centre' && target.lineOfSightAssumed && (
-          <CardRow label="Line of sight" value="assumed at the Galactic Centre's distance" />
-        )}
         {memberCount != null && (
           <CardRow
             label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
