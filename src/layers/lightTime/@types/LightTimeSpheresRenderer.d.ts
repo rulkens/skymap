@@ -3,11 +3,11 @@
  * light-time spheres, each intersected analytically per pixel.
  */
 
-import type { OrbitCamera } from '../camera/OrbitCamera';
-import type { Vec2 } from '../math/Vec2';
-import type { Vec3 } from '../math/Vec3';
-import type { LightTimeLiveness } from '../../layers/lightTime/@types/LightTimeLiveness';
-import type { Renderer } from './Renderer';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { LightTimeLiveness } from './LightTimeLiveness';
+import type { Renderer } from '../../../@types/rendering/Renderer';
 
 export type LightTimeSpheresRenderer = Renderer & {
   /** `camPos` is the eye in the same absolute Mpc frame as `liveness.centre`. */

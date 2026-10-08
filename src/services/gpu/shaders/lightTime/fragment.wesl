@@ -32,8 +32,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
       continue;
     }
     let sq = sqrt(disc);
-    // The far root must be ahead of the eye: both are when outside, only the
-    // far wall is when inside.
+    // Rejects spheres behind the eye (the eye is never inside one).
     if (-b + sq <= 0.0) {
       continue;
     }

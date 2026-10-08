@@ -12,7 +12,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
-import type { LightTimeSpheresRenderer } from '../../../@types/rendering/LightTimeSpheresRenderer';
+import type { LightTimeSpheresRenderer } from '../@types/LightTimeSpheresRenderer';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -103,7 +103,7 @@ export function createLightTimeSpheresRenderer(
     imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, upRef), basis);
     const { right, up } = basis;
     const tanHalfFovY = Math.tan(cam.fovYRad / 2);
-    const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
+    const aspect = viewport[0] / viewport[1];
 
     const { centre, opacities } = liveness;
     const eyeX = camPos[0] - centre[0];
@@ -128,12 +128,13 @@ export function createLightTimeSpheresRenderer(
       f32[slot + SLOT_C_FLOAT_OFFSET] = roX * roX + roY * roY + roZ * roZ - 1;
       count++;
     }
-    if (count === 0) return;
 
     // Sphere centre in camera space: centre − eye on the three basis axes.
     const x = -(eyeX * right[0] + eyeY * right[1] + eyeZ * right[2]);
     const y = -(eyeX * up[0] + eyeY * up[1] + eyeZ * up[2]);
     const depth = -(eyeX * fwd[0] + eyeY * fwd[1] + eyeZ * fwd[2]);
+    // Wholly behind the eye: nothing to draw, and the bounds maths needs depth > -R.
+    if (depth <= -largestRadius) return;
     const [minX, maxX] = sphereNdcBounds(x, depth, largestRadius, tanHalfFovY * aspect, RECT_PAD);
     const [minY, maxY] = sphereNdcBounds(y, depth, largestRadius, tanHalfFovY, RECT_PAD);
 
