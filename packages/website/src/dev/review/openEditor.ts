@@ -57,7 +57,7 @@ export function openEditor(
   const block = painted.classList.contains('review-block') ? painted : reviewBlockOf(painted);
   (block ?? painted).after(editor);
   const first = areas[0]!;
-  first.focus();
+  first.focus({ preventScroll: true });
   first.setSelectionRange(first.value.length, first.value.length);
   return () => editor.remove();
 }

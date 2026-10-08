@@ -114,14 +114,14 @@ async function initReview(): Promise<void> {
   }
 
   let closeEditor = (): void => {};
-  // A rewrite is asked for its replacement and instruction, a good passage for its reason.
+  // A rewrite is asked for its replacement and instruction (`how` is its reason), every other state for its optional `why`.
   function editNotes(mark: DocsReviewMark): void {
     closeEditor();
     const painted = article!.querySelectorAll(
       `.review-mark[data-review-id="${CSS.escape(mark.id)}"]`,
     );
     const last = painted[painted.length - 1];
-    if (!last || (mark.state !== 'rewrite' && mark.state !== 'good')) return;
+    if (!last) return;
     const fields: ReviewEditorField[] =
       mark.state === 'rewrite'
         ? [
@@ -134,9 +134,9 @@ async function initReview(): Promise<void> {
           ]
         : [
             {
-              label: 'Why is it good? (optional)',
+              label: 'Why? (optional)',
               value: mark.why ?? '',
-              placeholder: 'what it does for the reader',
+              placeholder: `why this is ${mark.state}`,
             },
           ];
     closeEditor = openEditor(last, fields, (values) => {
@@ -177,6 +177,14 @@ async function initReview(): Promise<void> {
     editNotes(mark);
   }
 
+  // A click anywhere else skips the editor (keeping what is stored); capture, so a click on a mark can open its own.
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (!(e.target as Element).closest('.review-editor')) closeEditor();
+    },
+    true,
+  );
   article.addEventListener('click', (e) => {
     if (!getSelection()?.isCollapsed) return;
     const target = e.target as Element;

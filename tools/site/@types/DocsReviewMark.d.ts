@@ -7,7 +7,7 @@ export type DocsReviewMark = {
   /** The cutter's one-line reason; `owner` for a mark the owner drew. */
   reason: string;
   state: 'cut' | 'keep' | 'rewrite' | 'good';
-  /** Why the owner calls a `good` passage good; kept when the mark leaves `good`. */
+  /** Why the owner put the mark in its state (not for `rewrite`, whose reason is `how`); kept when the state changes. */
   why?: string;
   /** The owner's replacement wording for a `rewrite` mark; kept when the mark leaves `rewrite`. */
   after?: string;

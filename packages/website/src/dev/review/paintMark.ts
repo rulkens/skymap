@@ -8,10 +8,13 @@ function tag(el: Element, mark: DocsReviewMark): void {
   el.setAttribute('data-review-id', mark.id);
   const rewrite = mark.state === 'rewrite';
   if (rewrite && mark.after) el.classList.add('review-has-after');
-  const notes = rewrite
-    ? [mark.how && `How: ${mark.how}`, mark.after && `Replace with: ${mark.after}`]
-    : [mark.state === 'good' && mark.why];
-  el.setAttribute('title', notes.filter(Boolean).join('\n') || mark.reason);
+  const notes = [
+    mark.reason !== 'owner' && mark.reason,
+    mark.why,
+    rewrite && mark.how && `How: ${mark.how}`,
+    rewrite && mark.after && `Replace with: ${mark.after}`,
+  ];
+  el.setAttribute('title', notes.filter(Boolean).join('\n'));
 }
 
 // The outermost block whose whole text is the mark's: a list item, not just the paragraph inside it.
