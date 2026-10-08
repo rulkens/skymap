@@ -1,7 +1,7 @@
 /**
  * voyager — both Voyagers from launch to today: their full trails, framed whole, and a
- * mission timeline that sets the clock. The captions are authored copy keyed by event id;
- * the event times and flyby distances are measured, in `MISSION_EVENTS`.
+ * mission timeline that sets the clock. The event times and flyby
+ * distances are measured, in `MISSION_EVENTS`.
  */
 
 import { initialState as orbitTrailsInitialState } from '../../state/settings/core/orbitTrails/initialState';
@@ -27,39 +27,6 @@ const FRAMING_RADIUS_AU = 190;
  */
 const YAW = -1.9305;
 const PITCH = 0.26;
-
-const CAPTIONS: Readonly<Record<string, string>> = {
-  'voyager2-launch':
-    'Voyager 2 launches first, on the slower path that kept Uranus and Neptune within reach.',
-  'voyager1-launch':
-    'Voyager 1 follows sixteen days later on a faster path and overtakes its twin by mid-December.',
-  'voyager1-jupiter':
-    'Voyager 1 finds active volcanoes on Io, the first seen on any world besides Earth.',
-  'voyager2-jupiter':
-    'Four months behind its twin, Voyager 2 takes the closest look yet at Europa’s cracked ice.',
-  'voyager1-titan':
-    'Voyager 1 passes Titan to study its thick haze, and the encounter sends it north out of the planets’ plane for good.',
-  'voyager1-saturn':
-    'Closest approach to Saturn, eighteen hours after Titan. No planet lies ahead of Voyager 1.',
-  'voyager2-saturn':
-    'Saturn swings Voyager 2 toward Uranus, a path open only because Voyager 1 had already covered Titan.',
-  'voyager2-uranus':
-    'The only spacecraft visit Uranus has had. Voyager 2 finds ten moons no one had seen.',
-  'voyager2-neptune':
-    'Voyager 2’s closest pass of any planet, over Neptune’s north pole. Triton follows five hours later.',
-  'voyager1-pale-blue-dot':
-    'From six billion kilometres, Voyager 1 photographs Earth as a dot smaller than a pixel. Its cameras are switched off 34 minutes later.',
-  'voyager1-pioneer10':
-    'Voyager 1 passes Pioneer 10 to become the most distant object people have made.',
-  'voyager1-termination-shock':
-    'Voyager 1 crosses the termination shock, where the solar wind suddenly slows.',
-  'voyager2-termination-shock':
-    'Voyager 2 meets the same boundary ten AU closer in, on the southern side: the bubble is not round.',
-  'voyager1-heliopause':
-    'Voyager 1 leaves the heliosphere, the bubble of solar wind around the Sun, and enters interstellar space.',
-  'voyager2-heliopause':
-    'Voyager 2 follows. Its plasma instrument still works, so it measures the crossing directly.',
-};
 
 export const voyager: Exhibit = {
   id: 'voyager',
@@ -92,32 +59,31 @@ export const voyager: Exhibit = {
   body: [
     {
       kind: 'prose',
-      heading: 'What you’re seeing',
-      text: 'Each line is one craft’s path since launch, from JPL’s tracking data. The lines grow as the clock runs and shrink when it runs back. Voyager 1, in pale gold, climbs north out of the planets’ plane after Saturn. Voyager 2, in copper, turns south after Neptune. The switch above the timeline picks which craft to follow; the other craft’s line and name dim.',
+      heading: 'The Voyager missions',
+      text: 'NASA sent the twin Voyagers to study Jupiter and Saturn up close. Voyager 2 went on to Uranus and Neptune. Since 1989 both have been on an interstellar mission, measuring where the Sun’s influence ends and what lies beyond it.',
     },
     {
       kind: 'timeline',
       heading: 'Timeline',
       events: MISSION_EVENTS,
       crafts: [
-        { bodyId: 'voyager1', route: 'Jupiter · Saturn · Titan' },
-        { bodyId: 'voyager2', route: 'Jupiter · Saturn · Uranus · Neptune' },
+        { bodyId: 'voyager1' },
+        { bodyId: 'voyager2' },
       ],
       eras: [
         { label: 'Planetary · 1977–1989', fromIso: '1977-08-20' },
         { label: 'Interstellar · 1990–now', fromIso: '1990-01-01' },
       ],
-      captions: CAPTIONS,
     },
     {
       kind: 'prose',
-      heading: 'Why the paths part',
-      text: 'In the late 1970s the outer planets lined up so that one craft could swing from each to the next, an arrangement that comes round about once every 175 years. Voyager 1 gave up that chain for a close pass of Titan, Saturn’s largest moon. Voyager 2 kept it, and reached Uranus and Neptune.',
+      heading: 'The Grand Tour',
+      text: 'In the late 1970s the outer planets lined up in a way that comes round about once every 175 years, so one craft could swing from each giant to the next. Voyager 2 flew the whole route. Voyager 1 left it for a close look at Titan.',
     },
     {
       kind: 'prose',
       heading: 'The Golden Record',
-      text: 'Each craft carries a 12-inch gold-plated copper record. It holds greetings in 55 languages and about 90 minutes of music, and encodes 115 images as sound. The cover shows how to play it and, using 14 pulsars, where the Sun is.',
+      text: 'Each craft carries a gold-plated record of greetings in 55 languages, 90 minutes of music and 115 images. Its cover uses 14 pulsars to show where the Sun is.',
     },
     {
       kind: 'facts',

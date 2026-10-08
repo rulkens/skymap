@@ -1,7 +1,6 @@
 /**
- * ExhibitTimelineSection — a scrubbable mission timeline in the notes column. `crafts` is the tab order and
- * each tab's route; the lanes are the events' `bodyId`s; `captions` are authored copy keyed by `MissionEvent.id`, since
- * the events file is measured data. The axis starts at `eras[0].fromIso`.
+ * ExhibitTimelineSection — a scrubbable mission timeline in the notes column. `crafts` is the tab
+ * order; the lanes are the events' `bodyId`s. The axis starts at `eras[0].fromIso`.
  */
 
 import type { MissionEvent } from '../missions/MissionEvent';
@@ -14,5 +13,4 @@ export type ExhibitTimelineSection = {
   readonly events: readonly MissionEvent[];
   readonly crafts: readonly ExhibitTimelineCraft[];
   readonly eras: readonly TimelineEra[];
-  readonly captions: Readonly<Record<string, string>>;
 };

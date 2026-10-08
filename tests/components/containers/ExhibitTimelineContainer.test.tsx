@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// ExhibitTimelineContainer: the timeline shows one craft's chapters and event card, the tabs
-// write the store's emphasis, and a chapter click seeks without pausing the clock.
+// ExhibitTimelineContainer: the timeline shows one craft's event card and transport row, the tabs
+// write the store's emphasis, and a dot click seeks without pausing the clock.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen, act } from '@testing-library/react';
@@ -16,7 +16,7 @@ import { setMissionEmphasis } from '../../../src/state/settings/core/orbitTrails
 import { setRide } from '../../../src/state/camera/cameraSlice';
 import { showWholeMission } from '../../../src/state/exhibits/showWholeMission';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
-import { resume, setSimDays } from '../../../src/state/time/timeSlice';
+import { pause, resume, setRate, setSimDays } from '../../../src/state/time/timeSlice';
 import { voyager } from '../../../src/data/exhibits/voyager';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
@@ -40,25 +40,32 @@ function mount(simIso: string) {
 }
 
 describe('ExhibitTimelineContainer', () => {
-  it('lists Voyager 1 then Voyager 2, each with its authored route', () => {
+  it('lists Voyager 1 then Voyager 2 by name only', () => {
     mount('1989-08-26');
     const tabs = screen.getAllByRole('tab');
-    expect(tabs[0]).toHaveTextContent(/Voyager 1.*Jupiter · Saturn · Titan/);
-    expect(tabs[1]).toHaveTextContent(/Voyager 2.*Uranus · Neptune/);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Voyager 1', 'Voyager 2']);
   });
 
-  it('shows only the selected craft: one card with its caption and measured distance', () => {
+  it('shows only the selected craft: its current event, date and name', () => {
     mount('1989-08-26');
-    const v1 = section.events.filter((e) => e.bodyId === 'voyager1');
-    expect(screen.getAllByRole('listitem')).toHaveLength(v1.length);
-    expect(screen.queryByText(section.captions['voyager2-neptune']!)).toBeNull();
-
+    expect(screen.queryByText('Neptune')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
-    const neptune = section.events.find((e) => e.id === 'voyager2-neptune')!;
-    expect(screen.getByText(section.captions['voyager2-neptune']!)).toBeInTheDocument();
-    expect(
-      screen.getByText(`${neptune.closestKm!.toLocaleString('en-US')} km from Neptune’s centre`),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Neptune')).toBeInTheDocument();
+    expect(screen.getByText('1989-08-25')).toBeInTheDocument();
+    expect(screen.getByText('26 Aug 1989')).toBeInTheDocument();
+  });
+
+  it('run / pause and the rate pair dispatch the time actions', () => {
+    const store = mount('1989-08-26');
+    const spy = vi.mocked(store.dispatch);
+    const types = () => spy.mock.calls.map((c) => (c[0] as { type: string }).type);
+    spy.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause the clock' }));
+    expect(types()).toEqual([pause.type]);
+    fireEvent.click(screen.getByRole('button', { name: 'Run the clock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Slower' }));
+    expect(types()).toEqual([pause.type, resume.type, setRate.type, setRate.type]);
   });
 
   it('a tab click sets the store emphasis and aria-selected follows it', () => {
@@ -69,10 +76,10 @@ describe('ExhibitTimelineContainer', () => {
     expect(screen.getByRole('tab', { name: /Voyager 2/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('a chapter click sets the clock to the event instant and leaves it running', () => {
+  it('an event dot click sets the clock to the event instant and leaves it running', () => {
     const store = mount('2026-01-01');
     const titanV1 = section.events.find((e) => e.id === 'voyager1-titan')!;
-    fireEvent.click(screen.getByRole('button', { name: `${titanV1.label}, 1980-11-12` }));
+    fireEvent.click(screen.getAllByTitle(`${titanV1.label} · 1980-11-12`).at(-1)!);
 
     const time = selectTimeState(store.getState());
     expect(time.paused).toBe(false);
@@ -90,27 +97,23 @@ describe('ExhibitTimelineContainer', () => {
     expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.parse(firstV1.iso)), 9);
   });
 
-  it('every chapter step dispatches stepToMissionEvent; a track drag dispatches setSimDays only', () => {
+  it('every event step dispatches stepToMissionEvent; a track drag dispatches setSimDays only', () => {
     const store = mount('1977-08-01');
     const spy = vi.mocked(store.dispatch);
     spy.mockClear();
     const v1 = section.events.filter((e) => e.bodyId === 'voyager1');
-    const label = (e: (typeof v1)[number]) => new RegExp(`^${e.label}, `);
     const stepped = () =>
       spy.mock.calls.map((c) => c[0] as { type: string; payload?: { eventId?: string } });
 
     fireEvent.click(screen.getByRole('button', { name: /Next/ }));
-    // The track dot is aria-hidden (the chapter bar is the accessible twin) but still clickable.
-    const segment = screen.getByRole('button', { name: label(v1[3]!) });
+    // The track dot is aria-hidden (Previous / Next are the accessible twin) but still clickable.
     const dot = screen.getAllByTitle(new RegExp(`^${v1[3]!.label} · `)).at(-1)!;
-    fireEvent.click(segment);
     fireEvent.click(dot);
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'PageDown' });
     fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
     const steps = stepped().filter((a) => a.type === stepToMissionEvent.type);
     expect(steps.map((a) => a.payload!.eventId)).toEqual([
       v1[0]!.id,
-      v1[3]!.id,
       v1[3]!.id,
       expect.any(String),
       expect.any(String),

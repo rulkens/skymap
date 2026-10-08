@@ -11,17 +11,11 @@ import styles from './ExhibitTimeline.module.css';
 
 export type TimelineCraftTabsProps = {
   readonly lanes: readonly TimelineLane[];
-  readonly subtitles: Readonly<Record<string, string>>;
   readonly selectedId: string;
   readonly onSelect: (bodyId: string) => void;
 };
 
-function TimelineCraftTabs({
-  lanes,
-  subtitles,
-  selectedId,
-  onSelect,
-}: TimelineCraftTabsProps): ReactNode {
+function TimelineCraftTabs({ lanes, selectedId, onSelect }: TimelineCraftTabsProps): ReactNode {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
     if (step === 0) return;
@@ -47,8 +41,7 @@ function TimelineCraftTabs({
             style={{ '--lane': lane.color } as CSSProperties}
             onClick={() => onSelect(lane.bodyId)}
           >
-            <span className={styles.tabName}>{lane.label}</span>
-            <span className={styles.tabSub}>{subtitles[lane.bodyId]}</span>
+            {lane.label}
           </button>
         );
       })}

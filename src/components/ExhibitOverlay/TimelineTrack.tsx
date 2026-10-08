@@ -146,7 +146,7 @@ function TimelineTrack({
                 <button
                   type="button"
                   key={e.id}
-                  // The chapter bar is the accessible twin; the slider's children are presentational.
+                  // Previous / Next are the accessible twin; the slider's children are presentational.
                   tabIndex={-1}
                   aria-hidden="true"
                   aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
