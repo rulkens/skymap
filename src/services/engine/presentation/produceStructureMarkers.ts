@@ -38,6 +38,7 @@ import {
   SIG_MIN_ALPHA,
   SELECTED_RING_BRIGHTEN,
   HOVERED_RING_BRIGHTEN,
+  RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -181,7 +182,8 @@ export function produceStructureMarkers(
       radiusMpc,
       haloColor,
       ringColor,
-      pickable: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus),
+      pickable:
+        ringColor[3] >= RING_PICK_MIN_ALPHA && isPickableUnderFocus(p.worldPos, ctx.snapshot.focus),
     });
   }
   return out;

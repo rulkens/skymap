@@ -132,7 +132,9 @@ const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
 
 // Near structure rings (filled pick discs) — above both star bands, below the
 // glints: a click inside a ring selects the structure first, and no star inside
-// its disc is clickable while the ring is visible, focused or not. A scene star nearer than about half the orbit
+// its disc is clickable while the ring is pickable, focused or not. A ring is pickable
+// only while its drawn alpha is at least RING_PICK_MIN_ALPHA (structureMarkerStyles.ts),
+// so a nearly faded-out ring stops blocking the stars inside it. A scene star nearer than about half the orbit
 // distance keeps true depth above this band and still wins.
 const PICK_BAND_STRUCTURE_RING_EPS: f32 = 2.0e-4;
 

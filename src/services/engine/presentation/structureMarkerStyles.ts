@@ -223,6 +223,9 @@ export const SIG_MIN_ALPHA = 0.25;
  */
 export const SELECTED_RING_BRIGHTEN = 1.6;
 
+/** A ring takes clicks only at or above this drawn alpha, so a nearly faded-out ring does not block the stars inside it. */
+export const RING_PICK_MIN_ALPHA = 0.1;
+
 /** The hover gain on a structure ring: a softer cue than the selected one, which outranks it. */
 export const HOVERED_RING_BRIGHTEN = 1.3;
 

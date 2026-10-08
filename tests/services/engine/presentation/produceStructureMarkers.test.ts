@@ -19,6 +19,7 @@ import {
   STRUCTURE_MARKER_STYLES,
   SELECTED_RING_BRIGHTEN,
   HOVERED_RING_BRIGHTEN,
+  RING_PICK_MIN_ALPHA,
 } from '../../../../src/services/engine/presentation/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -292,6 +293,22 @@ describe('produceStructureMarkers', () => {
       ['in', true],
       ['out', false],
     ]);
+  });
+
+  it('a ring drawn below RING_PICK_MIN_ALPHA stays emitted but is not pickable', () => {
+    const at = (clipFactor: number) => {
+      const state = makeState();
+      state.subsystems.clipPlayer.clipOpacityOf = () => clipFactor;
+      state.data.structures.setGroup('anchors', [rec('a')]);
+      return produceStructureMarkers(state, makeCtx())[0]!;
+    };
+    const faint = at(RING_PICK_MIN_ALPHA / 2);
+    const solid = at(0.5);
+    expect(faint.ringColor[3]).toBeGreaterThan(0);
+    expect(faint.ringColor[3]).toBeLessThan(RING_PICK_MIN_ALPHA);
+    expect(faint.pickable).toBe(false);
+    expect(solid.ringColor[3]).toBeGreaterThanOrEqual(RING_PICK_MIN_ALPHA);
+    expect(solid.pickable).toBe(true);
   });
 
   it('a hovered ring is brightened by HOVERED_RING_BRIGHTEN; a ring both hovered and selected by SELECTED_RING_BRIGHTEN', () => {
