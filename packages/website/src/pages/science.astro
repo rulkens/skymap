@@ -18,7 +18,6 @@ import SectionNav from '../components/SectionNav.astro';
 import ShotCaption from '../components/ShotCaption.astro';
 import Sources from '../components/Sources.astro';
 import SourceTable from '../components/SourceTable.astro';
-import { DATA_SOURCES } from '../data/dataSources';
 import { fact } from '../data/fact';
 import { REPO_URL } from '../data/siteIdentity';
 import { breadcrumbJsonLd } from '../utils/breadcrumbJsonLd';
@@ -153,9 +152,9 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
   <section class="wrap section" id="sources">
     <SectionHead title="The sources">
       <p>
-        The stars, galaxies, orbits, structures and imagery come from these {DATA_SOURCES.length} sources. Each name opens its
-        page in the docs, with its licence and its files. “Its own site” leaves for the catalogue’s, and “Our record” is the file
-        in our repository that says which release we use.
+        This is every dataset skymap is built from: the catalogues of stars and galaxies, the orbits, the named structures and
+        the imagery. We list them so that anything you see in the app can be traced to who measured it. Each name opens a page
+        with its licence and the files we use.
       </p>
     </SectionHead>
     <SourceTable>
