@@ -142,7 +142,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     widths: [1200, 720],
     title: 'What this address opens',
     caption: 'Jupiter on 14 March 2033 at 21:00 UTC.',
-    drawn: 'The ring is the app’s selection marker.',
     alt: 'Jupiter inside a white selection ring, three quarters lit, with labelled stars and galaxies behind it.',
     credit: 'Jupiter: Solar System Scope',
   },
