@@ -28,7 +28,12 @@ function makeRegistry(): FadeRegistry {
 // (if any) occupies the focus slot. The items bag defaults all-enabled; tests
 // flip an entry to drive the disabled path.
 function makeState(
-  opts: { focusedStructureId?: string | null; fades?: FadeRegistry; focusedOnly?: boolean } = {},
+  opts: {
+    focusedStructureId?: string | null;
+    hoveredStructureId?: string | null;
+    fades?: FadeRegistry;
+    focusedOnly?: boolean;
+  } = {},
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   registerAllCategories(fades);
@@ -42,7 +47,8 @@ function makeState(
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       select: null,
-      hover: null,
+      hover:
+        opts.hoveredStructureId == null ? null : { type: 'structure', id: opts.hoveredStructureId },
     },
     subsystems: {
       fades,
@@ -323,6 +329,19 @@ describe('produceStructureLabels', () => {
     const label = produceStructureLabels(state, makeCtx(), 'cosmo').labels[0]!;
     expect(label.worldPos).toEqual([10, 0, CAM_Z]);
     expect(label.alignY).toBe('center');
+  });
+
+  it('a hovered structure label moves toward white; the others keep their colour', () => {
+    const state = makeState({ hoveredStructureId: 'c1' });
+    state.data.structures.setGroup('anchors', [
+      rec('c1', { category: 'cluster' }),
+      rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
+    ]);
+    const labels = produceStructureLabels(state, makeCtx(), 'cosmo').labels;
+    const hovered = labels.find((l) => l.id === 'c1')!;
+    const other = labels.find((l) => l.id === 'c3')!;
+    expect(hovered.color![2]).toBeGreaterThan(other.color![2]);
+    expect(hovered.color![3]).toBe(other.color![3]);
   });
 
   it('stamps each label with the pick id its own ring writes — a PER-CATEGORY index', () => {

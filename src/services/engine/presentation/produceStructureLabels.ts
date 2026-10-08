@@ -60,7 +60,8 @@ import { ringUpDirection } from '../../../utils/labels/ringUpDirection';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
-import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
+import { STRUCTURE_MARKER_STYLES, HOVERED_LABEL_WHITEN } from './structureMarkerStyles';
+import { lerp } from '../../../utils/math/lerp';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
@@ -94,6 +95,8 @@ export function produceStructureLabels(
   const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
+  // Ring and label carry the same pick id, so hovering either lights both.
+  const hoveredStructureId = structureIdOf(state.selection.hover);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
@@ -244,7 +247,15 @@ export function produceStructureLabels(
       text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
-      color: [...style.labelColor],
+      color:
+        p.id === hoveredStructureId
+          ? [
+              lerp(style.labelColor[0], 1, HOVERED_LABEL_WHITEN),
+              lerp(style.labelColor[1], 1, HOVERED_LABEL_WHITEN),
+              lerp(style.labelColor[2], 1, HOVERED_LABEL_WHITEN),
+              style.labelColor[3],
+            ]
+          : [...style.labelColor],
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,
