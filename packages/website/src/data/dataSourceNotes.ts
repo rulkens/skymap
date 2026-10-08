@@ -181,7 +181,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Named galaxies, typed by hand',
     description:
       'The 81 galaxies skymap knows by name, with the figures and the paragraph on each one’s card.',
-    shows: 'The named galaxies: the ones the search finds by name, with a photograph and a description on the card. Their switch is “Famous” under Galaxy catalogs.',
+    shows: 'Well-known galaxies such as Andromeda, each with a photograph and a description. In the app: “Famous” under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
     view: { to: 'focus=m31', label: 'Open Andromeda' },
