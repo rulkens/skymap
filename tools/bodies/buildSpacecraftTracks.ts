@@ -103,6 +103,7 @@ function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
       iso: jdToIso(jd),
       label: e.bodyName,
       closestKm: Math.round(distanceKm),
+      targetId: e.bodyName.toLowerCase(),
     };
   });
 }

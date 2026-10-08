@@ -20,18 +20,14 @@ import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodie
 import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
-import { propagateElements } from '../../../utils/orbit/propagateElements';
-import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
 import { siteGroundRadiusM } from '../../../utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { EPHEMERIS_CORRECTIONS } from '../../../data/bodies/ephemerisCorrections.generated';
-import { BARYCENTRIC_REFLEX_BY_PRIMARY } from '../../../data/bodies/barycentricPairs';
-import { correctionSeriesAt } from '../../../utils/orbit/correctionSeriesAt';
 import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
 import { hermiteTrackAt } from '../../../utils/orbit/hermiteTrackAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 
@@ -70,30 +66,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
   // focus id throws — so the lookup here is total.
   for (const el of FOCUS_ORDER) {
     const focus = positions.get(el.focusId)!;
-    const correction = EPHEMERIS_CORRECTIONS[el.id];
-    let propagated = propagateElements(el, simDays);
-    const dM =
-      correction?.meanAnomalyRad &&
-      correctionSeriesAt(correction.meanAnomalyRad, simDays, correction.outside);
-    if (dM) propagated = { ...propagated, meanAnomalyRad: propagated.meanAnomalyRad + dM[0]! };
-    const position = addVec3(focus, keplerianPositionMpc(propagated));
-    const km =
-      correction?.positionKm &&
-      correctionSeriesAt(correction.positionKm, simDays, correction.outside);
-    if (km) {
-      const k = SCALE_UNITS.KM_TO_MPC;
-      position[0] += km[0]! * k;
-      position[1] += km[1]! * k;
-      position[2] += km[2]! * k;
-    }
-    // The secondary is propagated inline: `FOCUS_ORDER` places it after its primary.
-    const reflex = BARYCENTRIC_REFLEX_BY_PRIMARY.get(el.id);
-    if (reflex !== undefined) {
-      const s = keplerianPositionMpc(propagateElements(reflex.secondary, simDays));
-      position[0] -= reflex.k * s[0];
-      position[1] -= reflex.k * s[1];
-      position[2] -= reflex.k * s[2];
-    }
+    const { positionMpc: position, orbit: propagated } = orbitRowPlacement(el, focus, simDays);
     positions.set(el.id, position);
     orbits.set(el.id, propagated);
   }

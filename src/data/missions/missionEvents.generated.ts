@@ -26,6 +26,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1979-03-05T12:04:35.394Z',
     label: 'Jupiter',
     closestKm: 348435,
+    targetId: 'jupiter',
   },
   {
     id: 'voyager2-jupiter',
@@ -34,6 +35,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1979-07-09T22:29:01.306Z',
     label: 'Jupiter',
     closestKm: 721375,
+    targetId: 'jupiter',
   },
   {
     id: 'voyager1-titan',
@@ -42,6 +44,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1980-11-12T05:40:22.393Z',
     label: 'Titan',
     closestKm: 6587,
+    targetId: 'titan',
   },
   {
     id: 'voyager1-saturn',
@@ -50,6 +53,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1980-11-12T23:45:37.581Z',
     label: 'Saturn',
     closestKm: 184030,
+    targetId: 'saturn',
   },
   {
     id: 'voyager2-saturn',
@@ -58,6 +62,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1981-08-26T03:24:04.587Z',
     label: 'Saturn',
     closestKm: 160691,
+    targetId: 'saturn',
   },
   {
     id: 'voyager2-uranus',
@@ -66,6 +71,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1986-01-24T17:58:51.349Z',
     label: 'Uranus',
     closestKm: 107154,
+    targetId: 'uranus',
   },
   {
     id: 'voyager2-neptune',
@@ -74,6 +80,7 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     iso: '1989-08-25T03:55:40.084Z',
     label: 'Neptune',
     closestKm: 29236,
+    targetId: 'neptune',
   },
   {
     id: 'voyager1-pale-blue-dot',
