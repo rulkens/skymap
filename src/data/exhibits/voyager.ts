@@ -86,15 +86,6 @@ export const voyager: Exhibit = {
       text: 'Each craft carries a gold-plated record of greetings in 55 languages, 90 minutes of music and 115 images. Its cover uses 14 pulsars to show where the Sun is.',
     },
     {
-      kind: 'facts',
-      facts: [
-        { label: 'Launched', value: '1977' },
-        { label: 'Giant planets passed', value: '4' },
-        { label: 'Heliopause', value: '121 · 119 AU' },
-        { label: 'Leaving the Sun at', value: '17 · 15 km/s' },
-      ],
-    },
-    {
       kind: 'sources',
       heading: 'Sources',
       links: [

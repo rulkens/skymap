@@ -136,7 +136,6 @@ function TimelineTrack({
               className={styles.lane}
               style={{ '--lane': lane.color } as CSSProperties}
             >
-              <span className={styles.laneTag}>{lane.tag}</span>
               <div className={styles.laneLine} />
               <div
                 className={styles.laneFill}

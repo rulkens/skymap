@@ -101,7 +101,7 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   }, [dispatch, rateIndex, atFastest]);
   const clock = {
     paused,
-    rateLabel: rideRate ?? rateStep?.label ?? '',
+    rateLabel: rideRate ?? (time.mode === 'live' ? 'Live' : (rateStep?.label ?? '')),
     riding: rideRate !== null,
     atSlowest,
     atFastest,

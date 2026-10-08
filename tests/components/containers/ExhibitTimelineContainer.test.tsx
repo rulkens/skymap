@@ -51,7 +51,7 @@ describe('ExhibitTimelineContainer', () => {
     expect(screen.queryByText('Neptune')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
     expect(screen.getByText('Neptune')).toBeInTheDocument();
-    expect(screen.getByText('1989-08-25')).toBeInTheDocument();
+    expect(screen.getByText('25 Aug 1989')).toBeInTheDocument();
     expect(screen.getByText('26 Aug 1989')).toBeInTheDocument();
   });
 

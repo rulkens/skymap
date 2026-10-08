@@ -7,7 +7,6 @@ import type { TimelineLane } from '../../../@types/exhibits/TimelineLane';
 /**
  * One lane per craft, in order of first event. Label and colour are looked up, never
  * authored: the colour is the craft's trail tint, so panel and scene share one source.
- * The tag is the label's initial and number ('Voyager 1' → 'V1').
  */
 export function timelineLanes(events: readonly MissionEvent[]): readonly TimelineLane[] {
   const ids = [...new Set(events.map((e) => e.bodyId))];
@@ -17,7 +16,6 @@ export function timelineLanes(events: readonly MissionEvent[]): readonly Timelin
     return {
       bodyId,
       label,
-      tag: `${label[0]}${label.match(/\d+$/)?.[0] ?? ''}`,
       color: trailColor ? laneColorCss(trailColor) : '#a8d0ff',
     };
   });

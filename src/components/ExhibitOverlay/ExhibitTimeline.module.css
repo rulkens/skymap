@@ -31,10 +31,10 @@
 }
 
 /* ── Track ──────────────────────────────────────────────────────────── */
-/* The left margin is the lane-tag gutter; the track itself is the x-axis, so a
-   pointer's offset in it maps straight to a fraction. */
+/* The track is the x-axis, so a pointer's offset in it maps straight to a fraction. The side
+   margin keeps the thumb knob (half-width 4px, 7px on touch) inside the scrolling notes column. */
 .plot {
-  margin-left: 26px;
+  margin-inline: 8px;
 }
 
 .track {
@@ -68,15 +68,6 @@
 .lane {
   position: relative;
   height: 20px;
-}
-.laneTag {
-  position: absolute;
-  left: -26px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: var(--font-family-mono);
-  font-size: 9px;
-  color: var(--lane);
 }
 .laneLine {
   position: absolute;
@@ -239,7 +230,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 3em;
 }
 .cardHead {
   display: flex;

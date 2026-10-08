@@ -5,7 +5,8 @@
 
 import type { ReactNode } from 'react';
 
-import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
+import { formatClockDate } from '../../utils/exhibits/timeline/formatClockDate';
+import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
 import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import styles from './ExhibitTimeline.module.css';
 
@@ -29,7 +30,7 @@ function TimelineEventCard({ craftLabel, event, riding }: TimelineEventCardProps
     // Keyed on the event so the entrance animation replays on each step.
     <div key={event.id} className={styles.card}>
       <div className={styles.cardHead}>
-        <span className={styles.date}>{formatEventDate(event.iso)}</span>
+        <span className={styles.date}>{formatClockDate(missionEventMs(event))}</span>
         <span className={styles.cardLabel}>{event.label}</span>
       </div>
       <p className={styles.riding}>
