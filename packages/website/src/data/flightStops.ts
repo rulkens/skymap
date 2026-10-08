@@ -40,5 +40,11 @@ export const FLIGHT_STOPS: readonly FlightStop[] = [
     name: 'Deep space',
     line: 'We are reaching the edge of our observations. Only the brightest galaxies (quasars) are visible.',
   },
-  { id: 'universe', atSec: 65.5,name: 'The observable universe', factId: 'observable-edge', portraitZoom: 0.4 },
+  {
+    id: 'universe',
+    atSec: 65.5,
+    name: 'The observable universe',
+    line: 'Looking further in space is looking back in time, at the edge, we’re looking at the Big Bang.',
+    portraitZoom: 0.4,
+  },
 ];
