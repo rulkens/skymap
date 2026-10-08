@@ -22,7 +22,7 @@ src/layers/lightTime/
                              ui:[{ slot:'labelsAndGuides', content: lightTimeSettingsRow }] })
   create.ts / destroy.ts
   state/slices.ts · state/lightTime/{slice,initialState,selectors}.ts      lightTime: { enabled: false }
-  present/  lightTimeFadeRows.ts · lightTimeSphereOpacity.ts · deriveLightTimeLiveness.ts
+  present/  lightTimeFadeRows.ts · deriveLightTimeLiveness.ts
             · produceLightTimeCaptions.ts
   passes/   lightTimeSpheresPass.ts
   render/   lightTimeSpheresRenderer.ts

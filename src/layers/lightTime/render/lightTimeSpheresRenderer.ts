@@ -133,7 +133,7 @@ export function createLightTimeSpheresRenderer(
     const x = -(eyeX * right[0] + eyeY * right[1] + eyeZ * right[2]);
     const y = -(eyeX * up[0] + eyeY * up[1] + eyeZ * up[2]);
     const depth = -(eyeX * fwd[0] + eyeY * fwd[1] + eyeZ * fwd[2]);
-    // Wholly behind the eye: nothing to draw, and the bounds maths needs depth > -R.
+    // Wholly behind the eye: nothing to draw.
     if (depth <= -largestRadius) return;
     const [minX, maxX] = sphereNdcBounds(x, depth, largestRadius, tanHalfFovY * aspect, RECT_PAD);
     const [minY, maxY] = sphereNdcBounds(y, depth, largestRadius, tanHalfFovY, RECT_PAD);

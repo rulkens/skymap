@@ -6,7 +6,7 @@ Strategy: a new self-contained Layer modelled on `src/layers/zoneOfAvoidance/` (
 
 ## Task 1 — Sphere table and pure maths
 
-**Files:** `src/layers/lightTime/@types/LightTimeSphere.d.ts`, `src/data/lightTime/lightTimeSpheres.ts`, `src/data/lightTime/lightTimeFadeBands.ts`, `src/layers/lightTime/present/lightTimeSphereOpacity.ts`, `src/utils/math/sphereNdcBounds.ts`, `src/utils/math/sphereSilhouetteTop.ts`, and their tests under `tests/` mirroring those paths.
+**Files:** `src/layers/lightTime/@types/LightTimeSphere.d.ts`, `src/data/lightTime/lightTimeSpheres.ts`, `src/data/lightTime/lightTimeFadeBands.ts`, `src/layers/lightTime/present/lightTimeSphereOpacity.ts` (inlined into `deriveLightTimeLiveness` at the deletion audit), `src/utils/math/sphereNdcBounds.ts`, `src/utils/math/sphereSilhouetteTop.ts`, and their tests under `tests/` mirroring those paths.
 
 ```ts
 export type LightTimeSphere = { readonly id: string; readonly text: string; readonly radiusMpc: number };

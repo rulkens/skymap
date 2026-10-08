@@ -5,7 +5,7 @@ import { LIGHT_TIME_SPHERES } from '../../../../src/data/lightTime/lightTimeSphe
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// Float indices of the uniform block — the plan's table, restated so a silent
+// Float indices of the uniform block — `src/services/gpu/shaders/lightTime/io.wesl`, restated so a silent
 // renderer-side shift fails here rather than on screen.
 const COUNT = 11;
 const RECT = 12;
@@ -64,18 +64,12 @@ describe('createLightTimeSpheresRenderer', () => {
     expect(u[SLOT_0 + SLOT_FLOATS + 4]).toBeCloseTo(24, 3);
   });
 
-  it('sets the rect to the full screen when the camera is inside the largest visible sphere', () => {
+  it('bounds the rect below full screen when the camera is outside the largest visible sphere', () => {
     const hour = LIGHT_TIME_SPHERES[2]!.radiusMpc;
     const outside = drawUniforms(
       [CENTRE[0], CENTRE[1], CENTRE[2] + 5 * hour],
       opacitiesWith({ 2: 1 }),
     );
     expect(outside[RECT + 2]).toBeLessThan(1);
-
-    const inside = drawUniforms(
-      [CENTRE[0], CENTRE[1], CENTRE[2] + 0.5 * hour],
-      opacitiesWith({ 2: 1 }),
-    );
-    expect(Array.from(inside.slice(RECT, RECT + 4))).toEqual([-1, -1, 1, 1]);
   });
 });

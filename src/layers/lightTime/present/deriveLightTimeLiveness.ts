@@ -7,10 +7,14 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
+import {
+  LIGHT_TIME_APPROACH_BAND,
+  LIGHT_TIME_RECEDE_BAND,
+} from '../../../data/lightTime/lightTimeFadeBands';
+import { fadeWindow } from '../../../utils/math/fadeWindow';
 import { EARTH_REF } from '../../../data/selection/earthRef';
 import { LIGHT_TIME_SPHERES } from '../../../data/lightTime/lightTimeSpheres';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
-import { lightTimeSphereOpacity } from './lightTimeSphereOpacity';
 
 export function deriveLightTimeLiveness(
   state: PassState,
@@ -29,7 +33,9 @@ export function deriveLightTimeLiveness(
     ctx.drawCamPos[2] - centre[2],
   );
   const opacities = LIGHT_TIME_SPHERES.map(
-    (sphere) => layerOpacity * lightTimeSphereOpacity(camDistMpc, sphere.radiusMpc),
+    (sphere) =>
+      layerOpacity *
+      fadeWindow([LIGHT_TIME_APPROACH_BAND, LIGHT_TIME_RECEDE_BAND], camDistMpc / sphere.radiusMpc),
   );
   return opacities.some((opacity) => opacity > 0) ? { centre, opacities } : null;
 }

@@ -1,7 +1,5 @@
 /**
- * The lightTime Layer: faint Earth-centred spheres at light-travel distances
- * (1 light-second … 1 billion light-years) — one renderer, one pass, one fade
- * row, a caption per sphere and a toggle row in "Labels & guides".
+ * The lightTime Layer: faint Earth-centred spheres at light-travel distances.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
