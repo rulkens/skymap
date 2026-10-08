@@ -2,8 +2,9 @@
  * The exhibit hold loop's ride handling, run against the real store and the real voyager exhibit.
  * Fake timers drive both the ride's end-of-profile delay and `performance.now()`.
  */
+import type { Mock } from 'vitest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import createSagaMiddleware from 'redux-saga';
+import createSagaMiddleware, { CANCEL } from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { RIDE_WALL_MS } from '../../../src/data/exhibits/ride/rideWallMs';
@@ -45,8 +46,9 @@ const tick = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 const eventDays = (id: string) =>
   unixMsToJulianDays(missionEventMs(MISSION_EVENTS.find((e) => e.id === id)!));
 
-async function hold() {
-  const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+async function hold(
+  playClip: Mock<(clip: ClipData) => Promise<void>> = vi.fn().mockResolvedValue(undefined),
+) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
@@ -79,6 +81,24 @@ describe('exhibit hold loop — flyby rides', () => {
     step('voyager1-pale-blue-dot');
     await tick();
     expect(store.getState().camera.ride).toBeNull();
+    expect(playClip).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a fly-back finish when another non-flyby step lands during it', async () => {
+    const stopped = vi.fn();
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>(() => {
+      const pending = new Promise<void>(() => {}) as Promise<void> & { [CANCEL]?: () => void };
+      pending[CANCEL] = stopped;
+      return pending;
+    });
+    const { step } = await hold(playClip);
+    step('voyager2-neptune');
+    await tick();
+    step('voyager1-pale-blue-dot');
+    await tick(1000);
+    step('voyager1-pioneer10');
+    await tick();
+    expect(stopped).not.toHaveBeenCalled();
     expect(playClip).toHaveBeenCalledTimes(1);
   });
 

@@ -328,6 +328,25 @@ describe('pickWinner', () => {
   });
 });
 
+describe('CAMERA_DRIVERS — ride', () => {
+  const ride = CAMERA_DRIVERS.find((d) => d.id === 'ride')!;
+
+  it('ties no other driver, so no outcome rests on table order', () => {
+    const others = CAMERA_DRIVERS.filter((d) => d !== ride).map((d) => d.priority);
+    expect(others).not.toContain(ride.priority);
+  });
+
+  it('outranks the follow rows but yields to a visitor-started tween', () => {
+    const p = (id: string) => CAMERA_DRIVERS.find((d) => d.id === id)!.priority;
+    expect(ride.priority).toBeGreaterThan(p('followApproach'));
+    expect(ride.priority).toBeLessThan(p('tween'));
+  });
+
+  it('commits its pose on the edge, so the next winner starts from the encounter', () => {
+    expect(ride.commitsOnEdge).toBe(true);
+  });
+});
+
 describe('pickWinner — precedence', () => {
   it('orbitDrag wins when dragging (80 outranks the tween 60)', () => {
     const store = makeStore();

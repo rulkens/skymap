@@ -13,8 +13,10 @@ const stateAt = (
   iso: string,
   exhibit: 'voyager' | 'solarSystem' | null,
   emphasis: string | null = null,
+  ride: string | null = null,
 ): RootState =>
   ({
+    camera: { ride: ride ? { eventId: ride } : null },
     settings: { orbitTrails: { enabled: true, emphasis } },
     takeover: { active: exhibit ? { kind: 'exhibit', id: exhibit, entry: 'cut' } : null },
     time: {
@@ -64,6 +66,23 @@ describe('stepTimelineEvent with a craft emphasised', () => {
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v2[2]!));
     expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v2[0]!));
     expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager', 'voyager2'), 1)).toBeNull();
+  });
+});
+
+describe('stepTimelineEvent while riding', () => {
+  it('steps from the ridden event though the clock still sits before it', () => {
+    const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
+    const at = v2.findIndex((e) => e.id === 'voyager2-neptune');
+    const state = stateAt(v2[at]!.iso, 'voyager', 'voyager2', 'voyager2-neptune');
+    const rewound = {
+      ...state,
+      time: {
+        ...state.time,
+        anchor: { ...state.time.anchor, simDays: state.time.anchor.simDays - 2 },
+      },
+    } as RootState;
+    expect(stepTimelineEvent(rewound, -1)).toEqual(stepsTo(v2[at - 1]!));
+    expect(stepTimelineEvent(rewound, 1)).toEqual(stepsTo(v2[at + 1]!));
   });
 });
 

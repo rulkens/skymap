@@ -70,9 +70,12 @@ function ExhibitTimeline({
   const headingId = useId();
 
   const simMs = julianDaysToUnixMs(simDays);
-  const current = currentMissionEvent(events, simMs);
-  const prevId = adjacentEventId(events, simMs, -1);
-  const nextId = adjacentEventId(events, simMs, 1);
+  // A ride rewinds the clock to before its event, so the clock would name the previous chapter.
+  const ridden = events.find((e) => e.id === riding?.event.id) ?? null;
+  const current = ridden ?? currentMissionEvent(events, simMs);
+  const stepFromMs = ridden ? missionEventMs(ridden) : simMs;
+  const prevId = adjacentEventId(events, stepFromMs, -1);
+  const nextId = adjacentEventId(events, stepFromMs, 1);
   const daysSinceLaunch = Math.floor((simMs - missionEventMs(events[0]!)) / DAY_MS);
   const onSeekMs = (ms: number) => onSeek(unixMsToJulianDays(ms));
   const stepTo = (id: string | null) => (id ? () => onStep(id) : null);
@@ -115,7 +118,7 @@ function ExhibitTimeline({
           craftLabel={lane.label}
           event={current}
           caption={current ? captions[current.id] : undefined}
-          riding={riding && riding.event.id === current?.id ? riding : null}
+          riding={riding}
         />
         <TimelineStepper
           index={current ? events.indexOf(current) + 1 : 0}

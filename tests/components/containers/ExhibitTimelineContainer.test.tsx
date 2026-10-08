@@ -72,8 +72,7 @@ describe('ExhibitTimelineContainer', () => {
   it('a chapter click sets the clock to the event instant and leaves it running', () => {
     const store = mount('2026-01-01');
     const titanV1 = section.events.find((e) => e.id === 'voyager1-titan')!;
-    // The chapter segment comes first; the track's event dot carries the same name.
-    fireEvent.click(screen.getAllByRole('button', { name: `${titanV1.label}, 1980-11-12` })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: `${titanV1.label}, 1980-11-12` }));
 
     const time = selectTimeState(store.getState());
     expect(time.paused).toBe(false);
@@ -101,10 +100,11 @@ describe('ExhibitTimelineContainer', () => {
       spy.mock.calls.map((c) => c[0] as { type: string; payload?: { eventId?: string } });
 
     fireEvent.click(screen.getByRole('button', { name: /Next/ }));
-    // The chapter bar and the track dot both carry the event's label.
-    const [segment, dot] = screen.getAllByRole('button', { name: label(v1[3]!) });
-    fireEvent.click(segment!);
-    fireEvent.click(dot!);
+    // The track dot is aria-hidden (the chapter bar is the accessible twin) but still clickable.
+    const segment = screen.getByRole('button', { name: label(v1[3]!) });
+    const dot = screen.getAllByTitle(new RegExp(`^${v1[3]!.label} · `)).at(-1)!;
+    fireEvent.click(segment);
+    fireEvent.click(dot);
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'PageDown' });
     fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
     const steps = stepped().filter((a) => a.type === stepToMissionEvent.type);
@@ -144,5 +144,30 @@ describe('ExhibitTimelineContainer', () => {
     expect(screen.getByText(/Riding along with Voyager 2 past Neptune/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Whole mission' }));
     expect(store.dispatch).toHaveBeenCalledWith(showWholeMission());
+  });
+
+  it('keys the card, riding line and Next off the ridden event while the clock is still before it', () => {
+    const store = mount('1989-08-23');
+    fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
+    const v2 = section.events.filter((e) => e.bodyId === 'voyager2');
+    const at = v2.findIndex((e) => e.id === 'voyager2-neptune');
+    act(() => {
+      store.dispatch(
+        setRide({
+          eventId: 'voyager2-neptune',
+          craftId: 'voyager2',
+          targetId: 'neptune',
+          closestKm: 29236,
+          normal: [0, 0, 1],
+          offsets: { yaw: 0, pitch: 0, zoom: 1 },
+        }),
+      );
+    });
+    expect(screen.getByText(/Riding along with Voyager 2 past Neptune/)).toBeInTheDocument();
+    vi.mocked(store.dispatch).mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
+    expect(store.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ payload: expect.objectContaining({ eventId: v2[at - 1]!.id }) }),
+    );
   });
 });

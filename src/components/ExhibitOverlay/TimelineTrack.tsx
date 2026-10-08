@@ -146,6 +146,9 @@ function TimelineTrack({
                 <button
                   type="button"
                   key={e.id}
+                  // The chapter bar is the accessible twin; the slider's children are presentational.
+                  tabIndex={-1}
+                  aria-hidden="true"
                   aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
                   title={`${e.label} · ${formatEventDate(e.iso)}`}
                   onPointerDown={(ev) => ev.stopPropagation()}

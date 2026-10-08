@@ -145,15 +145,15 @@ const timeSlice = createSlice({
       time.profile = null;
     },
 
-    // Play a flyby ride from its first sample, un-paused. The profile is stamped with the
-    // caller's `nowMs` (reducers read no clock), and the anchor is set to the ride's start so a
-    // visitor action that drops the profile re-anchors from a consistent instant.
-    startRide: (time, action: PayloadAction<{ profile: RideProfile; nowMs: number }>) => {
-      const { profile, nowMs } = action.payload;
+    // Play a flyby ride from its first sample, un-paused. The profile arrives stamped (reducers
+    // read no clock); the anchor is set to the ride's start so a visitor action that drops the
+    // profile re-anchors from a consistent instant.
+    startRide: (time, action: PayloadAction<{ profile: RideProfile }>) => {
+      const { profile } = action.payload;
       time.mode = 'manual';
-      time.anchor = { simDays: profile.simDays[0]!, realMs: nowMs };
+      time.anchor = { simDays: profile.simDays[0]!, realMs: profile.startWallMs };
       time.paused = false;
-      time.profile = { ...profile, startWallMs: nowMs };
+      time.profile = profile;
     },
   },
   // A chapter step lands the clock on the event exactly as a scrub to it would.

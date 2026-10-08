@@ -22,6 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
@@ -127,6 +128,11 @@ describe('t row', () => {
   it('writes a manual anchor as an ISO instant', () => {
     const actions = manualPausedAtActions(new Date(J2000_ISO));
     expect(timeSource.write(stateAfter(...actions))).toBe(J2000_ISO);
+  });
+
+  it('rewrites on a chapter step, which moves the clock through an extraReducer', () => {
+    const step = stepToMissionEvent({ eventId: 'voyager1-titan', nowMs: 0 });
+    expect(timeSource.writesOn.some((matches) => matches(step))).toBe(true);
   });
 
   it('writes nothing while the clock is live', () => {

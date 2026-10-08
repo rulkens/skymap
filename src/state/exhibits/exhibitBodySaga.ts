@@ -84,6 +84,7 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
     section.kind === 'timeline' ? section.events : [],
   );
   let task: Task | null = null;
+  let flyingBack = false;
   try {
     for (;;) {
       const next = yield* race({
@@ -94,12 +95,19 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
       });
       if (next.exit) break;
       const riding = yield* select((s: RootState) => s.camera.ride !== null);
-      if (task !== null) yield* cancel(task);
-      task = null;
       const event = next.step ? events.find((e) => e.id === next.step!.payload.eventId) : undefined;
-      if (event?.kind === 'flyby') {
-        task = yield* fork(rideSaga, event);
+      const flyby = event?.kind === 'flyby' ? event : null;
+      // A running fly-back is the camera's way home: only a new ride may interrupt it, since
+      // cancelling the clip commits the camera wherever it stopped.
+      if (task !== null && (flyby !== null || !flyingBack)) {
+        yield* cancel(task);
+        task = null;
+      }
+      if (flyby !== null) {
+        flyingBack = false;
+        task = yield* fork(rideSaga, flyby);
       } else if (riding) {
+        flyingBack = true;
         // Only a ride is undone: a visitor who orbited the whole-mission view keeps their framing.
         yield* put(clearRide());
         task = yield* fork(function* () {

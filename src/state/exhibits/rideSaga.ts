@@ -33,7 +33,7 @@ export function* rideSaga(event: MissionEvent): Generator {
       offsets: { yaw: 0, pitch: 0, zoom: 1 },
     }),
   );
-  yield* put(startRide({ profile, nowMs }));
+  yield* put(startRide({ profile }));
   yield* delay(Math.max(0, RIDE_WALL_MS - (performance.now() - nowMs)));
   const stillPlaying = yield* select((s: RootState) => s.time.profile !== null);
   if (stillPlaying) yield* put(pause({ nowMs: performance.now() }));

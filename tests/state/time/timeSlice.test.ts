@@ -138,10 +138,13 @@ describe('ride profile', () => {
     wallMs: Float64Array.from([0, 10_000]),
     simDays: Float64Array.from([2460000, 2460010]),
   };
-  const riding = reducer(manualStart, startRide({ profile, nowMs: 50_000 }));
+  const riding = reducer(manualStart, startRide({ profile: { ...profile, startWallMs: 50_000 } }));
 
   it('startRide un-pauses, anchors at the first sample and stamps the payload clock', () => {
-    const paused = reducer({ ...manualStart, paused: true }, startRide({ profile, nowMs: 50_000 }));
+    const paused = reducer(
+      { ...manualStart, paused: true },
+      startRide({ profile: { ...profile, startWallMs: 50_000 } }),
+    );
     expect(paused.paused).toBe(false);
     expect(paused.profile?.startWallMs).toBe(50_000);
     expect(deriveSimDays(paused, 55_000)).toBe(2460005);

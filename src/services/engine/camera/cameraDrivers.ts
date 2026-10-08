@@ -345,9 +345,11 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'ride',
     followsMovingTarget: true,
-    // Above the follow rows (55) so a moving focus cannot pull the camera off the encounter. Ties
-    // tween, which loses on table order; the two never co-occur (the saga clears the ride first).
-    priority: 60,
+    // Above the follow rows (55) so a moving focus cannot pull the camera off the encounter, below
+    // tween (60) so a visitor's own focus move still wins while `camera.ride` is set.
+    priority: 58,
+    // Bakes the encounter pose, so the next winner does not render the stale pre-ride `base`.
+    commitsOnEdge: true,
     isActive: (s) => s.camera.ride !== null,
     pose: ridePose,
   },
