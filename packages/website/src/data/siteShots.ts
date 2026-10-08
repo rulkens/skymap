@@ -11,6 +11,8 @@ const ONE_GALAXY: SiteShotSettings = { ...SUBJECT, hideGalaxyField: true, hideCo
 // A data page's picture stands in the text column, 552 px at most: 1280 covers it at 2x.
 const DATA_WIDTHS = [1280, 640];
 const NOON = 't=2026-10-05T12:00:00Z';
+// Late morning in Copenhagen at midsummer, the time the park's other pictures are taken at.
+const PARK_TIME = 't=2026-06-21T11:00:00Z';
 const JUPITER = 'focus=body-jupiter&t=2033-03-14T21:00:00Z';
 // Lesson cards sit two to a row: 1120 covers a 2x desktop column, 640 a small tablet, and 320 the 88 px picture a phone's row has.
 const CARD = { width: 800, height: 600 };
@@ -69,6 +71,32 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The surface is satellite photography; the clouds are one fixed composite.',
     alt: 'Earth against a dense field of stars, the Indian Ocean in daylight and night arriving from the east.',
     credit: 'Earth: NASA Blue Marble',
+  },
+  // The opening view of the park-to-cosmic-web clip (SONDERMARKEN_POSE in the app): 46 m up, looking north.
+  {
+    id: 'lead-park',
+    link: `${PARK_TIME}&pose=b,earth,0,0,0,3507565.0909855557,779181.3743209324,5261187.663255859,-0.0469557302440652,0.9921810373246189,-0.1156371418303389,0.5013233500514287,0.12353707964967056,0.8563956379179216,-0.8639849871904368,0.01775891677648963,0.503204295276249`,
+    settings: { ...SUBJECT, settleMs: 12000 },
+    size: WIDE,
+    widths: [1920, 1280, 640],
+    title: 'Søndermarken from 46 metres up',
+    caption: 'Looking north.',
+    drawn: 'The park is a 3D model built from aerial photographs and a laser scan.',
+    alt: 'A lawn with a round bed of sand-coloured gravel, between two tall walls of dark green trees, under a deep blue sky.',
+    credit: 'Ortofoto © GeoDanmark / Klimadatastyrelsen (CC BY 4.0). Skråfoto © Klimadatastyrelsen (CC BY 4.0)',
+  },
+  {
+    id: 'lead-park-portrait',
+    link: `${PARK_TIME}&pose=b,earth,0,0,0,3507565.0909855557,779181.3743209324,5261187.663255859,-0.0469557302440652,0.9921810373246189,-0.1156371418303389,0.5013233500514287,0.12353707964967056,0.8563956379179216,-0.8639849871904368,0.01775891677648963,0.503204295276249`,
+    settings: { ...SUBJECT, settleMs: 12000 },
+    size: TALL,
+    widths: TALL_WIDTHS,
+    denseQuality: TALL_DENSE_QUALITY,
+    title: 'Søndermarken from 46 metres up',
+    caption: 'Looking north.',
+    drawn: 'The park is a 3D model built from aerial photographs and a laser scan.',
+    alt: 'A lawn with a round bed of sand-coloured gravel, between two tall walls of dark green trees, under a deep blue sky.',
+    credit: 'Ortofoto © GeoDanmark / Klimadatastyrelsen (CC BY 4.0). Skråfoto © Klimadatastyrelsen (CC BY 4.0)',
   },
   {
     id: 'hubble',

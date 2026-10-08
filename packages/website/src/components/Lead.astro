@@ -1,12 +1,18 @@
 ---
 import ViewLink from './ViewLink.astro';
 import PictureBand from './PictureBand.astro';
-import ShotCaption from './ShotCaption.astro';
+import CaptionGallery from './CaptionGallery.astro';
 import { appLink } from '../data/appLink';
 import { HOME_LINKS } from '../data/homeLinks';
+
+// The start of the pull-back, then a later point of the same move.
+const VIEWS = [
+  { id: 'lead-park', tall: 'lead-park-portrait' },
+  { id: 'earth-terminator', tall: 'earth-terminator-portrait' },
+];
 ---
 
-<PictureBand id="earth-terminator" tall="earth-terminator-portrait" gap="half">
+<PictureBand views={VIEWS} gap="half">
   <h2>From a park to the cosmic web</h2>
   <p class="say">
     The camera starts just above Søndermarken, a park in Copenhagen, and pulls back in one continuous move to beyond
@@ -14,7 +20,7 @@ import { HOME_LINKS } from '../data/homeLinks';
     star survey, the galaxies from surveys including SDSS, 2MRS and GLADE.
   </p>
   <ViewLink hang href={appLink(HOME_LINKS.parkFlight)}>Play the pull-back from the park</ViewLink>
-  <ShotCaption id="earth-terminator" />
+  <CaptionGallery ids={VIEWS.map((view) => view.id)} />
 </PictureBand>
 
 <style>
