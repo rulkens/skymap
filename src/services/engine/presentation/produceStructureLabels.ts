@@ -226,12 +226,10 @@ export function produceStructureLabels(
     // label, so those labels hang just above the ring's drawn top instead.
     const above = screenUp !== null && style.labelPlacement === 'above';
 
-    const whiten =
-      p.id === focusedStructureId
-        ? SELECTED_LABEL_WHITEN
-        : p.id === hoveredStructureId
-          ? HOVERED_LABEL_WHITEN
-          : 0;
+    // Selected wins over hovered: the later assignment is the stronger cue.
+    let whiten = 0;
+    if (p.id === hoveredStructureId) whiten = HOVERED_LABEL_WHITEN;
+    if (p.id === focusedStructureId) whiten = SELECTED_LABEL_WHITEN;
 
     labels.push({
       id: p.id,

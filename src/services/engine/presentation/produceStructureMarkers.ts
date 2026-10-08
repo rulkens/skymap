@@ -164,11 +164,9 @@ export function produceStructureMarkers(
     // Ring: same fade bake plus selection/hover. The selected ring is brightened and
     // recession-free; every other ring is scaled by the focus recession.
     // Hover is the weaker cue and does not exempt the ring from recession.
-    const ringGain = isSelected
-      ? SELECTED_RING_BRIGHTEN
-      : p.id === hoveredStructureId
-        ? HOVERED_RING_BRIGHTEN
-        : 1;
+    let ringGain = 1;
+    if (p.id === hoveredStructureId) ringGain = HOVERED_RING_BRIGHTEN;
+    if (isSelected) ringGain = SELECTED_RING_BRIGHTEN;
     const ringColor: Vec4 = [
       style.ringColor[0] * ringGain,
       style.ringColor[1] * ringGain,
