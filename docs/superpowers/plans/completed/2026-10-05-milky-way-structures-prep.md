@@ -14,7 +14,7 @@
 
 **Tech stack:** TS, Vitest, WESL, raw WebGPU.
 
-**Spec:** [`docs/superpowers/specs/2026-10-05-milky-way-structures-design.md`](../specs/2026-10-05-milky-way-structures-design.md), §3 (Ground preparation).
+**Spec:** [`docs/superpowers/specs/completed/2026-10-05-milky-way-structures-design.md`](../../specs/completed/2026-10-05-milky-way-structures-design.md), §3 (Ground preparation).
 
 ## Global constraints
 
