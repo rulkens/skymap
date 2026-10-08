@@ -129,7 +129,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://doi.org/10.1126/science.1172873',
     sourceLabel: 'Clark et al. 2009, last glacial maximum',
     checked: CHECKED,
-    short: 'Light from the centre of our galaxy left about 27,000 years ago, when the ice sheets were at their largest.',
+    short: 'Light from the centre of our galaxy left about 27,000 years ago, at the time of the ice ages.',
   },
   {
     id: 'andromeda-light',
