@@ -36,7 +36,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
       <div class="brand">
         <a class="mark" href={sitePath('/')}>skymap</a>
         <p class="say">A free, open-source web app that draws the mapped universe in three dimensions at true scale.</p>
-        <OpenApp />
+        <OpenApp size="small" />
       </div>
 
       <nav class="groups grid" aria-label="Footer">
@@ -154,15 +154,18 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
   }
 
   .mark {
-    font: var(--weight-display) clamp(3.5rem, 6vw, 5.5rem) / 0.9 var(--font-family-display);
+    font: var(--weight-display) clamp(2.75rem, 4.5vw, 4rem) / 0.9 var(--font-family-display);
     letter-spacing: -0.02em;
     color: var(--color-fg);
     text-decoration: none;
   }
 
+  /* Everything under the name is set as small print: a size down from the page's text, and dimmer. */
   .say {
-    max-width: 26rem;
+    max-width: 22rem;
     margin: 0 0 0.5rem;
+    font: var(--weight-small) var(--text-small) / 1.5 var(--font-body);
+    color: var(--site-text-muted);
     text-wrap: balance;
   }
 
@@ -174,8 +177,18 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
   /* A list's name, in the heading face; not a heading, so a page's outline ends with the page. */
   .heading {
-    margin: 0 0 0.75rem;
-    font: var(--weight-display) var(--text-h3) / 1.1 var(--font-family-display);
+    margin: 0 0 0.5rem;
+    font: var(--weight-display) 1.25rem / 1.1 var(--font-family-display);
+    color: var(--site-text-muted);
+  }
+
+  /* A link is dim until it is pointed at or is the page you are on; its row keeps the thumb's height. */
+  .groups :global(.ring) {
+    font-size: 0.9375rem;
+    color: var(--site-text-muted);
+  }
+
+  .groups :global(.ring:is(:hover, :focus-visible, [aria-current='page'])) {
     color: var(--color-fg);
   }
 
@@ -195,16 +208,17 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
     margin: 0;
   }
 
-  /* The page's last sentence, at reading size: the small print under it is the only dim text here.
-     Room for the longer line, so the swap moves nothing. */
+  /* The page's last sentence. Room for the longer line, so the swap moves nothing. */
   .light {
     min-height: calc(1em * var(--leading-body));
-    color: var(--site-text);
+    font: var(--weight-small) var(--text-small) / var(--leading-body) var(--font-body);
+    color: var(--site-text-muted);
     font-variant-numeric: tabular-nums;
   }
 
   .end .fine {
-    margin-top: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
     color: var(--site-text-dim);
   }
 
