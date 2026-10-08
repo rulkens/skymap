@@ -6,7 +6,12 @@ import { reviewBlockOf } from './reviewBlockOf';
 function tag(el: Element, mark: DocsReviewMark): void {
   el.classList.add('review-mark', `review-${mark.state}`);
   el.setAttribute('data-review-id', mark.id);
-  el.setAttribute('title', mark.reason);
+  const rewrite = mark.state === 'rewrite';
+  if (rewrite && mark.after) el.classList.add('review-has-after');
+  const notes = rewrite
+    ? [mark.how && `How: ${mark.how}`, mark.after && `Replace with: ${mark.after}`]
+    : [mark.state === 'good' && mark.why];
+  el.setAttribute('title', notes.filter(Boolean).join('\n') || mark.reason);
 }
 
 // The outermost block whose whole text is the mark's: a list item, not just the paragraph inside it.

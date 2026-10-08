@@ -1,6 +1,6 @@
 import type { DocsReview } from '../@types/DocsReview';
 
-const STATES = ['cut', 'keep', 'rewrite'];
+const STATES = ['cut', 'keep', 'rewrite', 'good'];
 
 /** Whether a body is a review the endpoint may store; the cutter writes these by hand, so it is strict about the shape. */
 export function isDocsReview(value: unknown): value is DocsReview {
@@ -18,7 +18,10 @@ export function isDocsReview(value: unknown): value is DocsReview {
       typeof mark.text === 'string' &&
       mark.text.trim() !== '' &&
       typeof mark.reason === 'string' &&
-      STATES.includes(mark.state);
+      STATES.includes(mark.state) &&
+      (mark.after === undefined || typeof mark.after === 'string') &&
+      (mark.how === undefined || typeof mark.how === 'string') &&
+      (mark.why === undefined || typeof mark.why === 'string');
     ids.add(mark?.id);
     return ok;
   });

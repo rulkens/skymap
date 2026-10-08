@@ -43,6 +43,19 @@ describe('isDocsReview', () => {
     expect(isDocsReview({ ...review, marks: [{ ...review.marks[0], text: '  ' }] })).toBe(false);
   });
 
+  it('accepts a rewrite with its replacement text and instruction, and refuses either that is not text', () => {
+    const rewrite = { ...review.marks[1], after: 'Better wording.', how: 'shorter' };
+    expect(isDocsReview({ ...review, marks: [rewrite] })).toBe(true);
+    expect(isDocsReview({ ...review, marks: [{ ...rewrite, after: 3 }] })).toBe(false);
+    expect(isDocsReview({ ...review, marks: [{ ...rewrite, how: ['shorter'] }] })).toBe(false);
+  });
+
+  it('accepts a good mark with its reason and refuses a reason that is not text', () => {
+    const good = { ...review.marks[0], state: 'good', why: 'Says it plainly.' };
+    expect(isDocsReview({ ...review, marks: [good] })).toBe(true);
+    expect(isDocsReview({ ...review, marks: [{ ...good, why: 1 }] })).toBe(false);
+  });
+
   it('refuses two marks with one id, which the page could not tell apart', () => {
     expect(isDocsReview({ ...review, marks: [review.marks[0], review.marks[0]] })).toBe(false);
   });

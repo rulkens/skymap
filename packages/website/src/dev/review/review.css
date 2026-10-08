@@ -37,8 +37,8 @@ html.review-on main {
 }
 
 .review-job {
-  flex: 1 1 14rem;
-  min-width: 8rem;
+  flex: 1;
+  min-width: 20rem;
   box-sizing: border-box;
   padding: 0.25rem 0.5rem;
   border: 1px solid rgba(168, 208, 255, 0.35);
@@ -62,6 +62,16 @@ html.review-on main {
 .review-counts,
 .review-flag {
   color: var(--site-text-dim);
+}
+
+/* Under the job field in the squeeze: it gives way first, so the field keeps its width. */
+.review-keys {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+  opacity: 0.75;
 }
 
 .review-missing {
@@ -114,7 +124,79 @@ html.review-on main {
   background: rgba(250, 204, 21, 0.3);
 }
 
+.review-good {
+  background: rgba(74, 222, 128, 0.14);
+}
+
 .review-hiding .review-cut,
-.review-hiding .review-cut-section {
+.review-hiding .review-cut-section,
+.review-hiding .review-has-after {
   display: none;
+}
+
+.review-pencil {
+  margin-left: 0.35em;
+  padding: 0 0.25em;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.45;
+}
+
+.review-pencil.has-after {
+  opacity: 1;
+}
+
+/* The owner's replacement stands in for the original only while the cut text is hidden. */
+.review-after {
+  display: none;
+  white-space: pre-line;
+}
+
+.review-hiding .review-after {
+  display: revert;
+}
+
+.review-editor {
+  margin: 0.5rem 0 1rem;
+  padding: 0.625rem;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  background: #05070d;
+  font: 400 0.8125rem / 1.4 var(--font-body);
+}
+
+.review-editor label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--site-text-dim);
+}
+
+.review-editor textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(168, 208, 255, 0.35);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.review-editor-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.review-editor-buttons button {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
 }

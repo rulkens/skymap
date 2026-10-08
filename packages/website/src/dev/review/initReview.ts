@@ -2,19 +2,24 @@
  * initReview — dev-only: when a cutter has written a review for this docs page
  * (tools/site/reviewPlugin.ts), its passages are marked in the article and a bar
  * above the page keeps the owner's rulings: click a mark to cycle its state, select
- * text and press c or w to add one, h to read the page as it would be after the cut.
+ * text and press c, w or g to add one, h to read the page as it would be after the cut.
+ * A rewrite opens an editor for the owner's replacement wording, which h then shows;
+ * a good passage opens one for the reason.
  * A click on a mark does not follow a link inside it: judging the text comes first.
  */
 import type { DocsReview } from '../../../../../tools/site/@types/DocsReview';
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
 import { clearMarks } from './clearMarks';
+import type { ReviewEditorField } from './@types/ReviewEditorField';
+import { openEditor } from './openEditor';
 import { paintMark } from './paintMark';
+import { placeAfter } from './placeAfter';
 import './review.css';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const ROUTE = `${BASE}__review`;
 const HIDE_KEY = 'skymap-review-hide-cut';
-const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'cut' } as const;
+const NEXT_STATE = { cut: 'keep', keep: 'rewrite', rewrite: 'good', good: 'cut' } as const;
 
 const wordsIn = (text: string): number => text.split(/\s+/).filter(Boolean).length;
 
@@ -44,6 +49,8 @@ async function initReview(): Promise<void> {
   const job = make('input', 'review-job', bar);
   const words = make('span', 'review-words', bar);
   const counts = make('span', 'review-counts', bar);
+  make('span', 'review-keys', bar).textContent =
+    'click a mark: cut → keep → rewrite → good · select + C: cut · W: rewrite · G: good · H: hide cut text';
   const missing = make('span', 'review-missing', bar);
   const toggle = make('button', 'review-toggle', bar);
   const flag = make('span', 'review-flag', bar);
@@ -82,13 +89,14 @@ async function initReview(): Promise<void> {
     const notFound = review.marks
       .filter((mark) => !paintMark(article!, mark))
       .map((mark) => mark.id);
+    placeAfter(article!, review.marks);
     const count = (state: DocsReviewMark['state']): number =>
       review.marks.filter((mark) => mark.state === state).length;
     const cutWords = review.marks
       .filter((mark) => mark.state === 'cut')
       .reduce((sum, mark) => sum + wordsIn(mark.text), 0);
     words.textContent = `${review.words.before} → ${review.words.before - cutWords} words`;
-    counts.textContent = `${count('cut')} cut · ${count('keep')} keep · ${count('rewrite')} rewrite`;
+    counts.textContent = `${count('cut')} cut · ${count('keep')} keep · ${count('rewrite')} rewrite · ${count('good')} good`;
     missing.textContent = notFound.map((id) => `not found: ${id}`).join(', ');
     document.documentElement.classList.toggle('review-hiding', hiding);
     toggle.textContent = hiding ? 'Show cut text (H)' : 'Hide cut text (H)';
@@ -105,6 +113,49 @@ async function initReview(): Promise<void> {
     render();
   }
 
+  let closeEditor = (): void => {};
+  // A rewrite is asked for its replacement and instruction, a good passage for its reason.
+  function editNotes(mark: DocsReviewMark): void {
+    closeEditor();
+    const painted = article!.querySelectorAll(
+      `.review-mark[data-review-id="${CSS.escape(mark.id)}"]`,
+    );
+    const last = painted[painted.length - 1];
+    if (!last || (mark.state !== 'rewrite' && mark.state !== 'good')) return;
+    const fields: ReviewEditorField[] =
+      mark.state === 'rewrite'
+        ? [
+            { label: 'Replace with', value: mark.after ?? mark.text, placeholder: '' },
+            {
+              label: 'How to rewrite it',
+              value: mark.how ?? '',
+              placeholder: 'shorter; say where the switch is',
+            },
+          ]
+        : [
+            {
+              label: 'Why is it good? (optional)',
+              value: mark.why ?? '',
+              placeholder: 'what it does for the reader',
+            },
+          ];
+    closeEditor = openEditor(last, fields, (values) => {
+      closeEditor();
+      if (!values) return;
+      const [first = '', second = ''] = values;
+      if (mark.state === 'rewrite') {
+        // The field starts as the passage itself: saving it untouched is not a replacement.
+        if (first && first !== mark.text) mark.after = first;
+        else delete mark.after;
+        if (second) mark.how = second;
+        else delete mark.how;
+      } else if (first) mark.why = first;
+      else delete mark.why;
+      render();
+      save();
+    });
+  }
+
   function addMark(state: DocsReviewMark['state']): void {
     const selection = getSelection();
     const range = selection && !selection.isCollapsed ? selection.getRangeAt(0) : null;
@@ -112,21 +163,34 @@ async function initReview(): Promise<void> {
     const text = selection!.toString().replace(/\s+/g, ' ').trim();
     if (!text) return;
     const taken = review.marks.map((mark) => Number(/^owner-(\d+)$/.exec(mark.id)?.[1] ?? 0));
-    review.marks.push({ id: `owner-${Math.max(0, ...taken) + 1}`, text, reason: 'owner', state });
+    const mark: DocsReviewMark = {
+      id: `owner-${Math.max(0, ...taken) + 1}`,
+      text,
+      reason: 'owner',
+      state,
+    };
+    review.marks.push(mark);
     selection!.removeAllRanges();
+    closeEditor();
     render();
     save();
+    editNotes(mark);
   }
 
   article.addEventListener('click', (e) => {
     if (!getSelection()?.isCollapsed) return;
-    const id = (e.target as Element).closest<HTMLElement>('.review-mark')?.dataset.reviewId;
+    const target = e.target as Element;
+    const pencil = target.closest<HTMLElement>('.review-pencil');
+    const id = (pencil ?? target.closest<HTMLElement>('.review-mark'))?.dataset.reviewId;
     const mark = review.marks.find((m) => m.id === id);
     if (!mark) return;
     e.preventDefault();
+    if (pencil) return editNotes(mark);
+    closeEditor();
     mark.state = NEXT_STATE[mark.state];
     render();
     save();
+    editNotes(mark);
   });
   job.addEventListener('change', () => {
     review.job = job.value;
@@ -145,6 +209,7 @@ async function initReview(): Promise<void> {
     if (key === 'h') setHiding(!hiding);
     else if (key === 'c') addMark('cut');
     else if (key === 'w') addMark('rewrite');
+    else if (key === 'g') addMark('good');
   });
 
   render();
