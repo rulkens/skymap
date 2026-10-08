@@ -35,8 +35,6 @@ const family = DATA_FAMILIES_USED.find((row) => row.id === entry.family)!;
 // On a page of its own a heading's anchor is its words; on a shared page it carries the entry's id, to stay one of a kind.
 const anchor = (name: string) => (level === 2 ? name : `${entry.id}-${name}`);
 const inTable = DATA_SOURCES.some((row) => row.entries.includes(entry.id));
-// The Checked bullet opens with the date, which the page's "Terms as stated on" line gives in words.
-const read = (bullets.Checked ?? '').replace(/^\d{4}-\d{2}-\d{2}[:;,.]?\s*/, '');
 const about = [
   // A page of its own opens on a sentence about the source; the record's own wording follows here.
   [level === 2 ? 'In the record’s words' : 'What it is', bullets.What],
@@ -100,7 +98,7 @@ const byHand = entry.files.filter((file) => !file.fetcher).length;
 {level === 3 && note?.figure && <DocFigure id={note.figure} />}
 
 <H id={anchor('licence')}>Licence and terms</H>
-<Recorded read={read}>
+<Recorded>
   <RecordText text={bullets.Licence ?? ''} lift />
 </Recorded>
 {

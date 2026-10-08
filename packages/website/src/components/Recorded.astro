@@ -2,27 +2,14 @@
 /*
  * Recorded — a passage of the repository's licence record set apart from the
  * page's own words as a quotation: behind a rule, under a line that says
- * whose words they are. `read` is the rest of the entry's Checked bullet:
- * the pages opened, or why none was.
- * Inside it a holder's own words stand behind a second, brighter rule.
+ * whose words they are. Inside it a holder's own words stand behind a
+ * second, brighter rule.
  */
-import RecordText from './RecordText.astro';
-
-type Props = { read?: string };
-
-const { read = '' } = Astro.props;
 ---
 
 <div class="recorded" data-embed>
   <p class="small">From our licence record</p>
   <slot />
-  {
-    read && (
-      <p class="small">
-        Read: <RecordText text={read} phrase />
-      </p>
-    )
-  }
 </div>
 
 <style>
@@ -37,13 +24,5 @@ const { read = '' } = Astro.props;
     margin: 0 0 0.75rem;
     color: var(--site-text-dim);
     overflow-wrap: anywhere;
-  }
-
-  .small:last-child {
-    margin: 0.75rem 0 0;
-  }
-
-  .small :global(a) {
-    padding-block: 0.625rem;
   }
 </style>
