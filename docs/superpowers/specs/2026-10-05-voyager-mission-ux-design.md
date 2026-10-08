@@ -341,3 +341,12 @@ Rulings (asks ktob, aD8k, Ya2Z, Ps7u, U2QA; drift ask UZer shipped as `Exhibit.d
 - Non-flyby chapters fly back to the whole-mission pose; a finished ride holds; a `Whole mission` header control returns.
 - Titan and Saturn (V1, 18 h apart) are separate rides on their own targets. Event card copy while riding: "Riding along with Voyager 1 past Saturn" + live distance.
 NEXT: refactor-ground → spec → plan.
+
+### Revision 3 (user, 2026-10-08): the clock lives in the timeline
+
+The time handling belonged to the hidden TimeBar and to keyboard shortcuts the visitor never found. Rulings (asks 9MoU, 1fZQ, 6jrW, xTfM/foDw, TkWY, VJCT; mock-up B1 approved live):
+
+1. **Transport row** replaces the stepper: previous event, run/pause, the current date, the rate with − / +, next event. The time of day shows under the date only while riding a flyby; during a ride the rate shows the ride's own speed.
+2. **The scrubber sits directly under it at full strength.** Its dots step to events. The chapter bar is dropped.
+3. **Dropped:** the "days after launch" line, the keyboard hint line (the keys still work), the route subtitles on the craft tabs, and the card's caption and fixed distance line. The card shows date and name; the live distance line stays while riding.
+4. **Prose kept, shortened:** "The Voyager missions" (the missions' goal), "The Grand Tour" (the 175-year line-up), and "The Golden Record".
