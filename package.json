@@ -118,6 +118,7 @@
     "record-clip": "tsx tools/record/record.ts --clip",
     "record-tour": "tsx tools/record/record.ts",
     "shot": "tsx tools/shot/shot.ts",
+    "loadtime": "tsx tools/loadtime/measureLoad.ts",
     "refactor": "tsx tools/refactor/refactor.ts",
     "spike-virtual-time": "tsx tools/record/virtualTimeSpike.ts",
     "sync-r2": "tsx tools/deploy/syncR2.ts",

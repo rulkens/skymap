@@ -1,10 +1,10 @@
 /**
- * DebugPanel — the umbrella for the dev panel, mounted by `App.tsx` on the `d`
- * shortcut. Every section that touches the store owns its own container, so this
- * component takes only the engine-handle props App reads off `handleRef`, and
- * section-level visibility is each section's own concern.
+ * DebugPanel — the umbrella for the dev panel, mounted on the `d` shortcut.
+ * Every section that touches the store owns its own container, so this
+ * component takes only the engine-handle props `DebugPanelContainer` unpacks,
+ * and section-level visibility is each section's own concern.
  *
- * `memo` is load-bearing: this is App's memo boundary for the panel, so an
+ * `memo` is load-bearing: this is the memo boundary for the panel, so an
  * unrelated App re-render doesn't cascade into every section's store reads.
  */
 

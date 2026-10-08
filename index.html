@@ -127,8 +127,210 @@
       them from main.tsx (side-effect import) rather than linking from this
       file so Vite's module graph owns the asset and HMR works during dev.
     -->
+
+    <!--
+      Boot shell.  The app bundle is ~600 KB gzipped, which is several seconds
+      of black screen on a slow mobile connection, so the first paint has to
+      come from this file alone: inline styles, static markup, no request
+      except the title font.  main.tsx removes #boot once React has rendered.
+
+      The colours, font stacks and offsets repeat design tokens from
+      src/styles/global.css and the Splash column's position, because that
+      stylesheet arrives with the bundle.  The hairline matches SplashProgress
+      so the bar carries through the handoff.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/CormorantGaramond-SemiBold.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <style>
+      /* The title's own glyphs from the same Cormorant file, inlined (2 kB), so
+         the first paint already sets it in the right face instead of a fallback
+         serif that swaps once the full 37 kB font lands. Regenerate when the
+         title text changes:
+           pyftsubset public/fonts/CormorantGaramond-SemiBold.woff2 \
+             --text="Welcome to the universe" --flavor=woff2 --layout-features=kern,liga */
+      @font-face {
+        font-family: 'Cormorant Boot';
+        font-weight: 600;
+        src: url('data:font/woff2;base64,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')
+          format('woff2');
+      }
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        background: #000;
+        color: rgba(200, 220, 255, 0.85);
+        font:
+          11px/1.6 ui-monospace,
+          'SF Mono',
+          Menlo,
+          monospace;
+        letter-spacing: 0.1em;
+      }
+      #boot .boot-column {
+        position: absolute;
+        left: 80px;
+        bottom: 80px;
+        max-width: 440px;
+      }
+      #boot .boot-label {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+      }
+      #boot .boot-label::before {
+        content: '';
+        width: 32px;
+        height: 1px;
+        background: #a8d0ff;
+      }
+      #boot h1 {
+        margin: 24px 0;
+        color: #fff;
+        font:
+          600 48px/1.04 'Cormorant Boot',
+          'Cormorant Garamond',
+          ui-serif,
+          Georgia,
+          serif;
+        letter-spacing: 0.005em;
+      }
+      /* The three status lines share one grid cell and hand over on a timer:
+         a visitor who is still here after 6 s is on a slow connection and
+         needs to hear that waiting is expected. */
+      #boot .boot-status {
+        display: grid;
+        margin: 0;
+      }
+      #boot .boot-status > * {
+        grid-area: 1 / 1;
+      }
+      #boot .boot-status > :nth-child(1) {
+        animation: bootOut 0.4s 6s forwards;
+      }
+      #boot .boot-status > :nth-child(2) {
+        opacity: 0;
+        animation:
+          bootIn 0.4s 6s forwards,
+          bootOut 0.4s 20s forwards;
+      }
+      #boot .boot-status > :nth-child(3) {
+        opacity: 0;
+        animation: bootIn 0.4s 20s forwards;
+      }
+      #boot .boot-failed,
+      #boot.failed .boot-status,
+      #boot.failed .boot-line {
+        display: none;
+      }
+      #boot.failed .boot-failed {
+        display: block;
+        margin: 0;
+        color: #ffb3b3;
+      }
+      #boot a {
+        color: inherit;
+      }
+      #boot .boot-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 12px;
+        height: 1px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      #boot .boot-line::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 30%;
+        background: linear-gradient(90deg, transparent, #a8d0ff, transparent);
+        animation: bootSweep 1.4s ease-in-out infinite;
+      }
+      @keyframes bootIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes bootOut {
+        to {
+          opacity: 0;
+        }
+      }
+      @keyframes bootSweep {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(400%);
+        }
+      }
+      @media (max-width: 768px) {
+        #boot .boot-column {
+          left: 24px;
+          right: 24px;
+          bottom: 56px;
+        }
+        #boot h1 {
+          margin: 20px 0;
+          font-size: 32px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot .boot-line::before {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot">
+      <div class="boot-column">
+        <div class="boot-label">SKYMAP</div>
+        <h1>Welcome<br />to the universe</h1>
+        <p class="boot-status" role="status">
+          <span>Loading…</span>
+          <span aria-hidden="true">Still loading. A slow connection needs a little longer.</span>
+          <span aria-hidden="true"
+            >Still loading. Keep this tab open and Skymap starts by itself.</span
+          >
+        </p>
+        <p class="boot-failed">
+          Skymap could not be loaded. Check your connection and <a href="">reload the page</a>.
+        </p>
+        <noscript><p>Skymap needs JavaScript and WebGPU to run.</p></noscript>
+      </div>
+      <div class="boot-line"></div>
+    </div>
+    <script>
+      // A failed bundle or stylesheet request would otherwise leave the shell
+      // saying "Loading…" forever.  Resource errors do not bubble: capture.
+      addEventListener(
+        'error',
+        function (e) {
+          var tag = e.target && e.target.tagName;
+          var boot = document.getElementById('boot');
+          if (boot && (tag === 'SCRIPT' || tag === 'LINK')) boot.className = 'failed';
+        },
+        true,
+      );
+    </script>
     <!--
       React mounts the entire app — canvas, status bar, info card, scale bar —
       into this single div. The old imperative markup (canvas, #status, #info-card,

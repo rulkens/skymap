@@ -1,12 +1,12 @@
 /**
- * useSplash — orchestrates the splash visibility, the readiness gate, the
- * "Continue anyway" escape, dismiss + reopen, and version-busted re-show.
+ * useSplash — orchestrates the splash visibility, the readiness gate,
+ * dismiss + reopen, and version-busted re-show.
  *
  * ### Why a separate hook
  *
  * App.tsx already wires six hooks.  The splash has its own state shape
- * (visibility, blocked, error, canContinueAnyway), its own derived
- * predicates (readiness signal), and its own side effects (8 s timer).
+ * (visibility, blocked, error) and its own derived predicates (readiness
+ * signal).
  * Bolting all of that onto App.tsx would push the file past its already-
  * substantial size and would scatter "splash logic" across the file.  A
  * dedicated hook gives the splash a single home with a clean public contract.
@@ -26,58 +26,24 @@
  *
  * ### Readiness signal
  *
- * The CTAs activate when
- *   1.  the engine is in `ready` state (WebGPU init done + first frame), and
- *   2.  no catalog fetch is currently in flight (`loadProgress === null`).
- * The hook does NOT differentiate between Explore and Tour readiness —
- * both buttons activate together so the user never sees "Tour disabled,
- * Explore enabled" intermediate UI.
- *
- * **Why famous-galaxies-meta is not a third condition.** The sidecar loads through its
- * asset slot, and that slot's demand is conditional: it waits for the
- * famous-galaxy `.bin` to leave `idle`, which in turn requires
- * `galaxyCatalogs.items.famousGalaxy.enabled`. With that category switched off
- * the slot never loads and never reports, so a readiness flag derived from it
- * would never settle — stranding the CTAs behind the 8 s escape hatch for a
- * payload that was never coming. Gating on a signal that can legitimately never
- * arrive is worse than not gating: the Tour may open before its InfoCard text
- * exists, which degrades one panel, where the alternative blocks the whole
- * entry point.
- *
- * `status` and `loadProgress` are read from the Redux engine slice via
- * `useAppSelector` rather than threaded in as props.
- *
- * ### 8 s "Continue anyway" timer
- *
- * Starts when the splash becomes visible AND blocked.  Fired once,
- * flipping `canContinueAnyway` to true so the splash can show the
- * escape link.  Cleared on unmount and re-armed if the splash is
- * reopened.  Does NOT fire when the splash isn't visible (deep-link
- * path) — the timer is a UX affordance for slow loads, not a global
- * timeout.
+ * The CTAs activate as soon as the engine is drawing (`loading` or `ready`),
+ * not when the catalogs have finished. The boot downloads total tens of MB —
+ * minutes on a slow mobile connection — while the opening view (Earth) needs
+ * none of them: the sky fills in behind the visitor, and the HUD's loading bar
+ * takes over from the splash's. Both buttons activate together.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
 import type { SplashError } from '../@types/splash/SplashError';
 import { CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { selectSplashVisible } from '../state/ui/selectors';
-import { selectEngineStatus, selectLoadProgress } from '../state/engine/selectors';
+import { selectEngineStatus } from '../state/engine/selectors';
 import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 
-/** Milliseconds before the "Continue anyway" escape appears. */
-const CONTINUE_ANYWAY_DELAY_MS = 8_000;
-
 export function useSplash(): UseSplashReturn {
-  // ── Engine state from the Redux slice ────────────────────────────────────
-  //
-  // `status` and `loadProgress` come from the engine slice rather than being
-  // threaded in as input props.  The engine dispatches `engineStatusChanged`
-  // and `engineLoadProgressChanged`; these selectors read the accumulated
-  // result so every subscriber sees a consistent snapshot.
   const status = useAppSelector(selectEngineStatus);
-  const loadProgress = useAppSelector(selectLoadProgress);
 
   // ── Slice-backed visibility ───────────────────────────────────────────────
   //
@@ -87,40 +53,7 @@ export function useSplash(): UseSplashReturn {
   const splashVisible = useAppSelector(selectSplashVisible);
   const dispatch = useAppDispatch();
 
-  // ── Readiness signal ─────────────────────────────────────────────────────
-  //
-  // The CTAs activate when the engine reports `ready` and no catalog fetches
-  // are in flight.  `blocked` is the negation — true while we're still waiting.
-  const ready = useMemo(
-    () => status.kind === 'ready' && loadProgress === null,
-    [status, loadProgress],
-  );
-  const blocked = !ready;
-
-  // ── 8 s "Continue anyway" timer ──────────────────────────────────────────
-  //
-  // Starts when the splash is visible AND blocked.  Cleared on unmount and
-  // re-armed if the splash is reopened.  Does not fire if the splash is
-  // not visible (deep-link path).
-  const [canContinueAnyway, setCanContinueAnyway] = useState(false);
-  useEffect(() => {
-    if (!splashVisible || !blocked) {
-      // Re-arm when the splash becomes visible again (reopen flow).
-      // We don't reset `canContinueAnyway` on the unblocked path because
-      // the splash hides itself on dismiss anyway; whether the link was
-      // ever visible doesn't matter after that.
-      return;
-    }
-    const t = setTimeout(() => setCanContinueAnyway(true), CONTINUE_ANYWAY_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [splashVisible, blocked]);
-
-  // Reset canContinueAnyway when the splash is reopened so the link
-  // appears again only after another 8 s if loading is somehow slow
-  // again (rare — content is cached — but cheap to handle).
-  useEffect(() => {
-    if (!splashVisible) setCanContinueAnyway(false);
-  }, [splashVisible]);
+  const blocked = status.kind !== 'loading' && status.kind !== 'ready';
 
   // ── Dismiss + reopen ─────────────────────────────────────────────────────
   //
@@ -168,7 +101,6 @@ export function useSplash(): UseSplashReturn {
   return {
     splashVisible,
     blocked,
-    canContinueAnyway,
     error,
     dismissExplore,
     dismissTour,

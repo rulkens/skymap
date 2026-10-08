@@ -164,6 +164,7 @@ recordings/
 # never `dist/` — that one is the deploy build.
 /tools/record/.build/
 /tools/shot/.build/
+/tools/loadtime/.build/
 
 # ── Firebase CLI per-developer cache ─────────────────────────────────────────
 # `.firebase/hosting.*.cache` records the previously-deployed file hashes so
