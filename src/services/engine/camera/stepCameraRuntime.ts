@@ -188,7 +188,7 @@ export function stepCameraRuntime(
     drivers,
   });
 
-  const { pose, memory } = winner.pose(
+  const { pose, memory, actions: driverActions } = winner.pose(
     {
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -241,7 +241,7 @@ export function stepCameraRuntime(
     actions.push(cancelCameraTween());
   }
 
-  actions.push(...edge.actions);
+  actions.push(...(driverActions ?? []), ...edge.actions);
   const foldCtx: RungCtx = { ...rungFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.

@@ -11,5 +11,6 @@ export type DriverId =
   | 'followApproach'
   | 'followHold'
   | 'tween'
+  | 'ride'
   | 'autoRotate'
   | 'resting';

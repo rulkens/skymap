@@ -2,7 +2,7 @@
  * cameraDrivers — the camera-driver table and its resolver. Among the drivers
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > followApproach 55 >
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 = ride 60 > followApproach 55 >
  * autoRotate 20 > followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
@@ -31,6 +31,7 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
+import { ridePose } from './ridePose';
 import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
@@ -340,6 +341,15 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         memory: settledMemory(mem),
       };
     },
+  },
+  {
+    id: 'ride',
+    followsMovingTarget: true,
+    // Above the follow rows (55) so a moving focus cannot pull the camera off the encounter. Ties
+    // tween, which loses on table order; the two never co-occur (the saga clears the ride first).
+    priority: 60,
+    isActive: (s) => s.camera.ride !== null,
+    pose: ridePose,
   },
   {
     id: 'autoRotate',

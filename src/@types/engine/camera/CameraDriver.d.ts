@@ -6,6 +6,7 @@ import type { DriverId } from './DriverId';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../../store/types';
 
 export type CameraDriver = {
@@ -30,8 +31,13 @@ export type CameraDriver = {
   readonly deliversFraming?: boolean;
   isActive(s: RootState, activity: DriverActivity): boolean;
   // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
+  // `actions` is for a row that reads its own state back off the camera (the ride's offsets).
   pose(
     ctx: DriverCtx,
     mem: FollowMemory | null,
-  ): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null };
+  ): {
+    readonly pose: FramedCameraPose;
+    readonly memory: FollowMemory | null;
+    readonly actions?: readonly UnknownAction[];
+  };
 };

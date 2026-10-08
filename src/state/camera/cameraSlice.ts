@@ -15,6 +15,8 @@ import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
 import type { CameraState } from '../../@types/camera/CameraState';
+import type { CameraRide } from '../../@types/camera/CameraRide';
+import type { RideOffsets } from '../../@types/camera/RideOffsets';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
@@ -38,6 +40,7 @@ const initialState: CameraState = {
   dragging: false,
   clip: null,
   frameTween: null,
+  ride: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -104,6 +107,16 @@ const cameraSlice = createSlice({
       camera.autoRotate = action.payload;
     },
 
+    setRide: (camera, action: PayloadAction<CameraRide>) => {
+      camera.ride = action.payload;
+    },
+    clearRide: (camera) => {
+      camera.ride = null;
+    },
+    setRideOffsets: (camera, action: PayloadAction<RideOffsets>) => {
+      if (camera.ride !== null) camera.ride.offsets = action.payload;
+    },
+
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
     // through a selector, and an in-place edit leaves that render stale.
     setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
@@ -124,6 +137,9 @@ export const {
   clipEnded,
   startFrameTween,
   clearFrameTween,
+  setRide,
+  clearRide,
+  setRideOffsets,
 } = cameraSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and

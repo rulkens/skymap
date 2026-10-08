@@ -818,10 +818,11 @@ describe('orbitDrag — the register comes from the ctx', () => {
 });
 
 describe('CAMERA_DRIVERS — followsMovingTarget', () => {
-  it('is set on exactly the two follow rows', () => {
+  it('is set on exactly the follow rows and the ride', () => {
     expect(CAMERA_DRIVERS.filter((d) => d.followsMovingTarget).map((d) => d.id)).toEqual([
       'followApproach',
       'followHold',
+      'ride',
     ]);
   });
 });
