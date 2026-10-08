@@ -137,15 +137,6 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
       ['SELECTION_SOURCE_SENTINEL_CODE', SELECTION_SOURCE_SENTINEL_CODE],
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
-      // Structure category source codes — mirror of TS Source.GalaxyCluster /
-      // Source.Supercluster / Source.Void / Source.GalaxyGroup. These appear
-      // at the WESL side so the future structure-marker pick fragment can
-      // refer to them by name instead of inlining a magic 5u/6u/7u/15u
-      // literal.
-      ['SOURCE_CODE_CLUSTER', Source.GalaxyCluster],
-      ['SOURCE_CODE_SUPERCLUSTER', Source.Supercluster],
-      ['SOURCE_CODE_VOID', Source.Void],
-      ['SOURCE_CODE_GROUP', Source.GalaxyGroup],
       // Survey (Gaia bin) stars — the star pick fragment packs this into the
       // r32uint pick texture; mirror of TS Source.GaiaStars.
       ['SOURCE_GAIA_STARS', Source.GaiaStars],

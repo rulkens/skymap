@@ -424,21 +424,3 @@ describe('produceSceneBodyCaptions focus pick', () => {
     expect(pickOf(under, venus)).toBeUndefined();
   });
 });
-
-describe('produceBlackHoleCaptions focus pick', () => {
-  it('a hole outside the focused sphere keeps its caption but not its pick', () => {
-    const ctx = makeCtx([0, 0, 0]);
-    const focus: FocusUniformsValue = {
-      center: [1, 0, 0],
-      apparentRadiusMpc: 1e-3,
-      physicalRadiusMpc: 1e-3,
-      blend: 1,
-    };
-    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
-    const [rest] = produceBlackHoleCaptions()(makeState(), ctx).labels;
-    const [under] = produceBlackHoleCaptions()(makeState(), focused).labels;
-    expect(rest!.pickId).toBeDefined();
-    expect(under!.id).toBe(rest!.id);
-    expect(under!.pickId).toBeUndefined();
-  });
-});

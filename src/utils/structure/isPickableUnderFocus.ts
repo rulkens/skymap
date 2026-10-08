@@ -1,6 +1,5 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { FocusUniformsValue } from '../../@types/rendering/FocusUniformsValue';
-import { FOCUS_PICK_EXCLUDE_BELOW } from '../../data/focusPickExcludeBelow';
 import { focusAlphaMultiplier } from './focusAlphaMultiplier';
 
 /**
@@ -10,5 +9,6 @@ import { focusAlphaMultiplier } from './focusAlphaMultiplier';
  */
 
 export function isPickableUnderFocus(worldPos: Readonly<Vec3>, focus: FocusUniformsValue): boolean {
-  return focusAlphaMultiplier(worldPos, focus) >= FOCUS_PICK_EXCLUDE_BELOW;
+  // Mirrors FOCUS_PICK_EXCLUDE_BELOW (1.0) in lib/focusUniforms.wesl.
+  return focusAlphaMultiplier(worldPos, focus) >= 1;
 }

@@ -70,6 +70,8 @@ import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates'
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { COSMO, NEAR0, SLAB_REVERSED_Z } from '../../../engine/frame/slabs';
+import { pickDepthFormat } from '../../../engine/frame/pickProgram';
 
 /**
  * 13 floats per instance × 4 bytes = 52 bytes/instance.
@@ -90,6 +92,8 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 const MARKER_INSTANCE_FLOATS = 13;
 const MARKER_PICKABLE_FLOAT = 12;
 const MARKER_PICKABLE_BYTE_OFFSET = MARKER_PICKABLE_FLOAT * 4;
+const MARKER_HALO_BYTE_OFFSET = 4 * 4;
+const MARKER_RING_BYTE_OFFSET = 8 * 4;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
@@ -127,23 +131,12 @@ export function createStructureMarkerRenderer(
    */
   fadeBgl: FadeUniformsBgl,
   /**
-   * Selects the COSMO slab's depth convention (single-sourced in
-   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
-   * `true` ⇒ reversed-Z greater-wins. Applies to the ring-pick pipeline's
-   * depth test, resolved through `resolveDepthCompare`.
+   * The slab this instance draws and picks in. It fixes the ring-pick depth
+   * convention and format (a format mismatch invalidates the whole pick encoder),
+   * and NEAR0 ranks the pick in a fixed band above the star bands while COSMO keeps
+   * true depth so rings compete with galaxies.
    */
-  reversedZ: boolean,
-  /**
-   * Depth format of the pick pass this instance's slab records into; the
-   * slabs differ, and a mismatch invalidates the whole pick encoder.
-   */
-  pickDepthFormat: GPUTextureFormat,
-  /**
-   * `true` ranks the ring pick in a fixed band above the star bands (NEAR0, whose pick
-   * depths are importance-ordered); `false` keeps true depth (COSMO, where rings
-   * compete with galaxies by real depth).
-   */
-  pickInStarBand: boolean,
+  slab: typeof NEAR0 | typeof COSMO,
   /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
   categories: readonly StructureId[],
   initialCapacity = 64,
@@ -257,8 +250,8 @@ export function createStructureMarkerRenderer(
         stepMode: 'instance',
         attributes: [
           { shaderLocation: 0, offset: 0, format: 'float32x4' }, // positionAndRadius
-          { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
-          { shaderLocation: 2, offset: 32, format: 'float32x4' }, // ringColorAndAlpha
+          { shaderLocation: 1, offset: MARKER_HALO_BYTE_OFFSET, format: 'float32x4' }, // haloColorAndAlpha
+          { shaderLocation: 2, offset: MARKER_RING_BYTE_OFFSET, format: 'float32x4' }, // ringColorAndAlpha
           { shaderLocation: 3, offset: MARKER_PICKABLE_BYTE_OFFSET, format: 'float32' }, // pickable
         ],
       },
@@ -343,14 +336,14 @@ export function createStructureMarkerRenderer(
       vertex: { module: ringPickVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
         module: ringPickFs,
-        entryPoint: pickInStarBand ? 'fsRingPickBanded' : 'fsRingPick',
+        entryPoint: slab === NEAR0 ? 'fsRingPickBanded' : 'fsRingPick',
         targets: [{ format: 'r32uint' }],
       },
       primitive: { topology: 'triangle-list' },
       depthStencil: {
-        format: pickDepthFormat,
+        format: pickDepthFormat(slab),
         depthWriteEnabled: true,
-        depthCompare: resolveDepthCompare('nearer', reversedZ),
+        depthCompare: resolveDepthCompare('nearer', SLAB_REVERSED_Z[slab]!),
       },
     });
 
@@ -469,12 +462,9 @@ export function createStructureMarkerRenderer(
       const base = slot * MARKER_INSTANCE_FLOATS;
       // Subtract in f64 BEFORE the Float32Array write narrows: absolute Mpc
       // positions would quantise a nearby marker onto a coarse f32 grid.
-      const rx = d.worldPos[0] - camPos[0];
-      const ry = d.worldPos[1] - camPos[1];
-      const rz = d.worldPos[2] - camPos[2];
-      instanceBuf[base + 0] = rx;
-      instanceBuf[base + 1] = ry;
-      instanceBuf[base + 2] = rz;
+      instanceBuf[base + 0] = d.worldPos[0] - camPos[0];
+      instanceBuf[base + 1] = d.worldPos[1] - camPos[1];
+      instanceBuf[base + 2] = d.worldPos[2] - camPos[2];
       instanceBuf[base + 3] = d.radiusMpc;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];

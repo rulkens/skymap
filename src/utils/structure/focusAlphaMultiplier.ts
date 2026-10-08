@@ -16,6 +16,6 @@ export function focusAlphaMultiplier(worldPos: Readonly<Vec3>, focus: FocusUnifo
   const inner = Math.min(focus.physicalRadiusMpc, focus.apparentRadiusMpc * FOCUS_CORE_FRACTION);
   const t = smoothstep(inner, focus.apparentRadiusMpc, distance3(worldPos, focus.center));
   // Written as a subtraction from 1 so it is exactly 1 inside the core, where
-  // the pick cut `< FOCUS_PICK_EXCLUDE_BELOW` must never fire.
+  // the pick cut (multiplier < 1) must never fire.
   return 1 - t * (1 - FOCUS_DIM_FLOOR) * focus.blend;
 }

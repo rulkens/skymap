@@ -18,7 +18,6 @@ import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOcclude
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { schwarzschildRadiusM } from '../../../utils/physics/schwarzschildRadiusM';
-import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
 import { BLACK_HOLE_SOURCE_ROWS } from '../sources/blackHoleSourceRows';
@@ -47,12 +46,11 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
       drawPxPerRad: ctx.drawPxPerRad,
       fades: state.subsystems.fades,
       nowMs: now,
-      focusBlend: ctx.snapshot.focusBlend,
+      focus: ctx.snapshot.focus,
       occluders: sceneOccluderBodies(state, ctx),
     };
     const states = sceneBodyStates(state, ctx);
 
-    const { focus } = ctx.snapshot;
     const labels = BLACK_HOLES.map((row, i) => {
       const caption = bodyCaption(
         findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
@@ -62,10 +60,7 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
         'sgrAStar',
         packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
       );
-      const composed = composeForegroundCaption(composeCtx, caption, clipFactor);
-      return isPickableUnderFocus(caption.worldPos, focus)
-        ? composed
-        : { ...composed, pickId: undefined };
+      return composeForegroundCaption(composeCtx, caption, clipFactor);
     });
 
     return { labels, awake: false };

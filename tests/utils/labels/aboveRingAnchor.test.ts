@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { aboveRingAnchor } from '../../../src/utils/labels/aboveRingAnchor';
-import { ringUpDirection } from '../../../src/utils/labels/ringUpDirection';
 import { dot3 } from '../../../src/utils/math/dot3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -10,8 +9,7 @@ const GAP = 0.5;
 // The camera looks down -z with screen-up +y; centres are camera-relative.
 const SCREEN_UP: Vec3 = [0, 1, 0];
 
-const anchorFor = (centre: Vec3): Vec3 =>
-  aboveRingAnchor(centre, ringUpDirection(SCREEN_UP, centre), RADIUS, GAP);
+const anchorFor = (centre: Vec3): Vec3 => aboveRingAnchor(centre, SCREEN_UP, centre, RADIUS, GAP);
 
 describe('label above an eye-facing ring', () => {
   it('on the view axis the lift is along screen-up', () => {
@@ -26,9 +24,5 @@ describe('label above an eye-facing ring', () => {
     const lift: Vec3 = [anchor[0] - centre[0], anchor[1] - centre[1], anchor[2] - centre[2]];
     expect(dot3(lift, normalize3(centre))).toBeCloseTo(0, 9);
     expect(Math.hypot(...lift)).toBeCloseTo(RADIUS + GAP, 9);
-  });
-
-  it('falls back to screen-up when it is parallel to the sight line', () => {
-    expect(ringUpDirection(SCREEN_UP, [0, 5, 0])).toEqual(SCREEN_UP);
   });
 });

@@ -15,7 +15,6 @@ import { sceneBodyLabels } from './sceneBodyLabels';
 import { sceneBodyStates } from '../frame/sceneBodyStates';
 import { sceneOccluderBodies } from '../frame/sceneOccluderBodies';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
-import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 // `deriveBodyStates` returns the SAME Map by reference while `simDays` is
 // unchanged, so this identity check is a free change-detector.
@@ -53,7 +52,7 @@ export function produceSceneBodyCaptions(
     drawPxPerRad: ctx.drawPxPerRad,
     fades: state.subsystems.fades,
     nowMs: now,
-    focusBlend: ctx.snapshot.focusBlend,
+    focus: ctx.snapshot.focus,
     // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
     // FRONT of a body from one behind it — deciding that per caption is what
     // keeps the whale's name legible over Earth's disc while the Moon's still
@@ -61,13 +60,9 @@ export function produceSceneBodyCaptions(
     occluders: sceneOccluderBodies(state, ctx),
   };
 
-  const { focus } = ctx.snapshot;
-  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) => {
-    const composed = composeForegroundCaption(composeCtx, label, clipFactorBody);
-    return isPickableUnderFocus(label.worldPos, focus)
-      ? composed
-      : { ...composed, pickId: undefined };
-  });
+  const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
+    composeForegroundCaption(composeCtx, label, clipFactorBody),
+  );
 
   return { labels, awake: false };
 }

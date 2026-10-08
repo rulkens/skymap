@@ -54,7 +54,7 @@ const FOCUS_DIM_FLOOR: f32 = 0.08;
 
 // A multiplier below this takes the instance out of the pick pass: the
 // multiplier is exactly 1.0 for members and at rest, so the cut lands on what
-// the visual pass fades away. Mirrored in TS (data/focusPickExcludeBelow.ts).
+// the visual pass fades away. The CPU cut (isPickableUnderFocus) compares >= 1 directly.
 const FOCUS_PICK_EXCLUDE_BELOW: f32 = 1.0;
 
 // Per-vertex focus alpha multiplier. Galaxies inside the core (the smaller

@@ -65,6 +65,27 @@ type StructureMarkerStyle = {
 };
 
 /**
+ * The fields the four Milky Way rows share; each row adds its colours and
+ * `worldEmMpc`. The cosmic rows differ field by field, so they stay spelled out.
+ */
+const MILKY_WAY_STYLE: Omit<
+  StructureMarkerStyle,
+  'labelColor' | 'worldEmMpc' | 'haloColor' | 'ringColor'
+> = {
+  minPixelSize: 35,
+  maxPixelSize: 150,
+  pixelWidth: 2,
+  markerMaxApparentRadiusPx: 700,
+  markerMaxApparentFadeBandPx: 400,
+  markerMinApparentRadiusPx: 5,
+  markerMinApparentFadeBandPx: 4,
+  visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
+  outlineColor: [0, 0, 0, 0.1],
+  outlineEmFrac: 0.16,
+  labelPlacement: 'above',
+};
+
+/**
  * Per-category visual style table. See the field docs above for semantics and
  * the tuning rationale (e.g. the per-category min-apparent floors that keep the
  * bulk catalog from papering the sky with sub-readable specks).
@@ -159,72 +180,32 @@ export const STRUCTURE_MARKER_STYLES = {
     labelPlacement: 'centre',
   },
   'open-cluster': {
+    ...MILKY_WAY_STYLE,
     labelColor: hexToGl('#A3B3D1'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
     worldEmMpc: 2e-6,
-    pixelWidth: 2,
     haloColor: hexToGl('#7B8AAD38'),
     ringColor: hexToGl('#7B8AAD'),
-    markerMaxApparentRadiusPx: 700,
-    markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
-    visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
-    labelPlacement: 'above',
   },
   'globular-cluster': {
+    ...MILKY_WAY_STYLE,
     labelColor: hexToGl('#C9A8FF'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
     worldEmMpc: 8e-6,
-    pixelWidth: 2,
     haloColor: hexToGl('#9A7FD942'),
     ringColor: hexToGl('#9A7FD9'),
-    markerMaxApparentRadiusPx: 700,
-    markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
-    visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
-    labelPlacement: 'above',
   },
   nebula: {
+    ...MILKY_WAY_STYLE,
     labelColor: hexToGl('#FF8FA3'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
     worldEmMpc: 2e-6,
-    pixelWidth: 2,
     haloColor: hexToGl('#D96F8442'),
     ringColor: hexToGl('#D96F84'),
-    markerMaxApparentRadiusPx: 700,
-    markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
-    visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
-    labelPlacement: 'above',
   },
   'galactic-centre': {
+    ...MILKY_WAY_STYLE,
     labelColor: hexToGl('#E8E8F0'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
     worldEmMpc: 2e-6,
-    pixelWidth: 2,
     haloColor: hexToGl('#B8B8C842'),
     ringColor: hexToGl('#B8B8C8'),
-    markerMaxApparentRadiusPx: 700,
-    markerMaxApparentFadeBandPx: 400,
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
-    visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
-    labelPlacement: 'above',
   },
 } as const satisfies Readonly<Record<StructureId, StructureMarkerStyle>>;
 

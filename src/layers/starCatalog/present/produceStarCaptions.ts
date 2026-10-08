@@ -19,7 +19,6 @@ import { sceneBodyStates } from '../../../services/engine/frame/sceneBodyStates'
 import { sceneOccluderBodies } from '../../../services/engine/frame/sceneOccluderBodies';
 import { bodyCaption } from '../../../utils/labels/bodyCaption';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { composeForegroundCaption } from '../../../utils/labels/composeForegroundCaption';
 import { STAR_CAPTION_KIND } from './starCaptionKinds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
@@ -86,22 +85,16 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       drawPxPerRad: ctx.drawPxPerRad,
       fades: state.subsystems.fades,
       nowMs: now,
-      focusBlend: ctx.snapshot.focusBlend,
+      focus: ctx.snapshot.focus,
       occluders: sceneOccluderBodies(state, ctx),
     };
 
-    const { focus } = ctx.snapshot;
     const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) => {
-      const composed = composeForegroundCaption(
+      return composeForegroundCaption(
         composeCtx,
         label,
         label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody,
       );
-      // A name is a click target for its star, so it leaves the pick with the
-      // star: nothing the focus dims is selectable.
-      return isPickableUnderFocus(label.worldPos, focus)
-        ? composed
-        : { ...composed, pickId: undefined };
     });
 
     return { labels, awake: false };

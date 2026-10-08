@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { COSMO, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { createStructureMarkerRenderer } from '../../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
@@ -21,13 +22,34 @@ const newRenderer = (initialCapacity?: number) => {
     ctx,
     'rgba16float',
     null as unknown as FadeUniformsBgl,
-    false,
-    'depth24plus',
-    false,
+    COSMO,
     STRUCTURE_IDS,
     initialCapacity,
   );
 };
+
+// A device whose creators return inert stubs; `over` swaps in the ones a test inspects.
+const fakeDevice = (over: Record<string, unknown> = {}): GPUDevice =>
+  ({
+    createBindGroupLayout: vi.fn(() => ({})),
+    createPipelineLayout: vi.fn(() => ({})),
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
+    createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+    createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
+    createBindGroup: vi.fn(() => ({})),
+    queue: { writeBuffer: vi.fn() },
+    ...over,
+  }) as unknown as GPUDevice;
+
+const ctxOf = (device: GPUDevice) => ({
+  device,
+  context: null as unknown as GPUCanvasContext,
+  format: 'bgra8unorm' as GPUTextureFormat,
+  canvas: null as unknown as HTMLCanvasElement,
+  hdrCapable: false,
+});
 
 const cluster = (id: number): StructureMarkerDescriptor => ({
   // `id` is CPU-side metadata used by the selection / pick paths;
@@ -111,9 +133,7 @@ describe('StructureMarkerRenderer categories', () => {
       },
       'rgba16float',
       null as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       ['void'],
     );
     r.setMarkers([cluster(1), void_(2), group(3), void_(4)], [0, 0, 0]);
@@ -124,34 +144,17 @@ describe('StructureMarkerRenderer categories', () => {
 describe('StructureMarkerRenderer colour target', () => {
   it('bakes the given targetFormat into the halo + ring pipelines (pick stays r32uint)', () => {
     const captured: GPURenderPipelineDescriptor[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
+    const device = fakeDevice({
       createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
         captured.push(desc);
         return { getBindGroupLayout: () => ({}) };
       }),
-      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      createBindGroup: vi.fn(() => ({})),
-      queue: { writeBuffer: vi.fn() },
-    } as unknown as GPUDevice;
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'bgra8unorm' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
+    });
     createStructureMarkerRenderer(
-      ctx,
+      ctxOf(device),
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       STRUCTURE_IDS,
     );
 
@@ -169,76 +172,21 @@ describe('StructureMarkerRenderer colour target', () => {
     // The NEAR0 pick pass carries depth32float; a pipeline built with the
     // COSMO format invalidates the whole pick encoder on the first pick.
     const captured: GPURenderPipelineDescriptor[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
+    const device = fakeDevice({
       createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
         captured.push(desc);
         return { getBindGroupLayout: () => ({}) };
       }),
-      createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      createBindGroup: vi.fn(() => ({})),
-      queue: { writeBuffer: vi.fn() },
-    } as unknown as GPUDevice;
+    });
     createStructureMarkerRenderer(
-      {
-        device,
-        context: null as unknown as GPUCanvasContext,
-        format: 'bgra8unorm' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
+      ctxOf(device),
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      true,
-      'depth32float',
-      true,
+      NEAR0,
       STRUCTURE_IDS,
     );
     const pick = captured.find((p) => p.label === 'structure-marker-ring-pick-pipeline');
     expect(pick?.depthStencil?.format).toBe('depth32float');
-  });
-
-  it('only the star-band instance picks through the banded fragment entry point', () => {
-    const pickEntry = (pickInStarBand: boolean): string | undefined => {
-      const captured: GPURenderPipelineDescriptor[] = [];
-      const device = {
-        createBindGroupLayout: vi.fn(() => ({})),
-        createPipelineLayout: vi.fn(() => ({})),
-        createShaderModule: vi.fn(() => ({
-          getCompilationInfo: () => Promise.resolve({ messages: [] }),
-        })),
-        createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
-          captured.push(desc);
-          return { getBindGroupLayout: () => ({}) };
-        }),
-        createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-        createBindGroup: vi.fn(() => ({})),
-        queue: { writeBuffer: vi.fn() },
-      } as unknown as GPUDevice;
-      createStructureMarkerRenderer(
-        {
-          device,
-          context: null as unknown as GPUCanvasContext,
-          format: 'bgra8unorm' as GPUTextureFormat,
-          canvas: null as unknown as HTMLCanvasElement,
-          hdrCapable: false,
-        },
-        'rgba16float',
-        {} as unknown as FadeUniformsBgl,
-        true,
-        'depth32float',
-        pickInStarBand,
-        STRUCTURE_IDS,
-      );
-      return captured.find((p) => p.label === 'structure-marker-ring-pick-pipeline')?.fragment
-        ?.entryPoint;
-    };
-    expect(pickEntry(true)).toBe('fsRingPickBanded');
-    expect(pickEntry(false)).toBe('fsRingPick');
   });
 });
 
@@ -247,13 +195,7 @@ describe('StructureMarkerRenderer pick camera', () => {
     const buffersByLabel = new Map<string, GPUBuffer>();
     const bufferSizesByLabel = new Map<string, number>();
     const bindGroupsByLabel = new Map<string, GPUBindGroup>();
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+    const device = fakeDevice({
       createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
         const buf = { label: desc.label, destroy: vi.fn() } as unknown as GPUBuffer;
         buffersByLabel.set(desc.label!, buf);
@@ -265,22 +207,13 @@ describe('StructureMarkerRenderer pick camera', () => {
         bindGroupsByLabel.set(desc.label!, bg);
         return bg;
       }),
-      queue: { writeBuffer: vi.fn() },
-    } as unknown as GPUDevice;
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'bgra8unorm' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
+    });
+    const ctx = ctxOf(device);
     const renderer = createStructureMarkerRenderer(
       ctx,
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       STRUCTURE_IDS,
     );
     renderer.setMarkers([cluster(1)], [0, 0, 0]);
@@ -345,32 +278,16 @@ describe('StructureMarkerRenderer pick camera', () => {
 describe('StructureMarkerRenderer instance eye', () => {
   it('setMarkers packs positions relative to the camera', () => {
     const writes: Float32Array[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
-      createBindGroup: vi.fn(() => ({})),
+    const device = fakeDevice({
       queue: {
         writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
       },
-    } as unknown as GPUDevice;
+    });
     const renderer = createStructureMarkerRenderer(
-      {
-        device,
-        context: null as unknown as GPUCanvasContext,
-        format: 'bgra8unorm' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
+      ctxOf(device),
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       STRUCTURE_IDS,
     );
     writes.length = 0;
@@ -381,32 +298,16 @@ describe('StructureMarkerRenderer instance eye', () => {
 
   it('setMarkers carries pickability in the lane after the ring colour', () => {
     const writes: Float32Array[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
-      createBindGroup: vi.fn(() => ({})),
+    const device = fakeDevice({
       queue: {
         writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
       },
-    } as unknown as GPUDevice;
+    });
     const renderer = createStructureMarkerRenderer(
-      {
-        device,
-        context: null as unknown as GPUCanvasContext,
-        format: 'bgra8unorm' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
+      ctxOf(device),
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       STRUCTURE_IDS,
     );
     renderer.setMarkers([cluster(1), { ...cluster(2), pickable: false }], [0, 0, 0]);
@@ -420,32 +321,16 @@ describe('StructureMarkerRenderer instance eye', () => {
 
   it("pickRing rebases against the eye the instances were packed with, not the pick view's", () => {
     const writes: Float32Array[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createPipelineLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => ({ label: desc.label, destroy: vi.fn() })),
-      createBindGroup: vi.fn(() => ({})),
+    const device = fakeDevice({
       queue: {
         writeBuffer: vi.fn((_b: GPUBuffer, _o: number, data: Float32Array) => writes.push(data)),
       },
-    } as unknown as GPUDevice;
+    });
     const renderer = createStructureMarkerRenderer(
-      {
-        device,
-        context: null as unknown as GPUCanvasContext,
-        format: 'bgra8unorm' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
+      ctxOf(device),
       'rgba16float',
       {} as unknown as FadeUniformsBgl,
-      false,
-      'depth24plus',
-      false,
+      COSMO,
       STRUCTURE_IDS,
     );
     const eyeA: [number, number, number] = [10, 20, 30];

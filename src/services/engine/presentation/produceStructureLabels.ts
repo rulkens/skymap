@@ -1,6 +1,6 @@
 /**
  * produceStructureLabels — per-frame text labels for the extended structures
- * (cluster / supercluster / void), read from `structureStore`.
+ * (every cosmic and Milky Way category), read from `structureStore`.
  *
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
@@ -47,6 +47,7 @@
  * being inspected (flicker).
  */
 
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -56,7 +57,6 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../data/structureLabelAboveGapPx';
 import { aboveRingAnchor } from '../../../utils/labels/aboveRingAnchor';
-import { ringUpDirection } from '../../../utils/labels/ringUpDirection';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
@@ -73,7 +73,6 @@ import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
 import type { StructureScale } from '../../../@types/data/structure/StructureScale';
-import { SLAB_BY_STRUCTURE_SCALE } from '../../../data/structure/slabByStructureScale';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
 import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 
@@ -120,7 +119,7 @@ export function produceStructureLabels(
   const scaleIds = STRUCTURE_IDS_BY_SCALE[scale];
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
-  const [ox, oy, oz] = SLAB_BY_STRUCTURE_SCALE[scale] === 'near0' ? ctx.drawCamPos : [0, 0, 0];
+  const [ox, oy, oz] = scale === 'milkyWay' ? ctx.drawCamPos : [0, 0, 0];
   // Screen-up in world axes; the same direction applies in both frames. Only the
   // 'above' categories lift along it.
   const screenUp = scaleIds.some((id) => STRUCTURE_MARKER_STYLES[id].labelPlacement === 'above')
@@ -233,25 +232,33 @@ export function produceStructureLabels(
     if (p.id === hoveredStructureId) whiten = HOVERED_LABEL_WHITEN;
     if (p.id === selectedStructureId) whiten = SELECTED_LABEL_WHITEN;
 
+    const centre: Vec3 = [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz];
+    let anchor = centre;
+    if (above) {
+      anchor = aboveRingAnchor(
+        centre,
+        screenUp,
+        [dx, dy, dz],
+        markerRadiusMpc * MARKER_RADIUS_RETUNE,
+        (STRUCTURE_LABEL_ABOVE_GAP_PX * distanceMpc) / pxPerRad,
+      );
+    }
+
+    // Byte-identical to what `ringPick.wesl` writes for this structure's own
+    // marker ring — the category's source code over the per-category index,
+    // both read from the store's single-sourced `categoryIndexOf`.
+    let pickId: number | undefined;
+    if (isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)) {
+      pickId = packSelection(
+        STRUCTURE_ID_CODES[p.category],
+        structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
+      );
+    }
+
     labels.push({
       id: p.id,
-      // Byte-identical to what `ringPick.wesl` writes for this structure's own
-      // marker ring — the category's source code over the per-category index,
-      // both read from the store's single-sourced `categoryIndexOf`.
-      pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
-        ? packSelection(
-            STRUCTURE_ID_CODES[p.category],
-            structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
-          )
-        : undefined,
-      worldPos: above
-        ? aboveRingAnchor(
-            [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
-            ringUpDirection(screenUp, [dx, dy, dz]),
-            markerRadiusMpc * MARKER_RADIUS_RETUNE,
-            (STRUCTURE_LABEL_ABOVE_GAP_PX * distanceMpc) / pxPerRad,
-          )
-        : [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
+      pickId,
+      worldPos: anchor,
       // Long names ("Perseus-Pisces Supercluster") break onto two balanced
       // lines here, at the presentation seam — the store keeps the unwrapped
       // name for the palette / InfoCard, and the layout just honours the '\n'.

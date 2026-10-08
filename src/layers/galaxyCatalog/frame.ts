@@ -21,7 +21,7 @@ import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
-import { structureHasGalaxyMembers } from '../../data/structure/structureHasGalaxyMembers';
+import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
 import { structureMemberCount } from '../../utils/structure/structureMemberCount';
 
 export function galaxyCatalogPlanner(
@@ -65,11 +65,11 @@ export function galaxyCatalogPlanner(
         memberCountVersion = runtime.catalogsVersion;
         runtime.publish({
           // Narrowed on the row's own tag, never a structural sniff — only a
-          // `structure` arm whose category has galaxy members is countable.
+          // `structure` arm of a cosmic category (one with galaxy members) is countable.
           structureMemberCount:
             selectRow !== null &&
             selectRow.type === 'structure' &&
-            structureHasGalaxyMembers(selectRow.category)
+            STRUCTURE_IDS_BY_SCALE.cosmic.includes(selectRow.category)
               ? structureMemberCount(
                   selectRow,
                   (source) => runtime.catalogs.get(source),

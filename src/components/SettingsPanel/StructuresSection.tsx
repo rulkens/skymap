@@ -28,11 +28,7 @@ import CollapsibleSection from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureScale } from '../../@types/data/structure/StructureScale';
-
-const SCALE_GROUPS: readonly { scale: StructureScale; title: string }[] = [
-  { scale: 'cosmic', title: 'Cosmic' },
-  { scale: 'milkyWay', title: 'Milky Way' },
-];
+import { STRUCTURE_SCALE_TITLES } from '../../data/structure/structureScaleTitles';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -97,31 +93,33 @@ function StructuresSection({
       {/* Per-category marker checkboxes live directly in the section body —
           no Advanced wrapper, since there are no other knobs to hide behind
           one. */}
-      {SCALE_GROUPS.map(({ scale, title }) => (
-        <Fragment key={scale}>
-          <div className={styles.groupHeading}>{title}</div>
-          {STRUCTURE_IDS_BY_SCALE[scale].map((cat) => {
-            const count = structureCounts?.[cat];
-            return (
-              <div className={styles.panelRow} key={`marker-${cat}`}>
-                <label htmlFor={`toggle-marker-${cat}`}>
-                  {CATEGORY_DISPLAY_INFO[cat].plural}
-                  {count !== undefined && (
-                    <span className={styles.sourceCount}>{count.toLocaleString()}</span>
-                  )}
-                </label>
-                <input
-                  id={`toggle-marker-${cat}`}
-                  type="checkbox"
-                  className={styles.toggle}
-                  checked={markerCategoryVisibility[cat]}
-                  onChange={(e) => onSetMarkerCategoryVisibility(cat, e.target.checked)}
-                />
-              </div>
-            );
-          })}
-        </Fragment>
-      ))}
+      {(Object.entries(STRUCTURE_SCALE_TITLES) as [StructureScale, string][]).map(
+        ([scale, title]) => (
+          <Fragment key={scale}>
+            <div className={styles.groupHeading}>{title}</div>
+            {STRUCTURE_IDS_BY_SCALE[scale].map((cat) => {
+              const count = structureCounts?.[cat];
+              return (
+                <div className={styles.panelRow} key={`marker-${cat}`}>
+                  <label htmlFor={`toggle-marker-${cat}`}>
+                    {CATEGORY_DISPLAY_INFO[cat].plural}
+                    {count !== undefined && (
+                      <span className={styles.sourceCount}>{count.toLocaleString()}</span>
+                    )}
+                  </label>
+                  <input
+                    id={`toggle-marker-${cat}`}
+                    type="checkbox"
+                    className={styles.toggle}
+                    checked={markerCategoryVisibility[cat]}
+                    onChange={(e) => onSetMarkerCategoryVisibility(cat, e.target.checked)}
+                  />
+                </div>
+              );
+            })}
+          </Fragment>
+        ),
+      )}
     </CollapsibleSection>
   );
 }
