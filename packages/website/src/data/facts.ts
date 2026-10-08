@@ -35,7 +35,7 @@ export const FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
     sourceLabel: 'NASA Moon fact sheet',
     checked: CHECKED,
-    short: 'The ring around Earth is the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
+    short: 'We’ve reached the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
   },
   {
     id: 'saturn-distance',
