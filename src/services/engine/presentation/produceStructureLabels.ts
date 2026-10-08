@@ -72,14 +72,15 @@ import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
-import type { StructureSlab } from '../../../@types/data/structure/StructureSlab';
-import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
-import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from './structureVisibleBands';
+import type { StructureScale } from '../../../@types/data/structure/StructureScale';
+import { SLAB_BY_STRUCTURE_SCALE } from '../../../data/structure/slabByStructureScale';
+import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
+import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 
 export function produceStructureLabels(
   state: EngineState,
   ctx: FrameView,
-  slab: StructureSlab,
+  scale: StructureScale,
 ): Label2DProducerOutput {
   const labels: Label2D[] = [];
 
@@ -91,7 +92,7 @@ export function produceStructureLabels(
   // descent into the solar system. When every band is at 0 the producer emits
   // nothing — the fade reaches 0 continuously before this skip, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
-  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB[slab], camDistMpc))
+  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SCALE[scale], camDistMpc))
     return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
@@ -115,17 +116,17 @@ export function produceStructureLabels(
   const focusedOnly = state.settings.labels.focusedOnly;
 
   const structures = state.data.structures;
-  const slabIds = STRUCTURE_IDS_BY_SLAB[slab];
+  const scaleIds = STRUCTURE_IDS_BY_SCALE[scale];
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
-  const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
+  const [ox, oy, oz] = SLAB_BY_STRUCTURE_SCALE[scale] === 'near0' ? ctx.drawCamPos : [0, 0, 0];
   // Screen-up in world axes; the same direction applies in both frames. Only the
   // 'above' categories lift along it.
-  const screenUp = slabIds.some((id) => STRUCTURE_MARKER_STYLES[id].labelPlacement === 'above')
+  const screenUp = scaleIds.some((id) => STRUCTURE_MARKER_STYLES[id].labelPlacement === 'above')
     ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
     : null;
   for (const p of structures.all()) {
-    if (!slabIds.includes(p.category)) continue;
+    if (!scaleIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the

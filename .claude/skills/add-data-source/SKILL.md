@@ -174,7 +174,7 @@ walk you to anything missed.
 | #   | Site               | File                                                                                                                                                | What it decides                                                                                 |
 | --- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 1   | Source code        | `src/data/source.ts`                                                                                                                                | The append-only pick code (rules below)                                                         |
-| 2   | Registry row       | `src/data/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/data/sources.ts`                                                | `id`, `slab`, `galaxyMembers`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
+| 2   | Registry row       | `src/data/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/data/sources.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
 | 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`, `lineOfSightAssumed`)                          |
 | 5   | Style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
@@ -198,15 +198,13 @@ walk you to anything missed.
 
 ### Registry row (step 2)
 
-- `slab` — which projection slab's marker pass and label director draw the
-  category: `'cosmo'` for Mpc-scale structures, `'near0'` for parsec-scale ones
-  (COSMO's near plane is 10 kpc, so anything smaller needs NEAR0's adaptive
-  planes). `STRUCTURE_IDS_BY_SLAB` is read from it, so the two marker passes and
-  the label producers partition the categories the same way.
-- `galaxyMembers` — `true` when the category is a region of the extragalactic
-  galaxy distribution: the InfoCard counts member galaxies inside it. It does
-  **not** decide focus dimming, which applies to every structure; only the count
-  is tied to it. Parsec-scale categories say `false`.
+- `scale` — `'cosmic'` for regions of the galaxy distribution (Mpc-scale), `'milkyWay'`
+  for structures inside our Galaxy (parsec-scale). `SLAB_BY_STRUCTURE_SCALE` turns it into the
+  projection slab (COSMO's near plane is 10 kpc, so anything smaller needs NEAR0's adaptive
+  planes), and `STRUCTURE_IDS_BY_SCALE` is read from it, so the two marker passes, the label
+  producers and the settings panel partition the categories the same way. A cosmic structure's
+  InfoCard counts member galaxies; that count, not focus dimming (which applies to every
+  structure), is what `scale` gates.
 - `bearsLabel` and `bearsMarker` are `true` and `labelLayer` is `'structure'`
   for every structure row; copy the neighbour's row.
 
@@ -216,7 +214,7 @@ Colour, size and fade fields as for any structure; the two that carry a decision
 
 - `visibleBand` — the camera-distance band over which the category's rings, halos
   and labels are visible. Cosmic categories use `surveyDeepZoom`, Milky Way ones
-  `galacticStructures` (full inside the Galaxy, gone at the foreground gate).
+  `milkyWayStructures` (full inside the Galaxy, gone at the foreground gate).
 - `labelPlacement` — `'centre'` puts the label on the ring; `'above'` puts it
   just over the ring's top edge with a fixed pixel gap
   (`STRUCTURE_LABEL_ABOVE_GAP_PX`), for categories whose rings stay on screen
@@ -235,7 +233,7 @@ _nearer_ distance. Focus framing is uniform (`structureFocusDistance.ts`,
 - Every row has `distance`, `physicalRadius` and `apparentRadius` as
   `{ value, unit }` (`pc` / `kpc` / `Mpc`), in the unit the source publishes.
 - `source` — the paper, survey or bibcode the numbers came from. **Required for
-  every category on the `near0` slab** (derived from the registry, not a list in
+  every Milky Way structure** (derived from the registry, not a list in
   the parser); build-time documentation only, never shipped.
 - `wikipedia` — the exact English article title after redirects, for the card's
   link. Optional; verify it, never derive it from the name. A row without one
@@ -249,7 +247,7 @@ selection row's deep-link claim (`${category}-${seed.id}`, matched by category
 prefix; add a test only if your id could collide with another category's
 prefix), the search chip and palette rows, default marker and label visibility,
 `StructureId`, the marker renderers' buckets, and the marker and label passes
-(chosen by `slab`). `BULK_CATALOG_CATEGORIES` in `assetWiring.ts` is the one
+(chosen by `scale`). `BULK_CATALOG_CATEGORIES` in `assetWiring.ts` is the one
 list not derived: add the category **only if** it has a bulk `.ccat`, which a
 seed-only category does not.
 

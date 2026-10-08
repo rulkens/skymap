@@ -58,7 +58,7 @@ OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GalacticCentrePlace: 36
 { id: 'nebula',           label: 'Nebula',                shortLabel: 'Nebula',           detailLabel: 'Nebula',                plural: 'Nebulae' }
 { id: 'galactic-centre',  label: 'Galactic Centre place', shortLabel: 'Galactic Centre',  detailLabel: 'Galactic Centre Place', plural: 'Galactic Centre' }
 // all four: type 'structure', allSky true, bearsLabel true, bearsMarker true,
-// labelLayer 'structure', slab 'near0', galaxyMembers false
+// labelLayer 'structure', scale 'milkyWay'
 
 // NebulaKind.d.ts
 export type NebulaKind = 'emission' | 'reflection' | 'planetary' | 'supernova-remnant' | 'dark';
@@ -70,13 +70,13 @@ NebulaRecord              = StructureBase & { readonly category: 'nebula'; reado
 GalacticCentrePlaceRecord = StructureBase & { readonly category: 'galactic-centre'; readonly lineOfSightAssumed: boolean };
 
 // scaleFadeBands.ts — keyed on camera distance from the render origin, Mpc
-galacticStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
+milkyWayStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
 
 // buildStaticAnchorStructures.ts SeedEntry gains
 readonly nebulaKind?: NebulaKind; readonly lineOfSightAssumed?: boolean;
 ```
 
-Style rows (all `visibleBand: SCALE_FADE_BANDS.galacticStructures`; every value here is a starting point that Task 9 tunes on screen):
+Style rows (all `visibleBand: SCALE_FADE_BANDS.milkyWayStructures`; every value here is a starting point that Task 9 tunes on screen):
 
 | id | label / ring / halo colour | `worldEmMpc` | min apparent px / band | max apparent px / band |
 |---|---|---|---|---|
@@ -112,7 +112,7 @@ type StructureSeedEntry = { …;
 `source` names where the row's distance and radii come from ("Hunt & Reffert 2024", "Harris 2010", a paper's bibcode). It is build-time documentation; the runtime never reads it.
 
 - [x] Tests, one per rule: `rejects a nebula without nebulaKind`, `rejects nebulaKind on a non-nebula`, `rejects an unknown nebulaKind`, `rejects lineOfSightAssumed outside galactic-centre`, `rejects a Milky Way row without source`.
-- [x] Implement beside the existing checks (`parseStructureSeed.ts:76-122`). The set of categories that require `source` is derived from the registry (`slab === 'near0'`), not a second hand-written list.
+- [x] Implement beside the existing checks (`parseStructureSeed.ts:76-122`). The set of categories that require `source` is derived from the registry (`scale === 'milkyWay'`), not a second hand-written list.
 - [x] `docs/DATA.md`: document the three fields in the seed section.
 - [x] Commit.
 
@@ -214,7 +214,7 @@ export const NEBULA_KIND_LABELS: Readonly<Record<NebulaKind, string>> = {
 
 - A nebula's card shows a "Type" row with the label.
 - A record with `lineOfSightAssumed` shows a "Line of sight" row reading "assumed at the Galactic Centre's distance".
-- The "Galaxies" row is already absent when `memberCount` is null. Check that a `galaxyMembers: false` category reaches the card with a null count (PR 1 made the publisher read the registry); change nothing if so.
+- The "Galaxies" row is already absent when `memberCount` is null. Check that a `scale: 'milkyWay'` category reaches the card with a null count (PR 1 made the publisher read the registry); change nothing if so.
 - The "r" line formats the radius for a parsec-scale object in pc, not as `0.00 Mpc`. Check what the card prints for the Pleiades and route it through the existing distance formatter if it does not already adapt its unit.
 
 - [x] Test `a nebula card shows its kind; a cluster card has no Type row`.
@@ -225,7 +225,7 @@ export const NEBULA_KIND_LABELS: Readonly<Record<NebulaKind, string>> = {
 
 Not a subagent task. With the dev server up and all rows in, tune and commit:
 
-- `galacticStructures.fullAt`; the four style rows' colours, `worldEmMpc`, pixel clamps and apparent-radius thresholds.
+- `milkyWayStructures.fullAt`; the four style rows' colours, `worldEmMpc`, pixel clamps and apparent-radius thresholds.
 - Label crowding near the Sun against constellation captions and star names; whether any category starts switched off.
 - The central cluster's label against the existing Sgr A\* caption.
 
@@ -324,7 +324,7 @@ Mid-branch reviews: Tasks 2 and 3. One whole-branch review at the end; deletion 
 
 Deliverables:
 
-- Four registry rows, four style rows, four record arms, `NebulaKind`, the `galacticStructures` band.
+- Four registry rows, four style rows, four record arms, `NebulaKind`, the `milkyWayStructures` band.
 - 71 seed rows, each with a `source`.
 - `setMarkers`'s clamp, used by the near pass.
 - "Type" and "Line of sight" card rows.

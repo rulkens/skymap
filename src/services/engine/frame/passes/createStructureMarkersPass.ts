@@ -8,11 +8,11 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { StructureMarkersPassSpec } from '../../../../@types/engine/frame/StructureMarkersPassSpec';
 import { anyFadeBandVisible } from '../../../../utils/math/anyFadeBandVisible';
-import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from '../../presentation/structureVisibleBands';
+import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from '../../presentation/structureVisibleBands';
 import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
 
 export function createStructureMarkersPass(spec: StructureMarkersPassSpec): ContentPass {
-  const bands = STRUCTURE_VISIBLE_BANDS_BY_SLAB[spec.slab];
+  const bands = STRUCTURE_VISIBLE_BANDS_BY_SCALE[spec.scale];
   // Past every category's visibility band all descriptors carry alpha 0 (rings and halos
   // dissolve on the descent), so the pass drops out. Keyed on distance from the render origin.
   const inBand = (cam: readonly [number, number, number]) =>

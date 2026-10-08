@@ -8,6 +8,6 @@ import { createStructureMarkersPass } from './createStructureMarkersPass';
 
 export const structureMarkersCosmoPass = createStructureMarkersPass({
   name: 'structure-markers-cosmo',
-  slab: 'cosmo',
+  scale: 'cosmic',
   rendererOf: (state) => state.gpu.structureMarkerCosmoRenderer,
 });

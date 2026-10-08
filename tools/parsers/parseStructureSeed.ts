@@ -23,13 +23,13 @@ import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import { MPC_PER_LENGTH_UNIT } from '../../src/data/mpcPerLengthUnit';
 import { NEBULA_KIND_LABELS } from '../../src/data/structure/nebulaKindLabels';
 import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
-import { STRUCTURE_IDS_BY_SLAB } from '../../src/data/structure/structureIdsBySlab';
+import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
 
 const NEBULA_KINDS: readonly string[] = Object.keys(NEBULA_KIND_LABELS);
 
 // Rows inside the Milky Way have no catalogue in this pipeline, so each names
 // the paper its numbers came from; the slab marks exactly those categories.
-const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SLAB.near0;
+const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SCALE.milkyWay;
 
 const LENGTH_UNITS: readonly string[] = Object.keys(MPC_PER_LENGTH_UNIT);
 

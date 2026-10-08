@@ -16,7 +16,7 @@ import { resolve } from 'node:path';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
-import { STRUCTURE_IDS_BY_SLAB } from '../../src/data/structure/structureIdsBySlab';
+import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 
@@ -81,7 +81,7 @@ describe('cluster seed — void entries', () => {
 describe('structure seed — Milky Way entries', () => {
   type Entry = (typeof allEntries)[number];
   const MILKY_WAY_ENTRIES = allEntries.filter((e) =>
-    (STRUCTURE_IDS_BY_SLAB.near0 as readonly string[]).includes(e.category),
+    (STRUCTURE_IDS_BY_SCALE.milkyWay as readonly string[]).includes(e.category),
   );
   const distanceFromCentrePc = (e: Entry) => {
     const [x, y, z] = raDecDistToEqCart({

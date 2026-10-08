@@ -4,6 +4,6 @@ import { createStructureMarkersPass } from './createStructureMarkersPass';
 
 export const structureMarkersNearPass = createStructureMarkersPass({
   name: 'structure-markers-near',
-  slab: 'near0',
+  scale: 'milkyWay',
   rendererOf: (state) => state.gpu.structureMarkerNearRenderer,
 });

@@ -328,7 +328,7 @@ export function createEngine(
   // boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabelsCosmo',
-    produceLabels: (s, c) => produceStructureLabels(s, c, 'cosmo'),
+    produceLabels: (s, c) => produceStructureLabels(s, c, 'cosmic'),
   });
 
   // Scene-body captions first so an equal-prominence tiebreak favours the
@@ -342,7 +342,7 @@ export function createEngine(
   // projection their parsec-scale anchors survive.
   state.subsystems.foregroundLabelDirector.registerProducer({
     id: 'structureLabelsNear',
-    produceLabels: (s, c) => produceStructureLabels(s, c, 'near0'),
+    produceLabels: (s, c) => produceStructureLabels(s, c, 'milkyWay'),
   });
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a

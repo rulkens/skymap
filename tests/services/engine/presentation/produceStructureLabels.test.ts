@@ -123,7 +123,7 @@ describe('produceStructureLabels', () => {
   it('emits a label only for featured structures', () => {
     const state = makeState();
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
-    const out = produceStructureLabels(state, makeCtx(), 'cosmo');
+    const out = produceStructureLabels(state, makeCtx(), 'cosmic');
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
   });
 
@@ -133,7 +133,7 @@ describe('produceStructureLabels', () => {
       rec('lan', { name: 'Laniakea Supercluster' }),
       rec('virgo', { name: 'Virgo Cluster', worldPos: [0, 10, CAM_Z] }),
     ]);
-    const texts = produceStructureLabels(state, makeCtx(), 'cosmo').labels.map((l) => l.text);
+    const texts = produceStructureLabels(state, makeCtx(), 'cosmic').labels.map((l) => l.text);
     expect(texts).toEqual(['Laniakea\nSupercluster', 'Virgo Cluster']);
   });
 
@@ -146,7 +146,7 @@ describe('produceStructureLabels', () => {
     const state = makeState({ fades });
     state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels).toEqual([]);
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
   it('emits a label whose labelEnabled is false but whose labelLayer opacity is still > 0 (fade-out tail)', () => {
@@ -159,7 +159,7 @@ describe('produceStructureLabels', () => {
     const state = makeState({ fades });
     state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels.map((l) => l.id)).toEqual([
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels.map((l) => l.id)).toEqual([
       'c1',
     ]);
   });
@@ -174,7 +174,7 @@ describe('produceStructureLabels', () => {
     const state = makeState({ fades });
     state.settings.structures.items.cluster.enabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels).toEqual([]);
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
   it('a structure label survives while its ring fades out (anchor gate reads opacityOf, not an instant flag)', () => {
@@ -188,7 +188,7 @@ describe('produceStructureLabels', () => {
     fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0.5);
     const state = makeState({ fades });
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels.map((l) => l.id)).toEqual([
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels.map((l) => l.id)).toEqual([
       'c1',
     ]);
   });
@@ -199,7 +199,7 @@ describe('produceStructureLabels', () => {
     // prominencePx equals the ring apparent radius.
     const state = makeState();
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
-    const out = produceStructureLabels(state, makeCtx(), 'cosmo');
+    const out = produceStructureLabels(state, makeCtx(), 'cosmic');
     expect(out.labels.map((l) => l.id)).toEqual(['a', 'b']);
     // radius 5 Mpc / 10 Mpc distance × pxPerRad (= halfH/tan(fovY/2) = 540/tan(30°))
     const pxPerRad = 540 / Math.tan((30 * Math.PI) / 180);
@@ -212,20 +212,20 @@ describe('produceStructureLabels', () => {
     // (700 + 400 band) → fully faded → label dropped entirely.
     const state = makeState();
     state.data.structures.setGroup('anchors', [rec('huge', { worldPos: [0.1, 0, CAM_Z] })]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels).toEqual([]);
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
   it('bakes per-category opacityOf into fadeAlpha', () => {
     // A cluster label at 0.5 category opacity emits half the at-rest fadeAlpha.
     const atRest = makeState();
     atRest.data.structures.setGroup('anchors', [rec('a')]);
-    const atRestAlpha = produceStructureLabels(atRest, makeCtx(), 'cosmo').labels[0]!.fadeAlpha!;
+    const atRestAlpha = produceStructureLabels(atRest, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
 
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', item: 'cluster' }, 0.5);
     const dimmed = makeState({ fades });
     dimmed.data.structures.setGroup('anchors', [rec('a')]);
-    const dimmedAlpha = produceStructureLabels(dimmed, makeCtx(), 'cosmo').labels[0]!.fadeAlpha!;
+    const dimmedAlpha = produceStructureLabels(dimmed, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
 
     expect(dimmedAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
   });
@@ -234,11 +234,11 @@ describe('produceStructureLabels', () => {
     // No focus, full blend → the label's fadeAlpha is scaled by LABEL_RECESSION.
     const atRest = makeState();
     atRest.data.structures.setGroup('anchors', [rec('a')]);
-    const atRestAlpha = produceStructureLabels(atRest, makeCtx(), 'cosmo').labels[0]!.fadeAlpha!;
+    const atRestAlpha = produceStructureLabels(atRest, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
 
     const focused = makeState();
     focused.data.structures.setGroup('anchors', [rec('a')]);
-    const recededAlpha = produceStructureLabels(focused, makeCtx({ focusBlend: 1 }), 'cosmo')
+    const recededAlpha = produceStructureLabels(focused, makeCtx({ focusBlend: 1 }), 'cosmic')
       .labels[0]!.fadeAlpha!;
 
     expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
@@ -249,12 +249,12 @@ describe('produceStructureLabels', () => {
     // full blend — a faded ring never carries a bright label.
     const blend0 = makeState({ focusedStructureId: 'a' });
     blend0.data.structures.setGroup('anchors', [rec('a')]);
-    const blend0Alpha = produceStructureLabels(blend0, makeCtx({ focusBlend: 0 }), 'cosmo')
+    const blend0Alpha = produceStructureLabels(blend0, makeCtx({ focusBlend: 0 }), 'cosmic')
       .labels[0]!.fadeAlpha!;
 
     const blend1 = makeState({ focusedStructureId: 'a' });
     blend1.data.structures.setGroup('anchors', [rec('a')]);
-    const blend1Alpha = produceStructureLabels(blend1, makeCtx({ focusBlend: 1 }), 'cosmo')
+    const blend1Alpha = produceStructureLabels(blend1, makeCtx({ focusBlend: 1 }), 'cosmic')
       .labels[0]!.fadeAlpha!;
 
     expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
@@ -263,14 +263,14 @@ describe('produceStructureLabels', () => {
   it('focusedOnly mode: emits only the focused structure label', () => {
     const state = makeState({ focusedStructureId: 'a', focusedOnly: true });
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
-    const out = produceStructureLabels(state, makeCtx(), 'cosmo');
+    const out = produceStructureLabels(state, makeCtx(), 'cosmic');
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
   });
 
   it('focusedOnly mode: emits nothing when no structure is focused', () => {
     const state = makeState({ focusedOnly: true });
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
-    expect(produceStructureLabels(state, makeCtx(), 'cosmo').labels).toEqual([]);
+    expect(produceStructureLabels(state, makeCtx(), 'cosmic').labels).toEqual([]);
   });
 
   it('emits nothing at deep zoom — the surveyDeepZoom band empties the producer', () => {
@@ -283,7 +283,7 @@ describe('produceStructureLabels', () => {
     const out = produceStructureLabels(
       state,
       makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
-      'cosmo',
+      'cosmic',
     );
     expect(out.labels).toEqual([]);
   });
@@ -297,7 +297,7 @@ describe('produceStructureLabels', () => {
     const out = produceStructureLabels(
       state,
       makeCtx({ drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]> }),
-      'cosmo',
+      'cosmic',
     );
     const alpha = out.labels[0]!.fadeAlpha!;
     expect(alpha).toBeGreaterThan(0);
@@ -314,7 +314,7 @@ describe('produceStructureLabels', () => {
       rec('n1', { category: 'nebula', worldPos: [0.01, 0, 0.03], physicalRadiusMpc: 0.001 }),
     ]);
     const ctx = makeCtx({ drawCamPos: [0, 0, 0.03] as Readonly<[number, number, number]> });
-    const label = produceStructureLabels(state, ctx, 'near0').labels[0]!;
+    const label = produceStructureLabels(state, ctx, 'milkyWay').labels[0]!;
     const pxPerRad = 540 / Math.tan((30 * Math.PI) / 180);
     const lift = 0.001 * MARKER_RADIUS_RETUNE + (STRUCTURE_LABEL_ABOVE_GAP_PX * 0.01) / pxPerRad;
     expect(label.alignY).toBe('bottom');
@@ -326,7 +326,7 @@ describe('produceStructureLabels', () => {
   it("a 'centre' category's label anchor and alignment are unchanged", () => {
     const state = makeState();
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    const label = produceStructureLabels(state, makeCtx(), 'cosmo').labels[0]!;
+    const label = produceStructureLabels(state, makeCtx(), 'cosmic').labels[0]!;
     expect(label.worldPos).toEqual([10, 0, CAM_Z]);
     expect(label.alignY).toBe('center');
   });
@@ -337,7 +337,7 @@ describe('produceStructureLabels', () => {
       rec('c1', { category: 'cluster' }),
       rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
     ]);
-    const labels = produceStructureLabels(state, makeCtx(), 'cosmo').labels;
+    const labels = produceStructureLabels(state, makeCtx(), 'cosmic').labels;
     const hovered = labels.find((l) => l.id === 'c1')!;
     const other = labels.find((l) => l.id === 'c3')!;
     expect(hovered.color![2]).toBeGreaterThan(other.color![2]);
@@ -350,7 +350,7 @@ describe('produceStructureLabels', () => {
       rec('c1', { category: 'cluster' }),
       rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
     ]);
-    const labels = produceStructureLabels(state, makeCtx(), 'cosmo').labels;
+    const labels = produceStructureLabels(state, makeCtx(), 'cosmic').labels;
     const selected = labels.find((l) => l.id === 'c1')!;
     const hovered = labels.find((l) => l.id === 'c3')!;
     expect(selected.color![2]).toBeGreaterThan(hovered.color![2]);
@@ -370,7 +370,7 @@ describe('produceStructureLabels', () => {
       rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
       rec('s2', { category: 'supercluster', worldPos: [-10, 0, CAM_Z] }),
     ]);
-    const labels = produceStructureLabels(state, makeCtx(), 'cosmo').labels;
+    const labels = produceStructureLabels(state, makeCtx(), 'cosmic').labels;
     expect(labels.map((l) => l.id)).toEqual(['c1', 's1', 'c3', 's2']);
 
     // Round-trip every emitted label through the decode side: unpack the
@@ -399,10 +399,10 @@ describe('produceStructureLabels', () => {
     const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
     const byId = (labels: readonly Label2D[], id: string) => labels.find((l) => l.id === id)!;
 
-    const rest = produceStructureLabels(state, ctx, 'cosmo').labels;
+    const rest = produceStructureLabels(state, ctx, 'cosmic').labels;
     expect(byId(rest, 'out').pickId).toBeDefined();
 
-    const under = produceStructureLabels(state, focused, 'cosmo').labels;
+    const under = produceStructureLabels(state, focused, 'cosmic').labels;
     expect(byId(under, 'in').pickId).toBeDefined();
     expect(byId(under, 'out').pickId).toBeUndefined();
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
