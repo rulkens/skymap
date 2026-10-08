@@ -132,7 +132,7 @@ Every Milky Way row also carries a `source` (see "Decided during review"). Parse
 
 ## 7. Card and search
 
-- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`), and a "Line of sight" row reading "assumed at the Galactic Centre's distance" when `lineOfSightAssumed`. The "Galaxies" row and its tooltip render only when the category has `galaxyMembers`.
+- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`), and a "Line of sight" row reading "assumed at the Galactic Centre's distance" when `lineOfSightAssumed`. The "Galaxies" row and its tooltip render only when the category's `scale` is `'cosmic'`.
 - `CompactStructureCard` and the palette rows need no change beyond the derived badge.
 
 ## 8. Testing
@@ -142,7 +142,7 @@ Each test below fails on a real bug nothing else catches.
 - `lengthToMpc`: pc, kpc and Mpc convert to the same Mpc value for the same physical length.
 - Seed parser: rejects a nebula without `nebulaKind`, `nebulaKind` on a non-nebula, an unknown unit.
 - Slab partition: every structure category is drawn by exactly one of the two marker passes, and its labels go to the matching director.
-- Band: a `near0` category is at full alpha at the Sun and zero at `FOREGROUND_MAX_DISTANCE_MPC`; a `cosmo` category is the reverse.
+- Band: a Milky Way category is at full alpha at the Sun and zero at `FOREGROUND_MAX_DISTANCE_MPC`; a cosmic category is the reverse.
 - Focus distance: a 4 pc radius frames within tens of parsecs; an existing cluster's framing distance is unchanged from before P5.
 - Membership: a `scale: 'milkyWay'` category still yields an `ActiveFocus` (it dims what lies outside it) but no member count.
 - Seed sanity: every Milky Way row lies within 0.1 Mpc of the origin; every Galactic Centre place lies within 50 pc of `GALACTIC_CENTRE_ANCHOR`.
@@ -165,14 +165,22 @@ Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centaur
 - `docs/DATA.md` describes the unit-tagged seed; the `add-data-source` skill's Path B table matches the code.
 - The backlog index line and `docs/backlog/2026-07-30-galactic-center-place-labels.md` are gone.
 
-## 11. Decided during review (2026-10-06/07)
+## 11. Decided during review (2026-10-06 to 10-08)
 
 Rulings from the on-screen checks. Where they differ from §6–§8 as first drafted, those sections now say what was built.
 
-- **Focus dims everything not part of the structure.** Focusing any structure dims stars outside its sphere, galaxies, the Milky Way glow, constellation lines and captions, and star and body names. Dimmed stars and their name labels are not pickable, so a click cannot land on something faded out. Reason: a parsec-scale focus is unreadable against a full-brightness sky, and the cluster rule already worked. The card's galaxy count still follows `galaxyMembers`.
+- **Focus dims everything not part of the structure.** Focusing any structure dims stars outside its sphere, galaxies, the Milky Way glow, constellation lines and captions, and star and body names. Dimmed stars and their name labels are not pickable, so a click cannot land on something faded out. Reason: a parsec-scale focus is unreadable against a full-brightness sky, and the cluster rule already worked. The card's galaxy count still follows the category's `scale`.
 - **The Milky Way glow recedes on every focus**, galaxy-cluster focus included. Reason: it is scenery behind any focused subject.
 - **Milky Way labels sit above their ring.** `labelPlacement: 'above'` on the style row places the label over the ring's top edge with a fixed pixel gap (`STRUCTURE_LABEL_ABOVE_GAP_PX`). These rings stay on screen at large sizes, and a centred label would sit on the ring line. A focused structure's label may fall off-screen; that is accepted.
 - **The selected ring brightens by a colour gain of 1.6×** (`SELECTED_RING_BRIGHTEN`) for every category, replacing the capped opacity boost. Reason: most rings rest at full opacity, where an alpha boost has nowhere to go.
-- **Structure cards link to Wikipedia** from a per-row `wikipedia` title, verified against the article rather than derived from the name. Five existing rows have none (`cluster-ophiuchus`, `cluster-shapley-a3558`, `cluster-a3571`, `group-cvn-i-cloud`, `group-ngc-6946-group`), and their cards show no link.
-- **Each Milky Way seed row carries a `source`** naming the paper or survey its distance and radii came from, required by the parser for every `near0` category. Reason: these rows have no catalogue in the pipeline to audit against.
+- **Structure cards link to Wikipedia** from a per-row `wikipedia` title, verified against the article rather than derived from the name. Five existing rows have none (`galaxy-cluster-ophiuchus`, `galaxy-cluster-shapley-a3558`, `galaxy-cluster-a3571`, `galaxy-group-cvn-i-cloud`, `galaxy-group-ngc-6946-group`), and their cards show no link.
+- **Each Milky Way seed row carries a `source`** naming the paper or survey its distance and radii came from, required by the parser for every Milky Way category. Reason: these rows have no catalogue in the pipeline to audit against.
 - **Known limitation, not fixed here:** globular clusters' Gaia member stars smear into a radial line toward the Sun, because each star keeps its own noisy distance. Backlogged at `docs/backlog/2026-10-06-cluster-member-star-distances.md`.
+- **During a focus, only what lies inside the focused sphere is clickable or hoverable** (`isPickableUnderFocus`), for every focus, galaxy-cluster focus included. Other rings, sibling Milky Way rings too, and galaxies outside the sphere do not answer the pointer. Reason: what is dimmed should not be selectable, and it ends accidental hops from ring to ring.
+- **A Milky Way ring's click target ranks above the stars** (`PICK_BAND_STRUCTURE_RING_EPS` in `pickDepthBands.wesl`), as labels already did, so a structure can always be selected first. Known gap: a curated star much nearer than the ring keeps its true depth and can still win.
+- **Hover highlights the ring and its label together**: the ring by a colour gain of 1.3× (`HOVERED_RING_BRIGHTEN`), the label by a blend toward white (`HOVERED_LABEL_WHITEN`). The selected label whitens further (`SELECTED_LABEL_WHITEN`).
+- **The far-plane clamp planned for the NEAR0 marker pass was removed.** NEAR0 has an infinite far plane, so the clamp never acted.
+- **Open-cluster colours are muted** so the many rings near the Sun do not dominate the star field.
+- **One scale word, `scale: 'cosmic' | 'milkyWay'`, replaces `slab` and `galaxyMembers` on the registry row.** This revises R6 and §3: the two flags agreed on every row, and "galactic" read both ways. The scale picks the depth slab (one lookup) and whether the card counts galaxies; the visible band and focus distance stay independent, which is what R6 was protecting. §3 is kept as the record of the prep PR as it was built.
+- **`cluster` and `group` became `galaxy-cluster` and `galaxy-group`** (ids, `Source` names, labels), so they no longer read as siblings of the star-cluster categories. Structure ids are `category-seedId`, so `#focus=cluster-…` and `#focus=group-…` links from before this change no longer resolve; the user accepted that without a redirect. Numeric source codes are unchanged, so no data was re-baked.
+- **Settings list the categories under two headings, Cosmic and Milky Way.** The Labels & Guides list stays flat.
