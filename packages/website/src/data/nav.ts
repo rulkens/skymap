@@ -20,7 +20,7 @@ export const FOOTER_GROUPS: NavGroup[] = [
     ],
   },
   {
-    heading: 'What it rests on',
+    heading: 'Science and credits',
     items: [
       { label: 'Science', path: '/science/', icon: 'science' },
       { label: 'Credits', path: '/docs/credits/', icon: 'credits' },
