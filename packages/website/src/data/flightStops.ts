@@ -34,6 +34,11 @@ export const FLIGHT_STOPS: readonly FlightStop[] = [
     line: 'The largest structures of our universe become visible as a glow, tracing the density of visible and dark matter.',
     portraitX: 0.27,
   },
-  { id: 'surveys', atSec: 55, name: 'Deep space', factId: 'survey-gaps' },
+  {
+    id: 'surveys',
+    atSec: 55,
+    name: 'Deep space',
+    line: 'We are reaching the edge of our observations. Only the brightest galaxies (quasars) are visible.',
+  },
   { id: 'universe', atSec: 65.5,name: 'The observable universe', factId: 'observable-edge', portraitZoom: 0.4 },
 ];
