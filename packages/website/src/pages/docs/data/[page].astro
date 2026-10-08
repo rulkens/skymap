@@ -48,7 +48,7 @@ const recorded = plainText(first!.record.heading);
           <DocLink href={`/docs/data/#${page.family.id}`}>All sources at a glance</DocLink> lists every other source.
         </p>
         {notes.length > 0 && (
-          <Recorded checked={checked}>
+          <Recorded>
             {notes.map((text) => (
               <RecordText text={text} lift />
             ))}
