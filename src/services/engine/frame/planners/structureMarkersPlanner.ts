@@ -1,6 +1,6 @@
 /**
  * structureMarkersPlanner — decides, per view, which structure markers
- * (cluster / supercluster / void / group rings and halos) that view draws,
+ * (the cosmic and Milky Way rings and halos) that view draws,
  * by running every marker producer against the view's own eye; the result
  * is the descriptor list both marker passes upload and draw. Per view
  * because sizing and culling depend on where THIS eye is: a dome face and

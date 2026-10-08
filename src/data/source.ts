@@ -42,7 +42,7 @@ export const Source = {
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 6 bits of
    * the packed identity; the 26-bit `localIdx` carries the structure's index
-   * into the cluster table. See `selectionEncoding.ts` for the layout.
+   * into the structure table. See `selectionEncoding.ts` for the layout.
    */
   GalaxyCluster: 5,
   /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as GalaxyCluster. */
@@ -242,7 +242,7 @@ export const Source = {
   MeshBody: 32,
   /**
    * Milky Way structure markers — parsec-scale places inside our own galaxy,
-   * drawn by the NEAR0 marker pass. Same encoding as Cluster; seed-only. Appended
+   * drawn by the NEAR0 marker pass. Same encoding as GalaxyCluster; seed-only. Appended
    * at 33..36 — after these rows, codes 37..62 remain before the 6-bit
    * pick-source field needs a wider layout.
    */

@@ -14,8 +14,8 @@ export type StructureSourceEntry = SourceEntryBase & {
   readonly code: number;
   /**
    * Cosmic structures are regions of the galaxy distribution (their InfoCard counts
-   * member galaxies); Milky Way structures sit inside our Galaxy. Picks the projection
-   * slab via `SLAB_BY_STRUCTURE_SCALE`.
+   * member galaxies); Milky Way structures sit inside our Galaxy and draw in the
+   * NEAR0 slab, cosmic ones in COSMO.
    */
   readonly scale: StructureScale;
 };

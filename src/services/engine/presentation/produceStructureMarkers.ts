@@ -1,10 +1,10 @@
 /**
  * produceStructureMarkers — per-frame ring/halo descriptors for the extended
- * structures (cluster / supercluster / void), read from `structureStore`.
+ * structures (every cosmic and Milky Way category), read from `structureStore`.
  *
- * Reads `state.data.structures` and emits one cluster marker descriptor per
+ * Reads `state.data.structures` and emits one marker descriptor per
  * marker-bearing structure — applying apparent-size fades, significance
- * weighting, the selection bump, per-category opacity (the category toggle's
+ * weighting, the selection brighten, per-category opacity (the category toggle's
  * fade, read from the FadeRegistry), and a smooth focus *recession*. Famous
  * galaxies are not on this path; they never emit markers.
  *
@@ -54,7 +54,7 @@ export function produceStructureMarkers(
   // Distance from the render origin, which keys each category's visibility band.
   const camDistMpc = Math.hypot(cx, cy, cz);
 
-  // selected → 1.5× ring bump (highlight what you clicked); focused → the
+  // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked); focused → the
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
   const selectedStructureId = structureIdOf(state.selection.select);
@@ -143,7 +143,7 @@ export function produceStructureMarkers(
     // key — 1 when no clip plays, otherwise the cue-driven dimming value.
     const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
 
-    // Cluster focus mode: while some structure is FOCUSED, every OTHER marker
+    // Focus mode: while some structure is FOCUSED, every OTHER marker
     // smoothly recedes toward MARKER_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
     // focused structure is exempt (factor 1) — a faded ring never carries a
     // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.

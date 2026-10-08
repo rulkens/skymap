@@ -7,7 +7,7 @@
  *                                 (`survey:milliquas` = the deep-field reveal).
  *   - `structureRing:<id>`      — one structure category's rings
  *                                 (`structureRing:galaxy-group`; structure settings
- *                                 items ARE the four categories).
+ *                                 items ARE the structure categories).
  *   - `label:<scope>`           — the unified label namespace:
  *                                 `label:milkyWay` (the MW label),
  *                                 `label:survey` (famous-galaxy names),

@@ -1,6 +1,6 @@
 /**
- * createStructureMarkersPass — shared factory behind the cosmo and NEAR0 marker
- * passes: halo + ring draws into the hdr layer for one slab's structure
+ * createStructureMarkersPass — shared factory behind the cosmic and Milky Way
+ * marker passes: halo + ring draws into the hdr layer for one scale's structure
  * categories, plus their ring pick. The slabs differ only in which bands gate
  * the pass and which renderer handle it drives.
  */

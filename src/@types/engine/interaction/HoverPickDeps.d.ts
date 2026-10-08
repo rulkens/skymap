@@ -20,10 +20,8 @@
  *
  * ### Why no `requestRender` / scheduler field
  *
- * The one hover consequence the scene draws (a structure ring's brighten) is
- * woken by `watchSelectionWakeSaga` from the dispatched action; everything
- * else feeds only the React InfoCard text. Excluding the scheduler from the
- * bag makes this a structural guarantee: the driver cannot wake the loop.
+ * Hover wakes belong to `watchSelectionWakeSaga`; with no scheduler in the bag
+ * the driver cannot wake the loop.
  */
 
 import type { EnginePickingState } from '../state/EnginePickingState';

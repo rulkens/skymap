@@ -29,11 +29,8 @@
  *
  * ### No requestRender here
  *
- * A hovered structure ring is brightened, so a hover change onto or off a
- * structure needs a frame; `watchSelectionWakeSaga` issues that wake from the
- * dispatched action. Every other hover feeds only the React InfoCard text and
- * needs none. `HoverPickDeps` has no scheduler field, so this driver cannot
- * wake the loop itself.
+ * Hover wakes belong to `watchSelectionWakeSaga`; `HoverPickDeps` has no
+ * scheduler field, so this driver cannot wake the loop.
  */
 
 import { cssToTexPx } from '../helpers/cssToTexPx';

@@ -89,7 +89,7 @@ Other style fields copy the `cluster` row.
 
 - [x] Add the codes, rows, type, arms, band and style rows. `buildAnchorStructure`'s switch gains four arms: the nebula arm carries `nebulaKind`, the Galactic Centre arm carries `lineOfSightAssumed ?? false`.
 - [x] Test `open-cluster and globular-cluster ids are not claimed as cluster`: the structure row's `claims` (`structureSelectionRow.ts:42`) resolves `open-cluster-pleiades` to category `open-cluster` and `globular-cluster-m13` to `globular-cluster`; the place id `galactic-centre` (no suffix) is not claimed, `galactic-centre-arches` is.
-- [x] Test `a near0 category is full at the Sun and gone at the foreground gate; a cosmo category is the reverse`: `fadeBand` over each slab's bands at camera distance 0 and at `FOREGROUND_MAX_DISTANCE_MPC`.
+- [x] Test `a Milky Way category is full at the Sun and gone at the foreground gate`: `fadeBand` over the Milky Way bands at camera distance 0 and at `FOREGROUND_MAX_DISTANCE_MPC`.
 - [x] No other new test: the registry, style table and record union are compiler-checked, and toggles, counts, pick codes and search chips derive from `STRUCTURE_IDS`.
 - [x] `npm run typecheck` and `npm test` green. Commit.
 
@@ -250,7 +250,7 @@ How focus works today, for all four tasks: `structureFocusSubsystem` turns the f
 
 **Files:** `src/services/engine/subsystems/structureFocusSubsystem.ts` and its type (modify), its test (modify), `docs/superpowers/specs/2026-10-05-milky-way-structures-design.md` (modify §6 and the §8 membership bullet)
 
-- [x] Remove the `hasGalaxyMembers` gate and its injectable dep from the focus subsystem (`structureFocusSubsystem.ts:70-86`): any focused structure yields an `ActiveFocus`. `structureHasGalaxyMembers` keeps its one other reader, the card's member count (`layers/galaxyCatalog/frame.ts:69-78`).
+- [x] Remove the `hasGalaxyMembers` gate and its injectable dep from the focus subsystem (`structureFocusSubsystem.ts:70-86`): any focused structure yields an `ActiveFocus`. The card's member count (`layers/galaxyCatalog/frame.ts`) reads `STRUCTURE_IDS_BY_SCALE.cosmic`.
 - [x] Test `a category without galaxy members still drives the focus blend`, replacing the test that asserted the opposite. The member-count test stays.
 - [x] Spec §6: focusing a Milky Way structure dims what lies outside its sphere, as for clusters. Commit.
 

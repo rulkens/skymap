@@ -9,6 +9,9 @@ import { COSMIC_WEB_DENSITY_OFF } from '../exhibits/utils/cosmicWebDensityOff';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
 
+// A card's `id` keys its thumbnail file, independent of its `focusId`: ids like
+// 'cluster-virgo-m87' keep their old names so the captured images stay valid.
+
 // A tour card has no registry pose to inherit, so its whole framing lives here.
 // Both mirror their tour's opening scene strip rather than the default sky, so
 // the thumbnail is a frame the viewer will actually see.

@@ -1,8 +1,2 @@
-/**
- * focusCoreFraction — the fraction of a focused structure's apparent radius that
- * its fully-bright core is capped to, so the dimming smoothstep never collapses
- * to a hard ring. Mirrors `FOCUS_CORE_FRACTION` in `lib/focusUniforms.wesl`,
- * pinned by a parity test.
- */
-
+/** Mirrors `FOCUS_CORE_FRACTION` in `lib/focusUniforms.wesl` (parity-tested). */
 export const FOCUS_CORE_FRACTION = 0.6;

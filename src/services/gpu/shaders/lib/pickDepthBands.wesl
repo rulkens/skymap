@@ -59,15 +59,17 @@
 // 5e-5 in z/w — a vast number of f32-resolvable steps near the 0.0 clear, where
 // depth32float resolution is far finer than the ~6e-8 it holds near 1.0 — so
 // planet-over-moon and earth-over-both are UNCONDITIONAL depth wins, needing no
-// ordering and admitting no ties. Nearness cannot invert them (all three force
-// their band regardless of true depth), and draw order is irrelevant.
+// ordering. Nearness cannot invert them (all three force their band regardless of
+// true depth), and draw order is irrelevant between classes. Within one class the
+// depth is shared: rings in the structure-ring band tie with each other and
+// resolve by draw order.
 //
 // ## Why these seven values are safe to distinguish
 //
 // All seven stay strictly above the 0.0 clear (positive z/w), so a banded fragment
 // always survives the clip test (the same clip-survival property the visual
 // clamp needs). depth32float resolves far finer than 6e-8 near the 0.0 clear, and
-// the tightest gap here is 0.125e-4 = 1.25e-5 — a vast number of resolvable steps —
+// the tightest gap here is 0.25e-4 = 2.5e-5 (survey star to backdrop) — a vast number of resolvable steps —
 // so the bands never collapse into one another through float rounding. The three
 // glint bands sit HIGHEST in the true-depth headroom (0.00040–0.00050), which is
 // deliberate: a resolved sphere must rise above the highest glint band to
@@ -129,8 +131,8 @@ const PICK_BAND_SCENE_STAR_EPS: f32 = 1e-4;
 const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
 
 // Near structure rings (filled pick discs) — above both star bands, below the
-// glints: a click inside a ring selects the structure first, and its stars are
-// reached once it is focused. A scene star nearer than about half the orbit
+// glints: a click inside a ring selects the structure first, and no star inside
+// its disc is clickable while the ring is visible, focused or not. A scene star nearer than about half the orbit
 // distance keeps true depth above this band and still wins.
 const PICK_BAND_STRUCTURE_RING_EPS: f32 = 2.0e-4;
 

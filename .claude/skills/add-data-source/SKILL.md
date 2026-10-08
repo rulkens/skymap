@@ -15,8 +15,8 @@ skymap has two kinds of "data source", with very different edit surfaces:
   cross-references that and adds the `Source`-enum touchpoints.
 
 - **Path B — a new featured structure category / POI type** rendered as marker
-  rings + text labels (the existing eight are `cluster` / `supercluster` /
-  `void` / `group` and `open-cluster` / `globular-cluster` / `nebula` /
+  rings + text labels (the existing categories are `galaxy-cluster` / `supercluster` /
+  `void` / `galaxy-group` and `open-cluster` / `globular-cluster` / `nebula` /
   `galactic-centre`). This is the common case and the one this skill maps in
   detail. The edit surface is a registry row plus a handful of typed tables;
   the rest derives from the registry.
@@ -165,8 +165,7 @@ renderer/layer order the galaxy catalogs use:
 
 Worked against the four Milky Way categories (`open-cluster`, `globular-cluster`,
 `nebula`, `galactic-centre`, 2026-10). Replace `X` with your category. A category
-is a registry row plus a few typed tables; most of what used to be hand-listed is
-now derived from the registry. Edit in this order and let `npm run typecheck`
+is a registry row plus a few typed tables; the rest derives from the registry. Edit in this order and let `npm run typecheck`
 walk you to anything missed.
 
 ### The edit surface
@@ -176,7 +175,7 @@ walk you to anything missed.
 | 1   | Source code        | `src/data/source.ts`                                                                                                                                | The append-only pick code (rules below)                                                         |
 | 2   | Registry row       | `src/data/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/data/sources.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
 | 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
-| 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`, `lineOfSightAssumed`)                          |
+| 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
 | 5   | Style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `visibleBand`, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
 | 6   | Fade band (if new) | `src/services/engine/presentation/scaleFadeBands.ts`                                                                                                | Only when no existing band fits; otherwise point `visibleBand` at one                           |
 | 7   | Build switch       | `src/data/structure/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
@@ -199,9 +198,9 @@ walk you to anything missed.
 ### Registry row (step 2)
 
 - `scale` — `'cosmic'` for regions of the galaxy distribution (Mpc-scale), `'milkyWay'`
-  for structures inside our Galaxy (parsec-scale). `SLAB_BY_STRUCTURE_SCALE` turns it into the
-  projection slab (COSMO's near plane is 10 kpc, so anything smaller needs NEAR0's adaptive
-  planes), and `STRUCTURE_IDS_BY_SCALE` is read from it, so the two marker passes, the label
+  for structures inside our Galaxy (parsec-scale). `'milkyWay'` draws in the NEAR0 slab (COSMO's near
+  plane is 10 kpc, so anything smaller needs NEAR0's adaptive planes), and
+  `STRUCTURE_IDS_BY_SCALE` is read from it, so the two marker passes, the label
   producers and the settings panel partition the categories the same way. A cosmic structure's
   InfoCard counts member galaxies; that count, not focus dimming (which applies to every
   structure), is what `scale` gates.
@@ -228,7 +227,7 @@ _nearer_ distance. Focus framing is uniform (`structureFocusDistance.ts`,
 
 - Add the category's own fields to `StructureSeedEntry` and validate them beside
   the existing checks: `nebulaKind` is required on `nebula` and rejected
-  elsewhere; `lineOfSightAssumed` is accepted on `galactic-centre` only.
+  elsewhere.
   `SeedEntry` in `buildStaticAnchorStructures.ts` mirrors the fields it reads.
 - Every row has `distance`, `physicalRadius` and `apparentRadius` as
   `{ value, unit }` (`pc` / `kpc` / `Mpc`), in the unit the source publishes.

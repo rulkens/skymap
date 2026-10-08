@@ -1,5 +1,5 @@
 // structureMarker/ringPick.wesl — offscreen r32uint picking fragment for
-// structure rings (cluster / supercluster / void / group).
+// structure rings (cosmic and Milky Way).
 //
 // Sister to structureMarker/ring.wesl (the visible-ring fragment). Both
 // consume the same VsOut produced by the shared vertex stage in
@@ -36,8 +36,7 @@
 // shared lib rather than hardcoded, so a future shift change can't leave
 // this one shader silently packing at the old width.  The per-category
 // SourceUniforms block carries
-// the source code (5/6/7/15 for cluster/supercluster/void/group — see
-// sources.ts and lib/selectionEncoding.wesl).  'structureIndex' is the
+// the category's source code (see sources.ts and lib/selectionEncoding.wesl).  'structureIndex' is the
 // @builtin(instance_index) of this draw, populated in the vertex stage
 // (ring.wesl) and forwarded through VsOut.structureIndex — flat-interpolated
 // so the integer arrives unchanged across all six vertices of the
