@@ -15,21 +15,22 @@ import { DATA_SOURCES } from '../data/dataSources';
 import { dataRowPath } from '../utils/dataRowPath';
 import { sitePath } from '../utils/sitePath';
 
-const groups = [...new Set(DATA_SOURCES.map((row) => row.group))].map((name) => ({
+// One count per source: what the app draws, or what the source holds where our build does not count.
+const sources = DATA_SOURCES.map((row) => ({ ...row, count: row.drawn ?? row.rows }));
+const groups = [...new Set(sources.map((row) => row.group))].map((name) => ({
   name,
-  rows: DATA_SOURCES.filter((row) => row.group === name),
+  rows: sources.filter((row) => row.group === name),
 }));
-const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We draw', licence: 'Licence' } as const;
+const COLUMNS = { release: 'Release / Paper', count: '# of objects', licence: 'Licence' } as const;
 ---
 
 <table role="table" class="small">
   <caption>Data sources in skymap, as the code read them on 6 October 2026</caption>
   <thead role="rowgroup">
     <tr role="row">
-      <th role="columnheader" scope="col">Source and what it gives</th>
+      <th role="columnheader" scope="col">Source</th>
       <th role="columnheader" scope="col">{COLUMNS.release}</th>
-      <th role="columnheader" scope="col" class="num">{COLUMNS.rows}</th>
-      <th role="columnheader" scope="col" class="num">{COLUMNS.drawn}</th>
+      <th role="columnheader" scope="col" class="num">{COLUMNS.count}</th>
       <th role="columnheader" scope="col">{COLUMNS.licence}</th>
     </tr>
   </thead>
@@ -37,7 +38,7 @@ const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We d
     groups.map((group) => (
       <tbody role="rowgroup">
         <tr role="row" class="group">
-          <th role="columnheader" scope="rowgroup" colspan="5">
+          <th role="columnheader" scope="rowgroup" colspan="4">
             {group.name}
           </th>
         </tr>
@@ -49,10 +50,7 @@ const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We d
             </th>
             <td role="cell">{row.release}</td>
             <td role="cell" class="num">
-              {row.rows ?? <span class="sr">not counted</span>}
-            </td>
-            <td role="cell" class="num">
-              {row.drawn ?? <span class="sr">not counted</span>}
+              {row.count ?? <span class="sr">not counted</span>}
             </td>
             <td role="cell">
               {row.licence}
@@ -81,7 +79,7 @@ const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We d
               </span>
             </summary>
             <dl>
-              {(['release', 'rows', 'drawn', 'licence'] as const).map(
+              {(['release', 'count', 'licence'] as const).map(
                 (key) =>
                   row[key] && (
                     <div>
@@ -127,7 +125,7 @@ const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We d
     display: none;
   }
 
-  /* Three columns of the page grid for the source, three for the release, two and one for the counts, three for the licence. */
+  /* Four columns of the page grid for the source, three for the release, two for the count, three for the licence. */
   tr {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -139,15 +137,15 @@ const COLUMNS = { release: 'Release we read', rows: 'Rows we read', drawn: 'We d
     grid-column: span 3;
   }
 
+  tr > :first-child {
+    grid-column: span 4;
+  }
+
   tr > :nth-child(3) {
     grid-column: span 2;
   }
 
-  /* A count is wider than one column and is set from its right edge: a flex line, so it runs back into the gap. */
-  tr > :nth-child(4) {
-    grid-column: span 1;
-  }
-
+  /* A count is set from its right edge. */
   tr > .num {
     display: flex;
     justify-content: flex-end;

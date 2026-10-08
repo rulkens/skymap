@@ -163,7 +163,7 @@ const count = SIMPLIFIED.reduce((n, group) => n + group.items.length, 0);
         <a href={fact('sci-built-counts').source}>{fact('sci-built-counts').sourceLabel}</a>
       </p>
       <p>
-        “Rows we read” is the size of the table or query. “We draw” is smaller because rows without a usable
+        The count is what the app draws. It is smaller than the source’s own total because rows without a usable
         <a href={sitePath('/docs/reference/glossary/#redshift')}>redshift</a> are dropped, <a href={sitePath('/docs/data/pipeline/#cross-match-and-de-duplicate')}>overlapping catalogues are merged</a>, and <a href={sitePath('/docs/data/sdss/')}>SDSS</a> is cut to about 500,000 of its most
         luminous galaxies. Where a count is missing, neither our build nor the source’s own record gives one.
       </p>

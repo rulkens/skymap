@@ -362,7 +362,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   {
     id: 'sci-built-counts',
     about: 'app',
-    text: 'The counts in the “we draw” column are for the largest data size as published on 6 October 2026. Each galaxy file is a 16-byte header and 64 bytes per object, so a count is the size of the file once decompressed, minus 16, divided by 64.',
+    text: 'The counts of galaxies, quasars and Gaia stars are for the largest data size as published on 6 October 2026. Each galaxy file is a 16-byte header and 64 bytes per object, so a count is the size of the file once decompressed, minus 16, divided by 64.',
     source: 'https://skymap-data.rulkens.com/data/manifest.json',
     sourceLabel: 'the published data manifest',
     checked: CHECKED,
