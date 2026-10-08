@@ -141,7 +141,8 @@ The first six are the owner's rulings; the rest come from the sources, where the
 - **Sentence case** for headings, labels and buttons; no final full stop on a heading. One
   grammatical form per heading level. [MS-style]
 - **The key word comes first** in headings, links and list items. [NN-first2]
-- **The reader's words**: no type names, file names or plan jargon; no "we", "please", "oops". [NN-10, HIG-writing, GOVUK-style]
+- **The reader's words**: no type names, file names or plan jargon. Interface strings (buttons, labels,
+  status, errors) have no "we", "please" or "oops"; the site's prose keeps the owner's "we". [NN-10, HIG-writing, GOVUK-style, owner]
 - **Every field has a visible label** outside it; a placeholder is an example, never the label. [NN-placeholder]
 
 ## Per surface — only what differs
