@@ -28,6 +28,7 @@ import { DEV_PORTS } from '../../tools/utils/io/devPorts.ts';
 import { distDir } from '../../tools/utils/io/distDir.ts';
 import { toolPages } from '../../tools/utils/io/toolPages.ts';
 import { feedbackPlugin } from '../../tools/site/feedbackPlugin.ts';
+import { reviewPlugin } from '../../tools/site/reviewPlugin.ts';
 import { BASE, INDEXABLE } from './src/data/site.ts';
 import { robotsTxt } from './src/utils/robotsTxt.ts';
 import { sitemapXml } from './src/utils/sitemapXml.ts';
@@ -70,8 +71,14 @@ const devRootStatics = {
       if (command === 'dev')
         updateConfig({
           publicDir: pathToFileURL(`${publicDir}/`),
-          // The feedback endpoint (src/dev/feedback) rides the dev server only.
-          vite: { plugins: [rootStatics, feedbackPlugin(`${BASE}__feedback`)] },
+          // The feedback and review endpoints (src/dev/feedback, src/dev/review) ride the dev server only.
+          vite: {
+            plugins: [
+              rootStatics,
+              feedbackPlugin(`${BASE}__feedback`),
+              reviewPlugin(`${BASE}__review`),
+            ],
+          },
         });
     },
   },

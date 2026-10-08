@@ -10,6 +10,7 @@ import { siteShot } from '../data/siteShot';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import DevFeedback from '../dev/feedback/DevFeedback.astro';
+import DevReview from '../dev/review/DevReview.astro';
 import { INDEXABLE } from '../data/site';
 
 type Props = {
@@ -70,5 +71,6 @@ const imageUrl = new URL(cardUrl, Astro.site).href;
     </main>
     <Footer />
     {import.meta.env.DEV && <DevFeedback />}
+    {import.meta.env.DEV && <DevReview />}
   </body>
 </html>

@@ -1,0 +1,120 @@
+/*
+ * Dev-only docs review mode. The bar is fixed under the site's own top bar and the
+ * page is pushed down by its height, so it covers nothing at the top of a page.
+ * Cut text keeps its place until "hide" is on, so the owner sees what goes first.
+ */
+html.review-on {
+  --review-bar: 2.75rem;
+  scroll-padding-top: calc(var(--nav-height) + var(--review-bar));
+}
+
+html.review-on main {
+  padding-top: var(--review-bar);
+}
+
+.review-bar {
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: var(--review-bar);
+  padding: 0 1rem;
+  background: #05070d;
+  border-bottom: 1px solid rgba(168, 208, 255, 0.5);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.2 var(--font-body);
+  white-space: nowrap;
+}
+
+.review-name {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.review-job {
+  flex: 1 1 14rem;
+  min-width: 8rem;
+  box-sizing: border-box;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(168, 208, 255, 0.35);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.review-job:focus-visible,
+.review-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.review-words {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.review-counts,
+.review-flag {
+  color: var(--site-text-dim);
+}
+
+.review-missing {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffb4a8;
+}
+
+.review-missing:empty,
+.review-flag:empty {
+  display: none;
+}
+
+.review-flag.error {
+  color: #ffb4a8;
+}
+
+.review-toggle {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-toggle[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.review-mark {
+  cursor: pointer;
+}
+
+.review-cut {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.review-keep {
+  text-decoration: underline;
+  text-decoration-color: #4ade80;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.review-rewrite {
+  background: rgba(250, 204, 21, 0.3);
+}
+
+.review-hiding .review-cut,
+.review-hiding .review-cut-section {
+  display: none;
+}
