@@ -34,7 +34,7 @@ const cluster = (id: number): StructureMarkerDescriptor => ({
   // the renderer ignores it when packing the instance buffer, but
   // the type requires it.  Synthesize a stable per-fixture id.
   id: `test-cluster-${id}`,
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [id, 0, 0],
   radiusMpc: 2,
   haloColor: [1, 0.85, 0.4, 1],
@@ -55,7 +55,7 @@ const void_ = (id: number): StructureMarkerDescriptor => ({
 
 const group = (id: number): StructureMarkerDescriptor => ({
   id: `test-group-${id}`,
-  category: 'group',
+  category: 'galaxy-group',
   worldPos: [id, 0, 0],
   radiusMpc: 1,
   haloColor: [0.5, 0.9, 0.6, 0.8], // soft green — colour irrelevant for CPU bucketing

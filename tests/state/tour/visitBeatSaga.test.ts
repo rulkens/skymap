@@ -95,7 +95,7 @@ const STRUCTURE_DEPS: ResolveDeps = {
         type: 'structure',
         id,
         name: 'Test Structure',
-        category: 'cluster',
+        category: 'galaxy-cluster',
         worldPos: [1, 2, 3] as [number, number, number],
         physicalRadiusMpc: 1,
         apparentRadiusMpc: 2,
@@ -120,7 +120,7 @@ const milkyWayBeat: BeatData = {
 const narrationClip: ClipData = { start: 'live', timeline: [] };
 
 // A clip with a structure focus id — resolves immediately (structures are always in deps).
-const structureClip: ClipData = flyAndFocusOnClip(focusId('cluster-virgo'));
+const structureClip: ClipData = flyAndFocusOnClip(focusId('galaxy-cluster-virgo'));
 const structureBeat: BeatData = {
   enterClip: structureClip,
   caption: { title: 'Virgo Cluster' },
@@ -465,7 +465,7 @@ describe('visitBeatSaga', () => {
     expect(focusCues.length).toBeGreaterThan(0);
     expect(focusCues[0]).toEqual({
       kind: 'focus',
-      ref: { type: 'structure', id: 'cluster-virgo' },
+      ref: { type: 'structure', id: 'galaxy-cluster-virgo' },
     });
   });
 });

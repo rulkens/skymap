@@ -26,7 +26,7 @@
  *      members stay bright, the rest of the sky recedes via `focusRecession`.
  *   3. M87 Galaxy — `flyToClip` moves only the camera to M87 (Virgo A, the
  *      cluster's dominant member). It does NOT dispatch a focus cue, so
- *      `selection.focus` stays on `cluster-virgo-m87` from beat 2. M87 —
+ *      `selection.focus` stays on `galaxy-cluster-virgo-m87` from beat 2. M87 —
  *      a cluster member — rides bright under the isolation dim while the rest
  *      of the sky remains receded. The dive is the focus composition doing its
  *      job: beat 2 owns the "what is focused", beat 3 owns "where the camera is".
@@ -79,7 +79,7 @@ export const webShowcase: Tour = {
         position: 'bottom-left',
       },
       dwellClip: dwellDrift(10),
-      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
     },
     {
       caption: {

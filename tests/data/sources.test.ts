@@ -26,7 +26,7 @@ describe('SOURCE_REGISTRY ids', () => {
 
 describe('Source enum — structure codes (cluster/supercluster/void)', () => {
   it('appends Cluster=5, Supercluster=6, Void=7 to the enum', () => {
-    expect(Source.Cluster).toBe(5);
+    expect(Source.GalaxyCluster).toBe(5);
     expect(Source.Supercluster).toBe(6);
     expect(Source.Void).toBe(7);
   });
@@ -36,7 +36,7 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
     expect(maskHas(VISIBLE_MASK, Source.DesiDeep)).toBe(false);
     expect(maskHas(VISIBLE_MASK, Source.DesiWedge)).toBe(false);
     expect(maskHas(VISIBLE_MASK, Source.DesiSgw)).toBe(false);
-    expect(maskHas(VISIBLE_MASK, Source.Cluster)).toBe(false);
+    expect(maskHas(VISIBLE_MASK, Source.GalaxyCluster)).toBe(false);
     expect(maskHas(VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(VISIBLE_MASK, Source.Void)).toBe(false);
   });

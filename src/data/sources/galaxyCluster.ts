@@ -1,17 +1,17 @@
 import type { StructureSourceEntry } from '../../@types/data/structure/StructureSourceEntry';
 import { Source } from '../source';
 
-export const CLUSTER_ENTRY = {
+export const GALAXY_CLUSTER_ENTRY = {
   type: 'structure',
-  code: Source.Cluster,
-  id: 'cluster',
-  label: 'Cluster',
+  code: Source.GalaxyCluster,
+  id: 'galaxy-cluster',
+  label: 'Galaxy cluster',
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
   scale: 'cosmic',
   labelLayer: 'structure',
   detailLabel: 'Galaxy Cluster',
-  shortLabel: 'Cluster',
-  plural: 'Clusters',
+  shortLabel: 'Galaxy cluster',
+  plural: 'Galaxy clusters',
 } as const satisfies StructureSourceEntry;

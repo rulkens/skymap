@@ -9,10 +9,15 @@ import { splitVisibilityArgs } from '../../../src/utils/animation/splitVisibilit
 describe('splitVisibilityArgs', () => {
   it('separates scoped entries from atomic keys, preserving each order', () => {
     expect(
-      splitVisibilityArgs(['cosmicWebDensity', 'survey:milliquas', 'flow', 'structureRing:group']),
+      splitVisibilityArgs([
+        'cosmicWebDensity',
+        'survey:milliquas',
+        'flow',
+        'structureRing:galaxy-group',
+      ]),
     ).toEqual({
       layers: ['cosmicWebDensity', 'flow'],
-      scoped: ['survey:milliquas', 'structureRing:group'],
+      scoped: ['survey:milliquas', 'structureRing:galaxy-group'],
     });
   });
 });

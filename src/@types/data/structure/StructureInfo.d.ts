@@ -80,7 +80,7 @@ type StructureBase = {
 
 /** A galaxy cluster.  Clusters alone carry an Abell/ACO designation. */
 type ClusterRecord = StructureBase & {
-  readonly category: 'cluster';
+  readonly category: 'galaxy-cluster';
   /**
    * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
    * surfaced for the InfoCard.  Omitted when the cluster has no Abell number
@@ -107,7 +107,7 @@ type VoidRecord = StructureBase & {
  * shared `StructureBase` fields, just like voids.
  */
 type GroupRecord = StructureBase & {
-  readonly category: 'group';
+  readonly category: 'galaxy-group';
 };
 
 /** An open star cluster inside the Milky Way. */

@@ -52,7 +52,7 @@ export const neighbourhoodReveal: ClipData = {
   start: 'live',
   timeline: [
     all([
-      ...dwellDrift(REVEAL_DWELL_SEC, { spinTo: focusId('group-m81-group') }).timeline,
+      ...dwellDrift(REVEAL_DWELL_SEC, { spinTo: focusId('galaxy-group-m81-group') }).timeline,
       // A beat of stillness, then release the focus and pull; the drift
       // outlasts the dolly so the wide shot breathes before the flythrough
       // launches.

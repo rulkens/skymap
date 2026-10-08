@@ -44,10 +44,10 @@ export const Source = {
    * the packed identity; the 26-bit `localIdx` carries the structure's index
    * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
-  Cluster: 5,
-  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */
+  GalaxyCluster: 5,
+  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as GalaxyCluster. */
   Supercluster: 6,
-  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as Cluster. */
+  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as GalaxyCluster. */
   Void: 7,
   /**
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
@@ -73,11 +73,11 @@ export const Source = {
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 6
    * bits of the packed identity; the 26-bit `localIdx` carries the structure's
-   * index into the structure store. Same encoding as Cluster/Supercluster/
+   * index into the structure store. Same encoding as GalaxyCluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the galaxy catalog codes 0–8 below it.
    */
-  Group: 15,
+  GalaxyGroup: 15,
   /**
    * Procedural Milky-Way galactic-disk overlay. Not persisted, but PICKABLE:
    * `milkyWayPickRenderer` stamps this code and `milkyWaySelectionRow` resolves

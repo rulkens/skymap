@@ -99,7 +99,7 @@ describe('clipFociReady', () => {
 
     const virgoLookClip: ClipData = {
       start: 'live',
-      timeline: [lookAtId(id('cluster-virgo-m87'), 3)],
+      timeline: [lookAtId(id('galaxy-cluster-virgo-m87'), 3)],
     };
     expect(clipFociReady(virgoLookClip, emptyResolver)).toBe(true);
   });
@@ -115,7 +115,7 @@ describe('clipFociReady', () => {
 
     const virgoSpinClip: ClipData = {
       start: 'live',
-      timeline: [spinToId(id('cluster-virgo-m87'), { over: 3 })],
+      timeline: [spinToId(id('galaxy-cluster-virgo-m87'), { over: 3 })],
     };
     expect(clipFociReady(virgoSpinClip, emptyResolver)).toBe(true);
   });
@@ -128,9 +128,9 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [
         all([
-          moveTargetId(id('cluster-virgo-m87'), 5, 'easeInOutCubic'),
-          dollyToId(id('cluster-virgo-m87'), 5, { ease: 'easeInOutCubic' }),
-          focus(id('cluster-virgo-m87')),
+          moveTargetId(id('galaxy-cluster-virgo-m87'), 5, 'easeInOutCubic'),
+          dollyToId(id('galaxy-cluster-virgo-m87'), 5, { ease: 'easeInOutCubic' }),
+          focus(id('galaxy-cluster-virgo-m87')),
         ]),
       ],
     };

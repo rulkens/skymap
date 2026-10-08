@@ -48,7 +48,7 @@ const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
@@ -93,7 +93,7 @@ function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
 const deps: ResolveDeps = {
   structures: {
     byId: (id) => (id === 'virgo' ? virgo : null),
-    byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
+    byCategory: (cat) => (cat === 'galaxy-cluster' ? [virgo] : []),
   },
 };
 
@@ -125,11 +125,11 @@ describe('resolvePick, composed', () => {
   });
 
   it('maps a structure code to a durable-id ref, or null with no backing record', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.Cluster, localIdx: 0 })).toEqual({
+    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 0 })).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(resolver.resolvePick({ sourceCode: Source.Cluster, localIdx: 99 })).toBeNull();
+    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 99 })).toBeNull();
   });
 
   it('maps a milkyWay code to the singleton ref', () => {
@@ -366,15 +366,15 @@ describe('resolveFocusId, composed', () => {
     expect(noCloud.resolveFocusId('m31')).toBeNull();
   });
 
-  it('cluster-<seed> → structure ref with the durable id', () => {
-    expect(resolver.resolveFocusId('cluster-virgo')).toEqual({
+  it('galaxy-cluster-<seed> → structure ref with the durable id', () => {
+    expect(resolver.resolveFocusId('galaxy-cluster-virgo')).toEqual({
       type: 'structure',
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
     });
   });
 
   it('structure id with invalid chars → null', () => {
-    expect(resolver.resolveFocusId('cluster-virgo m87')).toBeNull();
+    expect(resolver.resolveFocusId('galaxy-cluster-virgo m87')).toBeNull();
   });
 
   it('round-trips a milkyWay ref through encode → decode', () => {
@@ -547,18 +547,18 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
 describe('composeSelectionRows — picking gate', () => {
   const structureRow: SelectionKindRow = {
     type: 'structure',
-    pickSources: [Source.Cluster],
+    pickSources: [Source.GalaxyCluster],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
     extractRow: () => virgo,
     focusId: {
-      claims: (id) => id.startsWith('cluster-'),
+      claims: (id) => id.startsWith('galaxy-cluster-'),
       decode: () => ({ type: 'structure', id: 'virgo' }),
-      encode: () => 'cluster-virgo',
+      encode: () => 'galaxy-cluster-virgo',
     },
   };
 
   it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
-    const pick = { sourceCode: Source.Cluster, localIdx: 0 };
+    const pick = { sourceCode: Source.GalaxyCluster, localIdx: 0 };
     const allEnabled = composeSelectionRows(
       () => [structureRow],
       () => ({
@@ -602,10 +602,12 @@ describe('composeSelectionRows — picking gate', () => {
       }),
     );
     expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
-    expect(structureDisabled.resolveFocusId('cluster-virgo')).toEqual({
+    expect(structureDisabled.resolveFocusId('galaxy-cluster-virgo')).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('cluster-virgo');
+    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe(
+      'galaxy-cluster-virgo',
+    );
   });
 });

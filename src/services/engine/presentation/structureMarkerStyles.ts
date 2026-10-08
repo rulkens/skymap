@@ -70,7 +70,7 @@ type StructureMarkerStyle = {
  * bulk catalog from papering the sky with sub-readable specks).
  */
 export const STRUCTURE_MARKER_STYLES = {
-  cluster: {
+  'galaxy-cluster': {
     labelColor: hexToGl('#FFD966'),
     minPixelSize: 35,
     maxPixelSize: 150,
@@ -123,7 +123,7 @@ export const STRUCTURE_MARKER_STYLES = {
     outlineEmFrac: 0.16,
     labelPlacement: 'centre',
   },
-  group: {
+  'galaxy-group': {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
     // (yellow, #FFD966) → supercluster (orange, #FFB86B). Lightness falls and
     // hue warms as the structures grow. The cream is held a notch below pure

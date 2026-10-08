@@ -16,7 +16,7 @@
  *
  * The value passes through raw — no `decodeURIComponent`. That is deliberate and
  * matches `parseHashParams`'s encoding policy: skymap's hashes are un-encoded
- * slugs (`focus=cluster-virgo-m87`, `t=2026-07-29T12:00:00.000Z`), and decoding
+ * slugs (`focus=galaxy-cluster-virgo-m87`, `t=2026-07-29T12:00:00.000Z`), and decoding
  * them would change the bytes of every deep link already in circulation.
  *
  * ### The `typeof window` guard is load-bearing, not SSR insurance

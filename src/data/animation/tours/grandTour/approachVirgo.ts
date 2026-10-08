@@ -37,14 +37,14 @@ import {
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 
-const VIRGO = focusId('cluster-virgo-m87');
+const VIRGO = focusId('galaxy-cluster-virgo-m87');
 
 export const approachVirgo: ClipData = {
   start: 'live',
   timeline: [
     scene(setLabelsFocusedOnly(true)),
-    hide(['structureRing:group'], 1),
-    show(['survey:glade', 'survey:sdss', 'structureRing:cluster'], 2),
+    hide(['structureRing:galaxy-group'], 1),
+    show(['survey:glade', 'survey:sdss', 'structureRing:galaxy-cluster'], 2),
     all([lookAtId(VIRGO, 3), strafeId(VIRGO, 10, 3)]),
     focus(VIRGO),
     hold(1),

@@ -13,7 +13,7 @@
  * ### Fixture strategy
  *
  * We build a minimal `ResolveDeps` that resolves a single structure id
- * ('cluster-virgo') to a known `StructureInfo` record. That structure's
+ * ('galaxy-cluster-virgo') to a known `StructureInfo` record. That structure's
  * `worldPos` and `physicalRadiusMpc` are chosen so `focusFraming` returns
  * predictable values we can assert against using `structureFocusDistance`.
  * This avoids duplicating `focusFraming`'s framing math in the tests and
@@ -81,8 +81,8 @@ const POSE: CameraPose = { target: ORIGIN, yaw: 0, pitch: 0, distance: 5 };
  */
 const VIRGO: StructureInfo = {
   type: 'structure',
-  category: 'cluster',
-  id: 'cluster-virgo',
+  category: 'galaxy-cluster',
+  id: 'galaxy-cluster-virgo',
   name: 'Virgo Cluster',
   worldPos: [10, 0, 0],
   featured: true,
@@ -90,12 +90,15 @@ const VIRGO: StructureInfo = {
 } as StructureInfo;
 
 /**
- * `ResolveDeps` that resolves 'cluster-virgo' via the structure path used by
+ * `ResolveDeps` that resolves 'galaxy-cluster-virgo' via the structure path used by
  * `resolveFocusId` (the `${category}-${seedId}` prefix test). No catalogs
  * are needed because no galaxy ids are tested here — only structures.
  */
 const DEPS: ResolveDeps = {
-  structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null), byCategory: () => [] },
+  structures: {
+    byId: (id) => (id === 'galaxy-cluster-virgo' ? VIRGO : null),
+    byCategory: () => [],
+  },
 };
 const RESOLVER = selectionResolverOver(DEPS);
 
@@ -109,7 +112,7 @@ const EXPECTED_DISTANCE = structureFocusDistance(4, FOV_Y);
 
 describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera actions', () => {
   it('all([moveTargetId, dollyToId]) resolves to all([setVec ch:target, set ch:distance])', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [
         all([moveTargetId(id, 3, 'easeInOutCubic'), dollyToId(id, 3, { ease: 'easeInOutCubic' })]),
@@ -145,7 +148,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   });
 
   it('dollyToId scale multiplies the resolved framing distance', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [dollyToId(id, 2, { scale: 0.5 })],
     };
@@ -159,7 +162,7 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
   });
 
   it('ease and over are preserved on the resolved action', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [moveTargetId(id, 7, 'easeInCubic')],
     };
@@ -179,14 +182,14 @@ describe('resolveClipFoci rewrites moveTargetId/dollyToId to concrete camera act
 
 describe('resolveClipFoci rewrites a focusId cue to a focus ref cue', () => {
   it('focusId(id) resolves to { kind:"focus", ref: SelectionRef }', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [focus(id)],
     };
     const resolved = resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS);
     expect(resolved.timeline[0]).toEqual({
       kind: 'focus',
-      ref: { type: 'structure', id: 'cluster-virgo' },
+      ref: { type: 'structure', id: 'galaxy-cluster-virgo' },
     });
   });
 });
@@ -211,7 +214,7 @@ describe('resolveClipFoci resolves focusId(null) to focus(null)', () => {
 
 describe('resolveClipFoci recurses into seq/all/fork', () => {
   it('id-bearing leaf nested under seq is rewritten', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {
       timeline: [seq([hold(1), dollyToId(id, 2)])],
     };
@@ -243,7 +246,9 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
   it('resolves to concurrent yaw/pitch tweens aiming from the orbit target at the subject', () => {
     // Virgo frames at [10,0,0]. Looking from the origin, the camera must aim
     // along +X: orbitAnglesLookingAlong([1,0,0]) → yaw −π/2, pitch 0.
-    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 3, 'easeOutCubic')] };
+    const clip: ClipData = {
+      timeline: [lookAtId(focusId('galaxy-cluster-virgo'), 3, 'easeOutCubic')],
+    };
     const resolved = resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS);
 
     const outer = resolved.timeline[0]!;
@@ -266,7 +271,7 @@ describe('resolveClipFoci rewrites lookAtId to an aimAt bearing', () => {
 
   it('the bearing is measured from the passed pose target, not the origin', () => {
     // From [10,0,10] the subject at [10,0,0] lies along −Z: yaw π, pitch 0.
-    const clip: ClipData = { timeline: [lookAtId(focusId('cluster-virgo'), 2)] };
+    const clip: ClipData = { timeline: [lookAtId(focusId('galaxy-cluster-virgo'), 2)] };
     const resolved = resolveClipFoci(
       clip,
       RESOLVER,
@@ -293,7 +298,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
     // bearing-right (forward × worldUp) is +Z. byDeg 45 at pose distance 5 →
     // tan(45°) × 5 = 5 Mpc: the target strafes to [0,0,5].
     const clip: ClipData = {
-      timeline: [strafeId(focusId('cluster-virgo'), 45, 3, 'easeOutCubic')],
+      timeline: [strafeId(focusId('galaxy-cluster-virgo'), 45, 3, 'easeOutCubic')],
     };
     const resolved = resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS);
 
@@ -308,7 +313,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
   it('throws when the bearing is vertical (right axis undefined)', () => {
     // Subject straight above the pose target: forward ∥ worldUp, no lateral
     // direction exists. A descriptive throw beats a NaN target.
-    const clip: ClipData = { timeline: [strafeId(focusId('cluster-virgo'), 10, 3)] };
+    const clip: ClipData = { timeline: [strafeId(focusId('galaxy-cluster-virgo'), 10, 3)] };
     expect(() =>
       resolveClipFoci(clip, RESOLVER, FOV_Y, { ...POSE, target: [10, -20, 0] }, SIM_DAYS),
     ).toThrow(/vertical/);
@@ -345,7 +350,10 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
     const clip: ClipData = {
       timeline: [
         flyPath(
-          [atFocus(focusId('cluster-virgo'), { over: 2 }), atPoint([5, 5, 5], 3, { pitch: 0.2 })],
+          [
+            atFocus(focusId('galaxy-cluster-virgo'), { over: 2 }),
+            atPoint([5, 5, 5], 3, { pitch: 0.2 }),
+          ],
           { over: 5, ease: 'easeInOutCubic' },
         ),
       ],
@@ -382,7 +390,7 @@ describe('resolveClipFoci resolves flyPath waypoints', () => {
       timeline: [
         flyPath(
           [
-            atFocus(focusId('cluster-virgo'), { linger: 0.8 }), // per-target brake
+            atFocus(focusId('galaxy-cluster-virgo'), { linger: 0.8 }), // per-target brake
             atPoint([5, 5, 5], 3),
           ],
           {
@@ -429,7 +437,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
     // Virgo sits at [10,0,0]; from the origin that is world +X. A nonzero live
     // yaw makes this a real test of `by`, not a coincidence of yaw already
     // being 0.
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const livePose: CameraPose = { ...POSE, yaw: 0.5 };
     const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
 
@@ -449,7 +457,7 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
   });
 
   it('honours turns: turns:-1 yields a by exactly 2π less than turns:0', () => {
-    const id = focusId('cluster-virgo');
+    const id = focusId('galaxy-cluster-virgo');
     const livePose: CameraPose = { ...POSE, yaw: 0.5 };
 
     const byDefault = resolveSpinBy(spinToId(id, { over: 3 }), livePose);
@@ -479,8 +487,8 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
 
     const northStar: StructureInfo = {
       type: 'structure',
-      category: 'cluster',
-      id: 'cluster-northstar',
+      category: 'galaxy-cluster',
+      id: 'galaxy-cluster-northstar',
       name: 'North Star',
       worldPos: [forward[0] * 10, forward[1] * 10, forward[2] * 10],
       featured: true,
@@ -489,13 +497,13 @@ describe('resolveClipFoci rewrites spinToId to a bearing-aware yaw spin', () => 
     const deps: ResolveDeps = {
       ...DEPS,
       structures: {
-        byId: (sid) => (sid === 'cluster-northstar' ? northStar : null),
+        byId: (sid) => (sid === 'galaxy-cluster-northstar' ? northStar : null),
         byCategory: () => [],
       },
     };
     const resolver = selectionResolverOver(deps);
 
-    const id = focusId('cluster-northstar');
+    const id = focusId('galaxy-cluster-northstar');
     const livePose: CameraPose = { target: [0, 0, 0], yaw: 1.0, pitch: 0, distance: 5 };
     const clip: ClipData = { timeline: [spinToId(id, { over: 3 })] };
 

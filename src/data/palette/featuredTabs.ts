@@ -177,7 +177,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
         capture: { keepFocus: true },
       },
       {
@@ -185,7 +185,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
         capture: { keepFocus: true },
       },
       {
@@ -620,7 +620,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
         capture: { keepFocus: true },
       },
       {
@@ -628,7 +628,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'M81 Group',
         blurb:
           'A nearby group of about 30 galaxies around M81 and M82, some 12 million light-years away.',
-        action: { kind: 'focus', focusId: 'group-m81-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-m81-group' },
         capture: { keepFocus: true },
       },
       {
@@ -636,7 +636,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
         capture: { keepFocus: true },
       },
       {

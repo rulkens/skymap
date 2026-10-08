@@ -1,17 +1,17 @@
 import type { StructureSourceEntry } from '../../@types/data/structure/StructureSourceEntry';
 import { Source } from '../source';
 
-export const GROUP_ENTRY = {
+export const GALAXY_GROUP_ENTRY = {
   type: 'structure',
-  code: Source.Group,
-  id: 'group',
-  label: 'Group',
+  code: Source.GalaxyGroup,
+  id: 'galaxy-group',
+  label: 'Galaxy group',
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
   scale: 'cosmic',
   labelLayer: 'structure',
   detailLabel: 'Galaxy Group',
-  shortLabel: 'Group',
-  plural: 'Groups',
+  shortLabel: 'Galaxy group',
+  plural: 'Galaxy groups',
 } as const satisfies StructureSourceEntry;

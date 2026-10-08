@@ -6,14 +6,14 @@
  *   - `survey:<catalogId>`      — one galaxy catalog's visibility
  *                                 (`survey:milliquas` = the deep-field reveal).
  *   - `structureRing:<id>`      — one structure category's rings
- *                                 (`structureRing:group`; structure settings
+ *                                 (`structureRing:galaxy-group`; structure settings
  *                                 items ARE the four categories).
  *   - `label:<scope>`           — the unified label namespace:
  *                                 `label:milkyWay` (the MW label),
  *                                 `label:survey` (famous-galaxy names),
  *                                 `label:structure` (all structure labels),
  *                                 `label:<StructureId>` (one category's labels,
- *                                 e.g. `label:group`).
+ *                                 e.g. `label:galaxy-group`).
  *
  * Template-literal typing keeps the strings honest — `'survey:bogus'` is a
  * compile error. Unlike the `'labels'` aggregate (which expands to atomic keys

@@ -34,7 +34,7 @@ function makeStructure(id: string): StructureInfo {
     type: 'structure',
     id,
     name: id,
-    category: 'cluster',
+    category: 'galaxy-cluster',
     worldPos: [0, 0, 0],
     featured: true,
     physicalRadiusMpc: 2,

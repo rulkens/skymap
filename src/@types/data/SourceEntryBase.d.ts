@@ -7,7 +7,7 @@
 import type { CategoryLabelLayer } from '../animation/CategoryLabelLayer';
 
 export type SourceEntryBase = {
-  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'cluster'`). */
+  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'galaxy-cluster'`). */
   readonly id: string;
   /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Cluster'`). */
   readonly label: string;

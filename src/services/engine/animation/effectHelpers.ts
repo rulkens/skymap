@@ -347,7 +347,7 @@ export function fork(child: Effect): Effect & { kind: 'fork' } {
  *
  * `layers` accepts three vocabularies in one list: atomic keys, authoring
  * aggregates (`'labels'` → every label layer), and `'family:scope'`
- * scoped entries (`'survey:milliquas'`, `'structureRing:group'`,
+ * scoped entries (`'survey:milliquas'`, `'structureRing:galaxy-group'`,
  * `'label:milkyWay'`) that address ONE item where the bare key would fan over
  * all. `splitVisibilityArgs` resolves the mix at construction: aggregates
  * flatten to atomic keys, scoped entries move to the effect's `scoped` field.

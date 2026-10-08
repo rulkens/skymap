@@ -49,7 +49,7 @@ const STRUCTURE_ROW: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,

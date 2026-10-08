@@ -1,6 +1,6 @@
 # Path-based object links with share previews
 
-Object links live in the URL hash today (`#focus=cluster-virgo-m87`). A hash is never sent to a server, so a shared link cannot unfurl with the object's name and thumbnail, and search engines see one page for the whole app.
+Object links live in the URL hash today (`#focus=galaxy-cluster-virgo-m87`). A hash is never sent to a server, so a shared link cannot unfurl with the object's name and thumbnail, and search engines see one page for the whole app.
 
 ## The shape discussed (2026-10-05, Milky Way structures brainstorm)
 

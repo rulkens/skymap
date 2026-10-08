@@ -28,7 +28,7 @@ describe('tierTarget', () => {
   });
 
   it('returns undefined for non-galaxy catalog sources (structures cannot be subsampled)', () => {
-    expect(tierTarget(Source.Cluster, 'medium')).toBeUndefined();
+    expect(tierTarget(Source.GalaxyCluster, 'medium')).toBeUndefined();
     expect(tierTarget(Source.Supercluster, 'small')).toBeUndefined();
     expect(tierTarget(Source.Void, 'large')).toBeUndefined();
   });

@@ -76,10 +76,10 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       const gr = mags.magG - mags.magR;
       return Number.isFinite(gr) ? galaxyTypeFromColor(gr) : UNKNOWN;
     }
-    case Source.Cluster:
+    case Source.GalaxyCluster:
     case Source.Supercluster:
     case Source.Void:
-    case Source.Group:
+    case Source.GalaxyGroup:
     case Source.OpenCluster:
     case Source.GlobularCluster:
     case Source.Nebula:

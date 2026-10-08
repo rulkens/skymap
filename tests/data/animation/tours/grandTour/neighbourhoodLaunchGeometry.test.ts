@@ -35,8 +35,8 @@ const M81_POS: Vec3 = [-3.6 * Math.sin(0.6), 0, -3.6 * Math.cos(0.6)];
 
 const LOCAL_GROUP: StructureInfo = {
   type: 'structure',
-  category: 'group',
-  id: 'group-local-group',
+  category: 'galaxy-group',
+  id: 'galaxy-group-local-group',
   name: 'Local Group',
   worldPos: LG_POS,
   featured: true,
@@ -45,8 +45,8 @@ const LOCAL_GROUP: StructureInfo = {
 
 const M81_GROUP: StructureInfo = {
   type: 'structure',
-  category: 'group',
-  id: 'group-m81-group',
+  category: 'galaxy-group',
+  id: 'galaxy-group-m81-group',
   name: 'M81 Group',
   worldPos: M81_POS,
   featured: true,
@@ -56,7 +56,7 @@ const M81_GROUP: StructureInfo = {
 const DEPS: ResolveDeps = {
   structures: {
     byId: (id) =>
-      id === 'group-local-group' ? LOCAL_GROUP : id === 'group-m81-group' ? M81_GROUP : null,
+      id === 'galaxy-group-local-group' ? LOCAL_GROUP : id === 'galaxy-group-m81-group' ? M81_GROUP : null,
     byCategory: () => [],
   },
 };

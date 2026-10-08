@@ -152,10 +152,10 @@ const BOOT_SETTINGS: SettingsLeaves = {
   structures: {
     enabled: true,
     items: {
-      cluster: { enabled: true, labelEnabled: true },
+      'galaxy-cluster': { enabled: true, labelEnabled: true },
       supercluster: { enabled: true, labelEnabled: true },
       void: { enabled: true, labelEnabled: true },
-      group: { enabled: true, labelEnabled: true },
+      'galaxy-group': { enabled: true, labelEnabled: true },
     },
   },
 };
@@ -427,10 +427,10 @@ describe('reevaluateDemand demand-table regression', () => {
       structures: {
         enabled: true,
         items: {
-          cluster: { enabled: false, labelEnabled: false },
+          'galaxy-cluster': { enabled: false, labelEnabled: false },
           supercluster: { enabled: false, labelEnabled: false },
           void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
+          'galaxy-group': { enabled: false, labelEnabled: false },
         },
       },
     };
@@ -503,10 +503,10 @@ describe('reevaluateDemand demand-table regression', () => {
       structures: {
         enabled: true,
         items: {
-          cluster: { enabled: false, labelEnabled: false },
+          'galaxy-cluster': { enabled: false, labelEnabled: false },
           supercluster: { enabled: false, labelEnabled: false },
           void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
+          'galaxy-group': { enabled: false, labelEnabled: false },
         },
       },
     };

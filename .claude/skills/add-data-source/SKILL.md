@@ -1,6 +1,6 @@
 ---
 name: add-data-source
-description: Use when adding a new data source or featured category to skymap — a new survey catalog feeding the point cloud, or (the common case) a new featured structure category / POI type rendered as marker rings + labels (cluster / supercluster / void / group and the four Milky Way categories are the existing eight). Triggers like "add a data source", "add a new structure category", "add galaxy groups / walls / a new POI layer", "wire up a new survey". Maps the full edit surface so no parallel site is missed.
+description: Use when adding a new data source or featured category to skymap — a new survey catalog feeding the point cloud, or (the common case) a new featured structure category / POI type rendered as marker rings + labels (galaxy-cluster / supercluster / void / galaxy-group and the four Milky Way categories are the existing eight). Triggers like "add a data source", "add a new structure category", "add galaxy groups / walls / a new POI layer", "wire up a new survey". Maps the full edit surface so no parallel site is missed.
 ---
 
 # `/add-data-source` — add a new data source or featured category

@@ -36,7 +36,7 @@
  * a populated place — every passed galaxy's name, plus the group labels.
  * That is safe from label flood because structure labels ride their ring
  * category's anchor gate, and the opening strip hid the whole structureRing
- * family: revealing only 'structureRing:group' means only group labels can
+ * family: revealing only 'structureRing:galaxy-group' means only group labels can
  * join. A later beat that wants a single named subject flips the mode back.
  *
  * The final focus() fires on settle — Centaurus A takes the ring emphasis
@@ -65,7 +65,7 @@ export const neighbourhoodFlythrough: ClipData = {
     // 2MRS + group rings arrive with the Local-Group beat now; this show is
     // a dedup no-op in the tour and exists so the clip still dresses its
     // scene when played standalone from the debugger.
-    show(['survey:2mrs', 'structureRing:group'], 2),
+    show(['survey:2mrs', 'structureRing:galaxy-group'], 2),
     scene(setLabelsFocusedOnly(false)),
     flyPath(
       [

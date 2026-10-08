@@ -80,7 +80,7 @@ function StructureDetailCard({
             value={memberCount.toLocaleString()}
           />
         )}
-        {target.category === 'cluster' && target.abell !== undefined && (
+        {target.category === 'galaxy-cluster' && target.abell !== undefined && (
           <CardRow
             label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
             value={formatAbellDesignation(target.abell)}

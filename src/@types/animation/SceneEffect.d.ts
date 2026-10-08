@@ -54,7 +54,7 @@
  * See `src/@types/animation/VisibilityLayerKey.d.ts` for the full set.
  *
  * `show`/`hide` additionally carry `scoped` — `'family:scope'` entries
- * (`'survey:milliquas'`, `'structureRing:group'`, `'label:milkyWay'`) that
+ * (`'survey:milliquas'`, `'structureRing:galaxy-group'`, `'label:milkyWay'`) that
  * address ONE item of a per-item layer. Authors write them inline in the same
  * list (`hide(['flow', 'survey:milliquas'])`); the helper splits them out at
  * construction because they take a different path at fire time: a targeted

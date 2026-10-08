@@ -283,11 +283,11 @@ function makeState(
     layerSlots.set(code, densityRuntime.slots[entry.id] as never);
   }
   const allVisible: Record<string, boolean> = {
-    cluster: true,
+    'galaxy-cluster': true,
     supercluster: true,
     void: true,
     famousGalaxy: true,
-    group: true,
+    'galaxy-group': true,
   };
   // Translate the per-axis override maps into the per-category item rows the
   // structureCatalog demand predicate reads (ring axis = `enabled`, label axis
@@ -656,7 +656,12 @@ describe('wireSlots', () => {
     // demand pass must skip structureCatalog entirely.
     vi.mocked(structureCatalogFetcher).mockClear();
 
-    const allHidden = { cluster: false, supercluster: false, void: false, famousGalaxy: false };
+    const allHidden = {
+      'galaxy-cluster': false,
+      supercluster: false,
+      void: false,
+      famousGalaxy: false,
+    };
     const state = makeState({
       points: bootPointSlots(),
       markerCategoryVisibility: allHidden,
@@ -722,7 +727,7 @@ describe('wireSlots', () => {
     const deps = makeDeps();
     await wireSlots(state, deps);
     // The real structure store reflects setGroup writes immediately.
-    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
+    expect(state.data.structures.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
     expect(state.data.structures.byCategory('supercluster').length).toBeGreaterThan(0);
     expect(state.data.structures.byCategory('void').length).toBeGreaterThan(0);
   });
@@ -758,10 +763,10 @@ describe('wireSlots', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     // Bulk records land in the structure store.
-    expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
+    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
     expect(state.data.structures.byId('supercluster-bulk-shapley')).not.toBeNull();
     // Static anchors survive the bulk write (separate group).
-    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
+    expect(state.data.structures.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
   });
 
   it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
@@ -806,7 +811,7 @@ describe('wireSlots', () => {
     const last = counts[counts.length - 1]!;
     // Bulk adds one cluster (Coma) + one supercluster (Shapley); voids
     // come only from the static seed, so that count is unchanged.
-    expect(last.cluster!).toBe(first.cluster! + 1);
+    expect(last['galaxy-cluster']!).toBe(first['galaxy-cluster']! + 1);
     expect(last.supercluster!).toBe(first.supercluster! + 1);
     expect(last.void!).toBe(first.void!);
   });

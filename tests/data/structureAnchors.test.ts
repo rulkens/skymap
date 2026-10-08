@@ -23,7 +23,7 @@ import { SCALE_UNITS } from '../../src/data/scaleUnits';
 const SEED_PATH = resolve(__dirname, '../../data/seeds/structure_anchors.seed.json');
 const allEntries = parseStructureSeed(readFileSync(SEED_PATH, 'utf-8'));
 
-const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'cluster');
+const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'galaxy-cluster');
 const VOID_ENTRIES = allEntries.filter((e) => e.category === 'void');
 
 describe('raDecDistToEqCart', () => {

@@ -206,7 +206,7 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'cluster' } as unknown as StructureInfo;
-    store.dispatch(engineStructureCountsChanged({ cluster: 1 }));
+    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
   });

@@ -47,9 +47,9 @@ export const flyPathDemo: Clip = {
     timeline: [
       flyPath(
         [
-          atFocus(focusId('group-m81-group')), // launch toward M81 group
-          atFocus(focusId('group-cen-a-group')), // slow glide past Cen A
-          atFocus(focusId('group-sculptor-group')), // settle on Sculptor group
+          atFocus(focusId('galaxy-group-m81-group')), // launch toward M81 group
+          atFocus(focusId('galaxy-group-cen-a-group')), // slow glide past Cen A
+          atFocus(focusId('galaxy-group-sculptor-group')), // settle on Sculptor group
         ],
         { over: 20 },
       ),

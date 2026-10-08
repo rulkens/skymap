@@ -31,28 +31,28 @@ describe('buildStaticAnchorStructures', () => {
     const byName = new Map(structures.map((p) => [p.name, p.id]));
     // Ids come from the curated seed `id` field, not a runtime slug —
     // so they're stable regardless of display-name punctuation or encoding.
-    expect(byName.get('Virgo (M87)')).toBe('cluster-virgo-m87');
-    expect(byName.get('Coma (A1656)')).toBe('cluster-coma-a1656');
+    expect(byName.get('Virgo (M87)')).toBe('galaxy-cluster-virgo-m87');
+    expect(byName.get('Coma (A1656)')).toBe('galaxy-cluster-coma-a1656');
     expect(byName.get('Laniakea Supercluster')).toBe('supercluster-laniakea-sc');
     // The seed id is `bootes-void` (curated ASCII), so the structure id is
     // `void-bootes-void` — not the slug `bo-tes-void` that a naive
     // [^a-z0-9] strip of 'Boötes' would produce.
     expect(byName.get('Boötes Void')).toBe('void-bootes-void');
     // Entries whose seed id differs from slug(names[0]):
-    expect(byName.get('Leo Cluster')).toBe('cluster-leo-a1367');
+    expect(byName.get('Leo Cluster')).toBe('galaxy-cluster-leo-a1367');
     expect(byName.get('Corona Borealis Supercluster')).toBe('supercluster-corona-borealis-sc');
     expect(byName.get('Pisces-Cetus Supercluster')).toBe('supercluster-pisces-cetus-sc');
   });
 
   it('surfaces the abell designation on a featured cluster', () => {
     const structures = buildStaticAnchorStructures();
-    const coma = structures.find((p) => p.id === 'cluster-coma-a1656');
+    const coma = structures.find((p) => p.id === 'galaxy-cluster-coma-a1656');
     // Narrow to the cluster arm — `abell` lives there alone.
-    const abell = coma && coma.category === 'cluster' ? coma.abell : undefined;
+    const abell = coma && coma.category === 'galaxy-cluster' ? coma.abell : undefined;
     expect(abell).toBe('A1656');
     // Virgo has no seed `abell`, so the field is absent (not undefined-keyed)
     // even on the cluster arm.
-    const virgo = structures.find((p) => p.id === 'cluster-virgo-m87');
+    const virgo = structures.find((p) => p.id === 'galaxy-cluster-virgo-m87');
     expect(virgo && 'abell' in virgo).toBe(false);
     // The non-cluster arms structurally cannot carry an `abell` field.
     const aVoid = structures.find((p) => p.id === 'void-bootes-void');

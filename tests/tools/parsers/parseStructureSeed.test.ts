@@ -12,7 +12,7 @@ function baseEntry(overrides: Partial<StructureSeedEntry> = {}): StructureSeedEn
   return {
     id: 'coma',
     names: ['Coma Cluster', 'A1656'],
-    category: 'cluster',
+    category: 'galaxy-cluster',
     raHours: 12.997,
     decDeg: 27.98,
     distance: { value: 100, unit: 'Mpc' },

@@ -10,7 +10,7 @@
  *
  * The anchor id scheme is `${category}-${seed.id}` (see
  * `buildStaticAnchorStructures`), so Virgo — a cluster with seed id `virgo-m87`
- * — is `cluster-virgo-m87`, and Laniakea — a supercluster with seed id
+ * — is `galaxy-cluster-virgo-m87`, and Laniakea — a supercluster with seed id
  * `laniakea-sc` — is `supercluster-laniakea-sc`. A bare seed id never matches
  * `structures.byId`, so the beat's `waitUntilSaga(clipFociReady)` would poll forever:
  * the category prefix is load-bearing, not cosmetic.
@@ -42,7 +42,7 @@ export const demoTour: Tour = {
       dwellClip: dwellDrift(8),
     },
     {
-      enterClip: flyAndFocusOnClip(focusId('cluster-virgo-m87')),
+      enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
       caption: {
         title: 'The Virgo Cluster',
         body: 'Two thousand galaxies, bound by gravity 54 million light-years away.',
