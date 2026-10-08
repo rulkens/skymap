@@ -69,4 +69,5 @@ export type VisibilityLayerKey =
   | 'constellations'
   | 'orbitTrails'
   | 'cosmicWebDensityField'
-  | 'zoneOfAvoidance';
+  | 'zoneOfAvoidance'
+  | 'lightTime';

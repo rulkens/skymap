@@ -27,4 +27,5 @@ export const VISIBILITY_LAYER_ROWS = {
   orbitTrails: {},
   cosmicWebDensityField: {},
   zoneOfAvoidance: {},
+  lightTime: {},
 } as const satisfies Record<VisibilityLayerKey, { readonly aggregate?: 'labels' }>;

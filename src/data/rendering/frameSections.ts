@@ -167,7 +167,8 @@ export const SCENE: FrameSection = {
     // extinction — the shell's additive Fresnel glow would otherwise darken
     // along with the cosmological background behind it.
     //
-    // The rest is additive and so a listing choice: `star-upsample` sits beside
+    // The rest is additive and so a listing choice: `light-time-spheres` sits
+    // with the other faint shell, `star-upsample` sits beside
     // the `star-catalog` leaf draw for GPU-timing legibility, and the
     // constellation figures trail the star streams they connect. `constellations`
     // is the LAST roster row the lens line below samples.
@@ -179,6 +180,7 @@ export const SCENE: FrameSection = {
         'milky-way-upsample',
         'milky-way',
         'local-bubble',
+        'light-time-spheres',
         'star-points',
         'star-catalog',
         'star-upsample',
