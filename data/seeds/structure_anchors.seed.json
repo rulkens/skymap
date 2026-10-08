@@ -1448,7 +1448,7 @@
 {
   "id": "central-cluster",
   "names": ["Nuclear Star Cluster", "Milky Way nuclear star cluster"],
-  "category": "galactic-centre",
+  "category": "gc-cluster",
   "raHours": 17.761122667,
   "decDeg": -29.00781,
   "distance": { "value": 8178, "unit": "pc" },
@@ -1461,7 +1461,7 @@
 {
   "id": "arches",
   "names": ["Arches Cluster"],
-  "category": "galactic-centre",
+  "category": "gc-cluster",
   "raHours": 17.764027778,
   "decDeg": -28.82444444,
   "distance": { "value": 8178, "unit": "pc" },
@@ -1474,7 +1474,7 @@
 {
   "id": "quintuplet",
   "names": ["Quintuplet Cluster"],
-  "category": "galactic-centre",
+  "category": "gc-cluster",
   "raHours": 17.770518847,
   "decDeg": -28.83003348,
   "distance": { "value": 8178, "unit": "pc" },

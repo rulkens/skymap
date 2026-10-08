@@ -17,7 +17,7 @@ skymap has two kinds of "data source", with very different edit surfaces:
 - **Path B — a new featured structure category / POI type** rendered as marker
   rings + text labels (the existing categories are `galaxy-cluster` / `supercluster` /
   `void` / `galaxy-group` and `open-cluster` / `globular-cluster` / `nebula` /
-  `galactic-centre`). This is the common case and the one this skill maps in
+  `gc-cluster`). This is the common case and the one this skill maps in
   detail. The edit surface is a registry row plus a handful of typed tables;
   the rest derives from the registry.
 
@@ -164,7 +164,7 @@ renderer/layer order the galaxy catalogs use:
 ## Path B — a new featured structure category
 
 Worked against the four Milky Way categories (`open-cluster`, `globular-cluster`,
-`nebula`, `galactic-centre`, 2026-10). Replace `X` with your category. A category
+`nebula`, `gc-cluster`, 2026-10). Replace `X` with your category. A category
 is a registry row plus a few typed tables; the rest derives from the registry. Edit in this order and let `npm run typecheck`
 walk you to anything missed.
 
@@ -190,7 +190,7 @@ walk you to anything missed.
   **6-bit** field, and the all-ones value **63 is the reserved sentinel**
   (`selectionEncoding.ts`). Structure codes are pick-only, never persisted, but
   the discipline is the same. The last code in use is 36
-  (`GalacticCentrePlace`); **37..62 are free**. Re-read `source.ts` rather than
+  (`GcCluster`); **37..62 are free**. Re-read `source.ts` rather than
   trusting this line, and update the remaining-range note in its docblock.
 - The pick decode (`unpackPick`) does not map codes to categories, so there is
   no inverse table to keep in step.

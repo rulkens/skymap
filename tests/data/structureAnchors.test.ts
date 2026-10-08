@@ -102,7 +102,7 @@ describe('structure seed — Milky Way entries', () => {
   });
 
   it('every Galactic Centre place lies within 50 pc of GALACTIC_CENTRE_ANCHOR', () => {
-    for (const e of allEntries.filter((a) => a.category === 'galactic-centre')) {
+    for (const e of allEntries.filter((a) => a.category === 'gc-cluster')) {
       expect(distanceFromCentrePc(e), e.id).toBeLessThan(50);
     }
   });

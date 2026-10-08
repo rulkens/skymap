@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
-**Goal:** Four in-Galaxy structure categories (`open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`) with 71 seed rows, drawn as rings and labels on the NEAR0 slab, focusable, pickable, searchable, with two new card rows.
+**Goal:** Four in-Galaxy structure categories (`open-cluster`, `globular-cluster`, `nebula`, `gc-cluster`) with 71 seed rows, drawn as rings and labels on the NEAR0 slab, focusable, pickable, searchable, with two new card rows.
 
 **Architecture:** PR 1 (#844) built the joints, so this PR is rows at existing seams plus one renderer change:
 
@@ -50,13 +50,13 @@
 
 ```ts
 // src/data/source.ts — append-only; never renumber
-OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GalacticCentrePlace: 36
+OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GcCluster: 36
 
 // registry rows (shape of src/data/sources/cluster.ts)
 { id: 'open-cluster',     label: 'Open cluster',          shortLabel: 'Open cluster',     detailLabel: 'Open Cluster',          plural: 'Open clusters' }
 { id: 'globular-cluster', label: 'Globular cluster',      shortLabel: 'Globular',         detailLabel: 'Globular Cluster',      plural: 'Globular clusters' }
 { id: 'nebula',           label: 'Nebula',                shortLabel: 'Nebula',           detailLabel: 'Nebula',                plural: 'Nebulae' }
-{ id: 'galactic-centre',  label: 'Galactic Centre place', shortLabel: 'Galactic Centre',  detailLabel: 'Galactic Centre Place', plural: 'Galactic Centre' }
+{ id: 'gc-cluster',  label: 'Galactic Centre place', shortLabel: 'Galactic Centre',  detailLabel: 'Galactic Centre Place', plural: 'Galactic Centre' }
 // all four: type 'structure', allSky true, bearsLabel true, bearsMarker true,
 // labelLayer 'structure', scale 'milkyWay'
 
@@ -67,7 +67,7 @@ export type NebulaKind = 'emission' | 'reflection' | 'planetary' | 'supernova-re
 OpenClusterRecord         = StructureBase & { readonly category: 'open-cluster' };
 GlobularClusterRecord     = StructureBase & { readonly category: 'globular-cluster' };
 NebulaRecord              = StructureBase & { readonly category: 'nebula'; readonly nebulaKind: NebulaKind };
-GalacticCentrePlaceRecord = StructureBase & { readonly category: 'galactic-centre'; readonly lineOfSightAssumed: boolean };
+GcClusterRecord = StructureBase & { readonly category: 'gc-cluster'; readonly lineOfSightAssumed: boolean };
 
 // scaleFadeBands.ts — keyed on camera distance from the render origin, Mpc
 milkyWayStructures: { fullAt: MILKY_WAY_RADIUS_MPC * 2, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
@@ -83,12 +83,12 @@ Style rows (all `visibleBand: SCALE_FADE_BANDS.milkyWayStructures`; every value 
 | `open-cluster` | `#A9C4FF` / `#7F9BD9` / `#7F9BD942` | `2e-6` | 5 / 4 | 700 / 400 |
 | `globular-cluster` | `#C9A8FF` / `#9A7FD9` / `#9A7FD942` | `8e-6` | 5 / 4 | 700 / 400 |
 | `nebula` | `#FF8FA3` / `#D96F84` / `#D96F8442` | `2e-6` | 5 / 4 | 700 / 400 |
-| `galactic-centre` | `#E8E8F0` / `#B8B8C8` / `#B8B8C842` | `2e-6` | 5 / 4 | 700 / 400 |
+| `gc-cluster` | `#E8E8F0` / `#B8B8C8` / `#B8B8C842` | `2e-6` | 5 / 4 | 700 / 400 |
 
 Other style fields copy the `cluster` row.
 
 - [x] Add the codes, rows, type, arms, band and style rows. `buildAnchorStructure`'s switch gains four arms: the nebula arm carries `nebulaKind`, the Galactic Centre arm carries `lineOfSightAssumed ?? false`.
-- [x] Test `open-cluster and globular-cluster ids are not claimed as cluster`: the structure row's `claims` (`structureSelectionRow.ts:42`) resolves `open-cluster-pleiades` to category `open-cluster` and `globular-cluster-m13` to `globular-cluster`; the place id `galactic-centre` (no suffix) is not claimed, `galactic-centre-arches` is.
+- [x] Test `open-cluster and globular-cluster ids are not claimed as cluster`: the structure row's `claims` (`structureSelectionRow.ts:42`) resolves `open-cluster-pleiades` to category `open-cluster` and `globular-cluster-m13` to `globular-cluster`; the place id `galactic-centre` (no suffix) is not claimed, `gc-cluster-arches` is.
 - [x] Test `a Milky Way category is full at the Sun and gone at the foreground gate`: `fadeBand` over the Milky Way bands at camera distance 0 and at `FOREGROUND_MAX_DISTANCE_MPC`.
 - [x] No other new test: the registry, style table and record union are compiler-checked, and toggles, counts, pick codes and search chips derive from `STRUCTURE_IDS`.
 - [x] `npm run typecheck` and `npm test` green. Commit.
@@ -104,14 +104,14 @@ Other style fields copy the `cluster` row.
 ```ts
 type StructureSeedEntry = { …;
   nebulaKind?: NebulaKind;        // required on a nebula, rejected elsewhere
-  lineOfSightAssumed?: boolean;   // accepted only on galactic-centre
+  lineOfSightAssumed?: boolean;   // accepted only on gc-cluster
   source?: string;                // required, non-empty, on the four new categories
 };
 ```
 
 `source` names where the row's distance and radii come from ("Hunt & Reffert 2024", "Harris 2010", a paper's bibcode). It is build-time documentation; the runtime never reads it.
 
-- [x] Tests, one per rule: `rejects a nebula without nebulaKind`, `rejects nebulaKind on a non-nebula`, `rejects an unknown nebulaKind`, `rejects lineOfSightAssumed outside galactic-centre`, `rejects a Milky Way row without source`.
+- [x] Tests, one per rule: `rejects a nebula without nebulaKind`, `rejects nebulaKind on a non-nebula`, `rejects an unknown nebulaKind`, `rejects lineOfSightAssumed outside gc-cluster`, `rejects a Milky Way row without source`.
 - [x] Implement beside the existing checks (`parseStructureSeed.ts:76-122`). The set of categories that require `source` is derived from the registry (`scale === 'milkyWay'`), not a second hand-written list.
 - [x] `docs/DATA.md`: document the three fields in the seed section.
 - [x] Commit.
@@ -335,7 +335,7 @@ Smoke pass, one link each on this worktree's dev server (`http://localhost:<port
 - `#focus=open-cluster-pleiades`: the ring frames the cluster from tens of parsecs, the label reads "Pleiades", the card says "Open Cluster" with a radius in pc and no "Galaxies" row.
 - `#focus=globular-cluster-omega-centauri`: ring and label hold steady while orbiting; no jitter on approach.
 - `#focus=nebula-orion`: the card shows "Type: Emission nebula".
-- `#focus=galactic-centre-arches`: the card shows the "Line of sight" row; the ring is visible near Sgr A\* and hidden from the Sun.
+- `#focus=gc-cluster-arches`: the card shows the "Line of sight" row; the ring is visible near Sgr A\* and hidden from the Sun.
 - From about 50 kpc with all four categories on: rings sit on the Galaxy and fade out together as the camera leaves; none pops at the foreground gate.
 - Orbit the Pleiades at about 10 pc and look toward a globular: its ring is drawn and clickable.
 - `#focus=cluster-virgo-m87`: framing, ring and label as on main.

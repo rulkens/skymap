@@ -21,7 +21,7 @@ import { GALAXY_GROUP_ENTRY } from './sources/galaxyGroup';
 import { OPEN_CLUSTER_ENTRY } from './sources/openCluster';
 import { GLOBULAR_CLUSTER_ENTRY } from './sources/globularCluster';
 import { NEBULA_ENTRY } from './sources/nebula';
-import { GALACTIC_CENTRE_PLACE_ENTRY } from './sources/galacticCentrePlace';
+import { GC_CLUSTER_ENTRY } from './sources/gcCluster';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
@@ -76,7 +76,7 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.OpenCluster]: OPEN_CLUSTER_ENTRY,
   [Source.GlobularCluster]: GLOBULAR_CLUSTER_ENTRY,
   [Source.Nebula]: NEBULA_ENTRY,
-  [Source.GalacticCentrePlace]: GALACTIC_CENTRE_PLACE_ENTRY,
+  [Source.GcCluster]: GC_CLUSTER_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,

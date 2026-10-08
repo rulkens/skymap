@@ -132,8 +132,8 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
     case 'nebula':
       // The parser requires `nebulaKind` on every nebula row.
       return { ...common, category: 'nebula', nebulaKind: a.nebulaKind! };
-    case 'galactic-centre':
-      return { ...common, category: 'galactic-centre' };
+    case 'gc-cluster':
+      return { ...common, category: 'gc-cluster' };
   }
 }
 

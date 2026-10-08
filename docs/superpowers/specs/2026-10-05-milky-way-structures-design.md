@@ -6,7 +6,7 @@ Rulings came from the brainstorm of 2026-10-04 → 2026-10-05 (dash asks B28N an
 
 ## 1. What this is
 
-- Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`.
+- Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `gc-cluster`.
 - 71 hand-authored seed rows (§5: 25 open clusters, 21 globular clusters, 22 nebulae, 3 Galactic Centre places), each a ring plus label at its true 3D position, focusable, pickable and searchable.
 - The rings and labels are visible while the camera is inside or near the Milky Way and fade out in intergalactic space. The existing four categories keep fading out on the way in, as today.
 - Focusing a row frames it by its radius: the Pleiades from tens of parsecs, not from 100 kpc.
@@ -34,7 +34,7 @@ Packaging: **two PRs**. PR 1 is the ground preparation (§3): nine behaviour-neu
 
 ```ts
 // src/data/source.ts — append-only
-OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GalacticCentrePlace: 36
+OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GcCluster: 36
 
 // StructureSourceEntry gains two fields; every structure row states both
 type StructureSourceEntry = SourceEntryBase & {
@@ -56,7 +56,7 @@ type StructureSeedEntry = {
 
 // StructureInfo arms
 NebulaRecord              = StructureBase & { category: 'nebula'; nebulaKind: NebulaKind };
-GalacticCentrePlaceRecord = StructureBase & { category: 'galactic-centre' };
+GcClusterRecord = StructureBase & { category: 'gc-cluster' };
 OpenClusterRecord, GlobularClusterRecord = StructureBase & { category: 'open-cluster' | 'globular-cluster' };
 
 // scaleFadeBands.ts
@@ -106,7 +106,7 @@ The `add-data-source` skill's Path B table was stale (files that no longer exist
 
 ## 4. Registry, style and records
 
-- Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=galactic-centre-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `galactic-centre-…` does not collide with the `galactic-centre` place id.
+- Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `gc-cluster`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=gc-cluster-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `gc-cluster-…` cannot collide with the `galactic-centre` place id.
 - All four rows: `scale: 'milkyWay'`, `bearsLabel` and `bearsMarker` true, `labelLayer: 'structure'`. They share the structure fade and recession channel, so existing tour cues on structure rings and labels apply to them too.
 - Display copy (card label; short label and plural where they differ): "Open Cluster" / "Open clusters", "Globular Cluster" (short "Globular") / "Globular clusters", "Nebula" / "Nebulae", "Galactic Centre Place" (short and plural "Galactic Centre").
 - Style rows: all four use `milkyWayStructures`. Colours form a ramp distinct from the existing warm cluster ramp; the exact values and the min/max apparent-radius thresholds are tuned on screen with real rows (§8).

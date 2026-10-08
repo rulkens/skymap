@@ -249,5 +249,5 @@ export const Source = {
   OpenCluster: 33,
   GlobularCluster: 34,
   Nebula: 35,
-  GalacticCentrePlace: 36,
+  GcCluster: 36,
 } as const;

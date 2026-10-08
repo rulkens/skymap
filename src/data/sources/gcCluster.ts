@@ -1,10 +1,10 @@
 import type { StructureSourceEntry } from '../../@types/data/structure/StructureSourceEntry';
 import { Source } from '../source';
 
-export const GALACTIC_CENTRE_PLACE_ENTRY = {
+export const GC_CLUSTER_ENTRY = {
   type: 'structure',
-  code: Source.GalacticCentrePlace,
-  id: 'galactic-centre',
+  code: Source.GcCluster,
+  id: 'gc-cluster',
   label: 'Galactic Centre',
   allSky: true,
   bearsLabel: true,

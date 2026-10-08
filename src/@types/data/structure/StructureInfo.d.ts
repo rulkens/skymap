@@ -123,8 +123,8 @@ type NebulaRecord = StructureBase & {
 };
 
 /** A place around the Galactic Centre. */
-type GalacticCentrePlaceRecord = StructureBase & {
-  readonly category: 'galactic-centre';
+type GcClusterRecord = StructureBase & {
+  readonly category: 'gc-cluster';
 };
 
 /**
@@ -139,4 +139,4 @@ export type StructureInfo =
   | OpenClusterRecord
   | GlobularClusterRecord
   | NebulaRecord
-  | GalacticCentrePlaceRecord;
+  | GcClusterRecord;

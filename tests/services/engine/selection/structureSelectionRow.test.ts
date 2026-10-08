@@ -14,6 +14,6 @@ describe('structureSelectionRow focus claims', () => {
 
   it('claims a Galactic Centre place by its suffixed id and not the bare place id', () => {
     expect(claims('galactic-centre')).toBe(false);
-    expect(claims('galactic-centre-arches')).toBe(true);
+    expect(claims('gc-cluster-arches')).toBe(true);
   });
 });

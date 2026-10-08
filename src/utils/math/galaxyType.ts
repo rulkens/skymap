@@ -83,7 +83,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.OpenCluster:
     case Source.GlobularCluster:
     case Source.Nebula:
-    case Source.GalacticCentrePlace:
+    case Source.GcCluster:
     case Source.Filaments:
     case Source.Mcpm:
     case Source.Polyphorm2MRS:

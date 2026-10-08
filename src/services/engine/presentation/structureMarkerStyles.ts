@@ -200,7 +200,7 @@ export const STRUCTURE_MARKER_STYLES = {
     haloColor: hexToGl('#D96F8442'),
     ringColor: hexToGl('#D96F84'),
   },
-  'galactic-centre': {
+  'gc-cluster': {
     ...MILKY_WAY_STYLE,
     labelColor: hexToGl('#E8E8F0'),
     worldEmMpc: 2e-6,

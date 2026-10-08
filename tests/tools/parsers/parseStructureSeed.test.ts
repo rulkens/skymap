@@ -90,12 +90,12 @@ describe('Milky Way seed fields', () => {
     expect(() => validateStructureSeedEntry(e)).toThrow(/source/);
   });
 
-  it('accepts a complete nebula and a galactic-centre row', () => {
+  it('accepts a complete nebula and a gc-cluster row', () => {
     expect(() =>
       validateStructureSeedEntry(milkyWay({ category: 'nebula', nebulaKind: 'dark' })),
     ).not.toThrow();
     expect(() =>
-      validateStructureSeedEntry(milkyWay({ category: 'galactic-centre' })),
+      validateStructureSeedEntry(milkyWay({ category: 'gc-cluster' })),
     ).not.toThrow();
   });
 });
