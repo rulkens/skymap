@@ -86,17 +86,19 @@ function StructureDetailCard({
             value={formatAbellDesignation(target.abell)}
           />
         )}
-        {target.description && (
-          // Curated Wikipedia-lead blurb (featured anchors) or the build's
-          // auto one-liner (bulk entries).  Shares DescriptionBlock with
-          // GalaxyDetailCard so the show-more toggle sits in the same place.
-          <DescriptionBlock text={target.description} />
-        )}
       </div>
 
       {target.wikipediaTitle && (
         <div className={styles.cardSection}>
           <WikipediaRow title={target.wikipediaTitle} />
+        </div>
+      )}
+      {target.description && (
+        // Curated Wikipedia-lead blurb (featured anchors) or the build's
+        // auto one-liner (bulk entries).  Shares DescriptionBlock with
+        // GalaxyDetailCard so the show-more toggle sits in the same place.
+        <div className={styles.cardSection}>
+          <DescriptionBlock text={target.description} />
         </div>
       )}
     </div>

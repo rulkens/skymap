@@ -184,3 +184,8 @@ Rulings from the on-screen checks. Where they differ from §6–§8 as first dra
 - **One scale word, `scale: 'cosmic' | 'milkyWay'`, replaces `slab` and `galaxyMembers` on the registry row.** This revises R6 and §3: the two flags agreed on every row, and "galactic" read both ways. The scale picks the depth slab (one lookup) and whether the card counts galaxies; the visible band and focus distance stay independent, which is what R6 was protecting. §3 is kept as the record of the prep PR as it was built.
 - **`cluster` and `group` became `galaxy-cluster` and `galaxy-group`** (ids, `Source` names, labels), so they no longer read as siblings of the star-cluster categories. Structure ids are `category-seedId`, so `#focus=cluster-…` and `#focus=group-…` links from before this change no longer resolve; the user accepted that without a redirect. Numeric source codes are unchanged, so no data was re-baked.
 - **Settings list the categories under two headings, Cosmic and Milky Way.** The Labels & Guides list stays flat.
+- **Globular rings stay at the tidal radius**, though it is far larger than the visible cluster: the ring marks the cluster's extent, not its bright core.
+- **The Carina Nebula sits at Trumpler 14's distance** (2389.8 pc), so the nebula and the cluster inside it draw as one complex. The published sightline distances are kept in the row's `source`.
+- **Westerlund 1 and the Coalsack keep their approximate radii**, each marked `WEAK RADIUS` in its `source`.
+- **The Wikipedia link comes before the description**, as on star, body and black-hole cards.
+- **Stars inside a visible Milky Way ring are not clickable**; no exemption for the focused ring was built.

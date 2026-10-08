@@ -859,7 +859,7 @@
   "apparentRadius": { "value": 7, "unit": "pc" },
   "description": "A very massive young star cluster in Ara, heavily obscured by interstellar dust, about 4.05 kpc away. It contains many evolved massive stars such as red supergiants.",
   "wikipedia": "Westerlund 1",
-  "source": "Navarete et al. 2022 (MNRAS 516, 1289; arXiv:2204.09414): distance 4.05 +/- 0.20 kpc, effective radius R50 = 2.0 arcmin = 2.33 pc, 3 x R50 = 7.0 pc as the outer extent; centre from Clark et al. 2005 as used there. Not in Hunt & Reffert 2024"
+  "source": "Navarete et al. 2022 (MNRAS 516, 1289; arXiv:2204.09414): distance 4.05 +/- 0.20 kpc, effective radius R50 = 2.0 arcmin = 2.33 pc, 3 x R50 = 7.0 pc as the outer extent; centre from Clark et al. 2005 as used there. Not in Hunt & Reffert 2024. WEAK RADIUS: the outer extent is an assumed multiple of R50, not a measured tidal radius"
 }
 ,
 {
@@ -1156,12 +1156,12 @@
   "category": "nebula",
   "raHours": 10.750619,
   "decDeg": -59.69994444,
-  "distance": { "value": 2492, "unit": "pc" },
-  "physicalRadius": { "value": 76.1, "unit": "pc" },
-  "apparentRadius": { "value": 76.1, "unit": "pc" },
+  "distance": { "value": 2389.8, "unit": "pc" },
+  "physicalRadius": { "value": 73.0, "unit": "pc" },
+  "apparentRadius": { "value": 73.0, "unit": "pc" },
   "description": "A very large star-forming region in the southern Milky Way, home to many massive stars. It spans about 3.5 degrees on the sky.",
   "wikipedia": "Carina Nebula",
-  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 Carina sightline l=287.4 b=-0.6; Kuhn et al. 2019, ApJ 870, 32 give 2620 pc); angular size: RCW 53 diameter 210 arcmin (Rodgers et al. 1960, VizieR VII/216)",
+  "source": "Distance: set to that of its embedded cluster Trumpler 14 (2389.8 pc, Hunt & Reffert 2024) so the two draw as one complex; Zucker et al. 2020, A&A 633, A51 give 2492 pc for the Carina sightline and Kuhn et al. 2019, ApJ 870, 32 give 2620 pc; angular size: RCW 53 diameter 210 arcmin (Rodgers et al. 1960, VizieR VII/216)",
   "nebulaKind": "emission"
 },
 {
@@ -1287,7 +1287,7 @@
   "apparentRadius": { "value": 11.5, "unit": "pc" },
   "description": "The most prominent dark nebula in the southern sky, in Crux. It is a cloud of dust that blocks the Milky Way behind it.",
   "wikipedia": "Coalsack Nebula",
-  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: about 7 x 5 degrees (Wikipedia; Astropixels gives 400 x 300 arcmin), 7 degrees taken as the major axis",
+  "source": "Distance: Zucker et al. 2020, A&A 633, A51 (Gaia DR2 dust-cloud distance, via SIMBAD); angular size: about 7 x 5 degrees (Wikipedia; Astropixels gives 400 x 300 arcmin), 7 degrees taken as the major axis. WEAK RADIUS: no primary measurement of the angular size",
   "nebulaKind": "dark"
 },
 {
