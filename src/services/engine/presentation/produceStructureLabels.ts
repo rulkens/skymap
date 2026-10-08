@@ -102,6 +102,7 @@ export function produceStructureLabels(
   const focusedStructureId = structureIdOf(state.selection.focus);
   // Ring and label carry the same pick id, so hovering either lights both.
   const hoveredStructureId = structureIdOf(state.selection.hover);
+  const selectedStructureId = structureIdOf(state.selection.select);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
@@ -230,7 +231,7 @@ export function produceStructureLabels(
     // Selected wins over hovered: the later assignment is the stronger cue.
     let whiten = 0;
     if (p.id === hoveredStructureId) whiten = HOVERED_LABEL_WHITEN;
-    if (p.id === focusedStructureId) whiten = SELECTED_LABEL_WHITEN;
+    if (p.id === selectedStructureId) whiten = SELECTED_LABEL_WHITEN;
 
     labels.push({
       id: p.id,

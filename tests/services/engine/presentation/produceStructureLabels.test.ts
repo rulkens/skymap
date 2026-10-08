@@ -31,6 +31,7 @@ function makeState(
   opts: {
     focusedStructureId?: string | null;
     hoveredStructureId?: string | null;
+    selectedStructureId?: string | null;
     fades?: FadeRegistry;
     focusedOnly?: boolean;
   } = {},
@@ -46,7 +47,10 @@ function makeState(
     },
     selection: {
       focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
-      select: null,
+      select:
+        opts.selectedStructureId == null
+          ? null
+          : { type: 'structure', id: opts.selectedStructureId },
       hover:
         opts.hoveredStructureId == null ? null : { type: 'structure', id: opts.hoveredStructureId },
     },
@@ -345,7 +349,8 @@ describe('produceStructureLabels', () => {
   });
 
   it('whitens the selected label further than a hovered one', () => {
-    const state = makeState({ focusedStructureId: 'c1', hoveredStructureId: 'c3' });
+    // Selected, not focused: the same field the ring brightens on.
+    const state = makeState({ selectedStructureId: 'c1', hoveredStructureId: 'c3' });
     state.data.structures.setGroup('anchors', [
       rec('c1', { category: 'galaxy-cluster' }),
       rec('c3', { category: 'galaxy-cluster', worldPos: [0, -10, CAM_Z] }),
