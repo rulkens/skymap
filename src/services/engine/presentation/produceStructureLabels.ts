@@ -60,7 +60,11 @@ import { ringUpDirection } from '../../../utils/labels/ringUpDirection';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
-import { STRUCTURE_MARKER_STYLES, HOVERED_LABEL_WHITEN } from './structureMarkerStyles';
+import {
+  STRUCTURE_MARKER_STYLES,
+  HOVERED_LABEL_WHITEN,
+  SELECTED_LABEL_WHITEN,
+} from './structureMarkerStyles';
 import { lerp } from '../../../utils/math/lerp';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -222,6 +226,13 @@ export function produceStructureLabels(
     // label, so those labels hang just above the ring's drawn top instead.
     const above = screenUp !== null && style.labelPlacement === 'above';
 
+    const whiten =
+      p.id === focusedStructureId
+        ? SELECTED_LABEL_WHITEN
+        : p.id === hoveredStructureId
+          ? HOVERED_LABEL_WHITEN
+          : 0;
+
     labels.push({
       id: p.id,
       // Byte-identical to what `ringPick.wesl` writes for this structure's own
@@ -247,15 +258,12 @@ export function produceStructureLabels(
       text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
-      color:
-        p.id === hoveredStructureId
-          ? [
-              lerp(style.labelColor[0], 1, HOVERED_LABEL_WHITEN),
-              lerp(style.labelColor[1], 1, HOVERED_LABEL_WHITEN),
-              lerp(style.labelColor[2], 1, HOVERED_LABEL_WHITEN),
-              style.labelColor[3],
-            ]
-          : [...style.labelColor],
+      color: [
+        lerp(style.labelColor[0], 1, whiten),
+        lerp(style.labelColor[1], 1, whiten),
+        lerp(style.labelColor[2], 1, whiten),
+        style.labelColor[3],
+      ],
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,

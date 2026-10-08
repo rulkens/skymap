@@ -250,3 +250,6 @@ export const HOVERED_RING_BRIGHTEN = 1.3;
  * label colours already sit near full value, where a gain would only clip.
  */
 export const HOVERED_LABEL_WHITEN = 0.6;
+
+/** The selected structure's label goes further toward white than a hovered one. */
+export const SELECTED_LABEL_WHITEN = 0.9;

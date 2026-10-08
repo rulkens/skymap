@@ -344,6 +344,18 @@ describe('produceStructureLabels', () => {
     expect(hovered.color![3]).toBe(other.color![3]);
   });
 
+  it('whitens the selected label further than a hovered one', () => {
+    const state = makeState({ focusedStructureId: 'c1', hoveredStructureId: 'c3' });
+    state.data.structures.setGroup('anchors', [
+      rec('c1', { category: 'cluster' }),
+      rec('c3', { category: 'cluster', worldPos: [0, -10, CAM_Z] }),
+    ]);
+    const labels = produceStructureLabels(state, makeCtx(), 'cosmo').labels;
+    const selected = labels.find((l) => l.id === 'c1')!;
+    const hovered = labels.find((l) => l.id === 'c3')!;
+    expect(selected.color![2]).toBeGreaterThan(hovered.color![2]);
+  });
+
   it('stamps each label with the pick id its own ring writes — a PER-CATEGORY index', () => {
     // The ring pick's localIdx indexes `byCategory(cat)`, not `all()`. The
     // fixture interleaves two categories and drops a non-featured record so a
