@@ -11,7 +11,12 @@ import type { FlightStop } from '../@types/FlightStop';
 export const FLIGHT_STOPS: readonly FlightStop[] = [
   { id: 'earth', atSec: 0, name: 'Earth' },
   { id: 'moon-orbit', atSec: 20.5,name: 'The Moon’s orbit', factId: 'moon-orbit-light' },
-  { id: 'outer-planets', atSec: 28, name: 'Our solar system', factId: 'neptune-voyager2' },
+  {
+    id: 'outer-planets',
+    atSec: 28,
+    name: 'Our solar system',
+    line: 'The outer planets, Jupiter, Saturn, Uranus and Neptune give us a sense of scale of the vast distances.',
+  },
   { id: 'nearby-stars', atSec: 32.5, name: 'The nearby stars', factId: 'voyager1-to-proxima' },
   { id: 'milky-way', atSec: 41, name: 'The Milky Way', factId: 'galactic-centre-light' },
   { id: 'local-group', atSec: 44, name: 'The Local Group', factId: 'andromeda-light', portraitX: 0.56 },

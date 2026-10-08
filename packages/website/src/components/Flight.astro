@@ -39,7 +39,7 @@ const timeline = flightTimeline(
 );
 const stops = FLIGHT_STOPS.map((stop, i) => ({
   ...stop,
-  line: stop.factId ? (fact(stop.factId).short ?? '') : '',
+  line: stop.line ?? (stop.factId ? (fact(stop.factId).short ?? '') : ''),
   still: stills[i]!,
   // Evenly spaced, whatever the scroll between two stops; scripts/initFlight.ts fills the line to match.
   spineTop: `${((i / (FLIGHT_STOPS.length - 1)) * 100).toFixed(2)}%`,
