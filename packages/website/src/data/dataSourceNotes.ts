@@ -21,8 +21,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'Nearly every star in skymap is a row of Gaia’s third data release. We read the stars brighter than magnitude 14 in Gaia’s own G band, join a distance estimate to each, and add two smaller catalogues for the stars that this cut or Gaia’s detectors miss: the nearby faint ones and the very bright ones.',
     facts: ['sci-star-observables', 'sci-star-distance', 'sim-star-coverage', 'sim-star-epoch'],
-    shows:
-      'The star points, switched by “Gaia Stars” under Star catalogs in the Settings panel. The stars that have a name in the app come from a list of their own and are taken out of this one, so none is drawn twice.',
+    shows: '“Gaia Stars” switch under Star catalogs.',
     scene: 'stars',
     setting: 'star-catalogs',
     view: { to: 'focus=star-sun', label: 'Open the Sun, with the Gaia stars behind it' },
@@ -32,14 +31,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'A distance for each Gaia star, estimated from its parallax by Bailer-Jones and colleagues in 2021.',
     facts: ['sci-star-distance'],
-    shows: 'No switch of its own: it is the distance of each Gaia star, so it decides where the star stands.',
+    shows: 'No switch. It sets the distance of each Gaia star.',
     scene: 'stars',
   },
   gcns: {
     description:
       'The 331,312 stars within 100 parsecs of the Sun, from Gaia’s own list of nearby stars.',
     facts: ['sim-star-coverage'],
-    shows: 'The faint stars within 100 parsecs of the Sun, part of “Gaia Stars”. Every data size keeps them, however faint; from 70 parsecs outwards they are thinned, so that they fade out gradually.',
+    shows: 'Part of the “Gaia Stars” switch under Star catalogs.',
     scene: 'stars',
     setting: 'star-catalogs',
   },
@@ -47,14 +46,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The brightest stars in the sky, which are too bright for Gaia’s detectors, from the 2007 re-reduction of Hipparcos.',
     facts: ['sim-star-coverage'],
-    shows: 'The brightest stars in the sky, part of “Gaia Stars”, in place of the Gaia rows they match.',
+    shows: 'Part of the “Gaia Stars” switch under Star catalogs.',
     scene: 'stars',
     setting: 'star-catalogs',
   },
   'd3-celestial': {
     description:
       'The stick figures of the 88 constellations, from Olaf Frohn’s d3-celestial.',
-    shows: 'The constellation lines, which are off at first. Their switch is under Labels & Guides.',
+    shows: '“Constellations” switch under Labels & Guides. Off at first.',
     scene: 'stars',
     setting: 'labels--guides',
   },
@@ -62,7 +61,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Named stars, typed by hand',
     description:
       'The stars skymap knows by name, with the figures and the paragraph on each one’s card, typed by hand.',
-    shows: 'The named stars and the Sun: the stars the search finds by name and that have a card with a description.',
+    shows: '“Famous Stars” and “Sun” switches under Star catalogs.',
     scene: 'stars',
     setting: 'star-catalogs',
     view: { to: 'focus=star-betelgeuse', label: 'Open Betelgeuse' },
@@ -71,7 +70,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   's-stars': {
     description:
       'The orbits of 39 stars around the black hole at the centre of the Milky Way, from Gillessen and colleagues, 2017.',
-    shows: 'The stars in orbit around the black hole at the centre of the Milky Way, switched by “S-Star” under Star catalogs.',
+    shows: '“S-Star” switch under Star catalogs.',
     scene: 'the-milky-way',
     setting: 'star-catalogs',
     view: { to: 'focus=blackhole-sgr-a-star', label: 'Open the Galactic Centre' },
@@ -98,8 +97,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'SDSS gives a galaxy a spectrum, and with it a measured redshift. We run one query of our own against its seventeenth data release, which returns about 970,000 galaxies with their positions, redshifts, brightness in five bands and shapes. Why we run it in CasJobs is under Fetch on From catalogue to pixels; the query itself is in the repository’s data pipeline notes.',
     facts: ['survey-gaps', 'sci-redshifts', 'sim-flux-limits', 'sim-data-sizes'],
-    shows:
-      'The galaxy points switched by “SDSS” under Galaxy catalogs. Far out they stand in two fans. The smallest data size loads none of them.',
+    shows: '“SDSS” switch under Galaxy catalogs.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
     figure: 'science-wedges',
@@ -110,8 +108,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       '2MRS is the redshift survey of the brightest galaxies of the 2MASS infrared sky survey. We read its table 3: one row per galaxy, with a position, a velocity and three infrared magnitudes. It is small enough that every data size loads the same set: 34,974 of its 44,599 rows.',
     facts: ['2mrs-coverage', 'sim-frames', 'sim-flux-limits'],
-    shows:
-      'The galaxy points switched by “2MRS” under Galaxy catalogs: the nearby universe over nearly the whole sky. Together with GLADE it is also what the filaments are traced from.',
+    shows: '“2MRS” switch under Galaxy catalogs.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
     figure: 'guide-card-galaxy',
@@ -120,7 +117,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The tilt and flattening of the 2MRS galaxies’ discs, from the 2MASS catalogue of extended sources.',
     facts: ['sci-galaxy-tilt'],
-    shows: 'No switch of its own: where it has a measurement, it sets the tilt and flattening of a 2MRS galaxy’s disc.',
+    shows: 'No switch. It sets the tilt and flattening of a 2MRS galaxy’s disc.',
     scene: 'the-galaxy-surveys',
   },
   glade: {
@@ -129,8 +126,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'GLADE is a list of galaxies over the whole sky, put together from several older catalogues. It fills the regions SDSS never observed, at the cost of mixing measured redshifts with estimated ones.',
     facts: ['sci-photometric-share', 'sim-duplicates'],
-    shows:
-      'The galaxy points switched by “GLADE” under Galaxy catalogs: the largest set of galaxy points in the scene. The search finds a GLADE galaxy by a catalogue name it has, such as its NGC, IC or UGC number.',
+    shows: '“GLADE” switch under Galaxy catalogs.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
     figure: 'guide-density-corrected',
@@ -142,7 +138,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'HyperLEDA is a database that gathers published measurements of galaxies under one number each, the PGC number. We ask it for three things: the tilt and size of GLADE’s galaxies, a distance for nearby galaxies that Cosmicflows-4 does not cover, and the names a galaxy is known by. Our copy of the tilt table is partial, about 52,000 of GLADE’s galaxies.',
     facts: ['sci-local-volume', 'sci-galaxy-tilt'],
     shows:
-      'No switch of its own. It is in the tilt of a GLADE galaxy’s disc, in where some nearby galaxies stand, and in the names and numbers the search accepts.',
+      'No switch. It sets the tilt of a GLADE galaxy’s disc, the distance of some nearby galaxies, and the names the search accepts.',
     scene: 'nearby-galaxies',
   },
   milliquas: {
@@ -151,7 +147,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'Milliquas is a compilation of published quasars and other active galactic nuclei. We keep the rows that have a usable redshift and place each by it. They skip the step that removes duplicates between catalogues: a quasar and the galaxy around it are two things at one position.',
     facts: ['sci-deepest', 'sim-quasar-boost'],
-    shows: 'The points switched by “Milliquas” under Galaxy catalogs: the most distant objects in the scene.',
+    shows: '“Milliquas” switch under Galaxy catalogs.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
     figure: 'lesson-universe',
@@ -163,7 +159,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'From DESI’s first data release we read the large-scale-structure catalogues of four classes of target and cut three regions out of them. They are samples, one of them a deep cone that shows how much farther DESI reaches than the older surveys.',
     facts: ['sim-desi-patches', 'sci-desi-brightness'],
     shows:
-      'Three switches under Galaxy catalogs, all off at first: “DESI Deep Field”, “DESI Wedge” and “Sloan Great Wall”. Each file is fetched the first time its switch goes on.',
+      '“DESI Deep Field”, “DESI Wedge” and “Sloan Great Wall” switches under Galaxy catalogs. Off at first.',
     scene: 'the-galaxy-surveys',
     setting: 'galaxy-catalogs',
   },
@@ -173,15 +169,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'Cosmicflows-4 is a catalogue of galaxy distances measured by methods that do not use redshift. We take one number per galaxy from its table 2 and use it only inside 30 megaparsecs, where a galaxy’s own motion is a large part of its redshift.',
     facts: ['sci-local-volume', 'sim-scale-step'],
-    shows:
-      'No switch of its own: it moves nearby galaxy points to their measured distance. The card of such a galaxy still gives the published redshift.',
+    shows: 'No switch. It sets the distance of nearby galaxies.',
     scene: 'nearby-galaxies',
   },
   'seed-famous-galaxies': {
     title: 'Named galaxies, typed by hand',
     description:
       'The 81 galaxies skymap knows by name, with the figures and the paragraph on each one’s card.',
-    shows: 'Well-known galaxies such as Andromeda, each with a photograph and a description. In the app: “Famous” under Galaxy catalogs.',
+    shows: '“Famous” switch under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
     view: { to: 'focus=m31', label: 'Open Andromeda' },
@@ -191,7 +186,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Distances to a handful of nearby galaxies that the two distance catalogues miss, typed by hand.',
     facts: ['sci-local-volume'],
-    shows: 'No switch of its own: it places a handful of nearby galaxies that the two distance catalogues miss.',
+    shows: 'No switch. It sets the distance of a few nearby galaxies.',
     scene: 'nearby-galaxies',
   },
 
@@ -202,7 +197,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'MCXC is a catalogue of galaxy clusters detected in X-rays, compiled from earlier catalogues. We keep the most massive and draw a marker for each, unless a cluster we placed by hand stands at the same spot.',
     facts: ['sci-structures', 'sci-markers'],
-    shows: 'Cluster markers, switched by “Clusters” under Structures. A cluster from this catalogue has a ring and no name; the named ones are placed by hand.',
+    shows: '“Clusters” switch under Structures.',
     scene: 'clusters-superclusters-and-voids',
     setting: 'structures',
   },
@@ -212,7 +207,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'MSCC is a catalogue of superclusters, each a group of the clusters of the Abell catalogue. We keep the richest and draw a marker for each, unless a supercluster we placed by hand stands at the same spot.',
     facts: ['sci-structures', 'sci-markers'],
-    shows: 'Supercluster markers, switched by “Superclusters” under Structures. A supercluster from this catalogue has a ring and no name; the named ones are placed by hand.',
+    shows: '“Superclusters” switch under Structures.',
     scene: 'clusters-superclusters-and-voids',
     setting: 'structures',
   },
@@ -221,7 +216,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       '42 clusters, groups, superclusters and voids placed by hand, each with a paragraph on its card.',
     title: 'Featured structures, placed by hand',
     facts: ['sci-structures', 'sci-markers'],
-    shows: 'Every void and galaxy group in the scene, and the clusters and superclusters we placed by hand, each with a paragraph on its card.',
+    shows: '“Clusters”, “Superclusters”, “Voids” and “Groups” switches under Structures.',
     scene: 'clusters-superclusters-and-voids',
     setting: 'structures',
     figure: 'void-bootes',
@@ -232,7 +227,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'The glow of the cosmic web is a density field that the catalogue’s authors computed from the positions of SDSS galaxies, which we reduce to three sizes and draw as light.',
     facts: ['sci-density-field'],
-    shows: 'The purple and orange glow, switched by “MCPM Cosmic Web” under Cosmic web density.',
+    shows: '“MCPM Cosmic Web” switch under Cosmic web density.',
     scene: 'filaments-and-the-cosmic-web',
     setting: 'cosmic-web-density',
     figure: 'science-web-density',
@@ -240,7 +235,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   polyphorm: {
     description:
       'The program and the method behind the two density fields of the cosmic web.',
-    shows: 'A second density field, from our own run of the program on 2MRS: “Polyphorm (2MRS)” under Cosmic web density, which is off at first.',
+    shows: '“Polyphorm (2MRS)” switch under Cosmic web density. Off at first.',
     scene: 'filaments-and-the-cosmic-web',
     setting: 'cosmic-web-density',
     figure: 'lesson-cosmic-web',
@@ -251,7 +246,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'CF4++ is a reconstruction built on the Cosmicflows-4 distances: where the matter around us is and how it moves apart from the expansion. We draw its mean velocity field.',
     facts: ['sci-flows'],
-    shows: 'The flow ribbons switched by “Flow” in the Settings panel. The Cosmic Flows exhibit draws them.',
+    shows: '“Flow” switch in the Settings panel.',
     setting: 'flow',
     view: { to: 'exhibit=cosmicFlows', label: 'Open the Cosmic Flows exhibit' },
     figure: 'dome-exhibit',
@@ -264,7 +259,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'A planet’s place at a given moment starts from six numbers that describe its orbit. JPL publishes such elements for the planets and for the moons; we typed them into the app, and correct the eight planets and 18 of the moons against JPL’s Horizons service.',
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
-    shows: 'Where every planet and moon is at the date on the clock.',
+    shows: 'No switch. It sets where each planet and moon is at the date on the clock.',
     scene: 'planets-and-their-moons',
     figure: 'lesson-solar-system',
     view: { to: 'exhibit=solarSystem', label: 'Open the Solar System exhibit' },
@@ -275,7 +270,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'Horizons is JPL’s service for the positions of Solar System bodies. We asked it where the eight planets and 18 moons are at steps from 1900 to 2100, fitted a small correction to our own orbits from the answers, and ship only the corrections. The orbits of the Voyagers and of Hubble are also copied from it.',
     facts: ['sci-ephemeris', 'sim-ephemeris-span'],
-    shows: 'No switch of its own: it is why a planet stands within 1,000 kilometres of where JPL puts it, and each of 18 moons that close to its place beside its planet, between 1900 and 2100.',
+    shows: 'No switch. It corrects the positions of the planets and moons between 1900 and 2100.',
     scene: 'planets-and-their-moons',
     figure: 'guide-conjunction',
   },

@@ -61,11 +61,16 @@ const byHand = entry.files.filter((file) => !file.fetcher).length;
   {
     note?.shows && (
       <Row label="In the app">
-        <p>{note.shows}</p>
-        {(note.scene || note.setting || inTable) && (
+        <p>
+          {note.setting ? (
+            <DocLink href={`/docs/reference/settings/#${note.setting}`}>{note.shows}</DocLink>
+          ) : (
+            note.shows
+          )}
+        </p>
+        {(note.scene || inTable) && (
           <p class="small tap-links">
             {note.scene && <DocLink href={`/docs/start/scene/#${note.scene}`}>In “What is in the scene”</DocLink>}
-            {note.setting && <DocLink href={`/docs/reference/settings/#${note.setting}`}>Its switch in “All settings”</DocLink>}
             {inTable && <DocLink href="/science/#sources">In the Science page’s table of sources</DocLink>}
           </p>
         )}
