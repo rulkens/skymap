@@ -236,7 +236,7 @@ Not a subagent task. With the dev server up and all rows in, tune and commit:
 - [x] Rewrite the skill's Path B table against the files this PR actually touched for a new structure category (Task 1's file list is the truth), and fix the sentinel width (6-bit, sentinel 63).
 - [x] Perf: `npm run perf -- --url http://localhost:<this worktree's port>` on the `local-group` and a Sun-neighbourhood scenario, before (main) and after. The `local-group` total is bimodal on this machine (about 9.9 or 10.9 ms run to run), so compare several runs each side before reading a 1 ms difference as real.
   - Measured 2026-10-07, main (`73caca15d`) against this branch, three alternating runs each, 60 frames, merged total ms. `solar-system` 14.5 / 15.5 / 14.9 vs 16.2 / 15.1 / 17.8; `star-field` 17.1 / 15.2 / 14.7 vs 13.9 / 13.3 / 16.4; `milky-way` 16.8 / 16.6 / 17.0 vs 16.9 / 17.0 / 16.8; `galactic-centre` 11.2 / 10.8 / 10.7 vs 11.6 / 10.4 / 11.6; `local-group` 8.7 / 8.2 / 8.7 vs 7.8 / 8.3 / 8.5. The `hdr·NEAR0` slot, where the near rings draw, is unchanged in every scene. No attributable cost: the differences sit inside the run-to-run spread and go both ways.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -308,7 +308,7 @@ Smoke for these four, added to the list below:
 
 - `#focus=open-cluster-pleiades`: stars outside the cluster dim, the Pleiades' own stars stay bright, constellation lines and star names recede; clicking a dimmed star does nothing, clicking empty space or another ring still works.
 - `#focus=globular-cluster-m13`: the Milky Way glow dims behind it.
-- `#focus=cluster-virgo-m87`: galaxies dim as on main; the Milky Way now dims too.
+- `#focus=galaxy-cluster-virgo-m87`: galaxies dim as on main; the Milky Way now dims too.
 - Clearing focus brings everything back over about half a second.
 
 ## Dispatch grouping
@@ -326,8 +326,7 @@ Deliverables:
 
 - Four registry rows, four style rows, four record arms, `NebulaKind`, the `milkyWayStructures` band.
 - 71 seed rows, each with a `source`.
-- `setMarkers`'s clamp, used by the near pass.
-- "Type" and "Line of sight" card rows.
+- "Type" card row for nebulae.
 - The `add-data-source` skill's Path B table matches the code.
 
 Smoke pass, one link each on this worktree's dev server (`http://localhost:<port>/`):
@@ -335,7 +334,7 @@ Smoke pass, one link each on this worktree's dev server (`http://localhost:<port
 - `#focus=open-cluster-pleiades`: the ring frames the cluster from tens of parsecs, the label reads "Pleiades", the card says "Open Cluster" with a radius in pc and no "Galaxies" row.
 - `#focus=globular-cluster-omega-centauri`: ring and label hold steady while orbiting; no jitter on approach.
 - `#focus=nebula-orion`: the card shows "Type: Emission nebula".
-- `#focus=gc-cluster-arches`: the card shows the "Line of sight" row; the ring is visible near Sgr A\* and hidden from the Sun.
+- `#focus=gc-cluster-arches`: the ring is visible near Sgr A\* and hidden from the Sun.
 - From about 50 kpc with all four categories on: rings sit on the Galaxy and fade out together as the camera leaves; none pops at the foreground gate.
 - Orbit the Pleiades at about 10 pc and look toward a globular: its ring is drawn and clickable.
 - `#focus=cluster-virgo-m87`: framing, ring and label as on main.
