@@ -22,6 +22,7 @@ import { timelineAxis } from '../../utils/exhibits/timeline/timelineAxis';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
 import { DAY_MS } from '../../data/time/dayMs';
 import styles from './ExhibitTimeline.module.css';
@@ -38,6 +39,9 @@ export type ExhibitTimelineProps = {
   readonly onSeek: (simDays: number) => void;
   readonly onStep: (eventId: string) => void;
   readonly onSelect: (bodyId: string) => void;
+  /** The flyby being ridden and the craft's live distance from its target; null when not riding. */
+  readonly riding: { readonly event: MissionEvent; readonly distanceKm: number | null } | null;
+  readonly onWholeMission: () => void;
 };
 
 function ExhibitTimeline({
@@ -49,6 +53,8 @@ function ExhibitTimeline({
   onSeek,
   onStep,
   onSelect,
+  riding,
+  onWholeMission,
 }: ExhibitTimelineProps): ReactNode {
   const { eras, captions } = section;
   const lane = lanes.find((l) => l.bodyId === selectedId) ?? lanes[0]!;
@@ -77,6 +83,11 @@ function ExhibitTimeline({
         <h2 id={headingId} className={styles.heading}>
           {section.heading}
         </h2>
+        {riding ? (
+          <button type="button" className={styles.wholeMission} onClick={onWholeMission}>
+            Whole mission
+          </button>
+        ) : null}
         <span className={styles.meta}>
           {daysSinceLaunch < 0
             ? `before ${lane.label}’s launch`
@@ -104,6 +115,7 @@ function ExhibitTimeline({
           craftLabel={lane.label}
           event={current}
           caption={current ? captions[current.id] : undefined}
+          riding={riding && riding.event.id === current?.id ? riding : null}
         />
         <TimelineStepper
           index={current ? events.indexOf(current) + 1 : 0}

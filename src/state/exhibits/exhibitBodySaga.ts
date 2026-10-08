@@ -4,17 +4,23 @@
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
- * end it.
+ * end it. The hold is a loop over timeline steps: a flyby step rides along, a step away from
+ * a ride, `showWholeMission` or a craft-tab switch ends it and flies back to the pose.
  */
-import { call, getContext, put, race, select, take } from 'typed-redux-saga';
+import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
+import type { Task } from 'redux-saga';
 
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
-import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { clearRide, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { rideSaga } from './rideSaga';
+import { showWholeMission } from './showWholeMission';
+import { stepToMissionEvent } from './stepToMissionEvent';
+import { setMissionEmphasis } from '../settings/core/orbitTrails/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
-import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
+import { exhibitPose } from '../../utils/exhibits/exhibitPose';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
@@ -53,13 +59,7 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // any other exhibit.
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const rt = cameraRuntime();
-  const pose =
-    exhibit.fitRadiusMpc !== undefined && rt !== null
-      ? {
-          ...exhibit.pose,
-          distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.fovYRad, rt.aspect),
-        }
-      : exhibit.pose;
+  const pose = exhibitPose(exhibit, rt);
 
   if (entry === 'cut') {
     yield* put(commitCameraPose(absoluteArm(pose)));
@@ -80,9 +80,37 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // as surely as an exit does.
   const priorSpin = yield* select((s: RootState) => s.camera.autoRotate);
   if (exhibit.drift !== false) yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
+  const events = exhibit.body.flatMap((section) =>
+    section.kind === 'timeline' ? section.events : [],
+  );
+  let task: Task | null = null;
   try {
-    yield* take(exitTakeover);
+    for (;;) {
+      const next = yield* race({
+        exit: take(exitTakeover),
+        step: take(stepToMissionEvent),
+        whole: take(showWholeMission),
+        tab: take(setMissionEmphasis),
+      });
+      if (next.exit) break;
+      const riding = yield* select((s: RootState) => s.camera.ride !== null);
+      if (task !== null) yield* cancel(task);
+      task = null;
+      const event = next.step ? events.find((e) => e.id === next.step!.payload.eventId) : undefined;
+      if (event?.kind === 'flyby') {
+        task = yield* fork(rideSaga, event);
+      } else if (riding) {
+        // Only a ride is undone: a visitor who orbited the whole-mission view keeps their framing.
+        yield* put(clearRide());
+        task = yield* fork(function* () {
+          yield* call(playClip, flyToPoseClip(exhibitPose(exhibit, cameraRuntime())), orientation);
+        });
+      }
+    }
   } finally {
+    // An exhibit exit restores no camera pose, so the ride must not outlive the takeover.
+    if (task !== null) yield* cancel(task);
+    yield* put(clearRide());
     yield* put(setAutoRotate(priorSpin));
   }
 }

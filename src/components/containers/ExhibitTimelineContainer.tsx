@@ -1,6 +1,6 @@
 /**
  * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant and the
- * emphasised craft in, `setSimDays` (scrub), `stepToMissionEvent` (chapter steps) and `setMissionEmphasis` out (the craft tabs ARE the store's
+ * emphasised craft in, `setSimDays` (scrub), `stepToMissionEvent` (chapter steps) and `setMissionEmphasis` and `showWholeMission` out (the craft tabs ARE the store's
  * emphasis, so the 3D view dims the other craft). The instant is re-derived on a 4 Hz interval, the way the TimeBar's
  * readout is, so a running clock re-renders this leaf and not the whole exhibit overlay.
  * Both clock actions leave rate and pause alone, so a seek never stops or starts the clock.
@@ -11,12 +11,15 @@ import type { ReactNode } from 'react';
 
 import ExhibitTimeline from '../ExhibitOverlay/ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectCameraRide } from '../../state/camera/selectors';
+import { showWholeMission } from '../../state/exhibits/showWholeMission';
 import { selectTimeState } from '../../state/time/selectors';
 import { selectMissionEmphasis } from '../../state/settings/core/orbitTrails/selectors';
 import { setMissionEmphasis } from '../../state/settings/core/orbitTrails/slice';
 import { stepToMissionEvent } from '../../state/exhibits/stepToMissionEvent';
 import { setSimDays } from '../../state/time/timeSlice';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { flybyRelativeState } from '../../utils/exhibits/ride/flybyRelativeState';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 
@@ -55,6 +58,16 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     [dispatch],
   );
 
+  const onWholeMission = useCallback(() => dispatch(showWholeMission()), [dispatch]);
+
+  const rideState = useAppSelector(selectCameraRide);
+  const riding = useMemo(() => {
+    const event = rideState && section.events.find((e) => e.id === rideState.eventId);
+    if (!event) return null;
+    const rel = flybyRelativeState(event, simDays);
+    return { event, distanceKm: rel === null ? null : Math.hypot(...rel.rKm) };
+  }, [rideState, section.events, simDays]);
+
   const onSelect = useCallback((id: string) => dispatch(setMissionEmphasis(id)), [dispatch]);
 
   return (
@@ -67,6 +80,8 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
       onSeek={onSeek}
       onStep={onStep}
       onSelect={onSelect}
+      riding={riding}
+      onWholeMission={onWholeMission}
     />
   );
 }

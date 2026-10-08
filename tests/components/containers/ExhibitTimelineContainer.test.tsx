@@ -4,7 +4,7 @@
 // write the store's emphasis, and a chapter click seeks without pausing the clock.
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, act } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
@@ -13,6 +13,8 @@ import { createTestStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/selectors';
 import { setMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/slice';
+import { setRide } from '../../../src/state/camera/cameraSlice';
+import { showWholeMission } from '../../../src/state/exhibits/showWholeMission';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { resume, setSimDays } from '../../../src/state/time/timeSlice';
 import { voyager } from '../../../src/data/exhibits/voyager';
@@ -120,5 +122,27 @@ describe('ExhibitTimelineContainer', () => {
     slider.setPointerCapture = () => {};
     fireEvent.pointerDown(slider, { clientX: 50, pointerId: 1 });
     expect(stepped().map((a) => a.type)).toEqual([setSimDays.type]);
+  });
+
+  it('offers Whole mission and the riding line only while a ride is set', () => {
+    const store = mount('1989-08-26');
+    fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
+    expect(screen.queryByRole('button', { name: 'Whole mission' })).toBeNull();
+
+    act(() => {
+      store.dispatch(
+        setRide({
+          eventId: 'voyager2-neptune',
+          craftId: 'voyager2',
+          targetId: 'neptune',
+          closestKm: 29236,
+          normal: [0, 0, 1],
+          offsets: { yaw: 0, pitch: 0, zoom: 1 },
+        }),
+      );
+    });
+    expect(screen.getByText(/Riding along with Voyager 2 past Neptune/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Whole mission' }));
+    expect(store.dispatch).toHaveBeenCalledWith(showWholeMission());
   });
 });

@@ -14,9 +14,16 @@ export type TimelineEventCardProps = {
   /** Null before the craft's first event. */
   readonly event: MissionEvent | null;
   readonly caption: string | undefined;
+  /** Set while the camera rides this event; carries the craft's live distance from the target. */
+  readonly riding: { readonly distanceKm: number | null } | null;
 };
 
-function TimelineEventCard({ craftLabel, event, caption }: TimelineEventCardProps): ReactNode {
+function TimelineEventCard({
+  craftLabel,
+  event,
+  caption,
+  riding,
+}: TimelineEventCardProps): ReactNode {
   if (!event) {
     return (
       <div className={styles.card}>
@@ -32,6 +39,14 @@ function TimelineEventCard({ craftLabel, event, caption }: TimelineEventCardProp
         <span className={styles.cardLabel}>{event.label}</span>
       </div>
       {caption ? <p className={styles.caption}>{caption}</p> : null}
+      {riding ? (
+        <p className={styles.riding}>
+          Riding along with {craftLabel} past {event.label}
+          {riding.distanceKm === null
+            ? ''
+            : ` · ${Math.round(riding.distanceKm).toLocaleString('en-US')} km from its centre`}
+        </p>
+      ) : null}
       {event.closestKm !== undefined ? (
         <p className={styles.distance}>
           {event.closestKm.toLocaleString('en-US')} km from {event.label}’s centre

@@ -324,6 +324,35 @@
   color: var(--color-fg-base);
   text-wrap: pretty;
 }
+.riding {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lane);
+}
+
+.wholeMission {
+  margin-left: auto;
+  padding: 2px 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+}
+.wholeMission:hover {
+  color: var(--color-fg);
+  border-color: var(--lane, var(--color-accent));
+}
+.wholeMission:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .distance {
   margin: 0;
   font-family: var(--font-family-mono);
