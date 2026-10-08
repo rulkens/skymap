@@ -57,11 +57,6 @@ type StructureMarkerStyle = {
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
   readonly outlineEmFrac: number;
-  /**
-   * Where the label sits against its ring: centred on it, or just above its
-   * top edge for categories whose rings stay on screen at large sizes.
-   */
-  readonly labelPlacement: 'centre' | 'above';
 };
 
 /**
@@ -82,7 +77,6 @@ const MILKY_WAY_STYLE: Omit<
   visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
   outlineColor: [0, 0, 0, 0.1],
   outlineEmFrac: 0.16,
-  labelPlacement: 'above',
 };
 
 /**
@@ -106,7 +100,6 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
-    labelPlacement: 'centre',
   },
   supercluster: {
     // Orange end of the warm ramp — saturated enough to read clearly
@@ -125,7 +118,6 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
-    labelPlacement: 'centre',
   },
   void: {
     labelColor: hexToGl('#99D9F2'),
@@ -142,7 +134,6 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
-    labelPlacement: 'centre',
   },
   'galaxy-group': {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
@@ -177,7 +168,6 @@ export const STRUCTURE_MARKER_STYLES = {
     visibleBand: SCALE_FADE_BANDS.surveyDeepZoom,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
-    labelPlacement: 'centre',
   },
   'open-cluster': {
     ...MILKY_WAY_STYLE,

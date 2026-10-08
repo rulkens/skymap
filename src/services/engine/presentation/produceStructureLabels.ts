@@ -120,11 +120,12 @@ export function produceStructureLabels(
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
   const [ox, oy, oz] = scale === 'milkyWay' ? ctx.drawCamPos : [0, 0, 0];
-  // Screen-up in world axes; the same direction applies in both frames. Only the
-  // 'above' categories lift along it.
-  const screenUp = scaleIds.some((id) => STRUCTURE_MARKER_STYLES[id].labelPlacement === 'above')
-    ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
-    : null;
+  // Screen-up in world axes; the same direction applies in both frames. Only
+  // Milky Way labels lift along it: their rings stay on screen at large sizes.
+  const screenUp =
+    scale === 'milkyWay'
+      ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
+      : null;
   for (const p of structures.all()) {
     if (!scaleIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
@@ -223,9 +224,9 @@ export function produceStructureLabels(
           );
     fadeAlpha *= catOpacity * recession * clipFactor * bandFade;
 
-    // Rings that stay on screen at large sizes would sit under a centred
-    // label, so those labels hang just above the ring's drawn top instead.
-    const above = screenUp !== null && style.labelPlacement === 'above';
+    // A centred label would sit under a ring that stays on screen at large
+    // sizes, so Milky Way labels hang just above the ring's drawn top.
+    const above = screenUp !== null;
 
     // Selected wins over hovered: the later assignment is the stronger cue.
     let whiten = 0;
