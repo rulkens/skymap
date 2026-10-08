@@ -170,8 +170,14 @@
 }
 
 /* Sub-heading over a group of rows inside one section (Structures: Cosmic / Milky Way) */
-.groupHeading {
+.groupHeading:first-child {
   margin-top: var(--space-3);
+}
+
+.groupHeading {
+  margin: var(--space-7) 0 var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-control);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-mid);
   text-transform: uppercase;
