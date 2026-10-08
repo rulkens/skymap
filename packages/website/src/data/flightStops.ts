@@ -44,7 +44,7 @@ export const FLIGHT_STOPS: readonly FlightStop[] = [
     id: 'universe',
     atSec: 65.5,
     name: 'The observable universe',
-    line: 'Looking further in space is looking back in time, at the edge, we’re looking at the Big Bang.',
+    line: 'Looking further in space is looking back in time, at the edge, we’re looking back almost to the Big Bang.',
     portraitZoom: 0.4,
   },
 ];
