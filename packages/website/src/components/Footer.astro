@@ -210,14 +210,15 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
   /* The page's last sentence. Room for the longer line, so the swap moves nothing. */
   .light {
-    min-height: calc(1em * var(--leading-body));
-    font: var(--weight-small) var(--text-small) / var(--leading-body) var(--font-body);
-    color: var(--site-text-muted);
-    font-variant-numeric: tabular-nums;
+    min-height: 1.25em;
+    /* The one line of the footer in the display face: lining figures of equal width, so the count does not jitter. */
+    font: var(--weight-display) 1.625rem / 1.25 var(--font-family-display);
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--site-text);
   }
 
   .end .fine {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     font-size: 0.875rem;
     color: var(--site-text-dim);
   }
@@ -228,7 +229,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
     }
 
     .light {
-      min-height: calc(2em * var(--leading-body));
+      min-height: 2.5em;
     }
   }
 
@@ -240,7 +241,7 @@ groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
     /* Three lines on a narrow phone. */
     .light {
-      min-height: calc(3em * var(--leading-body));
+      min-height: 3.75em;
     }
   }
 </style>
