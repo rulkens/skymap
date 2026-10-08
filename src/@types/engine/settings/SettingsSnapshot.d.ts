@@ -16,6 +16,7 @@
  *   - `zoneOfAvoidance` — galactic-plane dust band + its lettering; the
  *                         Zone-of-Avoidance view drives it, and a viewer who
  *                         switched the band off must get that choice back.
+ *   - `lightTime`      — the light-time spheres guide's gate.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
  *   - `localBubble`    — the Local Bubble shell's gate.
  *   - `constellations` — constellation figures + their lettering.
@@ -82,6 +83,7 @@ export type SettingsSnapshot = Readonly<
     | 'cosmicWebFilaments'
     | 'milkyWay'
     | 'zoneOfAvoidance'
+    | 'lightTime'
     | 'flow'
     | 'localBubble'
     | 'constellations'
