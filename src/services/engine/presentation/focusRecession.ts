@@ -58,6 +58,7 @@ const RECESSION_BY_KIND = {
   orbitTrails: undefined, // near-field foreground trails never recede on focus
   overlay: undefined,
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
+  lightTime: undefined, // a guide, stays put under focus
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
 
 function recessionTargetFor(h: FadeId): number | undefined {
