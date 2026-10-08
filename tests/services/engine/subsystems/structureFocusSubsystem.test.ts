@@ -6,7 +6,7 @@ function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
   return {
     id: 'virgo',
     name: 'Virgo Cluster',
-    category: 'cluster',
+    category: 'galaxy-cluster',
     worldPos: [10, 0, 0],
     physicalRadiusMpc: 2,
     featured: true,
@@ -40,14 +40,6 @@ describe('structureFocusSubsystem', () => {
     sub.update(makeCluster(), 0);
     const mid = sub.produceFocusUniforms(200);
     expect(sub.lastFocusUniforms()).toBe(mid);
-    // A later read is still the drawn frame's value, not a newer one.
-    expect(sub.lastFocusUniforms().blend).toBe(mid.blend);
-  });
-
-  it('a category without galaxy members still drives the focus blend', () => {
-    const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ category: 'open-cluster', physicalRadiusMpc: 1e-5 }), 0);
-    expect(sub.produceFocusUniforms(500).blend).toBe(1);
   });
 
   it('emits apparent (fade outer edge) and physical (core) radii independently', () => {

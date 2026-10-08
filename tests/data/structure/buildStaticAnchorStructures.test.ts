@@ -15,7 +15,7 @@
  * default `node` vitest environment with no extra setup.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildStaticAnchorStructures } from '../../../src/data/structure/buildStaticAnchorStructures';
 import structureSeedJson from '../../../data/seeds/structure_anchors.seed.json';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
@@ -64,38 +64,14 @@ describe('buildStaticAnchorStructures', () => {
     expect(structures.length).toBeGreaterThan(0);
     expect(structures.every((p) => p.featured === true)).toBe(true);
   });
-});
 
-/**
- * Isolated describe block: vi.doMock + dynamic import keeps the synthetic seed
- * out of the module cache shared by the tests above, and keeps the assertion
- * independent of which rows the real seed happens to title.
- */
-describe('buildStaticAnchorStructures wikipedia title', () => {
-  it("carries the seed's wikipedia title onto the record and omits it when absent", async () => {
-    const row = {
-      names: ['Fixture'],
-      category: 'void',
-      raHours: 1,
-      decDeg: 2,
-      distance: { value: 10, unit: 'Mpc' },
-      physicalRadius: { value: 1, unit: 'Mpc' },
-      apparentRadius: { value: 1, unit: 'Mpc' },
-    };
-    vi.resetModules();
-    vi.doMock('../../../data/seeds/structure_anchors.seed.json', () => ({
-      default: [
-        { ...row, id: 'with', wikipedia: 'Boötes void' },
-        { ...row, id: 'without' },
-      ],
-    }));
-    const { buildStaticAnchorStructures: build } =
-      await import('../../../src/data/structure/buildStaticAnchorStructures');
-    const [withTitle, without] = build();
-    vi.doUnmock('../../../data/seeds/structure_anchors.seed.json');
-    vi.resetModules();
-    expect(withTitle!.wikipediaTitle).toBe('Boötes void');
-    expect('wikipediaTitle' in without!).toBe(false);
+  it("carries the seed's wikipedia title onto the record and omits it when absent", () => {
+    const structures = buildStaticAnchorStructures();
+    const coma = structures.find((p) => p.id === 'galaxy-cluster-coma-a1656');
+    expect(coma?.wikipediaTitle).toBe('Coma Cluster');
+    const ophiuchus = structures.find((p) => p.id === 'galaxy-cluster-ophiuchus');
+    expect(ophiuchus).toBeDefined();
+    expect('wikipediaTitle' in ophiuchus!).toBe(false);
   });
 });
 
