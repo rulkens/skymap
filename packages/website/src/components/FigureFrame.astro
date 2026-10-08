@@ -45,10 +45,13 @@ const { sheet, wide = false } = Astro.props;
   }
 
   /* On the label's last line, where "Open this view" stands, at the other end of it. */
-  .enlarge {
+  .ring.enlarge {
     position: absolute;
     right: 0;
-    bottom: 0;
+    /* Level with "Open this view", which hangs below the label by the same amount (ShotCaption). */
+    bottom: -0.625rem;
+    /* The label's own size. */
+    font-size: 0.875rem;
     color: var(--site-text-dim);
   }
 
