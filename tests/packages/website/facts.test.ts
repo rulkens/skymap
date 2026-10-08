@@ -68,6 +68,10 @@ describe('website facts', () => {
       /([\d,]+) km, which light covers in about (\d+(?:\.\d+)?) seconds/,
     );
     expect(moonKm! / C_KM_S).toBeCloseTo(moonSeconds!, 1);
+    // Nearest and farthest in km, NASA Mars fact sheet (54.6 and 401.4 million km).
+    const [marsNear, marsFar] = statedFigures('mars-distance', /between (\d+) and (\d+) light-minutes/);
+    expect(Math.round(54.6e6 / C_KM_S / 60)).toBe(marsNear);
+    expect(Math.round(401.4e6 / C_KM_S / 60)).toBe(marsFar);
     // Nearest and farthest in km, NASA Saturn fact sheet.
     const [near, far] = statedFigures('saturn-distance', /between (\d+) and (\d+) light-minutes/);
     expect(Math.round(1_205.5e6 / C_KM_S / 60)).toBe(near);

@@ -38,6 +38,14 @@ export const FACTS: readonly Fact[] = [
     short: 'We’ve reached the Moon’s orbit. Light from the Moon reaches Earth in about 1.3 seconds.',
   },
   {
+    id: 'mars-distance',
+    text: 'Mars is between 3 and 22 light-minutes from Earth, depending on where both planets are on their orbits.',
+    source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
+    sourceLabel: 'NASA Mars fact sheet',
+    checked: CHECKED,
+    short: '3 to 22 light-minutes away',
+  },
+  {
     id: 'saturn-distance',
     text: 'Saturn is between 67 and 92 light-minutes from Earth, depending on where both planets are on their orbits.',
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html',

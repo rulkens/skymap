@@ -17,13 +17,13 @@ import { SITE_LOOPS } from '../../packages/website/src/data/siteLoops';
 import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
 import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraSlice';
 import { setSimDays } from '../../src/state/time/timeSlice';
-import { absoluteArm } from '../../src/utils/camera/absoluteArm';
 import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';
 import { readCanvas } from '../utils/shot/readCanvas';
 import { SITE_LOOP_PLAN } from './siteLoopPlan';
 import { loopVideoArgs } from './utils/loopVideoArgs';
 import { loopYaw } from './utils/loopYaw';
+import { turnCameraArm } from './utils/turnCameraArm';
 import { openSiteShot } from './utils/openSiteShot';
 
 const MASTERS_DIR = 'data/shots/site/loops';
@@ -70,14 +70,9 @@ try {
         for (let frame = 0; frame < frameCount; frame++) {
           const turn = frame / frameCount;
           if (loop.motion === 'orbit' || 'swayDeg' in loop.motion) {
-            // Every place settles in the absolute frame; a body-fixed or site pose has no yaw to turn.
-            if (start.camera.frame !== 'absolute') {
-              throw new Error(`cannot turn the camera in the "${start.camera.frame}" frame`);
-            }
-            const yaw = start.camera.pose.yaw + loopYaw(loop.motion, turn);
             await dispatchActions(page, [
               cancelCameraTween(),
-              commitCameraPose(absoluteArm({ ...start.camera.pose, yaw })),
+              commitCameraPose(turnCameraArm(start.camera, loopYaw(loop.motion, turn))),
             ]);
           } else {
             const simDays = start.simDays + turn * loop.motion.clockDays;

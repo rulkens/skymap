@@ -212,6 +212,15 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   { id: 'place-earth', link: `focus=body-earth&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
   { id: 'place-moon', link: `focus=body-moon&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  {
+    id: 'place-perseverance',
+    link: 'focus=body-perseverance&t=2026-10-07T16:00:00Z',
+    settings: { ...SUBJECT, settleMs: 8000 },
+    size: THUMB,
+    widths: THUMB_WIDTHS,
+    title: '',
+    alt: '',
+  },
   { id: 'place-saturn', link: `focus=body-saturn&${NOON}`, settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
   {
     id: 'place-voyager1',
@@ -242,16 +251,6 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: '',
   },
   { id: 'place-virgo', link: 'focus=cluster-virgo-m87', settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
-  {
-    id: 'place-laniakea',
-    link: 'pose=a,0,0,0,2.1,0.35,220,0',
-    settings: { hideLabels: true, hideStructures: true, hideCosmicWeb: true, settleMs: 2000 },
-    size: THUMB,
-    widths: THUMB_WIDTHS,
-    title: '',
-    alt: '',
-  },
-
   {
     id: 'classroom-hero',
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,4.6e-15,0,0.5,0`,
