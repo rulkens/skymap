@@ -130,7 +130,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     settings: { tourStep: 8, settleMs: 27500 },
     size: WIDE,
     widths: [1920, 1280, 800],
-    title: 'The cosmic web around us, from the tour’s ninth step',
+    title: 'The cosmic web around us',
     drawn: 'The purple field is density computed from SDSS galaxy positions; the discs mark named superclusters.',
     alt: 'A purple web of threads with gold knots, ending at a straight edge, with pale discs marking superclusters.',
   },
