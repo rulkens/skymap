@@ -39,6 +39,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
 import StructuresSection from '../../../src/components/SettingsPanel/StructuresSection';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { STRUCTURE_IDS_BY_SCALE } from '../../../src/data/structure/structureIdsByScale';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 
 // All structure categories enabled.
@@ -194,6 +195,24 @@ describe('StructuresSection', () => {
       expect(clusterLabel).not.toBeNull();
       // Label text should only be the display name, no number.
       expect(clusterLabel!.textContent).not.toMatch(/\d/);
+    });
+  });
+
+  describe('scale groups', () => {
+    it('lists the cosmic categories under "Cosmic", then the Milky Way ones under "Milky Way"', () => {
+      const { container } = render(createElement(StructuresSection, baseProps()));
+      const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+      fireEvent.click(expandButton);
+
+      const order = Array.from(container.querySelectorAll('div, input'))
+        .filter((el) => el.className.includes('groupHeading') || el.id.startsWith('toggle-marker-'))
+        .map((el) => (el.id ? el.id.replace('toggle-marker-', '') : el.textContent));
+      expect(order).toEqual([
+        'Cosmic',
+        ...STRUCTURE_IDS_BY_SCALE.cosmic,
+        'Milky Way',
+        ...STRUCTURE_IDS_BY_SCALE.milkyWay,
+      ]);
     });
   });
 });

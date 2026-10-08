@@ -168,3 +168,12 @@
   color: rgba(160, 200, 255, 0.6);
   margin-top: var(--space-2);
 }
+
+/* Sub-heading over a group of rows inside one section (Structures: Cosmic / Milky Way) */
+.groupHeading {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+}

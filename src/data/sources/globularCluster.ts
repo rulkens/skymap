@@ -12,6 +12,6 @@ export const GLOBULAR_CLUSTER_ENTRY = {
   scale: 'milkyWay',
   labelLayer: 'structure',
   detailLabel: 'Globular Cluster',
-  shortLabel: 'Globular',
+  shortLabel: 'Globular cluster',
   plural: 'Globular clusters',
 } as const satisfies StructureSourceEntry;
