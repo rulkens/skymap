@@ -20,6 +20,8 @@
  * tracks real time) from a `manual` clock (anchored to a user-chosen instant).
  */
 
+import type { RideProfile } from './RideProfile';
+
 export type TimeState = {
   readonly mode: 'live' | 'manual';
   /** The (simDays JD at realMs) pairing from which playback integrates. */
@@ -29,4 +31,6 @@ export type TimeState = {
   /** Sign of playback: `1` forward, `-1` reverse. Not a ladder entry. */
   readonly direction: 1 | -1;
   readonly paused: boolean;
+  /** A flyby ride's wall→sim table; while set it overrides the anchor, and any time action drops it. */
+  readonly profile: RideProfile | null;
 };

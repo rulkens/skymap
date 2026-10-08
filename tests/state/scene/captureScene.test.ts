@@ -70,6 +70,7 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
       rateIndex: 0,
       direction: 1,
       paused: false,
+      profile: null,
     },
   } as unknown as RootState;
 }
@@ -100,6 +101,18 @@ describe('captureScene', () => {
     const snap = captureScene(makeState(null), 1000 + 86_400_000);
     // Rate index 0 is 1 s/s: one real day later is one sim day later.
     expect(snap.time.anchor).toEqual({ simDays: 2460001, realMs: 1000 + 86_400_000 });
+  });
+
+  it('strips a riding profile and captures the interpolated instant', () => {
+    const state = makeState(null) as unknown as { time: Record<string, unknown> };
+    state.time.profile = {
+      startWallMs: 1000,
+      wallMs: Float64Array.from([0, 10_000]),
+      simDays: Float64Array.from([2460000, 2460010]),
+    };
+    const snap = captureScene(state as unknown as RootState, 6000);
+    expect(snap.time.profile).toBeNull();
+    expect(snap.time.anchor).toEqual({ simDays: 2460005, realMs: 6000 });
   });
 
   it('captureScene is detached', () => {

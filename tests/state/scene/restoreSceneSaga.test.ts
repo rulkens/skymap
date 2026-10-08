@@ -46,6 +46,7 @@ const MANUAL_PAUSED: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: true,
+  profile: null,
 };
 
 function makeSnapshot(
@@ -220,6 +221,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 0,
         direction: 1,
         paused: false,
+        profile: null,
       };
       store.dispatch(setSimDays({ simDays: 2470000, nowMs: 5 }));
       const wallMs = Date.UTC(2031, 5, 1);
@@ -241,6 +243,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 0,
         direction: 1,
         paused: true,
+        profile: null,
       };
       store.dispatch(setSimDays({ simDays: 2470000, nowMs: 5 }));
 
@@ -259,6 +262,7 @@ describe('restoreSceneSaga', () => {
         rateIndex: 2,
         direction: -1,
         paused: false,
+        profile: null,
       };
       store.dispatch(setRate({ rateIndex: 5, nowMs: 5 }));
       store.dispatch(setDirection({ direction: 1, nowMs: 5 }));

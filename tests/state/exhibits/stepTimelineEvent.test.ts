@@ -23,6 +23,7 @@ const stateAt = (
       rateIndex: 0,
       direction: 1,
       paused: true,
+      profile: null,
     },
   }) as unknown as RootState;
 

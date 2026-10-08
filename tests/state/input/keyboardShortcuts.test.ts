@@ -56,6 +56,7 @@ const time = (rateIndex: number, paused: boolean): TimeState => ({
   rateIndex,
   direction: 1,
   paused,
+  profile: null,
 });
 
 const TOUR: TourRuntimeState = {

@@ -37,6 +37,7 @@ import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
 import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { timeRoute } from '../../store/constants';
+import type { RideProfile } from '../../@types/time/RideProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
@@ -55,6 +56,7 @@ const initialState: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 /**
@@ -77,6 +79,7 @@ const timeSlice = createSlice({
       reanchor(time, action.payload.nowMs);
       time.mode = 'manual';
       time.rateIndex = action.payload.rateIndex;
+      time.profile = null;
     },
 
     // Flip playback direction. Re-anchor first so the flip pivots about the
@@ -85,6 +88,7 @@ const timeSlice = createSlice({
       reanchor(time, action.payload.nowMs);
       time.mode = 'manual';
       time.direction = action.payload.direction;
+      time.profile = null;
     },
 
     // Freeze at the current instant. Re-anchor captures it; `paused` then makes
@@ -92,6 +96,7 @@ const timeSlice = createSlice({
     pause: (time, action: PayloadAction<{ nowMs: number }>) => {
       reanchor(time, action.payload.nowMs);
       time.paused = true;
+      time.profile = null;
     },
 
     // Resume from the paused instant. Re-anchor rebases `realMs` to now so
@@ -99,6 +104,7 @@ const timeSlice = createSlice({
     resume: (time, action: PayloadAction<{ nowMs: number }>) => {
       reanchor(time, action.payload.nowMs);
       time.paused = false;
+      time.profile = null;
     },
 
     // Scrub to an externally-chosen instant in manual mode. Overwrites the anchor
@@ -106,6 +112,7 @@ const timeSlice = createSlice({
     setSimDays: (time, action: PayloadAction<{ simDays: number; nowMs: number }>) => {
       time.mode = 'manual';
       time.anchor = { simDays: action.payload.simDays, realMs: action.payload.nowMs };
+      time.profile = null;
     },
 
     // Snap to the live wall-clock JD the caller captured and track real time
@@ -120,6 +127,7 @@ const timeSlice = createSlice({
       // stale manual detent live mode ignores. A subsequent Faster then walks up
       // from the real rate rather than jumping from wherever manual left off.
       time.rateIndex = 0;
+      time.profile = null;
     },
 
     // Put a captured clock back verbatim except for the anchor, which the
@@ -134,6 +142,18 @@ const timeSlice = createSlice({
       time.rateIndex = captured.rateIndex;
       time.direction = captured.direction;
       time.paused = captured.paused;
+      time.profile = null;
+    },
+
+    // Play a flyby ride from its first sample, un-paused. The profile is stamped with the
+    // caller's `nowMs` (reducers read no clock), and the anchor is set to the ride's start so a
+    // visitor action that drops the profile re-anchors from a consistent instant.
+    startRide: (time, action: PayloadAction<{ profile: RideProfile; nowMs: number }>) => {
+      const { profile, nowMs } = action.payload;
+      time.mode = 'manual';
+      time.anchor = { simDays: profile.simDays[0]!, realMs: nowMs };
+      time.paused = false;
+      time.profile = { ...profile, startWallMs: nowMs };
     },
   },
   // A chapter step lands the clock on the event exactly as a scrub to it would.
@@ -146,11 +166,12 @@ const timeSlice = createSlice({
         simDays: unixMsToJulianDays(missionEventMs(event)),
         realMs: action.payload.nowMs,
       };
+      time.profile = null;
     });
   },
 });
 
-export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime } =
+export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime, startRide } =
   timeSlice.actions;
 
 export default timeSlice.reducer;

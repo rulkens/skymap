@@ -19,6 +19,7 @@ describe('deriveSimDays', () => {
       rateIndex: 2,
       direction: 1,
       paused: true,
+      profile: null,
     };
     // Paused ⇒ the anchor's simDays verbatim, no matter how far nowMs moves.
     expect(deriveSimDays(time, 1_000_000)).toBe(2_451_545);
@@ -32,6 +33,7 @@ describe('deriveSimDays', () => {
       rateIndex: 0,
       direction: 1,
       paused: false,
+      profile: null,
     };
     // Δreal = 86_400_000 ms = one real day ⇒ +1 sim day (rate 1, forward).
     expect(deriveSimDays(time, 1_000_000 + 86_400_000)).toBe(2_451_546);
@@ -45,8 +47,34 @@ describe('deriveSimDays', () => {
       rateIndex: 4,
       direction: 1,
       paused: false,
+      profile: null,
     };
     // ΔrealSec = 24 real seconds ⇒ 3600·24/86400 = 1 sim day forward.
     expect(deriveSimDays(time, 24_000)).toBe(101);
+  });
+
+  describe('with a ride profile', () => {
+    const riding: TimeState = {
+      mode: 'manual',
+      anchor: { simDays: 2_460_000, realMs: 1_000 },
+      rateIndex: 0,
+      direction: 1,
+      paused: false,
+      profile: {
+        startWallMs: 1_000,
+        wallMs: Float64Array.from([0, 1_000, 3_000]),
+        simDays: Float64Array.from([10, 12, 20]),
+      },
+    };
+
+    it('interpolates linearly inside a segment', () => {
+      expect(deriveSimDays(riding, 1_500)).toBe(11);
+      expect(deriveSimDays(riding, 3_000)).toBe(16);
+    });
+
+    it('clamps before the start and after the end', () => {
+      expect(deriveSimDays(riding, 0)).toBe(10);
+      expect(deriveSimDays(riding, 1_000_000)).toBe(20);
+    });
   });
 });
