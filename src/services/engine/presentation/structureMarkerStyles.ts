@@ -159,13 +159,13 @@ export const STRUCTURE_MARKER_STYLES = {
     labelPlacement: 'centre',
   },
   'open-cluster': {
-    labelColor: hexToGl('#A9C4FF'),
+    labelColor: hexToGl('#A3B3D1'),
     minPixelSize: 35,
     maxPixelSize: 150,
     worldEmMpc: 2e-6,
     pixelWidth: 2,
-    haloColor: hexToGl('#7F9BD942'),
-    ringColor: hexToGl('#7F9BD9'),
+    haloColor: hexToGl('#7B8AAD38'),
+    ringColor: hexToGl('#7B8AAD'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 5,
@@ -244,3 +244,9 @@ export const SELECTED_RING_BRIGHTEN = 1.6;
 
 /** The hover gain on a structure ring: a softer cue than the selected one, which outranks it. */
 export const HOVERED_RING_BRIGHTEN = 1.3;
+
+/**
+ * How far a hovered structure's label moves toward white. A blend, not a gain:
+ * label colours already sit near full value, where a gain would only clip.
+ */
+export const HOVERED_LABEL_WHITEN = 0.6;
