@@ -1,19 +1,24 @@
 /*
  * initReview — dev-only: when a cutter has written a review for this docs page
- * (tools/site/reviewPlugin.ts), its passages are marked in the article and a bar
- * above the page keeps the owner's rulings: click a mark to cycle its state, select
- * text and press c, w or g to add one, h to read the page as it would be after the cut.
- * A rewrite opens an editor for the owner's replacement wording, which h then shows;
- * a good passage opens one for the reason.
- * A click on a mark does not follow a link inside it: judging the text comes first.
+ * (tools/site/reviewPlugin.ts), the article reads as plain text and each reviewed heading
+ * carries an icon that opens that section's panel: the marks, their states, the owner's
+ * notes. Select text and press c, w or g to add a mark; m shows the marks in the text
+ * (click one to cycle its state); h flips between the original and the result.
  */
 import type { DocsReview } from '../../../../../tools/site/@types/DocsReview';
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
+import type { ReviewPanel } from './@types/ReviewPanel';
+import type { ReviewPanelActions } from './@types/ReviewPanelActions';
+import type { ReviewSection } from './@types/ReviewSection';
 import { clearMarks } from './clearMarks';
-import type { ReviewEditorField } from './@types/ReviewEditorField';
-import { openEditor } from './openEditor';
+import { flashMark } from './flashMark';
+import { openSectionPanel } from './openSectionPanel';
 import { paintMark } from './paintMark';
 import { placeAfter } from './placeAfter';
+import { placeSectionIcons } from './placeSectionIcons';
+import { sectionsOf } from './sectionsOf';
+import { sectionText } from './sectionText';
+import { setNote } from './setNote';
 import './review.css';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -50,14 +55,14 @@ async function initReview(): Promise<void> {
   const words = make('span', 'review-words', bar);
   const counts = make('span', 'review-counts', bar);
   make('span', 'review-keys', bar).textContent =
-    'click a mark: cut → keep → rewrite → good · select + C: cut · W: rewrite · G: good · H: hide cut text';
+    'click a section icon: its review · select + C: cut · W: rewrite · G: good · M: show marks in the text (click one: cut → keep → rewrite → good) · H: show result';
   const missing = make('span', 'review-missing', bar);
   const toggle = make('button', 'review-toggle', bar);
   const flag = make('span', 'review-flag', bar);
   job.value = review.job;
   job.setAttribute('aria-label', 'The question a reader comes to this page with');
   toggle.type = 'button';
-  toggle.title = 'Hide cut text (H)';
+  toggle.title = 'Show the result: cut passages gone, rewrites in place (H)';
   document.documentElement.classList.add('review-on');
 
   let hiding = false;
@@ -66,6 +71,9 @@ async function initReview(): Promise<void> {
   } catch {
     /* private window: the toggle just starts off after a reload */
   }
+  let marksShown = false;
+  let sections: ReviewSection[] = [];
+  let panel: ReviewPanel | null = null;
 
   // The newest save goes last; a slower earlier request must not land on top of it.
   let queue: Promise<void> = Promise.resolve();
@@ -84,12 +92,33 @@ async function initReview(): Promise<void> {
     });
   }
 
+  function closePanel(): void {
+    panel?.close();
+    panel = null;
+  }
+
+  function refreshPanel(): void {
+    if (!panel) return;
+    const section = sections.find((s) => s.heading === panel!.heading);
+    if (!section) return closePanel();
+    const before = wordsIn(sectionText(article!, section));
+    const cut = section.marks
+      .filter((mark) => mark.state === 'cut')
+      .reduce((sum, mark) => sum + wordsIn(mark.text), 0);
+    panel.refresh(section, before, before - cut);
+  }
+
   function render(): void {
     clearMarks(article!);
     const notFound = review.marks
       .filter((mark) => !paintMark(article!, mark))
       .map((mark) => mark.id);
     placeAfter(article!, review.marks);
+    sections = sectionsOf(article!, review.marks);
+    placeSectionIcons(sections);
+    // The marks are painted either way (the panel finds its passages by them); unshown, they leave no trace, tooltips included.
+    if (!marksShown)
+      for (const el of article!.querySelectorAll('.review-mark')) el.removeAttribute('title');
     const count = (state: DocsReviewMark['state']): number =>
       review.marks.filter((mark) => mark.state === state).length;
     const cutWords = review.marks
@@ -99,8 +128,10 @@ async function initReview(): Promise<void> {
     counts.textContent = `${count('cut')} cut · ${count('keep')} keep · ${count('rewrite')} rewrite · ${count('good')} good`;
     missing.textContent = notFound.map((id) => `not found: ${id}`).join(', ');
     document.documentElement.classList.toggle('review-hiding', hiding);
-    toggle.textContent = hiding ? 'Show cut text (H)' : 'Hide cut text (H)';
+    document.documentElement.classList.toggle('review-marks', marksShown);
+    toggle.textContent = hiding ? 'Show original (H)' : 'Show result (H)';
     toggle.setAttribute('aria-pressed', String(hiding));
+    refreshPanel();
   }
 
   function setHiding(next: boolean): void {
@@ -113,55 +144,42 @@ async function initReview(): Promise<void> {
     render();
   }
 
-  let closeEditor = (): void => {};
-  // A rewrite is asked for its replacement and instruction (`how` is its reason), every other state for its optional `why`.
-  function editNotes(mark: DocsReviewMark): void {
-    closeEditor();
-    const painted = article!.querySelectorAll(
-      `.review-mark[data-review-id="${CSS.escape(mark.id)}"]`,
-    );
-    const last = painted[painted.length - 1];
-    if (!last) return;
-    const fields: ReviewEditorField[] =
-      mark.state === 'rewrite'
-        ? [
-            { label: 'Replace with', value: mark.after ?? mark.text, placeholder: '' },
-            {
-              label: 'How to rewrite it',
-              value: mark.how ?? '',
-              placeholder: 'shorter; say where the switch is',
-            },
-          ]
-        : [
-            {
-              label: 'Why? (optional)',
-              value: mark.why ?? '',
-              placeholder: `why this is ${mark.state}`,
-            },
-          ];
-    closeEditor = openEditor(last, fields, (values) => {
-      closeEditor();
-      if (!values) return;
-      const [first = '', second = ''] = values;
-      if (mark.state === 'rewrite') {
-        // The field starts as the passage itself: saving it untouched is not a replacement.
-        if (first && first !== mark.text) mark.after = first;
-        else delete mark.after;
-        if (second) mark.how = second;
-        else delete mark.how;
-      } else if (first) mark.why = first;
-      else delete mark.why;
-      render();
-      save();
-    });
+  // A mark in an h3 is listed by the h3 as well as the h2 around it: the panel opens on the nearest.
+  const sectionOfMark = (mark: DocsReviewMark): ReviewSection | undefined =>
+    [...sections].reverse().find((s) => s.marks.includes(mark));
+
+  function openPanel(section: ReviewSection, id?: string, focus = false): void {
+    if (panel?.heading !== section.heading) {
+      closePanel();
+      panel = openSectionPanel(section, actions);
+    }
+    refreshPanel();
+    if (id) panel.reveal(id, focus);
   }
 
-  function addMark(state: DocsReviewMark['state']): void {
-    const selection = getSelection();
-    const range = selection && !selection.isCollapsed ? selection.getRangeAt(0) : null;
-    if (!range || !article!.contains(range.commonAncestorContainer)) return;
-    const text = selection!.toString().replace(/\s+/g, ' ').trim();
-    if (!text) return;
+  const actions: ReviewPanelActions = {
+    setState(mark, state) {
+      mark.state = state;
+      render();
+      save();
+    },
+    setNote(mark, key, value) {
+      setNote(mark, key, value);
+      render();
+      save();
+    },
+    go: (mark) => flashMark(article!, mark.id),
+    whole(state) {
+      const section = sections.find((s) => s.heading === panel?.heading);
+      if (!section) return;
+      const mark = pushOwnerMark(sectionText(article!, section), state);
+      render();
+      save();
+      panel?.reveal(mark.id, true);
+    },
+  };
+
+  function pushOwnerMark(text: string, state: DocsReviewMark['state']): DocsReviewMark {
     const taken = review.marks.map((mark) => Number(/^owner-(\d+)$/.exec(mark.id)?.[1] ?? 0));
     const mark: DocsReviewMark = {
       id: `owner-${Math.max(0, ...taken) + 1}`,
@@ -170,35 +188,52 @@ async function initReview(): Promise<void> {
       state,
     };
     review.marks.push(mark);
-    selection!.removeAllRanges();
-    closeEditor();
-    render();
-    save();
-    editNotes(mark);
+    return mark;
   }
 
-  // A click anywhere else skips the editor (keeping what is stored); capture, so a click on a mark can open its own.
+  function addMark(state: DocsReviewMark['state']): void {
+    const selection = getSelection();
+    const range = selection && !selection.isCollapsed ? selection.getRangeAt(0) : null;
+    if (!range || !article!.contains(range.commonAncestorContainer)) return;
+    const text = selection!.toString().replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    const mark = pushOwnerMark(text, state);
+    selection!.removeAllRanges();
+    render();
+    save();
+    const section = sectionOfMark(mark);
+    if (section) openPanel(section, mark.id, true);
+  }
+
+  // A click anywhere but the panel and its icons closes it; capture, so a click that opens one is not undone.
   document.addEventListener(
     'click',
     (e) => {
-      if (!(e.target as Element).closest('.review-editor')) closeEditor();
+      if (!(e.target as Element).closest('.review-panel, .review-section-icon')) closePanel();
     },
     true,
   );
   article.addEventListener('click', (e) => {
-    if (!getSelection()?.isCollapsed) return;
     const target = e.target as Element;
-    const pencil = target.closest<HTMLElement>('.review-pencil');
-    const id = (pencil ?? target.closest<HTMLElement>('.review-mark'))?.dataset.reviewId;
+    const icon = target.closest<HTMLElement>('.review-section-icon');
+    if (icon) {
+      e.preventDefault();
+      const section = sections[Number(icon.dataset.reviewSection)];
+      if (!section) return;
+      if (panel?.heading === section.heading) closePanel();
+      else openPanel(section);
+      return;
+    }
+    if (!marksShown || !getSelection()?.isCollapsed) return;
+    const id = target.closest<HTMLElement>('.review-mark')?.dataset.reviewId;
     const mark = review.marks.find((m) => m.id === id);
     if (!mark) return;
     e.preventDefault();
-    if (pencil) return editNotes(mark);
-    closeEditor();
     mark.state = NEXT_STATE[mark.state];
     render();
     save();
-    editNotes(mark);
+    const section = sectionOfMark(mark);
+    if (section) openPanel(section, mark.id);
   });
   job.addEventListener('change', () => {
     review.job = job.value;
@@ -214,8 +249,12 @@ async function initReview(): Promise<void> {
     );
     if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
     const key = e.key.toLowerCase();
-    if (key === 'h') setHiding(!hiding);
-    else if (key === 'c') addMark('cut');
+    if (e.key === 'Escape') closePanel();
+    else if (key === 'h') setHiding(!hiding);
+    else if (key === 'm') {
+      marksShown = !marksShown;
+      render();
+    } else if (key === 'c') addMark('cut');
     else if (key === 'w') addMark('rewrite');
     else if (key === 'g') addMark('good');
   });

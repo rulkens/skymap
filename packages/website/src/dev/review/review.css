@@ -104,49 +104,50 @@ html.review-on main {
   color: #000;
 }
 
-.review-mark {
+/* The marks are in the page always but look like nothing until "show marks" (M) is on. */
+.review-marks .review-mark {
   cursor: pointer;
 }
 
-.review-cut {
+.review-marks .review-cut {
   opacity: 0.45;
   text-decoration: line-through;
 }
 
-.review-keep {
+.review-marks .review-keep {
   text-decoration: underline;
   text-decoration-color: #4ade80;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
 
-.review-rewrite {
+.review-marks .review-rewrite {
   background: rgba(250, 204, 21, 0.3);
 }
 
-.review-good {
+.review-marks .review-good {
   background: rgba(74, 222, 128, 0.14);
+}
+
+.review-flash {
+  animation: review-flash 1.5s ease-out;
+}
+
+@keyframes review-flash {
+  from {
+    background: rgba(250, 204, 21, 0.6);
+    box-shadow: 0 0 0 0.2em rgba(250, 204, 21, 0.6);
+  }
+  to {
+    background: transparent;
+    box-shadow: 0 0 0 0.2em transparent;
+  }
 }
 
 .review-hiding .review-cut,
 .review-hiding .review-cut-section,
 .review-hiding .review-has-after {
   display: none;
-}
-
-.review-pencil {
-  margin-left: 0.35em;
-  padding: 0 0.25em;
-  border: 0;
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  cursor: pointer;
-  opacity: 0.45;
-}
-
-.review-pencil.has-after {
-  opacity: 1;
 }
 
 /* The owner's replacement stands in for the original only while the cut text is hidden. */
@@ -159,44 +160,150 @@ html.review-on main {
   display: revert;
 }
 
-.review-editor {
-  margin: 0.5rem 0 1rem;
-  padding: 0.625rem;
-  border: 1px solid rgba(168, 208, 255, 0.5);
+/* The entry icon: in the left margin of the heading, inline before the text on a narrow page. */
+html.review-on #page :is(h1, h2, h3) {
+  position: relative;
+}
+
+.review-section-icon {
+  position: absolute;
+  right: 100%;
+  top: 0.4em;
+  margin-right: 0.75rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: none;
+  color: #9aa3b2;
+  font: 600 0.75rem / 1 var(--font-body);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.review-section-icon:hover,
+.review-section-icon:focus-visible {
+  opacity: 1;
+}
+
+.review-section-icon[data-state='good'],
+.review-section-icon[data-state='keep'] {
+  color: #4ade80;
+}
+
+.review-section-icon[data-state='rewrite'] {
+  color: #facc15;
+}
+
+.review-section-count {
+  margin-left: 0.2rem;
+  font-size: 0.625rem;
+  font-weight: 400;
+}
+
+@media (max-width: 900px) {
+  .review-section-icon {
+    position: static;
+    margin: 0 0.5rem 0 0;
+    vertical-align: middle;
+  }
+}
+
+/* Beside the article, never over it: its rows scroll to passages that must stay visible. */
+.review-panel {
+  position: fixed;
+  z-index: 6;
+  top: calc(var(--nav-height) + var(--review-bar) + 1rem);
+  right: 1rem;
+  box-sizing: border-box;
+  width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar) - 2rem);
+  overflow-y: auto;
+  padding: 0.75rem;
   background: #05070d;
+  border: 1px solid rgba(168, 208, 255, 0.5);
+  color: var(--site-text);
   font: 400 0.8125rem / 1.4 var(--font-body);
 }
 
-.review-editor label {
+.review-panel-title {
   display: block;
-  margin-bottom: 0.5rem;
-  color: var(--site-text-dim);
+  color: var(--color-accent);
 }
 
-.review-editor textarea {
+.review-panel-words {
+  margin-bottom: 0.5rem;
+  color: var(--site-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-row {
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(168, 208, 255, 0.2);
+}
+
+.review-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.review-state,
+.review-panel-action {
+  padding: 0.125rem 0.4rem;
+  border: 1px solid rgba(168, 208, 255, 0.4);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.review-state[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.review-row-text {
+  flex: 1 0 100%;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-row-reason {
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+.review-note {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+.review-note textarea {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.125rem;
   padding: 0.25rem 0.5rem;
   border: 1px solid rgba(168, 208, 255, 0.35);
   background: #000;
   color: var(--color-fg);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   resize: vertical;
 }
 
-.review-editor-buttons {
+.review-panel-foot {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.review-editor-buttons button {
-  padding: 0.25rem 0.625rem;
-  border: 1px solid rgba(168, 208, 255, 0.5);
-  background: #000;
-  color: var(--color-fg);
-  font: inherit;
-  cursor: pointer;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(168, 208, 255, 0.2);
 }
