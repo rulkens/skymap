@@ -139,7 +139,7 @@ export function createStructureMarkerRenderer(
    */
   pickDepthFormat: GPUTextureFormat,
   /**
-   * `true` ranks the ring pick in a fixed band below every star (NEAR0, whose pick
+   * `true` ranks the ring pick in a fixed band above the star bands (NEAR0, whose pick
    * depths are importance-ordered); `false` keeps true depth (COSMO, where rings
    * compete with galaxies by real depth).
    */

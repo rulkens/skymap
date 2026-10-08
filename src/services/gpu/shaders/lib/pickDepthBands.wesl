@@ -27,14 +27,15 @@
 //   earth glint band   eps = 5.00e-4  → z/w = 0.00050   (highest, wins)
 //   planet glint band  eps = 4.50e-4  → z/w = 0.00045
 //   moon glint band    eps = 4.00e-4  → z/w = 0.00040
+//   structure-ring band eps = 2.00e-4 → z/w = 0.00020
 //   scene-star band    eps = 1.00e-4  → z/w = 0.00010
 //   survey-star band   eps = 0.50e-4  → z/w = 0.00005
-//   structure-ring band eps = 0.375e-4 → z/w = 0.0000375
 //   backdrop band      eps = 0.25e-4  → z/w = 0.000025  (lowest, loses)
 //
 // So at any pixel where the classes overlap: the Earth glint beats a planet
-// glint beats a moon glint beats scene/famous stars beat survey stars beat a
-// structure ring beats the Milky Way backdrop — pure importance, independent of true distance. (Classes
+// glint beats a moon glint beats a structure ring beats scene/famous stars
+// beat survey stars beat the Milky Way backdrop — pure importance, independent
+// of true distance. (Classes
 // that keep TRUE depth — resolved spheres, and within-far scene stars — sit in
 // front of every band automatically because their z/w is well above 0.00050 at
 // foreground range (reversed-Z: nearer = larger z); that is the resolved-sphere +
@@ -91,9 +92,9 @@
 //                                decides among glints.
 //   - structureMarker/ringPick.wesl — 'fsRingPickBanded' (the NEAR0 instance)
 //                                writes frag_depth = PICK_BAND_STRUCTURE_RING_EPS,
-//                                z/w being exactly eps for 'z = w * eps': a ring
-//                                is the fallback for its area, so any star inside
-//                                it keeps its click.
+//                                z/w being exactly eps for 'z = w * eps': the
+//                                structure is selected before the stars inside
+//                                its disc, as its label is.
 //   - milkyWay/pick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
@@ -127,10 +128,11 @@ const PICK_BAND_SCENE_STAR_EPS: f32 = 1e-4;
 // eps.
 const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
 
-// Near structure rings (filled pick discs) — below every star band (the survey
-// band's lowest rank sits at its eps, 0.5e-4), above only the backdrop: stars
-// are the specific target, the ring is the click fallback for its area.
-const PICK_BAND_STRUCTURE_RING_EPS: f32 = 0.375e-4;
+// Near structure rings (filled pick discs) — above both star bands, below the
+// glints: a click inside a ring selects the structure first, and its stars are
+// reached once it is focused. A scene star nearer than about half the orbit
+// distance keeps true depth above this band and still wins.
+const PICK_BAND_STRUCTURE_RING_EPS: f32 = 2.0e-4;
 
 // Milky Way impostor backdrop — the deepest band, the ultimate fallback: any
 // resolvable Gaia dot overlapping the galaxy backdrop now wins the click over

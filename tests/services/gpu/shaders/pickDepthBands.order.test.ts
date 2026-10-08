@@ -14,9 +14,10 @@ const band = (name: string): number => {
 };
 
 describe('pickDepthBands.wesl ring band', () => {
-  it('a structure ring ranks below the survey stars and above the Milky Way backdrop', () => {
+  it('a structure ring ranks above both star bands and below the glints', () => {
     const ring = band('PICK_BAND_STRUCTURE_RING_EPS');
-    expect(ring).toBeLessThan(band('PICK_BAND_SURVEY_STAR_EPS'));
-    expect(ring).toBeGreaterThan(band('PICK_BAND_BACKDROP_EPS'));
+    expect(ring).toBeGreaterThan(band('PICK_BAND_SCENE_STAR_EPS'));
+    expect(ring).toBeGreaterThan(band('PICK_BAND_SURVEY_STAR_EPS'));
+    expect(ring).toBeLessThan(band('PICK_BAND_MOON_EPS'));
   });
 });
