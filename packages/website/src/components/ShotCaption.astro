@@ -177,12 +177,12 @@ const notes = Boolean(shot.drawn || shot.credit);
      * A docs figure sets "Enlarge" at the right end of the label's last line (FigureFrame), so the address
      * takes a line of its own there, under both columns.
      */
-    :global(figcaption) .what:not(.alone) {
+    :global([data-embed] figcaption) .what:not(.alone) {
       grid-row: 1 / span 2;
     }
 
-    :global(figcaption) .plate > :global(.ring),
-    :global(figcaption) .room {
+    :global([data-embed] figcaption) .plate > :global(.ring),
+    :global([data-embed] figcaption) .room {
       grid-area: 3 / 1 / 4 / -1;
     }
   }

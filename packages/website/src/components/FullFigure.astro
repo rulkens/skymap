@@ -33,8 +33,11 @@ const { id, tall } = Astro.props;
     display: block;
     width: 100%;
     height: auto;
-    max-height: 92svh;
+    /* An interlude between sections, not a screen of its own: the next heading shows under it. */
+    max-height: 68svh;
     object-fit: cover;
+    /* What is cut comes mostly off the foot, where the fade to black already hides the picture. */
+    object-position: 50% 35%;
   }
 
   .frame::after {
