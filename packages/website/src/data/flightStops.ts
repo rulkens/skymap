@@ -26,7 +26,14 @@ export const FLIGHT_STOPS: readonly FlightStop[] = [
     line: 'Our nearest galactic neighbours, the Magellanic Clouds and Andromeda, sit within a few million light-years.',
     portraitX: 0.56,
   },
-  { id: 'cosmic-web', atSec: 49, name: 'The cosmic web', factId: 'cosmic-web-map', portraitX: 0.27 },
+  {
+    id: 'cosmic-web',
+    atSec: 49,
+    name: 'The cosmic web',
+    factId: 'cosmic-web-map',
+    line: 'The largest structures of our universe become visible as a glow, tracing the density of visible and dark matter.',
+    portraitX: 0.27,
+  },
   { id: 'surveys', atSec: 55, name: 'The galaxy surveys', factId: 'survey-gaps' },
   { id: 'universe', atSec: 65.5,name: 'The observable universe', factId: 'observable-edge', portraitZoom: 0.4 },
 ];
