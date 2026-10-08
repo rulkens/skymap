@@ -195,6 +195,16 @@ const turns = [
     color: var(--site-text-dim);
   }
 
+  .turns p:has([rel='next']) {
+    justify-items: end;
+    text-align: right;
+  }
+
+  .turns p:has([rel='next']) :global(.ring) {
+    margin-right: 0;
+    text-align: right;
+  }
+
   footer .link-row {
     margin-block: 2rem 2.5rem;
   }
