@@ -306,7 +306,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   function signatureOf(labels: readonly Label2D[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color]`,
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]`,
     // joined. A label's synthesized leader line (see `synthesizeLines`) carries
     // no state of its own beyond what's keyed here, so one term covers both.
     //
@@ -337,6 +337,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // static-position producers (structures) keep their positions stable
     // and still benefit from the skip.  `color` is keyed too: a hovered or
     // selected structure label changes colour at a fixed id and position.
+    // So is `pickId`: focus strips it at a fixed id, and a stale one left
+    // uploaded would keep the label clickable.
     //
     // `leader.toWorld`, when present, is included for the same
     // camera-derived reason: the leader lines (famous-galaxy connectors,
@@ -357,7 +359,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           ? `:${l.leader.toWorld[0]},${l.leader.toWorld[1]},${l.leader.toWorld[2]}`
           : '';
         const colorKey = l.color ? `:${l.color.join(',')}` : '';
-        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}`;
+        const pickKey = l.pickId !== undefined ? `:${l.pickId}` : '';
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}`;
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;

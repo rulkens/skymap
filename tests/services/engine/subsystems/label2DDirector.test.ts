@@ -240,6 +240,28 @@ describe('label2DDirector', () => {
     expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
   });
 
+  it('re-uploads when a label loses its pick id at fixed id (focus strips it)', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    let pickId: number | undefined = 7;
+    dir.registerProducer({
+      id: 'p',
+      produceLabels: () => ({ labels: [{ ...SAMPLE_LABEL, pickId }], awake: false }),
+    });
+
+    dir.runFrame(makeState(), makeCtx(0));
+    dir.runFrame(makeState(), makeCtx(300)); // envelope settled
+    dir.runFrame(makeState(), makeCtx(400));
+    const settled = labelStub.setLabels.mock.calls.length;
+
+    pickId = undefined;
+    dir.runFrame(makeState(), makeCtx(500));
+    expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
+  });
+
   it("re-flushes when a leader's toWorld moves at fixed id and alpha", () => {
     // Pins the fold's landmine: signatureOf's separate line term collapsed
     // onto the label term, but must still key the leader's `toWorld` — the
