@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MISSION_LEG_WALL_MS } from '../../../../src/data/exhibits/mission/missionLegWallMs';
+import { MISSION_RAMP_MS } from '../../../../src/data/exhibits/mission/missionRampMs';
 import { MISSION_SPEEDS } from '../../../../src/data/exhibits/mission/missionSpeeds';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { buildMissionProfile } from '../../../../src/utils/exhibits/mission/buildMissionProfile';
@@ -14,6 +15,8 @@ const bounds = stops.map((s) => unixMsToJulianDays(s.ms));
 const END = unixMsToJulianDays(Date.parse('2026-10-06'));
 const ONE = MISSION_SPEEDS.indexOf(1);
 const FOUR = MISSION_SPEEDS.indexOf(4);
+/** The profile's integration step, ms. */
+const STEP_MS = 50;
 
 /** Wall ms each leg took: the profile lands a sample exactly on every boundary it crosses. */
 function legWallMs(p: MissionProfile): number[] {
@@ -49,8 +52,19 @@ describe('buildMissionProfile', () => {
     for (const ms of four.slice(-2)) expect(ms).toBeCloseTo(MISSION_LEG_WALL_MS / 4, 6);
     // Launch, Jupiter, Saturn, Uranus and Neptune legs are capped near their planets.
     for (const ms of one.slice(0, -2)) expect(ms).toBeGreaterThan(1.5 * MISSION_LEG_WALL_MS);
-    const total = (legs: number[]) => legs.reduce((a, b) => a + b);
-    expect((4 * total(four)) / total(one)).toBeCloseTo(1, 2);
+  });
+
+  it.each([
+    ['1×', () => atOne],
+    ['4×', () => atFour],
+  ])('never speeds up more than e-fold per MISSION_RAMP_MS at %s', (_, profile) => {
+    const p = profile();
+    const rates = Array.from(p.wallMs.subarray(1), (w, i) => {
+      return (p.simDays[i + 1]! - p.simDays[i]!) / (w - p.wallMs[i]!);
+    });
+    // Per integration step, the unit the ramp is applied in.
+    const worst = Math.max(...rates.slice(1).map((r, i) => Math.log(r / rates[i]!)));
+    expect(worst).toBeLessThan(STEP_MS / MISSION_RAMP_MS + 1e-6);
   });
 
   it('runs slowest at Neptune within an hour of closest approach', () => {

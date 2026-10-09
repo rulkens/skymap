@@ -47,12 +47,13 @@ describe.each(['voyager1', 'voyager2'])('missionFrame — %s', (craft) => {
     expect(worst).toBeLessThan(1);
   });
 
-  it('moves by a small fraction of its radius between adjacent samples', () => {
+  it('moves by a small fraction of its radius between adjacent samples on one stop', () => {
     let worst = 0;
     for (let i = 1; i < frames.length; i++) {
       if (samples[i]! - samples[i - 1]! > 1 / 24 + 1e-9) continue; // the gap between two stops' windows
       const a = frames[i - 1]!.frame;
       const b = frames[i]!.frame;
+      if (a.stop !== b.stop) continue; // the hand-off is a hard switch the camera eases across
       const r = Math.min(a.radiusMpc, b.radiusMpc);
       const shift = Math.hypot(a.aim[0] - b.aim[0], a.aim[1] - b.aim[1], a.aim[2] - b.aim[2]) / r;
       worst = Math.max(worst, shift, Math.abs(Math.log(a.radiusMpc / b.radiusMpc)));

@@ -104,12 +104,12 @@ describe('mission hold loop', () => {
     expect(simDays()).toBeCloseTo(eventDays('voyager1-pale-blue-dot'), 9);
   });
 
-  it('resets the visitor’s offsets on a step', async () => {
+  it('keeps the visitor’s offsets through a step', async () => {
     const { store, step } = await hold();
     store.dispatch(setMissionOffsets({ yaw: 0.3, pitch: 0.1, zoom: 2 }));
     step('voyager1-pale-blue-dot');
     await tick();
-    expect(store.getState().camera.mission?.offsets).toEqual({ yaw: 0, pitch: 0, zoom: 1 });
+    expect(store.getState().camera.mission?.offsets).toEqual({ yaw: 0.3, pitch: 0.1, zoom: 2 });
   });
 
   it('lifts the clock to the new craft’s launch on a tab switch, and keeps a later instant', async () => {

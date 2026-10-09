@@ -2,14 +2,15 @@
  * missionHoldSaga — a timeline exhibit's hold: the clock opens paused at the selected craft's
  * launch (or a linked `t=`) with the mission camera on it (flown to, unless the entry is a cut,
  * while the loop already listens). Run, resume, a flyby step and − / + or a scrub while playing
- * play the mission profile; a step or craft tab resets the orbit offsets and eases the camera to
- * the new frame, lifting the clock to that craft's launch. `finally` clears the mission.
+ * play the mission profile; a step or craft tab eases the camera to the new frame (keeping the
+ * visitor's orbit), a tab lifting the clock to that craft's launch. `finally` clears the mission.
  */
 import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
+import { NO_MISSION_OFFSETS } from '../../data/exhibits/mission/noMissionOffsets';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { orbitAnglesLookingAlong } from '../../utils/camera/orbitAnglesLookingAlong';
 import { missionCameraFrame } from '../../utils/camera/missionCameraFrame';
@@ -48,13 +49,13 @@ export function* missionHoldSaga(
 ): Generator {
   let speedIndex = MISSION_SPEEDS.indexOf(1);
   let retarget = 0;
-  const missionOf = (craftId: string | null): CameraMission => {
+  const missionOf = (craftId: string | null, offsets = NO_MISSION_OFFSETS): CameraMission => {
     const id = craftId ?? timeline.crafts[0]!.bodyId;
     return {
       craftId: id,
       stops: missionStops(timeline.events.filter((e) => e.bodyId === id)),
       cruise: { yaw: exhibit.pose.yaw, pitch: exhibit.pose.pitch },
-      offsets: { yaw: 0, pitch: 0, zoom: 1 },
+      offsets,
       speedIndex,
       retarget,
     };
@@ -107,8 +108,9 @@ export function* missionHoldSaga(
         task = null;
       }
       const flying = fly?.isRunning() ?? false;
+      const offsets = yield* select((s: RootState) => s.camera.mission?.offsets);
       if (next.tab) {
-        mission = missionOf(next.tab.payload);
+        mission = missionOf(next.tab.payload, offsets);
         const at = performance.now();
         if (deriveSimDays(yield* select(selectTimeState), at) < launchDays(mission)) {
           yield* put(setSimDays({ simDays: launchDays(mission), nowMs: at }));
@@ -117,7 +119,7 @@ export function* missionHoldSaga(
       // A re-aim while the fly-in still owns the camera eases from where it ends up.
       if (next.step || next.tab || flying) {
         retarget += 1;
-        mission = missionOf(mission.craftId);
+        mission = missionOf(mission.craftId, offsets);
         yield* put(setMission(mission));
       }
       const event = next.step
@@ -156,6 +158,7 @@ function* entryPose(mission: CameraMission, days: number): Generator<unknown, Ca
     rt.fovYRad,
     rt.aspect,
     basis,
+    null,
   );
   if (frame === null) return null;
   return {

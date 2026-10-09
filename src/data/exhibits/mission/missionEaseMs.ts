@@ -1,2 +1,5 @@
-/** How long the mission camera eases to the new frame after a step or a craft switch, ms. */
-export const MISSION_EASE_MS = 1000;
+/**
+ * Wall time of every mission camera view change (a step, a craft switch, a hand-off), of the
+ * visitor's idle wait before the orbit eases back to the auto view, and of that ease-back, ms.
+ */
+export const MISSION_EASE_MS = 3000;
