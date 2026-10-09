@@ -6,6 +6,9 @@
 
 import { initialState as orbitTrailsInitialState } from '../../state/settings/core/orbitTrails/initialState';
 import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
+import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import { MISSION_EVENTS } from '../missions/missionEvents.generated';
 import { SCALE_UNITS } from '../scaleUnits';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
@@ -30,7 +33,26 @@ export const voyager: Exhibit = {
   label: 'Voyager',
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true, emphasis: 'voyager1' },
-    starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
+    // Galaxies and star names are landmarks for other scales; here they only crowd the craft.
+    galaxyCatalogs: {
+      ...galaxyCatalogsInitialState,
+      items: Object.fromEntries(
+        Object.keys(galaxyCatalogsInitialState.items).map((id) => [
+          id,
+          { enabled: false, labelEnabled: false },
+        ]),
+      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
+    },
+    starCatalogs: {
+      ...starCatalogsInitialState,
+      brightness: STARFIELD_BRIGHTNESS,
+      items: {
+        ...starCatalogsInitialState.items,
+        gaiaStars: { enabled: true, labelEnabled: false },
+        famousStar: { enabled: true, labelEnabled: false },
+        sStar: { enabled: true, labelEnabled: false },
+      },
+    },
     picking: {
       kinds: {
         body: true,
