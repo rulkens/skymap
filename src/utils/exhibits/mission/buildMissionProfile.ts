@@ -8,6 +8,7 @@
 
 import type { MissionStop } from '../../../@types/missions/MissionStop';
 import type { MissionProfile } from '../../../@types/time/MissionProfile';
+import { FRAME_CROSSINGS_PER_S } from '../../../data/exhibits/mission/frameCrossingsPerS';
 import { MISSION_LEG_WALL_MS } from '../../../data/exhibits/mission/missionLegWallMs';
 import { MISSION_SPEEDS } from '../../../data/exhibits/mission/missionSpeeds';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -17,8 +18,6 @@ import { bodyRelativeState } from './bodyRelativeState';
 import { missionFrame } from './missionFrame';
 
 const SECONDS_PER_DAY = 86_400;
-/** At the cap the craft takes 1 / this many wall seconds to cross the frame. */
-const FRAME_CROSSINGS_PER_S = 0.5;
 const STEP_MS = 50;
 
 /** Sim seconds per wall second the near-planet cap allows at `simDays`; Infinity in cruise. */

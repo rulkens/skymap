@@ -148,14 +148,14 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('1989-08-26');
     act(() => {
       store.dispatch(pause({ nowMs: performance.now() }));
-      store.dispatch(setMission(missionAt(2)));
+      store.dispatch(setMission(missionAt(MISSION_SPEEDS.indexOf(1))));
     });
     expect(screen.getByText('1×')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slower' })).toBeEnabled();
     act(() => {
       store.dispatch(setMission(missionAt(0)));
     });
-    expect(screen.getByText('¼×')).toBeInTheDocument();
+    expect(screen.getByText('1⁄16×')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slower' })).toBeDisabled();
     act(() => {
       store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));

@@ -5,6 +5,14 @@ import { formatMissionSpeed } from '../../../../src/utils/exhibits/mission/forma
 
 describe('formatMissionSpeed', () => {
   it('writes every ladder factor as a short multiplier', () => {
-    expect(MISSION_SPEEDS.map(formatMissionSpeed)).toEqual(['¼×', '½×', '1×', '2×', '4×']);
+    expect(MISSION_SPEEDS.map(formatMissionSpeed)).toEqual([
+      '1⁄16×',
+      '⅛×',
+      '¼×',
+      '½×',
+      '1×',
+      '2×',
+      '4×',
+    ]);
   });
 });
