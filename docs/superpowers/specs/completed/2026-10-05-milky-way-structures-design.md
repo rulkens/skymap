@@ -192,3 +192,4 @@ Rulings from the on-screen checks. Where they differ from §6–§8 as first dra
 - **A ring takes clicks only while its ring alpha is at least `RING_PICK_MIN_ALPHA`**, so a faded-out ring does not block the stars inside it. Reason: a ring that is nearly invisible on screen should not be a click target.
 - **Overlapping rings share one click depth and resolve by draw order** (category order, then seed order). Left as is.
 - **Known gap:** during a structure focus, planets, Earth, spacecraft, body glints and the Milky Way disc still answer clicks although dimmed. Not filtered in this PR.
+- **Nebulae start switched off** (ring and label), because nebulae have no rendering of their own yet and a ring would circle empty sky. They stay searchable and focusable while off.
