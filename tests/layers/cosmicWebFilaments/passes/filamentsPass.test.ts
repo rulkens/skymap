@@ -2,14 +2,14 @@
  * filamentsPass — focus-recession routing of the overlay opacity, pinned at both
  * ends of the blend on the 6th argument of `filamentRenderer.draw`, plus the
  * SlabView threading and the either-or `enabled` gate: recession ∈
- * [FILAMENT_RECESSION, 1] can never zero a layer, so the gate must keep reading
+ * [SCENERY_RECESSION, 1] can never zero a layer, so the gate must keep reading
  * the pure toggle alone, while a fade-out tail keeps drawing after it flips off.
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { filamentsPass } from '../../../../src/layers/cosmicWebFilaments/passes/filamentsPass';
 import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
-import { FILAMENT_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { SCENERY_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CosmicWebFilamentsRuntime } from '../../../../src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsRuntime';
@@ -88,12 +88,12 @@ describe('filamentsPass draw focus recession', () => {
     expect(drawSpy.mock.calls[0]![6]).toBe(1);
   });
 
-  it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
+  it('passes opacityOf × SCENERY_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(1);
     filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(FILAMENT_RECESSION, 6);
+    expect(drawSpy.mock.calls[0]![6]).toBeCloseTo(SCENERY_RECESSION, 6);
   });
 
   it('threads the SlabView vp/viewport rather than ctx.vp/ctx.canvasSize', () => {

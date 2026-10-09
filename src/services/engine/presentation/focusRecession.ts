@@ -18,8 +18,10 @@ import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 
 // The opacity each tagged layer settles to at full focus (blend = 1): markers and
-// labels dim moderately, the large diffuse fields recede harder. Eye-tuned.
-export const FILAMENT_RECESSION = 0.15;
+// labels dim moderately; scenery behind the subject (filaments, the Local Bubble,
+// the Milky Way glow, constellation figures) and the density volume recede harder.
+// Eye-tuned.
+export const SCENERY_RECESSION = 0.15;
 const VOLUME_RECESSION = 0.15;
 export const MARKER_RECESSION = 0.25;
 export const LABEL_RECESSION = 0.25;
@@ -46,15 +48,15 @@ const RECESSION_BY_LABEL_LAYER = {
 } satisfies Record<LabelLayerId, number | undefined>;
 
 const RECESSION_BY_KIND = {
-  cosmicWebFilaments: FILAMENT_RECESSION,
-  localBubble: FILAMENT_RECESSION,
+  cosmicWebFilaments: SCENERY_RECESSION,
+  localBubble: SCENERY_RECESSION,
   cosmicWebDensity: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,
   cosmicWebDensityField: undefined,
-  milkyWay: FILAMENT_RECESSION, // the glow is scenery behind a focused subject
+  milkyWay: SCENERY_RECESSION,
   flow: undefined,
-  constellations: FILAMENT_RECESSION, // lines and captions both read this row
+  constellations: SCENERY_RECESSION, // lines and captions both read this row
   orbitTrails: undefined, // near-field foreground trails never recede on focus
   overlay: undefined,
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
