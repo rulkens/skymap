@@ -10,8 +10,10 @@
  * accumulator: sim time is recomputed here on demand rather than carried. Every
  * intent action re-anchors, so this stays a total function of `(time, nowMs)`.
  *
- * ### The three regimes
+ * ### The regimes
  *
+ * - **profiled** (a `profile` is set) ⇒ the mission table interpolated at `nowMs − startWallMs`,
+ *   clamped to its ends; a profile is only ever set un-paused, and any time action drops it.
  * - **paused** ⇒ the anchor's `simDays` verbatim; `nowMs` cannot move it.
  * - **live** ⇒ real-time forward: exactly one sim day per real day, ignoring the
  *   rate ladder and direction (a wall-clock JD that tracks "now").
@@ -31,9 +33,11 @@
  */
 
 import type { TimeState } from '../../@types/time/TimeState';
+import { interpolateMissionProfile } from './interpolateMissionProfile';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 
 export function deriveSimDays(time: TimeState, nowMs: number): number {
+  if (time.profile !== null) return interpolateMissionProfile(time.profile, nowMs);
   if (time.paused) return time.anchor.simDays;
 
   const realDaysElapsed = (nowMs - time.anchor.realMs) / 86_400_000;

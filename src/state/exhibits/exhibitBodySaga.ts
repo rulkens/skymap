@@ -4,7 +4,7 @@
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
- * end it.
+ * end it. A timeline exhibit hands its whole hold, fly-in included, to `missionHoldSaga`.
  */
 import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 
@@ -12,12 +12,14 @@ import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { missionHoldSaga } from './missionHoldSaga';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
 import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import type { SagaContext } from '../../store/types';
 import type { Transition } from '../../@types/navigation/Transition';
 
@@ -32,7 +34,11 @@ import type { Transition } from '../../@types/navigation/Transition';
  */
 const EXHIBIT_SPIN_RATE = -0.0003;
 
-export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator {
+export function* exhibitBodySaga(
+  exhibit: Exhibit,
+  entry: Transition,
+  atLinkedTime = false,
+): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
@@ -42,6 +48,11 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
+  const timeline = exhibit.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline');
+  if (timeline) {
+    yield* call(missionHoldSaga, exhibit, timeline, entry, atLinkedTime);
+    return;
+  }
 
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
   const orientation = yield* select(selectOrientation);

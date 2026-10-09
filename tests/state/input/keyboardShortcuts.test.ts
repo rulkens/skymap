@@ -15,6 +15,7 @@ import {
   toggleDebugPanelOpen,
   toggleUiHidden,
 } from '../../../src/state/ui/uiSlice';
+import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { RootState } from '../../../src/store/types';
@@ -33,7 +34,8 @@ const byKeys = (keys: string) => {
 // Minimal RootState-shaped fixtures — only the slice each case's selector
 // reads, hand-rolled the way sibling slice tests do (e.g. tourSlice.test.ts's
 // `asState`).
-const stateWith = (partial: Partial<RootState>): RootState => partial as unknown as RootState;
+const stateWith = (partial: Partial<RootState>): RootState =>
+  ({ takeover: { active: null }, ...partial }) as unknown as RootState;
 
 const ui = (paletteOpen: boolean): UiState => ({
   paletteOpen,
@@ -56,6 +58,7 @@ const time = (rateIndex: number, paused: boolean): TimeState => ({
   rateIndex,
   direction: 1,
   paused,
+  profile: null,
 });
 
 const TOUR: TourRuntimeState = {
@@ -96,6 +99,16 @@ describe('KEYBOARD_SHORTCUTS', () => {
     >;
     expect(stepDown.payload.rateIndex).toBe(0);
     expect(stepUp.payload.rateIndex).toBe(14);
+  });
+
+  it('[ and ] step the mission speed factor while a timeline exhibit runs', () => {
+    const inExhibit = stateWith({
+      time: time(3, false),
+      takeover: { active: { kind: 'exhibit', id: 'voyager', entry: 'cut' } },
+      settings: { orbitTrails: { enabled: true, emphasis: null } },
+    } as unknown as Partial<RootState>);
+    expect(byKeys('[').run(inExhibit)).toEqual(stepMissionSpeed({ step: -1 }));
+    expect(byKeys(']').run(inExhibit)).toEqual(stepMissionSpeed({ step: 1 }));
   });
 
   it('\\ returns resume when paused, pause when running', () => {

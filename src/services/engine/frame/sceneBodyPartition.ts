@@ -47,7 +47,7 @@ export function sceneBodyPartition(
   meshes: readonly MeshBody[];
 } {
   return partitionBodiesByPresentation({
-    bodies: [...state.data.bodies.planets, ...state.data.bodies.meshBodies],
+    bodies: [...state.data.bodies.planets, ...ctx.snapshot.meshBodies],
     bodyStates: sceneBodyStates(state, ctx),
     camPosMpc: ctx.drawCamPos,
     pxPerRad: ctx.drawPxPerRad,

@@ -14,7 +14,8 @@ import {
   manualPausedAtActions,
   enterManualPausedAt,
 } from '../../../src/state/time/enterManualPausedAt';
-import { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import timeReducer, { setSimDays, pause } from '../../../src/state/time/timeSlice';
+import type { TimeState } from '../../../src/@types/time/TimeState';
 import type { AppDispatch } from '../../../src/store/types';
 
 const INSTANT = new Date('2026-07-29T12:00:00Z');
@@ -42,5 +43,28 @@ describe('manualPausedAtActions', () => {
     ];
 
     expect(scrub.payload.nowMs).toBe(freeze.payload.nowMs);
+  });
+});
+
+describe('a t= restore while a mission profile plays', () => {
+  // Review focus 4: the hash's scrub-and-pause pair is a visitor action like any other.
+  it('clears the mission profile', () => {
+    const profiled = {
+      mode: 'manual' as const,
+      anchor: { simDays: 2460000, realMs: 0 },
+      rateIndex: 0,
+      direction: 1 as const,
+      paused: false,
+      profile: {
+        startWallMs: 0,
+        wallMs: Float64Array.from([0, 10_000]),
+        simDays: Float64Array.from([2460000, 2460010]),
+        speedIndex: 2,
+      },
+    };
+    let after: TimeState = profiled;
+    for (const action of manualPausedAtActions(INSTANT)) after = timeReducer(after, action);
+    expect(after.profile).toBeNull();
+    expect(after.paused).toBe(true);
   });
 });

@@ -6,4 +6,7 @@
 
 export type OrbitTrailsSettings = {
   enabled: boolean;
+  /** A `SAMPLED_BODIES` id whose mission trail and caption stay full strength while the other
+   *  sampled craft dim; null = no emphasis. */
+  readonly emphasis: string | null;
 };

@@ -5,6 +5,7 @@ export function exhibitSectionHasRule(section: ExhibitSection): boolean {
   switch (section.kind) {
     case 'prose':
     case 'key':
+    case 'timeline':
       return false;
     case 'facts':
     case 'sources':

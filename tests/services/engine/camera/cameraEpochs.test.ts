@@ -68,6 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     dragging: false,
     clip: null,
     frameTween: null,
+    mission: null,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };
@@ -102,6 +103,24 @@ describe('advanceEpochs', () => {
       nowMs: 1000,
     });
     expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
+  });
+
+  it('the mission epoch restarts when a re-aim bumps the mission, and only under the mission driver', () => {
+    const mission = { retarget: 3 } as NonNullable<CameraState['mission']>;
+    const intent = makeCameraState({ mission });
+    const args = { intent, focus: null, clip: UNSTARTED_EPOCHS.clip, nowMs: 1000 };
+    expect(advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: undefined }).mission).toBe(
+      UNSTARTED_EPOCHS.mission,
+    );
+    const started = advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: 'mission' as const });
+    expect(started.mission).toEqual({ ref: 3, startMs: 1000 });
+    const bumped = advanceEpochs(started, {
+      ...args,
+      intent: makeCameraState({ mission: { ...mission, retarget: 4 } }),
+      winnerEpoch: 'mission' as const,
+      nowMs: 1500,
+    });
+    expect(bumped.mission).toEqual({ ref: 4, startMs: 1500 });
   });
 
   it('the frameTween epoch advances on a frame no driver owns it', () => {

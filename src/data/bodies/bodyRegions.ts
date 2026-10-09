@@ -56,12 +56,11 @@ const SOLAR_NEIGHBOURHOOD_IDS: readonly string[] = SCENE_ANCHORS.map((anchor) =>
   (id) => !CLAIMED_IDS.has(id),
 );
 
-// An escaping body has no envelope: Voyager 1 sat 76 au out at J2000 and recedes
-// ~3.6 au/yr, against Pluto's 30 — so a snapshot max over a hyperbolic row
-// measures the clock rather than the region, and `scaleFadeBands` sizes its
-// glint backdrop off this. Such rows stay MEMBERS; only the max drops them.
-const isUnbound = (driver: PositionDriver): boolean =>
-  driver.kind === 'orbit' && driver.elements.eccentricity > 1;
+// An escaping craft has no envelope: Voyager 1 recedes ~3.6 au/yr against Pluto's
+// 30, so a snapshot max over a sampled row measures the clock rather than the
+// region, and `scaleFadeBands` sizes its glint backdrop off this. Such rows stay
+// MEMBERS; only the max drops them.
+const isUnbound = (driver: PositionDriver): boolean => driver.kind === 'sampled';
 
 // Emptiness is answered BEFORE the anchor is read: a region with no members must
 // not resolve an anchor nothing seeds yet, and `Math.max()` over nothing is

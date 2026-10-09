@@ -14,6 +14,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
+import { followsMovingTarget } from './followsMovingTarget';
 import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
@@ -22,7 +23,6 @@ import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
@@ -209,7 +209,9 @@ export function replayInput(
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
-          !step.duringGesture && isFollowDriverId(winnerLastFrame) && followTargetBefore !== null;
+          !step.duringGesture &&
+          followsMovingTarget(winnerLastFrame) &&
+          followTargetBefore !== null;
         if (!ridesTheFollow && stepRegister(step)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);

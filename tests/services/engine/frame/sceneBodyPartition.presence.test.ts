@@ -1,0 +1,109 @@
+import { describe, expect, it } from 'vitest';
+
+import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { sceneBodyPartition } from '../../../../src/services/engine/frame/sceneBodyPartition';
+import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+
+// One module instance per test file, so the registry set here stays out of the main suite.
+const T0 = 2444000.5;
+const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+const STATE = {
+  booted: true,
+  gpu: {
+    galaxyPointRenderer: {},
+    galaxyPickRenderer: {},
+    renderTargets: {},
+    compositor: {},
+    texturedBodyRenderer: null,
+  },
+  subsystems: { texturedDisks: {} },
+  selectionRows: { hover: null, select: null, focus: null },
+  slabRows: [],
+  data: { bodies: { earth: SCENE_EARTH, planets: [], meshBodies: SCENE_MESH_BODIES } },
+  settings: {
+    starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+    bodies: { items: {} },
+  },
+  picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
+} as unknown as EngineState;
+
+const POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1e-9 };
+
+const viewAt = (simDays: number) =>
+  canvasViewOf(
+    STATE,
+    {
+      cam: assembleOrbitCamera(
+        POSE,
+        { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 },
+        IDENTITY,
+        IDENTITY,
+      ),
+      arm: absoluteArm(POSE),
+      altitudeMpc: POSE.distance,
+      nowMs: 0,
+      simDays,
+      visibleSourceMask: 0,
+    },
+    { width: 1920, height: 1080 },
+  )!;
+
+const drawnIds = (simDays: number): string[] => {
+  const view = viewAt(simDays);
+  const { glints, meshes } = sceneBodyPartition(STATE as never, view);
+  return [...glints, ...meshes].map((body) => body.id);
+};
+const labelIds = (simDays: number): string[] =>
+  sceneBodyLabels(deriveBodyStates(simDays), simDays).map((label) => label.id);
+
+describe('spacecraft presence', () => {
+  it('a body with a presence date is absent before it, present after', () => {
+    const before = 2443392.5; // 1977-09-06
+    const after = 2460000.5; // 2023
+    for (const id of ['hubble', 'spirit', 'opportunity', 'curiosity', 'perseverance']) {
+      expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).not.toContain(id);
+      expect(labelIds(before)).not.toContain(`sceneBody-${id}`);
+      expect(viewAt(after).snapshot.meshBodies.map((b) => b.id)).toContain(id);
+      expect(labelIds(after)).toContain(`sceneBody-${id}`);
+    }
+    expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).toContain('whale');
+  });
+
+  it('presence turns on at the authored instant', () => {
+    const curiosityLanding = Date.parse('2012-08-06T05:17:00Z') / 86_400_000 + 2_440_587.5;
+    const ids = (t: number) => viewAt(t).snapshot.meshBodies.map((b) => b.id);
+    expect(ids(curiosityLanding - 1e-4)).not.toContain('curiosity');
+    expect(ids(curiosityLanding + 1e-4)).toContain('curiosity');
+  });
+
+  it('an absent craft is in neither glints nor meshes and has no label', () => {
+    expect(drawnIds(T0 + 5)).not.toContain('voyager1');
+    expect(labelIds(T0 + 5)).not.toContain('sceneBody-voyager1');
+  });
+
+  it('a present craft is', () => {
+    trajectoryRegistry.set({
+      id: 'voyager1',
+      tDays: Float64Array.from([T0, T0 + 10]),
+      posKm: Float64Array.from([1e9, 0, 0, 1e9, 0, 0]),
+      velKmS: new Float32Array(6),
+    });
+    expect(viewAt(T0 + 5).snapshot.meshBodies.map((b) => b.id)).toContain('voyager1');
+    expect(labelIds(T0 + 5)).toContain('sceneBody-voyager1');
+    // Before launch the track exists but the craft does not.
+    const preLaunch = 2443000.5; // 1976
+    expect(viewAt(preLaunch).snapshot.meshBodies.map((b) => b.id)).not.toContain('voyager1');
+    expect(drawnIds(preLaunch)).not.toContain('voyager1');
+    expect(labelIds(preLaunch)).not.toContain('sceneBody-voyager1');
+  });
+});

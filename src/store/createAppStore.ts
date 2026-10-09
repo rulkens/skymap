@@ -80,6 +80,9 @@ export type PreloadedState = Partial<RootState>;
 const ALIAS_INDEX_FACT_KEY = 'aliasIndex';
 const ALIAS_INDEX_STATE_PATH = `engine.galaxyCatalog.${ALIAS_INDEX_FACT_KEY}`;
 const ALIAS_INDEX_ACTION_PATH = `payload.patch.${ALIAS_INDEX_FACT_KEY}`;
+// A mission profile's wall→sim table is two Float64Arrays of thousands of rows: not plain, and not worth a per-dispatch walk.
+const MISSION_PROFILE_STATE_PATH = 'time.profile';
+const MISSION_PROFILE_ACTION_PATH = 'payload.profile';
 
 export function createAppStore(preloadedState?: PreloadedState) {
   const sagaMiddleware = createSagaMiddleware();
@@ -89,10 +92,10 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
-          ignoredPaths: [ALIAS_INDEX_STATE_PATH],
-          ignoredActionPaths: [ALIAS_INDEX_ACTION_PATH],
+          ignoredPaths: [ALIAS_INDEX_STATE_PATH, MISSION_PROFILE_STATE_PATH],
+          ignoredActionPaths: [ALIAS_INDEX_ACTION_PATH, MISSION_PROFILE_ACTION_PATH],
         },
-        immutableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH] },
+        immutableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH, MISSION_PROFILE_STATE_PATH] },
       }).concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);

@@ -53,6 +53,7 @@ export const allowDataFile = (path: string): boolean => {
     name === 'structures_meta.json' ||
     name === 'local-bubble.shell' ||
     name === 'constellations.json' ||
-    name === 'pgc_aliases.json'
+    name === 'pgc_aliases.json' ||
+    name === 'spacecraftTracks.bin'
   );
 };

@@ -5,4 +5,5 @@ export type ExhibitId =
   | 'zoneOfAvoidance'
   | 'cosmicFlows'
   | 'cosmicWeb'
-  | 'observableUniverse';
+  | 'observableUniverse'
+  | 'voyager';

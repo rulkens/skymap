@@ -18,6 +18,7 @@ export const UNSTARTED_EPOCHS: CameraEpochs = {
   autoRotate: { ref: null, startMs: null },
   follow: { ref: null, startMs: null },
   clip: { ref: null, startMs: null },
+  mission: { ref: null, startMs: null },
 };
 
 /** Same `ref` ⇒ `prev` back BY IDENTITY — the no-op guard callers key on. */
@@ -31,7 +32,7 @@ export function elapsedMs(epoch: Epoch<unknown>, nowMs: number): number {
 }
 
 /**
- * Advances the five rows in one call. `tween`/`autoRotate`/`follow` read their
+ * Advances the six rows in one call. `tween`/`autoRotate`/`follow` read their
  * live ref only when the winner names that epoch (else the ease would burn while
  * some other driver, e.g. a drag, holds) — replaying `prev.ref` when ineligible
  * makes `advanceEpoch` a guaranteed no-op for that row. `follow` also reads it
@@ -74,6 +75,11 @@ export function advanceEpochs(
     winnerEpoch === 'follow' || winnerDelivers ? focus : prev.follow.ref,
     nowMs,
   );
+  const mission = advanceEpoch(
+    prev.mission,
+    winnerEpoch === 'mission' ? (intent.mission?.retarget ?? null) : prev.mission.ref,
+    nowMs,
+  );
   const frameTween = advanceEpoch(prev.frameTween, intent.frameTween, nowMs);
 
   if (
@@ -81,9 +87,10 @@ export function advanceEpochs(
     autoRotate === prev.autoRotate &&
     follow === prev.follow &&
     frameTween === prev.frameTween &&
+    mission === prev.mission &&
     clip === prev.clip
   ) {
     return prev;
   }
-  return { tween, autoRotate, follow, frameTween, clip };
+  return { tween, autoRotate, follow, frameTween, clip, mission };
 }

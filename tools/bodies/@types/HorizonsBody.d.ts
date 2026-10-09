@@ -9,7 +9,7 @@ export type HorizonsBody = {
   target: string;
   /** Horizons CENTER, e.g. '500@10' (Sun centre); also the raw sub-directory name. */
   centre: string;
-  /** UT calendar dates `YYYY-MM-DD`, both endpoints fetched. */
+  /** UT `YYYY-MM-DD` (or `YYYY-MM-DDTHH:MM`), both endpoints fetched. */
   span: readonly [startIso: string, stopIso: string];
   /** Raw fetch step in whole minutes. */
   stepMinutes: number;

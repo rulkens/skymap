@@ -35,10 +35,15 @@
 
 import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
+import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { timeRoute } from '../../store/constants';
+import type { MissionProfile } from '../../@types/time/MissionProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
+import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
+import { MISSION_EVENTS } from '../../data/missions/missionEvents.generated';
 
 const initialState: TimeState = {
   mode: 'live',
@@ -51,6 +56,7 @@ const initialState: TimeState = {
   rateIndex: 0,
   direction: 1,
   paused: false,
+  profile: null,
 };
 
 /**
@@ -73,6 +79,7 @@ const timeSlice = createSlice({
       reanchor(time, action.payload.nowMs);
       time.mode = 'manual';
       time.rateIndex = action.payload.rateIndex;
+      time.profile = null;
     },
 
     // Flip playback direction. Re-anchor first so the flip pivots about the
@@ -81,6 +88,7 @@ const timeSlice = createSlice({
       reanchor(time, action.payload.nowMs);
       time.mode = 'manual';
       time.direction = action.payload.direction;
+      time.profile = null;
     },
 
     // Freeze at the current instant. Re-anchor captures it; `paused` then makes
@@ -88,6 +96,7 @@ const timeSlice = createSlice({
     pause: (time, action: PayloadAction<{ nowMs: number }>) => {
       reanchor(time, action.payload.nowMs);
       time.paused = true;
+      time.profile = null;
     },
 
     // Resume from the paused instant. Re-anchor rebases `realMs` to now so
@@ -95,6 +104,7 @@ const timeSlice = createSlice({
     resume: (time, action: PayloadAction<{ nowMs: number }>) => {
       reanchor(time, action.payload.nowMs);
       time.paused = false;
+      time.profile = null;
     },
 
     // Scrub to an externally-chosen instant in manual mode. Overwrites the anchor
@@ -102,6 +112,7 @@ const timeSlice = createSlice({
     setSimDays: (time, action: PayloadAction<{ simDays: number; nowMs: number }>) => {
       time.mode = 'manual';
       time.anchor = { simDays: action.payload.simDays, realMs: action.payload.nowMs };
+      time.profile = null;
     },
 
     // Snap to the live wall-clock JD the caller captured and track real time
@@ -116,6 +127,7 @@ const timeSlice = createSlice({
       // stale manual detent live mode ignores. A subsequent Faster then walks up
       // from the real rate rather than jumping from wherever manual left off.
       time.rateIndex = 0;
+      time.profile = null;
     },
 
     // Put a captured clock back verbatim except for the anchor, which the
@@ -130,11 +142,46 @@ const timeSlice = createSlice({
       time.rateIndex = captured.rateIndex;
       time.direction = captured.direction;
       time.paused = captured.paused;
+      time.profile = null;
     },
+
+    // Play a mission profile from its first sample, un-paused. The profile arrives stamped
+    // (reducers read no clock); the anchor is set to its start so a visitor action that drops
+    // the profile re-anchors from a consistent instant.
+    startMissionProfile: (time, action: PayloadAction<{ profile: MissionProfile }>) => {
+      const { profile } = action.payload;
+      time.mode = 'manual';
+      time.anchor = { simDays: profile.simDays[0]!, realMs: profile.startWallMs };
+      time.paused = false;
+      time.profile = profile;
+    },
+  },
+  // A chapter step lands the clock, paused, where `missionEventStepMs` says; a flyby step's
+  // saga then plays the mission profile from there.
+  extraReducers: (builder) => {
+    builder.addCase(stepToMissionEvent, (time, action) => {
+      const event = MISSION_EVENTS.find((e) => e.id === action.payload.eventId);
+      if (!event) return;
+      time.mode = 'manual';
+      time.anchor = {
+        simDays: unixMsToJulianDays(missionEventStepMs(event)),
+        realMs: action.payload.nowMs,
+      };
+      time.paused = true;
+      time.profile = null;
+    });
   },
 });
 
-export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime } =
-  timeSlice.actions;
+export const {
+  setRate,
+  setDirection,
+  pause,
+  resume,
+  setSimDays,
+  goLive,
+  restoreTime,
+  startMissionProfile,
+} = timeSlice.actions;
 
 export default timeSlice.reducer;

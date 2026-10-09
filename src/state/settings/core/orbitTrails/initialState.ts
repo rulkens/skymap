@@ -11,4 +11,5 @@ import type { OrbitTrailsSettings } from '../../../../@types/settings/OrbitTrail
 
 export const initialState: OrbitTrailsSettings = {
   enabled: true,
+  emphasis: null,
 };

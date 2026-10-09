@@ -6,11 +6,15 @@ import type { DriverId } from './DriverId';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../../store/types';
 
 export type CameraDriver = {
   readonly id: DriverId;
   readonly priority: number;
+  // This row re-asserts a moving body's target every frame, so it swallows a committed
+  // `base`: wheel zoom, the commit edge and the keep-ticking wake treat such rows as one author.
+  readonly followsMovingTarget: boolean;
   // The epoch this row's `ctx.elapsedMs` measures on; unset for the rows that
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the
   // approach's ease and the hold's saturation share one epoch.
@@ -27,8 +31,13 @@ export type CameraDriver = {
   readonly deliversFraming?: boolean;
   isActive(s: RootState, activity: DriverActivity): boolean;
   // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
+  // `actions` is for a row that reads its own state back off the camera (the mission's offsets).
   pose(
     ctx: DriverCtx,
     mem: FollowMemory | null,
-  ): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null };
+  ): {
+    readonly pose: FramedCameraPose;
+    readonly memory: FollowMemory | null;
+    readonly actions?: readonly UnknownAction[];
+  };
 };

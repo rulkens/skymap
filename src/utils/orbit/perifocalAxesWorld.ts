@@ -6,7 +6,7 @@
  * of the row's reference plane (`elements.plane`, default `ECLIPTIC_FRAME`).
  * Scalar arithmetic on the six entries we need beats assembling two 3×3
  * matrices: a once-per-orbit derivation, and the closed forms are standard.
- * Orientation only, so ellipses and hyperbolas share it unchanged.
+ * Orientation only, so it does not depend on eccentricity.
  */
 
 import type { OrbitalElements } from '../../@types/scene/OrbitalElements';

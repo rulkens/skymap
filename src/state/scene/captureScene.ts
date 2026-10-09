@@ -41,6 +41,10 @@ export function captureScene(state: RootState, nowMs: number): SceneSnapshot {
     settings: captureSettings(state),
     orientation: state.settings.orientation,
     focus: state.selection.focus,
-    time: { ...state.time, anchor: { simDays: deriveSimDays(state.time, nowMs), realMs: nowMs } },
+    time: {
+      ...state.time,
+      profile: null,
+      anchor: { simDays: deriveSimDays(state.time, nowMs), realMs: nowMs },
+    },
   };
 }

@@ -1,6 +1,6 @@
 /**
  * ExhibitNoteSection — one block of an exhibit's notes column, drawn per `kind`
- * (spec §4.2). The four kinds are structurally different, so each gets its own
+ * (spec §4.2). The kinds are structurally different, so each gets its own
  * markup rather than a shared heading+paragraph shell; the hairline rules
  * between them are the parent's, since they separate sections rather than
  * belong to one.
@@ -13,15 +13,23 @@ import ExternalLinkIcon from './ExternalLinkIcon';
 import { inlineSegments } from '../../utils/text/inlineSegments';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import type { ExhibitToggle } from '../../@types/exhibits/ExhibitToggle';
+import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import styles from './ExhibitOverlay.module.css';
 
 export type ExhibitNoteSectionProps = {
   readonly section: ExhibitSection;
   readonly toggleOn: boolean;
   readonly onToggle: (toggle: ExhibitToggle, on: boolean) => void;
+  /** The timeline reads the clock, so the container supplies it. */
+  readonly renderTimeline: (section: ExhibitTimelineSection) => ReactNode;
 };
 
-function ExhibitNoteSection({ section, toggleOn, onToggle }: ExhibitNoteSectionProps): ReactNode {
+function ExhibitNoteSection({
+  section,
+  toggleOn,
+  onToggle,
+  renderTimeline,
+}: ExhibitNoteSectionProps): ReactNode {
   switch (section.kind) {
     case 'prose':
       return (
@@ -127,6 +135,9 @@ function ExhibitNoteSection({ section, toggleOn, onToggle }: ExhibitNoteSectionP
           </div>
         </div>
       );
+
+    case 'timeline':
+      return renderTimeline(section);
 
     default: {
       const unreachable: never = section;

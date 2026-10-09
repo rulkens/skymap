@@ -285,6 +285,7 @@ describe('pickWinner', () => {
     return {
       id,
       priority,
+      followsMovingTarget: false,
       isActive: vi.fn<(s: RootState) => boolean>(() => active),
       pose: vi.fn<CameraDriver['pose']>(() => ({
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
@@ -324,6 +325,25 @@ describe('pickWinner', () => {
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
     expect(pickWinner(drivers, s, APPROACHING).id).toBe('clip');
+  });
+});
+
+describe('CAMERA_DRIVERS — mission', () => {
+  const ride = CAMERA_DRIVERS.find((d) => d.id === 'mission')!;
+
+  it('ties no other driver, so no outcome rests on table order', () => {
+    const others = CAMERA_DRIVERS.filter((d) => d !== ride).map((d) => d.priority);
+    expect(others).not.toContain(ride.priority);
+  });
+
+  it('outranks the follow rows but yields to a visitor-started tween', () => {
+    const p = (id: string) => CAMERA_DRIVERS.find((d) => d.id === id)!.priority;
+    expect(ride.priority).toBeGreaterThan(p('followApproach'));
+    expect(ride.priority).toBeLessThan(p('tween'));
+  });
+
+  it('commits its pose on the edge, so the next winner starts from the mission frame', () => {
+    expect(ride.commitsOnEdge).toBe(true);
   });
 });
 
@@ -813,5 +833,15 @@ describe('orbitDrag — the register comes from the ctx', () => {
     });
     const drag = CAMERA_DRIVERS.find((d) => d.id === 'orbitDrag')!;
     expect(drag.pose(ctx, null).pose).toBe(REGISTER_POSE);
+  });
+});
+
+describe('CAMERA_DRIVERS — followsMovingTarget', () => {
+  it('is set on exactly the follow rows and the mission', () => {
+    expect(CAMERA_DRIVERS.filter((d) => d.followsMovingTarget).map((d) => d.id)).toEqual([
+      'followApproach',
+      'followHold',
+      'mission',
+    ]);
   });
 });

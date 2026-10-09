@@ -485,6 +485,7 @@ describe('renderFrame visual baseline', () => {
           // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
           meshBodyRenderer: null,
           orbitTrailRenderer: null,
+          missionTrailRenderer: null,
           foregroundLabelRenderer: null,
           // Every `ContentPass.draw` reads its renderer straight off
           // `state.gpu.*` — this is the ONLY place these mock instances are

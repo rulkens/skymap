@@ -29,6 +29,7 @@ import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRen
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
+import { createMissionTrailRenderer } from '../../gpu/renderers/bodies/missionTrailRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
 import { SLAB_REVERSED_Z, NEAR0, COSMO } from '../frame/slabs';
 import { NEAR0_OVERLAY_CLIP_SCALE } from '../frame/near0OverlayClipScale';
@@ -230,6 +231,11 @@ export const GPU_HANDLE_ROWS = [
     key: 'orbitTrailRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    key: 'missionTrailRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createMissionTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
   },
   // Foreground-target invariant continues here — see the starRenderer/
   // planetRenderer comment above.

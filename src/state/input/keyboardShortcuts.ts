@@ -29,6 +29,9 @@ import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
 import { selectSelectedRef } from '../selection/selectors';
 import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
+import { selectTimelineEvents } from '../exhibits/selectTimelineEvents';
+import { stepMissionSpeed } from '../exhibits/stepMissionSpeed';
+import { stepTimelineEvent } from '../exhibits/stepTimelineEvent';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
@@ -37,7 +40,13 @@ import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSl
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setRate } from '../time/timeSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
+import type { RootState } from '../../store/types';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+
+const stepSpeed = (s: RootState, step: -1 | 1) =>
+  selectTimelineEvents(s) !== null
+    ? stepMissionSpeed({ step })
+    : setRate({ rateIndex: stepRate(s, step), nowMs: performance.now() });
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'command+k,ctrl+k', run: () => setPaletteOpen(true), preventDefault: true },
@@ -60,8 +69,9 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },
   { keys: 'l', run: () => logCameraState() },
   { keys: 'd', run: () => toggleDebugPanelOpen() },
-  { keys: '[', run: (s) => setRate({ rateIndex: stepRate(s, -1), nowMs: performance.now() }) },
-  { keys: ']', run: (s) => setRate({ rateIndex: stepRate(s, +1), nowMs: performance.now() }) },
+  // A timeline exhibit shows the mission speed factor, not the ladder, so these step that.
+  { keys: '[', run: (s) => stepSpeed(s, -1) },
+  { keys: ']', run: (s) => stepSpeed(s, +1) },
   {
     keys: '\\',
     run: (s) =>
@@ -70,6 +80,10 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
         : pause({ nowMs: performance.now() }),
   },
   { keys: 'shift+n', run: () => goLiveNowAction() },
+  // Previous / next event of an exhibit's timeline: a focus-free way to drive it, since
+  // `tab` above is taken. Null (inert) outside such an exhibit. No `preventDefault`.
+  { keys: ',', run: (s) => stepTimelineEvent(s, -1) },
+  { keys: '.', run: (s) => stepTimelineEvent(s, +1) },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
   // activate a focused button and the arrow keys must stay free to scroll,
@@ -81,7 +95,8 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
 
 export const SHORTCUTS_BY_KEY: Record<string, KeyboardShortcut> = KEYBOARD_SHORTCUTS.reduce(
   (byKey, shortcut) => {
-    for (const key of shortcut.keys.split(',')) byKey[key] = shortcut;
+    // A comma that ends the string (or stands alone) is the key itself, not a separator.
+    for (const key of shortcut.keys.split(/,(?=.)/)) byKey[key] = shortcut;
     return byKey;
   },
   {} as Record<string, KeyboardShortcut>,

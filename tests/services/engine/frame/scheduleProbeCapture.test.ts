@@ -51,7 +51,7 @@ function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   return {
     // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
     // these off `ctx.snapshot.x`.
-    snapshot: { simDays: SIM_DAYS, nowMs },
+    snapshot: { simDays: SIM_DAYS, nowMs, meshBodies: SCENE_MESH_BODIES },
     drawCamPos: positionMpc,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;

@@ -12,6 +12,7 @@
 import type { FramedCameraPose } from './FramedCameraPose';
 import type { CameraTuning } from './CameraTuning';
 import type { CameraTweenDescriptor } from './CameraTweenDescriptor';
+import type { CameraMission } from './CameraMission';
 import type { ClipData } from '../animation/ClipData';
 import type { FrameTween } from './FrameTween';
 import type { OrientationFrameId } from './OrientationFrameId';
@@ -24,6 +25,8 @@ export type CameraState = {
   dragging: boolean;
   clip: { data: ClipData; frame: OrientationFrameId } | null;
   frameTween: FrameTween | null;
+  /** The craft the mission driver follows; set and cleared by a timeline exhibit's saga. */
+  mission: CameraMission | null;
   /** The band edges the camera math is threaded with; session-only, never serialized. `readonly`: always replaced whole. */
   readonly tuning: CameraTuning;
 };

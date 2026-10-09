@@ -361,6 +361,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,
         orbitTrailRenderer: null,
+        missionTrailRenderer: null,
         foregroundLabelRenderer: null,
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are

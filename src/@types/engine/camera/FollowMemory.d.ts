@@ -2,10 +2,12 @@
  * FollowMemory — what the follow rows carry for ONE focus row; `null` = none yet.
  * `stepCameraRuntime` drops it on a follow-epoch ref change; the produce refills.
  * `from` is captured eye-preserving against the NEW body (R12b-1); `saturated` is
- * the approach's hand-off signal, set on the frame its ease reached 1.
+ * the approach's hand-off signal, set on the frame its ease reached 1. The mission row rides
+ * along: `mission` is its own state, `saturated` false while its camera still eases.
  */
 
 import type { CameraPose } from '../../camera/CameraPose';
+import type { MissionCameraMemory } from '../../camera/MissionCameraMemory';
 import type { Vec3 } from '../../math/Vec3';
 
 export type FollowMemory = {
@@ -15,4 +17,5 @@ export type FollowMemory = {
   /** WORLD frame — a stable screen strafe at follow scales, no basis re-projection. */
   readonly panOffset: Vec3;
   readonly saturated: boolean;
+  readonly mission?: MissionCameraMemory;
 };

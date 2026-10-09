@@ -5,6 +5,7 @@ import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { ANCHORED_MESH_BODY_IDS } from '../../../../src/data/bodies/anchoredMeshBodyIds';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { spacecraftPresent } from '../../../../src/utils/scene/spacecraftPresent';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
 import { compressBrightness } from '../../../../src/utils/color/compressBrightness';
@@ -15,13 +16,15 @@ const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 
 describe('sceneBodyLabels', () => {
-  const labels = sceneBodyLabels(J2000_STATES);
+  const labels = sceneBodyLabels(J2000_STATES, CONST_J2000);
 
   it('emits one label per core scene body (Earth + planets + non-anchored mesh bodies)', () => {
     // The seeded stars and the Sun caption from the star Layer's own producer
     // (`produceStarCaptions`) now, not here — core keeps only the bodies whose
     // identity core owns.
-    const captioned = SCENE_MESH_BODIES.filter((body) => !ANCHORED_MESH_BODY_IDS.has(body.id));
+    const captioned = SCENE_MESH_BODIES.filter(
+      (body) => !ANCHORED_MESH_BODY_IDS.has(body.id) && spacecraftPresent(body.id, CONST_J2000),
+    );
     expect(labels).toHaveLength(1 + SCENE_PLANETS.length + captioned.length);
   });
 
@@ -44,7 +47,7 @@ describe('sceneBodyLabels', () => {
     // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
     // to the new world position — the label FOLLOWS the body.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
-    const laterLabels = sceneBodyLabels(laterStates);
+    const laterLabels = sceneBodyLabels(laterStates, CONST_J2000 + 120);
 
     const earthNow = labels.find((label) => label.id === 'sceneBody-earth')!;
     const earthLater = laterLabels.find((label) => label.id === 'sceneBody-earth')!;

@@ -13,6 +13,7 @@ import ExhibitNoteSection from './ExhibitNoteSection';
 import { exhibitSectionHasRule } from '../../utils/exhibits/exhibitSectionHasRule';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import type { ExhibitToggle } from '../../@types/exhibits/ExhibitToggle';
+import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import styles from './ExhibitOverlay.module.css';
 
 export type ExhibitOverlayProps = {
@@ -23,6 +24,7 @@ export type ExhibitOverlayProps = {
   readonly enterDelaySec: number;
   readonly toggleOn: boolean;
   readonly onToggle: (toggle: ExhibitToggle, on: boolean) => void;
+  readonly renderTimeline: (section: ExhibitTimelineSection) => ReactNode;
   readonly onExit: () => void;
 };
 
@@ -33,6 +35,7 @@ function ExhibitOverlay({
   enterDelaySec,
   toggleOn,
   onToggle,
+  renderTimeline,
   onExit,
 }: ExhibitOverlayProps): ReactNode {
   // Every entrance in the stylesheet is offset from this one property, so the
@@ -65,7 +68,12 @@ function ExhibitOverlay({
               {exhibitSectionHasRule(section) ? (
                 <div className={styles.rule} aria-hidden="true" />
               ) : null}
-              <ExhibitNoteSection section={section} toggleOn={toggleOn} onToggle={onToggle} />
+              <ExhibitNoteSection
+                section={section}
+                toggleOn={toggleOn}
+                onToggle={onToggle}
+                renderTimeline={renderTimeline}
+              />
             </div>
           ))}
         </div>
