@@ -59,7 +59,7 @@ export function deriveFrameContext(
   const camBasisWorld = cameraBasisWorld(orbitForwardOf(cam), cam.roll ?? 0, cam.upBasis);
 
   const { earth, planets } = state.data.bodies;
-  // The ONE presence filter: an absent craft is parked at Earth's position, so every
+  // The ONE presence filter: an absent craft is parked on or in Earth, so every
   // consumer (slab rows, partition, glints, picks) reads this list, never the store's.
   const meshBodies = state.data.bodies.meshBodies.filter((body) =>
     spacecraftPresent(body.id, simDays),

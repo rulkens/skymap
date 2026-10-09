@@ -121,7 +121,7 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
       meshKey: body.meshKey,
       tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
     }),
-    // An absent craft is parked at Earth's centre, which must not demand its mesh.
+    // An absent craft is parked on or in Earth, which must not demand its mesh.
     demand: (ctx) =>
       spacecraftPresent(body.id, ctx.simDays) &&
       distanceMpc(ctx.cameraPosMpc, bodyPos(ctx.simDays)) < meshBodyLoadRadiusMpc(body.id),

@@ -100,9 +100,10 @@ describe('spacecraft presence', () => {
     });
     expect(viewAt(T0 + 5).snapshot.meshBodies.map((b) => b.id)).toContain('voyager1');
     expect(labelIds(T0 + 5)).toContain('sceneBody-voyager1');
-    // Before the first sample the track exists but the craft does not.
-    expect(viewAt(T0 - 1).snapshot.meshBodies.map((b) => b.id)).not.toContain('voyager1');
-    expect(drawnIds(T0 - 1)).not.toContain('voyager1');
-    expect(labelIds(T0 - 1)).not.toContain('sceneBody-voyager1');
+    // Before launch the track exists but the craft does not.
+    const preLaunch = 2443000.5; // 1976
+    expect(viewAt(preLaunch).snapshot.meshBodies.map((b) => b.id)).not.toContain('voyager1');
+    expect(drawnIds(preLaunch)).not.toContain('voyager1');
+    expect(labelIds(preLaunch)).not.toContain('sceneBody-voyager1');
   });
 });

@@ -1,7 +1,7 @@
 /**
  * spacecraftPresent — whether a body exists in the scene at `simDays`: never before
- * its row's `presentFromIso`, and a sampled craft only once its track is loaded and
- * the clock has reached its first sample. An absent body still has a snapshot
+ * its row's `presentFromIso` (a sampled craft's launch), and a sampled craft only
+ * once its track is loaded. An absent body still has a snapshot
  * position so lookups stay total; this gate is what keeps it undrawn.
  */
 
@@ -19,7 +19,5 @@ const PRESENT_FROM_DAYS = new Map(
 
 export function spacecraftPresent(id: string, simDays: number): boolean {
   if (simDays < (PRESENT_FROM_DAYS.get(id) ?? -Infinity)) return false;
-  if (!SAMPLED_IDS.has(id)) return true;
-  const track = trajectoryRegistry.get(id);
-  return track !== undefined && simDays >= track.tDays[0]!;
+  return !SAMPLED_IDS.has(id) || trajectoryRegistry.get(id) !== undefined;
 }

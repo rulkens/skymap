@@ -1,16 +1,17 @@
 /**
  * bodyPositionMpcAt — one body's world position at `simDays`, placed by the same rows
  * `deriveBodyStates` walks, for this body only: the whole-scene derive is a one-deep cache that
- * sampling hundreds of instants would thrash. A craft before its track (or with none loaded)
- * sits at Earth, as it does in the scene.
+ * sampling hundreds of instants would thrash; the scene's own sampled craft come from here too.
+ * A craft with no track loaded sits at Earth's centre, absent.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { positionDriverById } from '../../../data/bodies/positionDrivers';
-import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
 import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
-import { hermiteTrackAt } from '../../orbit/hermiteTrackAt';
+import { findByIdOrThrow } from '../../object/findByIdOrThrow';
 import { orbitRowPlacement } from '../../orbit/orbitRowPlacement';
+import { sampledCraftPositionMpc } from '../../orbit/sampledCraftPositionMpc';
 
 export function bodyPositionMpcAt(id: string, simDays: number): Vec3 {
   const driver = positionDriverById(id);
@@ -25,12 +26,9 @@ export function bodyPositionMpcAt(id: string, simDays: number): Vec3 {
       ).positionMpc;
     case 'sampled': {
       const track = trajectoryRegistry.get(id);
-      if (track === undefined || simDays < track.tDays[0]!)
-        return bodyPositionMpcAt('earth', simDays);
-      const km = hermiteTrackAt(track, simDays);
-      const sun = bodyPositionMpcAt(driver.focusId, simDays);
-      const k = SCALE_UNITS.KM_TO_MPC;
-      return [sun[0] + km[0] * k, sun[1] + km[1] * k, sun[2] + km[2] * k];
+      if (track === undefined) return bodyPositionMpcAt('earth', simDays);
+      const body = findByIdOrThrow(SAMPLED_BODIES, id, 'bodyPositionMpcAt');
+      return sampledCraftPositionMpc(body, track, simDays, bodyPositionMpcAt);
     }
     case 'surfaceFixed':
       throw new Error(`bodyPositionMpcAt: '${id}' is a surface site`);

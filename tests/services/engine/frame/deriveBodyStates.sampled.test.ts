@@ -6,6 +6,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 // One module instance per test file, so the registry set here stays out of the main suite.
 const T0 = 2444000.5;
+const PRE_LAUNCH = 2443000.5; // 1976, before either Voyager flew
 
 describe('sampled craft in the body snapshot', () => {
   it('a craft with no track sits at Earth’s position', () => {
@@ -13,15 +14,19 @@ describe('sampled craft in the body snapshot', () => {
     expect(states.get('voyager1')!.positionMpc).toEqual(states.get('earth')!.positionMpc);
   });
 
-  it('a craft before its first sample sits at Earth’s position; after, on its track', () => {
+  it('a craft before launch waits on its pad; after its first sample, on its track', () => {
     trajectoryRegistry.set({
       id: 'voyager1',
       tDays: Float64Array.from([T0, T0 + 10]),
       posKm: Float64Array.from([1e9, 0, 0, 1e9, 0, 0]),
       velKmS: new Float32Array(6),
     });
-    const before = deriveBodyStates(T0 - 1);
-    expect(before.get('voyager1')!.positionMpc).toEqual(before.get('earth')!.positionMpc);
+    const before = deriveBodyStates(PRE_LAUNCH);
+    const v0 = before.get('voyager1')!.positionMpc;
+    const e0 = before.get('earth')!.positionMpc;
+    const groundKm =
+      Math.hypot(v0[0] - e0[0], v0[1] - e0[1], v0[2] - e0[2]) / SCALE_UNITS.KM_TO_MPC;
+    expect(groundKm).toBeCloseTo(6371, 0);
 
     const after = deriveBodyStates(T0 + 5);
     const sun = after.get('sun')!.positionMpc;

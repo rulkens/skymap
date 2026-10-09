@@ -1,13 +1,10 @@
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import { meshBody, type MeshBodySeed } from './makers/meshBody';
-import { MISSION_EVENTS } from '../missions/missionEvents.generated';
+import { SAMPLED_BODIES } from '../missions/spacecraftBodies';
+import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 
-// A sampled craft enters the scene at its cited launch instant, not a re-typed copy.
-function launchIso(id: string): string {
-  const launch = MISSION_EVENTS.find((e) => e.bodyId === id && e.kind === 'launch');
-  if (!launch) throw new Error(`sceneMeshBodies: no launch event for '${id}'`);
-  return launch.iso;
-}
+const launchIso = (id: string): string =>
+  findByIdOrThrow(SAMPLED_BODIES, id, 'sceneMeshBodies').launchIso;
 
 /**
  * SCENE_MESH_BODIES — seeded mesh-drawn bodies (the fifth `SceneBody` arm).

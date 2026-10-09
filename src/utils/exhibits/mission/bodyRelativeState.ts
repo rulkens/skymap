@@ -1,7 +1,7 @@
 /**
  * bodyRelativeState — a craft minus another body (position km, velocity km/s) at `simDays`.
  * The craft's velocity is its track's own; the other body's is a central difference. Before
- * the track starts the craft is read at its first sample, since the scene holds it at Earth.
+ * the track starts the craft is read at its first sample: the launch ascent is a fitted ease.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';

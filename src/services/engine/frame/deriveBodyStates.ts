@@ -28,7 +28,7 @@ import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
 import { orbitRowPlacement } from '../../../utils/orbit/orbitRowPlacement';
-import { hermiteTrackAt } from '../../../utils/orbit/hermiteTrackAt';
+import { bodyPositionMpcAt } from '../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { trajectoryRegistry } from '../../bodies/trajectoryRegistry';
 
 // The focus graph is authored, static data, so its order is resolved once at
@@ -99,21 +99,10 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     positions.set(site.id, addVec3(hostPos, offsetMpc));
   }
 
-  // 1d — sampled craft: Hermite on the loaded track, else Earth's position, so the
-  // state always exists (22 sites do `states.get(id)!`) and the presence gate, not
-  // this phase, decides whether the craft is drawn. Earth is placed by 1b.
-  const earthMpc = positions.get('earth')!;
-  const sunMpc = positions.get('sun')!;
-  for (const { id } of SAMPLED_BODIES) {
-    const track = trajectoryRegistry.get(id);
-    if (track === undefined || simDays < track.tDays[0]!) {
-      positions.set(id, earthMpc);
-      continue;
-    }
-    const km = hermiteTrackAt(track, simDays);
-    const k = SCALE_UNITS.KM_TO_MPC;
-    positions.set(id, [sunMpc[0] + km[0] * k, sunMpc[1] + km[1] * k, sunMpc[2] + km[2] * k]);
-  }
+  // 1d — sampled craft, off the same walk the mission camera samples. With no track the
+  // craft sits at Earth, so the state always exists (22 sites do `states.get(id)!`) and the
+  // presence gate, not this phase, decides whether the craft is drawn.
+  for (const { id } of SAMPLED_BODIES) positions.set(id, bodyPositionMpcAt(id, simDays));
 
   // Phase 2 — orientations over the finished position map. Anchors go through
   // `orientationForBody` too, so the rotation-row gate stays one gate.
