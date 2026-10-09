@@ -15,7 +15,7 @@ import { Source } from '../../../../src/data/sources';
 
 const structure = {
   type: 'structure',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   id: 'abell-2065',
   name: 'Corona Borealis',
   worldPos: [1, 2, 3],

@@ -31,6 +31,7 @@ import {
   GLOW_OVERLAP_FLOAT_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
   PX_PER_RAD_FLOAT_INDEX,
+  writeStarFocus,
 } from './starCatalogLayout';
 import { createStarCutGpu } from './starCutGpu';
 
@@ -171,6 +172,7 @@ export function createStarCatalogRenderer(
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = args.glowOverlap;
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = args.aggregateIntensityCap;
     cameraScratch[PX_PER_RAD_FLOAT_INDEX] = args.pxPerRad;
+    writeStarFocus(cameraScratch, args.focus);
     const cameraRing = cameraRings[args.stream];
     cameraRing.writeSlot(args.viewSlot, cameraScratch);
 

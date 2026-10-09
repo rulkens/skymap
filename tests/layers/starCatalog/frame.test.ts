@@ -3,6 +3,7 @@
  * inputs and vote awake for `NODE_FADE_MS` after they last changed.
  */
 import { describe, it, expect, vi } from 'vitest';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -26,7 +27,7 @@ function camAtPc(x: number): Vec3 {
 
 function makeView(camPos: Vec3, nowMs: number): FrameView {
   return {
-    snapshot: { nowMs },
+    snapshot: { nowMs, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     drawPxPerRad: 600,
     viewSlot: 0,

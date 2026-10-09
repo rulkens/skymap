@@ -35,10 +35,10 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
 
 /**
  * The categories backed by the bulk `.ccat` — their visibility gates its fetch.
- * `famousGalaxy` (own `.bin`) and `group` (seed-only, no `.ccat`) are excluded;
- * adding `group` here would fetch the catalog whenever group visibility toggles.
+ * `famousGalaxy` (own `.bin`) and `galaxy-group` (seed-only, no `.ccat`) are excluded;
+ * adding it here would fetch the catalog whenever group visibility toggles.
  */
-const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['cluster', 'supercluster', 'void'];
+const BULK_CATALOG_CATEGORIES: readonly StructureId[] = ['galaxy-cluster', 'supercluster', 'void'];
 
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {

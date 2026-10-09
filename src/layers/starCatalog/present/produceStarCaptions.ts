@@ -85,16 +85,17 @@ export function produceStarCaptions(): Label2DProducer['produceLabels'] {
       drawPxPerRad: ctx.drawPxPerRad,
       fades: state.subsystems.fades,
       nowMs: now,
+      focus: ctx.snapshot.focus,
       occluders: sceneOccluderBodies(state, ctx),
     };
 
-    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) =>
-      composeForegroundCaption(
+    const labels = baseCaptionsFor(sceneBodyStates(state, ctx)).map((label) => {
+      return composeForegroundCaption(
         composeCtx,
         label,
         label.kind === 'star' ? clipFactorStarCatalog : clipFactorBody,
-      ),
-    );
+      );
+    });
 
     return { labels, awake: false };
   };

@@ -1,3 +1,4 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel } from '../../../../src/layers/milkyWay/present/produceMilkyWayLabel';
@@ -74,7 +75,7 @@ function makeCtx(
   return {
     // resolveLayerOpacity lerps its recession factor on snapshot.focusBlend;
     // an absent one makes the composed alpha NaN.
-    snapshot: { nowMs: 0, focusBlend: 0 },
+    snapshot: { nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },
@@ -119,6 +120,23 @@ const distanceFadeAt = (camDistMpc: number): number =>
   fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
 
 describe('produceMilkyWayLabel', () => {
+  it('outside the focused sphere the label draws but carries no pick; inside and at rest it keeps it', () => {
+    const ctx = makeCtx(0.5);
+    const at = (center: Vec3) =>
+      ({
+        ...ctx,
+        snapshot: {
+          ...ctx.snapshot,
+          focus: { center, apparentRadiusMpc: 0.1, physicalRadiusMpc: 0.05, blend: 1 },
+        },
+      }) as FrameView;
+    const pickOf = (c: FrameView) => produceMilkyWayLabel(makeState(true, 1), c).labels[0]!.pickId;
+
+    expect(pickOf(ctx)).toBeDefined();
+    expect(pickOf(at([0, 0, 0]))).toBeDefined();
+    expect(pickOf(at([5, 0, 0]))).toBeUndefined();
+  });
+
   it('emits one label carrying a leader at the composed distance fade when close and enabled', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);

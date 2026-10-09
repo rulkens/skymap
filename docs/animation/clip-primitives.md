@@ -345,10 +345,10 @@ in the same list:
   (`surveyLabel` + `structureLabel` + `milkyWayLabel`), expanded to atomic keys
   at construction.
 - **Scoped `'family:scope'` entries** — address ONE item where the bare key
-  fans over all: `'survey:milliquas'` (one catalog), `'structureRing:group'`
+  fans over all: `'survey:milliquas'` (one catalog), `'structureRing:galaxy-group'`
   (one structure category — structure settings items ARE the four categories),
   and the unified label namespace `'label:milkyWay'` / `'label:survey'` /
-  `'label:structure'` / `'label:group'` (etc. per category). Template-literal
+  `'label:structure'` / `'label:galaxy-group'` (etc. per category). Template-literal
   typed, so a bad scope is a compile error. Scoped entries dispatch one
   targeted settings action at fire time and fade via the reactive
   settings→fade bridge — a custom `over` applies to the atomic layers only.

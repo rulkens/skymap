@@ -42,9 +42,9 @@ describe('tween', () => {
 
 describe('show', () => {
   it('splits scoped entries out of the layer list', () => {
-    const e = show(['flow', 'survey:milliquas', 'label:group']);
+    const e = show(['flow', 'survey:milliquas', 'label:galaxy-group']);
     expect(e.layers).toEqual(['flow']);
-    expect(e.scoped).toEqual(['survey:milliquas', 'label:group']);
+    expect(e.scoped).toEqual(['survey:milliquas', 'label:galaxy-group']);
   });
 });
 

@@ -4,9 +4,9 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 
 const cluster: StructureInfo = {
   type: 'structure',
-  id: 'cluster-coma',
+  id: 'galaxy-cluster-coma',
   name: 'Coma Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   abell: 'A1656',
   worldPos: [1, 2, 3],
   featured: true,
@@ -27,9 +27,9 @@ const supercluster: StructureInfo = {
 describe('toStructureSearchEntry', () => {
   it('projects a cluster to the lean search entry, keeping its Abell number', () => {
     expect(toStructureSearchEntry(cluster)).toEqual({
-      id: 'cluster-coma',
+      id: 'galaxy-cluster-coma',
       name: 'Coma Cluster',
-      category: 'cluster',
+      category: 'galaxy-cluster',
       abell: 'A1656',
       description: 'The nearest rich cluster.',
     });

@@ -1,8 +1,9 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/services/engine/presentation/produceStructureMarkers';
-import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
@@ -14,7 +15,12 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
-import { STRUCTURE_MARKER_STYLES } from '../../../../src/services/engine/presentation/structureMarkerStyles';
+import {
+  STRUCTURE_MARKER_STYLES,
+  SELECTED_RING_BRIGHTEN,
+  HOVERED_RING_BRIGHTEN,
+  RING_PICK_MIN_ALPHA,
+} from '../../../../src/services/engine/presentation/structureMarkerStyles';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
@@ -68,7 +74,7 @@ const FULL_BAND_CAM_Z = SCALE_FADE_BANDS.surveyDeepZoom.fullAt * 1.01;
 
 function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
   return {
-    snapshot: { focusBlend, nowMs: 0 },
+    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -78,7 +84,7 @@ function makeCtx(focusBlend = 0, camDistMpc = FULL_BAND_CAM_Z): FrameView {
 
 const rec = (
   id: string,
-  category: StructureInfo['category'] = 'cluster',
+  category: StructureInfo['category'] = 'galaxy-cluster',
   over: Partial<StructureInfo> = {},
 ): StructureInfo =>
   ({
@@ -106,7 +112,7 @@ describe('produceStructureMarkers', () => {
     // floor → faded). Both MUST emit so the per-category index stays aligned.
     state.data.structures.setGroup('bulk', [
       rec('near'),
-      rec('far', 'cluster', { worldPos: [10000, 0, 0] }),
+      rec('far', 'galaxy-cluster', { worldPos: [10000, 0, 0] }),
     ]);
     const markers = produceStructureMarkers(state, makeCtx());
     expect(markers.map((m) => m.id)).toEqual(['near', 'far']);
@@ -117,12 +123,12 @@ describe('produceStructureMarkers', () => {
 
   it('skips a category that is disabled AND fully faded (opacity 0)', () => {
     const state = makeState();
-    state.data.structures.setGroup('bulk', [rec('c1', 'cluster'), rec('v1', 'void')]);
+    state.data.structures.setGroup('bulk', [rec('c1', 'galaxy-cluster'), rec('v1', 'void')]);
     // Both halves of the all-or-nothing skip: the authoritative `enabled`
     // boolean is false AND the structure fade has reached 0.
-    state.settings.structures.items.cluster.enabled = false;
-    state.subsystems.fades.register({ kind: 'structure', id: 'cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0);
+    state.settings.structures.items['galaxy-cluster'].enabled = false;
+    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0);
     const markers = produceStructureMarkers(state, makeCtx());
     // Cluster skipped wholesale; void (enabled, unregistered → fail-safe 1.0) emits.
     expect(markers.map((m) => m.id)).toEqual(['v1']);
@@ -130,12 +136,12 @@ describe('produceStructureMarkers', () => {
 
   it('draws a disabled category whose structure opacity is still > 0 (fade-out tail)', () => {
     const state = makeState();
-    state.data.structures.setGroup('bulk', [rec('c1', 'cluster', { significance: 0 })]);
+    state.data.structures.setGroup('bulk', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
     // Authoritative gate is OFF but the fade hasn't reached 0 yet: the fade-out
     // tail must still emit alpha-scaled descriptors, NOT skip.
-    state.settings.structures.items.cluster.enabled = false;
-    state.subsystems.fades.register({ kind: 'structure', id: 'cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0.5);
+    state.settings.structures.items['galaxy-cluster'].enabled = false;
+    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0.5);
     const markers = produceStructureMarkers(state, makeCtx());
     const c1 = markers.find((m) => m.id === 'c1')!;
     // Emitted, with alpha scaled by the 0.5 fade opacity (× sigWeight 0.25).
@@ -144,13 +150,13 @@ describe('produceStructureMarkers', () => {
 
   it('a mid-fade category emits alpha-scaled descriptors (not skipped)', () => {
     const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+    state.data.structures.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
     // No-focus baseline alpha first (cluster handle unregistered → 1.0).
     const baseMarkers = produceStructureMarkers(state, makeCtx());
     const base = baseMarkers.find((m) => m.id === 'c1')!;
     // Now half-fade the cluster category.
-    state.subsystems.fades.register({ kind: 'structure', id: 'cluster' }, 1);
-    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0.5);
+    state.subsystems.fades.register({ kind: 'structure', id: 'galaxy-cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'structure', id: 'galaxy-cluster' }, 0.5);
     const markers = produceStructureMarkers(state, makeCtx());
     const half = markers.find((m) => m.id === 'c1')!;
     // Still emitted (alignment) and ring/halo alpha exactly halved.
@@ -158,39 +164,45 @@ describe('produceStructureMarkers', () => {
     expect(half.haloColor[3]).toBeCloseTo(base.haloColor[3] * 0.5, 6);
   });
 
-  it('applies significance weight and selection 1.5x bump (at rest)', () => {
-    // significance 0 → sigWeight 0.25, so the base ring alpha is well under 1
-    // and the ×1.5 selection bump is observable. No focus (blend 0).
+  it('applies significance weight to alpha and brightens the selected ring colour', () => {
+    // significance 0 → sigWeight 0.25. Selection is a colour gain, so it shows
+    // on a ring whose alpha is already at its ceiling. No focus (blend 0).
     const sel = makeState('a', 'a'); // 'a' selected AND focused
     sel.data.structures.setGroup('anchors', [
-      rec('a', 'cluster', { significance: 0 }),
-      rec('b', 'cluster', { significance: 0 }),
+      rec('a', 'galaxy-cluster', { significance: 0 }),
+      rec('b', 'galaxy-cluster', { significance: 0 }),
     ]);
     const markers = produceStructureMarkers(sel, makeCtx());
     const a = markers.find((m) => m.id === 'a')!;
     const b = markers.find((m) => m.id === 'b')!;
-    // base = ringColor.a(1) × fade(1) × sigWeight(0.25) = 0.25
-    // a is selected → min(1, 0.25 × 1.5) = 0.375
-    expect(a.ringColor[3]).toBeCloseTo(0.375, 6);
-    // b is non-focused but blend 0 → recession 1 → 0.25 × 1 = 0.25
+    // alpha = ringColor.a(1) × fade(1) × sigWeight(0.25), selected or not
+    expect(a.ringColor[3]).toBeCloseTo(0.25, 6);
     expect(b.ringColor[3]).toBeCloseTo(0.25, 6);
+    expect(a.ringColor[0]).toBeCloseTo(b.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
+    expect(a.ringColor[2]).toBeCloseTo(b.ringColor[2] * SELECTED_RING_BRIGHTEN, 6);
   });
 
   it('non-focused marker ring AND halo alpha scale by focusRecession at blend > 0', () => {
     const state = makeState('a', 'a'); // 'a' focused
-    state.data.structures.setGroup('anchors', [rec('a', 'cluster'), rec('b', 'cluster')]);
+    state.data.structures.setGroup('anchors', [
+      rec('a', 'galaxy-cluster'),
+      rec('b', 'galaxy-cluster'),
+    ]);
     const rest = produceStructureMarkers(state, makeCtx(0));
     const focused = produceStructureMarkers(state, makeCtx(1));
     const bRest = rest.find((m) => m.id === 'b')!;
     const bFoc = focused.find((m) => m.id === 'b')!;
-    // Non-focused 'b' recedes to MARKER_RECESSION of its at-rest alpha at blend 1.
-    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MARKER_RECESSION, 6);
-    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MARKER_RECESSION, 6);
+    // Non-focused 'b' recedes to MILD_RECESSION of its at-rest alpha at blend 1.
+    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MILD_RECESSION, 6);
+    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MILD_RECESSION, 6);
   });
 
   it('focused marker is exempt from recession', () => {
     const state = makeState('a', 'a'); // 'a' focused
-    state.data.structures.setGroup('anchors', [rec('a', 'cluster'), rec('b', 'cluster')]);
+    state.data.structures.setGroup('anchors', [
+      rec('a', 'galaxy-cluster'),
+      rec('b', 'galaxy-cluster'),
+    ]);
     const rest = produceStructureMarkers(state, makeCtx(0));
     const focused = produceStructureMarkers(state, makeCtx(1));
     const aRest = rest.find((m) => m.id === 'a')!;
@@ -204,12 +216,12 @@ describe('produceStructureMarkers', () => {
     const band = SCALE_FADE_BANDS.surveyDeepZoom;
     const unbanded = (() => {
       const state = makeState();
-      state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+      state.data.structures.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
       return produceStructureMarkers(state, makeCtx(0, band.fullAt * 1.01))[0]!;
     })();
     for (const dist of [band.fullAt * 1.01, (band.fullAt + band.goneAt) / 2, band.goneAt * 0.5]) {
       const state = makeState();
-      state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+      state.data.structures.setGroup('anchors', [rec('c1', 'galaxy-cluster', { significance: 0 })]);
       const m = produceStructureMarkers(state, makeCtx(0, dist))[0]!;
       const expected = fadeBand(band, dist);
       expect(m.ringColor[3]).toBeCloseTo(unbanded.ringColor[3] * expected, 5);
@@ -223,7 +235,7 @@ describe('produceStructureMarkers', () => {
     const state = makeState();
     const camZ = FULL_BAND_CAM_Z;
     state.data.structures.setGroup('anchors', [
-      rec('tiny', 'cluster', {
+      rec('tiny', 'galaxy-cluster', {
         worldPos: [0, 0, camZ - 1e-4],
         physicalRadiusMpc: 4e-6,
         significance: 1,
@@ -239,11 +251,15 @@ describe('produceStructureMarkers', () => {
     const r = 5;
     const d = 0.99 * r;
     state.data.structures.setGroup('anchors', [
-      rec('edge', 'cluster', { worldPos: [0, 0, camZ - d], physicalRadiusMpc: r, significance: 1 }),
+      rec('edge', 'galaxy-cluster', {
+        worldPos: [0, 0, camZ - d],
+        physicalRadiusMpc: r,
+        significance: 1,
+      }),
     ]);
     const ctx = { ...makeCtx(0, camZ), drawPxPerRad: 900 } as FrameView;
     const [m] = produceStructureMarkers(state, ctx);
-    const style = STRUCTURE_MARKER_STYLES.cluster;
+    const style = STRUCTURE_MARKER_STYLES['galaxy-cluster'];
     const t = Math.min(
       1,
       ((r / d) * 900 - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
@@ -252,5 +268,71 @@ describe('produceStructureMarkers', () => {
     expect(expected).toBeGreaterThan(0);
     expect(expected).toBeLessThan(1);
     expect(m!.ringColor[3]).toBeCloseTo(style.ringColor[3] * expected, 5);
+  });
+
+  it('outside the focused sphere a ring draws but is not pickable; inside and at rest it is', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('in', 'galaxy-cluster', { worldPos: [10, 0, 0] }),
+      rec('out', 'galaxy-cluster', { worldPos: [0, 10, 0] }),
+    ]);
+    const focus = {
+      center: [10, 0, 0],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    } as const;
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+
+    expect(produceStructureMarkers(state, ctx).map((m) => m.pickable)).toEqual([true, true]);
+
+    const under = produceStructureMarkers(state, focused);
+    // Both descriptors stay, in order: the pick decodes by per-category index.
+    expect(under.map((m) => [m.id, m.pickable])).toEqual([
+      ['in', true],
+      ['out', false],
+    ]);
+  });
+
+  it('a ring drawn below RING_PICK_MIN_ALPHA stays emitted but is not pickable', () => {
+    const at = (clipFactor: number) => {
+      const state = makeState();
+      state.subsystems.clipPlayer.clipOpacityOf = () => clipFactor;
+      state.data.structures.setGroup('anchors', [rec('a')]);
+      return produceStructureMarkers(state, makeCtx())[0]!;
+    };
+    const faint = at(RING_PICK_MIN_ALPHA / 2);
+    const solid = at(0.5);
+    expect(faint.ringColor[3]).toBeGreaterThan(0);
+    expect(faint.ringColor[3]).toBeLessThan(RING_PICK_MIN_ALPHA);
+    expect(faint.pickable).toBe(false);
+    expect(solid.ringColor[3]).toBeGreaterThanOrEqual(RING_PICK_MIN_ALPHA);
+    expect(solid.pickable).toBe(true);
+  });
+
+  it('a hovered ring is brightened by HOVERED_RING_BRIGHTEN; a ring both hovered and selected by SELECTED_RING_BRIGHTEN', () => {
+    const hoverOn = (state: TestState, id: string) => {
+      state.selection = { ...state.selection, hover: { type: 'structure', id } };
+      return state;
+    };
+    const build = (state: TestState) => {
+      state.data.structures.setGroup('anchors', [
+        rec('a', 'galaxy-cluster', { significance: 0 }),
+        rec('b', 'galaxy-cluster', { significance: 0 }),
+      ]);
+      return produceStructureMarkers(state, makeCtx());
+    };
+    const plain = build(makeState()).find((m) => m.id === 'a')!;
+
+    const hovered = build(hoverOn(makeState(), 'a')).find((m) => m.id === 'a')!;
+    expect(hovered.ringColor[0]).toBeCloseTo(plain.ringColor[0] * HOVERED_RING_BRIGHTEN, 6);
+    expect(hovered.ringColor[3]).toBeCloseTo(plain.ringColor[3], 6);
+    // The neighbour is untouched.
+    const other = build(hoverOn(makeState(), 'a')).find((m) => m.id === 'b')!;
+    expect(other.ringColor[0]).toBeCloseTo(plain.ringColor[0], 6);
+
+    const both = build(hoverOn(makeState('a', 'a'), 'a')).find((m) => m.id === 'a')!;
+    expect(both.ringColor[0]).toBeCloseTo(plain.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
   });
 });

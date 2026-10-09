@@ -35,6 +35,7 @@ import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
+import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -66,7 +67,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
-// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+// ── @group(3) — structure-focus uniform (single shared binding) ───────
 //
 // One POI is focused at a time, so this is a single global binding (not
 // per-source like fade). 'focusAlphaMultiplier' folds a membership-based
@@ -200,7 +201,7 @@ fn vs(
   //               × schechterRatio (mode 3: Schechter LF)
   //               × angularReweight (mode 4: HEALPix)
   //               × crossfadeOut   (procedural-disk handoff band)
-  //               × focusMult      (cluster-focus dim)
+  //               × focusMult      (structure-focus dim)
   //
   // The old apparent-magnitude clamp is gone: p.sbAmp is the baked physical
   // surface-brightness amplitude and u.galaxySbScale is the live HDR gain that
@@ -336,7 +337,7 @@ fn vs(
   // pass binds the live focus buffer (the visual pass and pick share it);
   // at rest blend == 0 makes focusMult 1.0 for everything, so picking is
   // unaffected.
-  if (inPickPass && focusMult < 1.0) {
+  if (inPickPass && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

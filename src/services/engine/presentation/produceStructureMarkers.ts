@@ -1,10 +1,10 @@
 /**
  * produceStructureMarkers — per-frame ring/halo descriptors for the extended
- * structures (cluster / supercluster / void), read from `structureStore`.
+ * structures (every cosmic and Milky Way category), read from `structureStore`.
  *
- * Reads `state.data.structures` and emits one cluster marker descriptor per
+ * Reads `state.data.structures` and emits one marker descriptor per
  * marker-bearing structure — applying apparent-size fades, significance
- * weighting, the selection bump, per-category opacity (the category toggle's
+ * weighting, the selection brighten, per-category opacity (the category toggle's
  * fade, read from the FadeRegistry), and a smooth focus *recession*. Famous
  * galaxies are not on this path; they never emit markers.
  *
@@ -33,10 +33,17 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
+import {
+  STRUCTURE_MARKER_STYLES,
+  SIG_MIN_ALPHA,
+  SELECTED_RING_BRIGHTEN,
+  HOVERED_RING_BRIGHTEN,
+  RING_PICK_MIN_ALPHA,
+} from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 export function produceStructureMarkers(
   state: PassState,
@@ -48,10 +55,11 @@ export function produceStructureMarkers(
   // Distance from the render origin, which keys each category's visibility band.
   const camDistMpc = Math.hypot(cx, cy, cz);
 
-  // selected → 1.5× ring bump (highlight what you clicked); focused → the
-  // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
+  // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked); focused → the
+  // "every OTHER ring recedes" mode (structure-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
   const selectedStructureId = structureIdOf(state.selection.select);
+  const hoveredStructureId = structureIdOf(state.selection.hover);
   const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Per-category marker opacity (the category toggle's fade) lives in the
@@ -136,8 +144,8 @@ export function produceStructureMarkers(
     // key — 1 when no clip plays, otherwise the cue-driven dimming value.
     const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
 
-    // Cluster focus mode: while some structure is FOCUSED, every OTHER marker
-    // smoothly recedes toward MARKER_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
+    // Focus mode: while some structure is FOCUSED, every OTHER marker
+    // smoothly recedes toward MILD_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
     // focused structure is exempt (factor 1) — a faded ring never carries a
     // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.
     const isSelected = p.id === selectedStructureId;
@@ -154,15 +162,17 @@ export function produceStructureMarkers(
       style.haloColor[3] * weightedFade * recession * bandFade,
     ];
 
-    // Ring: same fade bake plus selection. Selected ring ×1.5 (capped at 1),
-    // recession-free; every other ring scaled by the focus recession.
-    const ringAlphaBase = style.ringColor[3] * weightedFade;
-    const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase * recession;
+    // Ring: same fade bake plus selection/hover. The selected ring is brightened and
+    // recession-free; every other ring is scaled by the focus recession.
+    // Hover is the weaker cue and does not exempt the ring from recession.
+    let ringGain = 1;
+    if (p.id === hoveredStructureId) ringGain = HOVERED_RING_BRIGHTEN;
+    if (isSelected) ringGain = SELECTED_RING_BRIGHTEN;
     const ringColor: Vec4 = [
-      style.ringColor[0],
-      style.ringColor[1],
-      style.ringColor[2],
-      ringAlpha * bandFade,
+      style.ringColor[0] * ringGain,
+      style.ringColor[1] * ringGain,
+      style.ringColor[2] * ringGain,
+      style.ringColor[3] * weightedFade * (isSelected ? 1 : recession) * bandFade,
     ];
 
     out.push({
@@ -172,6 +182,8 @@ export function produceStructureMarkers(
       radiusMpc,
       haloColor,
       ringColor,
+      pickable:
+        ringColor[3] >= RING_PICK_MIN_ALPHA && isPickableUnderFocus(p.worldPos, ctx.snapshot.focus),
     });
   }
   return out;

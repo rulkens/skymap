@@ -16,11 +16,14 @@ import { resolve } from 'node:path';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
+import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
+import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
+import { SCALE_UNITS } from '../../src/data/scaleUnits';
 
 const SEED_PATH = resolve(__dirname, '../../data/seeds/structure_anchors.seed.json');
 const allEntries = parseStructureSeed(readFileSync(SEED_PATH, 'utf-8'));
 
-const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'cluster');
+const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'galaxy-cluster');
 const VOID_ENTRIES = allEntries.filter((e) => e.category === 'void');
 
 describe('raDecDistToEqCart', () => {
@@ -72,5 +75,41 @@ describe('cluster seed — void entries', () => {
     const bootes = VOID_ENTRIES.find((a) => a.names[0] === 'Boötes Void');
     expect(bootes).toBeDefined();
     expect(lengthToMpc(bootes!.distance)).toBeLessThan(500);
+  });
+});
+
+describe('structure seed — Milky Way entries', () => {
+  type Entry = (typeof allEntries)[number];
+  const MILKY_WAY_ENTRIES = allEntries.filter((e) =>
+    (STRUCTURE_IDS_BY_SCALE.milkyWay as readonly string[]).includes(e.category),
+  );
+  const distanceFromCentrePc = (e: Entry) => {
+    const [x, y, z] = raDecDistToEqCart({
+      raHours: e.raHours,
+      decDeg: e.decDeg,
+      distMpc: lengthToMpc(e.distance),
+    });
+    const [cx, cy, cz] = GALACTIC_CENTRE_ANCHOR.positionMpc;
+    return Math.hypot(x - cx, y - cy, z - cz) / SCALE_UNITS.PC_TO_MPC;
+  };
+
+  it('every Milky Way row lies within 0.1 Mpc of the origin', () => {
+    // A kpc value entered with unit "Mpc" lands in intergalactic space.
+    expect(MILKY_WAY_ENTRIES.length).toBeGreaterThan(0);
+    for (const e of MILKY_WAY_ENTRIES) {
+      expect(lengthToMpc(e.distance), e.id).toBeLessThan(0.1);
+    }
+  });
+
+  it('every Galactic Centre place lies within 50 pc of GALACTIC_CENTRE_ANCHOR', () => {
+    for (const e of allEntries.filter((a) => a.category === 'gc-cluster')) {
+      expect(distanceFromCentrePc(e), e.id).toBeLessThan(50);
+    }
+  });
+
+  it('the central cluster sits on the anchor', () => {
+    const central = allEntries.find((e) => e.id === 'central-cluster');
+    expect(central).toBeDefined();
+    expect(distanceFromCentrePc(central!)).toBeLessThan(1);
   });
 });

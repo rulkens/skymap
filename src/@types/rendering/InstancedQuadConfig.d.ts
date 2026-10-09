@@ -34,7 +34,7 @@ export type InstancedQuadConfig = {
    *  (not `format`) so it never reads as a `GpuContext.format`, which is
    *  always the swap-chain format. */
   targetFormat: GPUTextureFormat;
-  /** Canonical cluster-focus bind-group layout, bound at `@group(1)`.
+  /** Canonical structure-focus bind-group layout, bound at `@group(1)`.
    *  The focus dim (non-members of a focused structure fade to 8%) is computed
    *  per instance in each consumer's vertex stage via
    *  `focusAlphaMultiplier`; the same shared layout serves every impostor

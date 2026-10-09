@@ -176,7 +176,7 @@ export function createInstancedQuadRenderer(
     layout: device.createPipelineLayout({
       label: `${label}-pipeline-layout`,
       // @group(0) per-renderer uniforms (+ optional atlas/hi-res bindings);
-      // @group(1) the shared cluster-focus uniform. Unlike the points
+      // @group(1) the shared structure-focus uniform. Unlike the points
       // pipeline (which carries fade@1 + source@2 and so parks focus at
       // @group(3)), the impostor pipelines have no intervening groups, so
       // focus sits at the first free slot.
@@ -342,7 +342,7 @@ export function createInstancedQuadRenderer(
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad: number;
-    /** Shared cluster-focus bind group (bound at @group(1)). Built once by
+    /** Shared structure-focus bind group (bound at @group(1)). Built once by
      *  the engine against the canonical focusBgl; the same group serves
      *  every impostor pipeline. */
     focusBindGroup: GPUBindGroup;

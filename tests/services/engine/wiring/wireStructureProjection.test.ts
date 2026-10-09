@@ -5,7 +5,7 @@
  * ### What this tests
  *
  *   1. Static anchors publish synchronously into the structure store — no
- *      async arrival needed; `byCategory('cluster')` is non-empty after the
+ *      async arrival needed; `byCategory('galaxy-cluster')` is non-empty after the
  *      call so the Structures panel has counts from frame 1.
  *   2. The bulk cluster group lands in the store when the structure-catalog
  *      slot fires, without clobbering the anchors group.
@@ -43,9 +43,9 @@ import type { StructureCatalogPayload } from '../../../../src/@types/loading/str
 vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn((): StructureInfo[] => [
     {
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
       name: 'Virgo Cluster',
-      category: 'cluster',
+      category: 'galaxy-cluster',
       worldPos: [0, 0, 0.016],
       physicalRadiusMpc: 2.2,
       featured: true,
@@ -67,9 +67,9 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
       featured: true,
     } as StructureInfo,
     {
-      id: 'group-local-group',
+      id: 'galaxy-group-local-group',
       name: 'Local Group',
-      category: 'group',
+      category: 'galaxy-group',
       worldPos: [0, 0, 0],
       physicalRadiusMpc: 0.16,
       apparentRadiusMpc: 0.94,
@@ -83,9 +83,9 @@ vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', (
   structureCatalogToStructures: vi.fn(
     (payload: StructureCatalogPayload): StructureInfo[] =>
       payload.meta.map((m) => ({
-        id: `cluster-bulk-${m.id}`,
+        id: `galaxy-cluster-bulk-${m.id}`,
         name: m.names[0],
-        category: 'cluster',
+        category: 'galaxy-cluster',
         worldPos: [0, 0, 0],
         physicalRadiusMpc: 2,
         featured: false,
@@ -186,10 +186,10 @@ describe('wireStructureProjection', () => {
 
     wireStructureProjection(state, cb);
 
-    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
+    expect(state.data.structures.byCategory('galaxy-cluster').length).toBeGreaterThan(0);
     expect(state.data.structures.byCategory('supercluster').length).toBeGreaterThan(0);
     expect(state.data.structures.byCategory('void').length).toBeGreaterThan(0);
-    expect(state.data.structures.byId('cluster-virgo')?.id).toBe('cluster-virgo');
+    expect(state.data.structures.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
   });
 
   it('lands the bulk cluster group when the slot fires, keeping the anchors', () => {
@@ -199,9 +199,11 @@ describe('wireStructureProjection', () => {
     wireStructureProjection(state, cb);
     structureCatalogSlot.fire(readyState(clusterPayload));
 
-    expect(state.data.structures.byId('cluster-bulk-coma')?.id).toBe('cluster-bulk-coma');
+    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')?.id).toBe(
+      'galaxy-cluster-bulk-coma',
+    );
     // Anchors survive the bulk write (separate group).
-    expect(state.data.structures.byId('cluster-virgo')?.id).toBe('cluster-virgo');
+    expect(state.data.structures.byId('galaxy-cluster-virgo')?.id).toBe('galaxy-cluster-virgo');
   });
 
   it('clears the bulk group and re-emits counts on a slot error', () => {
@@ -210,7 +212,7 @@ describe('wireStructureProjection', () => {
 
     wireStructureProjection(state, cb);
     structureCatalogSlot.fire(readyState(clusterPayload));
-    expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
+    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
 
     const beforeError = structureCountsCalls().length;
     structureCatalogSlot.fire({
@@ -219,7 +221,7 @@ describe('wireStructureProjection', () => {
       error: new Error('fetch failed'),
       finalAttempt: 1,
     });
-    expect(state.data.structures.byId('cluster-bulk-coma')).toBeNull();
+    expect(state.data.structures.byId('galaxy-cluster-bulk-coma')).toBeNull();
     // The error path re-emits counts (a fresh dispatch beyond those before it).
     expect(structureCountsCalls().length).toBeGreaterThan(beforeError);
   });
@@ -254,20 +256,20 @@ describe('wireStructureProjection', () => {
     // At boot: static anchors emit counts.
     expect(structureCountsCalls()).toHaveLength(1);
     const bootCounts = structureCountsCalls()[0]!;
-    expect(typeof bootCounts.cluster).toBe('number');
+    expect(typeof bootCounts['galaxy-cluster']).toBe('number');
     expect(typeof bootCounts.supercluster).toBe('number');
     expect(typeof bootCounts.void).toBe('number');
     // Every structure category must be reported — group included, else the
     // Settings panel renders its toggle with no count.
-    expect(bootCounts.group).toBe(1);
+    expect(bootCounts['galaxy-group']).toBe(1);
 
     structureCatalogSlot.fire(readyState(clusterPayload));
 
     expect(structureCountsCalls()).toHaveLength(2);
     const afterCluster = structureCountsCalls()[1]!;
-    expect(afterCluster['cluster']).toBe(bootCounts['cluster']! + 1);
+    expect(afterCluster['galaxy-cluster']).toBe(bootCounts['galaxy-cluster']! + 1);
     expect(afterCluster['supercluster']).toBe(bootCounts['supercluster']!);
     expect(afterCluster['void']).toBe(bootCounts['void']!);
-    expect(afterCluster['group']).toBe(bootCounts['group']!);
+    expect(afterCluster['galaxy-group']).toBe(bootCounts['galaxy-group']!);
   });
 });

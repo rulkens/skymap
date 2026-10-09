@@ -99,8 +99,8 @@ export type EngineSubsystemHandles = {
    */
   foregroundLabelDirector: Label2DDirector;
   /**
-   * Cluster focus-mode subsystem — drives the "dim non-members of the
-   * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
+   * Structure focus-mode subsystem — drives the "dim everything outside the
+   * selected structure" effect. Selection-driven: `runFrame` calls
    * `update(selectedStructure, nowMs)` each frame and threads
    * `produceFocusUniforms(nowMs)` into the points draw. Constructed
    * eagerly; no GPU dep, non-null from t=0.

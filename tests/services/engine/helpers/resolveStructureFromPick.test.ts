@@ -10,7 +10,7 @@ const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2.2,
@@ -19,7 +19,7 @@ const coma: StructureInfo = {
   type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [0, 100, 0],
   featured: true,
   physicalRadiusMpc: 6,
@@ -39,7 +39,7 @@ const bootes: StructureInfo = {
 // verify the helper indexes the RIGHT per-category bucket.
 const structures = {
   byCategory(category: StructureId): readonly StructureInfo[] {
-    if (category === 'cluster') return [virgo, coma];
+    if (category === 'galaxy-cluster') return [virgo, coma];
     if (category === 'void') return [bootes];
     return [];
   },
@@ -47,9 +47,9 @@ const structures = {
 
 describe('resolveStructureFromPick', () => {
   it('resolves the 0th cluster index to the first record', () => {
-    expect(resolveStructureFromPick(structures, { category: 'cluster', structureIndex: 0 })).toBe(
-      virgo,
-    );
+    expect(
+      resolveStructureFromPick(structures, { category: 'galaxy-cluster', structureIndex: 0 }),
+    ).toBe(virgo);
   });
 
   it('resolves a void index independently of the cluster bucket', () => {
@@ -61,8 +61,8 @@ describe('resolveStructureFromPick', () => {
   });
 
   it('returns null for out-of-bounds indices', () => {
-    expect(resolveStructureFromPick(structures, { category: 'cluster', structureIndex: 99 })).toBe(
-      null,
-    );
+    expect(
+      resolveStructureFromPick(structures, { category: 'galaxy-cluster', structureIndex: 99 }),
+    ).toBe(null);
   });
 });

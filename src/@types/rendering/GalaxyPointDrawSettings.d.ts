@@ -44,7 +44,7 @@ export type GalaxyPointDrawSettings = {
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
   /**
-   * Shared cluster-focus bind group for the @group(3) FocusUniforms
+   * Shared structure-focus bind group for the @group(3) FocusUniforms
    * binding. The engine owns the single focus buffer (written once per
    * frame in renderFrame) and hands its bind group here; the vertex stage
    * dims non-members of the focused POI. At rest (`blend: 0`) the shader

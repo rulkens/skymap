@@ -1,7 +1,6 @@
 /**
  * structureMarkerStyles — per-category visual style table for the extended
- * structures (cluster / supercluster / void / group) rendered as ring/halo
- * markers and text labels.
+ * structures rendered as ring/halo markers and text labels.
  *
  * The per-`StructureId` marker styles travel with the structure
  * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
@@ -9,9 +8,8 @@
  * styles here lets the producers' per-category math read a single local table
  * rather than a wider union that includes a kind they never emit.
  *
- * `StructureId` (cluster | supercluster | void | group) is the
- * discriminant; every row is keyed by it so the table and the type can't
- * drift.
+ * `StructureId` is the discriminant; every row is keyed by it so the table
+ * and the type can't drift.
  */
 
 import type { StructureId } from '../../../@types/data/structure/StructureId';
@@ -62,14 +60,32 @@ type StructureMarkerStyle = {
 };
 
 /**
- * Per-category visual style table: cluster / supercluster / void / group
- * (the Local Volume galaxy groups, 0–13 Mpc). See the field docs above for
- * semantics and the tuning rationale (e.g. the per-category min-apparent
- * floors that keep the bulk catalog from papering the sky with sub-readable
- * specks).
+ * The fields the four Milky Way rows share; each row adds its colours and
+ * `worldEmMpc`. The cosmic rows differ field by field, so they stay spelled out.
+ */
+const MILKY_WAY_STYLE: Omit<
+  StructureMarkerStyle,
+  'labelColor' | 'worldEmMpc' | 'haloColor' | 'ringColor'
+> = {
+  minPixelSize: 35,
+  maxPixelSize: 150,
+  pixelWidth: 2,
+  markerMaxApparentRadiusPx: 700,
+  markerMaxApparentFadeBandPx: 400,
+  markerMinApparentRadiusPx: 5,
+  markerMinApparentFadeBandPx: 4,
+  visibleBand: SCALE_FADE_BANDS.milkyWayStructures,
+  outlineColor: [0, 0, 0, 0.1],
+  outlineEmFrac: 0.16,
+};
+
+/**
+ * Per-category visual style table. See the field docs above for semantics and
+ * the tuning rationale (e.g. the per-category min-apparent floors that keep the
+ * bulk catalog from papering the sky with sub-readable specks).
  */
 export const STRUCTURE_MARKER_STYLES = {
-  cluster: {
+  'galaxy-cluster': {
     labelColor: hexToGl('#FFD966'),
     minPixelSize: 35,
     maxPixelSize: 150,
@@ -119,7 +135,7 @@ export const STRUCTURE_MARKER_STYLES = {
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
-  group: {
+  'galaxy-group': {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
     // (yellow, #FFD966) → supercluster (orange, #FFB86B). Lightness falls and
     // hue warms as the structures grow. The cream is held a notch below pure
@@ -153,6 +169,34 @@ export const STRUCTURE_MARKER_STYLES = {
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
+  'open-cluster': {
+    ...MILKY_WAY_STYLE,
+    labelColor: hexToGl('#A3B3D1'),
+    worldEmMpc: 2e-6,
+    haloColor: hexToGl('#7B8AAD38'),
+    ringColor: hexToGl('#7B8AAD'),
+  },
+  'globular-cluster': {
+    ...MILKY_WAY_STYLE,
+    labelColor: hexToGl('#C9A8FF'),
+    worldEmMpc: 8e-6,
+    haloColor: hexToGl('#9A7FD942'),
+    ringColor: hexToGl('#9A7FD9'),
+  },
+  nebula: {
+    ...MILKY_WAY_STYLE,
+    labelColor: hexToGl('#FF8FA3'),
+    worldEmMpc: 2e-6,
+    haloColor: hexToGl('#D96F8442'),
+    ringColor: hexToGl('#D96F84'),
+  },
+  'gc-cluster': {
+    ...MILKY_WAY_STYLE,
+    labelColor: hexToGl('#E8E8F0'),
+    worldEmMpc: 2e-6,
+    haloColor: hexToGl('#B8B8C842'),
+    ringColor: hexToGl('#B8B8C8'),
+  },
 } as const satisfies Readonly<Record<StructureId, StructureMarkerStyle>>;
 
 /**
@@ -161,3 +205,25 @@ export const STRUCTURE_MARKER_STYLES = {
  * (significance 1) — low-significance bulk clusters stay dim but visible.
  */
 export const SIG_MIN_ALPHA = 0.25;
+
+/**
+ * Colour gain on the selected structure's ring. A gain on colour, not alpha:
+ * most rings rest at full opacity, where an alpha boost has nowhere to go, and
+ * the HDR target has the headroom to show a colour above 1.
+ */
+export const SELECTED_RING_BRIGHTEN = 1.6;
+
+/** A ring takes clicks only at or above this drawn alpha, so a nearly faded-out ring does not block the stars inside it. */
+export const RING_PICK_MIN_ALPHA = 0.1;
+
+/** The hover gain on a structure ring: a softer cue than the selected one, which outranks it. */
+export const HOVERED_RING_BRIGHTEN = 1.3;
+
+/**
+ * How far a hovered structure's label moves toward white. A blend, not a gain:
+ * label colours already sit near full value, where a gain would only clip.
+ */
+export const HOVERED_LABEL_WHITEN = 0.6;
+
+/** The selected structure's label goes further toward white than a hovered one. */
+export const SELECTED_LABEL_WHITEN = 0.9;

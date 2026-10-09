@@ -167,11 +167,12 @@ export const SCENE: FrameSection = {
     // extinction — the shell's additive Fresnel glow would otherwise darken
     // along with the cosmological background behind it.
     //
-    // The rest is additive and so a listing choice: `light-time-spheres` sits
-    // with the other faint shell, `star-upsample` sits beside
-    // the `star-catalog` leaf draw for GPU-timing legibility, and the
-    // constellation figures trail the star streams they connect. `constellations`
-    // is the LAST roster row the lens line below samples.
+    // The additive rows are a listing choice: `light-time-spheres` sits with the
+    // other faint shell, `star-upsample` sits beside the `star-catalog` leaf
+    // draw for GPU-timing legibility, and the constellation figures trail the
+    // star streams they connect. `structure-markers-near` is NOT one of them:
+    // its rings blend premultiplied-over, so what precedes it is what they
+    // cover. `constellations` is the LAST roster row the lens line below samples.
     {
       kind: 'render',
       target: 'hdr',

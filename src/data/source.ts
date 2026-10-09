@@ -42,12 +42,12 @@ export const Source = {
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 6 bits of
    * the packed identity; the 26-bit `localIdx` carries the structure's index
-   * into the cluster table. See `selectionEncoding.ts` for the layout.
+   * into the structure table. See `selectionEncoding.ts` for the layout.
    */
-  Cluster: 5,
-  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */
+  GalaxyCluster: 5,
+  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as GalaxyCluster. */
   Supercluster: 6,
-  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as Cluster. */
+  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as GalaxyCluster. */
   Void: 7,
   /**
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
@@ -73,11 +73,11 @@ export const Source = {
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 6
    * bits of the packed identity; the 26-bit `localIdx` carries the structure's
-   * index into the structure store. Same encoding as Cluster/Supercluster/
+   * index into the structure store. Same encoding as GalaxyCluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the galaxy catalog codes 0–8 below it.
    */
-  Group: 15,
+  GalaxyGroup: 15,
   /**
    * Procedural Milky-Way galactic-disk overlay. Not persisted, but PICKABLE:
    * `milkyWayPickRenderer` stamps this code and `milkyWaySelectionRow` resolves
@@ -237,8 +237,17 @@ export const Source = {
    * Mesh-drawn scene bodies (the whale and the basket of petunias) — one code
    * for the pair, since one registry row governs both. Pickable: the mesh pass
    * stamps this code into the pick texture itself rather than borrowing a star
-   * layer's, so it spends a pick code. Appended at 32 — after this row, codes
-   * 33..62 remain before the 6-bit pick-source field needs a wider layout.
+   * layer's, so it spends a pick code. Appended at 32.
    */
   MeshBody: 32,
+  /**
+   * Milky Way structure markers — parsec-scale places inside our own galaxy,
+   * drawn by the NEAR0 marker pass. Same encoding as GalaxyCluster; seed-only. Appended
+   * at 33..36 — after these rows, codes 37..62 remain before the 6-bit
+   * pick-source field needs a wider layout.
+   */
+  OpenCluster: 33,
+  GlobularCluster: 34,
+  Nebula: 35,
+  GcCluster: 36,
 } as const;

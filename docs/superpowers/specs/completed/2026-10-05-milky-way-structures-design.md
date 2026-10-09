@@ -6,8 +6,8 @@ Rulings came from the brainstorm of 2026-10-04 → 2026-10-05 (dash asks B28N an
 
 ## 1. What this is
 
-- Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`.
-- About 70 hand-authored seed rows (§5), each a ring plus label at its true 3D position, focusable, pickable and searchable.
+- Four `type: 'structure'` registry rows: `open-cluster`, `globular-cluster`, `nebula`, `gc-cluster`.
+- 71 hand-authored seed rows (§5: 25 open clusters, 21 globular clusters, 22 nebulae, 3 Galactic Centre places), each a ring plus label at its true 3D position, focusable, pickable and searchable.
 - The rings and labels are visible while the camera is inside or near the Milky Way and fade out in intergalactic space. The existing four categories keep fading out on the way in, as today.
 - Focusing a row frames it by its radius: the Pleiades from tens of parsecs, not from 100 kpc.
 - A nebula's card shows its kind (emission, reflection, planetary, supernova remnant, dark). A Galactic Centre place's card says when its line-of-sight distance is assumed, not measured.
@@ -34,13 +34,12 @@ Packaging: **two PRs**. PR 1 is the ground preparation (§3): nine behaviour-neu
 
 ```ts
 // src/data/source.ts — append-only
-OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GalacticCentrePlace: 36
+OpenCluster: 33, GlobularCluster: 34, Nebula: 35, GcCluster: 36
 
 // StructureSourceEntry gains two fields; every structure row states both
 type StructureSourceEntry = SourceEntryBase & {
   readonly type: 'structure'; readonly code: number;
-  readonly slab: 'cosmo' | 'near0';       // which depth slab its rings and labels draw on
-  readonly galaxyMembers: boolean;        // focus dims non-members; card shows a galaxy count
+  readonly scale: 'cosmic' | 'milkyWay';  // picks the depth slab its rings and labels draw on; only cosmic cards show a galaxy count (focus dims for every category)
 };
 
 // structureMarkerStyles.ts — the style row gains the band it fades on
@@ -53,16 +52,15 @@ type StructureSeedEntry = {
   distance: Length; physicalRadius: Length; apparentRadius: Length;
   abell?: string;                    // cluster
   nebulaKind?: NebulaKind;           // nebula, required there
-  lineOfSightAssumed?: boolean;      // galactic-centre
 };
 
 // StructureInfo arms
 NebulaRecord              = StructureBase & { category: 'nebula'; nebulaKind: NebulaKind };
-GalacticCentrePlaceRecord = StructureBase & { category: 'galactic-centre'; lineOfSightAssumed: boolean };
+GcClusterRecord = StructureBase & { category: 'gc-cluster' };
 OpenClusterRecord, GlobularClusterRecord = StructureBase & { category: 'open-cluster' | 'globular-cluster' };
 
 // scaleFadeBands.ts
-galacticStructures: { fullAt: <inside the Galaxy>, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
+milkyWayStructures: { fullAt: <inside the Galaxy>, goneAt: FOREGROUND_MAX_DISTANCE_MPC }
 ```
 
 With the joints below in place, the feature is four source codes, four registry rows, four style rows, four record arms, one fade band, the seed rows and two card rows.
@@ -92,7 +90,7 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - **P3 — band on the style row.** `visibleBand` on every row, all four `surveyDeepZoom`. The pass keeps a cheap skip when every category it draws is at zero.
 - **P4 — near guards protect only the division.** Both 1 kpc guards become "distance is zero". Inside its own radius a ring is already faded by the max-apparent-radius band, which scales with the object, so no fixed distance is needed.
 - **P5 — focus from radius.** Drop `MIN_FRAMING_DISTANCE_MPC`; keep the maximum. No seeded row has a radius under 0.05 Mpc, so today's framing is unchanged.
-- **P6 — `galaxyMembers` on the registry row.** The four existing rows say `true`. `structureFocusSubsystem`'s predicate and the member-count publisher read it.
+- **P6 — `scale` on the registry row.** The four existing rows say `'cosmic'`; the member count is cosmic-only. The member-count publisher reads it; the focus subsystem does not.
 - **P7 — camera-relative marker instances.** `setMarkers` uploads `worldPos − camPos` computed in f64; `ring.wesl` and `ringPick.wesl` drop their `camPosMpc` add.
 - **P8 — derived category lists.** `emitCounts`, `VALID_CATEGORIES` and `SeedEntry.category` read `STRUCTURE_IDS` / `StructureId`.
 - **P9 — unit-tagged seed.** `Length` + `lengthToMpc`; the 42 rows migrate (`"distance": { "value": 16.5, "unit": "Mpc" }`); parser, `buildStaticAnchorStructures`, `buildStructures`, `demoTour.ts`, `docs/DATA.md` and the seed tests follow. Runtime records stay in Mpc.
@@ -104,36 +102,36 @@ Greenfield cross-check: a fresh agent given only the data requirements derived i
 - Forming the `structure` Layer (layer-composition spec §9) is not needed here.
 - Path-based object links with share previews: [`docs/backlog/2026-10-05-path-based-object-links.md`](../../backlog/2026-10-05-path-based-object-links.md).
 
-The `add-data-source` skill's Path B table is stale (files that no longer exist, a 5-bit sentinel). It is refreshed in PR 2, since that PR walks it.
+The `add-data-source` skill's Path B table was stale (files that no longer exist, a 5-bit sentinel); PR 2 rewrote it against the files it touched.
 
 ## 4. Registry, style and records
 
-- Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `galactic-centre`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=galactic-centre-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `galactic-centre-…` does not collide with the `galactic-centre` place id.
-- All four rows: `slab: 'near0'`, `galaxyMembers: false`, `bearsLabel` and `bearsMarker` true, `labelLayer: 'structure'`. They share the structure fade and recession channel, so existing tour cues on structure rings and labels apply to them too.
-- Display copy: "Open cluster / Open clusters", "Globular cluster / Globular clusters", "Nebula / Nebulae", "Galactic Centre place / Galactic Centre".
-- Style rows: all four use `galacticStructures`. Colours form a ramp distinct from the existing warm cluster ramp; the exact values and the min/max apparent-radius thresholds are tuned on screen with real rows (§8).
+- Ids are kebab-case (R9): `open-cluster`, `globular-cluster`, `nebula`, `gc-cluster`. Structure ids stay `${category}-${seed.id}`, so deep links read `#focus=open-cluster-pleiades` and `#focus=gc-cluster-arches`. The deep-link claim matches by category prefix, so the plan pins a test that `open-cluster-…` and `globular-cluster-…` never resolve as `cluster`, and that `gc-cluster-…` cannot collide with the `galactic-centre` place id.
+- All four rows: `scale: 'milkyWay'`, `bearsLabel` and `bearsMarker` true, `labelLayer: 'structure'`. They share the structure fade and recession channel, so existing tour cues on structure rings and labels apply to them too.
+- Display copy (card label; short label and plural where they differ): "Open Cluster" / "Open clusters", "Globular Cluster" (short "Globular") / "Globular clusters", "Nebula" / "Nebulae", "Galactic Centre Place" (short and plural "Galactic Centre").
+- Style rows: all four use `milkyWayStructures`. Colours form a ramp distinct from the existing warm cluster ramp; the exact values and the min/max apparent-radius thresholds are tuned on screen with real rows (§8).
 - None joins `BULK_CATALOG_CATEGORIES`; there is no `.ccat` for them.
 
 ## 5. Seed rows
 
 Rows are added to `data/seeds/structure_anchors.seed.json` with lengths in the unit the source publishes. Every value is taken from a cited source at authoring time, not from memory; the description names what the object is and why it is notable.
 
-- **Open clusters (~25):** Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, Double Cluster (two rows), Jewel Box, Wild Duck, Butterfly, Ptolemy, M35–M38, M41, M46, M47, M50, M67, NGC 752, IC 2602, IC 2391, Trumpler 14, Westerlund 1.
-- **Globular clusters (~20):** ω Centauri, 47 Tucanae, M2, M3, M4, M5, M10, M12, M13, M15, M22, M30, M53, M54, M55, M71, M79, M80, M92, NGC 6397, NGC 2419.
-- **Nebulae (~22):** Orion, Carina, Lagoon, Trifid, Eagle, Omega, Rosette, North America, California (emission); Horsehead, Coalsack (dark); Ring, Dumbbell, Helix, Cat's Eye, Owl (planetary); Crab, Veil, Vela, Cassiopeia A, Tycho, Kepler (supernova remnant). The Tarantula is left out: it is in the Large Magellanic Cloud.
-- **Galactic Centre places (3):** central cluster, Arches, Quintuplet. Arches and Quintuplet carry `lineOfSightAssumed: true` and sit at Sgr A\*'s distance (`GALACTIC_CENTRE_ANCHOR`), with their published RA/Dec.
+- **Open clusters (25):** Pleiades, Hyades, Praesepe, Coma Star Cluster, α Persei, Double Cluster (two rows), Jewel Box, Wild Duck, Butterfly, Ptolemy, M35–M38, M41, M46, M47, M50, M67, NGC 752, IC 2602, IC 2391, Trumpler 14, Westerlund 1.
+- **Globular clusters (21):** ω Centauri, 47 Tucanae, M2, M3, M4, M5, M10, M12, M13, M15, M22, M30, M53, M54, M55, M71, M79, M80, M92, NGC 6397, NGC 2419.
+- **Nebulae (22):** Orion, Carina, Lagoon, Trifid, Eagle, Omega, Rosette, North America, California (emission); Horsehead, Coalsack (dark); Ring, Dumbbell, Helix, Cat's Eye, Owl (planetary); Crab, Veil, Vela, Cassiopeia A, Tycho, Kepler (supernova remnant). The Tarantula is left out: it is in the Large Magellanic Cloud.
+- **Galactic Centre places (3):** central cluster, Arches, Quintuplet. Arches and Quintuplet sit at Sgr A\*'s distance (`GALACTIC_CENTRE_ANCHOR`), with their published RA/Dec.
 
-Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `lineOfSightAssumed` is accepted only on a Galactic Centre place; `Length.unit` must be one of the three units and `value > 0`.
+Every Milky Way row also carries a `source` (see "Decided during review"). Parser additions: `nebulaKind` is required on a nebula and rejected elsewhere; `Length.unit` must be one of the three units and `value > 0`.
 
 ## 6. Visibility and focus
 
-- `galacticStructures` is keyed on camera distance from the render origin, like `surveyDeepZoom`, and is its mirror: full inside the Galaxy, gone at `FOREGROUND_MAX_DISTANCE_MPC`, where NEAR0 content switches off anyway. `fullAt` is tuned on screen.
+- `milkyWayStructures` is keyed on camera distance from the render origin, like `surveyDeepZoom`, and is its mirror: full inside the Galaxy, gone at `FOREGROUND_MAX_DISTANCE_MPC`, where NEAR0 content switches off anyway. `fullAt` is tuned on screen.
 - The per-marker apparent-radius fades do the rest: from the Sun, a Galactic Centre place 8 kpc away is far below the minimum on-screen radius and stays hidden until the camera approaches.
-- Focus frames at `FOCUS_FILL × apparentRadius` (P5). `galaxyMembers: false` means focusing one dims no galaxies and the card shows no galaxy count.
+- Focus frames at `FOCUS_FILL × apparentRadius` (P5). Focusing any structure, a Milky Way one included, dims everything outside its sphere (see "Decided during review"); `scale: 'milkyWay'` only means the card shows no galaxy count.
 
 ## 7. Card and search
 
-- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`), and a "Line of sight" row reading "assumed at the Galactic Centre's distance" when `lineOfSightAssumed`. The "Galaxies" row and its tooltip render only when the category has `galaxyMembers`.
+- `StructureDetailCard`: a "Type" row for a nebula (`Planetary nebula`). The "Galaxies" row and its tooltip render only when the category's `scale` is `'cosmic'`.
 - `CompactStructureCard` and the palette rows need no change beyond the derived badge.
 
 ## 8. Testing
@@ -143,17 +141,17 @@ Each test below fails on a real bug nothing else catches.
 - `lengthToMpc`: pc, kpc and Mpc convert to the same Mpc value for the same physical length.
 - Seed parser: rejects a nebula without `nebulaKind`, `nebulaKind` on a non-nebula, an unknown unit.
 - Slab partition: every structure category is drawn by exactly one of the two marker passes, and its labels go to the matching director.
-- Band: a `near0` category is at full alpha at the Sun and zero at `FOREGROUND_MAX_DISTANCE_MPC`; a `cosmo` category is the reverse.
+- Band: a Milky Way category is at full alpha at the Sun and zero at `FOREGROUND_MAX_DISTANCE_MPC`; a cosmic category is the reverse.
 - Focus distance: a 4 pc radius frames within tens of parsecs; an existing cluster's framing distance is unchanged from before P5.
-- Membership: a `galaxyMembers: false` category yields no `ActiveFocus` and no member count.
+- Membership: a `scale: 'milkyWay'` category still yields an `ActiveFocus` (it dims what lies outside it) but no member count.
 - Seed sanity: every Milky Way row lies within 0.1 Mpc of the origin; every Galactic Centre place lies within 50 pc of `GALACTIC_CENTRE_ANCHOR`.
 
 Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centauri; Orion Nebula; Arches from near Sgr A\*; the whole Galaxy from 50 kpc with all four categories on; an existing cluster (Virgo) to confirm nothing moved.
 
 ## 9. Risks
 
-- **NEAR0 far plane moves with the camera.** It is 100× the orbit distance, so orbiting the Pleiades at 10 pc puts a 10 kpc globular beyond it. P1's far-plane clamp is the mitigation and is the least certain part until it is on screen.
-- **Label crowding near the Sun.** About 70 new labels in a volume that already holds constellation captions and star names. Declutter priority and the default-on state per category are judged on screen.
+- **NEAR0 far plane moves with the camera.** Does not apply: NEAR0 is a reversed-Z slab with an infinite far plane, so no ring is ever beyond it.
+- **Label crowding near the Sun.** 71 new labels in a volume that already holds constellation captions and star names. Declutter priority and the default-on state per category are judged on screen.
 - **P7 touches the pick shader.** Pick and draw must use the same camera-relative instances, or rings are clicked where they are not drawn.
 - **Seed migration (P9) touches every existing row.** The existing seed-sanity tests pin positions before and after.
 
@@ -165,3 +163,33 @@ Visual checks, one deep link each: Pleiades from the Sun and focused; ω Centaur
 - `npm run typecheck`, `npm test` and `npm run build` are green.
 - `docs/DATA.md` describes the unit-tagged seed; the `add-data-source` skill's Path B table matches the code.
 - The backlog index line and `docs/backlog/2026-07-30-galactic-center-place-labels.md` are gone.
+
+## 11. Decided during review (2026-10-06 to 10-08)
+
+Rulings from the on-screen checks. Where they differ from §6–§8 as first drafted, those sections now say what was built.
+
+- **Focus dims everything not part of the structure.** Focusing any structure dims stars outside its sphere, galaxies, the Milky Way glow, constellation lines and captions, and star and body names. Dimmed stars and their name labels are not pickable, so a click cannot land on something faded out. Reason: a parsec-scale focus is unreadable against a full-brightness sky, and the cluster rule already worked. The card's galaxy count still follows the category's `scale`.
+- **The Milky Way glow recedes on every focus**, galaxy-cluster focus included. Reason: it is scenery behind any focused subject.
+- **Milky Way labels sit above their ring, and placement follows the family (`scale`); there is no per-category field.** The label sits over the ring's top edge with a fixed pixel gap (`STRUCTURE_LABEL_ABOVE_GAP_PX`); cosmic labels are centred. These rings stay on screen at large sizes, and a centred label would sit on the ring line. A focused structure's label may fall off-screen; that is accepted.
+- **The selected ring brightens by a colour gain of 1.6×** (`SELECTED_RING_BRIGHTEN`) for every category, replacing the capped opacity boost. Reason: most rings rest at full opacity, where an alpha boost has nowhere to go.
+- **Structure cards link to Wikipedia** from a per-row `wikipedia` title, verified against the article rather than derived from the name. Five existing rows have none (`galaxy-cluster-ophiuchus`, `galaxy-cluster-shapley-a3558`, `galaxy-cluster-a3571`, `galaxy-group-cvn-i-cloud`, `galaxy-group-ngc-6946-group`), and their cards show no link.
+- **Each Milky Way seed row carries a `source`** naming the paper or survey its distance and radii came from, required by the parser for every Milky Way category. Reason: these rows have no catalogue in the pipeline to audit against.
+- **Known limitation, not fixed here:** globular clusters' Gaia member stars smear into a radial line toward the Sun, because each star keeps its own noisy distance. Backlogged at `docs/backlog/2026-10-06-cluster-member-star-distances.md`.
+- **During a focus, only what lies inside the focused sphere is clickable or hoverable** (`isPickableUnderFocus`), for every focus, galaxy-cluster focus included. Other rings, sibling Milky Way rings too, and galaxies outside the sphere do not answer the pointer. Reason: what is dimmed should not be selectable, and it ends accidental hops from ring to ring.
+- **A Milky Way ring's click target ranks above the stars** (`PICK_BAND_STRUCTURE_RING_EPS` in `pickDepthBands.wesl`), as labels already did, so a structure can always be selected first. Known gap: a curated star much nearer than the ring keeps its true depth and can still win.
+- **Hover highlights the ring and its label together**: the ring by a colour gain of 1.3× (`HOVERED_RING_BRIGHTEN`), the label by a blend toward white (`HOVERED_LABEL_WHITEN`). The selected label whitens further (`SELECTED_LABEL_WHITEN`).
+- **The far-plane clamp planned for the NEAR0 marker pass was removed.** NEAR0 has an infinite far plane, so the clamp never acted.
+- **Open-cluster colours are muted** so the many rings near the Sun do not dominate the star field.
+- **One scale word, `scale: 'cosmic' | 'milkyWay'`, replaces `slab` and `galaxyMembers` on the registry row.** This revises R6 and §3: the two flags agreed on every row, and "galactic" read both ways. The scale picks the depth slab and whether the card counts galaxies; the visible band and focus distance stay independent, which is what R6 was protecting. §3 is kept as the record of the prep PR as it was built.
+- **`cluster` and `group` became `galaxy-cluster` and `galaxy-group`** (ids, `Source` names, labels), so they no longer read as siblings of the star-cluster categories. Structure ids are `category-seedId`, so `#focus=cluster-…` and `#focus=group-…` links from before this change no longer resolve; the user accepted that without a redirect. Numeric source codes are unchanged, so no data was re-baked.
+- **Settings list the categories under two headings, Cosmic and Milky Way.** The Labels & Guides list stays flat.
+- **Globular rings stay at the tidal radius**, though it is far larger than the visible cluster: the ring marks the cluster's extent, not its bright core.
+- **The Carina Nebula sits at Trumpler 14's distance** (2389.8 pc), so the nebula and the cluster inside it draw as one complex. The published sightline distances are kept in the row's `source`.
+- **Westerlund 1 and the Coalsack keep their approximate radii**, each marked `WEAK RADIUS` in its `source`.
+- **The Wikipedia link comes before the description**, as on star, body and black-hole cards.
+- **Stars inside a visible Milky Way ring are not clickable**; no exemption for the focused ring was built.
+- **The Galactic Centre category's id is `gc-cluster`**, so it no longer matches the `galactic-centre` place id. Its labels still read "Galactic Centre". Reason: one string named two unrelated things, and the deep-link claim had to be pinned against the collision.
+- **A ring takes clicks only while its ring alpha is at least `RING_PICK_MIN_ALPHA`**, so a faded-out ring does not block the stars inside it. Reason: a ring that is nearly invisible on screen should not be a click target.
+- **Overlapping rings share one click depth and resolve by draw order** (category order, then seed order). Left as is.
+- **Known gap:** during a structure focus, planets, Earth, spacecraft, body glints and the Milky Way disc still answer clicks although dimmed. Not filtered in this PR.
+- **Nebulae start switched off** (ring and label), because nebulae have no rendering of their own yet and a ring would circle empty sky. They stay searchable and focusable while off.

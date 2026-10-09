@@ -15,6 +15,7 @@ import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starC
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../src/layers/starCatalog/sources/gaia-stars';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -22,6 +23,7 @@ import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
+import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -34,7 +36,7 @@ function camAtPc(distPc: number): Vec3 {
 
 function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
-    snapshot: { nowMs: 0 },
+    snapshot: { nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: camPos,
     viewKind: 'frame',
     viewSlot: 3,
@@ -72,7 +74,9 @@ function makeRuntime(frame: StarCutInputs | null) {
     getFrameCut: () => frame,
     drawCut,
   };
-  return { runtime: { renderer } as unknown as StarCatalogRuntime, drawCut };
+  const pickDraw = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogPickDrawArgs) => void>();
+  const runtime = { renderer, pickRenderer: { draw: pickDraw } } as unknown as StarCatalogRuntime;
+  return { runtime, drawCut, pickDraw };
 }
 
 function makeSettings(master = true, item = true): StarCatalogSettings {
@@ -123,6 +127,28 @@ describe('starCatalogPass.draw', () => {
     expect(a!.stream).toBe('leaf');
     expect(a!.vp).toBe(b!.vp);
     expect(a!.vp).not.toBe(view.vp);
+  });
+
+  it('the visual and pick draws both get the context focus, camera-relative to the cut origin', () => {
+    const camPos = camAtPc(1_000);
+    const { runtime, drawCut, pickDraw } = makeRuntime(makeFrame([1, 2, 3]));
+    const focused = {
+      ...makeCtx(camPos),
+      snapshot: {
+        nowMs: 0,
+        focus: { center: [4, 6, 8], apparentRadiusMpc: 2, physicalRadiusMpc: 1, blend: 1 },
+      },
+    } as unknown as FrameView;
+    const view = makeNear0View(camPos);
+    const pass = starCatalogPass(runtime);
+
+    pass.draw!(PASS_STUB, view, focused, makePassState(makeSettings()));
+    pass.drawPick!(PASS_STUB, view, focused, makePassState(makeSettings()));
+
+    for (const sphere of [drawCut.mock.calls[0]![1].focus, pickDraw.mock.calls[0]![1].focus]) {
+      expect(sphere.centerRelCamMpc).toEqual([3, 4, 5]);
+      expect(sphere.blend).toBe(1);
+    }
   });
 
   it('draws nothing when the frame has no cut', () => {

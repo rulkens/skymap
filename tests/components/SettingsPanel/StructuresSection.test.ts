@@ -6,10 +6,10 @@
  * No Redux Provider: `StructuresSection` imports nothing from `store/` or
  * `state/`. Props drive rendering; typed `vi.fn()` spies capture callbacks.
  *
- * STRUCTURE_IDS = ['cluster', 'supercluster', 'void', 'group'] (in registry order).
+ * STRUCTURE_IDS = ['galaxy-cluster', 'supercluster', 'void', 'galaxy-group'] (in registry order).
  * All-on: every category has markerCategoryVisibility[cat] === true.
  * None-on: every category has markerCategoryVisibility[cat] === false.
- * Partial: only 'cluster' on → mixed → indeterminate master.
+ * Partial: only 'galaxy-cluster' on → mixed → indeterminate master.
  *
  * Tests cover:
  *  - Master tri-state: indeterminate when a strict subset is enabled; checked
@@ -89,7 +89,7 @@ describe('StructuresSection', () => {
     it('reflects markerCategoryVisibility for each category', () => {
       // cluster on, others off.
       const visibility = noneOnVisibility();
-      visibility['cluster' as StructureId] = true;
+      visibility['galaxy-cluster' as StructureId] = true;
       const props = { ...baseProps(), markerCategoryVisibility: visibility };
       const { container } = render(createElement(StructuresSection, props));
 
@@ -97,7 +97,9 @@ describe('StructuresSection', () => {
       const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
       fireEvent.click(expandButton);
 
-      const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-marker-cluster');
+      const clusterCheckbox = container.querySelector<HTMLInputElement>(
+        '#toggle-marker-galaxy-cluster',
+      );
       expect(clusterCheckbox).not.toBeNull();
       expect(clusterCheckbox!.checked).toBe(true);
 
@@ -127,11 +129,13 @@ describe('StructuresSection', () => {
       // cluster starts checked (allOnVisibility); a click toggles it off.
       // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom —
       // fireEvent.change does not update e.target.checked for React-controlled inputs.
-      const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-marker-cluster')!;
+      const clusterCheckbox = container.querySelector<HTMLInputElement>(
+        '#toggle-marker-galaxy-cluster',
+      )!;
       fireEvent.click(clusterCheckbox);
 
       expect(onSetMarkerCategoryVisibility).toHaveBeenCalledOnce();
-      expect(onSetMarkerCategoryVisibility).toHaveBeenCalledWith('cluster', false);
+      expect(onSetMarkerCategoryVisibility).toHaveBeenCalledWith('galaxy-cluster', false);
     });
 
     it('calls onSetMarkerCategoryVisibility for all STRUCTURE_IDS when master toggled from noneOn', () => {
@@ -161,7 +165,7 @@ describe('StructuresSection', () => {
     it('renders a count in the label when structureCounts provides it', () => {
       const props = {
         ...baseProps(),
-        structureCounts: { cluster: 375 } as Partial<Record<StructureId, number>>,
+        structureCounts: { 'galaxy-cluster': 375 } as Partial<Record<StructureId, number>>,
       };
       const { container } = render(createElement(StructuresSection, props));
 
@@ -169,9 +173,9 @@ describe('StructuresSection', () => {
       const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
       fireEvent.click(expandButton);
 
-      // The count should appear formatted in the label for 'cluster'.
+      // The count should appear formatted in the label for 'galaxy-cluster'.
       const clusterLabel = container.querySelector<HTMLLabelElement>(
-        'label[for="toggle-marker-cluster"]',
+        'label[for="toggle-marker-galaxy-cluster"]',
       );
       expect(clusterLabel).not.toBeNull();
       expect(clusterLabel!.textContent).toContain('375');
@@ -185,7 +189,7 @@ describe('StructuresSection', () => {
       fireEvent.click(expandButton);
 
       const clusterLabel = container.querySelector<HTMLLabelElement>(
-        'label[for="toggle-marker-cluster"]',
+        'label[for="toggle-marker-galaxy-cluster"]',
       );
       expect(clusterLabel).not.toBeNull();
       // Label text should only be the display name, no number.

@@ -29,7 +29,7 @@ const NGC4565: AliasIndexEntry = {
 const COMA: StructureSearchEntry = {
   id: 'cluster-coma',
   name: 'Coma Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
 };

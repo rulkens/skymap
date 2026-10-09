@@ -27,7 +27,7 @@ export function starCatalogPass(runtime: StarCatalogRuntime): ContentPass {
     drawPick(pass, view, ctx) {
       const inputs = runtime.renderer.getFrameCut();
       if (inputs === null) return;
-      drawStarPick(runtime.pickRenderer, pass, view, inputs, ctx.drawPxPerRad);
+      drawStarPick(runtime.pickRenderer, pass, view, inputs, ctx.drawPxPerRad, ctx.snapshot.focus);
     },
   };
 }

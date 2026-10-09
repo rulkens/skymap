@@ -17,48 +17,43 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 
-// The opacity each tagged layer settles to at full focus (blend = 1): markers and
-// labels dim moderately, the large diffuse fields recede harder. Eye-tuned.
-export const FILAMENT_RECESSION = 0.15;
-const VOLUME_RECESSION = 0.15;
-export const MARKER_RECESSION = 0.25;
-export const LABEL_RECESSION = 0.25;
+// The opacity a tagged layer settles to at full focus (blend = 1). Two strengths,
+// named for the strength and not for a layer, since unrelated layers share each.
+// Eye-tuned.
+export const STRONG_RECESSION = 0.15;
+export const MILD_RECESSION = 0.25;
 
 // `undefined` = does not recede.
 const RECESSION_BY_LABEL_LAYER = {
   // The COSMO name labels: structure labels (any item) and famous-galaxy
   // labels, which reuse the 'galaxy' id. These are the labels focus is meant
   // to quiet — they crowd the same slab as the focused subject.
-  structure: LABEL_RECESSION,
-  galaxy: LABEL_RECESSION,
+  structure: MILD_RECESSION,
+  galaxy: MILD_RECESSION,
   // The YOU-ARE-HERE pin: one label at the world origin, the anchor the focused
   // subject is read against. Receding it would dim the reference.
   milkyWay: undefined,
   // The scale bar is a readout, not scenery — it must stay legible at full focus.
   scaleBar: undefined,
-  // The near-field caption layers draw on the NEAR0 slab through
-  // `foregroundLabelsPass`, which owns its OWN declutter (a screen-space
-  // separation cull with priority tiers) and its own temporal envelope, and
-  // never routes through `resolveLayerOpacity`. A recession factor here would
-  // be a second, competing dimming authority over the same captions — and the
-  // focus blend it keys on is driven at Mpc scales, where these pc-band
-  // captions have already faded out. So they do not recede: the near field
-  // declutters by its own mechanism.
-  starCatalog: undefined,
-  body: undefined,
-  blackHoles: undefined,
+  // The near-field caption layers never route through `resolveLayerOpacity`:
+  // `composeForegroundCaption` reads this same table for them, so the rule
+  // stays in one place. Focusing a parsec-scale structure drives the blend,
+  // so they quiet like the COSMO labels.
+  starCatalog: MILD_RECESSION,
+  body: MILD_RECESSION,
+  blackHoles: MILD_RECESSION,
 } satisfies Record<LabelLayerId, number | undefined>;
 
 const RECESSION_BY_KIND = {
-  cosmicWebFilaments: FILAMENT_RECESSION,
-  localBubble: FILAMENT_RECESSION,
-  cosmicWebDensity: VOLUME_RECESSION,
-  structure: MARKER_RECESSION, // all structure sources recede
+  cosmicWebFilaments: STRONG_RECESSION,
+  localBubble: STRONG_RECESSION,
+  cosmicWebDensity: STRONG_RECESSION,
+  structure: MILD_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,
   cosmicWebDensityField: undefined,
-  milkyWay: undefined, // the MW disk does not recede on focus
+  milkyWay: STRONG_RECESSION,
   flow: undefined,
-  constellations: undefined,
+  constellations: STRONG_RECESSION, // lines and captions both read this row
   orbitTrails: undefined, // near-field foreground trails never recede on focus
   overlay: undefined,
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus

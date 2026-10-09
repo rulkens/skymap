@@ -23,6 +23,7 @@ import {
   BRIGHTNESS_FLOAT_INDEX,
   GLOW_OVERLAP_FLOAT_INDEX,
   PICK_PASS_U32_INDEX,
+  writeStarFocus,
 } from './starCatalogLayout';
 
 export function createStarCatalogPickRenderer(
@@ -84,6 +85,7 @@ export function createStarCatalogPickRenderer(
     // Source-independent, so the repeated write per source is idempotent.
     writeCameraPrefix(uniformF32, args.vp, args.viewportPx, args.pxPerRad);
     uniformF32[SIZE_PX_FLOAT_INDEX] = args.sizePx;
+    writeStarFocus(uniformF32, args.focus);
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     pass.setPipeline(pipeline);

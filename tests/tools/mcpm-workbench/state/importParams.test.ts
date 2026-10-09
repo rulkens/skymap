@@ -133,7 +133,7 @@ describe('importParams', () => {
     // Cluster (5) is a real Source code but not one of the workbench's toggleable
     // galaxy-catalog sources — importParams must reject it against the ladder,
     // not merely check "is this a number".
-    preset.sources = [Source.SDSS, Source.Cluster];
+    preset.sources = [Source.SDSS, Source.GalaxyCluster];
 
     expect(() => importParams(JSON.stringify(preset))).toThrow(/unknown source id.*5/i);
   });

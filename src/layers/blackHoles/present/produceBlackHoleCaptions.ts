@@ -46,24 +46,22 @@ export function produceBlackHoleCaptions(): Label2DProducer['produceLabels'] {
       drawPxPerRad: ctx.drawPxPerRad,
       fades: state.subsystems.fades,
       nowMs: now,
+      focus: ctx.snapshot.focus,
       occluders: sceneOccluderBodies(state, ctx),
     };
     const states = sceneBodyStates(state, ctx);
 
-    const labels = BLACK_HOLES.map((row, i) =>
-      composeForegroundCaption(
-        composeCtx,
-        bodyCaption(
-          findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
-          schwarzschildRadiusM(row.massSolar),
-          states.get(blackHoleAnchorId(row))!.positionMpc,
-          BLACK_HOLE_CAPTION_TINT,
-          'sgrAStar',
-          packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
-        ),
-        clipFactor,
-      ),
-    );
+    const labels = BLACK_HOLES.map((row, i) => {
+      const caption = bodyCaption(
+        findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
+        schwarzschildRadiusM(row.massSolar),
+        states.get(blackHoleAnchorId(row))!.positionMpc,
+        BLACK_HOLE_CAPTION_TINT,
+        'sgrAStar',
+        packSelection(Source.SgrAStar, i + PICK_SENTINEL_OFFSET),
+      );
+      return composeForegroundCaption(composeCtx, caption, clipFactor);
+    });
 
     return { labels, awake: false };
   };

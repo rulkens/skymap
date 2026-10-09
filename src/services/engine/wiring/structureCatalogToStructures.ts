@@ -57,10 +57,10 @@ import { minOf } from '../../../utils/math/minOf';
 import { makeMinMaxNormaliser } from '../../../utils/math/makeMinMaxNormaliser';
 
 /** The two renderable category bytes; everything else is skipped. */
-type KnownCategory = 'cluster' | 'supercluster';
+type KnownCategory = 'galaxy-cluster' | 'supercluster';
 
 function categoryFromByte(byte: number): KnownCategory | null {
-  if (byte === 0) return 'cluster';
+  if (byte === 0) return 'galaxy-cluster';
   if (byte === 1) return 'supercluster';
   return null; // reserved / void — not yet a renderable arm
 }
@@ -76,7 +76,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
   const superclusterRaw: number[] = [];
   for (let i = 0; i < catalog.count; i++) {
     const category = categoryFromByte(catalog.category[i]!);
-    if (category === 'cluster') clusterRaw.push(catalog.significance[i]!);
+    if (category === 'galaxy-cluster') clusterRaw.push(catalog.significance[i]!);
     else if (category === 'supercluster') superclusterRaw.push(catalog.significance[i]!);
   }
   // Guard M500 ≤ 0 before log10 (defensive — the build filters M500 ≥ 2.0).
@@ -97,7 +97,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
     ];
     const raw = catalog.significance[i]!;
     const significance =
-      category === 'cluster' ? normaliseCluster(raw) : normaliseSupercluster(raw);
+      category === 'galaxy-cluster' ? normaliseCluster(raw) : normaliseSupercluster(raw);
     const common = {
       type: 'structure',
       // `-bulk-` infix: distinct from the featured `${category}-${seed.id}`
@@ -114,13 +114,13 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
     // Arm-typed switch: each branch returns a literal whose `category` is a
     // single string, so the union narrows with no `as` cast.
     switch (category) {
-      case 'cluster':
+      case 'galaxy-cluster':
         // `abell` lives on the cluster arm alone.  Spread it in only when the
         // meta carries a non-null designation so the key is absent (not
         // `abell: undefined`) for clusters with no Abell number.
         out.push({
           ...common,
-          category: 'cluster',
+          category: 'galaxy-cluster',
           ...(m.abell !== null ? { abell: m.abell } : {}),
         });
         break;

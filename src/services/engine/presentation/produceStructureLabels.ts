@@ -1,10 +1,11 @@
 /**
  * produceStructureLabels — per-frame text labels for the extended structures
- * (cluster / supercluster / void), read from `structureStore`.
+ * (every cosmic and Milky Way category), read from `structureStore`.
  *
  * Reads `state.data.structures` and emits structure labels — applying the
  * marker close-approach / far-distance fades, the featured + visibility gates,
- * and the ring-centre anchor. Famous-galaxy labels come from
+ * and the anchor (ring centre, or just above the ring's drawn top for the
+ * categories whose style asks for it). Famous-galaxy labels come from
  * `produceFamousGalaxyLabels` instead — a split that also carries the deep-zoom
  * exemption: THIS producer rides the `surveyDeepZoom` band (structure labels
  * dissolve with their rings on the descent into the solar system), while
@@ -46,26 +47,39 @@
  * being inspected (flicker).
  */
 
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import { STRUCTURE_IDS, STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
+import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
-import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
+import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
+import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../../../data/structureLabelAboveGapPx';
+import { aboveRingAnchor } from '../../../utils/labels/aboveRingAnchor';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import {
+  STRUCTURE_MARKER_STYLES,
+  HOVERED_LABEL_WHITEN,
+  SELECTED_LABEL_WHITEN,
+} from './structureMarkerStyles';
+import { lerp } from '../../../utils/math/lerp';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { anyFadeBandVisible } from '../../../utils/math/anyFadeBandVisible';
-import type { StructureSlab } from '../../../@types/data/structure/StructureSlab';
-import { STRUCTURE_IDS_BY_SLAB } from '../../../data/structure/structureIdsBySlab';
-import { STRUCTURE_VISIBLE_BANDS_BY_SLAB } from './structureVisibleBands';
+import type { StructureScale } from '../../../@types/data/structure/StructureScale';
+import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
+import { STRUCTURE_VISIBLE_BANDS_BY_SCALE } from './structureVisibleBands';
 
 export function produceStructureLabels(
   state: EngineState,
   ctx: FrameView,
-  slab: StructureSlab,
+  scale: StructureScale,
 ): Label2DProducerOutput {
   const labels: Label2D[] = [];
 
@@ -77,7 +91,7 @@ export function produceStructureLabels(
   // descent into the solar system. When every band is at 0 the producer emits
   // nothing — the fade reaches 0 continuously before this skip, so no pop.
   const camDistMpc = Math.hypot(cx, cy, cz);
-  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SLAB[slab], camDistMpc))
+  if (!anyFadeBandVisible(STRUCTURE_VISIBLE_BANDS_BY_SCALE[scale], camDistMpc))
     return { labels: [], awake: false };
 
   // Snapshot the registry + clock + focused id once so every category reads
@@ -85,6 +99,9 @@ export function produceStructureLabels(
   const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
+  // Ring and label carry the same pick id, so hovering either lights both.
+  const hoveredStructureId = structureIdOf(state.selection.hover);
+  const selectedStructureId = structureIdOf(state.selection.select);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
@@ -99,12 +116,18 @@ export function produceStructureLabels(
   const focusedOnly = state.settings.labels.focusedOnly;
 
   const structures = state.data.structures;
-  const slabIds = STRUCTURE_IDS_BY_SLAB[slab];
+  const scaleIds = STRUCTURE_IDS_BY_SCALE[scale];
   // The NEAR0 director projects camera-relative anchors (its f32 matrix has no
   // room for absolute Mpc positions); the COSMO one takes them absolute.
-  const [ox, oy, oz] = slab === 'near0' ? ctx.drawCamPos : [0, 0, 0];
+  const [ox, oy, oz] = scale === 'milkyWay' ? ctx.drawCamPos : [0, 0, 0];
+  // Screen-up in world axes; the same direction applies in both frames. Only
+  // Milky Way labels lift along it: their rings stay on screen at large sizes.
+  const screenUp =
+    scale === 'milkyWay'
+      ? imagePlaneBasis(orbitForwardOf(ctx.cam), ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis)).up
+      : null;
   for (const p of structures.all()) {
-    if (!slabIds.includes(p.category)) continue;
+    if (!scaleIds.includes(p.category)) continue;
     if (focusedOnly && p.id !== focusedStructureId) continue;
     // Per-category label opacity: the category toggle's fade, read from the
     // registry. The authoritative gate is the boolean — emit while the
@@ -201,31 +224,60 @@ export function produceStructureLabels(
           );
     fadeAlpha *= catOpacity * recession * clipFactor * bandFade;
 
-    labels.push({
-      id: p.id,
-      // Byte-identical to what `ringPick.wesl` writes for this structure's own
-      // marker ring — the category's source code over the per-category index,
-      // both read from the store's single-sourced `categoryIndexOf`.
-      pickId: packSelection(
+    // A centred label would sit under a ring that stays on screen at large
+    // sizes, so Milky Way labels hang just above the ring's drawn top.
+    const above = screenUp !== null;
+
+    // Selected wins over hovered: the later assignment is the stronger cue.
+    let whiten = 0;
+    if (p.id === hoveredStructureId) whiten = HOVERED_LABEL_WHITEN;
+    if (p.id === selectedStructureId) whiten = SELECTED_LABEL_WHITEN;
+
+    const centre: Vec3 = [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz];
+    let anchor = centre;
+    if (above) {
+      anchor = aboveRingAnchor(
+        centre,
+        screenUp,
+        [dx, dy, dz],
+        markerRadiusMpc * MARKER_RADIUS_RETUNE,
+        (STRUCTURE_LABEL_ABOVE_GAP_PX * distanceMpc) / pxPerRad,
+      );
+    }
+
+    // Byte-identical to what `ringPick.wesl` writes for this structure's own
+    // marker ring — the category's source code over the per-category index,
+    // both read from the store's single-sourced `categoryIndexOf`.
+    let pickId: number | undefined;
+    if (isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)) {
+      pickId = packSelection(
         STRUCTURE_ID_CODES[p.category],
         structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
-      ),
-      // Structures anchor at the ring centre, centred on both axes (only
-      // famous galaxies lift their label off the dot).
-      worldPos: [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz],
+      );
+    }
+
+    labels.push({
+      id: p.id,
+      pickId,
+      worldPos: anchor,
       // Long names ("Perseus-Pisces Supercluster") break onto two balanced
       // lines here, at the presentation seam — the store keeps the unwrapped
       // name for the palette / InfoCard, and the layout just honours the '\n'.
       text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
-      color: [...style.labelColor],
+      color: [
+        lerp(style.labelColor[0], 1, whiten),
+        lerp(style.labelColor[1], 1, whiten),
+        lerp(style.labelColor[2], 1, whiten),
+        style.labelColor[3],
+      ],
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,
       fadeAlpha,
       alignX: 'center',
-      alignY: 'center',
+      alignY: above ? 'bottom' : 'center',
       outlineColor: [...style.outlineColor],
       outlineEmFrac: style.outlineEmFrac,
       prominencePx,

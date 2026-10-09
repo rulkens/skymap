@@ -1,8 +1,10 @@
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
 import { produceFamousGalaxyLabels } from '../../../../src/layers/galaxyCatalog/present/produceFamousGalaxyLabels';
-import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
@@ -99,7 +101,7 @@ function screenOf(p: readonly number[]): [number, number] {
 
 function makeCtx(over: { focusBlend?: number } = {}): FrameView {
   return {
-    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0 },
+    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
@@ -330,7 +332,7 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('famous labels recede uniformly at blend > 0', () => {
-    // No per-member exemption: every famous label is scaled by LABEL_RECESSION
+    // No per-member exemption: every famous label is scaled by MILD_RECESSION
     // at full blend (there is no focused-famous-structure path here).
     const atRest = makeState();
     const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
@@ -344,7 +346,7 @@ describe('produceFamousGalaxyLabels', () => {
       makeCtx({ focusBlend: 1 }),
     ).labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
+    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
@@ -410,5 +412,35 @@ describe('produceFamousGalaxyLabels', () => {
       expect(pick.sourceCode).toBe(Source.FamousGalaxy);
       expect(runtime.famousMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
     }
+  });
+
+  it('outside the focused sphere a label draws but carries no pick; inside and at rest it keeps it', () => {
+    const runtime = seed(
+      [
+        { id: 'in', names: ['In'] },
+        { id: 'out', names: ['Out'] },
+      ],
+      [5, 0, 0, 5, 3, 0],
+      [120, 120],
+    );
+    const state = makeState();
+    const focus: FocusUniformsValue = {
+      center: [5, 0, 0],
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+      blend: 1,
+    };
+    const ctx = makeCtx();
+    const focused = { ...ctx, snapshot: { ...ctx.snapshot, focus } } as FrameView;
+    const pickOf = (labels: readonly Label2D[], id: string) =>
+      labels.find((l) => l.id === id)!.pickId;
+
+    const rest = produceFamousGalaxyLabels(runtime)(state, ctx).labels;
+    expect(pickOf(rest, 'famous-out')).toBeDefined();
+
+    const under = produceFamousGalaxyLabels(runtime)(state, focused).labels;
+    expect(pickOf(under, 'famous-in')).toBeDefined();
+    expect(pickOf(under, 'famous-out')).toBeUndefined();
+    expect(under.find((l) => l.id === 'famous-out')!.fadeAlpha).toBeGreaterThan(0);
   });
 });

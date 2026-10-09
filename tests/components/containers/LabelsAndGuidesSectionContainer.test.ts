@@ -84,7 +84,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
   it('[label-home dispatch] toggling a structure label category flips the structure item labelEnabled in the store', () => {
     const { store } = createAppStore();
     // Confirm initial state: cluster.labelEnabled is true.
-    expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(true);
+    expect(selectStructureItems(store.getState())['galaxy-cluster'].labelEnabled).toBe(true);
 
     const { container } = render(
       createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
@@ -98,12 +98,14 @@ describe('LabelsAndGuidesSectionContainer', () => {
     fireEvent.click(expandButton);
 
     // cluster label starts enabled (checked); click dispatches enabled=false.
-    const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-label-cluster')!;
+    const clusterCheckbox = container.querySelector<HTMLInputElement>(
+      '#toggle-label-galaxy-cluster',
+    )!;
     expect(clusterCheckbox).not.toBeNull();
     fireEvent.click(clusterCheckbox);
 
     // Assert the structure item's labelEnabled flipped — confirming setStructureLabelEnabled.
-    expect(selectStructureItems(store.getState())['cluster'].labelEnabled).toBe(false);
+    expect(selectStructureItems(store.getState())['galaxy-cluster'].labelEnabled).toBe(false);
   });
 
   it('[label-home dispatch] toggling milkyWay label flips selectMilkyWayLabelEnabled in the store', () => {
