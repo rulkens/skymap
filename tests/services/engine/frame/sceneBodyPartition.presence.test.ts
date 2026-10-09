@@ -67,6 +67,25 @@ const labelIds = (simDays: number): string[] =>
   sceneBodyLabels(deriveBodyStates(simDays), simDays).map((label) => label.id);
 
 describe('spacecraft presence', () => {
+  it('a body with a presence date is absent before it, present after', () => {
+    const before = 2443392.5; // 1977-09-06
+    const after = 2460000.5; // 2023
+    for (const id of ['hubble', 'spirit', 'opportunity', 'curiosity', 'perseverance']) {
+      expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).not.toContain(id);
+      expect(labelIds(before)).not.toContain(`sceneBody-${id}`);
+      expect(viewAt(after).snapshot.meshBodies.map((b) => b.id)).toContain(id);
+      expect(labelIds(after)).toContain(`sceneBody-${id}`);
+    }
+    expect(viewAt(before).snapshot.meshBodies.map((b) => b.id)).toContain('whale');
+  });
+
+  it('presence turns on at the authored instant', () => {
+    const curiosityLanding = Date.parse('2012-08-06T05:17:00Z') / 86_400_000 + 2_440_587.5;
+    const ids = (t: number) => viewAt(t).snapshot.meshBodies.map((b) => b.id);
+    expect(ids(curiosityLanding - 1e-4)).not.toContain('curiosity');
+    expect(ids(curiosityLanding + 1e-4)).toContain('curiosity');
+  });
+
   it('an absent craft is in neither glints nor meshes and has no label', () => {
     expect(drawnIds(T0 + 5)).not.toContain('voyager1');
     expect(labelIds(T0 + 5)).not.toContain('sceneBody-voyager1');
