@@ -348,6 +348,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Above the follow rows (55) so a moving focus cannot pull the camera off the craft, below
     // tween (60) so a visitor's own focus move still wins while `camera.mission` is set.
     priority: 58,
+    epoch: 'mission',
     // Bakes the mission pose, so the next winner does not render the stale pre-exhibit `base`.
     commitsOnEdge: true,
     isActive: (s) => s.camera.mission !== null,

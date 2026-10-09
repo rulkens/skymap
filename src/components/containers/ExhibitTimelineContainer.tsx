@@ -15,12 +15,14 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { playMission } from '../../state/exhibits/playMission';
 import { stepMissionSpeed } from '../../state/exhibits/stepMissionSpeed';
 import { stepToMissionEvent } from '../../state/exhibits/stepToMissionEvent';
-import { selectRateStep, selectTimeState } from '../../state/time/selectors';
+import { selectMissionSpeedIndex } from '../../state/camera/selectors';
+import { selectTimeState } from '../../state/time/selectors';
 import { selectMissionEmphasis } from '../../state/settings/core/orbitTrails/selectors';
 import { setMissionEmphasis } from '../../state/settings/core/orbitTrails/slice';
 import { pause, setSimDays } from '../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { formatMissionSpeed } from '../../utils/exhibits/mission/formatMissionSpeed';
 import { formatSimRate } from '../../utils/time/formatSimRate';
 import { missionProfileRate } from '../../utils/time/missionProfileRate';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
@@ -44,7 +46,6 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   // The axis ends at the wall clock as the exhibit opened; it does not creep.
   const endMs = useMemo(() => Date.now(), []);
 
-  const rateStep = useAppSelector(selectRateStep);
   const { paused, profile } = time;
 
   const read = useCallback(() => {
@@ -79,12 +80,11 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   );
   const onSlower = useCallback(() => dispatch(stepMissionSpeed({ step: -1 })), [dispatch]);
   const onFaster = useCallback(() => dispatch(stepMissionSpeed({ step: 1 })), [dispatch]);
-  // Without a profile the saga's remembered factor is not in the store; both ends stay live.
-  const speedIndex = profile?.speedIndex ?? null;
+  const speedIndex = useAppSelector(selectMissionSpeedIndex) ?? MISSION_SPEEDS.indexOf(1);
+  // Playing, the label is the profile's live speed; otherwise the factor the next run plays at.
   const clock = {
     paused,
-    rateLabel:
-      speed > 0 ? formatSimRate(speed) : time.mode === 'live' ? 'Live' : (rateStep?.label ?? ''),
+    rateLabel: speed > 0 ? formatSimRate(speed) : formatMissionSpeed(MISSION_SPEEDS[speedIndex]!),
     profiled: speed > 0,
     showTime: speed > 0 && speed < SECONDS_PER_DAY,
     atSlowest: speedIndex === 0,

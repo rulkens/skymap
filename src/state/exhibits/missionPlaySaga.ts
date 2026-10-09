@@ -3,6 +3,7 @@
  * end. The pause is conditional on this profile still being on the clock: any visitor time
  * action drops it, and a delayed pause must not freeze a clock the visitor has since started
  * again. The hold loop cancels this saga on its next intent, so a superseded timer never fires.
+ * `settleMs` holds the build back while a scrub stream is still arriving.
  */
 import { delay, put, select } from 'typed-redux-saga';
 
@@ -14,14 +15,26 @@ import { selectTimeState } from '../time/selectors';
 import type { CameraMission } from '../../@types/camera/CameraMission';
 import type { RootState } from '../../store/types';
 
-/** Run pressed within this of the end plays the mission again from launch. */
+/** Run pressed within this of the end plays the mission again from launch (run only, never − / +). */
 const AT_END_DAYS = 1;
 
-export function* missionPlaySaga(mission: CameraMission, speedIndex: number): Generator {
-  const nowMs = performance.now();
+export function* missionPlaySaga(
+  mission: CameraMission,
+  speedIndex: number,
+  options: { readonly replayAtEnd: boolean; readonly settleMs: number },
+): Generator {
   const endDays = unixMsToJulianDays(Date.now());
-  const at = deriveSimDays(yield* select(selectTimeState), nowMs);
-  const from = at >= endDays - AT_END_DAYS ? unixMsToJulianDays(mission.stops[0]!.ms) : at;
+  const at = deriveSimDays(yield* select(selectTimeState), performance.now());
+  if (options.settleMs > 0) {
+    yield* delay(options.settleMs);
+    // A pause that lands in the settle window outranks the scrub that scheduled this.
+    if ((yield* select(selectTimeState)).paused) return;
+  }
+  const from =
+    options.replayAtEnd && at >= endDays - AT_END_DAYS
+      ? unixMsToJulianDays(mission.stops[0]!.ms)
+      : at;
+  const nowMs = performance.now();
   const profile = buildMissionProfile(
     mission.stops,
     mission.craftId,

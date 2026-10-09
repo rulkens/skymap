@@ -34,7 +34,11 @@ import type { Transition } from '../../@types/navigation/Transition';
  */
 const EXHIBIT_SPIN_RATE = -0.0003;
 
-export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator {
+export function* exhibitBodySaga(
+  exhibit: Exhibit,
+  entry: Transition,
+  atLinkedTime = false,
+): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks
@@ -46,7 +50,7 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   yield* put(mergeSnapshot(exhibit.settings));
   const timeline = exhibit.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline');
   if (timeline) {
-    yield* call(missionHoldSaga, exhibit, timeline, entry);
+    yield* call(missionHoldSaga, exhibit, timeline, entry, atLinkedTime);
     return;
   }
 

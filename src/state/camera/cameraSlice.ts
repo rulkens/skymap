@@ -114,6 +114,9 @@ const cameraSlice = createSlice({
     clearMission: (camera) => {
       camera.mission = null;
     },
+    setMissionSpeed: (camera, action: PayloadAction<number>) => {
+      if (camera.mission !== null) camera.mission.speedIndex = action.payload;
+    },
     setMissionOffsets: (camera, action: PayloadAction<MissionOffsets>) => {
       if (camera.mission !== null) camera.mission.offsets = action.payload;
     },
@@ -141,6 +144,7 @@ export const {
   setMission,
   clearMission,
   setMissionOffsets,
+  setMissionSpeed,
 } = cameraSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and

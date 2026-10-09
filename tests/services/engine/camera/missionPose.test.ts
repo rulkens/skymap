@@ -6,6 +6,7 @@ import type { CameraMission } from '../../../../src/@types/camera/CameraMission'
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { MissionEvent } from '../../../../src/@types/missions/MissionEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { MISSION_EASE_MS } from '../../../../src/data/exhibits/mission/missionEaseMs';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { trajectoryRegistry } from '../../../../src/services/bodies/trajectoryRegistry';
@@ -39,12 +40,14 @@ beforeAll(() => {
   });
 });
 
-function missionOf(offsets = { yaw: 0, pitch: 0, zoom: 1 }): CameraMission {
+function missionOf(offsets = { yaw: 0, pitch: 0, zoom: 1 }, retarget = 0): CameraMission {
   return {
     craftId: 'voyager2',
     stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2')),
     cruise: { yaw: voyager.pose.yaw, pitch: voyager.pose.pitch },
     offsets,
+    speedIndex: 2,
+    retarget,
   };
 }
 
@@ -116,5 +119,44 @@ describe('missionPose', () => {
 
   it('emits nothing when the offsets did not change', () => {
     expect(missionPose(ctxAt(missionOf(), tc, 'mission'), null).actions).toBeUndefined();
+  });
+
+  describe('ease after a re-aim', () => {
+    const from = {
+      target: [1e-9, 2e-9, 3e-9] as Vec3,
+      yaw: 1.2,
+      pitch: 0.3,
+      distance: 5e-7,
+    };
+    const eased = (elapsedMs: number) => {
+      const base = ctxAt(missionOf(undefined, 1), tc);
+      const ctx = { ...base, elapsedMs, authoredWorld: from };
+      return worldPose(ctx);
+    };
+    const exact = () => worldPose(ctxAt(missionOf(), tc));
+
+    it('starts on the pose the camera was showing', () => {
+      const pose = eased(0);
+      expect(pose.target).toEqual(from.target);
+      expect(pose.distance).toBeCloseTo(from.distance, 12);
+      expect(pose.yaw).toBeCloseTo(from.yaw, 9);
+    });
+
+    it('is the exact per-frame frame once the ease has run', () => {
+      expect(eased(MISSION_EASE_MS)).toEqual(exact());
+      expect(eased(MISSION_EASE_MS * 5)).toEqual(exact());
+    });
+
+    it('is in between part-way', () => {
+      const mid = eased(MISSION_EASE_MS / 2);
+      const end = exact();
+      expect(mid.distance).toBeGreaterThan(Math.min(from.distance, end.distance));
+      expect(mid.distance).toBeLessThan(Math.max(from.distance, end.distance));
+    });
+
+    it('never eases a mission that has not re-aimed', () => {
+      const ctx = { ...ctxAt(missionOf(), tc), elapsedMs: 0, authoredWorld: from };
+      expect(worldPose(ctx)).toEqual(exact());
+    });
   });
 });

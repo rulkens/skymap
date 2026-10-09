@@ -8,6 +8,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { voyager } from '../../../src/data/exhibits/voyager';
+import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { setMissionOffsets } from '../../../src/state/camera/cameraSlice';
 import { exhibitBodySaga } from '../../../src/state/exhibits/exhibitBodySaga';
@@ -16,7 +17,7 @@ import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { setMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/slice';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { pause, resume, setSimDays } from '../../../src/state/time/timeSlice';
+import { pause, resume, setSimDays, goLive } from '../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
@@ -33,9 +34,12 @@ const tick = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 const eventDays = (id: string) =>
   unixMsToJulianDays(missionEventMs(MISSION_EVENTS.find((e) => e.id === id)!));
 
+let linkedDays = 0;
+
 async function hold(
   entry: Transition = 'cut',
   playClip: Mock<(clip: ClipData) => Promise<void>> = vi.fn().mockResolvedValue(undefined),
+  atLinkedTime = false,
 ) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
@@ -45,10 +49,15 @@ async function hold(
   });
   // Live and running, as the app boots: entry must stop it.
   store.dispatch(resume({ nowMs: performance.now() }));
+  if (atLinkedTime) {
+    const nowMs = performance.now();
+    store.dispatch(setSimDays({ simDays: linkedDays, nowMs }));
+    store.dispatch(pause({ nowMs }));
+  }
   const runtime = { fovYRad: 0.9, aspect: 16 / 9 };
   sagaMiddleware.setContext({ playClip, cameraRuntime: () => runtime });
   sagaMiddleware.run(function* () {
-    yield* exhibitBodySaga(voyager, entry);
+    yield* exhibitBodySaga(voyager, entry, atLinkedTime);
   });
   await tick();
   const step = (eventId: string) =>
@@ -146,7 +155,7 @@ describe('mission hold loop', () => {
     await tick();
     const wall = store.getState().time.profile!.wallMs.at(-1)!;
     store.dispatch(pause({ nowMs: performance.now() }));
-    store.dispatch(resume({ nowMs: performance.now() }));
+    store.dispatch(goLive({ simDays: eventDays('voyager1-jupiter'), nowMs: performance.now() }));
     await tick(wall + 100);
     expect(store.getState().time.paused).toBe(false);
   });
@@ -158,5 +167,125 @@ describe('mission hold loop', () => {
     store.dispatch(exitTakeover());
     await tick();
     expect(store.getState().camera.mission).toBeNull();
+  });
+
+  describe('review fixes', () => {
+    const never = () => vi.fn<(clip: ClipData) => Promise<void>>(() => new Promise(() => {}));
+
+    it('a tab click during the fly-in switches the followed craft', async () => {
+      const { store } = await hold('fly', never());
+      store.dispatch(setMissionEmphasis('voyager2'));
+      await tick();
+      expect(store.getState().camera.mission?.craftId).toBe('voyager2');
+    });
+
+    it('run, speed and a flyby step during the fly-in take effect', async () => {
+      const { store, step } = await hold('fly', never());
+      store.dispatch(playMission());
+      await tick();
+      expect(store.getState().time.profile).not.toBeNull();
+      store.dispatch(stepMissionSpeed({ step: 1 }));
+      await tick();
+      expect(store.getState().camera.mission?.speedIndex).toBe(MISSION_SPEEDS.indexOf(1) + 1);
+      step('voyager1-jupiter');
+      await tick();
+      expect(store.getState().time.profile).not.toBeNull();
+    });
+
+    it('a resume from outside the exhibit UI plays the mission profile', async () => {
+      const { store } = await hold();
+      store.dispatch(resume({ nowMs: performance.now() }));
+      await tick();
+      expect(store.getState().time.profile).not.toBeNull();
+      expect(store.getState().time.paused).toBe(false);
+    });
+
+    it('a scrub while playing keeps playing the profile from the scrubbed instant', async () => {
+      const { store, simDays } = await hold();
+      store.dispatch(playMission());
+      await tick(500);
+      const to = eventDays('voyager1-saturn');
+      store.dispatch(setSimDays({ simDays: to, nowMs: performance.now() }));
+      await tick(1000);
+      const s = store.getState();
+      expect(s.time.paused).toBe(false);
+      expect(s.time.profile).not.toBeNull();
+      expect(s.time.profile!.simDays[0]).toBeCloseTo(to, 6);
+      expect(simDays()).toBeGreaterThan(to);
+    });
+
+    it('a scrub while paused stays paused', async () => {
+      const { store } = await hold();
+      store.dispatch(
+        setSimDays({ simDays: eventDays('voyager1-saturn'), nowMs: performance.now() }),
+      );
+      await tick(1000);
+      expect(store.getState().time.profile).toBeNull();
+    });
+
+    it('opens with the speed factor in the store, and − / + while paused only change it', async () => {
+      const { store, simDays } = await hold();
+      const at = simDays();
+      expect(store.getState().camera.mission?.speedIndex).toBe(MISSION_SPEEDS.indexOf(1));
+      store.dispatch(stepMissionSpeed({ step: 1 }));
+      await tick(1000);
+      const s = store.getState();
+      expect(s.camera.mission?.speedIndex).toBe(MISSION_SPEEDS.indexOf(1) + 1);
+      expect(s.time.paused).toBe(true);
+      expect(s.time.profile).toBeNull();
+      expect(simDays()).toBeCloseTo(at, 9);
+    });
+
+    it('the speed factor stops at the ladder ends and survives a step', async () => {
+      const { store, step } = await hold();
+      for (let i = 0; i < 9; i++) store.dispatch(stepMissionSpeed({ step: -1 }));
+      await tick();
+      expect(store.getState().camera.mission?.speedIndex).toBe(0);
+      step('voyager1-pale-blue-dot');
+      await tick();
+      expect(store.getState().camera.mission?.speedIndex).toBe(0);
+    });
+
+    it('− / + at the end of the mission leave the clock at now; only run replays', async () => {
+      const { store, simDays } = await hold();
+      store.dispatch(playMission());
+      await tick();
+      await tick(store.getState().time.profile!.wallMs.at(-1)! + 100);
+      const end = simDays();
+      store.dispatch(stepMissionSpeed({ step: 1 }));
+      await tick(1000);
+      expect(simDays()).toBeCloseTo(end, 9);
+      expect(store.getState().time.profile).toBeNull();
+      store.dispatch(playMission());
+      await tick();
+      expect(store.getState().time.profile!.simDays[0]).toBeCloseTo(
+        eventDays('voyager1-launch'),
+        9,
+      );
+    });
+
+    it('a linked time wins over the launch, clamped up to it', async () => {
+      linkedDays = eventDays('voyager1-jupiter') + 3;
+      const { simDays } = await hold('cut', undefined, true);
+      expect(simDays()).toBeCloseTo(linkedDays, 9);
+    });
+
+    it('a linked time before the launch lands on the launch', async () => {
+      linkedDays = eventDays('voyager1-launch') - 100;
+      const { simDays } = await hold('cut', undefined, true);
+      expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
+    });
+
+    it('a step and a tab switch re-aim the camera with an ease', async () => {
+      const { store, step } = await hold();
+      const before = store.getState().camera.mission!.retarget;
+      step('voyager1-pale-blue-dot');
+      await tick();
+      const afterStep = store.getState().camera.mission!.retarget;
+      expect(afterStep).toBeGreaterThan(before);
+      store.dispatch(setMissionEmphasis('voyager2'));
+      await tick();
+      expect(store.getState().camera.mission!.retarget).toBeGreaterThan(afterStep);
+    });
   });
 });

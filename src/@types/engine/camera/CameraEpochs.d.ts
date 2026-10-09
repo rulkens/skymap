@@ -16,4 +16,6 @@ export type CameraEpochs = {
   readonly autoRotate: Epoch<FramedCameraPose>;
   readonly follow: Epoch<SelectionRow>;
   readonly clip: Epoch<NonNullable<CameraState['clip']>>;
+  /** Ref: the mission's `retarget` count, so a step or craft switch restarts the ease. */
+  readonly mission: Epoch<number>;
 };

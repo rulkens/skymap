@@ -18,10 +18,21 @@ import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { pause, resume, setSimDays, startMissionProfile } from '../../../src/state/time/timeSlice';
+import { setMission } from '../../../src/state/camera/cameraSlice';
+import type { CameraMission } from '../../../src/@types/camera/CameraMission';
 import { voyager } from '../../../src/data/exhibits/voyager';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineSection } from '../../../src/@types/exhibits/ExhibitTimelineSection';
+
+const missionAt = (speedIndex: number): CameraMission => ({
+  craftId: 'voyager1',
+  stops: [],
+  cruise: { yaw: 0, pitch: 0 },
+  offsets: { yaw: 0, pitch: 0, zoom: 1 },
+  speedIndex,
+  retarget: 0,
+});
 
 const section = voyager.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline')!;
 
@@ -133,10 +144,31 @@ describe('ExhibitTimelineContainer', () => {
     expect(stepped().map((a) => a.type)).toEqual([setSimDays.type]);
   });
 
+  it('paused, the rate slot reads the speed factor from the store; the ends disable', () => {
+    const store = mount('1989-08-26');
+    act(() => {
+      store.dispatch(pause({ nowMs: performance.now() }));
+      store.dispatch(setMission(missionAt(2)));
+    });
+    expect(screen.getByText('1×')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Slower' })).toBeEnabled();
+    act(() => {
+      store.dispatch(setMission(missionAt(0)));
+    });
+    expect(screen.getByText('¼×')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Slower' })).toBeDisabled();
+    act(() => {
+      store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));
+    });
+    expect(screen.getByText('4×')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Faster' })).toBeDisabled();
+  });
+
   it('reads a playing profile’s live speed, with the time of day under a day per second', () => {
     const store = mount('1989-08-24');
     const start = performance.now();
     act(() => {
+      store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));
       store.dispatch(
         startMissionProfile({
           profile: {

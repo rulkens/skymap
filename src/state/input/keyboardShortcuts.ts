@@ -29,6 +29,8 @@ import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
 import { selectSelectedRef } from '../selection/selectors';
 import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
+import { selectTimelineEvents } from '../exhibits/selectTimelineEvents';
+import { stepMissionSpeed } from '../exhibits/stepMissionSpeed';
 import { stepTimelineEvent } from '../exhibits/stepTimelineEvent';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
@@ -38,7 +40,13 @@ import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSl
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setRate } from '../time/timeSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
+import type { RootState } from '../../store/types';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+
+const stepSpeed = (s: RootState, step: -1 | 1) =>
+  selectTimelineEvents(s) !== null
+    ? stepMissionSpeed({ step })
+    : setRate({ rateIndex: stepRate(s, step), nowMs: performance.now() });
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'command+k,ctrl+k', run: () => setPaletteOpen(true), preventDefault: true },
@@ -61,8 +69,9 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },
   { keys: 'l', run: () => logCameraState() },
   { keys: 'd', run: () => toggleDebugPanelOpen() },
-  { keys: '[', run: (s) => setRate({ rateIndex: stepRate(s, -1), nowMs: performance.now() }) },
-  { keys: ']', run: (s) => setRate({ rateIndex: stepRate(s, +1), nowMs: performance.now() }) },
+  // A timeline exhibit shows the mission speed factor, not the ladder, so these step that.
+  { keys: '[', run: (s) => stepSpeed(s, -1) },
+  { keys: ']', run: (s) => stepSpeed(s, +1) },
   {
     keys: '\\',
     run: (s) =>

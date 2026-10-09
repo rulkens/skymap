@@ -56,7 +56,6 @@ function TimelineTrack({
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
   const thumb = timelineFraction(simMs, axis);
   const firstMs = stops[0]!.ms;
-  const pastNow = simMs > endMs + DAY_MS;
   const seek = (ms: number) => onSeekMs(Math.min(endMs, Math.max(firstMs, ms)));
   // Each event's left edge: its stop's boundary, nudged apart from the stop's other events.
   const dotLeft = new Map(
@@ -171,9 +170,6 @@ function TimelineTrack({
         <div className={styles.thumb} style={{ left: pct(thumb) }}>
           <span className={styles.knob} />
         </div>
-        {pastNow ? (
-          <span className={styles.beyond}>→ {new Date(simMs).getUTCFullYear()}</span>
-        ) : null}
         <div className={styles.axis} aria-hidden="true">
           {labels.map((label) => (
             <span

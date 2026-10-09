@@ -156,7 +156,9 @@ export function* navigateSaga(
       if (!isKeyOf(exhibitRegistry, view.id)) return UNKNOWN_ID;
       // The fitted pose reads the live lens, so the cut waits for it.
       yield* call(liveCameraRuntimeSaga);
-      yield* put(openExhibit({ id: view.id, entry: transition }));
+      yield* put(
+        openExhibit({ id: view.id, entry: transition, atLinkedTime: intent.t !== undefined }),
+      );
       return OK;
     case 'tour':
       if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;

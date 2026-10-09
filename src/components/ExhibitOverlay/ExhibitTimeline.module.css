@@ -127,16 +127,6 @@
   background: #fff;
 }
 
-.beyond {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-family: var(--font-family-mono);
-  font-size: 9px;
-  pointer-events: none;
-  color: var(--color-accent);
-}
-
 .axis {
   position: absolute;
   inset: auto 0 2px 0;
@@ -328,10 +318,10 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .pulse {
-    animation: ridePulse 1.2s infinite;
+    animation: pulse 1.2s infinite;
   }
 }
-@keyframes ridePulse {
+@keyframes pulse {
   50% {
     opacity: 0.2;
   }
