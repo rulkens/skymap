@@ -56,7 +56,7 @@ export function produceStructureMarkers(
   const camDistMpc = Math.hypot(cx, cy, cz);
 
   // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked); focused → the
-  // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
+  // "every OTHER ring recedes" mode (structure-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
   const selectedStructureId = structureIdOf(state.selection.select);
   const hoveredStructureId = structureIdOf(state.selection.hover);

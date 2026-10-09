@@ -1,6 +1,6 @@
 /**
- * Per-category display metadata for label-bearing sources (cluster,
- * supercluster, void, group, famousGalaxy, famousStar, earth, planet, sun,
+ * Per-category display metadata for label-bearing sources (galaxy-cluster,
+ * supercluster, void, galaxy-group, famousGalaxy, famousStar, earth, planet, sun,
  * milkyWay).  Keyed by `LabelCategory`.
  *
  * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true` — the
@@ -41,8 +41,8 @@ function buildDisplayInfo(): Readonly<Record<LabelCategory, CategoryDisplayInfo>
  *
  * Field semantics:
  *   - `label`      — long form for detail surfaces ('Galaxy Cluster')
- *   - `shortLabel` — compact form for chips ('Cluster')
- *   - `plural`     — plural for list/toggle headers ('Clusters')
+ *   - `shortLabel` — compact form for chips ('Galaxy cluster')
+ *   - `plural`     — plural for list/toggle headers ('Galaxy clusters')
  */
 export const CATEGORY_DISPLAY_INFO: Readonly<Record<LabelCategory, CategoryDisplayInfo>> =
   buildDisplayInfo();

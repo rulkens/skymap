@@ -29,10 +29,10 @@
  *   - The `physicalRadiusMpc` carry-through, which downstream consumers
  *     (cone-search, ring sizing) rely on.
  *
- *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
- *     designation lands on the cluster arm alone (the `StructureInfo`
+ *   - The galaxy-cluster-only `abell` carry-through: the seed's Abell/ACO
+ *     designation lands on the galaxy-cluster arm alone (the `StructureInfo`
  *     union has no `abell` field on the supercluster/void/group arms), so
- *     the field never leaks onto a non-cluster anchor.
+ *     the field never leaks onto any other anchor.
  *
  * ### Pure
  *
@@ -111,7 +111,7 @@ function buildAnchorStructure(a: SeedEntry): StructureInfo {
   } as const;
   switch (a.category) {
     case 'galaxy-cluster':
-      // `abell` lives on the cluster arm alone.  Spread it in only when the
+      // `abell` lives on the galaxy-cluster arm alone.  Spread it in only when the
       // seed carries one so the key is absent (not `abell: undefined`) for
       // clusters with no Abell number, e.g. Virgo.
       return {

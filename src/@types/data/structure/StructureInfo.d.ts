@@ -10,11 +10,11 @@
  *
  * ### Why a discriminated union on `category`
  *
- * Clusters alone carry an Abell/ACO designation.  Modelling the record as a
- * flat shape with `abell?` optional would let a supercluster, void, or group
+ * Galaxy clusters alone carry an Abell/ACO designation.  Modelling the record as a
+ * flat shape with `abell?` optional would let a supercluster, void, or galaxy group
  * literal silently carry one.  Splitting on `category` (`StructureId`)
- * makes `abell` exist only on the cluster arm — consumers must narrow on
- * `category` before reading it, and a producer can't build a void or group
+ * makes `abell` exist only on the galaxy-cluster arm — consumers must narrow on
+ * `category` before reading it, and a producer can't build a void or galaxy group
  * with an Abell number.  The shared structure fields live on `StructureBase`
  * so the four arms stay in lockstep.
  */
@@ -26,7 +26,7 @@ import type { NebulaKind } from './NebulaKind';
  * Fields every structure record carries regardless of category.  Two distinct
  * axes live here: `type` is the focusable-union tag (the parallel of a galaxy's
  * `'galaxyCatalog'` tag) and is the same for every arm; `category` is the
- * structure sub-kind (cluster / supercluster / void / group, the parallel of a
+ * structure sub-kind (galaxy cluster / supercluster / void / galaxy group / …, the parallel of a
  * `GalaxyCatalogId`) and is added per-arm below so each arm's literal pins a
  * single discriminant.
  */
@@ -79,12 +79,12 @@ type StructureBase = {
 };
 
 /** A galaxy cluster.  Clusters alone carry an Abell/ACO designation. */
-type ClusterRecord = StructureBase & {
+type GalaxyClusterRecord = StructureBase & {
   readonly category: 'galaxy-cluster';
   /**
    * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
    * surfaced for the InfoCard.  Omitted when the cluster has no Abell number
-   * (e.g. Virgo).  Lives on the cluster arm only — superclusters and voids
+   * (e.g. Virgo).  Lives on the galaxy-cluster arm only — superclusters and voids
    * never have one.
    */
   readonly abell?: string;
@@ -106,7 +106,7 @@ type VoidRecord = StructureBase & {
  * hand-curated anchors rather than catalog-derived; they carry only the
  * shared `StructureBase` fields, just like voids.
  */
-type GroupRecord = StructureBase & {
+type GalaxyGroupRecord = StructureBase & {
   readonly category: 'galaxy-group';
 };
 
@@ -132,10 +132,10 @@ type GcClusterRecord = StructureBase & {
  * galaxies are not structures and are absent from this union.
  */
 export type StructureInfo =
-  | ClusterRecord
+  | GalaxyClusterRecord
   | SuperclusterRecord
   | VoidRecord
-  | GroupRecord
+  | GalaxyGroupRecord
   | OpenClusterRecord
   | GlobularClusterRecord
   | NebulaRecord

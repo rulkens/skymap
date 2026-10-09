@@ -84,7 +84,7 @@ type Init = {
    */
   targetFormat: GPUTextureFormat;
   canvas: HTMLCanvasElement;
-  /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
+  /** Shared structure-focus layout, bound at @group(1) — see instancedQuadRenderer. */
   focusBgl: FocusUniformsBgl;
   /**
    * Selects the COSMO slab's depth convention (single-sourced in

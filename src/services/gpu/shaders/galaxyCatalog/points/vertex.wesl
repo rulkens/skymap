@@ -67,7 +67,7 @@ import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
-// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+// ── @group(3) — structure-focus uniform (single shared binding) ───────
 //
 // One POI is focused at a time, so this is a single global binding (not
 // per-source like fade). 'focusAlphaMultiplier' folds a membership-based
@@ -201,7 +201,7 @@ fn vs(
   //               × schechterRatio (mode 3: Schechter LF)
   //               × angularReweight (mode 4: HEALPix)
   //               × crossfadeOut   (procedural-disk handoff band)
-  //               × focusMult      (cluster-focus dim)
+  //               × focusMult      (structure-focus dim)
   //
   // The old apparent-magnitude clamp is gone: p.sbAmp is the baked physical
   // surface-brightness amplitude and u.galaxySbScale is the live HDR gain that
