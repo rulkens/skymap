@@ -4,7 +4,7 @@ import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusU
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
 import { produceFamousGalaxyLabels } from '../../../../src/layers/galaxyCatalog/present/produceFamousGalaxyLabels';
-import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import {
   LEADER_LINE_PADDING_PX,
@@ -332,7 +332,7 @@ describe('produceFamousGalaxyLabels', () => {
   });
 
   it('famous labels recede uniformly at blend > 0', () => {
-    // No per-member exemption: every famous label is scaled by LABEL_RECESSION
+    // No per-member exemption: every famous label is scaled by MILD_RECESSION
     // at full blend (there is no focused-famous-structure path here).
     const atRest = makeState();
     const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
@@ -346,7 +346,7 @@ describe('produceFamousGalaxyLabels', () => {
       makeCtx({ focusBlend: 1 }),
     ).labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
+    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
   });
 
   it('focusedOnly mode: emits only the focused famous galaxy', () => {

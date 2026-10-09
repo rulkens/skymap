@@ -35,7 +35,7 @@ export function filamentsPass(runtime: CosmicWebFilamentsRuntime): ContentPass {
         FILAMENT_LINE_HALFWIDTH_PX,
         state.settings.cosmicWebFilaments.intensity,
         // Focus recession is applied HERE (on the drawn opacity), not on the
-        // `enabled` gate above: recession ∈ [SCENERY_RECESSION, 1] can never
+        // `enabled` gate above: recession ∈ [STRONG_RECESSION, 1] can never
         // zero the layer, so the gate keeps reading the pure toggle opacity.
         resolveLayerOpacity(state, ctx, { kind: 'cosmicWebFilaments' }),
         FILAMENT_BASE_TINT,

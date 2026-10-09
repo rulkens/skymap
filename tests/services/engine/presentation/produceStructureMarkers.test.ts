@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../src/services/engine/presentation/produceStructureMarkers';
-import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
@@ -192,9 +192,9 @@ describe('produceStructureMarkers', () => {
     const focused = produceStructureMarkers(state, makeCtx(1));
     const bRest = rest.find((m) => m.id === 'b')!;
     const bFoc = focused.find((m) => m.id === 'b')!;
-    // Non-focused 'b' recedes to MARKER_RECESSION of its at-rest alpha at blend 1.
-    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MARKER_RECESSION, 6);
-    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MARKER_RECESSION, 6);
+    // Non-focused 'b' recedes to MILD_RECESSION of its at-rest alpha at blend 1.
+    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MILD_RECESSION, 6);
+    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MILD_RECESSION, 6);
   });
 
   it('focused marker is exempt from recession', () => {

@@ -145,7 +145,7 @@ export function produceStructureMarkers(
     const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
 
     // Focus mode: while some structure is FOCUSED, every OTHER marker
-    // smoothly recedes toward MARKER_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
+    // smoothly recedes toward MILD_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
     // focused structure is exempt (factor 1) — a faded ring never carries a
     // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.
     const isSelected = p.id === selectedStructureId;

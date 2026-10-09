@@ -2,7 +2,7 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structure
 import { describe, expect, it, vi } from 'vitest';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import { produceStructureLabels } from '../../../../src/services/engine/presentation/produceStructureLabels';
-import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -235,7 +235,7 @@ describe('produceStructureLabels', () => {
   });
 
   it('non-focused label recedes at blend > 0', () => {
-    // No focus, full blend → the label's fadeAlpha is scaled by LABEL_RECESSION.
+    // No focus, full blend → the label's fadeAlpha is scaled by MILD_RECESSION.
     const atRest = makeState();
     atRest.data.structures.setGroup('anchors', [rec('a')]);
     const atRestAlpha = produceStructureLabels(atRest, makeCtx(), 'cosmic').labels[0]!.fadeAlpha!;
@@ -245,7 +245,7 @@ describe('produceStructureLabels', () => {
     const recededAlpha = produceStructureLabels(focused, makeCtx({ focusBlend: 1 }), 'cosmic')
       .labels[0]!.fadeAlpha!;
 
-    expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
+    expect(recededAlpha).toBeCloseTo(atRestAlpha * MILD_RECESSION, 6);
   });
 
   it('focused structure label is exempt from recession', () => {

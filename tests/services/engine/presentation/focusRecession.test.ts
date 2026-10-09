@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  SCENERY_RECESSION,
+  STRONG_RECESSION,
   focusRecession,
-  LABEL_RECESSION,
+  MILD_RECESSION,
   resolveLayerOpacity,
 } from '../../../../src/services/engine/presentation/focusRecession';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -44,7 +44,7 @@ function makeClipPlayer(factor: number): ClipPlayer {
 
 describe('focusRecession', () => {
   it('returns the exact target for a tagged handle at blend 1', () => {
-    expect(focusRecession({ kind: 'cosmicWebFilaments' }, 1)).toBe(SCENERY_RECESSION);
+    expect(focusRecession({ kind: 'cosmicWebFilaments' }, 1)).toBe(STRONG_RECESSION);
   });
 });
 
@@ -58,10 +58,10 @@ describe('resolveLayerOpacity', () => {
     fades.fadeTo(handle, 0.5, 0, 0);
 
     const state = makeState(fades, makeClipPlayer(1));
-    // toggle 0.5 × recession (full focus → SCENERY_RECESSION) × clip 1.
+    // toggle 0.5 × recession (full focus → STRONG_RECESSION) × clip 1.
     expect(
       resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
-    ).toBe(0.5 * SCENERY_RECESSION);
+    ).toBe(0.5 * STRONG_RECESSION);
   });
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {

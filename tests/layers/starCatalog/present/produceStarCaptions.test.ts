@@ -23,7 +23,7 @@ import {
   unpackPick,
   PICK_SENTINEL_OFFSET,
 } from '../../../../src/data/selectionEncoding';
-import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { MILD_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { Source } from '../../../../src/data/source';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { StarRowFixture } from '../../../support/selectionResolverOver';
@@ -122,7 +122,7 @@ describe('produceStarCaptions', () => {
       fadeAlphaOf(produceStarCaptions()(makeState(), makeCtx(EARTH_POS, blend)).labels, PROXIMA_ID);
     const full = alphaAt(0)!;
     expect(full).toBeGreaterThan(0);
-    expect(alphaAt(1)).toBeCloseTo(full * LABEL_RECESSION, 10);
+    expect(alphaAt(1)).toBeCloseTo(full * MILD_RECESSION, 10);
   });
 
   it('captions every drawn famous star and the Sun with their kinds, and no S-star', () => {
