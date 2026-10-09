@@ -1,7 +1,7 @@
 /**
- * voyager — both Voyagers from launch to today: their full trails, framed whole, and a
- * mission timeline that sets the clock. The event times and flyby
- * distances are measured, in `MISSION_EVENTS`.
+ * voyager — both Voyagers from launch to today: their full trails and a mission timeline whose
+ * camera follows the selected craft (`missionHoldSaga`). The event times and flyby distances
+ * are measured, in `MISSION_EVENTS`.
  */
 
 import { initialState as orbitTrailsInitialState } from '../../state/settings/core/orbitTrails/initialState';
@@ -13,17 +13,14 @@ import type { Exhibit } from '../../@types/exhibits/Exhibit';
 /** Held down so the trails read against the sky, as in the solar-system exhibit. */
 const STARFIELD_BRIGHTNESS = 0.3;
 
-/**
- * The whole mission: Voyager 1 is about 172 AU out and the sphere that fits both
- * trails is a little larger. A flyby's bend is sub-pixel at this scale; the timeline
- * says when it happened, the visitor zooms in to see how.
- */
+/** The sphere that fits both whole trails (Voyager 1 is about 172 AU out). */
 const FRAMING_RADIUS_AU = 190;
 
 /**
  * Looking along the cross product of the two craft's outbound headings (2026), so both
  * trails lie across the view and the fork reads as a split rather than foreshortened.
  * Derived through `orbitAnglesLookingAlong`; pitch is lifted from the exact 6° to 15°.
+ * The mission camera's cruise view takes this bearing.
  */
 const YAW = -1.9305;
 const PITCH = 0.26;
@@ -46,9 +43,6 @@ export const voyager: Exhibit = {
       },
     },
   },
-  // The mission clock already moves the scene; a turning camera distracts from it.
-  drift: false,
-  fitRadiusMpc: FRAMING_RADIUS_AU * SCALE_UNITS.AU_TO_MPC,
   pose: {
     target: [0, 0, 0],
     yaw: YAW,
@@ -69,10 +63,6 @@ export const voyager: Exhibit = {
       crafts: [
         { bodyId: 'voyager1' },
         { bodyId: 'voyager2' },
-      ],
-      eras: [
-        { label: 'Planetary · 1977–1989', fromIso: '1977-08-20' },
-        { label: 'Interstellar · 1990–now', fromIso: '1990-01-01' },
       ],
     },
     {

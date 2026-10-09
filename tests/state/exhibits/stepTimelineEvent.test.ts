@@ -5,6 +5,7 @@ import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/k
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
+import { missionEventStepMs } from '../../../src/utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { RootState } from '../../../src/store/types';
 
@@ -13,10 +14,8 @@ const stateAt = (
   iso: string,
   exhibit: 'voyager' | 'solarSystem' | null,
   emphasis: string | null = null,
-  ride: string | null = null,
 ): RootState =>
   ({
-    camera: { ride: ride ? { eventId: ride } : null },
     settings: { orbitTrails: { enabled: true, emphasis } },
     takeover: { active: exhibit ? { kind: 'exhibit', id: exhibit, entry: 'cut' } : null },
     time: {
@@ -62,27 +61,42 @@ describe('stepTimelineEvent', () => {
 describe('stepTimelineEvent with a craft emphasised', () => {
   it("steps only through that craft's events", () => {
     const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
-    const state = stateAt(v2[1]!.iso, 'voyager', 'voyager2');
+    // Where a step to Jupiter lands: two days before closest approach.
+    const state = stateAt(
+      new Date(missionEventStepMs(v2[1]!)).toISOString(),
+      'voyager',
+      'voyager2',
+    );
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v2[2]!));
     expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v2[0]!));
     expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager', 'voyager2'), 1)).toBeNull();
   });
 });
 
-describe('stepTimelineEvent while riding', () => {
-  it('steps from the ridden event though the clock still sits before it', () => {
+describe('stepTimelineEvent from a flyby step', () => {
+  const rewound = (event: (typeof SAVED)[number], emphasis: string) => {
+    const state = stateAt(event.iso, 'voyager', emphasis);
+    const { anchor } = state.time;
+    return {
+      ...state,
+      time: { ...state.time, anchor: { ...anchor, simDays: anchor.simDays - 2 } },
+    };
+  };
+
+  it('steps from the flyby itself though the clock sits two days before it', () => {
     const v2 = SAVED.filter((e) => e.bodyId === 'voyager2');
     const at = v2.findIndex((e) => e.id === 'voyager2-neptune');
-    const state = stateAt(v2[at]!.iso, 'voyager', 'voyager2', 'voyager2-neptune');
-    const rewound = {
-      ...state,
-      time: {
-        ...state.time,
-        anchor: { ...state.time.anchor, simDays: state.time.anchor.simDays - 2 },
-      },
-    } as RootState;
-    expect(stepTimelineEvent(rewound, -1)).toEqual(stepsTo(v2[at - 1]!));
-    expect(stepTimelineEvent(rewound, 1)).toEqual(stepsTo(v2[at + 1]!));
+    const state = rewound(v2[at]!, 'voyager2') as RootState;
+    expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v2[at - 1]!));
+    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v2[at + 1]!));
+  });
+
+  it('steps from Saturn to the next stop, not back onto Titan 18 h before it', () => {
+    const v1 = SAVED.filter((e) => e.bodyId === 'voyager1');
+    const saturn = v1.findIndex((e) => e.id === 'voyager1-saturn');
+    const state = rewound(v1[saturn]!, 'voyager1') as RootState;
+    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v1[saturn + 1]!));
+    expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v1[saturn - 1]!));
   });
 });
 

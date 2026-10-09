@@ -1,45 +1,38 @@
 import { describe, it, expect } from 'vitest';
 
+import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
+import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { timelineAxis } from '../../../../src/utils/exhibits/timeline/timelineAxis';
 import { timelineFraction } from '../../../../src/utils/exhibits/timeline/timelineFraction';
 import { timelineInstant } from '../../../../src/utils/exhibits/timeline/timelineInstant';
 
 const END = Date.parse('2026-10-06');
-const ERAS = [
-  { label: 'Planetary', fromIso: '1977-08-20' },
-  { label: 'Interstellar', fromIso: '1990-01-01' },
-];
-const axis = timelineAxis(ERAS, END);
+const v1 = MISSION_EVENTS.filter((e) => e.bodyId === 'voyager1');
+const stops = missionStops(v1);
+const axis = timelineAxis(stops, END);
+const at = (id: string) => Date.parse(v1.find((e) => e.id === id)!.iso);
 
-describe('era-split timeline axis', () => {
-  it('puts the era boundary at the middle of the track and the ends at 0 and 1', () => {
-    expect(timelineFraction(Date.parse('1977-08-20'), axis)).toBe(0);
-    expect(timelineFraction(Date.parse('1990-01-01'), axis)).toBeCloseTo(0.5, 12);
-    expect(timelineFraction(END, axis)).toBe(1);
+describe('equal-leg mission axis', () => {
+  it('merges Titan and Saturn into one stop, so they share one boundary', () => {
+    const merged = stops.find((s) => s.events.some((e) => e.id === 'voyager1-titan'))!;
+    expect(merged.events.map((e) => e.id)).toEqual(['voyager1-titan', 'voyager1-saturn']);
+    expect(merged.planetId).toBe('saturn');
+    expect(axis.boundsMs).toHaveLength(v1.length); // 8 events − 1 merge + the end
   });
 
-  it('is monotone across the era break and clamps outside the span', () => {
-    const isos = [
-      '1976-01-01',
-      '1977-10-01',
-      '1980-01-01',
-      '1989-12-31',
-      '1990-01-02',
-      '2000-01-01',
-      '2020-01-01',
-      '2026-10-01',
-      '2030-01-01',
-    ];
-    const fractions = isos.map((iso) => timelineFraction(Date.parse(iso), axis));
-    for (let i = 1; i < fractions.length; i++) {
-      expect(fractions[i]!).toBeGreaterThanOrEqual(fractions[i - 1]!);
-    }
-    expect(fractions[0]).toBe(0);
-    expect(fractions.at(-1)).toBe(1);
+  it('gives every leg the same width, the last (to now) included', () => {
+    const legs = axis.boundsMs.length - 1;
+    axis.boundsMs.forEach((ms, i) => expect(timelineFraction(ms, axis)).toBeCloseTo(i / legs, 12));
   });
 
-  it('timelineInstant inverts timelineFraction on both sides of the break', () => {
-    for (const iso of ['1979-03-05', '1989-08-25', '1990-02-14', '2012-08-25']) {
+  it('clamps at launch and at now', () => {
+    expect(timelineFraction(at('voyager1-launch') - 1e9, axis)).toBe(0);
+    expect(timelineInstant(-0.2, axis)).toBe(at('voyager1-launch'));
+    expect(timelineInstant(1.2, axis)).toBe(END);
+  });
+
+  it('timelineInstant inverts timelineFraction inside every leg', () => {
+    for (const iso of ['1978-01-01', '1980-01-01', '1985-01-01', '2000-01-01', '2020-01-01']) {
       const ms = Date.parse(iso);
       expect(timelineInstant(timelineFraction(ms, axis), axis)).toBeCloseTo(ms, -1);
     }

@@ -31,7 +31,7 @@ export type CameraDriver = {
   readonly deliversFraming?: boolean;
   isActive(s: RootState, activity: DriverActivity): boolean;
   // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
-  // `actions` is for a row that reads its own state back off the camera (the ride's offsets).
+  // `actions` is for a row that reads its own state back off the camera (the mission's offsets).
   pose(
     ctx: DriverCtx,
     mem: FollowMemory | null,

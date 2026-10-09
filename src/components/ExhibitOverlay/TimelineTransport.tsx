@@ -1,7 +1,7 @@
 /**
  * TimelineTransport — the exhibit clock as one pill: previous event, run/pause, the sim date,
- * a slower/faster rate pair and next event. The time of day shows only on a ridden flyby;
- * while a ride profile drives the clock the rate slot reads its live speed instead of a detent.
+ * a slower/faster speed pair and next event. While a mission profile drives the clock the rate
+ * slot reads its live speed, and the time of day shows once that is under a day per second.
  */
 
 import type { ReactNode } from 'react';
@@ -15,8 +15,6 @@ import styles from './ExhibitTimeline.module.css';
 export type TimelineTransportProps = {
   readonly simMs: number;
   readonly clock: ExhibitTimelineClock;
-  /** Show the time of day under the date (a flyby is being ridden). */
-  readonly showTime: boolean;
   readonly onPrev: (() => void) | null;
   readonly onNext: (() => void) | null;
   readonly onPlayPause: () => void;
@@ -27,7 +25,6 @@ export type TimelineTransportProps = {
 function TimelineTransport({
   simMs,
   clock,
-  showTime,
   onPrev,
   onNext,
   onPlayPause,
@@ -69,7 +66,7 @@ function TimelineTransport({
       </button>
       <div className={styles.when}>
         <span className={styles.whenDate}>{formatClockDate(simMs)}</span>
-        {showTime ? <span className={styles.whenTime}>{formatClockTime(simMs)}</span> : null}
+        {clock.showTime ? <span className={styles.whenTime}>{formatClockTime(simMs)}</span> : null}
       </div>
       <div className={styles.rate}>
         <button
@@ -84,7 +81,7 @@ function TimelineTransport({
           </svg>
         </button>
         <b className={styles.rateLabel}>
-          {clock.riding ? <i className={styles.pulse} /> : null}
+          {clock.profiled ? <i className={styles.pulse} /> : null}
           {clock.rateLabel}
         </b>
         <button

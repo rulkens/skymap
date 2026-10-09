@@ -141,18 +141,6 @@ describe('exhibitBodySaga', () => {
     expect(store.getState().camera.autoRotate).toEqual(before);
   });
 
-  it('holds the camera still when the exhibit sets drift: false', async () => {
-    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
-    const { store, sagaMiddleware } = buildStore(playClip);
-
-    sagaMiddleware.run(function* () {
-      yield* exhibitBodySaga({ ...EXHIBIT, drift: false }, 'fly');
-    });
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(store.getState().camera.autoRotate.active).toBe(false);
-  });
-
   it('hands the spin back when the takeover is superseded mid-hold', async () => {
     // Supersede cancels the body from outside rather than dispatching
     // exitTakeover — the restore rides a `finally` so both paths wind back.

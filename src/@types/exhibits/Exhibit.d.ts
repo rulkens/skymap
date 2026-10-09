@@ -19,9 +19,6 @@ export type Exhibit = {
   /** When set, `pose.distance` is re-derived at fly time so a sphere of this
    *  radius fits the live viewport — see `sphereFitDistance`. */
   fitRadiusMpc?: number;
-  /** `false` holds the camera still; the ambient yaw drift competes with an exhibit whose
-   *  clock already moves the scene. Absent = drift on. */
-  drift?: false;
   /** The italic line under the title — the exhibit's one-sentence claim. */
   lede: string;
   body: readonly ExhibitSection[];

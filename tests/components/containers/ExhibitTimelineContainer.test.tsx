@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // ExhibitTimelineContainer: the timeline shows one craft's event card and transport row, the tabs
-// write the store's emphasis, and a dot click seeks without pausing the clock.
+// write the store's emphasis, and a dot click steps to its event.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen, act } from '@testing-library/react';
@@ -13,10 +13,11 @@ import { createTestStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/selectors';
 import { setMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/slice';
-import { setRide } from '../../../src/state/camera/cameraSlice';
-import { showWholeMission } from '../../../src/state/exhibits/showWholeMission';
+import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
+import { playMission } from '../../../src/state/exhibits/playMission';
+import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
-import { pause, resume, setRate, setSimDays } from '../../../src/state/time/timeSlice';
+import { pause, resume, setSimDays, startMissionProfile } from '../../../src/state/time/timeSlice';
 import { voyager } from '../../../src/data/exhibits/voyager';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
@@ -55,7 +56,7 @@ describe('ExhibitTimelineContainer', () => {
     expect(screen.getByText('26 Aug 1989')).toBeInTheDocument();
   });
 
-  it('run / pause and the rate pair dispatch the time actions', () => {
+  it('run / pause and the speed pair dispatch the clock and mission actions', () => {
     const store = mount('1989-08-26');
     const spy = vi.mocked(store.dispatch);
     const types = () => spy.mock.calls.map((c) => (c[0] as { type: string }).type);
@@ -65,7 +66,12 @@ describe('ExhibitTimelineContainer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run the clock' }));
     fireEvent.click(screen.getByRole('button', { name: 'Faster' }));
     fireEvent.click(screen.getByRole('button', { name: 'Slower' }));
-    expect(types()).toEqual([pause.type, resume.type, setRate.type, setRate.type]);
+    expect(types()).toEqual([
+      pause.type,
+      playMission.type,
+      stepMissionSpeed.type,
+      stepMissionSpeed.type,
+    ]);
   });
 
   it('a tab click sets the store emphasis and aria-selected follows it', () => {
@@ -76,21 +82,21 @@ describe('ExhibitTimelineContainer', () => {
     expect(screen.getByRole('tab', { name: /Voyager 2/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('an event dot click sets the clock to the event instant and leaves it running', () => {
+  it('an event dot click steps to the event, a flyby two days early', () => {
     const store = mount('2026-01-01');
     const titanV1 = section.events.find((e) => e.id === 'voyager1-titan')!;
     fireEvent.click(screen.getAllByTitle(`${titanV1.label} · 1980-11-12`).at(-1)!);
 
     const time = selectTimeState(store.getState());
-    expect(time.paused).toBe(false);
-    expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.parse(titanV1.iso)), 9);
+    expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.parse(titanV1.iso)) - 2, 9);
     expect(deriveSimDays(time, time.anchor.realMs)).toBe(time.anchor.simDays);
   });
 
   it('Previous / Next step the selected craft only and disable at the ends', () => {
     const store = mount('1977-08-01');
     expect(screen.getByRole('button', { name: /Previous/ })).toBeDisabled();
-    expect(screen.getByText(/has not launched yet/)).toBeInTheDocument();
+    // No "not launched" state: the launch stands in for any earlier instant.
+    expect(screen.getByText('Launch')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Next/ }));
     const firstV1 = section.events.find((e) => e.bodyId === 'voyager1')!;
     const time = selectTimeState(store.getState());
@@ -127,50 +133,25 @@ describe('ExhibitTimelineContainer', () => {
     expect(stepped().map((a) => a.type)).toEqual([setSimDays.type]);
   });
 
-  it('offers Whole mission and the riding line only while a ride is set', () => {
-    const store = mount('1989-08-26');
-    fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
-    expect(screen.queryByRole('button', { name: 'Whole mission' })).toBeNull();
-
+  it('reads a playing profile’s live speed, with the time of day under a day per second', () => {
+    const store = mount('1989-08-24');
+    const start = performance.now();
     act(() => {
       store.dispatch(
-        setRide({
-          eventId: 'voyager2-neptune',
-          craftId: 'voyager2',
-          targetId: 'neptune',
-          closestKm: 29236,
-          normal: [0, 0, 1],
-          offsets: { yaw: 0, pitch: 0, zoom: 1 },
+        startMissionProfile({
+          profile: {
+            startWallMs: start,
+            // One sim hour per wall second for a minute.
+            wallMs: Float64Array.of(0, 60_000),
+            simDays: Float64Array.of(2447762, 2447762 + 60 / 24),
+            speedIndex: MISSION_SPEEDS.length - 1,
+          },
         }),
       );
     });
-    expect(screen.getByText(/Riding along with Voyager 2 past Neptune/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Whole mission' }));
-    expect(store.dispatch).toHaveBeenCalledWith(showWholeMission());
-  });
-
-  it('keys the card, riding line and Next off the ridden event while the clock is still before it', () => {
-    const store = mount('1989-08-23');
-    fireEvent.click(screen.getByRole('tab', { name: /Voyager 2/ }));
-    const v2 = section.events.filter((e) => e.bodyId === 'voyager2');
-    const at = v2.findIndex((e) => e.id === 'voyager2-neptune');
-    act(() => {
-      store.dispatch(
-        setRide({
-          eventId: 'voyager2-neptune',
-          craftId: 'voyager2',
-          targetId: 'neptune',
-          closestKm: 29236,
-          normal: [0, 0, 1],
-          offsets: { yaw: 0, pitch: 0, zoom: 1 },
-        }),
-      );
-    });
-    expect(screen.getByText(/Riding along with Voyager 2 past Neptune/)).toBeInTheDocument();
-    vi.mocked(store.dispatch).mockClear();
-    fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
-    expect(store.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ payload: expect.objectContaining({ eventId: v2[at - 1]!.id }) }),
-    );
+    expect(screen.getByText('1.0 h/s')).toBeInTheDocument();
+    expect(screen.getByText(/^\d\d:\d\d UT$/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Faster' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Slower' })).toBeEnabled();
   });
 });

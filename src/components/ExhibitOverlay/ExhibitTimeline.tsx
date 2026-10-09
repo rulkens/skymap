@@ -3,8 +3,8 @@
  * current event card, the transport row (previous / run / date / rate / next) and the
  * `TimelineTrack` scrubber of that craft's lane. Presentational: the container hands it the
  * sim instant (throttled, never per-frame), the clock readout and the selection, and takes the
- * callbacks back; `onSeek` is the free scrub, `onStep` every event step. Seeking sets the clock
- * only; rate, play state and camera are the visitor's own.
+ * callbacks back; `onSeek` is the free scrub, `onStep` every event step. The axis gives each
+ * mission leg the same width and runs from the craft's launch to now.
  */
 
 import { useId, useMemo } from 'react';
@@ -17,13 +17,12 @@ import TimelineTransport from './TimelineTransport';
 import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { currentMissionEvent } from '../../utils/exhibits/timeline/currentMissionEvent';
 import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
-import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
+import { missionStops } from '../../utils/exhibits/mission/missionStops';
 import { timelineAxis } from '../../utils/exhibits/timeline/timelineAxis';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineClock } from '../../@types/exhibits/ExhibitTimelineClock';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
-import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
 import styles from './ExhibitTimeline.module.css';
 
@@ -39,9 +38,6 @@ export type ExhibitTimelineProps = {
   readonly onSeek: (simDays: number) => void;
   readonly onStep: (eventId: string) => void;
   readonly onSelect: (bodyId: string) => void;
-  /** The flyby being ridden and the craft's live distance from its target; null when not riding. */
-  readonly riding: { readonly event: MissionEvent; readonly distanceKm: number | null } | null;
-  readonly onWholeMission: () => void;
   readonly clock: ExhibitTimelineClock;
   readonly onPlayPause: () => void;
   readonly onSlower: () => void;
@@ -57,55 +53,43 @@ function ExhibitTimeline({
   onSeek,
   onStep,
   onSelect,
-  riding,
-  onWholeMission,
   clock,
   onPlayPause,
   onSlower,
   onFaster,
 }: ExhibitTimelineProps): ReactNode {
-  const { eras } = section;
   const lane = lanes.find((l) => l.bodyId === selectedId) ?? lanes[0]!;
   const events = useMemo(
     () => section.events.filter((e) => e.bodyId === lane.bodyId),
     [section.events, lane.bodyId],
   );
-  const axis = useMemo(() => timelineAxis(eras, endMs), [eras, endMs]);
+  const stops = useMemo(() => missionStops(events), [events]);
+  const axis = useMemo(() => timelineAxis(stops, endMs), [stops, endMs]);
   const headingId = useId();
 
   const simMs = julianDaysToUnixMs(simDays);
-  // A ride rewinds the clock to before its event, so the clock would name the previous chapter.
-  const ridden = events.find((e) => e.id === riding?.event.id) ?? null;
-  const current = ridden ?? currentMissionEvent(events, simMs);
-  const stepFromMs = ridden ? missionEventMs(ridden) : simMs;
-  const prevId = adjacentEventId(events, stepFromMs, -1);
-  const nextId = adjacentEventId(events, stepFromMs, 1);
+  // The scrub range starts at launch, so the launch stands in for any earlier instant.
+  const current = currentMissionEvent(events, simMs) ?? events[0]!;
+  const prevId = adjacentEventId(events, simMs, -1);
+  const nextId = adjacentEventId(events, simMs, 1);
   const onSeekMs = (ms: number) => onSeek(unixMsToJulianDays(ms));
   const stepTo = (id: string | null) => (id ? () => onStep(id) : null);
 
   return (
     <div className={styles.root} role="group" aria-labelledby={headingId}>
-      <div className={styles.header}>
-        <h2 id={headingId} className={styles.heading}>
-          {section.heading}
-        </h2>
-        {riding ? (
-          <button type="button" className={styles.wholeMission} onClick={onWholeMission}>
-            Whole mission
-          </button>
-        ) : null}
-      </div>
+      <h2 id={headingId} className={styles.heading}>
+        {section.heading}
+      </h2>
       <div className={styles.srOnly} aria-live="polite">
-        {current ? `${lane.label} · ${current.label} · ${formatEventDate(current.iso)}` : ''}
+        {`${lane.label} · ${current.label} · ${formatEventDate(current.iso)}`}
       </div>
 
       <TimelineCraftTabs lanes={lanes} selectedId={lane.bodyId} onSelect={onSelect} />
       <div className={styles.story} style={{ '--lane': lane.color } as CSSProperties}>
-        <TimelineEventCard craftLabel={lane.label} event={current} riding={riding} />
+        <TimelineEventCard event={current} />
         <TimelineTransport
           simMs={simMs}
           clock={clock}
-          showTime={riding !== null}
           onPrev={stepTo(prevId)}
           onNext={stepTo(nextId)}
           onPlayPause={onPlayPause}
@@ -114,12 +98,12 @@ function ExhibitTimeline({
         />
         <TimelineTrack
           events={events}
-          eras={eras}
+          stops={stops}
           lanes={[lane]}
           axis={axis}
           simMs={simMs}
           endMs={endMs}
-          currentId={current?.id ?? null}
+          currentId={current.id}
           onSeekMs={onSeekMs}
           onStep={onStep}
         />

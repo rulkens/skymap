@@ -37,10 +37,10 @@ import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
 import { stepToMissionEvent } from '../exhibits/stepToMissionEvent';
 import { timeRoute } from '../../store/constants';
-import type { RideProfile } from '../../@types/time/RideProfile';
+import type { MissionProfile } from '../../@types/time/MissionProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { missionEventMs } from '../../utils/exhibits/timeline/missionEventMs';
+import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { MISSION_EVENTS } from '../../data/missions/missionEvents.generated';
@@ -145,10 +145,10 @@ const timeSlice = createSlice({
       time.profile = null;
     },
 
-    // Play a flyby ride from its first sample, un-paused. The profile arrives stamped (reducers
-    // read no clock); the anchor is set to the ride's start so a visitor action that drops the
-    // profile re-anchors from a consistent instant.
-    startRide: (time, action: PayloadAction<{ profile: RideProfile }>) => {
+    // Play a mission profile from its first sample, un-paused. The profile arrives stamped
+    // (reducers read no clock); the anchor is set to its start so a visitor action that drops
+    // the profile re-anchors from a consistent instant.
+    startMissionProfile: (time, action: PayloadAction<{ profile: MissionProfile }>) => {
       const { profile } = action.payload;
       time.mode = 'manual';
       time.anchor = { simDays: profile.simDays[0]!, realMs: profile.startWallMs };
@@ -156,22 +156,32 @@ const timeSlice = createSlice({
       time.profile = profile;
     },
   },
-  // A chapter step lands the clock on the event exactly as a scrub to it would.
+  // A chapter step lands the clock, paused, where `missionEventStepMs` says; a flyby step's
+  // saga then plays the mission profile from there.
   extraReducers: (builder) => {
     builder.addCase(stepToMissionEvent, (time, action) => {
       const event = MISSION_EVENTS.find((e) => e.id === action.payload.eventId);
       if (!event) return;
       time.mode = 'manual';
       time.anchor = {
-        simDays: unixMsToJulianDays(missionEventMs(event)),
+        simDays: unixMsToJulianDays(missionEventStepMs(event)),
         realMs: action.payload.nowMs,
       };
+      time.paused = true;
       time.profile = null;
     });
   },
 });
 
-export const { setRate, setDirection, pause, resume, setSimDays, goLive, restoreTime, startRide } =
-  timeSlice.actions;
+export const {
+  setRate,
+  setDirection,
+  pause,
+  resume,
+  setSimDays,
+  goLive,
+  restoreTime,
+  startMissionProfile,
+} = timeSlice.actions;
 
 export default timeSlice.reducer;

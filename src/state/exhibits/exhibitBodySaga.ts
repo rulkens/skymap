@@ -4,26 +4,22 @@
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
- * end it. The hold is a loop over timeline steps: a flyby step rides along, a step away from
- * a ride, `showWholeMission` or a craft-tab switch ends it and flies back to the pose.
+ * end it. A timeline exhibit hands its whole hold, fly-in included, to `missionHoldSaga`.
  */
-import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
-import type { Task } from 'redux-saga';
+import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
-import { clearRide, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
-import { rideSaga } from './rideSaga';
-import { showWholeMission } from './showWholeMission';
-import { stepToMissionEvent } from './stepToMissionEvent';
-import { setMissionEmphasis } from '../settings/core/orbitTrails/slice';
+import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { missionHoldSaga } from './missionHoldSaga';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
-import { exhibitPose } from '../../utils/exhibits/exhibitPose';
+import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
+import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 import type { SagaContext } from '../../store/types';
 import type { Transition } from '../../@types/navigation/Transition';
 
@@ -48,6 +44,11 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
+  const timeline = exhibit.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline');
+  if (timeline) {
+    yield* call(missionHoldSaga, exhibit, timeline, entry);
+    return;
+  }
 
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
   const orientation = yield* select(selectOrientation);
@@ -59,7 +60,13 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // any other exhibit.
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const rt = cameraRuntime();
-  const pose = exhibitPose(exhibit, rt);
+  const pose =
+    exhibit.fitRadiusMpc !== undefined && rt !== null
+      ? {
+          ...exhibit.pose,
+          distance: sphereFitDistance(exhibit.fitRadiusMpc, rt.fovYRad, rt.aspect),
+        }
+      : exhibit.pose;
 
   if (entry === 'cut') {
     yield* put(commitCameraPose(absoluteArm(pose)));
@@ -79,46 +86,10 @@ export function* exhibitBodySaga(exhibit: Exhibit, entry: Transition): Generator
   // which a generator runs on cancellation too, so a supersede winds it back
   // as surely as an exit does.
   const priorSpin = yield* select((s: RootState) => s.camera.autoRotate);
-  if (exhibit.drift !== false) yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
-  const events = exhibit.body.flatMap((section) =>
-    section.kind === 'timeline' ? section.events : [],
-  );
-  let task: Task | null = null;
-  let flyingBack = false;
+  yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
   try {
-    for (;;) {
-      const next = yield* race({
-        exit: take(exitTakeover),
-        step: take(stepToMissionEvent),
-        whole: take(showWholeMission),
-        tab: take(setMissionEmphasis),
-      });
-      if (next.exit) break;
-      const riding = yield* select((s: RootState) => s.camera.ride !== null);
-      const event = next.step ? events.find((e) => e.id === next.step!.payload.eventId) : undefined;
-      const flyby = event?.kind === 'flyby' ? event : null;
-      // A running fly-back is the camera's way home: only a new ride may interrupt it, since
-      // cancelling the clip commits the camera wherever it stopped.
-      if (task !== null && (flyby !== null || !flyingBack)) {
-        yield* cancel(task);
-        task = null;
-      }
-      if (flyby !== null) {
-        flyingBack = false;
-        task = yield* fork(rideSaga, flyby);
-      } else if (riding) {
-        flyingBack = true;
-        // Only a ride is undone: a visitor who orbited the whole-mission view keeps their framing.
-        yield* put(clearRide());
-        task = yield* fork(function* () {
-          yield* call(playClip, flyToPoseClip(exhibitPose(exhibit, cameraRuntime())), orientation);
-        });
-      }
-    }
+    yield* take(exitTakeover);
   } finally {
-    // An exhibit exit restores no camera pose, so the ride must not outlive the takeover.
-    if (task !== null) yield* cancel(task);
-    yield* put(clearRide());
     yield* put(setAutoRotate(priorSpin));
   }
 }

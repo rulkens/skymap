@@ -46,10 +46,10 @@ describe('manualPausedAtActions', () => {
   });
 });
 
-describe('a t= restore while riding', () => {
+describe('a t= restore while a mission profile plays', () => {
   // Review focus 4: the hash's scrub-and-pause pair is a visitor action like any other.
-  it('clears the ride profile', () => {
-    const riding = {
+  it('clears the mission profile', () => {
+    const profiled = {
       mode: 'manual' as const,
       anchor: { simDays: 2460000, realMs: 0 },
       rateIndex: 0,
@@ -59,9 +59,10 @@ describe('a t= restore while riding', () => {
         startWallMs: 0,
         wallMs: Float64Array.from([0, 10_000]),
         simDays: Float64Array.from([2460000, 2460010]),
+        speedIndex: 2,
       },
     };
-    let after: TimeState = riding;
+    let after: TimeState = profiled;
     for (const action of manualPausedAtActions(INSTANT)) after = timeReducer(after, action);
     expect(after.profile).toBeNull();
     expect(after.paused).toBe(true);

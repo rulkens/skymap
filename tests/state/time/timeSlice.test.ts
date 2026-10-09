@@ -19,7 +19,7 @@ import reducer, {
   goLive,
   setSimDays,
   restoreTime,
-  startRide,
+  startMissionProfile,
 } from '../../../src/state/time/timeSlice';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
@@ -121,38 +121,47 @@ describe('timeSlice goLive lands the ladder on the truthful detent', () => {
 });
 
 describe('stepToMissionEvent', () => {
-  it('lands a manual clock on the event instant, anchored at the action time', () => {
-    const event = MISSION_EVENTS[3]!;
+  it.each([
+    ['voyager1-pale-blue-dot', 0],
+    ['voyager2-neptune', 2],
+  ])('lands a paused manual clock on %s, %i d early', (id, leadDays) => {
+    const event = MISSION_EVENTS.find((e) => e.id === id)!;
     const next = reducer(liveStart, stepToMissionEvent({ eventId: event.id, nowMs: 777 }));
     expect(next.mode).toBe('manual');
-    expect(next.anchor).toEqual({
-      simDays: unixMsToJulianDays(missionEventMs(event)),
-      realMs: 777,
-    });
+    expect(next.paused).toBe(true);
+    expect(next.anchor.realMs).toBe(777);
+    expect(next.anchor.simDays).toBeCloseTo(
+      unixMsToJulianDays(missionEventMs(event)) - leadDays,
+      9,
+    );
   });
 });
 
-describe('ride profile', () => {
+describe('mission profile', () => {
   const profile = {
     startWallMs: 0,
     wallMs: Float64Array.from([0, 10_000]),
     simDays: Float64Array.from([2460000, 2460010]),
+    speedIndex: 2,
   };
-  const riding = reducer(manualStart, startRide({ profile: { ...profile, startWallMs: 50_000 } }));
+  const profiled = reducer(
+    manualStart,
+    startMissionProfile({ profile: { ...profile, startWallMs: 50_000 } }),
+  );
 
-  it('startRide un-pauses, anchors at the first sample and stamps the payload clock', () => {
+  it('startMissionProfile un-pauses, anchors at the first sample and stamps the payload clock', () => {
     const paused = reducer(
       { ...manualStart, paused: true },
-      startRide({ profile: { ...profile, startWallMs: 50_000 } }),
+      startMissionProfile({ profile: { ...profile, startWallMs: 50_000 } }),
     );
     expect(paused.paused).toBe(false);
     expect(paused.profile?.startWallMs).toBe(50_000);
     expect(deriveSimDays(paused, 55_000)).toBe(2460005);
   });
 
-  // Review focus 1: the clock freezes where the ride was, not at either end of the table.
-  it('pause mid-ride freezes at the interpolated instant and drops the profile', () => {
-    const next = reducer(riding, pause({ nowMs: 55_000 }));
+  // The clock freezes where the profile was, not at either end of the table.
+  it('pause mid-profile freezes at the interpolated instant and drops the profile', () => {
+    const next = reducer(profiled, pause({ nowMs: 55_000 }));
     expect(next.profile).toBeNull();
     expect(next.paused).toBe(true);
     expect(deriveSimDays(next, 90_000)).toBe(2460005);
@@ -175,10 +184,13 @@ describe('ride profile', () => {
   ];
 
   it.each(visitorActions)('$name drops the profile', ({ action }) => {
-    expect(reducer(riding, action).profile).toBeNull();
+    expect(reducer(profiled, action).profile).toBeNull();
   });
 
-  it.each(visitorActions.slice(0, 3))('$name keeps the clock continuous mid-ride', ({ action }) => {
-    expect(deriveSimDays(reducer(riding, action), 55_000)).toBe(2460005);
-  });
+  it.each(visitorActions.slice(0, 3))(
+    '$name keeps the clock continuous mid-profile',
+    ({ action }) => {
+      expect(deriveSimDays(reducer(profiled, action), 55_000)).toBe(2460005);
+    },
+  );
 });

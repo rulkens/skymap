@@ -1,11 +1,10 @@
 /**
- * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, rate step,
- * paused flag, ride profile and emphasised craft in; `setSimDays` (scrub), `stepToMissionEvent`,
- * `setMissionEmphasis`, `showWholeMission` and the transport's `pause`/`resume`/`setRate` out (the
- * craft tabs ARE the store's emphasis, so the 3D view dims the other craft). The instant and the
- * ride's live speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running
- * clock re-renders this leaf and not the whole exhibit overlay. Seek and step leave rate and
- * pause alone, so they never stop or start the clock.
+ * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, paused
+ * flag, mission profile and emphasised craft in; `setSimDays` (scrub), `stepToMissionEvent`,
+ * `setMissionEmphasis`, `playMission`, `stepMissionSpeed` and `pause` out (the craft tabs ARE the
+ * store's emphasis, so the 3D view dims the other craft). The instant and the profile's live
+ * speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running clock
+ * re-renders this leaf and not the whole exhibit overlay.
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,22 +12,22 @@ import type { ReactNode } from 'react';
 
 import ExhibitTimeline from '../ExhibitOverlay/ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectCameraRide } from '../../state/camera/selectors';
-import { showWholeMission } from '../../state/exhibits/showWholeMission';
+import { playMission } from '../../state/exhibits/playMission';
+import { stepMissionSpeed } from '../../state/exhibits/stepMissionSpeed';
+import { stepToMissionEvent } from '../../state/exhibits/stepToMissionEvent';
 import { selectRateStep, selectTimeState } from '../../state/time/selectors';
 import { selectMissionEmphasis } from '../../state/settings/core/orbitTrails/selectors';
 import { setMissionEmphasis } from '../../state/settings/core/orbitTrails/slice';
-import { stepToMissionEvent } from '../../state/exhibits/stepToMissionEvent';
-import { pause, resume, setRate, setSimDays } from '../../state/time/timeSlice';
-import { RATE_LADDER } from '../../data/time/rateLadder';
+import { pause, setSimDays } from '../../state/time/timeSlice';
+import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { formatRideRate } from '../../utils/time/formatRideRate';
-import { rideProfileRate } from '../../utils/time/rideProfileRate';
-import { flybyRelativeState } from '../../utils/exhibits/ride/flybyRelativeState';
+import { formatSimRate } from '../../utils/time/formatSimRate';
+import { missionProfileRate } from '../../utils/time/missionProfileRate';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
 
 const REFRESH_MS = 250;
+const SECONDS_PER_DAY = 86_400;
 
 export type ExhibitTimelineContainerProps = {
   readonly section: ExhibitTimelineSection;
@@ -46,18 +45,17 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
   const endMs = useMemo(() => Date.now(), []);
 
   const rateStep = useAppSelector(selectRateStep);
-  const { paused, rateIndex, profile } = time;
+  const { paused, profile } = time;
 
   const read = useCallback(() => {
     const now = performance.now();
-    // A finished ride holds its table with slope 0; the ladder label then reads true again.
-    const speed = profile === null ? 0 : rideProfileRate(profile, now);
+    // A finished profile holds its table with slope 0; the ladder label then reads true again.
     return {
       simDays: deriveSimDays(time, now),
-      rideRate: speed > 0 ? formatRideRate(speed) : null,
+      speed: profile === null ? 0 : missionProfileRate(profile, now),
     };
   }, [time, profile]);
-  const [{ simDays, rideRate }, setReading] = useState(read);
+  const [{ simDays, speed }, setReading] = useState(read);
   useEffect(() => {
     const update = () => setReading(read());
     update();
@@ -75,36 +73,22 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     [dispatch],
   );
 
-  const onWholeMission = useCallback(() => dispatch(showWholeMission()), [dispatch]);
-
-  const rideState = useAppSelector(selectCameraRide);
-  const riding = useMemo(() => {
-    const event = rideState && section.events.find((e) => e.id === rideState.eventId);
-    if (!event) return null;
-    const rel = flybyRelativeState(event, simDays);
-    return { event, distanceKm: rel === null ? null : Math.hypot(...rel.rKm) };
-  }, [rideState, section.events, simDays]);
-
   const onPlayPause = useCallback(
-    () =>
-      dispatch(paused ? resume({ nowMs: performance.now() }) : pause({ nowMs: performance.now() })),
+    () => dispatch(paused ? playMission() : pause({ nowMs: performance.now() })),
     [dispatch, paused],
   );
-  // Ends are inert, as in the TimeBar: a clamped step would re-anchor a live clock for nothing.
-  const atSlowest = rateIndex === 0;
-  const atFastest = rateIndex === RATE_LADDER.length - 1;
-  const onSlower = useCallback(() => {
-    if (!atSlowest) dispatch(setRate({ rateIndex: rateIndex - 1, nowMs: performance.now() }));
-  }, [dispatch, rateIndex, atSlowest]);
-  const onFaster = useCallback(() => {
-    if (!atFastest) dispatch(setRate({ rateIndex: rateIndex + 1, nowMs: performance.now() }));
-  }, [dispatch, rateIndex, atFastest]);
+  const onSlower = useCallback(() => dispatch(stepMissionSpeed({ step: -1 })), [dispatch]);
+  const onFaster = useCallback(() => dispatch(stepMissionSpeed({ step: 1 })), [dispatch]);
+  // Without a profile the saga's remembered factor is not in the store; both ends stay live.
+  const speedIndex = profile?.speedIndex ?? null;
   const clock = {
     paused,
-    rateLabel: rideRate ?? (time.mode === 'live' ? 'Live' : (rateStep?.label ?? '')),
-    riding: rideRate !== null,
-    atSlowest,
-    atFastest,
+    rateLabel:
+      speed > 0 ? formatSimRate(speed) : time.mode === 'live' ? 'Live' : (rateStep?.label ?? ''),
+    profiled: speed > 0,
+    showTime: speed > 0 && speed < SECONDS_PER_DAY,
+    atSlowest: speedIndex === 0,
+    atFastest: speedIndex === MISSION_SPEEDS.length - 1,
   };
 
   const onSelect = useCallback((id: string) => dispatch(setMissionEmphasis(id)), [dispatch]);
@@ -119,8 +103,6 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
       onSeek={onSeek}
       onStep={onStep}
       onSelect={onSelect}
-      riding={riding}
-      onWholeMission={onWholeMission}
       clock={clock}
       onPlayPause={onPlayPause}
       onSlower={onSlower}

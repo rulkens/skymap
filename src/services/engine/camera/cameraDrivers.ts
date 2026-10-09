@@ -2,7 +2,7 @@
  * cameraDrivers — the camera-driver table and its resolver. Among the drivers
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
- * Priorities: clip 95 > orbitDrag 80 > tween 60 = ride 60 > followApproach 55 >
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > mission 58 > followApproach 55 >
  * autoRotate 20 > followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
@@ -31,7 +31,7 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { ridePose } from './ridePose';
+import { missionPose } from './missionPose';
 import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
@@ -343,15 +343,15 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     },
   },
   {
-    id: 'ride',
+    id: 'mission',
     followsMovingTarget: true,
-    // Above the follow rows (55) so a moving focus cannot pull the camera off the encounter, below
-    // tween (60) so a visitor's own focus move still wins while `camera.ride` is set.
+    // Above the follow rows (55) so a moving focus cannot pull the camera off the craft, below
+    // tween (60) so a visitor's own focus move still wins while `camera.mission` is set.
     priority: 58,
-    // Bakes the encounter pose, so the next winner does not render the stale pre-ride `base`.
+    // Bakes the mission pose, so the next winner does not render the stale pre-exhibit `base`.
     commitsOnEdge: true,
-    isActive: (s) => s.camera.ride !== null,
-    pose: ridePose,
+    isActive: (s) => s.camera.mission !== null,
+    pose: missionPose,
   },
   {
     id: 'autoRotate',

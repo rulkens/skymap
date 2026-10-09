@@ -328,8 +328,8 @@ describe('pickWinner', () => {
   });
 });
 
-describe('CAMERA_DRIVERS — ride', () => {
-  const ride = CAMERA_DRIVERS.find((d) => d.id === 'ride')!;
+describe('CAMERA_DRIVERS — mission', () => {
+  const ride = CAMERA_DRIVERS.find((d) => d.id === 'mission')!;
 
   it('ties no other driver, so no outcome rests on table order', () => {
     const others = CAMERA_DRIVERS.filter((d) => d !== ride).map((d) => d.priority);
@@ -342,7 +342,7 @@ describe('CAMERA_DRIVERS — ride', () => {
     expect(ride.priority).toBeLessThan(p('tween'));
   });
 
-  it('commits its pose on the edge, so the next winner starts from the encounter', () => {
+  it('commits its pose on the edge, so the next winner starts from the mission frame', () => {
     expect(ride.commitsOnEdge).toBe(true);
   });
 });
@@ -837,11 +837,11 @@ describe('orbitDrag — the register comes from the ctx', () => {
 });
 
 describe('CAMERA_DRIVERS — followsMovingTarget', () => {
-  it('is set on exactly the follow rows and the ride', () => {
+  it('is set on exactly the follow rows and the mission', () => {
     expect(CAMERA_DRIVERS.filter((d) => d.followsMovingTarget).map((d) => d.id)).toEqual([
       'followApproach',
       'followHold',
-      'ride',
+      'mission',
     ]);
   });
 });

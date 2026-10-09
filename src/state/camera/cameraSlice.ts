@@ -8,15 +8,15 @@
  * wall-clock-free, so they stay valid across serialisation and replay.
  */
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
 import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/clampCameraTuning';
 import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraRide } from '../../@types/camera/CameraRide';
-import type { RideOffsets } from '../../@types/camera/RideOffsets';
+import type { CameraMission } from '../../@types/camera/CameraMission';
+import type { MissionOffsets } from '../../@types/camera/MissionOffsets';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
@@ -40,7 +40,7 @@ const initialState: CameraState = {
   dragging: false,
   clip: null,
   frameTween: null,
-  ride: null,
+  mission: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
@@ -107,14 +107,15 @@ const cameraSlice = createSlice({
       camera.autoRotate = action.payload;
     },
 
-    setRide: (camera, action: PayloadAction<CameraRide>) => {
-      camera.ride = action.payload;
+    setMission: (camera, action: PayloadAction<CameraMission>) => {
+      // Stored whole and replaced whole (offsets aside), so the readonly record stands as its Draft.
+      camera.mission = action.payload as Draft<CameraMission>;
     },
-    clearRide: (camera) => {
-      camera.ride = null;
+    clearMission: (camera) => {
+      camera.mission = null;
     },
-    setRideOffsets: (camera, action: PayloadAction<RideOffsets>) => {
-      if (camera.ride !== null) camera.ride.offsets = action.payload;
+    setMissionOffsets: (camera, action: PayloadAction<MissionOffsets>) => {
+      if (camera.mission !== null) camera.mission.offsets = action.payload;
     },
 
     // A WHOLE new record, never a leaf write: the panel's sliders read it back
@@ -137,9 +138,9 @@ export const {
   clipEnded,
   startFrameTween,
   clearFrameTween,
-  setRide,
-  clearRide,
-  setRideOffsets,
+  setMission,
+  clearMission,
+  setMissionOffsets,
 } = cameraSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and

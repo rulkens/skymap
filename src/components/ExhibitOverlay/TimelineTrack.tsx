@@ -1,8 +1,8 @@
 /**
- * TimelineTrack — the scrubber of the exhibit timeline: era headers, the selected craft's lane
- * with its fill and event ticks, the thumb, and the year axis. Pointer drag and the free keys
- * report instants through `onSeekMs`; PageUp / PageDown and the event dots step through `onStep`.
- * The parent owns the clock.
+ * TimelineTrack — the scrubber of the exhibit timeline: the selected craft's lane with its fill
+ * and event ticks, the thumb, and the year axis. Pointer drag and the free keys report instants
+ * through `onSeekMs`, held between launch and now; PageUp / PageDown and the event dots step
+ * through `onStep`. A stop's events sit side by side on its boundary. The parent owns the clock.
  */
 
 import { useMemo } from 'react';
@@ -18,7 +18,7 @@ import { timelineFraction } from '../../utils/exhibits/timeline/timelineFraction
 import { timelineInstant } from '../../utils/exhibits/timeline/timelineInstant';
 import type { MissionEvent } from '../../@types/missions/MissionEvent';
 import type { TimelineAxis } from '../../@types/exhibits/TimelineAxis';
-import type { TimelineEra } from '../../@types/exhibits/TimelineEra';
+import type { MissionStop } from '../../@types/missions/MissionStop';
 import type { TimelineLane } from '../../@types/exhibits/TimelineLane';
 import { DAY_MS } from '../../data/time/dayMs';
 import { YEAR_MS } from '../../data/time/yearMs';
@@ -26,7 +26,7 @@ import styles from './ExhibitTimeline.module.css';
 
 export type TimelineTrackProps = {
   readonly events: readonly MissionEvent[];
-  readonly eras: readonly TimelineEra[];
+  readonly stops: readonly MissionStop[];
   readonly lanes: readonly TimelineLane[];
   readonly axis: TimelineAxis;
   readonly simMs: number;
@@ -37,12 +37,14 @@ export type TimelineTrackProps = {
 };
 
 const MONTH_MS = 30.4375 * DAY_MS;
+/** Spacing of the dots of one stop, px. */
+const DOT_GAP_PX = 9;
 
 const pct = (fraction: number) => `${fraction * 100}%`;
 
 function TimelineTrack({
   events,
-  eras,
+  stops,
   lanes,
   axis,
   simMs,
@@ -53,13 +55,22 @@ function TimelineTrack({
 }: TimelineTrackProps): ReactNode {
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
   const thumb = timelineFraction(simMs, axis);
-  const firstMs = missionEventMs(events[0]!);
-  const beforeLaunch = simMs < firstMs;
+  const firstMs = stops[0]!.ms;
   const pastNow = simMs > endMs + DAY_MS;
+  const seek = (ms: number) => onSeekMs(Math.min(endMs, Math.max(firstMs, ms)));
+  // Each event's left edge: its stop's boundary, nudged apart from the stop's other events.
+  const dotLeft = new Map(
+    stops.flatMap((stop) =>
+      stop.events.map((e, k) => {
+        const nudge = (k - (stop.events.length - 1) / 2) * DOT_GAP_PX;
+        return [e.id, `calc(${pct(timelineFraction(stop.ms, axis))} + ${nudge}px)`] as const;
+      }),
+    ),
+  );
 
   const commitFromClientX = (el: HTMLElement, clientX: number) => {
     const rect = el.getBoundingClientRect();
-    onSeekMs(timelineInstant((clientX - rect.left) / rect.width, axis));
+    seek(timelineInstant((clientX - rect.left) / rect.width, axis));
   };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -100,7 +111,7 @@ function TimelineTrack({
     }
     // Without this the page scrolls under the focused slider.
     e.preventDefault();
-    if (next !== null) onSeekMs(next);
+    if (next !== null) seek(next);
   };
 
   return (
@@ -118,13 +129,6 @@ function TimelineTrack({
         onPointerMove={onPointerMove}
         onKeyDown={onKeyDown}
       >
-        <div className={styles.eras} aria-hidden="true">
-          {eras.map((era) => (
-            <span key={era.fromIso} className={styles.era}>
-              {era.label}
-            </span>
-          ))}
-        </div>
         {lanes.map((lane) => {
           const mine = events.filter((e) => e.bodyId === lane.bodyId);
           const launchMs = missionEventMs(mine[0]!);
@@ -158,7 +162,7 @@ function TimelineTrack({
                     missionEventMs(e) <= simMs && styles.passed,
                     currentId === e.id && styles.current,
                   )}
-                  style={{ left: pct(timelineFraction(missionEventMs(e), axis)) }}
+                  style={{ left: dotLeft.get(e.id) }}
                 />
               ))}
             </div>
@@ -167,7 +171,6 @@ function TimelineTrack({
         <div className={styles.thumb} style={{ left: pct(thumb) }}>
           <span className={styles.knob} />
         </div>
-        {beforeLaunch ? <span className={styles.before}>before launch</span> : null}
         {pastNow ? (
           <span className={styles.beyond}>→ {new Date(simMs).getUTCFullYear()}</span>
         ) : null}

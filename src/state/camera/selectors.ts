@@ -8,7 +8,6 @@ import { cameraRoute } from '../../store/constants';
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
-import type { CameraRide } from '../../@types/camera/CameraRide';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
@@ -46,7 +45,3 @@ export const selectCameraActive = (state: RootState): boolean => {
 
 export const selectClipActive = (state: RootState): boolean =>
   selectCameraIntent(state).clip !== null;
-
-/** The flyby the ride driver is framing, or null. */
-export const selectCameraRide = (state: RootState): CameraRide | null =>
-  selectCameraIntent(state).ride;

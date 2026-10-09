@@ -53,8 +53,8 @@ describe('deriveSimDays', () => {
     expect(deriveSimDays(time, 24_000)).toBe(101);
   });
 
-  describe('with a ride profile', () => {
-    const riding: TimeState = {
+  describe('with a mission profile', () => {
+    const profiled: TimeState = {
       mode: 'manual',
       anchor: { simDays: 2_460_000, realMs: 1_000 },
       rateIndex: 0,
@@ -64,17 +64,18 @@ describe('deriveSimDays', () => {
         startWallMs: 1_000,
         wallMs: Float64Array.from([0, 1_000, 3_000]),
         simDays: Float64Array.from([10, 12, 20]),
+        speedIndex: 2,
       },
     };
 
     it('interpolates linearly inside a segment', () => {
-      expect(deriveSimDays(riding, 1_500)).toBe(11);
-      expect(deriveSimDays(riding, 3_000)).toBe(16);
+      expect(deriveSimDays(profiled, 1_500)).toBe(11);
+      expect(deriveSimDays(profiled, 3_000)).toBe(16);
     });
 
     it('clamps before the start and after the end', () => {
-      expect(deriveSimDays(riding, 0)).toBe(10);
-      expect(deriveSimDays(riding, 1_000_000)).toBe(20);
+      expect(deriveSimDays(profiled, 0)).toBe(10);
+      expect(deriveSimDays(profiled, 1_000_000)).toBe(20);
     });
   });
 });

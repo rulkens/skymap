@@ -1,7 +1,7 @@
+import type { MissionStop } from '../../../@types/missions/MissionStop';
 import type { TimelineAxis } from '../../../@types/exhibits/TimelineAxis';
-import type { TimelineEra } from '../../../@types/exhibits/TimelineEra';
 
-/** The axis from the first era's start to `endMs`, split at each later era's start. */
-export function timelineAxis(eras: readonly TimelineEra[], endMs: number): TimelineAxis {
-  return { boundsMs: [...eras.map((era) => Date.parse(era.fromIso)), endMs] };
+/** One equal-width segment per mission leg: stop to stop, the last stop to `endMs`. */
+export function timelineAxis(stops: readonly MissionStop[], endMs: number): TimelineAxis {
+  return { boundsMs: [...stops.map((stop) => stop.ms), endMs] };
 }
