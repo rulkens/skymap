@@ -83,7 +83,7 @@ export const DOCS_RENDERING_FACTS: readonly Fact[] = [
     id: 'render-star-tree',
     about: 'app',
     text: 'The stars of a file are sorted into an octree, 6 bytes a star. Every frame the app chooses which of its boxes to open, the ones largest on screen first, until a budget of stars is spent. An opened box draws its own stars. A closed one draws a single glow with the summed light of everything inside it.',
-    source: `${REPO_BLOB}/src/utils/star/walkStarOctreeCut.ts`,
+    source: `${REPO_BLOB}/src/services/gpu/shaders/starCatalog/cut.wesl`,
     sourceLabel: `the choice of star boxes, ${IN_REPO}`,
     checked: CHECKED,
   },

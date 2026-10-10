@@ -35,13 +35,6 @@ export const ROADMAP: readonly RoadmapGroup[] = [
         backlog: 'Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1',
       },
       {
-        id: 'galactic-centre-places',
-        title: 'Places at the centre of the Milky Way',
-        text: 'Markers round Sagittarius A* for the central star cluster, the Arches and Quintuplet clusters and the Central Molecular Zone.',
-        state: 'planned',
-        backlog: 'Galactic Center place labels',
-      },
-      {
         id: 'galaxy-impostors',
         title: 'Galaxies with structure at middle distance',
         text: 'A galaxy at middle distance drawn from a picture of its generated model, where the app now shows a photograph from a sky survey.',

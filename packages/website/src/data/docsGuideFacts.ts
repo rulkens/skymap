@@ -598,7 +598,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'share-focus',
     about: 'app',
-    text: 'The address names the focus, the object the camera turns about: focus=body-saturn for a planet, a moon or a spacecraft, focus=star-sirius for a named star, focus=m31 for a named galaxy, focus=cluster-virgo-m87 for a structure, focus=milkyWay for the Milky Way. With Earth as the focus the address names no focus at all, because the address with nothing after it is the home view.',
+    text: 'The address names the focus, the object the camera turns about: focus=body-saturn for a planet, a moon or a spacecraft, focus=star-sirius for a named star, focus=m31 for a named galaxy, focus=galaxy-cluster-virgo-m87 for a structure, focus=milkyWay for the Milky Way. With Earth as the focus the address names no focus at all, because the address with nothing after it is the home view.',
     source: `${REPO_BLOB}/src/services/url/urlHashFor.ts`,
     sourceLabel: `how the app names an object in its address, ${IN_REPO}`,
     checked: CHECKED,

@@ -227,9 +227,9 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     names: 'The Milky Way.',
   },
   {
-    form: 'cluster-<name>',
-    prefix: 'cluster-',
-    example: 'cluster-virgo-m87',
+    form: 'galaxy-cluster-<name>',
+    prefix: 'galaxy-cluster-',
+    example: 'galaxy-cluster-virgo-m87',
     names: 'A cluster of galaxies.',
   },
   {
@@ -240,10 +240,34 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
   },
   { form: 'void-<name>', prefix: 'void-', example: 'void-bootes-void', names: 'A void.' },
   {
-    form: 'group-<name>',
-    prefix: 'group-',
-    example: 'group-local-group',
+    form: 'galaxy-group-<name>',
+    prefix: 'galaxy-group-',
+    example: 'galaxy-group-local-group',
     names: 'A group of galaxies.',
+  },
+  {
+    form: 'open-cluster-<name>',
+    prefix: 'open-cluster-',
+    example: 'open-cluster-pleiades',
+    names: 'An open cluster of stars.',
+  },
+  {
+    form: 'globular-cluster-<name>',
+    prefix: 'globular-cluster-',
+    example: 'globular-cluster-omega-centauri',
+    names: 'A globular cluster.',
+  },
+  {
+    form: 'nebula-<name>',
+    prefix: 'nebula-',
+    example: 'nebula-orion',
+    names: 'A nebula.',
+  },
+  {
+    form: 'gc-cluster-<name>',
+    prefix: 'gc-cluster-',
+    example: 'gc-cluster-arches',
+    names: 'A star cluster near the centre of the Milky Way.',
   },
   {
     form: 'blackhole-sgr-a-star',

@@ -181,6 +181,16 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/perf/README.md',
       },
       {
+        scripts: ['perf:cpu'],
+        does: 'Flies the camera to the same views and reports how long the main thread takes over each part of a frame.',
+        manual: 'tools/perf/cpuPerf.ts',
+      },
+      {
+        scripts: ['loadtime'],
+        does: 'Builds the app and loads it in a headless browser at phone size on a slow connection, and reports the seconds until each step of the loading is done.',
+        manual: 'tools/loadtime/README.md',
+      },
+      {
         scripts: ['structure-audit'],
         does: 'Writes one page of tables on the app’s source: which folder imports which, import cycles, unused exports and repeated code.',
         manual: 'tools/structure-audit/README.md',

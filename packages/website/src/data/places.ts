@@ -14,5 +14,5 @@ export const PLACES: readonly Place[] = [
   { id: 'betelgeuse', name: 'Betelgeuse', factId: 'betelgeuse-distance', shot: 'place-betelgeuse', loop: 'place-betelgeuse', hash: 'focus=star-betelgeuse' },
   { id: 'sgr-a', name: 'The black hole Sagittarius A*', factId: 'sgr-a-distance', shot: 'place-sgr-a', loop: 'place-sgr-a', hash: 'focus=blackhole-sgr-a-star' },
   { id: 'andromeda', name: 'Andromeda', factId: 'andromeda-distance', shot: 'place-andromeda', loop: 'place-andromeda', hash: 'focus=m31' },
-  { id: 'virgo', name: 'The Virgo cluster', factId: 'virgo-distance', shot: 'place-virgo', loop: 'place-virgo', hash: 'focus=cluster-virgo-m87' },
+  { id: 'virgo', name: 'The Virgo cluster', factId: 'virgo-distance', shot: 'place-virgo', loop: 'place-virgo', hash: 'focus=galaxy-cluster-virgo-m87' },
 ];

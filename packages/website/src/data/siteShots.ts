@@ -277,7 +277,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     title: '',
     alt: '',
   },
-  { id: 'place-virgo', link: 'focus=cluster-virgo-m87', settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
+  { id: 'place-virgo', link: 'focus=galaxy-cluster-virgo-m87', settings: SUBJECT, size: THUMB, widths: THUMB_WIDTHS, title: '', alt: '' },
   {
     id: 'classroom-hero',
     link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,4.6e-15,0,0.5,0`,
@@ -815,7 +815,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   },
   {
     id: 'guide-card-structure',
-    link: 'focus=cluster-virgo-m87',
+    link: 'focus=galaxy-cluster-virgo-m87',
     settings: { ui: true, settleMs: 5000, crop: { left: 760, top: 0, width: 440, height: 320 } },
     size: FEATURE,
     widths: [880, 560],
@@ -937,7 +937,7 @@ export const SITE_SHOTS: readonly SiteShot[] = [
   // The docs' Rendering pages.
   {
     id: 'render-lod',
-    link: 'focus=cluster-virgo-m87',
+    link: 'focus=galaxy-cluster-virgo-m87',
     settings: { ...SUBJECT, hideCosmicWeb: true, hideZoneOfAvoidance: true, fovDeg: 30, settleMs: 8000 },
     size: WIDE,
     widths: [1920, 1280, 640],
