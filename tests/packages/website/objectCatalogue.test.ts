@@ -54,8 +54,12 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
     BLACK_HOLE_SOURCE_ROWS.some(([, hole]) => encodeBlackHoleFocusId(hole.id) === id),
   // The app's resolver takes any id of the famous-galaxy shape; the list it checks against is in its data files (below).
   galaxy: (id) => /^[a-z0-9]+$/.test(id),
-  group: (id) => structureIds.has(id),
-  cluster: (id) => structureIds.has(id),
+  'open-cluster': (id) => structureIds.has(id),
+  'globular-cluster': (id) => structureIds.has(id),
+  nebula: (id) => structureIds.has(id),
+  'gc-cluster': (id) => structureIds.has(id),
+  'galaxy-group': (id) => structureIds.has(id),
+  'galaxy-cluster': (id) => structureIds.has(id),
   supercluster: (id) => structureIds.has(id),
   void: (id) => structureIds.has(id),
   exhibit: (id) => id in exhibitRegistry,
@@ -101,7 +105,18 @@ describe('object catalogue', () => {
       prefixed(STAR_FOCUS_PREFIX, Object.values(SEEDED_STAR_CATALOGS).flat()),
     );
     expect(ids('place')).toEqual(prefixed('', EARTH_PLACES));
-    expect(ids('group', 'cluster', 'supercluster', 'void')).toEqual([...structureIds].sort());
+    expect(
+      ids(
+        'open-cluster',
+        'globular-cluster',
+        'nebula',
+        'gc-cluster',
+        'galaxy-group',
+        'galaxy-cluster',
+        'supercluster',
+        'void',
+      ),
+    ).toEqual([...structureIds].sort());
     expect(ids('exhibit')).toEqual(Object.keys(exhibitRegistry).sort());
     expect(ids('tour')).toEqual(
       Object.values(tourRegistry)
