@@ -129,14 +129,14 @@ The rows split today's alternatives (`allowDataFile.ts:19-20,31-56`) by gzip out
 | `mesh-body`         | `'meshes'` | `^[a-z0-9-]+\.mesh$`                                                                                           | true         |
 | `mesh-texture`      | `'meshes'` | `^[a-z0-9-]+_(?:albedo\|mr\|normal\|contact)\.webp$`                                                           | false        |
 
-- [ ] `dataFamilyOf` takes over `allowDataFile.ts:22-29`: the `images/` exclusion, the backslash normalisation, `logicalDataName`, and the dir test, which is today's `meshes` rule generalised to `row.dir`. `allowDataFile` keeps its name and its two callers (`buildDataManifest.ts:91`, `collectDataFiles.ts:41`). Its module comment shrinks to point at `DATA_FAMILIES`.
-- [ ] Move the measured-ratio rationale from `shouldGzipOnWire.ts:3-12` onto the rows: the yes-ratios go in the table's header comment, and the "~99% / ~90%, already packed" reasons go on the `star-catalog-v1` and `flowfield` rows. The `local-bubble` row gets one line saying `.shell` was never eligible. The DESI and `filaments-small` comments (`allowDataFile.ts:40-41,46`) move onto their rows. `shouldGzipOnWire.ts` itself is deleted in Task 4.
-- [ ] Add `dataFamilyOf.test.ts`. It is a fixture of `path → { label, transport, gzipOnWire } | null`, run through `it.each` in two tests:
+- [x] `dataFamilyOf` takes over `allowDataFile.ts:22-29`: the `images/` exclusion, the backslash normalisation, `logicalDataName`, and the dir test, which is today's `meshes` rule generalised to `row.dir`. `allowDataFile` keeps its name and its two callers (`buildDataManifest.ts:91`, `collectDataFiles.ts:41`). Its module comment shrinks to point at `DATA_FAMILIES`.
+- [x] Move the measured-ratio rationale from `shouldGzipOnWire.ts:3-12` onto the rows: the yes-ratios go in the table's header comment, and the "~99% / ~90%, already packed" reasons go on the `star-catalog-v1` and `flowfield` rows. The `local-bubble` row gets one line saying `.shell` was never eligible. The DESI and `filaments-small` comments (`allowDataFile.ts:40-41,46`) move onto their rows. `shouldGzipOnWire.ts` itself is deleted in Task 4.
+- [x] Add `dataFamilyOf.test.ts`. It is a fixture of `path → { label, transport, gzipOnWire } | null`, run through `it.each` in two tests:
   - `every tracked file maps to its family with today's transport and encoding`. For each row: one logical name, one hashed name (`<name>.a3f19c2e.<ext>`), and one nested epoch path (`galaxy-catalog/v9/…`, `star-catalog/v1/…`, `scalar-field/v3/…`, `meshes/whale-small.a3f19c2e.mesh`, `meshes/whale-small_albedo.a3f19c2e.webp`, `meshes/mer_contact.webp`).
   - `untracked files map to no family`: every negative from `allowDataFile.test.ts:11-66` (`glade.bin`, `sdss.bin`, `sdss.a3f19c2e.bin`, `flowfield-large.scfd`, `flowfield.bin`, the three `desi-*-large.bin`, `stars-huge.bin`, `images/famous/x.webp`, `whale.mesh`, `other/whale_albedo.webp`, `meshes/whale_thumbnail.webp`), plus `thumb.jpg` and `manifest.json`.
-- [ ] Prove the gzip column before deleting anything. Run the fixture's positive paths through today's `shouldGzipOnWire` once, in a scratch script, and confirm every value matches the column. Report the result.
-- [ ] Delete `allowDataFile.test.ts`. Every case now lives in the fixture.
-- [ ] Commit.
+- [x] Prove the gzip column before deleting anything. Run the fixture's positive paths through today's `shouldGzipOnWire` once, in a scratch script, and confirm every value matches the column. Report the result.
+- [x] Delete `allowDataFile.test.ts`. Every case now lives in the fixture.
+- [x] Commit.
 
 ### Task 4: Group-level `gzipOnWire`, per-family groups — `review: yes`
 
