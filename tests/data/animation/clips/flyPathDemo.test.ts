@@ -43,28 +43,28 @@ function eyeOf(p: CameraPose): [number, number, number] {
 }
 
 const GROUPS: Record<string, StructureInfo> = {
-  'group-m81-group': {
+  'galaxy-group-m81-group': {
     type: 'structure',
-    category: 'group',
-    id: 'group-m81-group',
+    category: 'galaxy-group',
+    id: 'galaxy-group-m81-group',
     name: 'M81 Group',
     worldPos: [10, 0, 0],
     featured: true,
     physicalRadiusMpc: 2,
   } as StructureInfo,
-  'group-cen-a-group': {
+  'galaxy-group-cen-a-group': {
     type: 'structure',
-    category: 'group',
-    id: 'group-cen-a-group',
+    category: 'galaxy-group',
+    id: 'galaxy-group-cen-a-group',
     name: 'Centaurus A Group',
     worldPos: [0, 10, 0],
     featured: true,
     physicalRadiusMpc: 3,
   } as StructureInfo,
-  'group-sculptor-group': {
+  'galaxy-group-sculptor-group': {
     type: 'structure',
-    category: 'group',
-    id: 'group-sculptor-group',
+    category: 'galaxy-group',
+    id: 'galaxy-group-sculptor-group',
     name: 'Sculptor Group',
     worldPos: [0, 0, 10],
     featured: true,

@@ -1,5 +1,5 @@
 /**
- * createFocusUniformBuffer — allocate the single engine-owned cluster-focus
+ * createFocusUniformBuffer — allocate the single engine-owned structure-focus
  * uniform (buffer + bind group + scratch packer). One structure is focused at a
  * time, so one instance lives on `state.gpu.focusUniform`; `renderFrame`
  * writes it once per frame and every focus-aware pipeline (points, the

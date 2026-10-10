@@ -19,7 +19,7 @@
  * axis, still contains the camera (a per-axis interval test). That admits a
  * neighbour leaf exactly when a star in it could be within range, and no
  * farther. The descent is an explicit stack (no per-node closures on the hot
- * path, matching `walkStarOctreeCut`'s idiom).
+ * path).
  *
  * ── Why reconstruct through the SHARED starNodeOriginRelCamMpc formula ────────
  *

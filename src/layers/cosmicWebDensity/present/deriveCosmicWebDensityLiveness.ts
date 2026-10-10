@@ -25,7 +25,7 @@ export function deriveCosmicWebDensityLiveness(
   if (!state.settings.cosmicWebDensity.enabled && masterOpacity <= 0) return null;
 
   // Recession lands on the master MULTIPLIER only: `recessedMaster ∈
-  // [VOLUME_RECESSION, 1]` can't zero the layer, so the gate reads the pure toggle.
+  // [STRONG_RECESSION, 1]` can't zero the layer, so the gate reads the pure toggle.
   const recessedMaster = resolveLayerOpacity(state, ctx, { kind: 'cosmicWebDensity' });
   // Mpc from the heliocentric render origin — what every field's `bands` measure.
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);

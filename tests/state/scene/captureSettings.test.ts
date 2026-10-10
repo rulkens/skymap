@@ -5,7 +5,7 @@
  * mutates them, then restores the capture. These tests pin the properties
  * that make that round-trip sound:
  *
- *   1. *Scope* — exactly the sixteen tour-owned clusters are captured, and
+ *   1. *Scope* — exactly the seventeen tour-owned clusters are captured, and
  *      excluded fields (e.g. `tonemap`, `orientation`) never leak into the
  *      snapshot. `orientation` is captured separately by `captureScene` onto
  *      `SceneSnapshot` — see that type's header for why it must not ride here.
@@ -40,6 +40,7 @@ const SNAPSHOT_KEYS = [
   'structures',
   'cosmicWebDensity',
   'zoneOfAvoidance',
+  'lightTime',
 ].sort();
 
 /**
@@ -59,6 +60,7 @@ function makeState() {
       milkyWay: { enabled: true, labelEnabled: false },
       flow: { enabled: true, nested: { speed: 2 } },
       orbitTrails: { enabled: true },
+      lightTime: { enabled: true },
       starCatalogs: { enabled: true, items: {} },
       bodies: { items: {} },
       blackHoles: { items: {} },
@@ -71,7 +73,7 @@ function makeState() {
 }
 
 describe('captureSettings', () => {
-  it('clones exactly the sixteen tour-owned clusters', () => {
+  it('clones exactly the seventeen tour-owned clusters', () => {
     const state = makeState();
     const snap = captureSettings(state);
 
@@ -83,7 +85,7 @@ describe('captureSettings', () => {
     // this type cannot revert the tour's live-authored pole (see
     // `SceneSnapshot`'s header).
     expect(snap).not.toHaveProperty('orientation');
-    // The sixteen captured clusters deep-equal their source.
+    // The seventeen captured clusters deep-equal their source.
     for (const key of SNAPSHOT_KEYS) {
       expect((snap as Record<string, unknown>)[key]).toEqual(
         (state.settings as unknown as Record<string, unknown>)[key],

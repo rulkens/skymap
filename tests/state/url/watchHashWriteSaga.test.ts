@@ -50,7 +50,7 @@ const virgoRow: SelectionRow = {
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,

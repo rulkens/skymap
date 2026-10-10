@@ -19,8 +19,8 @@ export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly binBaseName: string;
   /** Ships per-tier `.bin` variants (always true for this source). */
   readonly tiered: boolean;
-  /** Per-frame drawn-point budget: typical + hard cap. */
-  readonly drawBudget: { readonly typical: number; readonly hardCap: number };
+  /** Per-frame drawn-point budget: typical. */
+  readonly drawBudget: { readonly typical: number };
   /** Camera-distance crossfade band to the procedural MW cloud, parsecs. */
   readonly crossfadePc: { readonly inner: number; readonly outer: number };
 };

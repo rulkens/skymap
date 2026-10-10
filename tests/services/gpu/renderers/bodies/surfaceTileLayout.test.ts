@@ -1,7 +1,6 @@
 /**
  * surfaceTile layout parity — the CPU packer and the WESL structs must
- * agree byte-for-byte, the `NodeParams` case `nodeParamsLayout.test.ts`
- * guards for the star pipeline, adapted here for `surfaceTileLayout.ts`'s
+ * agree byte-for-byte, checked here for `surfaceTileLayout.ts`'s
  * two structs (`PatchInstance`, `SurfaceTileUniforms`).
  *
  * The WESL `struct PatchInstance` / `SurfaceTileUniforms`

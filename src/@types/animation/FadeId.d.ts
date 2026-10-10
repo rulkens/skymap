@@ -40,6 +40,8 @@
  *                    `settings.zoneOfAvoidance.enabled`, which gates both
  *                    the band and its curved lettering — a single toggle,
  *                    not a band/label split. No discriminator.
+ *   - lightTime    — the light-time spheres guide. Seeded from
+ *                    `settings.lightTime.enabled`. No discriminator.
  *   - orbitTrails  — the near-field Keplerian orbit trails (Earth / Jupiter /
  *                    Moon …). Seeded from `settings.orbitTrails.enabled` and
  *                    multiplied into the layer's per-orbit apparent-size alpha so
@@ -90,6 +92,7 @@ export type FadeId =
   | { readonly kind: 'constellations' }
   | { readonly kind: 'orbitTrails' }
   | { readonly kind: 'zoneOfAvoidance' }
+  | { readonly kind: 'lightTime' }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;

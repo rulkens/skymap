@@ -12,6 +12,7 @@ import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
+import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
@@ -163,13 +164,27 @@ export const GPU_HANDLE_ROWS = [
   },
 
   {
-    key: 'structureMarkerRenderer',
+    key: 'structureMarkerCosmoRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createStructureMarkerRenderer(
         deps.ctx,
         HDR_TARGET_FORMAT,
         deps.fadeBgl,
-        SLAB_REVERSED_Z[COSMO]!,
+        COSMO,
+        STRUCTURE_IDS_BY_SCALE.cosmic,
+      ),
+  },
+  {
+    // Its own uniform + instance buffers: both marker passes record into one
+    // encoder, so a shared uniform would hand both draws the last-written matrix.
+    key: 'structureMarkerNearRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createStructureMarkerRenderer(
+        deps.ctx,
+        HDR_TARGET_FORMAT,
+        deps.fadeBgl,
+        NEAR0,
+        STRUCTURE_IDS_BY_SCALE.milkyWay,
       ),
   },
   {

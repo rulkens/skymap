@@ -27,11 +27,10 @@
  * has advanced past `picked`, a new pick is fired immediately. Without this,
  * a stopped cursor would never get a hover result for its resting position.
  *
- * ### No requestRender
+ * ### No requestRender here
  *
- * Hover feeds only the React InfoCard text; there is no hover halo in the
- * rendered scene, so a hover change requires no re-render. `HoverPickDeps`
- * has no scheduler field — the dep type is the structural guarantee.
+ * Hover wakes belong to `watchSelectionWakeSaga`; `HoverPickDeps` has no
+ * scheduler field, so this driver cannot wake the loop.
  */
 
 import { cssToTexPx } from '../helpers/cssToTexPx';

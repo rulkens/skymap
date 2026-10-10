@@ -33,7 +33,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/milkyWay/render/milkyWayCloudRenderer.ts',
   'src/layers/starCatalog/passes/fieldStarSpherePass.ts',
   'src/layers/starCatalog/present/starCatalogSelectionRow.ts',
-  'src/layers/starCatalog/render/starCatalogPickRenderer.ts',
   'src/layers/starCatalog/render/starCatalogRenderer.ts',
   'src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow.ts',
   'src/services/animation/fadeController.ts',

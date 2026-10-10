@@ -1,9 +1,8 @@
 /**
  * parseStructureSeed — parse + validate `data/seeds/structure_anchors.seed.json`.
  *
- * The seed file is the single source of truth for which galaxy clusters,
- * superclusters, voids, and nearby galaxy groups appear as featured labelled
- * POIs in the renderer.
+ * The seed file is the single source of truth for which structures appear as
+ * featured labelled POIs in the renderer.
  * Two Plan-2 scripts will read it: `buildClusterPois.ts` (cross-matches
  * catalog coverage and emits the runtime POI list) and `auditClusterCoverage.ts`
  * (verifies MCXC/MSCC catalog density at each anchor).  Centralising parsing
@@ -18,19 +17,32 @@
  * would silently shadow one entry in every consumer that keyed on the id.
  */
 
-/** Valid structural categories. */
-const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;
+import type { Length } from '../../src/@types/data/Length';
+import type { NebulaKind } from '../../src/@types/data/structure/NebulaKind';
+import type { StructureId } from '../../src/@types/data/structure/StructureId';
+import { MPC_PER_LENGTH_UNIT } from '../../src/data/mpcPerLengthUnit';
+import { NEBULA_KIND_LABELS } from '../../src/data/structure/nebulaKindLabels';
+import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
+import { STRUCTURE_IDS_BY_SCALE } from '../../src/data/structure/structureIdsByScale';
+
+const NEBULA_KINDS: readonly string[] = Object.keys(NEBULA_KIND_LABELS);
+
+// Rows inside the Milky Way have no catalogue in this pipeline, so each names
+// the paper its numbers came from; the Milky Way scale marks exactly those categories.
+const SOURCE_REQUIRED: readonly string[] = STRUCTURE_IDS_BY_SCALE.milkyWay;
+
+const LENGTH_UNITS: readonly string[] = Object.keys(MPC_PER_LENGTH_UNIT);
 
 /**
  * One featured structure from `structure_anchors.seed.json`.
  *
  * Coordinates follow the `SkyCoord` convention: RA in hours [0, 24),
- * Dec in degrees [-90, 90], distances in Mpc.
+ * Dec in degrees [-90, 90]; distance and radii are unit-tagged `Length`s.
  *
- * `physicalRadiusMpc` is the gravitationally-bound virial/core radius for
+ * `physicalRadius` is the gravitationally-bound virial/core radius for
  * clusters and groups (e.g. the harmonic radius Rh for groups); for
- * superclusters and voids it equals `apparentRadiusMpc` (no bound core).
- * `apparentRadiusMpc` is the wider "named extent" — for clusters and groups
+ * superclusters and voids it equals `apparentRadius` (no bound core).
+ * `apparentRadius` is the wider "named extent" — for clusters and groups
  * this is the zero-velocity turnaround radius R0 (physR < appR); for
  * superclusters and voids it matches physR.  Drives ring sizing and
  * cone-search membership.
@@ -45,25 +57,34 @@ export type StructureSeedEntry = {
   /** Abell/ACO designation where applicable (clusters only). */
   abell?: string;
   /** Structural category. */
-  category: (typeof VALID_CATEGORIES)[number];
+  category: StructureId;
   /** Right Ascension in hours, [0, 24). */
   raHours: number;
   /** Declination in degrees, [-90, 90]. */
   decDeg: number;
-  /** Distance in Mpc, > 0. */
-  distMpc: number;
+  /** Distance, value > 0. */
+  distance: Length;
   /**
-   * Virial/core radius for clusters and groups; equals `apparentRadiusMpc`
+   * Virial/core radius for clusters and groups; equals `apparentRadius`
    * for superclusters and voids (no bound core concept applies).
    */
-  physicalRadiusMpc: number;
+  physicalRadius: Length;
   /**
    * Wider "named extent" radius — drives ring sizing, cone-search membership,
-   * and the halo half-extent.  >= `physicalRadiusMpc` for clusters.
+   * and the halo half-extent.  >= `physicalRadius` for clusters.
    */
-  apparentRadiusMpc: number;
+  apparentRadius: Length;
   /** 1–2 sentence curated description shown in the POI info panel. */
   description: string;
+  /** What a nebula is; required on `nebula`, rejected on every other category. */
+  nebulaKind?: NebulaKind;
+  /**
+   * Where the row's distance and radii come from (survey, paper or bibcode).
+   * Required on the Milky Way categories; build-time documentation only.
+   */
+  source?: string;
+  /** Exact English Wikipedia article title (canonical, after redirects). */
+  wikipedia?: string;
 };
 
 /**
@@ -77,38 +98,60 @@ export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeed
   if (!Array.isArray(e.names) || e.names.length === 0) {
     throw new Error(`structure seed: ${e.id} has empty names array`);
   }
-  if (!VALID_CATEGORIES.includes(e.category as (typeof VALID_CATEGORIES)[number])) {
+  if (!(STRUCTURE_IDS as readonly string[]).includes(e.category)) {
     throw new Error(
-      `structure seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void' | 'group')`,
+      `structure seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected ${STRUCTURE_IDS.map((id) => `'${id}'`).join(' | ')})`,
     );
   }
   if (!Number.isFinite(e.raHours) || e.raHours < 0 || e.raHours >= 24) {
-    throw new Error(`structure seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`);
+    throw new Error(
+      `structure seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`,
+    );
   }
   if (!Number.isFinite(e.decDeg) || e.decDeg < -90 || e.decDeg > 90) {
-    throw new Error(`structure seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`);
-  }
-  if (!Number.isFinite(e.distMpc) || e.distMpc <= 0) {
-    throw new Error(`structure seed: ${e.id} has non-positive distMpc ${e.distMpc}`);
-  }
-  if (!Number.isFinite(e.physicalRadiusMpc) || e.physicalRadiusMpc <= 0) {
     throw new Error(
-      `structure seed: ${e.id} has non-positive physicalRadiusMpc ${e.physicalRadiusMpc}`,
+      `structure seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`,
     );
   }
-  if (!Number.isFinite(e.apparentRadiusMpc) || e.apparentRadiusMpc <= 0) {
-    throw new Error(
-      `structure seed: ${e.id} has non-positive apparentRadiusMpc ${e.apparentRadiusMpc}`,
-    );
+  for (const field of ['distance', 'physicalRadius', 'apparentRadius'] as const) {
+    const length = e[field];
+    if (!LENGTH_UNITS.includes(length?.unit)) {
+      throw new Error(
+        `structure seed: ${e.id} has unknown ${field} unit ${JSON.stringify(length?.unit)} (expected ${LENGTH_UNITS.join(' | ')})`,
+      );
+    }
+    if (!Number.isFinite(length.value) || length.value <= 0) {
+      throw new Error(`structure seed: ${e.id} has non-positive ${field} ${length.value}`);
+    }
   }
   if (typeof e.description !== 'string' || e.description.trim().length === 0) {
     throw new Error(`structure seed: ${e.id} missing description`);
   }
-  if (e.commonName !== undefined && (typeof e.commonName !== 'string' || e.commonName.length === 0)) {
+  if (
+    e.commonName !== undefined &&
+    (typeof e.commonName !== 'string' || e.commonName.length === 0)
+  ) {
     throw new Error(`structure seed: ${e.id} has invalid commonName (must be a non-empty string)`);
   }
   if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {
     throw new Error(`structure seed: ${e.id} has invalid abell (must be a non-empty string)`);
+  }
+  if (e.wikipedia !== undefined && (typeof e.wikipedia !== 'string' || e.wikipedia.length === 0)) {
+    throw new Error(`structure seed: ${e.id} has invalid wikipedia (must be a non-empty string)`);
+  }
+  if (e.category === 'nebula') {
+    if (!NEBULA_KINDS.includes(e.nebulaKind as string)) {
+      throw new Error(
+        `structure seed: ${e.id} needs nebulaKind, got ${JSON.stringify(e.nebulaKind)} (expected ${NEBULA_KINDS.join(' | ')})`,
+      );
+    }
+  } else if (e.nebulaKind !== undefined) {
+    throw new Error(`structure seed: ${e.id} has nebulaKind but is not a nebula`);
+  }
+  if (SOURCE_REQUIRED.includes(e.category)) {
+    if (typeof e.source !== 'string' || e.source.trim().length === 0) {
+      throw new Error(`structure seed: ${e.id} (${e.category}) missing source`);
+    }
   }
   return e;
 }

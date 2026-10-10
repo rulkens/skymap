@@ -9,6 +9,7 @@ export const VOID_ENTRY = {
   allSky: true,
   bearsLabel: true,
   bearsMarker: true,
+  scale: 'cosmic',
   labelLayer: 'structure',
   detailLabel: 'Cosmic Void',
   shortLabel: 'Void',

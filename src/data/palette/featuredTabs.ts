@@ -10,6 +10,9 @@ import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
 
+// A card's `id` keys its thumbnail file, independent of its `focusId`: ids like
+// 'cluster-virgo-m87' keep their old names so the captured images stay valid.
+
 // A tour card has no registry pose to inherit, so its whole framing lives here.
 // Both mirror their tour's opening scene strip rather than the default sky, so
 // the thumbnail is a frame the viewer will actually see.
@@ -186,7 +189,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
         capture: { keepFocus: true },
       },
       {
@@ -194,7 +197,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
         capture: { keepFocus: true },
       },
       {
@@ -630,7 +633,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Local Group',
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
-        action: { kind: 'focus', focusId: 'group-local-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-local-group' },
         capture: { keepFocus: true },
       },
       {
@@ -638,7 +641,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'M81 Group',
         blurb:
           'A nearby group of about 30 galaxies around M81 and M82, some 12 million light-years away.',
-        action: { kind: 'focus', focusId: 'group-m81-group' },
+        action: { kind: 'focus', focusId: 'galaxy-group-m81-group' },
         capture: { keepFocus: true },
       },
       {
@@ -646,7 +649,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Virgo Cluster',
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
-        action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        action: { kind: 'focus', focusId: 'galaxy-cluster-virgo-m87' },
         capture: { keepFocus: true },
       },
       {

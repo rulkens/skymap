@@ -42,7 +42,7 @@
 }
 
 /* Staggered fade-up reveal. Film-title sequence: ~600 ms total.
- * Optional elements (errorBox, continueAnyway) inherit their slot's
+ * The optional errorBox inherits its slot's
  * delay by virtue of nth-child position — the order remains the
  * right reveal sequence. */
 .column > * {
@@ -195,18 +195,6 @@
 .cta:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 4px;
-}
-
-/* "Continue anyway" — the same .cta chrome but no arrow, smaller,
- * pinned by margin rather than ctas-row flex. */
-.continueAnyway {
-  margin-top: 4px;
-  align-self: flex-start;
-  font-size: 11px;
-  color: var(--color-fg-muted);
-}
-.continueAnyway::after {
-  right: 0;
 }
 
 .footer {

@@ -1,7 +1,7 @@
 /**
  * The standalone home of the star renderer's f64-rebase precision seam
- * (`resolveStarRecord` reuses it; see `computeStarCut` for the full
- * catastrophic-cancellation landmine). f64 the whole way, narrowed to f32
+ * (`resolveStarRecord` uses it; `cutIo.wesl` keeps the same discipline on the
+ * GPU against catastrophic cancellation). f64 the whole way, narrowed to f32
  * only in the returned `Vec3`. One formula for leaves and aggregates via
  * `2^level` — inverts the box scaling `buildStarOctree` applies when
  * quantizing an aggregate's flux centroid. No division, so a node coincident

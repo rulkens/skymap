@@ -21,6 +21,7 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
 import { fadeBand } from '../../../utils/math/fadeBand';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
@@ -78,7 +79,9 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
     // the source code over localIdx 0, exactly what `milkyWayPickRenderer`
     // stamps. Note the impostor picks on NEAR0 while this label picks on
     // COSMO; both decode to the same `{ type: 'milkyWay' }` selection.
-    pickId: packSelection(Source.MilkyWay, 0 + PICK_SENTINEL_OFFSET),
+    pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus)
+      ? packSelection(Source.MilkyWay, 0 + PICK_SENTINEL_OFFSET)
+      : undefined,
     worldPos: [0, 0, 0],
     text: LABEL_TEXT,
     font: 'cormorant',

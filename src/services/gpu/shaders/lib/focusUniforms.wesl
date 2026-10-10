@@ -11,10 +11,9 @@
 // FOCUS_CORE_FRACTION) so the smoothstep never sees a degenerate
 // edge0 == edge1, even when the two radii are equal (SC/void).
 //
-// Clusters, superclusters and voids all behave identically: the focused
-// structure's interior galaxies stay bright, the rest recede. (Voids are
-// underdense, so focusing one isolates the few galaxies that sit inside
-// its radius — same rule, no inversion.)
+// Every focusable structure behaves identically: what lies inside its sphere
+// stays bright, the rest recedes. (Voids are underdense, so focusing one
+// isolates the few galaxies inside its radius — same rule, no inversion.)
 //
 // The @group/@binding decoration is declared by each consuming shader, not
 // here: points parks it at @group(3) (its lower slots hold Uniforms / Fade /
@@ -49,6 +48,15 @@ struct FocusUniforms {
 // (>= 40% of the radius) for every category.
 const FOCUS_CORE_FRACTION: f32 = 0.6;
 
+// The multiplier everything outside the focused sphere settles to at full blend.
+// Mirrored in TS (data/focusDimFloor.ts).
+const FOCUS_DIM_FLOOR: f32 = 0.08;
+
+// A multiplier below this takes the instance out of the pick pass: the
+// multiplier is exactly 1.0 for members and at rest, so the cut lands on what
+// the visual pass fades away. The CPU cut (isPickableUnderFocus) compares >= 1 directly.
+const FOCUS_PICK_EXCLUDE_BELOW: f32 = 1.0;
+
 // Per-vertex focus alpha multiplier. Galaxies inside the core (the smaller
 // of physicalRadiusMpc and 60% of the apparent radius) keep alpha 1.0;
 // alpha ramps smoothly down to 0.08 across the band out to the apparent
@@ -59,6 +67,6 @@ fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
   let inner = min(focus.physicalRadiusMpc, apparent * FOCUS_CORE_FRACTION);
   let d = distance(worldPos, focus.centerApparent.xyz);
   let t = smoothstep(inner, apparent, d);
-  let baseAlpha = mix(1.0, 0.08, t);
+  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, t);
   return mix(1.0, baseAlpha, focus.blend);
 }

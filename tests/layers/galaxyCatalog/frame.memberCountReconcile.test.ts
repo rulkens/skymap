@@ -22,7 +22,7 @@ const CLUSTER: SelectionRow = {
   type: 'structure',
   id: 'test-cluster',
   name: 'Test Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 10,

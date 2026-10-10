@@ -11,7 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
-import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
+import { structureMarkersCosmoPass } from '../../../../../src/services/engine/frame/passes/structureMarkersCosmoPass';
 import { structureMarkersPlanner } from '../../../../../src/services/engine/frame/planners/structureMarkersPlanner';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
@@ -184,22 +184,22 @@ function planMarkers(ctx: FrameView, count: number): FrameView {
 // on every frame and the markers would never appear.
 const EMPTY_RENDERER_STATE = {
   ...STATE_STUB,
-  gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 0 } },
+  gpu: { ...STATE_STUB.gpu, structureMarkerCosmoRenderer: { markerCount: () => 0 } },
 } as unknown as EngineState;
 
 describe('structureMarkersPass.enabled', () => {
   it('gates on the PLANNED markers, not on what the renderer last uploaded', () => {
     const ctx = planMarkers(makeCtx(), 3);
-    expect(structureMarkersPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO))).toBe(
-      true,
-    );
+    expect(
+      structureMarkersCosmoPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO)),
+    ).toBe(true);
   });
 
   it('an empty planned list leaves the pass plan', () => {
     const ctx = planMarkers(makeCtx(), 0);
-    expect(structureMarkersPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO))).toBe(
-      false,
-    );
+    expect(
+      structureMarkersCosmoPass.enabled(EMPTY_RENDERER_STATE, ctx, slabViewOf(ctx, COSMO)),
+    ).toBe(false);
   });
 
   it('disables once the surveyDeepZoom fade completes (opacity-zero principle)', () => {
@@ -209,17 +209,19 @@ describe('structureMarkersPass.enabled', () => {
     // hits.
     const state = {
       ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
+      gpu: { ...STATE_STUB.gpu, structureMarkerCosmoRenderer: { markerCount: () => 3 } },
     } as unknown as EngineState;
     // Default fixture camera: 5 Mpc from origin, far outside the band.
     const farCtx = planMarkers(makeCtx(), 3);
-    expect(structureMarkersPass.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
+    expect(structureMarkersCosmoPass.enabled(state, farCtx, slabViewOf(farCtx, COSMO))).toBe(true);
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
     const nearCtx = planMarkers(
       makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> }),
       3,
     );
-    expect(structureMarkersPass.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
+    expect(structureMarkersCosmoPass.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(
+      false,
+    );
   });
 });
 
@@ -230,11 +232,11 @@ describe('structureMarkersPass.pickEnabled', () => {
   it('reads the renderer, never the plan the pick context never ran', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    expect(structureMarkersPass.pickEnabled!(EMPTY_RENDERER_STATE, ctx, view)).toBe(false);
+    expect(structureMarkersCosmoPass.pickEnabled!(EMPTY_RENDERER_STATE, ctx, view)).toBe(false);
     const uploaded = {
       ...STATE_STUB,
-      gpu: { ...STATE_STUB.gpu, structureMarkerRenderer: { markerCount: () => 3 } },
+      gpu: { ...STATE_STUB.gpu, structureMarkerCosmoRenderer: { markerCount: () => 3 } },
     } as unknown as EngineState;
-    expect(structureMarkersPass.pickEnabled!(uploaded, ctx, view)).toBe(true);
+    expect(structureMarkersCosmoPass.pickEnabled!(uploaded, ctx, view)).toBe(true);
   });
 });
