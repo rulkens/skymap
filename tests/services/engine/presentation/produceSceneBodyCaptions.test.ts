@@ -116,7 +116,7 @@ function makeState(
       },
     },
     settings: {
-      orbitTrails: { emphasis: null },
+      missionTrails: { emphasis: null },
       bodies: { items: bodyItems },
       blackHoles: { items: { [SGR_A_STAR_ENTRY.id]: { labelEnabled: true } } },
       starCatalogs: {
@@ -317,7 +317,7 @@ describe('produceSceneBodyCaptions', () => {
     expect(full).toBeGreaterThan(0);
 
     // Same bodyStates identity (paused clock), so only a post-memo dim can show the change.
-    (state.settings as { orbitTrails: { emphasis: string | null } }).orbitTrails.emphasis =
+    (state.settings as { missionTrails: { emphasis: string | null } }).missionTrails.emphasis =
       'voyager1';
     const out = produceSceneBodyCaptions(state, ctx).labels;
     expect(fadeAlphaOf(out, 'sceneBody-voyager2')).toBeCloseTo(full * MISSION_EMPHASIS_DIM);

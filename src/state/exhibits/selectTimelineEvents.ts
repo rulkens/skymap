@@ -1,5 +1,5 @@
 import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
-import { selectMissionEmphasis } from '../settings/core/orbitTrails/selectors';
+import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { MissionEvent } from '../../@types/missions/MissionEvent';

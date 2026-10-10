@@ -57,6 +57,8 @@ import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatal
 import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
 import { selectBlackHoleItems } from '../../layers/blackHoles/state/blackHoles/selectors';
 import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
+import { selectMissionTrailsEnabled } from '../../state/settings/core/missionTrails/selectors';
+import { setMissionTrailsEnabled } from '../../state/settings/core/missionTrails/slice';
 import { selectOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/selectors';
 import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
@@ -85,6 +87,7 @@ function LabelsAndGuidesSectionContainer({
   const blackHoleItems = useAppSelector(selectBlackHoleItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
+  const missionTrailsEnabled = useAppSelector(selectMissionTrailsEnabled);
 
   // Bundle the label homes, then project them → flat label-visibility record.
   // Both rebuild only when one of the stable-reference inputs changes.
@@ -130,6 +133,13 @@ function LabelsAndGuidesSectionContainer({
     [dispatch],
   );
 
+  const onToggleMissionTrails = useCallback(
+    (enabled: boolean) => {
+      dispatch(setMissionTrailsEnabled(enabled));
+    },
+    [dispatch],
+  );
+
   // `shallowEqual` is required: the mapped array is a fresh reference on
   // every store write, which would otherwise re-render this section on any unrelated state change.
   const layerValues = useAppSelector((s) => layerRows.map((row) => row.select(s)), shallowEqual);
@@ -153,6 +163,12 @@ function LabelsAndGuidesSectionContainer({
         enabled: orbitTrailsEnabled,
         onChange: onToggleOrbitTrails,
       },
+      {
+        id: 'toggle-mission-trails',
+        label: 'Mission trails',
+        enabled: missionTrailsEnabled,
+        onChange: onToggleMissionTrails,
+      },
       ...layerRows.map((row, index) => ({
         id: row.id,
         label: row.label,
@@ -165,6 +181,8 @@ function LabelsAndGuidesSectionContainer({
       onSetLabelCategoryVisibility,
       orbitTrailsEnabled,
       onToggleOrbitTrails,
+      missionTrailsEnabled,
+      onToggleMissionTrails,
       layerRows,
       layerValues,
       dispatch,

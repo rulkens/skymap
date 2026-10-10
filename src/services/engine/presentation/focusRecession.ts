@@ -55,6 +55,7 @@ const RECESSION_BY_KIND = {
   flow: undefined,
   constellations: STRONG_RECESSION, // lines and captions both read this row
   orbitTrails: undefined, // near-field foreground trails never recede on focus
+  missionTrails: undefined,
   overlay: undefined,
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
   lightTime: undefined, // a guide, stays put under focus

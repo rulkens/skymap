@@ -20,8 +20,8 @@
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
  *   - `localBubble`    — the Local Bubble shell's gate.
  *   - `constellations` — constellation figures + their lettering.
- *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate + the
- *                        mission-craft emphasis (which sampled craft stays undimmed).
+ *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
+ *   - `missionTrails`  — sampled-craft trails' gate + the emphasis (which craft stays undimmed).
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
  *   - `bodies`         — per-body visibility + caption toggles.
  *   - `blackHoles`     — per-hole caption toggles; a `bodyLabel` cue writes them.
@@ -89,6 +89,7 @@ export type SettingsSnapshot = Readonly<
     | 'localBubble'
     | 'constellations'
     | 'orbitTrails'
+    | 'missionTrails'
     | 'starCatalogs'
     | 'bodies'
     | 'blackHoles'

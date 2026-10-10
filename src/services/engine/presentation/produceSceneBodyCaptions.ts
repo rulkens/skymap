@@ -65,7 +65,7 @@ export function produceSceneBodyCaptions(
 
   // After the memo, never inside it: the memo only rebuilds when the sim clock moves, but the
   // visitor can flip the emphasis while it is paused.
-  const emphasis = state.settings.orbitTrails.emphasis;
+  const emphasis = state.settings.missionTrails.emphasis;
   const labels = baseLabelsFor(sceneBodyStates(state, ctx), ctx.snapshot.simDays).map((label) => {
     const sampled = SAMPLED_BODIES.some((b) => b.id === label.bodyId);
     const dim = sampled ? emphasisDim(emphasis, label.bodyId!) : 1;

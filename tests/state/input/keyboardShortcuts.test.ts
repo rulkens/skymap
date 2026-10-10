@@ -105,7 +105,7 @@ describe('KEYBOARD_SHORTCUTS', () => {
     const inExhibit = stateWith({
       time: time(3, false),
       takeover: { active: { kind: 'exhibit', id: 'voyager-missions', entry: 'cut' } },
-      settings: { orbitTrails: { enabled: true, emphasis: null } },
+      settings: { missionTrails: { enabled: true, emphasis: null } },
     } as unknown as Partial<RootState>);
     expect(byKeys('[').run(inExhibit)).toEqual(stepMissionSpeed({ step: -1 }));
     expect(byKeys(']').run(inExhibit)).toEqual(stepMissionSpeed({ step: 1 }));

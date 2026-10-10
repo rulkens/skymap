@@ -14,11 +14,7 @@ export const orbitTrailsSlice = createSlice({
     setOrbitTrailsEnabled: (orbitTrails, action: PayloadAction<boolean>) => {
       orbitTrails.enabled = action.payload;
     },
-    // The exhibit timeline's craft switch; the takeover bracket restores it on exit.
-    setMissionEmphasis: (orbitTrails, action: PayloadAction<string | null>) => {
-      orbitTrails.emphasis = action.payload;
-    },
   },
 });
 
-export const { setOrbitTrailsEnabled, setMissionEmphasis } = orbitTrailsSlice.actions;
+export const { setOrbitTrailsEnabled } = orbitTrailsSlice.actions;

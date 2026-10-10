@@ -4,6 +4,7 @@
  * are measured, in `MISSION_EVENTS`.
  */
 
+import { initialState as missionTrailsInitialState } from '../../state/settings/core/missionTrails/initialState';
 import { initialState as orbitTrailsInitialState } from '../../state/settings/core/orbitTrails/initialState';
 import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
@@ -32,7 +33,8 @@ export const voyagerMissions: Exhibit = {
   id: 'voyager-missions',
   label: 'The Voyager missions',
   settings: {
-    orbitTrails: { ...orbitTrailsInitialState, enabled: true, emphasis: 'voyager1' },
+    orbitTrails: { ...orbitTrailsInitialState, enabled: true },
+    missionTrails: { ...missionTrailsInitialState, enabled: true, emphasis: 'voyager1' },
     // Galaxies and star names are landmarks for other scales; here they only crowd the craft.
     galaxyCatalogs: {
       ...galaxyCatalogsInitialState,

@@ -21,8 +21,8 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { clearMission, setMission, setMissionSpeed } from '../camera/cameraSlice';
 import { selectOrientation } from '../settings/selectors';
-import { selectMissionEmphasis } from '../settings/core/orbitTrails/selectors';
-import { setMissionEmphasis } from '../settings/core/orbitTrails/slice';
+import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors';
+import { setMissionEmphasis } from '../settings/core/missionTrails/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setSimDays } from '../time/timeSlice';
@@ -43,7 +43,7 @@ const SCRUB_SETTLE_MS = 150;
 /** A clock this close to a launch counts as at it (a minute, under any float drift). */
 const LAUNCH_TOLERANCE_DAYS = 1 / 1440;
 
-const launchDays =(mission: CameraMission): number => unixMsToJulianDays(mission.stops[0]!.ms);
+const launchDays = (mission: CameraMission): number => unixMsToJulianDays(mission.stops[0]!.ms);
 
 export function* missionHoldSaga(
   exhibit: Exhibit,

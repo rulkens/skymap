@@ -15,7 +15,7 @@ import { exhibitBodySaga } from '../../../src/state/exhibits/exhibitBodySaga';
 import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEvent';
-import { setMissionEmphasis } from '../../../src/state/settings/core/orbitTrails/slice';
+import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrails/slice';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { pause, resume, setSimDays, goLive } from '../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../src/store/rootReducer';

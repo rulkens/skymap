@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { createTestStore } from '../../../../support/createTestStore';
-import { selectMissionEmphasis } from '../../../../../src/state/settings/core/orbitTrails/selectors';
-import { setMissionEmphasis } from '../../../../../src/state/settings/core/orbitTrails/slice';
+import { selectMissionEmphasis } from '../../../../../src/state/settings/core/missionTrails/selectors';
+import { setMissionEmphasis } from '../../../../../src/state/settings/core/missionTrails/slice';
 
 describe('mission emphasis', () => {
   it('starts null and follows setMissionEmphasis', () => {

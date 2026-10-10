@@ -1,0 +1,24 @@
+import { createSelector } from '@reduxjs/toolkit';
+
+import { selectSettings } from '../../selectSettings';
+import type { MissionTrailsSettings } from '../../../../@types/settings/MissionTrailsSettings';
+
+/** The one root hop for this slice, spelled `selectRoute` in every slice. */
+export const selectRoute = createSelector(
+  [selectSettings],
+  (settings): MissionTrailsSettings => settings.missionTrails,
+);
+
+/** The whole cluster, under the slice's own name. */
+export const selectMissionTrails = selectRoute;
+
+export const selectMissionTrailsEnabled = createSelector(
+  [selectRoute],
+  (route: MissionTrailsSettings): boolean => route.enabled,
+);
+
+/** The emphasised sampled craft's id, or null for none. */
+export const selectMissionEmphasis = createSelector(
+  [selectRoute],
+  (route: MissionTrailsSettings): string | null => route.emphasis,
+);
