@@ -39,14 +39,14 @@
 
 ## 2. What carries over, what does not
 
-| Reusable as-is or by rename | Star-specific, diverges for galaxies |
-| --- | --- |
-| Morton-grid bottom-up builder with fat-leaf merge | 6 B record (no room for size, PA, axis ratio, objID; 5 spare bits) |
-| `mergeFluxAggregate` (flux-weighted centroid + scalars) | parsec units, heliocentric grid, 12 kpc cap, `MPC_TO_PC` conversions |
-| `cut.wesl` / `cutIo.wesl`, `starCutGpu`, `starCutLayout`, camera cell+fraction split | absMag / BP−RP LUT windows duplicated in `vertex.wesl` |
-| two-stream `drawIndirect` lists, half-res aggregate target + knee upsample | fixed-pixel round leaf dot; galaxies need oriented ellipses + the existing SB / Schechter / K-correction terms |
-| planner + wake logic (`frame.ts`, `sameStarCut`) | near-sprite dissolve, `fieldStarSpherePass`, leaf-only pick path |
-| gzip codec per object | 1024³ grid / 4.19 M node / 8192-per-leaf caps (bind at 71 M rows) |
+| Reusable as-is or by rename                                                          | Star-specific, diverges for galaxies                                                                           |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Morton-grid bottom-up builder with fat-leaf merge                                    | 6 B record (no room for size, PA, axis ratio, objID; 5 spare bits)                                             |
+| `mergeFluxAggregate` (flux-weighted centroid + scalars)                              | parsec units, heliocentric grid, 12 kpc cap, `MPC_TO_PC` conversions                                           |
+| `cut.wesl` / `cutIo.wesl`, `starCutGpu`, `starCutLayout`, camera cell+fraction split | absMag / BP−RP LUT windows duplicated in `vertex.wesl`                                                         |
+| two-stream `drawIndirect` lists, half-res aggregate target + knee upsample           | fixed-pixel round leaf dot; galaxies need oriented ellipses + the existing SB / Schechter / K-correction terms |
+| planner + wake logic (`frame.ts`, `sameStarCut`)                                     | near-sprite dissolve, `fieldStarSpherePass`, leaf-only pick path                                               |
+| gzip codec per object                                                                | 1024³ grid / 4.19 M node / 8192-per-leaf caps (bind at 71 M rows)                                              |
 
 The cut is the valuable part: it is a generic "point octree with aggregate mips under an instance budget", and nothing in it knows about stars except the record decode in the vertex stage.
 
@@ -69,6 +69,7 @@ The cut is the valuable part: it is a generic "point octree with aggregate mips 
 **Hosting:** versioned prefix, rclone bulk sync group, `index.txt` last, chunks immutable and not hashed; the index object is small enough to stay on the hashed-manifest path. The Cache Rule lands first.
 
 **Stage it:**
+
 - **A — galaxy octree, whole file, GPU cut.** Port the cut to galaxies on a single index-plus-all-chunks file. Lifts the draw ceiling from ~2.5 M to the budget-limited regime (10–20 M points resident, draw cost flat) and answers DESI's deferral; no streaming yet. This is where record packing, oriented-ellipse leaves, aggregate look, bias terms and the pick indirection get solved.
 - **B — chunking + streaming.** Split by `Lc`, add the subsystem and pool, resolve durable ids through chunks. REGALADE's full depth needs B; A alone cannot hold 71 M rows.
 
@@ -82,15 +83,15 @@ The cut is the valuable part: it is a generic "point octree with aggregate mips 
 
 ## 6. Sizing (REGALADE as the stress case)
 
-| Quantity | Value |
-| --- | --- |
-| Rows | 71.5 M (2000 Mpc, ~15 % are `fRel`) |
-| On disk at 16 / 24 B per record | 1.1 / 1.7 GB total |
-| Chunk objects at ~1 MB each | ~1,100–1,700 (tiles: 10,912) |
-| Leaf grid 1024³ over a 3000 Mpc box | ~3 Mpc cells, ~3 kpc in-cell resolution |
-| Nodes at 64 records/leaf | ≥ 1.1 M leaves; whole-tree node count near the 4.19 M cap → only chunking keeps the GPU table small |
-| Resident at a 100 MB GPU budget, 24 B/record | ~4 M galaxies in the pool, + index |
-| Parse cost (parser measured) | ~3 µs/row ≈ 4 min for the full file |
+| Quantity                                     | Value                                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Rows                                         | 71.5 M (2000 Mpc, ~15 % are `fRel`)                                                                 |
+| On disk at 16 / 24 B per record              | 1.1 / 1.7 GB total                                                                                  |
+| Chunk objects at ~1 MB each                  | ~1,100–1,700 (tiles: 10,912)                                                                        |
+| Leaf grid 1024³ over a 3000 Mpc box          | ~3 Mpc cells, ~3 kpc in-cell resolution                                                             |
+| Nodes at 64 records/leaf                     | ≥ 1.1 M leaves; whole-tree node count near the 4.19 M cap → only chunking keeps the GPU table small |
+| Resident at a 100 MB GPU budget, 24 B/record | ~4 M galaxies in the pool, + index                                                                  |
+| Parse cost (parser measured)                 | ~3 µs/row ≈ 4 min for the full file                                                                 |
 
 Dense nearby cells are the open risk: a 3 Mpc cell in Virgo/Fornax may exceed the 8192-records-per-leaf cap, so either the grid goes to 12 bits/axis (Morton no longer fits 30 bits; `(level, morton)` addressing changes) or the builder learns to split dense leaves.
 
@@ -151,14 +152,14 @@ tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire);
 
 ### Shape options under tension (greenfield cross-check vs §8)
 
-| # | §8 sketch | Greenfield | Price |
-|---|---|---|---|
-| A | binary header, enum-keyed stat/column tables | JSON header after a 6-byte magic | JSON: one parse at index load, no format bump for new stats/columns, readable in a hex dump; binary: smaller by ~1 KB, every new key is a VERSION bump |
-| B | patch parent + `firstRecord` to pool-absolute at upload | `firstRecord` object-local, slot base added in the shader; index never rewritten | greenfield removes the CPU patch pass and a mutable copy of the index; costs one `slotBase` per node row (u32) |
-| C | blob = one record in the record schema | blob inline in the node row (flux + u16 centroid) | KEEP §8: galaxies need flux-weighted axis ratio / PA / size on the blob, and one vertex path draws records and blobs alike |
-| D | chunks listed in the global data manifest | per-catalog mutable manifest with stable chunk ids | NEITHER: the index header lists chunk hashes, so the global manifest gets one row per catalog and a chunk re-bake rehashes the index (whole-catalog bakes are the only bake anyway) |
-| E | — | no SKST v1 reader kept | break = re-bake stars once + ~115 MB R2 re-sync; keeping v1 = a format switch (`VERSION` branch) in the loader forever |
-| F | — | — | `tools/stars-rs` port: keep in sync (two emitters to maintain) or drop (TS bake of the 1.8 GB Gaia CSV, time unmeasured) |
+| #   | §8 sketch                                               | Greenfield                                                                       | Price                                                                                                                                                                               |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | binary header, enum-keyed stat/column tables            | JSON header after a 6-byte magic                                                 | JSON: one parse at index load, no format bump for new stats/columns, readable in a hex dump; binary: smaller by ~1 KB, every new key is a VERSION bump                              |
+| B   | patch parent + `firstRecord` to pool-absolute at upload | `firstRecord` object-local, slot base added in the shader; index never rewritten | greenfield removes the CPU patch pass and a mutable copy of the index; costs one `slotBase` per node row (u32)                                                                      |
+| C   | blob = one record in the record schema                  | blob inline in the node row (flux + u16 centroid)                                | KEEP §8: galaxies need flux-weighted axis ratio / PA / size on the blob, and one vertex path draws records and blobs alike                                                          |
+| D   | chunks listed in the global data manifest               | per-catalog mutable manifest with stable chunk ids                               | NEITHER: the index header lists chunk hashes, so the global manifest gets one row per catalog and a chunk re-bake rehashes the index (whole-catalog bakes are the only bake anyway) |
+| E   | —                                                       | no SKST v1 reader kept                                                           | break = re-bake stars once + ~115 MB R2 re-sync; keeping v1 = a format switch (`VERSION` branch) in the loader forever                                                              |
+| F   | —                                                       | —                                                                                | `tools/stars-rs` port: keep in sync (two emitters to maintain) or drop (TS bake of the 1.8 GB Gaia CSV, time unmeasured)                                                            |
 
 ### Missing joints
 
@@ -181,5 +182,7 @@ tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire);
 - Galaxy `medianAbsMag` decode pass (`galaxyCatalogFormat.ts:320`) moves into the header when galaxies migrate, not now.
 
 ### Rulings (2026-10-10)
+
+Corrections found while writing the spec: `tiered` is read at one site only (`starCatalogFetcher.ts:71`; the five lines above test `binBaseName !== null`), so P2 is narrower; 16-bit node-relative offsets replace the `u20x3` store (spec §2.4). Spec: `docs/superpowers/specs/2026-10-10-chunked-star-octree-design.md`.
 
 A JSON header · B object-local `firstRecord` + slot base in the shader · C blob as a schema record (kept) · D index header is the chunk manifest · E **keep the SKST v1 reader behind the format switch** (both formats loadable side by side for the A/B; revisit deletion at `/feature-done`) · F stars-rs: decide after timing a TS bake · shape agreed · prep lands as separate PR(s) ahead of the feature.
