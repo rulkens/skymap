@@ -16,10 +16,13 @@ import type { SlotStore } from '../../@types/cache/SlotStore';
 export class SlotPool implements SlotStore {
   private readonly slots: Array<SlotEntry | undefined>;
   private readonly keyToSlot = new Map<string, number>();
-  // One handler, not an array: the stream that owns the pool is its only consumer.
+  // One handler, not an array: a store has one owner.
   private onEvict: SlotEvictHandler | undefined;
 
-  constructor(private readonly capacity: number) {
+  private readonly capacity: number;
+
+  constructor(capacity: number) {
+    this.capacity = capacity;
     this.slots = new Array(capacity).fill(undefined);
   }
 
