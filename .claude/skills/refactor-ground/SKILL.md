@@ -69,36 +69,91 @@ because there was only ever one case). Decision ledger:
 
 ## The checkpoint (required output)
 
-Present this to the user **before any spec text is written**. The output IS, in
-order:
+Present this to the user **before any spec text is written**. It has three
+parts: a page to read, one set of questions, and a few lines of text.
 
-1. **Ideal shape** — a compact code-shaped sketch (~20–50 lines: registry rows,
-   type deltas, file list), data delta first.
-2. **Shape options under compatibility tension** — wherever the greenfield
-   cross-check's shape and a compatibility-preserving shape diverge, present
-   BOTH, priced: what the break costs (migration, re-bake, cache-skew window,
-   external readers) vs what compat carries (the extra concept or asymmetry, and
-   for how long it lives). The user prices the break; backward compatibility is
-   never a silent default. "No tension found — greenfield and sketch agree" is
-   the item's null form, stated, not omitted.
-3. **Missing joints** — each with its growth/bolt-on verdict and the current
-   blocker (`file:line`).
-4. **Prep list** — the refactors that create the joints; each is its **own
-   diff, sequenced before the feature commits**. PR packaging (separate prep
-   PR(s) vs everything riding one PR) is NOT decided here — it is part of the
-   ask below, every time.
-5. **Adjacent findings** — knots seen but not required by the ideal diff. Default:
-   a `docs/backlog/` detail file. The user may promote one to a separate cleanup PR
-   — their call, at this checkpoint, never the agent's call mid-execution.
-6. **The ask** — sign-off on the shape, AND the PR-packaging question: "prep as
-   separate PR(s), or everything on one PR?" Ask it explicitly every time —
-   there is no default (`feedback_prep_rides_same_pr_ask`). When the shape has
-   genuine decision branches, escalate to a `grill-me` session instead of a
-   yes/no.
+### 1. The ground-check page
+
+With the claude-dash tools available, the checkpoint is a `show_sketch` page.
+Copy `checkpoint.html` (beside this file) to your scratchpad, replace its
+content, and show it with `width: "wide"`. Keep its structure and styles: the
+template is the design, and its opening comment says what goes where. The page
+shows the main points at rest and opens to the detail, so nothing below is a
+reason to shorten what you found.
+
+- **Headline.** The feature, and one sentence: how many touchpoints would be
+  special cases today, how many prep commits create the joints, how many
+  contracts change.
+- **Contracts that change**, breaking ones first — the ideal shape, data delta
+  first, one block per contract. At rest: its name, the kind of change, its
+  reach as a counted number, and the real before/after lines. Opened:
+  - **Why** — three steps: what the feature needs, what the code allows
+    today, so what changes.
+  - **Defined in** — the `file:line`.
+  - **Who is affected** — who writes it and who reads it, grouped (by folder
+    or role), each group opening to its files. Mark the files that special-case
+    one value: those are the existing bolt-ons.
+  - **How it is used** — the usage patterns, each opening to one real line.
+  - **Weighed** — cost, what is deliberately left alone, and the alternative
+    that was rejected with its reason. All three, always: "none recorded" is
+    not an answer, "the greenfield cross-check proposed no other shape" is.
+- **Prep, in order** — one row per prep commit with the bolt-on it removes;
+  each row opens to the blockers (`file:line`) that force the special case
+  today. Each prep is its **own diff, sequenced before the feature commits**.
+- **Growth, in one line** — the touchpoints that land as plain additions.
+
+Rules for the page:
+
+- **Real code only.** Lines are copied from the files with their line numbers.
+  An "after" line that does not exist yet is your proposal and is the only
+  thing you may write yourself.
+- **Every reference opens.** Give each file reference
+  `data-ref="<repo-relative path>:<line>"`; a click opens it in the user's
+  editor. The user reads these pages to learn the structure — a name without a
+  path teaches nothing.
+- **Counts come from a search**, and the page says which one. Never estimate
+  a blast radius.
+- **Colour means one thing each**: red/green are removed/added lines, the
+  accent is "you can open this", amber is the one exception named under the
+  list. Add no others.
+
+### 2. The questions — one `ask_user` call
+
+- **Shape options under compatibility tension.** Wherever the greenfield
+  cross-check's shape and a compatibility-preserving shape diverge, ask a
+  `choice`: both shapes, each priced in its label or `why` (what the break
+  costs: migration, re-bake, cache-skew window, external readers; what compat
+  carries: the extra concept or asymmetry, and for how long). Recommend one.
+  The user prices the break; backward compatibility is never a silent default.
+  "No tension found — greenfield and sketch agree" is the null form: say it in
+  the text, ask nothing.
+- **Sign-off** on the shape.
+- **PR packaging**: "prep as separate PR(s), or everything on one PR?" Ask it
+  every time — there is no default (`feedback_prep_rides_same_pr_ask`).
+
+When the shape has genuine decision branches, escalate to a `grill-me` session
+instead.
+
+### 3. The text
+
+A `> [!TLDR]` with the headline sentence, then at most a few lines: anything
+the page cannot carry, and **adjacent findings** — knots seen but not required
+by the ideal diff. Default: a `docs/backlog/` detail file. The user may promote
+one to a separate cleanup PR — their call, at this checkpoint, never the
+agent's call mid-execution. End with one line saying the questions are in the
+dash. Do not repeat the page in prose.
+
+### Without the dash
+
+No `show_sketch`: write the same content as markdown, in the same order — the
+TL;DR, then per contract a heading, one ```diff block of the real before/after
+with its `file:line`, and the Why / Who is affected / Weighed lines as a short
+list; then the prep list as a table; then the questions as a numbered list.
 
 **The null result is first-class.** "Ground is ready — the feature lands as a row
 in X plus one file, because those seams exist" is a complete, successful run: one
-paragraph, still checkpointed. Do not manufacture prep to look thorough.
+paragraph of text and the sign-off question, no page. Do not manufacture prep to
+look thorough.
 
 ## After sign-off
 
@@ -146,5 +201,7 @@ paragraph, still checkpointed. Do not manufacture prep to look thorough.
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Running the radar over the blast radius and calling it done | Radar finds existing knots; this pass asks whether the joints the feature needs exist. Run the ideal-diff. |
 | Prep scope ballooning into a cleanup crusade                | Prep = only what the ideal diff needs; the rest is backlog or a user-promoted cleanup PR.                  |
-| Prose architecture musings at the checkpoint                | The sketch is code-shaped (rows, types, file list) — per "design in code, lighter loop".                   |
+| Prose architecture musings at the checkpoint                | The page is code-shaped (real before/after lines, files, counts) — per "design in code, lighter loop".     |
+| Restyling the page, or adding a diagram of your own         | Fill the template. Its layout was designed and checked; a restyled page is how checkpoints became noise.   |
+| A file name without a path, or a count without a search     | Every reference carries `data-ref`; every number says how it was counted.                                  |
 | Treating "no prep needed" as a failed run                   | It's a valid, honest outcome — the most common one in a healthy codebase.                                  |

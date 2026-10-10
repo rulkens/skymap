@@ -1,0 +1,279 @@
+<!--
+  refactor-ground checkpoint: the template. Copy this file to your scratchpad, replace the content, and show it with
+  show_sketch (width "wide"). Keep the structure and the styles; do not restyle it.
+
+  What you fill in:
+  - h1 + .lede     the feature, and one sentence: how many touchpoints are special cases, how many prep commits,
+                   how many contracts change.
+  - .contract      one per changed contract, breaking ones first. The summary holds its name, what kind of change
+                   it is (class "breaks" on .kind when existing code must change), its reach as a counted number,
+                   and the real before/after lines. The .depth rows hold Why (feature needs / today / so), Defined
+                   in, Who is affected (grouped, each group opening to its files), How it is used (each pattern
+                   opening to one real line of code) and Weighed (cost, left alone, alternatives: all three, always).
+  - table.prep     the prep commits in order, each opening to the places that block the feature today.
+  - .rest          the touchpoints that land as plain additions, in one line.
+
+  Rules:
+  - Code is real: copy lines from the files, with their line numbers. An "after" line that does not exist yet is
+    your proposal; nothing else may be invented.
+  - Every file reference carries data-ref="<repo-relative path>:<line>"; a click opens it in the user's editor.
+  - Counts come from a search, and the page says which search. Never estimate.
+  - Amber marks one thing only, named in the line under the list (here: files that single out one case).
+  - Drop a .depth row you have nothing true to put in, except Why and Weighed.
+  The example content below is the blackHoles Layer ground check (2026-09).
+-->
+<style>
+  [hidden] { display: none !important; }
+  body { --meta: 230px; --gap: var(--dash-space-5); max-width: 900px; padding: var(--dash-space-6); }
+  h1 { margin: 0; font-size: var(--dash-font-xl); font-weight: 500; }
+  .lede { margin: var(--dash-space-2) 0 0; color: var(--dash-color-text-muted); }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--gap); }
+  h2 { margin: var(--dash-space-7) 0 var(--dash-space-4); font-size: var(--dash-font-md); font-weight: 500; }
+  h2 small, .small { font-size: var(--dash-font-sm); font-weight: 400; color: var(--dash-color-text-muted); }
+  h2 small { margin-left: var(--dash-space-3); }
+  code, .mono { font-family: var(--dash-font-mono); font-size: var(--dash-font-sm); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  .switch { display: flex; flex: none; gap: 2px; padding: 2px; border-radius: var(--dash-radius-md); background: var(--dash-color-surface-sunken); }
+  .switch button { border: 0; padding: var(--dash-space-1) var(--dash-space-4); border-radius: var(--dash-radius-sm); background: none;
+                   font-size: var(--dash-font-sm); color: var(--dash-color-text-muted); }
+  .switch button[aria-pressed='true'] { background: var(--dash-color-surface-raised); color: var(--dash-color-text); }
+
+  /* A contract: one flat block. Two edges inside it, the same for the summary and for everything it opens to. */
+  .contract { border-radius: var(--dash-radius-md); background: var(--dash-color-surface-raised); }
+  .contract + .contract { margin-top: var(--dash-space-3); }
+  .summary, .depth > div { display: grid; grid-template-columns: var(--meta) minmax(0, 1fr); column-gap: var(--gap); padding: 0 var(--dash-space-5); }
+  .summary { position: relative; padding-block: var(--dash-space-5); cursor: pointer; }
+  .summary::after { content: '\203A'; position: absolute; right: var(--dash-space-5); top: var(--dash-space-5); color: var(--dash-color-text-faint); transition: transform 120ms ease-out; }
+  .summary[aria-expanded='true']::after { transform: rotate(90deg); }
+  .name { font-family: var(--dash-font-mono); font-weight: 500; }
+  .kind { margin-top: var(--dash-space-2); font-size: var(--dash-font-sm); }
+  .kind::before, .dot::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: var(--dash-space-2); border-radius: 50%; background: var(--dash-color-text-faint); }
+  .kind.breaks::before { background: var(--dash-color-danger); }
+  .dot::before { background: var(--dash-color-warning); }
+  .reach { margin-top: var(--dash-space-1); font-size: var(--dash-font-sm); color: var(--dash-color-text-muted); }
+
+  .diff { font-family: var(--dash-font-mono); font-size: var(--dash-font-sm); line-height: 1.7; padding-right: var(--dash-space-6); }
+  .diff div { padding-left: 2.5ch; text-indent: -2.5ch; white-space: pre-wrap; color: var(--dash-color-text-faint); }
+  .diff div::before { content: '  '; display: inline-block; width: 2.5ch; text-indent: 0; }
+  .diff .add { color: var(--dash-color-text); }
+  .diff .add::before { content: '+'; color: var(--dash-color-success); }
+  .diff .del { color: var(--dash-color-text-muted); }
+  .diff .del::before { content: '\2212'; color: var(--dash-color-danger); }
+
+  /* What a contract opens to: label on the left edge, content on the right one. */
+  .depth { padding-bottom: var(--dash-space-5); }
+  .depth > div { padding-block: var(--dash-space-4); }
+  .depth > div + div, .depth > div:first-child { border-top: var(--dash-border-width) solid var(--dash-color-border); margin-inline: 0; }
+  .lab { font-size: var(--dash-font-sm); font-weight: 500; }
+  .lab small { display: block; margin-top: var(--dash-space-1); }
+  .lead { color: var(--dash-color-text-muted); }
+  .con p { margin: 0 0 var(--dash-space-2); }
+  .con p:last-child { margin-bottom: 0; }
+
+  .ref { font-family: var(--dash-font-mono); font-size: var(--dash-font-sm); color: var(--dash-color-accent); text-decoration: none; cursor: pointer; }
+  .ref:hover { text-decoration: underline; }
+
+  .flow { display: flex; align-items: center; gap: var(--dash-space-3); margin-bottom: var(--dash-space-3); font-size: var(--dash-font-sm); }
+  .flow .line { flex: 1; display: flex; align-items: center; gap: var(--dash-space-3); color: var(--dash-color-text-faint); white-space: nowrap; }
+  .flow .line::before, .flow .line::after { content: ''; flex: 1; height: var(--dash-border-width); background: var(--dash-color-border-strong); }
+  .field { padding: 0 var(--dash-space-3); border-radius: var(--dash-radius-pill); background: var(--dash-color-surface-sunken); font-family: var(--dash-font-mono); }
+
+  /* A row that opens further. */
+  .more { display: grid; grid-template-columns: 1.2em 150px 130px minmax(0, 1fr); align-items: baseline; width: 100%; padding: var(--dash-space-1) 0;
+          margin-left: -1.2em; width: calc(100% + 1.2em); border: 0; background: none; text-align: left; }
+  .more::before { content: '\203A'; color: var(--dash-color-text-faint); transition: transform 120ms ease-out; justify-self: start; }
+  .more[aria-expanded='true']::before { transform: rotate(90deg); }
+  .more.wide { grid-template-columns: 1.2em 230px minmax(0, 1fr); }
+  .more .fact, .more .aside { font-size: var(--dash-font-sm); color: var(--dash-color-text-muted); font-variant-numeric: tabular-nums; }
+  .bar { display: inline-block; height: 4px; margin-right: var(--dash-space-4); border-radius: 2px; background: var(--dash-color-text-faint); vertical-align: middle; }
+  .files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--dash-space-1) var(--gap); padding: var(--dash-space-2) 0 var(--dash-space-4); }
+  /* Room for the mark left of each name, so marked and unmarked names share one edge. */
+  .files { margin-left: -14px; }
+  .file { position: relative; display: flex; justify-content: space-between; padding-left: 14px; }
+  .file .ref { color: var(--dash-color-text); }
+  .file span { color: var(--dash-color-text-faint); font-size: var(--dash-font-sm); font-variant-numeric: tabular-nums; }
+  .file.special::before { content: ''; position: absolute; left: 0; top: 50%; width: 7px; height: 7px; margin-top: -3px; border-radius: 50%; background: var(--dash-color-warning); }
+  .example { padding: var(--dash-space-2) 0 var(--dash-space-4); }
+  .example .at { display: flex; justify-content: flex-end; }
+  .example pre { margin: 0; font-family: var(--dash-font-mono); font-size: var(--dash-font-sm); line-height: 1.7; white-space: pre-wrap; color: var(--dash-color-text-muted); }
+  .example pre b { font-weight: 400; color: var(--dash-color-text); }
+  .ask { padding: var(--dash-space-2) var(--dash-space-4); border: var(--dash-border-width) solid var(--dash-color-border-strong); border-radius: var(--dash-radius-md);
+         background: none; font-size: var(--dash-font-sm); }
+
+  table { width: 100%; border-collapse: collapse; }
+  tr.prep { cursor: pointer; }
+  tr.prep td.n::after { content: '\203A'; margin-left: var(--dash-space-2); display: inline-block; transition: transform 120ms ease-out; }
+  tr.prep[aria-expanded='true'] td.n::after { transform: rotate(90deg); }
+  tr.blockers td { padding-top: 0; border-top: 0; }
+  tr.blockers .refs { display: flex; flex-wrap: wrap; gap: var(--dash-space-1) var(--dash-space-5); }
+  td { padding: var(--dash-space-3) var(--dash-space-4) var(--dash-space-3) 0; vertical-align: baseline; }
+  tr + tr td { border-top: var(--dash-border-width) solid var(--dash-color-border); }
+  td.n { width: 4ch; white-space: nowrap; color: var(--dash-color-text-faint); font-variant-numeric: tabular-nums; }
+  td.what { width: 36%; }
+  td.why { color: var(--dash-color-text-muted); }
+  td.touch { width: 22%; font-family: var(--dash-font-mono); font-size: var(--dash-font-sm); color: var(--dash-color-text-muted); text-align: right; padding-right: 0; }
+  .rest { margin-top: var(--dash-space-4); font-size: var(--dash-font-sm); color: var(--dash-color-text-muted); }
+</style>
+
+<div class="top">
+  <div>
+    <h1>blackHoles Layer: ground check</h1>
+    <p class="lede">4 of its 9 touchpoints would be special cases today. Five prep commits create the joints; four contracts change.</p>
+  </div>
+  <div class="switch" role="group" aria-label="How much to show">
+    <button aria-pressed="true" data-depth="0">Main points</button><button aria-pressed="false" data-depth="1">Reasoning</button><button aria-pressed="false" data-depth="2">Everything</button>
+  </div>
+</div>
+
+<h2>Contracts that change <small>breaking first; open one for its reasoning and reach</small></h2>
+
+<section class="contract">
+  <div class="summary" role="button" tabindex="0" aria-expanded="false">
+    <div><div class="name">SlabFrame</div><div class="kind breaks">Breaking</div><div class="reach">18 files, scripted rename</div></div>
+    <div class="diff"><div class="del">{ kind: 'body-m'; bodyId: BodyId }</div><div class="add">{ kind: 'body-m'; hostId: SlabHostId }</div></div>
+  </div>
+  <div class="depth" hidden>
+    <div><div class="lab">Why</div><div class="con">
+      <p><span class="lead">The feature needs</span> a slab for the black hole, which hangs off the <code>'galactic-centre'</code> place anchor.</p>
+      <p><span class="lead">Today</span> a slab can only name a body: the field is typed <code>BodyId</code>, and a place anchor is not one.</p>
+      <p><span class="lead">So</span> the field names its host, whatever kind that is.</p>
+    </div></div>
+    <div><div class="lab">Defined in</div><div class="con"><a class="ref" data-ref="src/@types/engine/frame/SlabFrame.d.ts:15">src/@types/engine/frame/SlabFrame.d.ts:15</a></div></div>
+    <div><div class="lab">Who is affected<small class="small">18 files, 45 lines</small></div><div class="con">
+      <div class="flow"><a class="ref" data-ref="src/services/engine/frame/slabs.ts:224">frame/slabs.ts:224</a><span class="line">writes</span><span class="field">frame.bodyId</span><span class="line">read by</span><span>17 files</span></div>
+      <button class="more" aria-expanded="false"><span>Render passes</span><span class="fact">12 files · 36 lines</span><span class="aside"><i class="bar" style="width: 144px"></i><span class="dot">2 single out one body</span></span></button>
+      <div class="files" hidden>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/planetsPass.ts:73">planetsPass</a><span>5</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/cloudShellPass.ts:150">cloudShellPass</a><span>4</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/atmosphereShellPass.ts:24">atmosphereShellPass</a><span>3</span></div>
+        <div class="file special"><a class="ref" data-ref="src/services/engine/frame/passes/earthPass.ts:130">earthPass</a><span>3</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/meshBodiesPass.ts:39">meshBodiesPass</a><span>3</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/ringsPass.ts:133">ringsPass</a><span>3</span></div>
+        <div class="file special"><a class="ref" data-ref="src/services/engine/frame/passes/sgrAStarLensingPass.ts:42">sgrAStarLensingPass</a><span>3</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/surfaceTilesPass.ts:46">surfaceTilesPass</a><span>3</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/texturedBodiesPass.ts:102">texturedBodiesPass</a><span>3</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/aerialPerspectivePass.ts:19">aerialPerspectivePass</a><span>2</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/contactShadowsPass.ts:28">contactShadowsPass</a><span>2</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/passes/terrainPickMarkerPass.ts:34">terrainPickMarkerPass</a><span>2</span></div>
+      </div>
+      <button class="more" aria-expanded="false"><span>Frame assembly</span><span class="fact">4 files · 7 lines</span><span class="aside"><i class="bar" style="width: 28px"></i><span class="dot">1 singles out one body</span></span></button>
+      <div class="files" hidden>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/runFrame.ts:260">runFrame</a><span>3</span></div>
+        <div class="file special"><a class="ref" data-ref="src/services/engine/frame/bodyRowSlabs.ts:23">bodyRowSlabs</a><span>2</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/scheduleProbeCapture.ts:83">scheduleProbeCapture</a><span>1</span></div>
+        <div class="file"><a class="ref" data-ref="src/services/engine/frame/executeFrame.ts:254">executeFrame</a><span>1</span></div>
+      </div>
+      <button class="more" aria-expanded="false"><span>Elsewhere</span><span class="fact">2 files · 2 lines</span><span class="aside"><i class="bar" style="width: 8px"></i></span></button>
+      <div class="files" hidden>
+        <div class="file"><a class="ref" data-ref="src/utils/camera/sampledDepthKmFrame.ts:25">sampledDepthKmFrame</a><span>1</span></div>
+        <div class="file"><a class="ref" data-ref="src/@types/engine/frame/ContentPass.d.ts:29">ContentPass.d</a><span>1</span></div>
+      </div>
+      <p class="small" style="margin-top: var(--dash-space-3)">Lines counted by searching <code>frame.bodyId</code> on the commit before the change; tests add 4 files.</p>
+    </div></div>
+    <div><div class="lab">How it is used<small class="small">three patterns</small></div><div class="con">
+      <button class="more wide" aria-expanded="false"><span>Which body is this row for?</span><span class="aside">The common case: a pass draws once per body.</span></button>
+      <div class="example" hidden><div class="at"><a class="ref" data-ref="src/services/engine/frame/passes/planetsPass.ts:73">passes/planetsPass.ts:73</a></div><pre>const bodyId = view.slab.frame.<b>bodyId</b>;</pre></div>
+      <button class="more wide" aria-expanded="false"><span>Is this the one special body?</span><span class="aside">What the feature removes, in a later prep.</span></button>
+      <div class="example" hidden><div class="at"><a class="ref" data-ref="src/services/engine/frame/bodyRowSlabs.ts:23">frame/bodyRowSlabs.ts:23</a></div><pre>(slab) => slab.frame.kind === 'body-m' &amp;&amp; slab.frame.<b>bodyId === SGR_A_STAR.id</b>,</pre></div>
+      <button class="more wide" aria-expanded="false"><span>Does a table have a row for it?</span><span class="aside">The field is a key into a registry.</span></button>
+      <div class="example" hidden><div class="at"><a class="ref" data-ref="src/services/engine/frame/passes/terrainPickMarkerPass.ts:34">passes/terrainPickMarkerPass.ts:34</a></div><pre>if (registry[view.slab.frame.<b>bodyId</b>] === undefined) return false;</pre></div>
+    </div></div>
+    <div><div class="lab">Weighed</div><div class="con">
+      <p><span class="lead">Cost:</span> a scripted rename across 18 source files, no behaviour change.</p>
+      <p><span class="lead">Left alone:</span> the three places that single out one body; their logic stays.</p>
+      <p><span class="lead">Alternatives:</span> none. The blind greenfield design arrived at the same shape.</p>
+      <p style="margin-top: var(--dash-space-4)"><button class="ask" onclick="dash.draft('About the SlabFrame change (bodyId to hostId): ')">Ask about this change</button></p>
+    </div></div>
+  </div>
+</section>
+
+<section class="contract">
+  <div class="summary" role="button" tabindex="0" aria-expanded="false">
+    <div><div class="name">LayerCoreDeps</div><div class="kind breaks">Removes a member</div><div class="reach">3 call sites, replaced by a Layer feed</div></div>
+    <div class="diff"><div class="del">reportSourceCount(source, count): void</div></div>
+  </div>
+  <div class="depth" hidden>
+    <div><div class="lab">Why</div><div class="con">
+      <p><span class="lead">The feature needs</span> to report how many black holes it loaded, like every source does.</p>
+      <p><span class="lead">Today</span> a Layer pushes its count through a callback that core hands it.</p>
+      <p><span class="lead">So</span> the count becomes a feed the Layer declares (<code>sourceCounts</code>), the same shape as its search rows.</p>
+    </div></div>
+    <div><div class="lab">Who is affected<small class="small">3 call sites</small></div><div class="con">
+      <div class="files" style="padding-block: 0">
+        <div class="file"><a class="ref" data-ref="wireGalaxyCatalogSourceSlot.ts:65">wireGalaxyCatalogSourceSlot.ts:65</a></div>
+        <div class="file"><a class="ref" data-ref="starCatalogSlot.ts:41">starCatalogSlot.ts:41</a></div>
+        <div class="file"><a class="ref" data-ref="starCatalog/create.ts:88">starCatalog/create.ts:88</a></div>
+      </div>
+    </div></div>
+    <div><div class="lab">Weighed</div><div class="con">
+      <p><span class="lead">Not forced:</span> the callback would have worked. This was a ruling, to keep one way for a Layer to feed core.</p>
+    </div></div>
+  </div>
+</section>
+
+<section class="contract">
+  <div class="summary" role="button" tabindex="0" aria-expanded="false">
+    <div><div class="name">SelectionKindRow</div><div class="kind">New optional member</div><div class="reach">8 readers switch to it</div></div>
+    <div class="diff"><div>focusId: { encode, decode }</div><div class="add">driver?(row): DriverGeometry | null</div></div>
+  </div>
+  <div class="depth" hidden>
+    <div><div class="lab">Why</div><div class="con">
+      <p><span class="lead">The feature needs</span> the camera to fly to and orbit the black hole at a sensible distance.</p>
+      <p><span class="lead">Today</span> a two-arm switch decides what the camera drives around, and its readers look the answer up in the body table. A third arm would make six of them throw.</p>
+      <p><span class="lead">So</span> each kind of selection answers for its own size.</p>
+    </div></div>
+    <div><div class="lab">Weighed</div><div class="con">
+      <p><span class="lead">Alternative:</span> put the camera fields on the slab row. Rejected: it grows a render structure with camera data that six readers would then read.</p>
+    </div></div>
+  </div>
+</section>
+
+<section class="contract">
+  <div class="summary" role="button" tabindex="0" aria-expanded="false">
+    <div><div class="name">Layer</div><div class="kind">Three optional members</div><div class="reach">No existing Layer has to change</div></div>
+    <div class="diff"><div>targets?: readonly TargetRow[]</div><div class="add">search?(rt): AsyncIterable&lt;LayerSearchEntry[]&gt;</div><div class="add">sourceCounts?(rt): AsyncIterable&lt;SourceCountReport&gt;</div><div class="add">slabs?: readonly LayerSlabRow[]</div></div>
+  </div>
+  <div class="depth" hidden>
+    <div><div class="lab">Why</div><div class="con">
+      <p><span class="lead">search</span> lets a Layer add rows to the command palette, which today scores nine fixed inputs.</p>
+      <p><span class="lead">sourceCounts</span> replaces the callback removed from <code>LayerCoreDeps</code>.</p>
+      <p><span class="lead">slabs</span> lets a Layer declare a slab, which today is a static splice and three id branches in core.</p>
+    </div></div>
+  </div>
+</section>
+
+<h2>Prep, in order <small>one commit each, before the feature; open one for what blocks it today</small></h2>
+<table class="prep">
+  <tr class="prep" tabindex="0" aria-expanded="false"><td class="n">1</td><td class="what">Search and source counts as Layer feeds</td><td class="why">Palette rows would need a 4th store input</td><td class="touch">Layer, LayerCoreDeps</td></tr>
+  <tr class="blockers" hidden><td></td><td colspan="3"><div class="small">Blocked today by</div><div class="refs"><a class="ref" data-ref="rankPaletteMatches.ts:62">rankPaletteMatches.ts:62</a><a class="ref" data-ref="CommandPaletteContainer.tsx:61">CommandPaletteContainer.tsx:61</a><a class="ref" data-ref="createLayers.ts:63">createLayers.ts:63</a></div></td></tr>
+  <tr class="prep" tabindex="0" aria-expanded="false"><td class="n">2</td><td class="what">Slab rows declared by Layers</td><td class="why">Today: a static splice and 3 id branches</td><td class="touch">Layer, SlabFrame</td></tr>
+  <tr class="blockers" hidden><td></td><td colspan="3"><div class="small">Blocked today by</div><div class="refs"><a class="ref" data-ref="frameContext.ts:65">frameContext.ts:65</a><a class="ref" data-ref="visibleSlabBodies.ts:72">visibleSlabBodies.ts:72</a><a class="ref" data-ref="bodyRowSlabs.ts:23">bodyRowSlabs.ts:23</a><a class="ref" data-ref="bodySlabCapacity.ts:16">bodySlabCapacity.ts:16</a></div></td></tr>
+  <tr class="prep" tabindex="0" aria-expanded="false"><td class="n">3</td><td class="what">Camera geometry from the selection row</td><td class="why">A third arm would make 6 readers throw</td><td class="touch">SelectionKindRow</td></tr>
+  <tr class="blockers" hidden><td></td><td colspan="3"><div class="small">Blocked today by</div><div class="refs"><a class="ref" data-ref="focusDriverId.ts:8">focusDriverId.ts:8</a><a class="ref" data-ref="cameraDrivers.ts:166">cameraDrivers.ts:166</a><a class="ref" data-ref="bodyHomePose.ts:77">bodyHomePose.ts:77</a><a class="ref" data-ref="focusFraming.ts:109">focusFraming.ts:109</a></div></td></tr>
+  <tr class="prep" tabindex="0" aria-expanded="false"><td class="n">4</td><td class="what">Rename the galactic-centre anchor</td><td class="why">One row; needs 2 first</td><td class="touch"></td></tr>
+  <tr class="blockers" hidden><td></td><td colspan="3"><div class="small">Blocked today by</div><div class="refs"><a class="ref" data-ref="sceneAnchors.ts:27">sceneAnchors.ts:27</a><a class="ref" data-ref="bodyRegions.ts:24">bodyRegions.ts:24</a></div></td></tr>
+  <tr class="prep" tabindex="0" aria-expanded="false"><td class="n">5</td><td class="what">Detail card as a Layer slot</td><td class="why">The core table is exhaustive</td><td class="touch"></td></tr>
+  <tr class="blockers" hidden><td></td><td colspan="3"><div class="small">Blocked today by</div><div class="refs"><a class="ref" data-ref="detailCardTable.ts:70">detailCardTable.ts:70</a><a class="ref" data-ref="InfoCard.tsx:80">InfoCard.tsx:80</a></div></td></tr>
+</table>
+<p class="rest">The other five touchpoints land as plain additions: selection arm, URL hash, cubemap target, marker, caption.</p>
+
+<script>
+  const tops = [...document.querySelectorAll('.summary')];
+  const mores = [...document.querySelectorAll('.more, tr.prep')];
+  const set = (el, open) => { el.setAttribute('aria-expanded', open); el.nextElementSibling.hidden = !open; };
+  const isOpen = (el) => el.getAttribute('aria-expanded') === 'true';
+  const levels = [...document.querySelectorAll('.switch button')];
+  // The switch shows the level everything is at; a mix of open and closed presses none.
+  const sync = () => {
+    const level = tops.every((t) => !isOpen(t)) ? 0 : tops.every(isOpen) && mores.every(isOpen) ? 2 : tops.every(isOpen) && mores.every((m) => !isOpen(m)) ? 1 : -1;
+    levels.forEach((b) => b.setAttribute('aria-pressed', Number(b.dataset.depth) === level));
+  };
+  const toggle = (el) => { set(el, !isOpen(el)); sync(); };
+  [...tops, ...mores].forEach((el) => {
+    el.addEventListener('click', (event) => { if (!event.target.closest('[data-ref]')) toggle(el); });
+    el.addEventListener('keydown', (event) => { if (!el.matches('button') && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); toggle(el); } });
+  });
+  const show = (depth) => { tops.forEach((t) => set(t, depth >= 1)); mores.forEach((m) => set(m, depth >= 2)); sync(); };
+  levels.forEach((b) => b.addEventListener('click', () => show(Number(b.dataset.depth))));
+</script>
