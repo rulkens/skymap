@@ -16,7 +16,9 @@ export function groupByDataFamily(
     if (family === null) {
       throw new Error(`${file.r2Key}: no DATA_FAMILIES row claims it.`);
     }
-    byFamily.set(family, [...(byFamily.get(family) ?? []), file]);
+    const group = byFamily.get(family);
+    if (group === undefined) byFamily.set(family, [file]);
+    else group.push(file);
   }
   return byFamily;
 }

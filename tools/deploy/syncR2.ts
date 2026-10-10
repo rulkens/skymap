@@ -126,7 +126,6 @@ function buildGroups(): R2SyncGroup[] {
         transport: { kind: 'wrangler' },
         cacheControl: DAY,
         purge: true,
-        // Manifests are JSON, which gzip shrinks.
         gzipOnWire: true,
       }),
     ),

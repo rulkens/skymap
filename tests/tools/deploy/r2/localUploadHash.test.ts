@@ -26,21 +26,19 @@ afterEach(() => {
 
 describe('localUploadHash', () => {
   it('hashes the gzipped bytes when the group gzips on the wire', () => {
-    const localPath = join(dir, 'sdss-medium.bin');
+    const localPath = join(dir, 'gzipped.bin');
     writeFileSync(localPath, 'sdss-catalog-bytes-repeated-repeated-repeated');
 
     const expected = createHash('md5')
       .update(gzipSync(Buffer.from('sdss-catalog-bytes-repeated-repeated-repeated')))
       .digest('hex');
-    expect(localUploadHash({ localPath, r2Key: 'data/sdss-medium.bin' }, true)).toBe(expected);
+    expect(localUploadHash({ localPath, r2Key: 'data/gzipped.bin' }, true)).toBe(expected);
   });
 
   it('hashes the raw bytes when the group does not gzip', () => {
-    const localPath = join(dir, 'stars-medium.bin');
-    writeFileSync(localPath, 'already-internally-compressed-star-bytes');
+    const localPath = join(dir, 'raw.bin');
+    writeFileSync(localPath, 'raw-bytes');
 
-    expect(localUploadHash({ localPath, r2Key: 'data/stars-medium.bin' }, false)).toBe(
-      fileMd5(localPath),
-    );
+    expect(localUploadHash({ localPath, r2Key: 'data/raw.bin' }, false)).toBe(fileMd5(localPath));
   });
 });

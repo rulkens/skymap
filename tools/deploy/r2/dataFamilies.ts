@@ -6,7 +6,7 @@
  * `gzipOnWire` was measured with `gzip -6` on the real artefacts: catalogs and
  * JSON sidecars shrink 11-84% (glade-large 102→55 MB, sdss-medium 9.8→8.3 MB,
  * pgc_aliases.json 1.7→0.4 MB), raw-float32 `.mesh` bodies 45-68% (all eight
- * 29.6→16.8 MB). A `false` row would not get smaller, so gzip only burns CPU.
+ * 29.6→16.8 MB). A `false` row is already packed, or small and unmeasured.
  */
 import type { DataFamily } from '../@types/DataFamily';
 
@@ -65,7 +65,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     dir: null,
     fileName: /^local-bubble\.shell$/,
     transport: 'wrangler',
-    // Never measured: `.shell` was outside the old gzip extension list.
+    // Unmeasured; a few KB, not worth a measurement.
     gzipOnWire: false,
   },
   {

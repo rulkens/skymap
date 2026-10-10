@@ -2,18 +2,11 @@ import type { R2Transport } from './R2Transport';
 import type { R2Upload } from './R2Upload';
 
 /**
- * A named batch of uploads that share an upload policy.
- *
- * `files` is empty when the batch's build step hasn't run — a fresh checkout
- * has no hi-res images and no baked tiles — so an absent group is normal, not
- * an error.
- *
- * `purge` is false only for content that is immutable by construction, where
- * a new version means new keys. Setting it false for anything else silently
- * serves stale bytes for the whole `cacheControl` window.
- *
- * `gzipOnWire` stores gzipped bytes under `Content-Encoding: gzip`; the ETag
- * diff must hash those same bytes, so both read this one flag.
+ * A named batch of uploads sharing one policy. `files` is empty when the
+ * batch's build step hasn't run (no hi-res images, no baked tiles), which is
+ * normal. `purge: false` is only for content immutable by construction; for
+ * anything else it serves stale bytes for the whole `cacheControl` window.
+ * `gzipOnWire` picks the bytes R2 stores, so the ETag diff hashes the same.
  */
 export type R2SyncGroup = {
   readonly label: string;
