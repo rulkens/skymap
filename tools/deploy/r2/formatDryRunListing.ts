@@ -1,5 +1,4 @@
 import type { R2SyncGroup } from '../@types/R2SyncGroup';
-import { shouldGzipOnWire } from './shouldGzipOnWire';
 
 /**
  * The per-object upload policy `sync-r2 --dry-run` prints, one tab-separated
@@ -10,11 +9,10 @@ import { shouldGzipOnWire } from './shouldGzipOnWire';
 export function formatDryRunListing(groups: readonly R2SyncGroup[]): string[] {
   return groups
     .flatMap((group) =>
-      group.files.map(({ localPath, r2Key }) => {
-        const gzip = group.transport.kind === 'wrangler' && shouldGzipOnWire(localPath);
+      group.files.map(({ r2Key }) => {
         return {
           r2Key,
-          line: `${r2Key}\t${group.transport.kind}\t${group.cacheControl}\tpurge=${group.purge}\tgzip=${gzip}`,
+          line: `${r2Key}\t${group.transport.kind}\t${group.cacheControl}\tpurge=${group.purge}\tgzip=${group.gzipOnWire}`,
         };
       }),
     )

@@ -65,12 +65,12 @@ async function uploadIfChanged(
   touchedKeys: string[],
 ): Promise<boolean> {
   const remote = await remoteEtag(`${ctx.publicUrl}/${file.r2Key}`);
-  if (remote && etagMatches(localUploadHash(file), remote)) {
+  if (remote && etagMatches(localUploadHash(file, group.gzipOnWire), remote)) {
     const sizeMB = (statSync(file.localPath).size / 1024 / 1024).toFixed(1);
     console.log(`= ${file.localPath} (${sizeMB} MB) unchanged — skip`);
     return false;
   }
-  uploadViaWrangler(file, ctx.bucket, group.cacheControl);
+  uploadViaWrangler(file, ctx.bucket, group.cacheControl, group.gzipOnWire);
   if (group.purge) touchedKeys.push(file.r2Key);
   return true;
 }

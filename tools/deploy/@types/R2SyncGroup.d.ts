@@ -11,6 +11,9 @@ import type { R2Upload } from './R2Upload';
  * `purge` is false only for content that is immutable by construction, where
  * a new version means new keys. Setting it false for anything else silently
  * serves stale bytes for the whole `cacheControl` window.
+ *
+ * `gzipOnWire` stores gzipped bytes under `Content-Encoding: gzip`; the ETag
+ * diff must hash those same bytes, so both read this one flag.
  */
 export type R2SyncGroup = {
   readonly label: string;
@@ -18,4 +21,5 @@ export type R2SyncGroup = {
   readonly transport: R2Transport;
   readonly cacheControl: string;
   readonly purge: boolean;
+  readonly gzipOnWire: boolean;
 };

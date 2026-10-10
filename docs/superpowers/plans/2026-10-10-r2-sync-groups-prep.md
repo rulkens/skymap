@@ -156,17 +156,17 @@ uploadViaWrangler(file: R2Upload, bucket: string, cacheControl: string, gzipOnWi
 localUploadHash(file: R2Upload, gzipOnWire: boolean): string;
 ```
 
-- [ ] `buildGroups()` (`syncR2.ts:48-127`): call `collectDataFiles(DATA_DIR)` once, then emit one group per family that holds files, in `DATA_FAMILIES` order, at the old `public/data` group's position. Each group gets `label: 'public/data: <label>'`, `transport: { kind: 'wrangler' }`, `cacheControl: IMMUTABLE`, `purge: false` and the row's `gzipOnWire`. Keep the immutable/no-purge comment (`:54-55`) above the mapping.
-- [ ] Every other group states `gzipOnWire` with the neutrality-table value: `false` for hi-res, textures, extra files, mesh sources and surface tiles, and `true` for each surface-tile manifest group and for the data manifest group. Give the two `true` lines one short comment: these manifests are JSON, and gzip shrinks them.
-- [ ] `syncGroup.ts:73` passes `group.gzipOnWire` to `uploadViaWrangler`. `syncGroup.ts:68` passes it to `localUploadHash`. Both functions stop importing `shouldGzipOnWire`, and their docblocks (`uploadViaWrangler.ts:30-34`, `localUploadHash.ts:8-14`) say "the group's flag".
-- [ ] `serveGzipped.ts:54`: a request under `/data/` gzips when `dataFamilyOf(<path after /data/>)?.gzipOnWire` is true. Add `.json` to `TEXT_EXTENSIONS` (`:25`), so both manifest kinds and every other JSON stay gzipped as they are today. Accepted residual: untracked `.bin`/`.scfd` files under `data/` (`glade.bin`, `sdss.bin`, `filaments-sdss.bin`, `spacecraftTracks.bin`) are now served raw. The runtime fetches none of them; confirm that with a grep of `src/` and report.
-- [ ] `formatDryRunListing` reads `group.gzipOnWire`.
-- [ ] `localUploadHash.test.ts:28-43`: the two cases pass the flag (`true` / `false`) instead of relying on the filename; rename the second to `hashes the raw bytes when the group does not gzip`. Its guard (hash the bytes R2 stores) stays the point of the test.
-- [ ] Delete `shouldGzipOnWire.ts` with `npm run refactor -- delete tools/deploy/r2/shouldGzipOnWire.ts#shouldGzipOnWire` once it has no references. Delete its test too: its cases already live in the Task 3 fixture.
-- [ ] `docs/DEPLOY.md`: in `:20`, the meshes ride their own family groups, tracked by `DATA_FAMILIES`. In "R2 sync architecture" (`:30`), add one sentence on family groups and the group-level `gzipOnWire`. In "Wire compression" (`:76`), make `DATA_FAMILIES` plus each group's `gzipOnWire` the source of truth, replacing `shouldGzipOnWire.ts`.
-- [ ] No new test: the partition throw is one branch that review covers, and the dry-run diff proves the rest.
-- [ ] **Neutrality gate:** `npm run sync-r2 -- --dry-run > <scratchpad>/r2-after.txt` and `diff` it against the Task 1 baseline. The diff must be empty. Any difference halts the plan; report it, and do not edit the baseline.
-- [ ] Commit.
+- [x] `buildGroups()` (`syncR2.ts:48-127`): call `collectDataFiles(DATA_DIR)` once, then emit one group per family that holds files, in `DATA_FAMILIES` order, at the old `public/data` group's position. Each group gets `label: 'public/data: <label>'`, `transport: { kind: 'wrangler' }`, `cacheControl: IMMUTABLE`, `purge: false` and the row's `gzipOnWire`. Keep the immutable/no-purge comment (`:54-55`) above the mapping.
+- [x] Every other group states `gzipOnWire` with the neutrality-table value: `false` for hi-res, textures, extra files, mesh sources and surface tiles, and `true` for each surface-tile manifest group and for the data manifest group. Give the two `true` lines one short comment: these manifests are JSON, and gzip shrinks them.
+- [x] `syncGroup.ts:73` passes `group.gzipOnWire` to `uploadViaWrangler`. `syncGroup.ts:68` passes it to `localUploadHash`. Both functions stop importing `shouldGzipOnWire`, and their docblocks (`uploadViaWrangler.ts:30-34`, `localUploadHash.ts:8-14`) say "the group's flag".
+- [x] `serveGzipped.ts:54`: a request under `/data/` gzips when `dataFamilyOf(<path after /data/>)?.gzipOnWire` is true. Add `.json` to `TEXT_EXTENSIONS` (`:25`), so both manifest kinds and every other JSON stay gzipped as they are today. Accepted residual: untracked `.bin`/`.scfd` files under `data/` (`glade.bin`, `sdss.bin`, `filaments-sdss.bin`, `spacecraftTracks.bin`) are now served raw. The runtime fetches none of them; confirm that with a grep of `src/` and report.
+- [x] `formatDryRunListing` reads `group.gzipOnWire`.
+- [x] `localUploadHash.test.ts:28-43`: the two cases pass the flag (`true` / `false`) instead of relying on the filename; rename the second to `hashes the raw bytes when the group does not gzip`. Its guard (hash the bytes R2 stores) stays the point of the test.
+- [x] Delete `shouldGzipOnWire.ts` with `npm run refactor -- delete tools/deploy/r2/shouldGzipOnWire.ts#shouldGzipOnWire` once it has no references. Delete its test too: its cases already live in the Task 3 fixture.
+- [x] `docs/DEPLOY.md`: in `:20`, the meshes ride their own family groups, tracked by `DATA_FAMILIES`. In "R2 sync architecture" (`:30`), add one sentence on family groups and the group-level `gzipOnWire`. In "Wire compression" (`:76`), make `DATA_FAMILIES` plus each group's `gzipOnWire` the source of truth, replacing `shouldGzipOnWire.ts`.
+- [x] No new test: the partition throw is one branch that review covers, and the dry-run diff proves the rest.
+- [x] **Neutrality gate:** `npm run sync-r2 -- --dry-run > <scratchpad>/r2-after.txt` and `diff` it against the Task 1 baseline. The diff must be empty. Any difference halts the plan; report it, and do not edit the baseline.
+- [x] Commit.
 
 ### Task 5: The bulk transport honours `gzipOnWire` — `review: yes`
 
