@@ -73,11 +73,11 @@ The two manifest rows are the trap. They gzip today only because `.json` matched
 export function formatDryRunListing(groups: readonly R2SyncGroup[]): string[];
 ```
 
-- [ ] `main()` (`syncR2.ts:129`) checks `process.argv.includes('--dry-run')` (the pattern at `tools/fetch/fetchPrebuiltData.ts:63`). When it is set, `main()` prints the listing and returns after `buildGroups()`, before the credentials preflight (`:137-142`) and before any network call.
-- [ ] For now the gzip column is `transport.kind === 'wrangler' && shouldGzipOnWire(localPath)`. Task 4 switches it to the group flag. The output format never changes after this task.
-- [ ] No test. The listing is the neutrality instrument, and the Task 4 diff exercises it.
-- [ ] Capture the baseline: `npm run sync-r2 -- --dry-run > <scratchpad>/r2-baseline.txt`, run in this worktree. `public/data` is linked to the main checkout's tree, and `data/raw/meshes/meshes.sha256` must exist. If the `collectDataFiles` drift guard throws, stop and report. Do not run `build-data-manifest` against a linked tree. Keep the file outside the repo, and report its line count and the per-gzip-value counts.
-- [ ] Commit.
+- [x] `main()` (`syncR2.ts:129`) checks `process.argv.includes('--dry-run')` (the pattern at `tools/fetch/fetchPrebuiltData.ts:63`). When it is set, `main()` prints the listing and returns after `buildGroups()`, before the credentials preflight (`:137-142`) and before any network call.
+- [x] For now the gzip column is `transport.kind === 'wrangler' && shouldGzipOnWire(localPath)`. Task 4 switches it to the group flag. The output format never changes after this task.
+- [x] No test. The listing is the neutrality instrument, and the Task 4 diff exercises it.
+- [x] Capture the baseline: `npm run sync-r2 -- --dry-run > <scratchpad>/r2-baseline.txt`, run in this worktree. `public/data` is linked to the main checkout's tree, and `data/raw/meshes/meshes.sha256` must exist. If the `collectDataFiles` drift guard throws, stop and report. Do not run `build-data-manifest` against a linked tree. Keep the file outside the repo, and report its line count and the per-gzip-value counts.
+- [x] Commit.
 
 ### Task 2: Deploy types into `tools/deploy/@types/`
 

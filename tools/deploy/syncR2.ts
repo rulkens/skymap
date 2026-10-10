@@ -19,6 +19,7 @@ import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
 import { collectTextureImages } from './r2/collectTextureImages';
+import { formatDryRunListing } from './r2/formatDryRunListing';
 import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
@@ -128,6 +129,10 @@ function buildGroups(): R2SyncGroup[] {
 
 async function main(): Promise<void> {
   const groups = buildGroups();
+  if (process.argv.includes('--dry-run')) {
+    for (const line of formatDryRunListing(groups)) console.log(line);
+    return;
+  }
   const total = groups.reduce((n, g) => n + g.files.length, 0);
   if (total === 0) {
     console.error(`No matching files in ${DATA_DIR}.  Run npm run build-tiers first.`);
