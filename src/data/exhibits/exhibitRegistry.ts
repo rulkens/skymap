@@ -10,7 +10,7 @@ import { cosmicFlows } from './cosmicFlows';
 import { cosmicWeb } from './cosmicWeb';
 import { observableUniverse } from './observableUniverse';
 import { solarSystem } from './solarSystem';
-import { voyager } from './voyager';
+import { voyagerMissions } from './voyagerMissions';
 import { zoneOfAvoidance } from './zoneOfAvoidance';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { ExhibitId } from '../../@types/exhibits/ExhibitId';
@@ -21,5 +21,5 @@ export const exhibitRegistry: Record<ExhibitId, Exhibit> = {
   solarSystem,
   zoneOfAvoidance,
   observableUniverse,
-  voyager,
+  'voyager-missions': voyagerMissions,
 };

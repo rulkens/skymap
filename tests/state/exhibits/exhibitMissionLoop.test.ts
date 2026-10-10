@@ -7,7 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { voyager } from '../../../src/data/exhibits/voyager';
+import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
 import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { setMissionOffsets } from '../../../src/state/camera/cameraSlice';
@@ -57,7 +57,7 @@ async function hold(
   const runtime = { fovYRad: 0.9, aspect: 16 / 9 };
   sagaMiddleware.setContext({ playClip, cameraRuntime: () => runtime });
   sagaMiddleware.run(function* () {
-    yield* exhibitBodySaga(voyager, entry, atLinkedTime);
+    yield* exhibitBodySaga(voyagerMissions, entry, atLinkedTime);
   });
   await tick();
   const step = (eventId: string) =>

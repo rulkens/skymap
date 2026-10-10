@@ -104,7 +104,7 @@ describe('KEYBOARD_SHORTCUTS', () => {
   it('[ and ] step the mission speed factor while a timeline exhibit runs', () => {
     const inExhibit = stateWith({
       time: time(3, false),
-      takeover: { active: { kind: 'exhibit', id: 'voyager', entry: 'cut' } },
+      takeover: { active: { kind: 'exhibit', id: 'voyager-missions', entry: 'cut' } },
       settings: { orbitTrails: { enabled: true, emphasis: null } },
     } as unknown as Partial<RootState>);
     expect(byKeys('[').run(inExhibit)).toEqual(stepMissionSpeed({ step: -1 }));

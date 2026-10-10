@@ -28,9 +28,9 @@ const FRAMING_RADIUS_AU = 190;
 const YAW = -1.9305;
 const PITCH = 0.26;
 
-export const voyager: Exhibit = {
-  id: 'voyager',
-  label: 'Voyager',
+export const voyagerMissions: Exhibit = {
+  id: 'voyager-missions',
+  label: 'The Voyager missions',
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true, emphasis: 'voyager1' },
     // Galaxies and star names are landmarks for other scales; here they only crowd the craft.

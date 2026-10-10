@@ -6,4 +6,4 @@ export type ExhibitId =
   | 'cosmicFlows'
   | 'cosmicWeb'
   | 'observableUniverse'
-  | 'voyager';
+  | 'voyager-missions';

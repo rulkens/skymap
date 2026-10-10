@@ -13,7 +13,7 @@ const SAVED = MISSION_EVENTS;
 const V1 = SAVED.filter((e) => e.bodyId === 'voyager1');
 const stateAt = (
   iso: string,
-  exhibit: 'voyager' | 'solarSystem' | null,
+  exhibit: 'voyager-missions' | 'solarSystem' | null,
   emphasis: string | null = 'voyager1',
 ): RootState =>
   ({
@@ -37,7 +37,7 @@ const stepsTo = (e: { id: string }) =>
 
 describe('stepTimelineEvent', () => {
   it('steps to the next and previous event relative to the current sim day', () => {
-    const state = stateAt('1980-01-01', 'voyager');
+    const state = stateAt('1980-01-01', 'voyager-missions');
     const before = V1.filter((e) => missionEventMs(e) < Date.parse('1980-01-01')).at(-1)!;
     const after = V1.find((e) => missionEventMs(e) > Date.parse('1980-01-01'))!;
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(after));
@@ -46,22 +46,22 @@ describe('stepTimelineEvent', () => {
 
   it('steps past an event the clock already sits on', () => {
     const k = V1.findIndex((e, i) => i > 0 && e.kind !== 'flyby');
-    const state = stateAt(V1[k]!.iso, 'voyager');
+    const state = stateAt(V1[k]!.iso, 'voyager-missions');
     expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(V1[k - 1]!));
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(V1[k + 1]!));
   });
 
   it('with no emphasis follows the first craft, as the timeline UI does', () => {
     // Voyager 2's Saturn flyby (1981-08) is the next event overall; Voyager 1's is later.
-    const state = stateAt('1981-01-01', 'voyager', null);
+    const state = stateAt('1981-01-01', 'voyager-missions', null);
     const next = V1.find((e) => missionEventMs(e) > Date.parse('1981-01-01'))!;
     expect(next.bodyId).toBe('voyager1');
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(next));
   });
 
   it('does nothing at the ends, or outside a timeline exhibit', () => {
-    expect(stepTimelineEvent(stateAt(V1[0]!.iso, 'voyager'), -1)).toBeNull();
-    expect(stepTimelineEvent(stateAt(V1.at(-1)!.iso, 'voyager'), 1)).toBeNull();
+    expect(stepTimelineEvent(stateAt(V1[0]!.iso, 'voyager-missions'), -1)).toBeNull();
+    expect(stepTimelineEvent(stateAt(V1.at(-1)!.iso, 'voyager-missions'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', 'solarSystem'), 1)).toBeNull();
     expect(stepTimelineEvent(stateAt('1980-01-01', null), 1)).toBeNull();
   });
@@ -73,18 +73,20 @@ describe('stepTimelineEvent with a craft emphasised', () => {
     // Where a step to Jupiter lands: two days before closest approach.
     const state = stateAt(
       new Date(missionEventStepMs(v2[1]!)).toISOString(),
-      'voyager',
+      'voyager-missions',
       'voyager2',
     );
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(v2[2]!));
     expect(stepTimelineEvent(state, -1)).toEqual(stepsTo(v2[0]!));
-    expect(stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager', 'voyager2'), 1)).toBeNull();
+    expect(
+      stepTimelineEvent(stateAt(v2.at(-1)!.iso, 'voyager-missions', 'voyager2'), 1),
+    ).toBeNull();
   });
 });
 
 describe('stepTimelineEvent from a flyby step', () => {
   const rewound = (event: (typeof SAVED)[number], emphasis: string) => {
-    const state = stateAt(event.iso, 'voyager', emphasis);
+    const state = stateAt(event.iso, 'voyager-missions', emphasis);
     const { anchor } = state.time;
     return {
       ...state,

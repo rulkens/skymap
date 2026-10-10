@@ -22,7 +22,7 @@ import { rootReducer } from '../../../../src/store/rootReducer';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { flybyNormal } from '../../../../src/utils/exhibits/mission/flybyNormal';
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
-import { voyager } from '../../../../src/data/exhibits/voyager';
+import { voyagerMissions } from '../../../../src/data/exhibits/voyagerMissions';
 import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
 import { dot3 } from '../../../../src/utils/math/dot3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
@@ -43,7 +43,7 @@ function missionOf(offsets = { yaw: 0, pitch: 0, zoom: 1 }, retarget = 0): Camer
   return {
     craftId: 'voyager2',
     stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2')),
-    cruise: { yaw: voyager.pose.yaw, pitch: voyager.pose.pitch },
+    cruise: { yaw: voyagerMissions.pose.yaw, pitch: voyagerMissions.pose.pitch },
     offsets,
     speedIndex: 2,
     retarget,

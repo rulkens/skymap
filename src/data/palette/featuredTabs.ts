@@ -94,10 +94,10 @@ const M31_CAPTURE: PaletteCardCapture = {
 const WANING_GIBBOUS: PaletteCardCapture = { phaseDeg: 315 };
 
 const VOYAGER_CARD: PaletteCard = {
-  id: 'voyager',
-  label: 'Voyager',
+  id: 'voyager-missions',
+  label: 'The Voyager missions',
   blurb: 'Both Voyagers from launch to today, with every flyby on a timeline you can scrub.',
-  action: { kind: 'exhibit', exhibitId: 'voyager' },
+  action: { kind: 'exhibit', exhibitId: 'voyager-missions' },
 };
 
 export const FEATURED_TABS: readonly PaletteTab[] = [

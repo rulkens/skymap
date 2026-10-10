@@ -20,7 +20,7 @@ import { stepToMissionEvent } from '../../../src/state/exhibits/stepToMissionEve
 import { pause, resume, setSimDays, startMissionProfile } from '../../../src/state/time/timeSlice';
 import { setMission } from '../../../src/state/camera/cameraSlice';
 import type { CameraMission } from '../../../src/@types/camera/CameraMission';
-import { voyager } from '../../../src/data/exhibits/voyager';
+import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { ExhibitTimelineSection } from '../../../src/@types/exhibits/ExhibitTimelineSection';
@@ -34,7 +34,9 @@ const missionAt = (speedIndex: number): CameraMission => ({
   retarget: 0,
 });
 
-const section = voyager.body.find((s): s is ExhibitTimelineSection => s.kind === 'timeline')!;
+const section = voyagerMissions.body.find(
+  (s): s is ExhibitTimelineSection => s.kind === 'timeline',
+)!;
 
 function mount(simIso: string) {
   const { store } = createTestStore();
