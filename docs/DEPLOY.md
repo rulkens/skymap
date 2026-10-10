@@ -77,6 +77,7 @@ Rendered takes that are too big to mail (a 4096² dome take is ~2 GB) go to the 
 The website's hero film (`npm run site:media`, see `tools/site/README.md`) is one versioned file, `public/data/site/<videoFile>` (the name is `HERO_MEDIA.videoFile` in `tools/site/heroMediaPlan.ts`), served at `${VITE_DATA_BASE_URL}/data/site/<videoFile>`; the site reads the same variable the app does. It stays outside `syncR2.ts` on purpose: the sync would need a new collector and an `.mp4` content type in `uploadViaWrangler.ts`, and the file is neither hashed nor in the data manifest, so a group row would not be "one clean row". Upload it by hand, with the S3 credentials above, after each `site:media` run that changes the file:
 
 ```
+bash tools/deploy/uploadSiteMedia.sh   # reads the three Keychain entries, runs the rclone copyto below, prints the live HEAD status
 rclone copyto public/data/site/earth-to-universe-v1.mp4 r2:skymap-data/data/site/earth-to-universe-v1.mp4 --header-upload "Content-Type: video/mp4" --header-upload "Cache-Control: public, max-age=31536000, immutable"
 ```
 
