@@ -1,0 +1,106 @@
+---
+description: Every named object in skymap, with its other names, the id a link uses and a link that opens it in the app.
+facts: [search-catalogue-galaxies]
+---
+
+import ObjectFinder from '../../../components/ObjectFinder.astro';
+import ObjectList from '../../../components/ObjectList.astro';
+import { objectCount } from '../../../utils/objectCount';
+
+Put an id after `#focus=` in the app’s address to open that object; an exhibit’s id goes after `#exhibit=` and a tour’s after `#tour=`. Each row here has an address of its own too: add the id to this page’s, as in `#body-saturn`. The rows and their links are made from the app’s own tables when the site is built.
+
+The millions of galaxies and stars that come from the catalogues are not listed. The app’s search finds a <Source id="glade">GLADE</Source> or <Source id="2mrs">2MRS</Source> galaxy by its [designation](/docs/reference/glossary/#designation) (see [Finding things](/docs/guide/finding/)), and any object the camera is focused on has an id in the address, in one of the forms on [URL parameters](/docs/reference/url-parameters/#object-ids).
+
+<ObjectFinder />
+
+## Sun, planets and dwarf planets
+
+The app’s tables of bodies hold the Sun, {objectCount('planet')} planets counting Pluto, {objectCount('moon')} moons, {objectCount('spacecraft')} spacecraft and {objectCount('model')} other models. Earth is the view the app opens on.
+
+<ObjectList section="sun-planets-and-dwarf-planets" />
+
+## Moons
+
+<ObjectList section="moons" />
+
+## Spacecraft
+
+The name after a spacecraft is the body it orbits or stands on.
+
+<ObjectList section="spacecraft" />
+
+## Other models
+
+<ObjectList section="other-models" />
+
+## Places on Earth
+
+The app’s search knows {objectCount('place')} places on Earth. A place has no id and no link: the app flies there and writes nothing into its address.
+
+<ObjectList section="places-on-earth" />
+
+## Named stars
+
+The app gives a name and an id to {objectCount('star')} stars, and to {objectCount('sStar')} more <Source id="s-stars">in orbit round the black hole</Source> at the centre of the Milky Way. Every other star is a row of the star data, with a number that changes with the data size.
+
+<ObjectList section="named-stars" />
+
+## Stars at the centre of the Milky Way
+
+<ObjectList section="stars-at-the-centre-of-the-milky-way" />
+
+## The Milky Way and its black hole
+
+<ObjectList section="the-milky-way-and-its-black-hole" />
+
+## Open clusters
+
+The app also names {objectCount('open-cluster')} open clusters, {objectCount('globular-cluster')} globular clusters and {objectCount('nebula')} nebulae in the Milky Way, and {objectCount('gc-cluster')} star clusters at its centre.
+
+<ObjectList section="open-clusters" />
+
+## Globular clusters
+
+<ObjectList section="globular-clusters" />
+
+## Nebulae
+
+<ObjectList section="nebulae" />
+
+## Galactic Centre clusters
+
+<ObjectList section="galactic-centre-clusters" />
+
+## Named galaxies
+
+The app gives a name and a short id to {objectCount('galaxy')} galaxies, most of them a [Messier](/docs/reference/glossary/#messier-catalogue) or a Caldwell number.
+
+<ObjectList section="named-galaxies" />
+
+## Galaxy groups
+
+The app’s list of named structures has {objectCount('galaxy-group')} galaxy groups, {objectCount('galaxy-cluster')} clusters, {objectCount('supercluster')} superclusters and {objectCount('void')} voids. The app also draws <Source id="mcxc">X-ray clusters</Source> and <Source id="mscc">superclusters</Source> taken from catalogues, which come with its data files and are not listed on this page.
+
+<ObjectList section="galaxy-groups" />
+
+## Galaxy clusters
+
+<ObjectList section="galaxy-clusters" />
+
+## Superclusters
+
+<ObjectList section="superclusters" />
+
+## Voids
+
+<ObjectList section="voids" />
+
+## Exhibits
+
+The app’s search lists {objectCount('exhibit')} exhibits and {objectCount('tour')} tours. The [Zone of Avoidance](/docs/reference/glossary/#zone-of-avoidance) is an exhibit only: the band itself has no id.
+
+<ObjectList section="exhibits" />
+
+## Tours
+
+<ObjectList section="tours" />

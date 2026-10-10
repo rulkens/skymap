@@ -1,0 +1,68 @@
+---
+/*
+ * Formula — an equation on a docs page, set as mathematics in MathML, which
+ * every browser that runs the app draws without a library:
+ * `<Formula say="…" of="d = \frac{c}{H_0} ∫_0^z \frac{d z′}{E(z′)}" />`
+ * between two rules (a list in `of` gives one equation to a line), or
+ * `inline` in a sentence. The notation is utils/formulaMathml.ts. `say` is
+ * the equation in words, which is what a screen reader is given.
+ */
+import { formulaMathml } from '../utils/formulaMathml';
+
+type Props = { say: string; of: string | readonly string[]; inline?: boolean };
+
+const { say, of, inline = false } = Astro.props;
+const lines = [of].flat();
+---
+
+{
+  inline ? (
+    <span class="inline" role="math" aria-label={say}>
+      <math set:html={formulaMathml(lines[0]!)} />
+    </span>
+  ) : (
+    <div class="formula" data-embed role="math" aria-label={say}>
+      {lines.map((line) => <math set:html={formulaMathml(line)} />)}
+    </div>
+  )
+}
+
+<style>
+  .formula {
+    max-width: var(--doc-measure);
+    margin: 0 0 var(--stack);
+    padding-block: 1rem;
+    border-block: 1px solid var(--border-divider);
+    color: var(--color-fg);
+    font-variant-numeric: normal;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    /* An equation is not broken: one wider than a phone scrolls inside its rules. */
+    overflow-x: auto;
+  }
+
+  /* Faces that carry the tables an integral sign and a root are sized from; the first is on every Mac, the second on Windows. */
+  math {
+    font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Noto Sans Math', math;
+  }
+
+  /*
+   * A line of its own at full size, as `display="block"` gives, but on the text's left edge like everything else
+   * on the page: the attribute centres. 20px, so that a subscript, at seven tenths of it, is still 14px.
+   */
+  .formula math {
+    display: block math;
+    math-style: normal;
+    width: fit-content;
+    font-size: 1.25rem;
+  }
+
+  .formula math + math {
+    margin-top: 0.875rem;
+  }
+
+  .inline {
+    color: var(--color-fg);
+    white-space: nowrap;
+  }
+</style>

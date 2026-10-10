@@ -1,0 +1,58 @@
+---
+/*
+ * Figure — a picture from the shot manifest with its label under it. `disc`
+ * shows a fisheye frame round with the dome's ring about it, centred and never
+ * taller than the screen it is on. The slot is for what follows the label.
+ */
+import Disc from './Disc.astro';
+import Shot from './Shot.astro';
+import ShotCaption from './ShotCaption.astro';
+
+type Props = { id: string; sizes: string; open?: boolean; disc?: boolean };
+
+const { id, sizes, open = true, disc = false } = Astro.props;
+---
+
+<figure>
+  {
+    disc ? (
+      <div class="ringed">
+        <Disc id={id} sizes={sizes} />
+      </div>
+    ) : (
+      <Shot id={id} sizes={sizes} />
+    )
+  }
+  <figcaption>
+    <ShotCaption id={id} open={open} />
+    <slot />
+  </figcaption>
+</figure>
+
+<style>
+  figure {
+    margin: 0;
+  }
+
+  figure > :global(picture img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.5rem;
+  }
+
+  /* The margin is the room the disc's ring stands in. */
+  .ringed {
+    max-width: min(26rem, 78svh);
+    margin: var(--disc-ring) auto;
+  }
+
+  @media (max-width: 900px) {
+    .ringed {
+      max-width: min(85%, 78svh);
+    }
+  }
+</style>

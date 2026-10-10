@@ -1,0 +1,101 @@
+---
+/*
+ * LessonLinks — the ready-made lesson links as small cards on the page grid: the
+ * picture, its topic, its name, one question, what in the picture is data and
+ * what is drawn, and the same Open this view link every picture label has.
+ * Four to a row when wide; on an upright phone each is a row with its picture
+ * small on the left.
+ */
+import ViewLink from './ViewLink.astro';
+import Shot from './Shot.astro';
+import { appLink } from '../data/appLink';
+import { LESSON_TOPICS } from '../data/lessons';
+import { siteShot } from '../data/siteShot';
+
+// A card has no room for the picture's full label: it keeps the line that says what is data and what is drawn.
+const drawn = (id: string) => [siteShot(id).drawn, siteShot(id).credit && `${siteShot(id).credit}.`].filter(Boolean).join(' ');
+---
+
+<ul class="grid quarters">
+  {
+    LESSON_TOPICS.flatMap((topic) =>
+      topic.lessons.map((lesson) => (
+        <li>
+          <a class="picture" href={appLink(lesson.hash)} tabindex="-1" aria-hidden="true">
+            <Shot id={lesson.shot} sizes="(max-width: 600px) 5.5rem, (max-width: 1100px) calc(50vw - 1.875rem), 15.75rem" alt="" />
+          </a>
+          <div class="words">
+            <p class="topic small">{topic.title}</p>
+            <h3>{lesson.title}</h3>
+            <p class="ask small">{lesson.ask}</p>
+            <p class="drawn small">{drawn(lesson.shot)}</p>
+            <ViewLink href={appLink(lesson.hash)} />
+          </div>
+        </li>
+      )),
+    )
+  }
+</ul>
+
+<style>
+  ul {
+    row-gap: 3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .picture {
+    display: block;
+    margin-bottom: 0.875rem;
+  }
+
+  .picture :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .topic {
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  h3 {
+    margin: 0.25rem 0 0.5rem;
+  }
+
+  .ask {
+    margin: 0 0 0.5rem;
+    color: var(--color-fg);
+  }
+
+  .drawn {
+    margin: 0;
+    color: var(--site-text-dim);
+  }
+
+  @media (min-width: 601px) and (max-width: 1100px) {
+    ul > li {
+      grid-column: span 6;
+    }
+  }
+
+  @media (max-width: 600px) {
+    ul {
+      row-gap: 0;
+    }
+
+    li {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: 1rem;
+      padding-block: 1.5rem;
+      border-top: 1px solid var(--border-divider);
+    }
+
+    .picture {
+      margin: 0.375rem 0 0;
+    }
+  }
+</style>

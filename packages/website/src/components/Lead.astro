@@ -1,0 +1,41 @@
+---
+import ViewLink from './ViewLink.astro';
+import PictureBand from './PictureBand.astro';
+import CaptionGallery from './CaptionGallery.astro';
+import { appLink } from '../data/appLink';
+import { HOME_LINKS } from '../data/homeLinks';
+
+// The start of the pull-back, then a later point of the same move.
+const VIEWS = [
+  { id: 'lead-park', tall: 'lead-park-portrait' },
+  { id: 'earth-terminator', tall: 'earth-terminator-portrait' },
+];
+---
+
+<PictureBand views={VIEWS} gap="half">
+  <h2>From a park to the cosmic web</h2>
+  <p class="say">
+    The camera starts just above Søndermarken, a park in Copenhagen, and pulls back in one continuous move to beyond
+    the galaxy surveys. The galaxies lie along a network of filaments, the cosmic web. The stars come from the Gaia
+    star survey, the galaxies from surveys including SDSS, 2MRS and GLADE.
+  </p>
+  <ViewLink hang href={appLink(HOME_LINKS.parkFlight)}>Play the pull-back from the park</ViewLink>
+  <CaptionGallery ids={VIEWS.map((view) => view.id)} />
+</PictureBand>
+
+<style>
+  h2 {
+    max-width: 13ch;
+  }
+
+  .say {
+    max-width: 27rem;
+    font-size: var(--text-lead);
+  }
+
+  @media (max-width: 900px) {
+    h2 {
+      max-width: 17ch;
+    }
+  }
+</style>

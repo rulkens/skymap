@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+import DocsMap from '../../components/DocsMap.astro';
+import { breadcrumbJsonLd } from '../../utils/breadcrumbJsonLd';
+---
+
+<Base
+  title="Docs | skymap"
+  description="The skymap documentation: every feature of the app by task, reference tables, the data sources with their licences, the science and how a frame is drawn."
+  jsonLd={[breadcrumbJsonLd(Astro.site!, [{ name: 'Docs', path: '/docs/' }])]}
+>
+  <DocsMap />
+</Base>

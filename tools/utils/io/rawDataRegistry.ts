@@ -673,7 +673,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (public domain, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
+    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (NASA media guidelines, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -683,7 +683,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (public domain). The --dev quick-fetch subset source.',
+      'NASA Blue Marble Next Generation, 5400x2700 sibling of the full BMNG Earth equirect (NASA media guidelines). The --dev quick-fetch subset source.',
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -699,7 +699,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A1 — lon -180..-90, lat 0..90 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A1.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -708,7 +708,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant A2 — lon -180..-90, lat -90..0 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.A2.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -717,7 +717,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B1 — lon -90..0, lat 0..90 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B1.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -726,7 +726,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant B2 — lon -90..0, lat -90..0 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.B2.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -735,7 +735,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C1 — lon 0..90, lat 0..90 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C1.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -744,7 +744,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant C2 — lon 0..90, lat -90..0 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.C2.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -753,7 +753,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D1 — lon 90..180, lat 0..90 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D1.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -762,7 +762,7 @@ export const RAW_DATA = {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
     kind: 'file',
     source: 'gitignored',
-    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (public domain, credit NASA Earth Observatory).`,
+    description: `BMNG ${BMNG_VINTAGE.label} topo+bathymetry quadrant D2 — lon 90..180, lat -90..0 (NASA media guidelines, credit NASA Earth Observatory).`,
     upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x21600.D2.jpg`,
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -773,7 +773,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (public domain, credit NASA Earth Observatory). Feeds Earth's material map. Verified live 2026-07-19 (4.3 MB, original NEO file preserved by the Internet Archive; NASA retired the NEO bluemarble archive and the relocated BMNG collection dropped the mask files).",
+      "NASA Blue Marble Next Generation land/water mask, equirect PNG (land=255, water=0), subsampled to 21600x10800 (NASA media guidelines, credit NASA Earth Observatory). Feeds Earth's material map. Verified live 2026-07-19 (4.3 MB, original NEO file preserved by the Internet Archive; NASA retired the NEO bluemarble archive and the relocated BMNG collection dropped the mask files).",
     upstream:
       'https://web.archive.org/web/20240509231512if_/https://neo.gsfc.nasa.gov/archive/bluemarble/bmng/landmask/world.watermask.21600x10800.png',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -784,7 +784,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (public domain, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
+      "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (NASA media guidelines, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
     upstream:
       'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -795,7 +795,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "NASA Visible Earth 'Topography' GEBCO_08-derived grayscale relief (land elevation + bathymetry shading), 21600x10800 equirect PNG (public domain, credit NASA Earth Observatory, imagery by Jesse Allen using GEBCO_08 grid data). Build-only bake input for Earth's normal map — never shipped as a runtime texture. Verified live 2026-07-19 (18,414,843 bytes, image/png).",
+      "NASA Visible Earth 'Topography' GEBCO_08-derived grayscale relief (land elevation + bathymetry shading), 21600x10800 equirect PNG (NASA media guidelines, credit NASA Earth Observatory, imagery by Jesse Allen using GEBCO_08 grid data). Build-only bake input for Earth's normal map — never shipped as a runtime texture. Verified live 2026-07-19 (18,414,843 bytes, image/png).",
     upstream:
       'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev_21600x10800.png',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -816,7 +816,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "Gaskell Mimas shape model (PDS SBN, CO-SA-ISSNA-5-MIMASSHAPE-V2.0, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 187.6-210.8 km; build-only bake input for Mimas's normal map. Its frame uses prime-meridian W0 = 337.46 deg vs the texture's 333.46, so texture lon L reads shape lon L + 4 (measured by cross-correlation); ~60 MB.",
+      "Gaskell Mimas shape model (PDS SBN, CO-SA-ISSNA-5-MIMASSHAPE-V2.0, no licence stated in its readme): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 187.6-210.8 km; build-only bake input for Mimas's normal map. Its frame uses prime-meridian W0 = 337.46 deg vs the texture's 333.46, so texture lon L reads shape lon L + 4 (measured by cross-correlation); ~60 MB.",
     upstream:
       'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.mimas.shape-model/data/mimas_quad512q.tab',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -827,7 +827,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "Gaskell Tethys shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.1 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
+      "Gaskell Tethys shape model (PDS SBN, no licence stated in its readme): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 519.2-541.6 km; build-only bake input for Tethys's normal map. Texture lon L reads shape lon L - 0.1 (measured by cross-correlation against PIA18439; the prime-meridian constants would predict +1.5). ~60 MB.",
     upstream:
       'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.tethys.shape-model/data/tethys_quad512q.tab',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -838,7 +838,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "Gaskell Dione shape model (PDS SBN, public domain): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 554.2-566.1 km; build-only bake input for Dione's normal map. Texture lon L reads shape lon L - 0.6 (measured by cross-correlation; agrees with the prime-meridian constants). ~60 MB.",
+      "Gaskell Dione shape model (PDS SBN, no licence stated in its readme): ASCII, line 1 = Q (512), then 6*(Q+1)^2 lines of body-fixed x y z in km (+z north, east lon = atan2(y, x)), radius 554.2-566.1 km; build-only bake input for Dione's normal map. Texture lon L reads shape lon L - 0.6 (measured by cross-correlation; agrees with the prime-meridian constants). ~60 MB.",
     upstream:
       'https://sbnarchive.psi.edu/pds4/non_mission/gaskell.dione.shape-model/data/dione_quad512q.tab',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -849,7 +849,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "NASA Visible Earth Blue Marble cloud composite, 8192x4096 equirect TIFF, white-cloud-on-black with no alpha (public domain, credit NASA Goddard Space Flight Center, Reto Stockli). Feeds Earth's cloud shell — build derives alpha from luminance. Full pull only, no dev variant. Verified live 2026-07-19 (35,870,468 bytes, image/tiff).",
+      "NASA Visible Earth Blue Marble cloud composite, 8192x4096 equirect TIFF, white-cloud-on-black with no alpha (NASA media guidelines, credit NASA Goddard Space Flight Center, Reto Stockli). Feeds Earth's cloud shell — build derives alpha from luminance. Full pull only, no dev variant. Verified live 2026-07-19 (35,870,468 bytes, image/tiff).",
     upstream:
       'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -860,7 +860,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Io global colour mosaic (Galileo SSI + Voyager), 11445x5723 RGB GeoTIFF (public domain, credit NASA/USGS).',
+      'USGS Astrogeology Io global colour mosaic (Galileo SSI + Voyager), 11445x5723 RGB GeoTIFF (public domain per its USGS record, credit NASA/USGS).',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -871,7 +871,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Europa global mosaic (Voyager + Galileo SSI), 19631x9816 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+      'USGS Astrogeology Europa global mosaic (Voyager + Galileo SSI), 19631x9816 grayscale GeoTIFF (no constraint stated in its USGS record, credit NASA/USGS). Grayscale — build-tinted.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -882,7 +882,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Ganymede global colour mosaic (Voyager + Galileo SSI), 11520x5760 RGB GeoTIFF (public domain, credit NASA/USGS).',
+      'USGS Astrogeology Ganymede global colour mosaic (Voyager + Galileo SSI), 11520x5760 RGB GeoTIFF (public domain per its USGS record, credit NASA/USGS).',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -893,7 +893,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Callisto global mosaic (Voyager + Galileo SSI), 15138x7569 grayscale GeoTIFF (public domain, credit NASA/USGS). Grayscale — build-tinted.',
+      'USGS Astrogeology Callisto global mosaic (Voyager + Galileo SSI), 15138x7569 grayscale GeoTIFF (public domain per its USGS record, credit NASA/USGS). Grayscale — build-tinted.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -904,7 +904,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~296 MB.',
+      'USGS Astrogeology Pluto global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (its USGS record: please cite authors; credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~296 MB.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -915,7 +915,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (public domain, credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
+      'USGS Astrogeology Charon global mosaic (New Horizons LORRI+MVIC), 300 m/px, 8-bit stretched from the original 32-bit data, equirectangular GeoTIFF (its USGS record: please cite authors; credit NASA/JHUAPL/SwRI/Lunar and Planetary Institute, publisher USGS Astrogeology Science Center, 2017 — see ATTRIBUTIONS.md). Only the encounter hemisphere is well-resolved; ~77 MB.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -937,7 +937,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'USGS Astrogeology Enceladus Cassini global mosaic, 110 m/px, 14401x7201, single-band 8-bit GeoTIFF (public domain, credit NASA/JPL/Space Science Institute, publisher USGS Astrogeology). Grayscale relief mosaic — build-tinted and lifted; ~104 MB.',
+      'USGS Astrogeology Enceladus Cassini global mosaic, 110 m/px, 14401x7201, single-band 8-bit GeoTIFF (public domain per its USGS record, which asks to cite authors; credit NASA/JPL/Space Science Institute, publisher USGS Astrogeology). Grayscale relief mosaic — build-tinted and lifted; ~104 MB.',
     upstream: 'https://planetarymaps.usgs.gov/mosaic/Enceladus_Cassini_mosaic_global_110m.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
@@ -1048,7 +1048,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Mimas - 2014" (PIA18437), 6356x3178, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~61 MB.',
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Mimas - 2014" (PIA18437), 6356x3178, 3-channel 8-bit, equirectangular centred on 180° (NASA media guidelines). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~61 MB.',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18437/PIA18437.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -1059,7 +1059,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Tethys - 2014" (PIA18439), 13467x6734, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~272 MB.',
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Tethys - 2014" (PIA18439), 13467x6734, 3-channel 8-bit, equirectangular centred on 180° (NASA media guidelines). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~272 MB.',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18439/PIA18439.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -1070,7 +1070,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Dione - 2014" (PIA18434), 14134x7067, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~300 MB.',
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Dione - 2014" (PIA18434), 14134x7067, 3-channel 8-bit, equirectangular centred on 180° (NASA media guidelines). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~300 MB.',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18434/PIA18434.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -1081,7 +1081,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Rhea - 2014" (PIA18438), 12015x6008, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~217 MB.',
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Rhea - 2014" (PIA18438), 12015x6008, 3-channel 8-bit, equirectangular centred on 180° (NASA media guidelines). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~217 MB.',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18438/PIA18438.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -1092,7 +1092,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Iapetus - 2014" (PIA18436), 11741x5871, 3-channel 8-bit, equirectangular centred on 180° (public domain). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~207 MB.',
+      'NASA/JPL-Caltech/SSI/LPI "Color Maps of Iapetus - 2014" (PIA18436), 11741x5871, 3-channel 8-bit, equirectangular centred on 180° (NASA media guidelines). Enhanced IR/green/UV colour — build-greyed, tinted and half-turn re-centred; ~207 MB.',
     upstream:
       'https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia18/pia18436/PIA18436.tif',
     fetcher: 'tools/fetch/fetchTextures.ts',
@@ -1153,7 +1153,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA/USGS public domain), native dims, fetch date, checksums.',
+      'Provenance for the planet-texture sources — upstream URLs, licences (SSS CC BY 4.0, NASA media guidelines, USGS per record), native dims, fetch date, checksums.',
   },
 
   // ─── EOX s2cloudless (2025) — deep tile bands over regional patches ───
@@ -1219,7 +1219,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'ETOPO 2022 30 arc-second surface-elevation GeoTIFF, 43200x21600 float32 metres (EGM2008 height), topography and bathymetry in one grid, AREA (cell-centred) registration, NoData -99999, DEFLATE, ~1.59 GB (public domain, NOAA NCEI, DOI 10.25921/fd45-gt74). The global height band bakes from this. Verified live 2026-09-15: HTTP 200, 1,585,813,987 bytes.',
+      'ETOPO 2022 30 arc-second surface-elevation GeoTIFF, 43200x21600 float32 metres (EGM2008 height), topography and bathymetry in one grid, AREA (cell-centred) registration, NoData -99999, DEFLATE, ~1.59 GB (CC0 1.0 per the NOAA metadata record, NOAA NCEI, DOI 10.25921/fd45-gt74). The global height band bakes from this. Verified live 2026-09-15: HTTP 200, 1,585,813,987 bytes.',
     upstream:
       'https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/ETOPO_2022_v1_30s_N90W180_surface.tif',
     fetcher: 'tools/fetch/fetchHeightSources.ts',
@@ -1527,7 +1527,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA 3D Resources "Voyager Probe (B)" by Michael D. Carbajal (public domain) — the untouched download, registered so the provenance chain is complete. buildMeshes never reads it: three materials and a placeholder cube go through the Blender pre-bake first.',
+      'NASA 3D Resources "Voyager Probe (B)" by Michael D. Carbajal (NASA media guidelines) — the untouched download, registered so the provenance chain is complete. buildMeshes never reads it: three materials and a placeholder cube go through the Blender pre-bake first.',
     upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     readme: 'meshes.voyager.readme',
   },
@@ -1556,14 +1556,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the Voyager model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
+      'Provenance for the Voyager model — author, model URL, NASA media guidelines, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
   },
   'meshes.hubbleSource': {
     path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA 3D Resources "Hubble Space Telescope (A)" (public domain) — the untouched download. Only the GitHub mirror carries this textured variant; the model on NASA\'s own page is the untextured printable. buildMeshes never reads it: five materials and inch units go through the Blender import and pre-bake first.',
+      'NASA 3D Resources "Hubble Space Telescope (A)" (NASA media guidelines) — the untouched download. Only the GitHub mirror carries this textured variant; the model on NASA\'s own page is the untextured printable. buildMeshes never reads it: five materials and inch units go through the Blender import and pre-bake first.',
     upstream:
       'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
     readme: 'meshes.hubble.readme',
@@ -1595,14 +1595,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the Hubble model — source mirror, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the material overrides and the Horizons refresh query behind the orbit row.',
+      'Provenance for the Hubble model — source mirror, NASA media guidelines, fetch date, checksum, the attribution string, native units/axes, the material overrides and the Horizons refresh query behind the orbit row.',
   },
   'meshes.perseveranceSource': {
     path: 'data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA 3D Resources "Mars 2020 Perseverance Rover" by Brian Kumanchik, NASA/JPL-Caltech (public domain) — the untouched download. buildMeshes never reads it: 47 materials, 199k tris and a mast that only deploys mid-animation go through the Blender pre-bake first.',
+      'NASA 3D Resources "Mars 2020 Perseverance Rover" by Brian Kumanchik, NASA/JPL-Caltech (NASA media guidelines) — the untouched download. buildMeshes never reads it: 47 materials, 199k tris and a mast that only deploys mid-animation go through the Blender pre-bake first.',
     upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     readme: 'meshes.perseverance.readme',
   },
@@ -1631,14 +1631,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the Perseverance model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
+      'Provenance for the Perseverance model — author, model URL, NASA media guidelines, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
   },
   'meshes.curiosityArchive': {
     path: 'data/raw/meshes/curiosity/Curiosity Rover (MSL) (Clean).zip',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA 3D Resources "Curiosity Rover (MSL) (Clean)" by Brian Kumanchik, NASA/JPL-Caltech (public domain) — the download as served, a zip holding one .blend.',
+      'NASA 3D Resources "Curiosity Rover (MSL) (Clean)" by Brian Kumanchik, NASA/JPL-Caltech (NASA media guidelines) — the download as served, a zip holding one .blend.',
     upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     readme: 'meshes.curiosity.readme',
   },
@@ -1676,14 +1676,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the Curiosity model — author, model URL, NASA public-domain terms, fetch date, checksums for both the zip and the .blend inside it, the attribution string, native units/axes, and the three source defects the pre-bake repairs.',
+      'Provenance for the Curiosity model — author, model URL, NASA media guidelines, fetch date, checksums for both the zip and the .blend inside it, the attribution string, native units/axes, and the three source defects the pre-bake repairs.',
   },
   'meshes.merSource': {
     path: 'data/raw/meshes/mer/Mars Exploration Rover - Spirit and Opportunity.blend',
     kind: 'file',
     source: 'gitignored',
     description:
-      'NASA 3D Resources "Mars Exploration Rover - Spirit and Opportunity" by NASA/JPL-Caltech (public domain) — one model serving both rover bodies. NASA\'s own download link 404s; the URL below is the page, the working fetch is the GitHub mirror named in the README.',
+      'NASA 3D Resources "Mars Exploration Rover - Spirit and Opportunity" by NASA/JPL-Caltech (NASA media guidelines) — one model serving both rover bodies. NASA\'s own download link 404s; the URL below is the page, the working fetch is the GitHub mirror named in the README.',
     upstream:
       'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     readme: 'meshes.mer.readme',
@@ -1715,7 +1715,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
+      'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA media guidelines, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
   },
   'meshes.soendermarken': {
     path: 'data/raw/meshes/soendermarken/mesh.glb',
