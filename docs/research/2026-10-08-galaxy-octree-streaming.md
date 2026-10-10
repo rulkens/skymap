@@ -123,3 +123,59 @@ Still open: whether SDSS, 2MRS and the DESI patches migrate onto the octree (one
 Branch `regalade-octree` (teleported from the cloud session): REGALADE parser + registry + backlog item landed and pushed; this doc holds the converged octree design (§8, decisions 1–9). No PR opened yet; no spec or plan exists.
 
 Next in order: (1) decide whether to close a PR at the parser or carry the octree work on its own branch; (2) run `refactor-ground` over §5's prep candidates; (3) write the spec from §8 with a "Ground preparation" section. Undecided, raised last: whether the brightness stratification should also drive galaxy thumbnails/procedural discs (retiring `diskPlannerWalk`'s full-catalog stride) — couples thumbnail LOD to the octree level assignment.
+
+## 10. Refactor-ground checkpoint — Gaia-first slice (2026-10-10)
+
+First build target is Gaia (same renderer and data as SKST v1, so the A/B isolates the format); GLADE second; REGALADE only after GLADE streams.
+
+### Ideal diff (data first)
+
+```
+src/data/octree/           family-agnostic container (replaces starCatalogFormat + starBinCodec for stars)
+  @types/OctreeIndexHeader  { grid: { bits, origin, cellEdge }, mLim, thr, chunkCapacity,
+                              columns: ColumnSchema[], stats: Record<StatId, number>,
+                              chunks: { level, morton, hash, bytes }[] }   // index IS the chunk manifest
+  @types/OctreeNode         { level, morton, childMask, firstRecord, recordCount, chunkRef }  // firstRecord object-local
+  @types/ColumnSchema       { id: ColumnId, store, q0, q1 }
+  decodeOctreeIndex.ts / decodeOctreeChunk.ts   → typed arrays per column; required-column check throws
+src/layers/starCatalog/
+  sources/gaia-stars.ts     row: `format: 'octree'`, `columns: ['offset','absMag','colourIndex']`, `budgets: { small, medium, large }` (pool slots + draw budget) — replaces `tiered: true`
+  load/                     index via the existing AssetSlot (one value per source); chunks via the stream subsystem (not AssetSlot)
+  render/starCutGpu.ts      node buffer = index nodes + slots×chunkNodeCap; record buffer = index records + slots×CHUNK_CAPACITY; `refines(i)` && residentChildren bit; slot base added in the shader
+  render/starCutLayout.ts   drop the 1024-cell and 2²²-node caps; parent index from the chunk's own table
+  pick: pool-absolute record index (fits 26 bits while slots×32k < 64M); resolveStarRecord reads the resident chunk's decoded columns
+src/services/engine/subsystems/  createBufferStreamSubsystem = tileStreamSubsystem over a SlotPool instead of TextureAtlas
+tools/octree/              family-agnostic emitter (stratify → chunk → write index + chunks); buildStars drops the tier binary search
+tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire); the `stars-*` opt-outs go
+```
+
+### Shape options under tension (greenfield cross-check vs §8)
+
+| # | §8 sketch | Greenfield | Price |
+|---|---|---|---|
+| A | binary header, enum-keyed stat/column tables | JSON header after a 6-byte magic | JSON: one parse at index load, no format bump for new stats/columns, readable in a hex dump; binary: smaller by ~1 KB, every new key is a VERSION bump |
+| B | patch parent + `firstRecord` to pool-absolute at upload | `firstRecord` object-local, slot base added in the shader; index never rewritten | greenfield removes the CPU patch pass and a mutable copy of the index; costs one `slotBase` per node row (u32) |
+| C | blob = one record in the record schema | blob inline in the node row (flux + u16 centroid) | KEEP §8: galaxies need flux-weighted axis ratio / PA / size on the blob, and one vertex path draws records and blobs alike |
+| D | chunks listed in the global data manifest | per-catalog mutable manifest with stable chunk ids | NEITHER: the index header lists chunk hashes, so the global manifest gets one row per catalog and a chunk re-bake rehashes the index (whole-catalog bakes are the only bake anyway) |
+| E | — | no SKST v1 reader kept | break = re-bake stars once + ~115 MB R2 re-sync; keeping v1 = a format switch (`VERSION` branch) in the loader forever |
+| F | — | — | `tools/stars-rs` port: keep in sync (two emitters to maintain) or drop (TS bake of the 1.8 GB Gaia CSV, time unmeasured) |
+
+### Missing joints
+
+1. Fixed-slot LRU is welded to `TextureAtlas` (`src/services/gpu/resources/textureAtlas.ts:212-253`); `createTileStreamSubsystem` constructs the atlas itself (`tileStreamSubsystem.ts:35`). Chunk residency needs the same LRU over buffer slots → BOLT-ON without a `SlotPool`.
+2. `tiered: true` is a discriminant at five sites (`starCatalogFetcher.ts:58`, `starSourcesInBand.ts:23`, `starSourceDrawOpacity.ts:19`, `create.ts:77`, `starCatalogAssetRows.ts:16`). Tiers-as-budgets would add a second meaning → consolidate into a per-source `budgets` row (second-special-case trigger).
+3. `allowDataFile.ts:34` / `shouldGzipOnWire.ts:15` are hand regex lists; a chunk tree is the second bulk family after surface tiles (`syncR2.ts:93-99`) → sync groups declared per data family.
+4. Star cut buffers sized once + global `firstRecord` (`starCutGpu.ts:113-122`, `vertex.wesl:187`), pick ids global (`pickFragment.wesl:58`): rewritten BY the feature, not prep.
+5. Wake vote is the fade timer only (`src/layers/starCatalog/frame.ts:38`): OR in "chunks in flight" — growth.
+6. `starOctreeIndex.ts:27` assumes a whole sorted table with root last: deleted with SKST.
+
+### Prep list (own commits, before feature commits)
+
+- P1 `SlotPool` extracted from `TextureAtlas` (key→slot LRU by lastSeenFrame, refuse-when-all-claimed-this-frame, evict handler); `TextureAtlas` composes it; `createTileStreamSubsystem` takes the slot store as a dep.
+- P2 per-source `budgets` row replacing the `tiered` discriminant at the five sites.
+- P3 data-family sync groups in `tools/deploy/r2` (prefix, bulk, gzipOnWire) replacing the two regex lists.
+
+### Adjacent (not required)
+
+- `hiResFamousSubsystem.ts:68-87` + `hiResFamousTexture.ts:126` duplicate the stream loop (already `docs/backlog/2026-08-20-hires-famous-lru-substrate.md`; P1 makes it a one-liner later).
+- Galaxy `medianAbsMag` decode pass (`galaxyCatalogFormat.ts:320`) moves into the header when galaxies migrate, not now.
