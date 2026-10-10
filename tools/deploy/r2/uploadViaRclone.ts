@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import type { R2SyncGroup } from './R2SyncGroup';
+import type { R2SyncGroup } from '../@types/R2SyncGroup';
 import { RCLONE_REMOTE, rcloneEnv, type RcloneCredentials } from './rcloneEnv';
 
 /** Parallel transfers. R2 has no documented per-connection cap; 32 saturates a home uplink. */

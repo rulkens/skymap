@@ -83,10 +83,10 @@ export function formatDryRunListing(groups: readonly R2SyncGroup[]): string[];
 
 **Files:** `tools/deploy/r2/R2SyncGroup.ts`, `R2Transport.ts`, `R2Upload.ts`, `CachePurgeFile.ts` → `tools/deploy/@types/<Name>.d.ts`, plus every importer the tool rewrites
 
-- [ ] One manifest move: `npm run move-files -- --manifest <moves.json> --dry`, then without `--dry`. The manifest has four `{ from: 'tools/deploy/r2/<Name>.ts', to: 'tools/deploy/@types/<Name>.d.ts' }` entries. Then grep `tools/` and `tests/` for `r2/R2SyncGroup`, `r2/R2Transport`, `r2/R2Upload` and `r2/CachePurgeFile` to catch string-literal paths.
-- [ ] The inline types in `syncGroup.ts:11-27` and `rcloneEnv.ts:14-18` stay put (out of scope).
-- [ ] No test: a pure move.
-- [ ] Commit.
+- [x] One manifest move: `npm run move-files -- --manifest <moves.json> --dry`, then without `--dry`. The manifest has four `{ from: 'tools/deploy/r2/<Name>.ts', to: 'tools/deploy/@types/<Name>.d.ts' }` entries. Then grep `tools/` and `tests/` for `r2/R2SyncGroup`, `r2/R2Transport`, `r2/R2Upload` and `r2/CachePurgeFile` to catch string-literal paths.
+- [x] The inline types in `syncGroup.ts:11-27` and `rcloneEnv.ts:14-18` stay put (out of scope).
+- [x] No test: a pure move.
+- [x] Commit.
 
 ### Task 3: The data-family table — `review: yes`
 

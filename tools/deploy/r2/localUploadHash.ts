@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 import { fileMd5 } from '../../utils/io/fileMd5';
 import { shouldGzipOnWire } from './shouldGzipOnWire';
 

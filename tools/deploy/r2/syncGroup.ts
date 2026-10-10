@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs';
-import type { R2SyncGroup } from './R2SyncGroup';
-import type { R2Upload } from './R2Upload';
+import type { R2SyncGroup } from '../@types/R2SyncGroup';
+import type { R2Upload } from '../@types/R2Upload';
 import { etagMatches } from './etagMatches';
 import { localUploadHash } from './localUploadHash';
 import { remoteEtag } from './remoteEtag';

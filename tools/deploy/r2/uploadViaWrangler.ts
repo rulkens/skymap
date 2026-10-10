@@ -3,7 +3,7 @@ import { gzipSync } from 'node:zlib';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join } from 'node:path';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 import { shouldGzipOnWire } from './shouldGzipOnWire';
 
 const CONTENT_TYPES: Record<string, string> = {

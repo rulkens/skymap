@@ -35,9 +35,9 @@ The runtime `cloudLoader` requests `<source>-<tier>.bin` per source; callers kee
 
 ### R2 sync architecture
 
-`tools/deploy/syncR2.ts` is only an entry point: it assembles a list of groups and runs each through `syncGroup()`. Selection, transport, ETag diffing and CDN purging live under `tools/deploy/r2/`. Each `R2SyncGroup` (`tools/deploy/r2/R2SyncGroup.ts`) carries its own policy — `transport`, `cacheControl`, `purge` — rather than the script hardcoding one policy for everything.
+`tools/deploy/syncR2.ts` is only an entry point: it assembles a list of groups and runs each through `syncGroup()`. Selection, transport, ETag diffing and CDN purging live under `tools/deploy/r2/`. Each `R2SyncGroup` (`tools/deploy/@types/R2SyncGroup.d.ts`) carries its own policy — `transport`, `cacheControl`, `purge` — rather than the script hardcoding one policy for everything.
 
-Two transports exist (`tools/deploy/r2/R2Transport.ts`):
+Two transports exist (`tools/deploy/@types/R2Transport.d.ts`):
 
 - **`wrangler`** spawns one `npx wrangler r2 object put` per file, skipping any file whose remote ETag already matches. Fine for dozens of large artefacts: the `.bin` tiers, famous/hi-res images, textures, extra files, mesh sources, and every surface-tile manifest.
 - **`bulk`** hands a whole group to a single `rclone copy` (`tools/deploy/r2/uploadViaRclone.ts`), which owns listing, diffing, retry and concurrency itself. The reason it exists: at wrangler's ~1-2 s process-startup cost per file, the 10912 Earth tiles would take 3-6 hours before a single byte moved.

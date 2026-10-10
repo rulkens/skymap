@@ -1,4 +1,4 @@
-import type { R2SyncGroup } from './R2SyncGroup';
+import type { R2SyncGroup } from '../@types/R2SyncGroup';
 import { shouldGzipOnWire } from './shouldGzipOnWire';
 
 /**

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 
 /**
  * The hi-res famous-galaxy WebPs, written one per curated galaxy by

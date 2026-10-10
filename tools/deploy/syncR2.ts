@@ -10,7 +10,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
-import type { R2SyncGroup } from './r2/R2SyncGroup';
+import type { R2SyncGroup } from './@types/R2SyncGroup';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
