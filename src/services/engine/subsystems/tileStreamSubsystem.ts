@@ -39,7 +39,6 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
     format,
     label,
   });
-  atlas.initTexture();
 
   // `undefined` falls through to the queue's own default, so a caller that
   // has no opinion keeps today's behaviour.
