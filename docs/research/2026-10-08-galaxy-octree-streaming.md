@@ -179,3 +179,7 @@ tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire);
 
 - `hiResFamousSubsystem.ts:68-87` + `hiResFamousTexture.ts:126` duplicate the stream loop (already `docs/backlog/2026-08-20-hires-famous-lru-substrate.md`; P1 makes it a one-liner later).
 - Galaxy `medianAbsMag` decode pass (`galaxyCatalogFormat.ts:320`) moves into the header when galaxies migrate, not now.
+
+### Rulings (2026-10-10)
+
+A JSON header · B object-local `firstRecord` + slot base in the shader · C blob as a schema record (kept) · D index header is the chunk manifest · E **keep the SKST v1 reader behind the format switch** (both formats loadable side by side for the A/B; revisit deletion at `/feature-done`) · F stars-rs: decide after timing a TS bake · shape agreed · prep lands as separate PR(s) ahead of the feature.
