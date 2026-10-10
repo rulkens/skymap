@@ -16,17 +16,21 @@ import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { MissionOffsets } from '../../../@types/camera/MissionOffsets';
 import { MISSION_EASE_MS } from '../../../data/exhibits/mission/missionEaseMs';
+import { MISSION_SURFACE_STANDOFF } from '../../../data/exhibits/mission/missionSurfaceStandoff';
 import { MISSION_FRAME_MARGIN } from '../../../data/exhibits/mission/missionFrameMargin';
 import { NO_MISSION_OFFSETS } from '../../../data/exhibits/mission/noMissionOffsets';
 import { setMissionOffsets } from '../../../state/camera/cameraSlice';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { blendCameraPose } from '../../../utils/camera/blendCameraPose';
+import { bodyRadiusMpc } from '../../../utils/camera/bodyRadiusMpc';
+import { distanceOutsideSphere } from '../../../utils/camera/distanceOutsideSphere';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { missionCameraFrame } from '../../../utils/camera/missionCameraFrame';
 import { missionOffsetsOfView } from '../../../utils/camera/missionOffsetsOfView';
 import { missionViewDirection } from '../../../utils/camera/missionViewDirection';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { sphereFitDistance } from '../../../utils/camera/sphereFitDistance';
+import { lerpVec3 } from '../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { smoothstep } from '../../../utils/math/smoothstep';
 
@@ -111,7 +115,13 @@ export function missionPose(
     missionViewDirection(frame, offsets),
     ctx.poseBasis,
   );
-  const exact = { target: frame.aim, yaw, pitch, distance };
+  // Zooming in slides the aim from the frame's midpoint to the craft, so the close view is of the
+  // craft and not of a point that, at a launch, lies inside the planet.
+  const aim =
+    craft !== undefined && offsets.zoom < 1
+      ? lerpVec3(frame.aim, craft, 1 - offsets.zoom)
+      : frame.aim;
+  const exact = { target: aim, yaw, pitch, distance };
   let shown: CameraPose = exact;
   if (from !== null) {
     const s = smoothstep(0, MISSION_EASE_MS, now - easeAtMs);
@@ -123,13 +133,32 @@ export function missionPose(
     shown = { ...blend, distance: Math.max(blend.distance, floor) };
   }
 
+  // The eye never goes inside the framed planet (the Sun when the frame has none). A floored exact
+  // pose writes its zoom back so further notches do not pile up below the floor.
+  const planet = positionOf(frame.stop?.planetId ?? 'sun');
+  const eye = eyeMpcOf({ ...shown, distance: 1 }, ctx.poseBasis);
+  const floored =
+    planet === undefined
+      ? shown.distance
+      : distanceOutsideSphere(
+          shown.target,
+          [eye[0] - shown.target[0], eye[1] - shown.target[1], eye[2] - shown.target[2]],
+          shown.distance,
+          planet,
+          bodyRadiusMpc(frame.stop?.planetId ?? undefined) * MISSION_SURFACE_STANDOFF,
+        );
+  if (floored !== shown.distance) {
+    if (from === null) offsets = { ...offsets, zoom: floored / frame.distance };
+    shown = { ...shown, distance: floored };
+  }
+
   return {
     pose: absoluteArm(shown),
     // The wheel only routes a notch to a row whose memory names its distance; `saturated`
     // false keeps the render loop awake through an ease on a paused clock.
     memory: {
       from: null,
-      distanceTarget: distance,
+      distanceTarget: shown.distance,
       panOffset: mem?.panOffset ?? [0, 0, 0],
       saturated: from === null && storedIsZero,
       mission: {

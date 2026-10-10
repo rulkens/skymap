@@ -24,6 +24,7 @@ import { flybyNormal } from '../../../../src/utils/exhibits/mission/flybyNormal'
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { voyagerMissions } from '../../../../src/data/exhibits/voyagerMissions';
 import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
+import { bodyRadiusMpc } from '../../../../src/utils/camera/bodyRadiusMpc';
 import { dot3 } from '../../../../src/utils/math/dot3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
@@ -39,10 +40,14 @@ const FRAME_MS = 16;
 
 beforeAll(loadVoyagerStopWindows);
 
-function missionOf(offsets = { yaw: 0, pitch: 0, zoom: 1 }, retarget = 0): CameraMission {
+function missionOf(
+  offsets = { yaw: 0, pitch: 0, zoom: 1 },
+  retarget = 0,
+  craftId = 'voyager2',
+): CameraMission {
   return {
-    craftId: 'voyager2',
-    stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2')),
+    craftId,
+    stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === craftId)),
     cruise: { yaw: voyagerMissions.pose.yaw, pitch: voyagerMissions.pose.pitch },
     offsets,
     speedIndex: 2,
@@ -118,6 +123,31 @@ describe('missionPose', () => {
 
   it('emits nothing when the offsets did not change', () => {
     expect(missionPose(ctxAt(missionOf(), tc, 'mission'), null).actions).toBeUndefined();
+  });
+
+  describe('zooming in at a launch', () => {
+    const launch = MISSION_EVENTS.find((e) => e.id === 'voyager1-launch') as MissionEvent;
+    const t = unixMsToJulianDays(missionEventMs(launch)) + 1 / 24;
+    const zoomed = missionOf({ yaw: 0, pitch: 0, zoom: 0.01 }, 0, 'voyager1');
+    const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+    it('keeps the eye outside the planet and slides the aim to the craft', () => {
+      const states = deriveBodyStates(t);
+      const earth = states.get('earth' as BodyId)!.positionMpc;
+      const craft = states.get('voyager1' as BodyId)!.positionMpc;
+      const pose = worldPose(ctxAt(zoomed, t));
+      const exact = worldPose(ctxAt(missionOf(undefined, 0, 'voyager1'), t));
+      expect(dist(eyeMpcOf(pose, BASIS), earth)).toBeGreaterThanOrEqual(bodyRadiusMpc('earth'));
+      expect(dist(pose.target, craft)).toBeLessThan(dist(exact.target, craft));
+    });
+
+    it('writes the floored zoom back so notches do not pile up below the floor', () => {
+      const ctx = ctxAt(zoomed, t, 'mission');
+      const dist0 = missionPose(ctx, null).memory!.distanceTarget!;
+      const out = missionPose({ ...ctx, followDistanceTarget: dist0 * 1e-6 }, null);
+      const zoom = (out.actions?.[0] as { payload: { zoom: number } }).payload.zoom;
+      expect(zoom).toBeGreaterThan(1e-8 * 2);
+    });
   });
 
   describe('ease after a re-aim', () => {
