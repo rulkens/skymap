@@ -186,3 +186,7 @@ tools/deploy/r2            sync group `star-catalog/v2/**` (bulk, gzip-on-wire);
 Corrections found while writing the spec: `tiered` is read at one site only (`starCatalogFetcher.ts:71`; the five lines above test `binBaseName !== null`), so P2 is narrower; 16-bit node-relative offsets replace the `u20x3` store (spec §2.4). Spec: `docs/superpowers/specs/2026-10-10-chunked-star-octree-design.md`.
 
 A JSON header · B object-local `firstRecord` + slot base in the shader · C blob as a schema record (kept) · D index header is the chunk manifest · E **keep the SKST v1 reader behind the format switch** (both formats loadable side by side for the A/B; revisit deletion at `/feature-done`) · F stars-rs: decide after timing a TS bake · shape agreed · prep lands as separate PR(s) ahead of the feature.
+
+### Prep status (2026-10-11)
+
+P1 #872 (`prep-slot-pool`), P2 #871 (`prep-star-budgets`), P3 #873 (`prep-r2-sync-groups`): implemented, reviewed, CI green, ready for review; merge is the user's word. P3's bucket probe (plan Task 5) is NOT run: the sandbox refuses the credential step; run it by hand from the plan's recipe before the first `gzipOnWire` bulk sync. Next after the preps land: `/wt` a feature worktree off the new main, rebase `regalade-octree` (parser + docs) onto it or merge #868 first, then write the feature plan against spec §2–§7.
