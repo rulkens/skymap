@@ -171,10 +171,10 @@ Chunks are capacity-bounded, not cut at a fixed level (research §8.2).
 
 ### 5.1 Load path
 
-| Object | Path                                                                                                                     |
-| ------ | ------------------------------------------------------------------------------------------------------------------------ |
-| index  | the existing `AssetSlot` (one value per source, `AssetSlot.d.ts`), fetched through the manifest                          |
-| chunks | a buffer stream subsystem: `createBufferStreamSubsystem` = the tile stream loop over P1's `SlotPool`, not an `AssetSlot` |
+| Object | Path                                                                                                                 |
+| ------ | -------------------------------------------------------------------------------------------------------------------- |
+| index  | the existing `AssetSlot` (one value per source, `AssetSlot.d.ts`), fetched through the manifest                      |
+| chunks | `createTileStreamSubsystem<Chunk, BufferSlotStore>` over P1's `SlotPool`, not an `AssetSlot`; no sibling stream loop |
 
 Chunk URLs are `star-catalog/v2/stars/<level>-<morton>.<hash>.bin`; `resolveDataPath` passes names absent from the manifest through unchanged (`dataManifest.ts:36-37`). No `DecompressionStream`: R2 serves `Content-Encoding: gzip` and the browser inflates.
 
@@ -208,7 +208,7 @@ Buffers are created once per source at index load, replacing the catalog-sized o
 | records                  | `indexRecords + slots·chunkCapacity`, 2 u32 each        |
 | leaf list                | index blocks + `slots·(chunkCapacity/8 + chunkNodeCap)` |
 
-Tiers become pool budgets (§8.4). The source row's `budgets: Record<Tier, { slots: number; drawBudget: number }>` (P2 introduces it, the feature adds `slots`) picks the pool size and the cut's instance budget per tier. Starting values are tuned with `npm run perf`; large at 256 slots is about 67 MB of records.
+Tiers become pool budgets (research §8.4). The source row's `budgets: Record<Tier, { slots: number; drawBudget: number }>` (P2 introduces it, the feature adds `slots`) picks the pool size and the cut's instance budget per tier. Starting values are tuned with `npm run perf`; large at 256 slots is about 67 MB of records.
 
 ### 5.5 Pick, fade, wake
 
@@ -255,26 +255,26 @@ src/layers/starCatalog/
   load/                          index via AssetSlot; chunks via the buffer stream subsystem
   render/starCutGpu.ts           pool-sized buffers, slot base in the shader, resident-children bit
   render/starCutLayout.ts        caps per §2.6; parent from the object's own table
-src/services/engine/subsystems/  createBufferStreamSubsystem = tile stream loop over a SlotPool
+src/services/engine/subsystems/  tile stream loop (P1) over a buffer-backed SlotStore; no sibling
 tools/octree/                    stratify → chunk → write
 tools/deploy/r2/                 data-family sync groups; star-catalog/v2/** bulk + gzip
 ```
 
 ### 8.2 Verdicts
 
-| Joint                    | Today                                                                                                                                                       | Verdict                     | Prep |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ---- |
-| Fixed-slot LRU           | welded into `TextureAtlas.allocate` (`textureAtlas.ts:212-253`); the tile stream constructs its atlas (`tileStreamSubsystem.ts:36-42`)                      | bolt-on                     | P1   |
-| Tiers as budgets         | `tiered` read once (`starCatalogFetcher.ts:71`), `drawBudget.typical` once (`starCutInputs.ts:63`); a budget meaning of tier would be a second special case | bolt-on                     | P2   |
-| Data-family sync         | hand regex lists (`allowDataFile.ts:34`, `shouldGzipOnWire.ts:15`); bulk only for surface tiles (`syncR2.ts:89-101`)                                        | bolt-on                     | P3   |
-| Cut buffers, record base | sized once, global `firstRecord` (`starCutGpu.ts:113-123`, `vertex.wesl:187`)                                                                               | rewritten by the feature    | none |
-| Root and node count      | root is the last node (`cut.wesl:128`)                                                                                                                      | growth (`rootNode` uniform) | none |
-| Wake vote                | fade timer only (`frame.ts:38`)                                                                                                                             | growth                      | none |
-| Whole-table index        | `starOctreeIndex.ts:27` assumes a whole sorted table                                                                                                        | stays for the v1 reader (E) | none |
+| Joint                    | Today                                                                                                                                                                  | Verdict                     | Prep |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ---- |
+| Fixed-slot LRU           | welded into `TextureAtlas.allocate` (`textureAtlas.ts:212-253`); the tile stream constructs its atlas (`tileStreamSubsystem.ts:36-42`)                                 | bolt-on                     | P1   |
+| Tiers as budgets         | `tiered` read once (`starCatalogFetcher.ts:71`), `drawBudget.typical` once (`render/cut/starCutInputs.ts:63`); a budget meaning of tier would be a second special case | bolt-on                     | P2   |
+| Data-family sync         | hand regex lists (`allowDataFile.ts:34`, `shouldGzipOnWire.ts:15`); bulk only for surface tiles (`syncR2.ts:89-101`)                                                   | bolt-on                     | P3   |
+| Cut buffers, record base | sized once, global `firstRecord` (`starCutGpu.ts:113-123`, `vertex.wesl:187`)                                                                                          | rewritten by the feature    | none |
+| Root and node count      | root is the last node (`cut.wesl:128`)                                                                                                                                 | growth (`rootNode` uniform) | none |
+| Wake vote                | fade timer only (`frame.ts:38`)                                                                                                                                        | growth                      | none |
+| Whole-table index        | `starOctreeIndex.ts:27` assumes a whole sorted table                                                                                                                   | stays for the v1 reader (E) | none |
 
 ### 8.3 Prep list (each its own PR, landing before feature commits)
 
-- **P1 `SlotPool` out of `TextureAtlas`.** Key → slot LRU by `lastSeenFrame`, refuse-when-all-claimed-this-frame, evict handler. `TextureAtlas` composes it; `createTileStreamSubsystem` takes the slot store as a dep. Behaviour-neutral. It also makes the hi-res-famous substrate (`docs/backlog/2026-08-20-hires-famous-lru-substrate.md`) a later one-liner.
+- **P1 `SlotPool` out of `TextureAtlas`.** Key → slot LRU by `lastSeenFrame`, refuse-when-all-claimed-this-frame, evict handler. `TextureAtlas` composes it; `createTileStreamSubsystem` takes the slot store as a dep. Behaviour-neutral. The hi-res-famous substrate (`docs/backlog/2026-08-20-hires-famous-lru-substrate.md`) stays backlogged: its victim policy (smallest recent apparent diameter, refuse a smaller newcomer, `hiResFamousTexture.ts:147-159`) is one `SlotPool` does not have.
 - **P2 per-source `budgets` row.** `budgets: Record<Tier, { drawBudget }>` replaces `tiered` (`SurveyStarCatalogSourceEntry.d.ts:21`, `gaia-stars.ts:29`) and `drawBudget` (`:23`, `gaia-stars.ts:36`). The fetcher names the file from the row, the cut reads the committed tier's budget. All three tiers carry today's 1.5 M, so it is behaviour-neutral. The five `binBaseName !== null` survey tests (`starCatalogFetcher.ts:58`, `starSourcesInBand.ts:23`, `starSourceDrawOpacity.ts:19`, `create.ts:77`, `starCatalogAssetRows.ts:16`) stay as they are.
 - **P3 data-family sync groups.** A family declares `{ prefix, transport, gzipOnWire }` in `tools/deploy/r2`, replacing the two regex lists; the bulk transport learns gzip. Existing families keep their keys and encodings.
 
