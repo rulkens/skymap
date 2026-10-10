@@ -116,11 +116,11 @@ export function createTileStreamSubsystem<T, S extends SlotStore>(
 
 **Files:** `docs/RENDERER.md`, `docs/BACKLOG.md`, `docs/backlog/2026-08-20-hires-famous-lru-substrate.md`, `src/@types/rendering/hiResFamousTexture/HiResFamousTexture.d.ts` (one comment line)
 
-- [ ] `RENDERER.md:59`: the landmine names `SlotPool.allocate` (reached through `TextureAtlas` and the tile stream). `:30`: "`textureAtlas.ts` is the shared LRU slot atlas" becomes the atlas over a `SlotPool` (`utils/cache/slotPool.ts`). `:22`: "LRU eviction" points at `SlotPool`.
-- [ ] `BACKLOG.md:141`: the item names `SlotPool` instead of `TextureAtlas`; its text is otherwise unchanged.
-- [ ] `HiResFamousTexture.d.ts:16-17`: "(what `TextureAtlas` uses)" names `SlotPool`.
-- [ ] The hi-res-famous backlog detail file gains one paragraph under "Approach": `SlotPool` is now the shared substrate, but `hiResFamousTexture` evicts the smallest recent apparent diameter and refuses a newcomer smaller than that victim (`hiResFamousTexture.ts:147-159`), a policy `SlotPool` does not have. Folding it in needs a victim-policy seam, so it is not a one-line change.
-- [ ] Commit.
+- [x] `RENDERER.md:59`: the landmine names `SlotPool.allocate` (reached through `TextureAtlas` and the tile stream). `:30`: "`textureAtlas.ts` is the shared LRU slot atlas" becomes the atlas over a `SlotPool` (`utils/cache/slotPool.ts`). `:22`: "LRU eviction" points at `SlotPool`.
+- [x] `BACKLOG.md:141`: the item names `SlotPool` instead of `TextureAtlas`; its text is otherwise unchanged.
+- [x] `HiResFamousTexture.d.ts:16-17`: "(what `TextureAtlas` uses)" names `SlotPool`.
+- [x] The hi-res-famous backlog detail file gains one paragraph under "Approach": `SlotPool` is now the shared substrate, but `hiResFamousTexture` evicts the smallest recent apparent diameter and refuses a newcomer smaller than that victim (`hiResFamousTexture.ts:147-159`), a policy `SlotPool` does not have. Folding it in needs a victim-policy seam, so it is not a one-line change.
+- [x] Commit.
 
 ## Definition of Done
 
