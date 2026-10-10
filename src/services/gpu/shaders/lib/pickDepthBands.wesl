@@ -27,13 +27,15 @@
 //   earth glint band   eps = 5.00e-4  → z/w = 0.00050   (highest, wins)
 //   planet glint band  eps = 4.50e-4  → z/w = 0.00045
 //   moon glint band    eps = 4.00e-4  → z/w = 0.00040
+//   structure-ring band eps = 2.00e-4 → z/w = 0.00020
 //   scene-star band    eps = 1.00e-4  → z/w = 0.00010
 //   survey-star band   eps = 0.50e-4  → z/w = 0.00005
 //   backdrop band      eps = 0.25e-4  → z/w = 0.000025  (lowest, loses)
 //
 // So at any pixel where the classes overlap: the Earth glint beats a planet
-// glint beats a moon glint beats scene/famous stars beat survey stars beat the
-// Milky Way backdrop — pure importance, independent of true distance. (Classes
+// glint beats a moon glint beats a structure ring beats scene/famous stars
+// beat survey stars beat the Milky Way backdrop — pure importance, independent
+// of true distance. (Classes
 // that keep TRUE depth — resolved spheres, and within-far scene stars — sit in
 // front of every band automatically because their z/w is well above 0.00050 at
 // foreground range (reversed-Z: nearer = larger z); that is the resolved-sphere +
@@ -57,15 +59,17 @@
 // 5e-5 in z/w — a vast number of f32-resolvable steps near the 0.0 clear, where
 // depth32float resolution is far finer than the ~6e-8 it holds near 1.0 — so
 // planet-over-moon and earth-over-both are UNCONDITIONAL depth wins, needing no
-// ordering and admitting no ties. Nearness cannot invert them (all three force
-// their band regardless of true depth), and draw order is irrelevant.
+// ordering. Nearness cannot invert them (all three force their band regardless of
+// true depth), and draw order is irrelevant between classes. Within one class the
+// depth is shared: rings in the structure-ring band tie with each other and
+// resolve by draw order.
 //
-// ## Why these six values are safe to distinguish
+// ## Why these seven values are safe to distinguish
 //
-// All six stay strictly above the 0.0 clear (positive z/w), so a banded fragment
+// All seven stay strictly above the 0.0 clear (positive z/w), so a banded fragment
 // always survives the clip test (the same clip-survival property the visual
 // clamp needs). depth32float resolves far finer than 6e-8 near the 0.0 clear, and
-// the tightest gap here is 0.25e-4 = 2.5e-5 — a vast number of resolvable steps —
+// the tightest gap here is 0.25e-4 = 2.5e-5 (survey star to backdrop) — a vast number of resolvable steps —
 // so the bands never collapse into one another through float rounding. The three
 // glint bands sit HIGHEST in the true-depth headroom (0.00040–0.00050), which is
 // deliberate: a resolved sphere must rise above the highest glint band to
@@ -88,6 +92,11 @@
 //                                per-instance glint CLASS band (earth / planet /
 //                                moon eps below) so importance, not nearness,
 //                                decides among glints.
+//   - structureMarker/ringPick.wesl — 'fsRingPickBanded' (the NEAR0 instance)
+//                                writes frag_depth = PICK_BAND_STRUCTURE_RING_EPS,
+//                                z/w being exactly eps for 'z = w * eps': the
+//                                structure is selected before the stars inside
+//                                its disc, as its label is.
 //   - milkyWay/pick/vertex.wesl — FORCES clip.z to PICK_BAND_BACKDROP_EPS (the
 //                                impostor is the ultimate fallback).
 //
@@ -120,6 +129,14 @@ const PICK_BAND_SCENE_STAR_EPS: f32 = 1e-4;
 // a contested pixel to a scene/famous star, glint, or sphere. Half the scene
 // eps.
 const PICK_BAND_SURVEY_STAR_EPS: f32 = 0.5e-4;
+
+// Near structure rings (filled pick discs) — above both star bands, below the
+// glints: a click inside a ring selects the structure first, and no star inside
+// its disc is clickable while the ring is pickable, focused or not. A ring is pickable
+// only while its drawn alpha is at least RING_PICK_MIN_ALPHA (structureMarkerStyles.ts),
+// so a nearly faded-out ring stops blocking the stars inside it. A scene star nearer than about half the orbit
+// distance keeps true depth above this band and still wins.
+const PICK_BAND_STRUCTURE_RING_EPS: f32 = 2.0e-4;
 
 // Milky Way impostor backdrop — the deepest band, the ultimate fallback: any
 // resolvable Gaia dot overlapping the galaxy backdrop now wins the click over

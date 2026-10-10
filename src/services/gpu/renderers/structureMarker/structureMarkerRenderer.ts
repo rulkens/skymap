@@ -1,6 +1,7 @@
 /**
- * structureMarkerRenderer — instanced halo + ring overlay for every
- * `type:'structure'` category: cluster, supercluster, void, and group.
+ * structureMarkerRenderer — instanced halo + ring overlay for the
+ * `type:'structure'` categories of one slab; each slab gets its own instance
+ * and buffers.
  * The producer (`produceStructureMarkers`) feeds it descriptors; the
  * store it visualises is `state.data.structures`.
  *
@@ -21,8 +22,8 @@
  * 6-bit `sourceCode`, which the ringPick fragment composes into
  * `(sourceCode << 26) | structureIndex + PICK_SENTINEL_OFFSET` — the same
  * per-source pattern `galaxyPointRenderer` uses per galaxy catalog.  Buckets are
- * data-driven from `STRUCTURE_IDS`, so a new structure source
- * needs no change here.
+ * the categories handed to the factory (one instance per slab), so a new
+ * structure source needs no change here.
  *
  * Voids skip the halo draw — a halo implies matter where the structure
  * is defined by absence.  The descriptor's `haloColor` alpha 0 is the
@@ -67,15 +68,20 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
+import { COSMO, NEAR0, SLAB_REVERSED_Z } from '../../../engine/frame/slabs';
+import { pickDepthFormat } from '../../../engine/frame/pickProgram';
 
 /**
- * 12 floats per instance × 4 bytes = 48 bytes/instance.
+ * 13 floats per instance × 4 bytes = 52 bytes/instance.
  *
  * Layout (matches VsIn in structureMarker/io.wesl):
- *   [0..2]   position.xyz       — world-space centre
+ *   [0..2]   position.xyz       — centre relative to the eye (f64-subtracted)
  *   [3]      radiusMpc          — world-space half-extent (ring + halo)
  *   [4..7]   haloColor.rgba     — additive halo tint + final alpha
  *   [8..11]  ringColor.rgba     — ring tint + final alpha
+ *   [12]     pickable           — 1 when the ring takes a click, else 0
  *
  * Halo and ring carry independent RGB tints so voids — which opt out
  * of the additive halo entirely (haloAlpha = 0) — can still display
@@ -83,21 +89,15 @@ import { createDummyFadeBindGroup } from '../../lib/dummyFade';
  * halo's RGB across both pipelines would save stride but can't
  * express that void colour split.
  */
-const MARKER_INSTANCE_FLOATS = 12;
+const MARKER_INSTANCE_FLOATS = 13;
+const MARKER_PICKABLE_FLOAT = 12;
+const MARKER_PICKABLE_BYTE_OFFSET = MARKER_PICKABLE_FLOAT * 4;
+const MARKER_HALO_BYTE_OFFSET = 4 * 4;
+const MARKER_RING_BYTE_OFFSET = 8 * 4;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
-
-/**
- * The 80-byte CameraUniforms prefix plus a 16-byte camPosMpc tail (the eye,
- * absolute Mpc — vec3 + one unused pad float) — see structureMarker/io.wesl's
- * `Uniforms` struct, which the ring/halo vertex stage needs to build its
- * eye-facing world basis (`expandBillboardWorld`).
- */
-export const MARKER_UNIFORM_BYTES = CAMERA_UNIFORM_BYTES + 16;
-/** Float index of camPosMpc.xyz — right after the 80-byte (20-float) prefix. */
-export const CAM_POS_FLOAT_OFFSET = CAMERA_UNIFORM_BYTES / 4;
 
 /** A per-category bag seeded to `init` — a new structure source can't leave a bucket unset. */
 function byCategory<T>(init: T): Record<StructureId, T> {
@@ -131,12 +131,14 @@ export function createStructureMarkerRenderer(
    */
   fadeBgl: FadeUniformsBgl,
   /**
-   * Selects the COSMO slab's depth convention (single-sourced in
-   * `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
-   * `true` ⇒ reversed-Z greater-wins. Applies to the ring-pick pipeline's
-   * depth test, resolved through `resolveDepthCompare`.
+   * The slab this instance draws and picks in. It fixes the ring-pick depth
+   * convention and format (a format mismatch invalidates the whole pick encoder),
+   * and NEAR0 ranks the pick in a fixed band above the star bands while COSMO keeps
+   * true depth so rings compete with galaxies.
    */
-  reversedZ: boolean,
+  slab: typeof NEAR0 | typeof COSMO,
+  /** The categories this instance buckets, in draw order; descriptors of others are ignored. */
+  categories: readonly StructureId[],
   initialCapacity = 64,
 ): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
@@ -156,38 +158,37 @@ export function createStructureMarkerRenderer(
   // saturate the buffer first, so superclusters and voids never get
   // packed — visible only with clusters toggled off) AND desyncing the
   // per-category pick index.  Growing keeps the renderer correct for
-  // any catalog size; the buffer is tiny (660 × 48 B ≈ 31 KB).
+  // any catalog size; the buffer is tiny (660 × 52 B ≈ 34 KB).
   let capacity = initialCapacity;
   let instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
   let currentMarkerCount = 0;
+  // The eye the instances are packed against: draw and pick rebase the f64
+  // view-projection on it, so no caller can hand a matrix for another eye.
+  let packedEye: Vec3 = [0, 0, 0];
 
   // Per-category bucket bookkeeping: where each category's run begins
   // in the instance buffer + how many descriptors it owns.  Reset at
   // the start of every setMarkers call.
   const bucketOffsets = byCategory(0);
   const bucketCounts = byCategory(0);
+  const owned: ReadonlySet<StructureId> = new Set(categories);
 
   // GPU resources — null when device is null.
   let haloPipeline: GPURenderPipeline | null = null;
   let ringPipeline: GPURenderPipeline | null = null;
   // Ring-pick pipeline — same vertex source as ringPipeline, fragment
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
-  // r32uint + depth24plus added.  See the pick pipeline build below for
+  // r32uint + a depth attachment added.  See the pick pipeline build below for
   // the full rationale; in short, this is the structure-marker sibling of the
   // galaxy pick path in galaxyPickRenderer.ts.
   let ringPickPipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
-  let fadeBuffer: GPUBuffer | null = null;
-  let fadeBindGroup: GPUBindGroup | null = null;
-  // Dummy zeroed FadeUniforms for the pick pipeline.  Same pattern as
-  // galaxyPickRenderer.ts's dummy fade group: the pick fragment
-  // doesn't read fade.opacity (the pick texture is integer + has no
-  // observable alpha), but the pipeline layout still declares the
-  // canonical fadeBgl at @group(1) so other passes' bound fade
-  // groups remain layout-compatible across the encoder boundary.
-  let pickDummyFadeBuffer: GPUBuffer | null = null;
-  let pickDummyFadeBindGroup: GPUBindGroup | null = null;
+  // Inert FadeUniforms bound at @group(1) by the draw and the pick alike: no shader
+  // here reads it, but the layout lists the canonical fadeBgl at that slot so other
+  // passes' bound fade groups stay layout-compatible across the encoder boundary.
+  let dummyFadeBuffer: GPUBuffer | null = null;
+  let dummyFadeBindGroup: GPUBindGroup | null = null;
   // The pick path's OWN @group(0) camera — never the draw-time
   // `uniformBuffer`, which holds the last VISUAL frame's camera and would hand
   // the ring vertex stage a stale snapshot of the pose being picked.
@@ -196,12 +197,6 @@ export function createStructureMarkerRenderer(
   const sourceBuffers = byCategory<GPUBuffer | null>(null);
   let cameraBindGroup: GPUBindGroup | null = null;
   const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
-  // Scratch arrays for the per-frame fade.opacity write.  Same shape
-  // as filamentRenderer's fadeScratchF32: a 16-byte staging buffer that
-  // matches the fade uniform's footprint, with the opacity f32 at offset
-  // 0 and the trailing 12 bytes held at zero.
-  const fadeScratchBuffer = new ArrayBuffer(16);
-  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   if (device) {
     const cameraBgl = device.createBindGroupLayout({
@@ -224,8 +219,8 @@ export function createStructureMarkerRenderer(
         },
       ],
     });
-    // @group(1) FadeUniforms slot — the structure-marker shaders DO NOT
-    // reference this slot (alpha rides on the per-descriptor fields the
+    // @group(1) FadeUniforms slot — the structure-marker shaders do not
+    // reference it (alpha rides on the per-descriptor fields the
     // CPU bakes in produceMarkers), but we MUST list the canonical
     // shared fadeBgl in the layout at slot 1.
     //
@@ -238,7 +233,7 @@ export function createStructureMarkerRenderer(
     // didn't match the fadeBgl would trip "BindGroupLayout … does not
     // match layout … set at group index 1".  Listing fadeBgl here keeps
     // the pipeline layout-compatible with whatever the prior pass
-    // bound.  We never create a BindGroup against it ourselves.
+    // bound; the draw and the pick bind an inert group against it.
     const pipelineLayout = device.createPipelineLayout({
       label: 'structure-marker-pipeline-layout',
       bindGroupLayouts: [cameraBgl, fadeBgl, sourceBgl],
@@ -255,8 +250,9 @@ export function createStructureMarkerRenderer(
         stepMode: 'instance',
         attributes: [
           { shaderLocation: 0, offset: 0, format: 'float32x4' }, // positionAndRadius
-          { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
-          { shaderLocation: 2, offset: 32, format: 'float32x4' }, // ringColorAndAlpha
+          { shaderLocation: 1, offset: MARKER_HALO_BYTE_OFFSET, format: 'float32x4' }, // haloColorAndAlpha
+          { shaderLocation: 2, offset: MARKER_RING_BYTE_OFFSET, format: 'float32x4' }, // ringColorAndAlpha
+          { shaderLocation: 3, offset: MARKER_PICKABLE_BYTE_OFFSET, format: 'float32' }, // pickable
         ],
       },
     ];
@@ -318,7 +314,7 @@ export function createStructureMarkerRenderer(
     // Differences vs. the visible-ring pipeline:
     //   - Fragment target is `r32uint` (integer pick texture).
     //   - No blend descriptor — integer formats don't support blending.
-    //   - depthStencil enabled with `depth24plus` + `less`+writeEnabled
+    //   - depthStencil enabled with the pick pass's depth format + writeEnabled
     //     so a closer galaxy pick fragment (running just before us in
     //     the same pass) wins the pixel over an occluded structure ring.
     //     The depth attachment is the same texture the galaxy pick
@@ -340,30 +336,24 @@ export function createStructureMarkerRenderer(
       vertex: { module: ringPickVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
         module: ringPickFs,
-        entryPoint: 'fsRingPick',
+        entryPoint: slab === NEAR0 ? 'fsRingPickBanded' : 'fsRingPick',
         targets: [{ format: 'r32uint' }],
       },
       primitive: { topology: 'triangle-list' },
       depthStencil: {
-        format: 'depth24plus',
+        format: pickDepthFormat(slab),
         depthWriteEnabled: true,
-        depthCompare: resolveDepthCompare('nearer', reversedZ),
+        depthCompare: resolveDepthCompare('nearer', SLAB_REVERSED_Z[slab]!),
       },
     });
 
-    // 16-byte zeroed FadeUniforms buffer — the pick fragment ignores
-    // fade.opacity, but the pipeline layout still lists fadeBgl at
-    // @group(1) for symmetry with the visible pipelines, so we MUST
-    // bind a layout-compatible group there.  Allocated GPUBufferUsage.
-    // UNIFORM only (no COPY_DST): we never write to it, the default-
-    // zero contents are what we want.
-    const pickDummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker-pick');
-    pickDummyFadeBuffer = pickDummyFade.buffer;
-    pickDummyFadeBindGroup = pickDummyFade.bindGroup;
+    const dummyFade = createDummyFadeBindGroup(device, fadeBgl, 'structure-marker');
+    dummyFadeBuffer = dummyFade.buffer;
+    dummyFadeBindGroup = dummyFade.bindGroup;
 
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
-      size: MARKER_UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     pickCameraBindGroup = device.createBindGroup({
@@ -374,7 +364,7 @@ export function createStructureMarkerRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
-      size: MARKER_UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -390,23 +380,8 @@ export function createStructureMarkerRenderer(
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
 
-    // @group(1) FadeUniforms — 16-byte buffer.  Each frame the whole
-    // 16-byte scratch is uploaded; only its first 4 bytes carry the
-    // fade.opacity scalar, the trailing 12 are struct pad and stay zero.
-    // Bind group lives forever; only the buffer contents change.
-    fadeBuffer = device.createBuffer({
-      label: 'structure-marker-fade-uniform',
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    fadeBindGroup = device.createBindGroup({
-      label: 'structure-marker-fade-bg',
-      layout: fadeBgl,
-      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
-    });
-
     // Per-category SourceUniforms — written once at construction.
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       const buf = device.createBuffer({
         label: `structure-marker-source-${cat}`,
         size: SOURCE_UNIFORM_BYTES,
@@ -451,12 +426,13 @@ export function createStructureMarkerRenderer(
     }
   }
 
-  function setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void {
+  function setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void {
     // Partition descriptors by category — preserves order within each
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
     currentMarkerCount = 0;
-    for (const c of STRUCTURE_IDS) bucketCounts[c] = 0;
+    packedEye = [camPos[0], camPos[1], camPos[2]];
+    for (const c of categories) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
     // and the `capacity` docstring for why a cap here would be a
@@ -467,11 +443,11 @@ export function createStructureMarkerRenderer(
     // First pass: count per category to compute offsets.
     const count = descriptors.length;
     for (let i = 0; i < count; i++) {
-      bucketCounts[descriptors[i]!.category]++;
+      if (owned.has(descriptors[i]!.category)) bucketCounts[descriptors[i]!.category]++;
     }
     // Prefix-sum the counts into per-category run offsets.
     let acc = 0;
-    for (const c of STRUCTURE_IDS) {
+    for (const c of categories) {
       bucketOffsets[c] = acc;
       acc += bucketCounts[c];
     }
@@ -480,12 +456,15 @@ export function createStructureMarkerRenderer(
     const writeCursor: Record<StructureId, number> = { ...bucketOffsets };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
+      if (!owned.has(d.category)) continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;
-      instanceBuf[base + 0] = d.worldPos[0];
-      instanceBuf[base + 1] = d.worldPos[1];
-      instanceBuf[base + 2] = d.worldPos[2];
+      // Subtract in f64 BEFORE the Float32Array write narrows: absolute Mpc
+      // positions would quantise a nearby marker onto a coarse f32 grid.
+      instanceBuf[base + 0] = d.worldPos[0] - camPos[0];
+      instanceBuf[base + 1] = d.worldPos[1] - camPos[1];
+      instanceBuf[base + 2] = d.worldPos[2] - camPos[2];
       instanceBuf[base + 3] = d.radiusMpc;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
@@ -495,6 +474,7 @@ export function createStructureMarkerRenderer(
       instanceBuf[base + 9] = d.ringColor[1];
       instanceBuf[base + 10] = d.ringColor[2];
       instanceBuf[base + 11] = d.ringColor[3];
+      instanceBuf[base + MARKER_PICKABLE_FLOAT] = d.pickable ? 1 : 0;
       currentMarkerCount++;
     }
 
@@ -510,11 +490,9 @@ export function createStructureMarkerRenderer(
 
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
-    fadeOpacity: number,
   ): void {
     if (
       !device ||
@@ -523,30 +501,19 @@ export function createStructureMarkerRenderer(
       !uniformBuffer ||
       !instanceBuffer ||
       !cameraBindGroup ||
-      !fadeBuffer ||
-      !fadeBindGroup
+      !dummyFadeBindGroup
     )
       return;
     if (currentMarkerCount === 0) return;
 
-    // Write the 80-byte CameraUniforms prefix, then the eye at floats
-    // 20..22 (byte 80..91) — the ring/halo vertex stage's eye-facing world
-    // basis.  The reserved pad (float 19) and camPosMpc.w (float 23) stay
-    // zero via Float32Array zero-init.
-    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
-    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
+    // The 80-byte CameraUniforms prefix, rebased on the eye the eye-relative
+    // instances were packed against.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
-    // Per-frame fade.opacity write — same pattern as filamentRenderer.
-    // The upload spans the full 16-byte scratch (one writeBuffer of a
-    // whole struct, not a partial write): opacity occupies floats [0],
-    // the trailing 12 bytes are pad and stay zero from the zero-init.
-    fadeScratchF32[0] = fadeOpacity;
-    device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
-
     pass.setBindGroup(0, cameraBindGroup);
-    pass.setBindGroup(1, fadeBindGroup);
+    pass.setBindGroup(1, dummyFadeBindGroup);
 
     // Halo passes first (additive) — voids skip; see spec §2.1.  We
     // could check bucket-level halo presence by inspecting each
@@ -567,7 +534,7 @@ export function createStructureMarkerRenderer(
     // the visible draws (their shaders don't read instance_index for
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       if (cat === 'void') continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -579,7 +546,7 @@ export function createStructureMarkerRenderer(
 
     // Ring passes second (premultiplied OVER — composites over halo).
     pass.setPipeline(ringPipeline);
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -612,25 +579,21 @@ export function createStructureMarkerRenderer(
    */
   function pickRing(
     passEncoder: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportPx: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
   ): void {
-    if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
+    if (!device || !ringPickPipeline || !instanceBuffer || !dummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    // Same prefix + eye write as `draw`, into the pick buffer: the pad
-    // (float 19) and camPosMpc.w (float 23) stay zero via Float32Array
-    // zero-init.
-    const uni = new Float32Array(MARKER_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
-    uni.set(camPosMpc, CAM_POS_FLOAT_OFFSET);
+    // Same prefix write as `draw`, into the pick buffer.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportPx, pxPerRad);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);
-    passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
-    for (const cat of STRUCTURE_IDS) {
+    passEncoder.setBindGroup(1, dummyFadeBindGroup);
+    for (const cat of categories) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -647,10 +610,9 @@ export function createStructureMarkerRenderer(
   function destroy(): void {
     uniformBuffer?.destroy();
     instanceBuffer?.destroy();
-    fadeBuffer?.destroy();
-    pickDummyFadeBuffer?.destroy();
+    dummyFadeBuffer?.destroy();
     pickCameraBuffer?.destroy();
-    for (const cat of STRUCTURE_IDS) {
+    for (const cat of categories) {
       sourceBuffers[cat]?.destroy();
     }
   }

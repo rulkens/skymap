@@ -114,7 +114,7 @@ function mixedPayload(): StructureCatalogPayload {
 describe('structureCatalogToStructures', () => {
   it('maps category bytes to cluster/supercluster', () => {
     const structures = structureCatalogToStructures(mixedPayload());
-    expect(structures.filter((p) => p.category === 'cluster')).toHaveLength(2);
+    expect(structures.filter((p) => p.category === 'galaxy-cluster')).toHaveLength(2);
     expect(structures.filter((p) => p.category === 'supercluster')).toHaveLength(2);
   });
 
@@ -122,8 +122,8 @@ describe('structureCatalogToStructures', () => {
     const structures = structureCatalogToStructures(mixedPayload());
     const low = structures.find((p) => p.id.includes('low-cluster'))!;
     expect(low.worldPos).toEqual([1, 2, 3]);
-    expect(low.category === 'cluster' && low.physicalRadiusMpc).toBe(1.5);
-    expect(low.category === 'cluster' && low.apparentRadiusMpc).toBe(3);
+    expect(low.category === 'galaxy-cluster' && low.physicalRadiusMpc).toBe(1.5);
+    expect(low.category === 'galaxy-cluster' && low.apparentRadiusMpc).toBe(3);
   });
 
   it('normalizes significance per-category into [0,1] on independent scales', () => {
@@ -131,11 +131,14 @@ describe('structureCatalogToStructures', () => {
     const sig = (idFrag: string) => {
       const p = structures.find((q) => q.id.includes(idFrag))!;
       // significance lives on the extended-structure arms.
-      return p.category === 'cluster' || p.category === 'supercluster' ? p.significance : undefined;
+      return p.category === 'galaxy-cluster' || p.category === 'supercluster'
+        ? p.significance
+        : undefined;
     };
     // All normalized values within [0,1].
     for (const p of structures) {
-      const s = p.category === 'cluster' || p.category === 'supercluster' ? p.significance : 1;
+      const s =
+        p.category === 'galaxy-cluster' || p.category === 'supercluster' ? p.significance : 1;
       expect(s).toBeGreaterThanOrEqual(0);
       expect(s).toBeLessThanOrEqual(1);
     }
@@ -157,15 +160,15 @@ describe('structureCatalogToStructures', () => {
   it('ids are prefixed bulk and never collide with featured slugs', () => {
     const structures = structureCatalogToStructures(mixedPayload());
     for (const p of structures) {
-      expect(p.id).toMatch(/^(cluster|supercluster)-bulk-/);
+      expect(p.id).toMatch(/^(galaxy-cluster|supercluster)-bulk-/);
     }
   });
 
   it('carries the abell designation from meta onto the cluster arm only', () => {
     const structures = structureCatalogToStructures(mixedPayload());
     const high = structures.find((p) => p.id.includes('high-cluster'))!;
-    expect(high.category).toBe('cluster');
-    expect(high.category === 'cluster' && high.abell).toBe('A2670');
+    expect(high.category).toBe('galaxy-cluster');
+    expect(high.category === 'galaxy-cluster' && high.abell).toBe('A2670');
     // Superclusters never carry abell.
     const sc = structures.find((p) => p.id.includes('rich-sc'))!;
     expect('abell' in sc).toBe(false);
@@ -224,6 +227,6 @@ describe('structureCatalogToStructures', () => {
     ]);
     const structures = structureCatalogToStructures(payload);
     const p = structures[0]!;
-    expect(p.category === 'cluster' && p.significance).toBeCloseTo(1);
+    expect(p.category === 'galaxy-cluster' && p.significance).toBeCloseTo(1);
   });
 });

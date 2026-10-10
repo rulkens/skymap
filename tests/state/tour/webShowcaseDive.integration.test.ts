@@ -4,8 +4,8 @@
  *
  * ### What is proven
  *
- *   1. Beat 2 (`flyAndFocusOnClip('cluster-virgo-m87')`) resolves to a clip
- *      that carries a `{ kind:'focus', ref: { type:'structure', id:'cluster-virgo-m87' } }`
+ *   1. Beat 2 (`flyAndFocusOnClip('galaxy-cluster-virgo-m87')`) resolves to a clip
+ *      that carries a `{ kind:'focus', ref: { type:'structure', id:'galaxy-cluster-virgo-m87' } }`
  *      cue — the Virgo focus fires at beat start.
  *
  *   2. Beat 3 (`flyToClip('m87')`) resolves to a clip with NO `kind:'focus'` /
@@ -105,8 +105,8 @@ const DIVE_DEPS: ResolveDeps = {
       ({
         type: 'structure',
         id,
-        name: id === 'cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
-        category: 'cluster',
+        name: id === 'galaxy-cluster-virgo-m87' ? 'Virgo Cluster' : 'Unknown',
+        category: 'galaxy-cluster',
         worldPos: [16.5, 12.3, -1.2] as [number, number, number],
         physicalRadiusMpc: 2,
         apparentRadiusMpc: 4,
@@ -154,8 +154,8 @@ describe('webShowcase dive invariants', () => {
 
   // ── Assertion 1: beat 2 resolved clip carries a focus cue for Virgo ───────
 
-  it('beat 2 resolved clip carries a { kind:"focus", ref: { type:"structure", id:"cluster-virgo-m87" } } cue', () => {
-    // flyAndFocusOnClip('cluster-virgo-m87') prepends a focusId cue before
+  it('beat 2 resolved clip carries a { kind:"focus", ref: { type:"structure", id:"galaxy-cluster-virgo-m87" } } cue', () => {
+    // flyAndFocusOnClip('galaxy-cluster-virgo-m87') prepends a focusId cue before
     // the camera-move block. resolveClipFoci rewrites it to a concrete focus cue.
     const beat2Clip: ClipData = webShowcase.beats[1]!.enterClip!;
     const resolved = resolveClipFoci(
@@ -175,7 +175,7 @@ describe('webShowcase dive invariants', () => {
     expect(focusCues.length).toBeGreaterThan(0);
     expect(focusCues[0]).toEqual({
       kind: 'focus',
-      ref: { type: 'structure', id: 'cluster-virgo-m87' },
+      ref: { type: 'structure', id: 'galaxy-cluster-virgo-m87' },
     });
   });
 
@@ -230,7 +230,7 @@ describe('webShowcase dive invariants', () => {
 
     // Dispatch a focus update — this is what an in-clip focus() cue would
     // trigger when applySceneEffect processes it during playback.
-    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'galaxy-cluster-virgo-m87' }));
 
     // Give the saga worker a chance to run (it won't reach startCameraTween).
     await flush();

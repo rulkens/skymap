@@ -6,7 +6,7 @@ import type { StructureId } from '../../../../src/@types/data/structure/Structur
 // StructureInfo is a discriminated union; a union-typed `category` can't be
 // narrowed to a single arm at construction, so the helper asserts the type.
 // The object is a structurally-valid record regardless of which arm.
-const rec = (id: string, category: StructureId = 'cluster'): StructureInfo =>
+const rec = (id: string, category: StructureId = 'galaxy-cluster'): StructureInfo =>
   ({
     id,
     name: id,
@@ -34,11 +34,11 @@ describe('createStructureStore', () => {
 
   it('byId and byCategory resolve across groups in all() order', () => {
     const s = createStructureStore();
-    s.setGroup('anchors', [rec('a1', 'cluster')]);
-    s.setGroup('bulk', [rec('b1', 'cluster'), rec('v1', 'void')]);
+    s.setGroup('anchors', [rec('a1', 'galaxy-cluster')]);
+    s.setGroup('bulk', [rec('b1', 'galaxy-cluster'), rec('v1', 'void')]);
     expect(s.byId('b1')?.id).toBe('b1');
     expect(s.byId('nope')).toBeNull();
-    expect(s.byCategory('cluster').map((r) => r.id)).toEqual(['a1', 'b1']);
+    expect(s.byCategory('galaxy-cluster').map((r) => r.id)).toEqual(['a1', 'b1']);
   });
 
   it('categoryIndexOf matches the position byCategory would resolve back through', () => {
@@ -46,11 +46,11 @@ describe('createStructureStore', () => {
     // would each land on a different number here than the true per-category
     // position, exactly the drift `resolveStructureFromPick` can't tolerate.
     const s = createStructureStore();
-    s.setGroup('anchors', [rec('c1', 'cluster'), rec('s1', 'supercluster'), rec('c2', 'cluster')]);
-    expect(s.categoryIndexOf('cluster', 'c1')).toBe(0);
+    s.setGroup('anchors', [rec('c1', 'galaxy-cluster'), rec('s1', 'supercluster'), rec('c2', 'galaxy-cluster')]);
+    expect(s.categoryIndexOf('galaxy-cluster', 'c1')).toBe(0);
     expect(s.categoryIndexOf('supercluster', 's1')).toBe(0);
-    expect(s.categoryIndexOf('cluster', 'c2')).toBe(1);
-    expect(s.categoryIndexOf('cluster', 'nope')).toBe(-1);
+    expect(s.categoryIndexOf('galaxy-cluster', 'c2')).toBe(1);
+    expect(s.categoryIndexOf('galaxy-cluster', 'nope')).toBe(-1);
   });
 
   it('setGroup takes a defensive copy (caller may mutate after)', () => {

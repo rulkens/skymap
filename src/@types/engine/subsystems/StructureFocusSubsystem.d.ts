@@ -3,16 +3,14 @@ import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
 
 /**
- * StructureFocusSubsystem — owns cluster "focus mode": when a cluster /
- * supercluster / void structure is focused, non-member galaxies fade to ~8%
- * alpha over ~400 ms so the structure's membership pops out. All three
- * categories behave identically (the focused structure's interior
- * galaxies stay bright; voids are just an underdense case).
+ * StructureFocusSubsystem — owns structure "focus mode": when any structure is
+ * focused, everything outside its sphere fades to ~8% alpha over ~400 ms so the
+ * structure pops out. Every category behaves identically.
  *
  * ### Focus-driven, not imperative
  *
  * The selection subsystem's `focused()` slot is the single source of
- * truth ("a cluster structure is focused" *is* "focus active"). So instead of
+ * truth ("a structure is focused" *is* "focus active"). So instead of
  * scattering focusOn / clearFocus calls across every focus-mutating
  * site, this subsystem exposes one per-frame `update(focusedStructure, now)`
  * that diffs the focused structure's id against the currently-active id and
@@ -48,6 +46,13 @@ export type StructureFocusSubsystem = {
    * rest (no structure focused) returns an all-zero value (blend=0).
    */
   produceFocusUniforms(nowMs: number): FocusUniformsValue;
+
+  /**
+   * The value the last `produceFocusUniforms` returned, without ticking the
+   * fade: what a pick between frames must test against, since it hit-tests the
+   * frame that was drawn.
+   */
+  lastFocusUniforms(): FocusUniformsValue;
 
   /** True only while the fade is animating (drives render-on-demand). */
   isAwake(nowMs: number): boolean;

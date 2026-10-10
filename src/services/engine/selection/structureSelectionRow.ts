@@ -1,6 +1,6 @@
 /**
  * structureSelectionRow — the core `SelectionKindRow` for the marker-ring
- * categories (cluster / supercluster / void / group). Pick identity resolves
+ * structure categories. Pick identity resolves
  * the durable id via `resolveStructureFromPick`; focus ids are the durable
  * `${category}-${seed}` token already, so no cloud read is needed to encode.
  */

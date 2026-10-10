@@ -41,6 +41,7 @@ import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
 } from '../../layers/structure/state/structures/slice';
+import { setLightTimeEnabled } from '../../layers/lightTime/state/lightTime/slice';
 import { setZoneOfAvoidanceEnabled } from '../../layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 
 type VisibilityActionRow = {
@@ -58,6 +59,7 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   flow: { actions: (on) => [setFlowEnabled(on)] },
   constellations: { actions: (on) => [setConstellationsEnabled(on)] },
   zoneOfAvoidance: { actions: (on) => [setZoneOfAvoidanceEnabled(on)] },
+  lightTime: { actions: (on) => [setLightTimeEnabled(on)] },
 
   // Per-item layers fan out across a `settings.<cluster>.items` record, read live
   // so the action list always reflects the current catalog set.

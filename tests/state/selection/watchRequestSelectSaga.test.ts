@@ -62,11 +62,11 @@ describe('watchRequestSelectSaga', () => {
   });
 
   it('resolves a structure id immediately and pins the select slot', async () => {
-    store.dispatch(requestSelect('cluster-virgo'));
+    store.dispatch(requestSelect('galaxy-cluster-virgo'));
     await flush();
     expect(store.getState()[selectionRoute].select).toEqual({
       type: 'structure',
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
     });
   });
 

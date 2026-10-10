@@ -14,10 +14,14 @@ import type { Tier } from '../@types/data/Tier';
 import { Source } from './source';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
 import { sourceRecordOf } from '../utils/data/sourceRecordOf';
-import { CLUSTER_ENTRY } from './sources/cluster';
+import { GALAXY_CLUSTER_ENTRY } from './sources/galaxyCluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
-import { GROUP_ENTRY } from './sources/group';
+import { GALAXY_GROUP_ENTRY } from './sources/galaxyGroup';
+import { OPEN_CLUSTER_ENTRY } from './sources/openCluster';
+import { GLOBULAR_CLUSTER_ENTRY } from './sources/globularCluster';
+import { NEBULA_ENTRY } from './sources/nebula';
+import { GC_CLUSTER_ENTRY } from './sources/gcCluster';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/cosmicWebFilaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
@@ -65,10 +69,14 @@ export { Source } from './source';
  * separate display-order mechanism; neither is a decision this file makes.
  */
 const UNFORMED_SOURCE_REGISTRY = {
-  [Source.Cluster]: CLUSTER_ENTRY,
+  [Source.GalaxyCluster]: GALAXY_CLUSTER_ENTRY,
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
-  [Source.Group]: GROUP_ENTRY,
+  [Source.GalaxyGroup]: GALAXY_GROUP_ENTRY,
+  [Source.OpenCluster]: OPEN_CLUSTER_ENTRY,
+  [Source.GlobularCluster]: GLOBULAR_CLUSTER_ENTRY,
+  [Source.Nebula]: NEBULA_ENTRY,
+  [Source.GcCluster]: GC_CLUSTER_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,

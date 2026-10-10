@@ -10,38 +10,32 @@ import type { Vec3 } from '../math/Vec3';
 
 export type StructureMarkerRenderer = {
   readonly label: string;
-  /** Replace the marker set (`[]` clears); partitioned by `category`, one draw each. */
-  setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void;
   /**
-   * `camPosMpc` is the drawn view's eye, in the same absolute-Mpc frame the
-   * instance positions use — the ring/halo vertex stage needs it to build an
-   * eye-facing world basis (see structureMarker/io.wesl). `fadeOpacity` scales
-   * the whole layer's alpha through `lib::fadeUniforms::applyFade`.
+   * Replace the marker set (`[]` clears); partitioned by `category`, one draw each.
+   * Positions are packed relative to `camPos`, which the renderer remembers:
+   * `draw` and `pickRing` take the f64 view-projection and rebase it on that eye.
    */
+  setMarkers(descriptors: readonly StructureMarkerDescriptor[], camPos: Vec3): void;
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
-    fadeOpacity: number,
   ): void;
   markerCount(): number;
   /**
    * One ring-pick draw per category into the caller's pass, which must already bind
    * the r32uint pick attachment and a `depth24plus` depth attachment (this pipeline
-   * writes + tests depth, so a galaxy in front of a ring claims the pixel). The pose
-   * packs into this renderer's OWN `@group(0)` buffer, never the draw-time uniform,
-   * which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
-   * FadeUniforms, since every declared group must be bound. `camPosMpc` is the
-   * pick-time eye, same frame as `draw`'s.
+   * writes + tests depth, so a galaxy in front of a ring claims the pixel). The
+   * matrix packs into this renderer's OWN `@group(0)` buffer, never the draw-time
+   * uniform, which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
+   * FadeUniforms, since every declared group must be bound.
    */
   pickRing(
     passEncoder: GPURenderPassEncoder,
-    viewProj: Float32Array,
+    viewProj: Float64Array,
     viewportPx: Vec2,
     pxPerRad: number,
-    camPosMpc: Vec3,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

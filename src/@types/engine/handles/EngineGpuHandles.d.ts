@@ -74,13 +74,13 @@ export type EngineGpuHandles = {
   sourceBgl: SourceUniformsBgl | null;
   /**
    * Canonical FocusUniforms bind-group layout. Constructed once in
-   * `initGpu` and shared by every pipeline that renders the cluster-focus
+   * `initGpu` and shared by every pipeline that renders the structure-focus
    * dim — points (@group(3)), the impostor disks (@group(1)), and the
    * pick pass. Null until `initGpu` resolves.
    */
   focusBgl: FocusUniformsBgl | null;
   /**
-   * The single shared cluster-focus uniform (buffer + bind group + packer).
+   * The single shared structure-focus uniform (buffer + bind group + packer).
    * Only one structure is focused at a time, so one buffer serves the whole
    * engine: written once per frame in `renderFrame`, and its bind group —
    * built against `focusBgl` — is bound by every focus-aware pipeline at
@@ -244,7 +244,9 @@ export type EngineGpuHandles = {
    * the renderer's GPU buffers (per-category bind groups + per-instance
    * buffer + corner VBO).
    */
-  structureMarkerRenderer: StructureMarkerRenderer | null;
+  structureMarkerCosmoRenderer: StructureMarkerRenderer | null;
+  /** The NEAR0-slab categories' marker renderer; same lifecycle, separate buffers. */
+  structureMarkerNearRenderer: StructureMarkerRenderer | null;
   /**
    * Cosmic-horizon shell renderer — translucent sphere at the
    * comoving particle-horizon radius.  Same lifecycle as the other

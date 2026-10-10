@@ -14,7 +14,7 @@ export function toStructureSearchEntry(structure: StructureInfo): StructureSearc
     id: structure.id,
     name: structure.name,
     category: structure.category,
-    abell: structure.category === 'cluster' ? (structure.abell ?? null) : null,
+    abell: structure.category === 'galaxy-cluster' ? (structure.abell ?? null) : null,
     description: structure.description ?? '',
   };
 }

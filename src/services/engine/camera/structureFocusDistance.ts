@@ -41,10 +41,11 @@
  *
  * ### Clamp rationale
  *
- * - **Minimum 0.1 Mpc**: low enough to let a sub-Mpc group frame close enough
- *   for its ring to clear the fade, while staying 10× the ~0.01 Mpc near plane
- *   so the target never clips. Only bites for degenerate sub-0.1 Mpc radii no
- *   real structure has.
+ * - **No minimum for real radii**: the distance follows the radius alone, so a
+ *   parsec-scale structure frames within tens of parsecs. A non-finite or
+ *   non-positive radius has nothing to frame and falls back to a fixed
+ *   `DEGENERATE_RADIUS_DISTANCE_MPC`, so a bad record never yields a NaN or a
+ *   camera sitting on the target.
  * - **Maximum 800 Mpc**: framing a freakishly-large structure further out
  *   projects it to a few pixels — the user reads it as "I didn't move".
  */
@@ -56,28 +57,26 @@
  */
 const FOCUS_FILL = 2.2;
 
-const MIN_FRAMING_DISTANCE_MPC = 0.1;
+const DEGENERATE_RADIUS_DISTANCE_MPC = 0.1;
 const MAX_FRAMING_DISTANCE_MPC = 800;
 
 /**
  * Camera-target distance (Mpc) for a tween toward a structure, framing its
- * `apparentRadiusMpc` so the ring + label have just faded out. Clamped to
- * [MIN_FRAMING_DISTANCE_MPC, MAX_FRAMING_DISTANCE_MPC].
+ * `apparentRadiusMpc` so the ring + label have just faded out. Capped at
+ * MAX_FRAMING_DISTANCE_MPC.
  *
  * `apparentRadiusMpc` is the WIDER extent the close-approach fade reads
  * (`apparentRadiusMpc ?? physicalRadiusMpc` at the call site). Non-finite or
- * non-positive values are treated as zero, so the result clamps to the
- * minimum; positive infinity clamps to the maximum.
+ * non-positive values return DEGENERATE_RADIUS_DISTANCE_MPC; positive infinity
+ * clamps to the maximum.
  */
 export function structureFocusDistance(apparentRadiusMpc: number, fovYRad: number): number {
-  // Treat NaN / negative as 0 so the clamp does the right thing; positive
-  // infinity passes through to the upper clamp.
-  const safeRadius =
-    Number.isFinite(apparentRadiusMpc) && apparentRadiusMpc > 0
-      ? apparentRadiusMpc
-      : apparentRadiusMpc === Number.POSITIVE_INFINITY
-        ? apparentRadiusMpc
-        : 0;
-  const raw = safeRadius / (FOCUS_FILL * Math.tan(fovYRad / 2));
-  return Math.min(Math.max(raw, MIN_FRAMING_DISTANCE_MPC), MAX_FRAMING_DISTANCE_MPC);
+  if (apparentRadiusMpc === Number.POSITIVE_INFINITY) return MAX_FRAMING_DISTANCE_MPC;
+  if (!Number.isFinite(apparentRadiusMpc) || apparentRadiusMpc <= 0) {
+    return DEGENERATE_RADIUS_DISTANCE_MPC;
+  }
+  return Math.min(
+    apparentRadiusMpc / (FOCUS_FILL * Math.tan(fovYRad / 2)),
+    MAX_FRAMING_DISTANCE_MPC,
+  );
 }

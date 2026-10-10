@@ -88,5 +88,5 @@ and expect both to be ruled on when the Layer structure is cleaned up:
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles` and
-`milkyWay` are formed. The other two folders (`body`, `structure`) are settings-only
+`milkyWay` and `lightTime` are formed. The other two folders (`body`, `structure`) are settings-only
 stubs from prep step (c) and are filled in one Layer at a time.

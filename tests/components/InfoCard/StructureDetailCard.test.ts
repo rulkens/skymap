@@ -7,7 +7,7 @@
 // picked up by Vitest's `include: ['tests/**/*.test.ts']` glob.
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import StructureDetailCard from '../../../src/components/InfoCard/StructureDetailCard/StructureDetailCard';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
@@ -17,7 +17,7 @@ const comaWithAbell: StructureInfo = {
   type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [0, 100, 0],
   featured: true,
   physicalRadiusMpc: 6,
@@ -29,7 +29,7 @@ const virgoNoAbell: StructureInfo = {
   type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2.2,
@@ -45,6 +45,21 @@ describe('StructureDetailCard', () => {
   it('omits the Abell row for a cluster without an Abell designation', () => {
     const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
     expect(container.textContent).not.toMatch(/Abell/);
+  });
+
+  it('shows a Wikipedia link when the record has a title and none when it does not', () => {
+    render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, wikipediaTitle: 'Virgo Cluster' },
+      }),
+    );
+    expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+      'href',
+      'https://en.wikipedia.org/wiki/Virgo_Cluster',
+    );
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Wikipedia/);
   });
 
   it('shows the Galaxies row when a member count is supplied', () => {
@@ -64,5 +79,24 @@ describe('StructureDetailCard', () => {
     render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 0 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('a nebula card shows its kind; a cluster card has no Type row', () => {
+    const orion: StructureInfo = {
+      type: 'structure',
+      id: 'nebula-orion',
+      name: 'Orion Nebula',
+      category: 'nebula',
+      nebulaKind: 'emission',
+      worldPos: [0, 0.0004, 0],
+      featured: true,
+      physicalRadiusMpc: 4e-6,
+    };
+    render(createElement(StructureDetailCard, { target: orion }));
+    expect(screen.getByText('Type')).toBeInTheDocument();
+    expect(screen.getByText('Emission nebula')).toBeInTheDocument();
+    cleanup();
+    const { container } = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Type/);
   });
 });

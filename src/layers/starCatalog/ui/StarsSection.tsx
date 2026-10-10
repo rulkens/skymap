@@ -205,9 +205,9 @@ function StarsSection({
           />
         </div>
 
-        {/* Detail — the CPU octree-cut refine threshold. LOWER = far boxes split
-            earlier = fewer visible lattice cells (more detail), at the cost of
-            more drawn nodes. Range 0.01–0.30; NOT a GPU uniform. */}
+        {/* Detail — the octree-cut refine threshold (a uniform of the cut compute).
+            LOWER = far boxes split earlier = fewer visible lattice cells (more
+            detail), at the cost of more drawn nodes. Range 0.01–0.30. */}
         <div className={styles.panelRow}>
           <Slider
             label="Detail"

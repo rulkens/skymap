@@ -63,7 +63,7 @@ const galaxyRow = makeGalaxyRow({
 
 const structureInfo: StructureInfo = {
   type: 'structure',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   id: 'virgo',
   name: 'Virgo Cluster',
   worldPos: [0.27, 0.22, 0.15],

@@ -7,9 +7,9 @@
 import type { CategoryLabelLayer } from '../animation/CategoryLabelLayer';
 
 export type SourceEntryBase = {
-  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'cluster'`). */
+  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'galaxy-cluster'`). */
   readonly id: string;
-  /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Cluster'`). */
+  /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Galaxy cluster'`). */
   readonly label: string;
   /**
    * True if the source covers (approximately) the full celestial sphere.
@@ -34,8 +34,8 @@ export type SourceEntryBase = {
   readonly bearsLabel: boolean;
   /**
    * True if this source carries a ring/halo marker around its anchor point.
-   * Today this is exactly the structure category set (cluster, supercluster,
-   * void, group). famousGalaxy has no ring — only a name label — so the
+   * Today this is exactly the structure category set (galaxy-cluster, supercluster,
+   * void, galaxy-group and the Milky Way categories). famousGalaxy has no ring — only a name label — so the
    * marker-visibility record excludes it entirely.
    */
   readonly bearsMarker: boolean;
@@ -50,14 +50,14 @@ export type SourceEntryBase = {
    */
   readonly detailLabel?: string;
   /**
-   * Compact label for chips and previews (e.g. 'Cluster', 'Galaxy').
+   * Compact label for chips and previews (e.g. 'Galaxy cluster', 'Galaxy').
    * Present iff bearsLabel. The existing `label` field carries the shortest
-   * UI name ('Cluster', 'Famous') — shortLabel is the one step longer form
+   * UI name ('Galaxy cluster', 'Famous') — shortLabel is the one step longer form
    * the InfoCard chips use.
    */
   readonly shortLabel?: string;
   /**
-   * Plural label for list and toggle headers (e.g. 'Clusters', 'Famous Galaxies').
+   * Plural label for list and toggle headers (e.g. 'Galaxy clusters', 'Famous Galaxies').
    * Present iff bearsLabel.
    */
   readonly plural?: string;

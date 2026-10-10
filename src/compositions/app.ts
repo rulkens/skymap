@@ -14,6 +14,7 @@ import { cosmicWebDensityLayer } from '../layers/cosmicWebDensity/layer';
 import { cosmicWebFilamentsLayer } from '../layers/cosmicWebFilaments/layer';
 import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
+import { lightTimeLayer } from '../layers/lightTime/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
 import { milkyWayLayer } from '../layers/milkyWay/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
@@ -28,6 +29,7 @@ export const APP_COMPOSITION = {
     flowLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
+    lightTimeLayer,
     constellationsLayer,
     blackHolesLayer,
     milkyWayLayer,
@@ -42,6 +44,7 @@ export const APP_COMPOSITION = {
     typeof flowLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
+    typeof lightTimeLayer,
     typeof constellationsLayer,
     typeof blackHolesLayer,
     typeof milkyWayLayer,

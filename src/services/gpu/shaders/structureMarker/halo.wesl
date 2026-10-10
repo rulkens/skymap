@@ -11,21 +11,17 @@
 // The fragment stage emits an additive radial gradient: centre alpha
 // full, edge alpha zero, smoothstep falloff across the quad.
 
-import package::structureMarker::io::Uniforms;
+import package::lib::camera::CameraUniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
-import package::lib::fadeUniforms::FadeUniforms;
-import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
-// @group(1) FadeUniforms — the shared per-renderer opacity uniform
-// every HDR pass uses.  See lib/fadeUniforms.wesl for the contract
-// and filaments/fragment.wesl for the canonical consumer pattern.
-@group(1) @binding(0) var<uniform> fade: FadeUniforms;
+@group(0) @binding(0) var<uniform> u: CameraUniforms;
+// No @group(1): visibility rides each instance's alpha. The renderer's pipeline
+// layout still lists the shared fade slot so it matches the other HDR passes.
 
 @vertex
 fn vs(
@@ -38,10 +34,10 @@ fn vs(
   // Eye-facing world disc — see lib/billboard.wesl's expandBillboardWorld.
   let half = radiusMpc * MARKER_RADIUS_RETUNE;
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.camPosMpc.xyz, worldPos, corner, half);
+  let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u.cam, worldPos + offset);
+  out.pos = worldToClip(u, worldPos + offset);
   out.uv = corner;
   out.color = input.haloColorAndAlpha.xyz;
   out.alpha = input.haloColorAndAlpha.w;
@@ -51,6 +47,7 @@ fn vs(
   // initialised, so we pass 0u.  All six vertices of one instance share
   // the same value (flat-interpolated in io.wesl); never read here.
   out.structureIndex = 0u;
+  out.pickable = 0.0;
   return out;
 }
 
@@ -76,10 +73,6 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // 1, doesn't matter for additive) both work.  We emit alpha = g *
   // input.alpha so a future blend-state change (e.g. additive-with-
   // alpha-cap) sees a coherent vec4.
-  //
-  // applyFade folds in the per-renderer FadeUniforms.opacity (always
-  // alpha-only — never let opacity attenuate RGB).  Mirror of the
-  // filaments-fragment pattern.
-  let a = applyFade(g * input.alpha, fade.opacity);
+  let a = g * input.alpha;
   return vec4<f32>(input.color * a, a);
 }
