@@ -64,7 +64,7 @@ export function starCutInputs(
       sources: inBand.flatMap(({ source, entry, crossfade }) => {
         const tier = runtime.catalogs.get(source)?.committed()?.req.tier;
         if (tier === undefined) return [];
-        return [{ source, opacity: crossfade, budgetTypical: entry.budgets[tier].drawBudget }];
+        return [{ source, opacity: crossfade, drawBudget: entry.budgets[tier].drawBudget }];
       }),
     },
     nowMs: view.snapshot.nowMs,

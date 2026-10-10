@@ -216,7 +216,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     writeStarCutUniforms(uniformScratch, catalog, cut.originMpc, {
       refineThreshold: cut.refineThreshold,
       fadeStep,
-      budgetTypical: row.budgetTypical,
+      drawBudget: row.drawBudget,
       worldSpread: cut.worldSpread,
       leafMarginRad: cut.leafMarginRad,
       opacity: row.opacity,

@@ -8,7 +8,7 @@
 
 import type { ReferenceStarCut } from './@types/ReferenceStarCut';
 import {
-  BUDGET_TYPICAL_U32_INDEX,
+  DRAW_BUDGET_U32_INDEX,
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
   CELL_EDGE_MPC_FLOAT_INDEX,
@@ -109,7 +109,7 @@ export function referenceStarCut(
   }
 
   // pickThreshold
-  const budget = u32[BUDGET_TYPICAL_U32_INDEX]!;
+  const budget = u32[DRAW_BUDGET_U32_INDEX]!;
   let instances = recordCount(nodeCount - 1);
   let cutBin = 0;
   for (let b = CUT_BINS; b > 0; b--) {

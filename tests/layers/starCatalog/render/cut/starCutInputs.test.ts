@@ -92,7 +92,7 @@ describe('starCutInputs', () => {
     // Mid-reload: the slot still holds the small catalog while large is in flight.
     const inputs = starCutInputs(runtime('small', 'large'), SETTINGS, [view(600)]);
     expect(inputs!.cut.sources).toEqual([
-      expect.objectContaining({ source: Source.GaiaStars, budgetTypical: 100 }),
+      expect.objectContaining({ source: Source.GaiaStars, drawBudget: 100 }),
     ]);
   });
 });

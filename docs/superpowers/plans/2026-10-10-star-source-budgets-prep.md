@@ -66,13 +66,13 @@ readonly budgets: StarSourceBudgets;
 
 **Files:** `src/layers/starCatalog/@types/StarCutSourceInput.d.ts`, `src/layers/starCatalog/render/starCutLayout.ts`, `src/layers/starCatalog/render/starCutGpu.ts`, `src/layers/starCatalog/render/cut/starCutInputs.ts`, `src/services/gpu/shaders/starCatalog/cutIo.wesl`, `src/services/gpu/shaders/starCatalog/cut.wesl`, `tests/helpers/starCatalog/referenceStarCut.ts`, `tests/services/gpu/shaders/starCutLayout.parity.test.ts`, `tests/layers/starCatalog/render/starCutGpu.test.ts`, `tests/layers/starCatalog/render/starCutLayout.test.ts`, `tests/layers/starCatalog/render/cut/sameStarCut.test.ts`, `tests/layers/starCatalog/render/cut/referenceStarCut.test.ts`, `tests/layers/starCatalog/passes/starCatalogPass.test.ts`, `tests/layers/starCatalog/passes/starAggregatesPass.test.ts`
 
-- [ ] Rename the TS symbols with `npm run refactor` (see `.claude/skills/refactor/SKILL.md` for the rename subcommand): `StarCutSourceInput.budgetTypical` (`StarCutSourceInput.d.ts:8`) → `drawBudget`, the `writeStarCutUniforms` parameter field (`starCutLayout.ts:163`) → `drawBudget`, and `BUDGET_TYPICAL_U32_INDEX` (`starCutLayout.ts:70`) → `DRAW_BUDGET_U32_INDEX`. The CLI does not reach WGSL or string keys, so then search the files above for `budgetTypical` and `BUDGET_TYPICAL` and finish by hand.
-- [ ] WGSL by hand: the `CutUniforms` field (`cutIo.wesl:53`), the offset comment (`cutIo.wesl:44`) and its read (`cut.wesl:134`). Field order and type are unchanged, so the struct layout is unchanged.
-- [ ] The parity test's name map (`starCutLayout.parity.test.ts:142,171,183`) keys on the WGSL field name; rename the key with the field.
-- [ ] No new test: the parity test already fails if the TS index and the WGSL field disagree.
-- [ ] Search `src/` and `tests/` for `budgetTypical` and `BUDGET_TYPICAL`: zero hits.
-- [ ] `npm run build` passes (shader specifiers are invisible to `tsc`).
-- [ ] Commit.
+- [x] Rename the TS symbols with `npm run refactor` (see `.claude/skills/refactor/SKILL.md` for the rename subcommand): `StarCutSourceInput.budgetTypical` (`StarCutSourceInput.d.ts:8`) → `drawBudget`, the `writeStarCutUniforms` parameter field (`starCutLayout.ts:163`) → `drawBudget`, and `BUDGET_TYPICAL_U32_INDEX` (`starCutLayout.ts:70`) → `DRAW_BUDGET_U32_INDEX`. The CLI does not reach WGSL or string keys, so then search the files above for `budgetTypical` and `BUDGET_TYPICAL` and finish by hand.
+- [x] WGSL by hand: the `CutUniforms` field (`cutIo.wesl:53`), the offset comment (`cutIo.wesl:44`) and its read (`cut.wesl:134`). Field order and type are unchanged, so the struct layout is unchanged.
+- [x] The parity test's name map (`starCutLayout.parity.test.ts:142,171,183`) keys on the WGSL field name; rename the key with the field.
+- [x] No new test: the parity test already fails if the TS index and the WGSL field disagree.
+- [x] Search `src/` and `tests/` for `budgetTypical` and `BUDGET_TYPICAL`: zero hits.
+- [x] `npm run build` passes (shader specifiers are invisible to `tsc`).
+- [x] Commit.
 
 ## Definition of Done
 

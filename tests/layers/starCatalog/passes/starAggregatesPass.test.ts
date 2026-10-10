@@ -49,7 +49,7 @@ const FRAME: StarCutInputs = {
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,
-    sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 100 }],
+    sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 100 }],
   },
   nowMs: 0,
   sizePx: 2.5,
