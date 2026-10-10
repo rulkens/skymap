@@ -45,6 +45,7 @@ export function buildStore() {
     syncFades: vi.fn<() => void>(),
     logCameraState: vi.fn<ReconcileEffects['logCameraState']>(() => null),
     applySwapFormat: vi.fn<(desired: GPUTextureFormat) => void>(),
+    isLabelled: vi.fn<ReconcileEffects['isLabelled']>(() => false),
   };
 
   // setContext BEFORE running the sagas so getContext finds the closures when

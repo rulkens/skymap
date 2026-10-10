@@ -93,6 +93,22 @@ describe('makeReconcileEffects', () => {
     expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
   });
 
+  it("isLabelled asks both label directors for the ref's pick id, and is false for a ref with none", () => {
+    const { state } = makeState();
+    const hasLabelFor = vi.fn<(id: number) => boolean>((id) => id === 42);
+    Object.assign(state.subsystems, {
+      cosmoLabelDirector: { hasLabelFor: () => false },
+      foregroundLabelDirector: { hasLabelFor },
+    });
+    Object.assign(state, {
+      selectionKindRows: [{ type: 'milkyWay', encodePick: () => 42 }],
+    });
+    const effects = makeReconcileEffects(state, CANVAS);
+    expect(effects.isLabelled({ type: 'milkyWay' })).toBe(true);
+    expect(effects.isLabelled({ type: 'zoneOfAvoidance' })).toBe(false);
+    expect(effects.isLabelled(null)).toBe(false);
+  });
+
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);

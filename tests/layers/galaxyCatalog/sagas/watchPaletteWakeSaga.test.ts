@@ -23,6 +23,7 @@ describe('watchPaletteWakeSaga', () => {
       syncFades: vi.fn(),
       logCameraState: vi.fn(),
       applySwapFormat: vi.fn(),
+      isLabelled: vi.fn(() => false),
     };
     mw.setContext({ reconcile });
     return s;

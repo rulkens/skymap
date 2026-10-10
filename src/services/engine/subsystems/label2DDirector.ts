@@ -6,6 +6,12 @@
  * the projection, declutter policy, envelope policy, and lift policy, so a
  * second instance is data, not a second code path.
  *
+ * ### Highlight
+ *
+ * After the envelope and before the lift, a label whose `pickId` names the
+ * hovered or selected ref has its colour blended toward white — one place for
+ * every clickable caption, and the lift copies the colour onto the leader.
+ *
  * ### Declutter, envelope, and lift are policy arms
  *
  * `config.declutter.mode` / `config.envelope.mode` select which stage
@@ -112,6 +118,12 @@ import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
 import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
+import { whitenColor } from '../../../utils/labels/whitenColor';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
+import {
+  HOVERED_LABEL_WHITEN,
+  SELECTED_LABEL_WHITEN,
+} from '../../../data/labels/labelHighlightWhiten';
 
 /**
  * Ramp record for one label id under `smoothstepRamp` (COSMO).
@@ -282,6 +294,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   // Signature of the last flushed label set, or null on the first frame.
   // Empty string is a valid signature (no labels) and is distinct from null.
   let prevSignature: string | null = null;
+  // Pick ids of the last flushed label set; rebuilt only when a flush happens.
+  let flushedPickIds: ReadonlySet<number> = new Set();
   // The director's cross-frame animation state: label id → ramp/filter
   // record, one map per envelope arm.  Only one is ever populated — which
   // arm runs is fixed by `config.envelope.mode` for this instance's whole
@@ -718,6 +732,29 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     return out;
   }
 
+  /**
+   * Blend the hovered and selected subjects' labels toward white. Absent
+   * colour is already white, and a label that needs no change passes through
+   * by reference so the steady state allocates nothing.
+   */
+  function applyHighlight(labels: readonly Label2D[], state: EngineState): readonly Label2D[] {
+    const hoveredPickId = encodeSelectionPick(state.selectionKindRows, state.selection.hover);
+    const selectedPickId = encodeSelectionPick(state.selectionKindRows, state.selection.select);
+    if (hoveredPickId === null && selectedPickId === null) return labels;
+    return labels.map((label) => {
+      if (label.pickId === undefined || !label.color) return label;
+      // Selected wins over hovered: the later assignment is the stronger cue.
+      let whiten = 0;
+      if (label.pickId === hoveredPickId) whiten = HOVERED_LABEL_WHITEN;
+      if (label.pickId === selectedPickId) whiten = SELECTED_LABEL_WHITEN;
+      return whiten === 0 ? label : { ...label, color: whitenColor(label.color, whiten) };
+    });
+  }
+
+  function hasLabelFor(pickId: number): boolean {
+    return flushedPickIds.has(pickId);
+  }
+
   function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
@@ -749,10 +786,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       ctx.snapshot.nowMs,
     );
 
+    // Highlight stage: before the lift, which copies the colour onto the leader.
+    const highlighted = applyHighlight(enveloped, state);
+
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
-    const labels = applyLift(enveloped, ctx);
+    const labels = applyLift(highlighted, ctx);
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
@@ -763,6 +803,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       labelRenderer.setLabels(labels);
       lineRenderer.setLines(lines);
       prevSignature = sig;
+      flushedPickIds = new Set(labels.flatMap((l) => (l.pickId === undefined ? [] : [l.pickId])));
     }
 
     return anyAwake || anyRamping;
@@ -776,6 +817,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     attachRenderers,
     registerProducer,
     runFrame,
+    hasLabelFor,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

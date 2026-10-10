@@ -6,6 +6,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
+import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { logCameraState } from '../helpers/logCameraState';
 import { liveRenderCamera } from '../helpers/liveRenderCamera';
 import { liveFocusRow } from '../helpers/liveFocusRow';
@@ -33,5 +34,11 @@ export function makeReconcileEffects(
       return cam === null ? null : { framed: state.cameraRuntime.outputs.displayed, simDays };
     },
     applySwapFormat: (desired) => applySwapFormat(state, desired),
+    isLabelled: (ref) => {
+      const pickId = encodeSelectionPick(state.selectionKindRows, ref);
+      if (pickId === null) return false;
+      const { cosmoLabelDirector, foregroundLabelDirector } = state.subsystems;
+      return cosmoLabelDirector.hasLabelFor(pickId) || foregroundLabelDirector.hasLabelFor(pickId);
+    },
   };
 }

@@ -6,10 +6,11 @@
  * watchers, because the engine registers the reconcile bag AFTER the root saga
  * is forked.
  *
- * Hover wakes only when a structure ring gains or loses it: that is the one
- * hover consequence the scene draws, and hover lands at pointer-pick rate, so
- * a star or galaxy hover (InfoCard text only) must not start frames. The
- * previous hover is tracked here because the reducer has already overwritten it.
+ * Hover wakes only when it changes pixels: a structure ring gaining or losing
+ * it, or a ref with a label on screen (the label whitens). Hover lands at
+ * pointer-pick rate, so a hover onto or off something unlabelled (InfoCard text
+ * only) must not start frames. The previous hover is tracked here because the
+ * reducer has already overwritten it.
  *
  * Every action that changes a GPU-visible selection ref MUST appear here, or
  * its frame never redraws: clearSelection (Esc / InfoCard ×) drops the ring,
@@ -44,8 +45,9 @@ export function* watchSelectionWakeSaga() {
     const previous = hovered;
     hovered = action.payload;
     if (shallowEqualRef(previous, hovered)) return;
-    if (structureIdOf(previous) === null && structureIdOf(hovered) === null) return;
     const fx = yield* getContext<ReconcileEffects>('reconcile');
+    const ringChanged = structureIdOf(previous) !== null || structureIdOf(hovered) !== null;
+    if (!ringChanged && !fx.isLabelled(previous) && !fx.isLabelled(hovered)) return;
     fx.requestRender();
   });
 }

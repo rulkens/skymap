@@ -10,6 +10,8 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
+import { shallowEqualRef } from '../../../src/utils/object/shallowEqualRef';
+import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -17,8 +19,11 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 describe('watchSelectionWakeSaga', () => {
   let store: ReturnType<typeof build>;
   let requestRender: ReturnType<typeof vi.fn<() => void>>;
+  // Refs with a label on screen; the engine answers this from the directors' flushed sets.
+  let labelled: SelectionRef[];
 
   function build() {
+    labelled = [];
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchSelectionWakeSaga);
@@ -30,6 +35,7 @@ describe('watchSelectionWakeSaga', () => {
       syncFades: vi.fn(),
       logCameraState: vi.fn(),
       applySwapFormat: vi.fn(),
+      isLabelled: (ref) => ref !== null && labelled.some((l) => shallowEqualRef(l, ref)),
     };
     mw.setContext({ reconcile });
     return s;
@@ -43,7 +49,7 @@ describe('watchSelectionWakeSaga', () => {
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
-  it('a structure hover change requests a render; a non-structure hover change does not', async () => {
+  it('a structure hover change requests a render; an unlabelled non-structure hover does not', async () => {
     store.dispatch(updateSelectionHover({ type: 'milkyWay' }));
     store.dispatch(updateSelectionHover({ type: 'body', id: 'earth' }));
     await flush();
@@ -58,6 +64,20 @@ describe('watchSelectionWakeSaga', () => {
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(1);
     store.dispatch(updateSelectionHover(null));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(2);
+  });
+  it('a hover onto or off a labelled ref wakes; between two unlabelled refs it does not', async () => {
+    labelled = [{ type: 'body', id: 'earth' }];
+    store.dispatch(updateSelectionHover({ type: 'milkyWay' }));
+    await flush();
+    expect(requestRender).not.toHaveBeenCalled();
+
+    store.dispatch(updateSelectionHover({ type: 'body', id: 'earth' }));
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(1);
+
+    store.dispatch(updateSelectionHover({ type: 'milkyWay' }));
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(2);
   });
