@@ -26,7 +26,7 @@ export const GAIA_STARS_ENTRY = {
   bearsLabel: false,
   bearsMarker: false,
   binBaseName: 'stars',
-  // Each tier's draw budget bounds Σ recordCount of the cut the GPU cut
+  // Each tier's draw budget bounds Σ recordCount the GPU cut
   // (`cut.wesl`) emits. Sized so the small/medium tiers can refine to
   // (near-)all leaves when the camera is close. Starting values (grill Q9), raised
   // alongside `REFINE_ANGULAR_THRESHOLD`'s tightening (0.3 → 0.05): a lower
