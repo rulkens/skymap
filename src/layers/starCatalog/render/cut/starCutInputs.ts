@@ -25,7 +25,7 @@ import { FLOATS_PER_VIEW } from '../starCutLayout';
  * sees.
  */
 export function starCutInputs(
-  runtime: Pick<StarCatalogRuntime, 'renderer'>,
+  runtime: Pick<StarCatalogRuntime, 'renderer' | 'catalogs'>,
   settings: StarCatalogSettings,
   views: readonly FrameView[],
 ): StarCutInputs | null {
@@ -57,11 +57,15 @@ export function starCutInputs(
       leafMarginRad:
         Math.max(STAR_GLOW_MIN_PX * (settings.sizePx / STAR_SIZE_REF_PX), STAR_PICK_MIN_RADIUS_PX) /
         pxPerRad,
-      sources: inBand.map(({ source, entry, crossfade }) => ({
-        source,
-        opacity: crossfade,
-        budgetTypical: entry.drawBudget.typical,
-      })),
+      // The committed tier, not the requested one: during a tier reload the
+      // old catalog keeps drawing at the budget it was loaded under. The
+      // renderer holds a catalog only once its slot commits, so the skip
+      // never drops a drawing source.
+      sources: inBand.flatMap(({ source, entry, crossfade }) => {
+        const tier = runtime.catalogs.get(source)?.committed()?.req.tier;
+        if (tier === undefined) return [];
+        return [{ source, opacity: crossfade, budgetTypical: entry.budgets[tier].drawBudget }];
+      }),
     },
     nowMs: view.snapshot.nowMs,
     sizePx: settings.sizePx,
