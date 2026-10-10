@@ -1,0 +1,37 @@
+---
+/*
+ * FeatureLead — the opening of the Features page: its title and one short
+ * lead, with no picture, since every group below brings its own. The slot
+ * takes what a layout puts under the lead.
+ */
+---
+
+<section class="wrap lead">
+  <h1>Features</h1>
+  <p class="say">
+    Everything you can see and do in skymap, in the order you meet it. Each name opens its page in the docs.
+  </p>
+  <slot />
+</section>
+
+<style>
+  .lead {
+    padding-top: 4.5rem;
+  }
+
+  h1 {
+    font-size: var(--text-h2);
+  }
+
+  .say {
+    max-width: var(--measure-lead);
+    margin-bottom: 0;
+    font-size: var(--text-lead);
+  }
+
+  @media (max-width: 900px) {
+    .lead {
+      padding-top: 2.5rem;
+    }
+  }
+</style>

@@ -605,6 +605,30 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     alt: 'A card headed Saturn listing radius, mass, gravity, day length, year length and more, with part of the planet beside it.',
     credit: 'Saturn: Solar System Scope',
   },
+  // The Features page's picture for info cards: a galaxy's card, where the lesson pictures above show a planet's.
+  {
+    id: 'features-card',
+    link: 'focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.16,0',
+    settings: { ui: true, hideStructures: true, hideZoneOfAvoidance: true, settleMs: 9000 },
+    size: FEATURE,
+    widths: FEATURE_WIDTHS,
+    title: 'The Andromeda Galaxy with its card open on the right',
+    drawn: 'The galaxy stands at its catalogued position; its picture is a photograph placed in the scene.',
+    alt: 'A tilted spiral galaxy under its name, on a field of stars, beside a card with its photograph, distance and type.',
+    credit: 'Photograph: Brody Wesner, CC0',
+  },
+  {
+    id: 'features-card-phone',
+    link: 'focus=m31&pose=a,0.57651,0.10877,0.51485,-1.0847,-0.5820,0.16,0',
+    settings: { ui: true, hideStructures: true, hideZoneOfAvoidance: true, settleMs: 9000, crop: { left: 560, top: 0, width: 640, height: 750 } },
+    size: FEATURE,
+    widths: PHONE_WIDTHS,
+    title: 'The Andromeda Galaxy’s card',
+    caption: 'Cut from a wider window.',
+    drawn: 'The galaxy stands at its catalogued position; its picture is a photograph placed in the scene.',
+    alt: 'A tilted spiral galaxy under its name, beside a card with its photograph, distance and type.',
+    credit: 'Photograph: Brody Wesner, CC0',
+  },
   // The first-flight tutorial: no pinned time on the first four, because the page describes the app as a visitor finds it, with its clock on the present.
   {
     id: 'start-arrival',

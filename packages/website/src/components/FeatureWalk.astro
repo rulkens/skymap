@@ -1,0 +1,201 @@
+---
+/*
+ * Features, variant A, "the long walk": one column in Home's idiom. Each group
+ * is a band with its picture large, its name standing beside it while the band
+ * passes, and its features in two columns. A segmented line under the top bar
+ * says how far down the walk the reader is (scripts/initFeatureWalk.ts).
+ */
+import FeatureHead from './FeatureHead.astro';
+import FeatureLead from './FeatureLead.astro';
+import FeatureList from './FeatureList.astro';
+import FeatureShot from './FeatureShot.astro';
+import Sources from './Sources.astro';
+import { FEATURE_FACT_IDS, FEATURE_GROUPS } from '../data/features';
+---
+
+<div data-walk>
+  <div class="progress" data-progress aria-hidden="true">
+    {FEATURE_GROUPS.map(() => <i><b /></i>)}
+  </div>
+
+  <FeatureLead>
+    <nav class="jump" aria-label="Groups on this page">
+      <ul>
+        {
+          FEATURE_GROUPS.map((group) => (
+            <li>
+              <a class="ring small" href={`#${group.id}`}>
+                {group.title}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </FeatureLead>
+
+  {
+    FEATURE_GROUPS.map((group, i) => (
+      <section class:list={['band', { quiet: !group.shot }]} id={group.id} aria-labelledby={`${group.id}-title`} data-band>
+        <div class="wrap grid row">
+          <div class="head">
+            <FeatureHead group={group} quiet={!group.shot} />
+          </div>
+          <div class="body">
+            <FeatureShot group={group} sizes="(max-width: 900px) 100vw, 62vw" eager={i === 0} />
+            <FeatureList items={group.items} columns={2} />
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <div class="wrap foot">
+    <Sources ids={FEATURE_FACT_IDS} />
+  </div>
+</div>
+
+<script>
+  import { initFeatureFilms } from '../scripts/initFeatureFilms';
+  import { initFeatureWalk } from '../scripts/initFeatureWalk';
+
+  const walk = document.querySelector<HTMLElement>('[data-walk]');
+  if (walk) {
+    initFeatureWalk(walk);
+    initFeatureFilms(walk);
+  }
+</script>
+
+<style>
+  /* On the top bar's lower edge, so the bar is no taller for it. */
+  .progress {
+    position: sticky;
+    top: var(--nav-height);
+    z-index: 5;
+    display: flex;
+    gap: 0.25rem;
+    height: 0;
+  }
+
+  /* A segment for each group: its track is the bar's own divider, a little brighter, and it fills from the left. */
+  .progress i {
+    flex: 1;
+    height: 2px;
+    margin-top: -1px;
+    background: rgb(232 238 255 / 0.16);
+  }
+
+  .progress b {
+    display: block;
+    height: 100%;
+    background: var(--color-accent);
+    transform: scaleX(var(--p, 0));
+    transform-origin: 0 50%;
+  }
+
+  .jump ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2rem;
+    max-width: 60rem;
+    margin: 2rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .jump a {
+    color: var(--site-text-muted);
+  }
+
+  .band {
+    padding-top: var(--section-space);
+    overflow-x: clip;
+    scroll-margin-top: calc(-1 * var(--section-space) + 2rem);
+  }
+
+  .foot {
+    padding-block: calc(var(--section-space) / 2) var(--section-space);
+  }
+
+  .row {
+    row-gap: 2rem;
+  }
+
+  .body :global(.fshot) {
+    margin-bottom: 2.5rem;
+  }
+
+  /* One entrance for a band, as it comes on screen; set up by the script, so nothing is hidden without it. */
+  [data-reveal] .band > .wrap {
+    opacity: 0;
+    transform: translateY(0.75rem);
+    transition:
+      opacity 0.45s ease-out,
+      transform 0.45s ease-out;
+  }
+
+  [data-reveal] .band[data-seen] > .wrap {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (min-width: 901px) {
+    /* The name stays under the top bar while its band passes. */
+    .head {
+      grid-column: span 4;
+      align-self: start;
+      position: sticky;
+      top: calc(var(--nav-height) + 2rem);
+      padding-bottom: 2rem;
+    }
+
+    .body {
+      grid-column: 5 / -1;
+      --cols: 8;
+      --shot-room: calc(100svh - var(--nav-height) - 13rem);
+    }
+  }
+
+  /* Narrow: the picture, its label, the name, then the list. */
+  @media (max-width: 900px) {
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .body {
+      display: contents;
+    }
+
+    .body :global(.fshot) {
+      order: -1;
+    }
+
+    .head {
+      margin-bottom: 1.75rem;
+    }
+
+    /* One name to a line: a wrapped row of thirteen reads as a heap. */
+    .jump ul {
+      display: block;
+      margin-top: 1.5rem;
+    }
+
+    .jump a {
+      min-height: 2.5rem;
+    }
+
+    .quiet .head {
+      margin-bottom: 1.25rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] .band > .wrap {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>

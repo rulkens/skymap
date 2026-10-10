@@ -1,0 +1,13 @@
+---
+/* A comparison route for the Features page (components/FeatureWalk.astro); the chosen variant becomes /features/. */
+import Base from '../layouts/Base.astro';
+import FeatureWalk from '../components/FeatureWalk.astro';
+
+const title = 'Features, as one long page | skymap';
+const description =
+  'Everything you can see and do in skymap, group by group, each with a link to its page in the docs.';
+---
+
+<Base title={title} description={description}>
+  <FeatureWalk />
+</Base>
