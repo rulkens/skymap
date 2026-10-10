@@ -174,9 +174,9 @@ localUploadHash(file: R2Upload, gzipOnWire: boolean): string;
 
 **rclone and Content-Encoding (verified 2026-10-11).** rclone can set the header but never compresses. `--header-upload` sets S3 system metadata on upload. R2's PutObject accepts `Content-Encoding` (Cloudflare R2 S3-compatibility table). rclone's S3 docs list `content-encoding` as writable system metadata. The bytes must already be gzipped. The rclone R2 section warns: "Cloudflare decompresses files uploaded with Content-Encoding: gzip by default … upload the files with `--header-upload "Cache-Control: no-transform"`". Production already serves wrangler-uploaded gzip objects correctly to browsers, which send `Accept-Encoding: gzip`. So this plan does not add `no-transform` up front. The probe below decides.
 
-- [ ] When `group.gzipOnWire` is set, `uploadViaRclone` (`:23-57`) writes `gzipSync(bytes)` for each file to `<staging>/<relative(localRoot, localPath)>` in a `mkdtemp` tree, creating parent dirs. It copies each source's atime/mtime onto the staged file with `utimesSync`. Then it runs `rclone copy <staging> …` with the same `--files-from` list and one extra `--header-upload 'Content-Encoding: gzip'`. The `finally` removes the staging tree with the list dir. When the flag is unset, behaviour stays exactly as today.
-- [ ] Explain why mtimes are copied in one comment line. Fresh mtimes make rclone re-hash every object on every run and server-side-copy each one to rewrite `X-Amz-Meta-Mtime` (rclone S3 docs, "Modification times").
-- [ ] No unit test: the bug class is "header and bytes disagree on the real bucket", which only the probe sees.
+- [x] When `group.gzipOnWire` is set, `uploadViaRclone` (`:23-57`) writes `gzipSync(bytes)` for each file to `<staging>/<relative(localRoot, localPath)>` in a `mkdtemp` tree, creating parent dirs. It copies each source's atime/mtime onto the staged file with `utimesSync`. Then it runs `rclone copy <staging> …` with the same `--files-from` list and one extra `--header-upload 'Content-Encoding: gzip'`. The `finally` removes the staging tree with the list dir. When the flag is unset, behaviour stays exactly as today.
+- [x] Explain why mtimes are copied in one comment line. Fresh mtimes make rclone re-hash every object on every run and server-side-copy each one to rewrite `X-Amz-Meta-Mtime` (rclone S3 docs, "Modification times").
+- [x] No unit test: the bug class is "header and bytes disagree on the real bucket", which only the probe sees.
 - [ ] **Probe. Ask the user first:** it writes one object to the production bucket and deletes it. On a go:
   - [ ] From a scratch script outside the repo, call `uploadViaRclone` for one group: `bulk`, `keyRoot: 'data/_probe'`, `cacheControl: NO_CACHE`, `purge: false`, `gzipOnWire: true`, holding one ~1 MB compressible file. Load the R2 S3 credentials the way `syncR2Secure.sh` does.
   - [ ] rclone exits 0, with no `corrupted on transfer` or `sizes differ` line.
@@ -185,9 +185,9 @@ localUploadHash(file: R2Upload, gzipOnWire: boolean): string;
   - [ ] A second identical call reports nothing transferred.
   - [ ] `rclone deletefile r2:skymap-data/data/_probe/<f>`.
   - [ ] If any check fails, stop and report which one. The documented candidates are `Cache-Control: no-transform` and `--s3-might-gzip`, but do not apply either without the user's ruling. If the user declines the probe, it becomes the first step of the feature PR's first sync. Note that in the report.
-- [ ] `docs/DEPLOY.md`, "R2 sync architecture", bullet on `bulk` (`:36`): one sentence on gzip-on-wire by staging, with the probe outcome.
-- [ ] The dry-run listing is unchanged (no bulk group sets the flag yet).
-- [ ] Commit.
+- [x] `docs/DEPLOY.md`, "R2 sync architecture", bullet on `bulk` (`:36`): one sentence on gzip-on-wire by staging, with the probe outcome.
+- [x] The dry-run listing is unchanged (no bulk group sets the flag yet).
+- [x] Commit.
 
 ## Definition of Done
 
