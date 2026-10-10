@@ -3,7 +3,8 @@
  * launch (or a linked `t=`) with the mission camera on it (flown to, unless the entry is a cut,
  * while the loop already listens). Run, resume, a flyby step and − / + or a scrub while playing
  * play the mission profile; a step or craft tab eases the camera to the new frame (keeping the
- * visitor's orbit), a tab lifting the clock to that craft's launch. `finally` clears the mission.
+ * visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it there from the
+ * other's launch). `finally` clears the mission.
  */
 import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
@@ -39,7 +40,10 @@ import type { RootState, SagaContext } from '../../store/types';
 /** A scrub is a stream of `setSimDays`; the profile is rebuilt once the drag goes quiet. */
 const SCRUB_SETTLE_MS = 150;
 
-const launchDays = (mission: CameraMission): number => unixMsToJulianDays(mission.stops[0]!.ms);
+/** A clock this close to a launch counts as at it (a minute, under any float drift). */
+const LAUNCH_TOLERANCE_DAYS = 1 / 1440;
+
+const launchDays =(mission: CameraMission): number => unixMsToJulianDays(mission.stops[0]!.ms);
 
 export function* missionHoldSaga(
   exhibit: Exhibit,
@@ -110,9 +114,12 @@ export function* missionHoldSaga(
       const flying = fly?.isRunning() ?? false;
       const offsets = yield* select((s: RootState) => s.camera.mission?.offsets);
       if (next.tab) {
-        mission = missionOf(next.tab.payload, offsets);
         const at = performance.now();
-        if (deriveSimDays(yield* select(selectTimeState), at) < launchDays(mission)) {
+        const days = deriveSimDays(yield* select(selectTimeState), at);
+        // At one craft's launch, the other's launch: each tab then opens on Earth.
+        const atLaunch = Math.abs(days - launchDays(mission)) < LAUNCH_TOLERANCE_DAYS;
+        mission = missionOf(next.tab.payload, offsets);
+        if (atLaunch || days < launchDays(mission)) {
           yield* put(setSimDays({ simDays: launchDays(mission), nowMs: at }));
         }
       }

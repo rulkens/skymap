@@ -126,6 +126,14 @@ describe('mission hold loop', () => {
     expect(store.getState().camera.mission?.craftId).toBe('voyager2');
   });
 
+  it('carries a clock at one craft’s launch to the other’s launch on a tab switch', async () => {
+    const { store, simDays } = await hold();
+    expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
+    store.dispatch(setMissionEmphasis('voyager2'));
+    await tick();
+    expect(simDays()).toBeCloseTo(eventDays('voyager2-launch'), 9);
+  });
+
   it('plays to now and pauses there', async () => {
     const { store, simDays } = await hold();
     store.dispatch(playMission());
