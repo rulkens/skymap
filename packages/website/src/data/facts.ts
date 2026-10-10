@@ -354,31 +354,6 @@ export const FACTS: readonly Fact[] = [
     checked: CHECKED,
   },
   {
-    id: 'wisdome-showing',
-    about: 'app',
-    text: 'We showed skymap in the dome at Wisdome Malmö in September 2026, and the film recorder’s fulldome preset was written for that dome.',
-    source: `${REPO_BLOB}/tools/record/README.md`,
-    sourceLabel: 'the recorder’s fulldome notes, in the skymap repository',
-    checked: CHECKED,
-  },
-  {
-    id: 'wisdome-venue',
-    text: 'Wisdome Malmö is a visualisation dome at Malmö museum, one of five in a Swedish national collaboration.',
-    short: 'It is one of five visualisation domes in a Swedish national collaboration, at Malmö museum.',
-    source: 'https://malmo.se/Uppleva-och-gora/Konst-och-museer/Malmo-museum/Wisdome-Malmo/Om-Wisdome-Malmo.html',
-    sourceLabel: 'City of Malmö, about Wisdome Malmö (in Swedish)',
-    checked: CHECKED,
-  },
-  {
-    id: 'wisdome-dome',
-    text: 'The screen in the dome at Wisdome Malmö is 11.5 metres across and the theatre holds 58 visitors. It opened on 22 and 23 April 2023.',
-    short: 'Its screen is 11.5 metres across.',
-    source:
-      'https://www.mynewsdesk.com/se/malmo/pressreleases/snart-oeppnar-wisdome-malmoe-360-graders-filmduk-paa-plats-i-domteatern-3236947',
-    sourceLabel: 'City of Malmö press release, 2 March 2023 (in Swedish)',
-    checked: CHECKED,
-  },
-  {
     id: 'search-key',
     about: 'app',
     text: 'The / key opens the app’s search, as Ctrl + K and Cmd + K do.',

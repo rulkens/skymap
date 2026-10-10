@@ -23,13 +23,10 @@ import { sitePath } from '../utils/sitePath';
 
 const title = 'Domes and museums | skymap';
 const description =
-  'We showed skymap in the dome at Wisdome Malmö in September 2026. We deliver a live fisheye picture, a dome or 4K film, or a screen built round one exhibit.';
+  'We deliver a live fisheye picture, a dome or 4K film, or a screen built round one exhibit.';
 
 // Every fact row the page prints, so the Sources list cannot drift from the copy.
 const factIds = [
-  'wisdome-showing',
-  'wisdome-venue',
-  'wisdome-dome',
   'dome-flag',
   'dome-rig',
   'dome-tilt',
@@ -69,9 +66,8 @@ const STEPS = [
   <!-- The disc leads: the page's subject is round, so its header is not a rectangle with words on it. -->
   <DiscBand id="dome-earth">
     <h1>Domes and museums</h1>
-    <p class="say proof">In September 2026 we showed skymap in the dome at Wisdome Malmö.</p>
     <p>
-      {fact('wisdome-dome').short} {fact('wisdome-venue').short} We can do three things for a dome or a gallery: a
+      We can do three things for a dome or a gallery: a
       <a href={sitePath('/docs/guide/screens-and-domes/#dome-mode')}>live fisheye picture</a> from the app, a <a href={sitePath('/docs/guide/screens-and-domes/#live-or-as-a-film')}>rendered film</a>, or a screen built around <a href={sitePath('/docs/guide/tours/#what-an-exhibit-is')}>one exhibit</a>.
     </p>
     <ObjLink hang href="#contact">How to reach us</ObjLink>
