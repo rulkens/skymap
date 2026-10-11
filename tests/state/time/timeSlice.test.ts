@@ -166,6 +166,13 @@ describe('mission profile', () => {
     expect(reducer(profiled, action).profile).toBeNull();
   });
 
+  it('only startMissionProfile keeps a profile: any other time action drops it, others ignore it', () => {
+    expect(reducer(profiled, { type: 'time/aFutureReducer' }).profile).toBeNull();
+    expect(reducer(profiled, { type: 'camera/anything' }).profile).not.toBeNull();
+    const restarted = startMissionProfile({ profile: { ...profile, startWallMs: 60_000 } });
+    expect(reducer(profiled, restarted).profile?.startWallMs).toBe(60_000);
+  });
+
   it.each(visitorActions.slice(0, 3))(
     '$name keeps the clock continuous mid-profile',
     ({ action }) => {
