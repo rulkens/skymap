@@ -46,6 +46,7 @@ const VOYAGER_TIMELINE: MissionTimeline = {
   heading: 'Timeline',
   crafts: CRAFTS,
   events: MISSION_EVENTS.filter((e) => CRAFTS.some((c) => c.bodyId === e.bodyId)),
+  cruise: { yaw: YAW, pitch: PITCH },
 };
 
 export const voyagerMissions: Exhibit = {

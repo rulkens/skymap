@@ -12,10 +12,9 @@ import ExhibitTimelineContainer from '../../../src/components/containers/Exhibit
 import { createTestStore } from '../../support/createTestStore';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectMissionCraft } from '../../../src/state/settings/core/missions/selectors';
-import { setMissionCraft } from '../../../src/state/settings/core/missions/slice';
+import { setMissionCraft, stepMissionSpeed } from '../../../src/state/settings/core/missions/slice';
 import { MISSION_SPEEDS } from '../../../src/data/exhibits/mission/missionSpeeds';
 import { playMission } from '../../../src/state/exhibits/playMission';
-import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import {
   pause,
   resume,
@@ -23,22 +22,16 @@ import {
   startClockProfile,
   stepToEvent,
 } from '../../../src/state/time/timeSlice';
-import { setMission } from '../../../src/state/camera/cameraSlice';
-import type { CameraMission } from '../../../src/@types/camera/CameraMission';
 import { voyagerMissions } from '../../../src/data/exhibits/voyagerMissions';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { missionTimelineKind } from '../../../src/components/ExhibitOverlay/kinds/missionTimelineKind';
 import type { MissionTimeline } from '../../../src/@types/exhibits/MissionTimeline';
 
-const missionAt = (speedIndex: number): CameraMission => ({
-  craftId: 'voyager1',
-  stops: [],
-  cruise: { yaw: 0, pitch: 0 },
-  offsets: { yaw: 0, pitch: 0, zoom: 1 },
-  speedIndex,
-  reaim: false,
-});
+/** Steps the speed factor to one end of the ladder; the reducer clamps there. */
+const speedToEnd = (store: ReturnType<typeof mount>, step: -1 | 1) => {
+  for (let i = 0; i < MISSION_SPEEDS.length; i++) store.dispatch(stepMissionSpeed({ step }));
+};
 
 const section = voyagerMissions.body.find((s) => s.kind === missionTimelineKind)!
   .data as MissionTimeline;
@@ -159,18 +152,13 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('1989-08-26');
     act(() => {
       store.dispatch(pause({ nowMs: performance.now() }));
-      store.dispatch(setMission(missionAt(MISSION_SPEEDS.indexOf(1))));
     });
     expect(screen.getByText('1×')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slower' })).toBeEnabled();
-    act(() => {
-      store.dispatch(setMission(missionAt(0)));
-    });
+    act(() => speedToEnd(store, -1));
     expect(screen.getByText('1⁄16×')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slower' })).toBeDisabled();
-    act(() => {
-      store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));
-    });
+    act(() => speedToEnd(store, 1));
     expect(screen.getByText('4×')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Faster' })).toBeDisabled();
   });
@@ -179,7 +167,7 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('1989-08-24');
     const start = performance.now();
     act(() => {
-      store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));
+      speedToEnd(store, 1);
       store.dispatch(
         startClockProfile({
           profile: {

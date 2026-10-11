@@ -86,7 +86,7 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { CONTROL_SCHEMES } from '../../../../src/services/engine/camera/controlSchemes';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
@@ -253,6 +253,8 @@ function makeState(): EngineState {
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
+      own: {},
+      pivotBody: null,
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,
@@ -289,7 +291,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
     context: {} as unknown as GPUCanvasContext,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
-    controlSchemes: CONTROL_SCHEMES,
+    controlSchemes: composeControlSchemes([]),
   };
 }
 
@@ -326,7 +328,7 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
       clientWidth: 100,
       clientHeight: 100,
     } as unknown as HTMLCanvasElement,
-    controlSchemes: CONTROL_SCHEMES,
+    controlSchemes: composeControlSchemes([]),
   };
 }
 

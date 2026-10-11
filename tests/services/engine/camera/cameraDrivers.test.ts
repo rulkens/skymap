@@ -42,13 +42,16 @@ import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRo
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   beginDrag,
-  setMission,
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
   clipStarted,
 } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
+import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
+import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
+import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
+import type { ExhibitId } from '../../../../src/@types/exhibits/ExhibitId';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
@@ -66,8 +69,8 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-const APPROACHING: DriverActivity = { approachDone: false };
-const APPROACH_DONE: DriverActivity = { approachDone: true };
+const APPROACHING: DriverActivity = { approachDone: false, dragClaimed: false };
+const APPROACH_DONE: DriverActivity = { approachDone: true, dragClaimed: false };
 const BASE_POSE: CameraPose = { target: [0, 0, 0], yaw: 1.5, pitch: 0.1, distance: 100 };
 
 const TWEEN_DESC: CameraTweenDescriptor = {
@@ -102,7 +105,7 @@ const CLIP_DATA: ClipData = { timeline: [] };
 
 /** One produce off a row that owns no memory: only the store and elapsed matter. */
 function produce(driver: CameraDriver, s: RootState, elapsedMs = 0): FramedCameraPose {
-  return driver.pose(makeDriverCtx({ state: s, elapsedMs }), null).pose;
+  return driver.pose(makeDriverCtx({ state: s, elapsedMs }), null, null).pose;
 }
 
 /** `runFrame`'s call shape: elapsed resolved at the winner, then produce. */
@@ -113,13 +116,13 @@ function runAtWinner(
   nowMs: number,
   approachDone = false,
 ) {
-  const winner = pickWinner(drivers, s, { approachDone });
+  const winner = pickWinner(drivers, s, { approachDone, dragClaimed: false });
   const ctx = makeDriverCtx({
     state: s,
     elapsedMs: elapsedForWinner(winner, epochs, nowMs),
     register: REGISTER_POSE,
   });
-  return { ...winner.pose(ctx, null), winner };
+  return { ...winner.pose(ctx, null, null), winner };
 }
 
 describe('CAMERA_DRIVERS — pose functions', () => {
@@ -329,35 +332,42 @@ describe('pickWinner', () => {
   });
 });
 
-describe('CAMERA_DRIVERS — mission', () => {
-  const mission = CAMERA_DRIVERS.find((d) => d.id === 'mission')!;
+describe('the mission row, lifted from the timeline kind', () => {
+  const drivers = composeControlSchemes(Object.values(exhibitRegistry)).skymap.drivers;
+  const mission = drivers.find((d) => d.id === 'mission')!;
+  const inExhibit = (id: ExhibitId) => {
+    const store = makeStore();
+    store.dispatch(takeoverStarted({ kind: 'exhibit', id, entry: 'cut' }));
+    return store;
+  };
 
   it('ties no other driver, so no outcome rests on table order', () => {
-    const others = CAMERA_DRIVERS.filter((d) => d !== mission).map((d) => d.priority);
+    const others = drivers.filter((d) => d !== mission).map((d) => d.priority);
     expect(others).not.toContain(mission.priority);
   });
 
   it('outranks the follow rows but yields to a visitor-started tween', () => {
-    const p = (id: string) => CAMERA_DRIVERS.find((d) => d.id === id)!.priority;
+    const p = (id: string) => drivers.find((d) => d.id === id)!.priority;
     expect(mission.priority).toBeGreaterThan(p('followApproach'));
     expect(mission.priority).toBeLessThan(p('tween'));
   });
 
-  it('keeps the camera through a drag, which turns its view about the craft', () => {
-    const store = makeStore();
-    store.dispatch(
-      setMission({
-        craftId: 'voyager2',
-        stops: [],
-        cruise: { yaw: 0, pitch: 0 },
-        offsets: { yaw: 0, pitch: 0, zoom: 1 },
-        speedIndex: 0,
-        reaim: false,
-      }),
+  it('is on only while an exhibit carrying the kind runs', () => {
+    const on = inExhibit('voyager-missions').getState() as unknown as RootState;
+    const other = inExhibit('solarSystem').getState() as unknown as RootState;
+    expect(mission.isActive(on, APPROACHING)).toBe(true);
+    expect(mission.isActive(other, APPROACHING)).toBe(false);
+    expect(mission.isActive(makeStore().getState() as unknown as RootState, APPROACHING)).toBe(
+      false,
     );
+  });
+
+  it('keeps the camera through a drag, which turns its view about the craft', () => {
+    const store = inExhibit('voyager-missions');
     store.dispatch(beginDrag());
     const s = store.getState() as unknown as RootState;
-    expect(pickWinner(CAMERA_DRIVERS, s, APPROACHING).id).toBe('mission');
+    const claimed = { approachDone: false, dragClaimed: true };
+    expect(pickWinner(drivers, s, claimed).id).toBe('mission');
   });
 });
 
@@ -521,6 +531,7 @@ function makeFollowProduce(opts: {
         followDistanceTarget: opts.followDistanceTarget ?? null,
       }),
       mem,
+      null,
     );
 }
 
@@ -829,8 +840,8 @@ describe('the follow produce — the capture is returned, not written', () => {
     });
     const follow = CAMERA_DRIVERS.find((d) => d.id === 'followApproach')!;
 
-    const first = follow.pose(ctx, mem);
-    const second = follow.pose(ctx, mem);
+    const first = follow.pose(ctx, mem, null);
+    const second = follow.pose(ctx, mem, null);
 
     expect(mem.from).toBeNull();
     expect(mem.distanceTarget).toBeNull();
@@ -846,13 +857,14 @@ describe('orbitDrag — the register comes from the ctx', () => {
       register: REGISTER_POSE,
     });
     const drag = CAMERA_DRIVERS.find((d) => d.id === 'orbitDrag')!;
-    expect(drag.pose(ctx, null).pose).toBe(REGISTER_POSE);
+    expect(drag.pose(ctx, null, null).pose).toBe(REGISTER_POSE);
   });
 });
 
 describe('CAMERA_DRIVERS — ridesWheelTarget', () => {
   it('is set on exactly the follow rows and the mission', () => {
-    expect(CAMERA_DRIVERS.filter((d) => d.ridesWheelTarget).map((d) => d.id)).toEqual([
+    const drivers = composeControlSchemes(Object.values(exhibitRegistry)).skymap.drivers;
+    expect(drivers.filter((d) => d.ridesWheelTarget).map((d) => d.id)).toEqual([
       'followApproach',
       'followHold',
       'mission',

@@ -50,7 +50,7 @@ import { eventChannel, type EventChannel } from 'redux-saga';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
 
 export function createKeyboardListener(
-  shortcuts: readonly KeyboardShortcut[],
+  shortcuts: readonly Pick<KeyboardShortcut, 'keys' | 'preventDefault'>[],
 ): EventChannel<string> {
   if (typeof document === 'undefined') {
     // No DOM ⇒ no keydown source. Return a channel that never emits and whose

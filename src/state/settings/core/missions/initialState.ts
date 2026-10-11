@@ -5,4 +5,5 @@ import type { MissionsSettings } from '../../../../@types/settings/MissionsSetti
 export const initialState: MissionsSettings = {
   trails: false,
   craft: null,
+  speed: 1,
 };

@@ -31,5 +31,9 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */
   readonly gesture: RungMemory;
   readonly tilt: TiltMemory;
+  /** Each row's private memory, as its `pose` last returned it; core never reads or drops it. */
+  readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
+  /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
+  readonly pivotBody: string | null;
   readonly outputs: FrameOutputs;
 };

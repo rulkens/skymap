@@ -7,7 +7,7 @@
  * cannot flap it. Null when a body the frame needs has no position.
  */
 
-import type { CameraMission } from '../../@types/camera/CameraMission';
+import type { MissionCourse } from '../../@types/missions/MissionCourse';
 import type { MissionCameraFrame } from '../../@types/camera/MissionCameraFrame';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -28,7 +28,7 @@ const CRUISE_ABOVE_MPC = 0.5 * SCALE_UNITS.AU_TO_MPC;
 const ECLIPTIC = ORIENTATION_FRAMES.ecliptic;
 
 export function missionCameraFrame(
-  mission: CameraMission,
+  mission: MissionCourse,
   simDays: number,
   positionOf: (id: string) => Readonly<Vec3> | undefined,
   fovYRad: number,

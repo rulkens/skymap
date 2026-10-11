@@ -40,7 +40,9 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchKeyboardEventsSaga } from '../../../src/state/input/watchKeyboardEventsSaga';
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
-import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
+import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { stepMissionSpeed } from '../../../src/state/settings/core/missions/slice';
+import { setRate } from '../../../src/state/time/timeSlice';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -108,5 +110,19 @@ describe('watchKeyboardEventsSaga', () => {
 
     const after = recorded.slice(before);
     expect(after).toEqual([clearSelection(), exitTakeover()]);
+  });
+
+  it("runs a running exhibit's kind shortcut ahead of the global row", async () => {
+    const { store, recorded } = buildHarness();
+    await flush();
+
+    h.emit!(']');
+    await flush();
+    expect(recorded.at(-1)!.type).toBe(setRate.type);
+
+    store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
+    h.emit!(']');
+    await flush();
+    expect(recorded.at(-1)).toEqual(stepMissionSpeed({ step: 1 }));
   });
 });

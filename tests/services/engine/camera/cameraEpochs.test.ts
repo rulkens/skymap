@@ -68,7 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     dragging: false,
     clip: null,
     frameTween: null,
-    mission: null,
+    aim: null,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };
@@ -105,23 +105,22 @@ describe('advanceEpochs', () => {
     expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
   });
 
-  it('the mission epoch restarts when a new mission record replaces the stops, and only under the mission driver', () => {
-    const stops = [] as unknown as NonNullable<CameraState['mission']>['stops'];
-    const mission = { stops } as NonNullable<CameraState['mission']>;
-    const intent = makeCameraState({ mission });
+  it('the aim epoch restarts on each new aim token, and only under a row that names it', () => {
+    const aim = { ease: false };
+    const intent = makeCameraState({ aim });
     const args = { intent, focus: null, clip: UNSTARTED_EPOCHS.clip, nowMs: 1000 };
-    expect(advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: undefined }).mission).toBe(
-      UNSTARTED_EPOCHS.mission,
+    expect(advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: undefined }).aim).toBe(
+      UNSTARTED_EPOCHS.aim,
     );
-    const started = advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: 'mission' as const });
-    expect(started.mission).toEqual({ ref: stops, startMs: 1000 });
+    const started = advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: 'aim' as const });
+    expect(started.aim).toEqual({ ref: aim, startMs: 1000 });
     const bumped = advanceEpochs(started, {
       ...args,
-      intent: makeCameraState({ mission: { ...mission, stops: [...stops] } }),
-      winnerEpoch: 'mission' as const,
+      intent: makeCameraState({ aim: { ease: true } }),
+      winnerEpoch: 'aim' as const,
       nowMs: 1500,
     });
-    expect(bumped.mission.startMs).toBe(1500);
+    expect(bumped.aim.startMs).toBe(1500);
   });
 
   it('the frameTween epoch advances on a frame no driver owns it', () => {

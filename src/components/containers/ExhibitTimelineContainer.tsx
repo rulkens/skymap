@@ -13,11 +13,12 @@ import type { ReactNode } from 'react';
 import ExhibitTimeline from '../ExhibitOverlay/ExhibitTimeline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { playMission } from '../../state/exhibits/playMission';
-import { stepMissionSpeed } from '../../state/exhibits/stepMissionSpeed';
-import { selectMissionSpeedIndex } from '../../state/camera/selectors';
 import { selectTimeState } from '../../state/time/selectors';
-import { selectMissionCraft } from '../../state/settings/core/missions/selectors';
-import { setMissionCraft } from '../../state/settings/core/missions/slice';
+import {
+  selectMissionCraft,
+  selectMissionSpeed,
+} from '../../state/settings/core/missions/selectors';
+import { setMissionCraft, stepMissionSpeed } from '../../state/settings/core/missions/slice';
 import { pause, setSimDays, stepToEvent } from '../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -83,15 +84,15 @@ function ExhibitTimelineContainer({ data }: ExhibitTimelineContainerProps): Reac
   );
   const onSlower = useCallback(() => dispatch(stepMissionSpeed({ step: -1 })), [dispatch]);
   const onFaster = useCallback(() => dispatch(stepMissionSpeed({ step: 1 })), [dispatch]);
-  const speedIndex = useAppSelector(selectMissionSpeedIndex) ?? MISSION_SPEEDS.indexOf(1);
+  const factor = useAppSelector(selectMissionSpeed);
   // Playing, the label is the profile's live speed; otherwise the factor the next run plays at.
   const clock = {
     paused,
-    rateLabel: speed > 0 ? formatSimRate(speed) : formatMissionSpeed(MISSION_SPEEDS[speedIndex]!),
+    rateLabel: speed > 0 ? formatSimRate(speed) : formatMissionSpeed(factor),
     profiled: speed > 0,
     showTime: speed > 0 && speed < SECONDS_PER_DAY,
-    atSlowest: speedIndex === 0,
-    atFastest: speedIndex === MISSION_SPEEDS.length - 1,
+    atSlowest: factor <= MISSION_SPEEDS[0]!,
+    atFastest: factor >= MISSION_SPEEDS.at(-1)!,
   };
 
   const onSelect = useCallback((id: string) => dispatch(setMissionCraft(id)), [dispatch]);

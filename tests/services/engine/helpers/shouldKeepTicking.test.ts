@@ -14,6 +14,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
@@ -100,22 +101,24 @@ function makeState(over: {
 describe('shouldKeepTicking', () => {
   it('at rest (camera at rest, no fades/focus) → false', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('a dragging camera → true (selectCameraActive)', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM)).toBe(true);
+    expect(
+      shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM, CAMERA_DRIVERS),
+    ).toBe(true);
   });
 
   it('a fade animating → true', () => {
     const state = makeState({ fadesAnimating: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('structure-focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('manual clock playing → true even with everything else at rest', () => {
@@ -129,6 +132,7 @@ describe('shouldKeepTicking', () => {
         rootWithCamera({ timeMode: 'manual', paused: false }),
         1000,
         NO_ANIM,
+        CAMERA_DRIVERS,
       ),
     ).toBe(true);
   });
@@ -140,7 +144,13 @@ describe('shouldKeepTicking', () => {
     // deliberately absent from this predicate.
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, rootWithCamera({ timeMode: 'live', paused: false }), 1000, NO_ANIM),
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ timeMode: 'live', paused: false }),
+        1000,
+        NO_ANIM,
+        CAMERA_DRIVERS,
+      ),
     ).toBe(false);
   });
 
@@ -150,26 +160,26 @@ describe('shouldKeepTicking', () => {
     // the zoom on the next interaction. Everything else is at rest, so this
     // disjunct alone must keep the loop ticking.
     const state = makeState({ followWinner: true, followSaturated: false });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(true);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
   it('a SATURATED follow ease → false (steady follow must not pin 60 fps)', () => {
     // The approach handed off: steady follow of a body must fall back to the
     // coarse-idle / manual-play paths, not this predicate.
     const state = makeState({ followWinner: true, followSaturated: true });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('a follow row winning with no memory yet → false', () => {
     const state = makeState({ followWinner: true, followSaturated: null });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('an unsaturated ease but no follow row winning → false (term is winner-gated)', () => {
     // A body is focused but autoRotate/drag won the orbit terms; that driver's own
     // wake (selectCameraActive) covers it, so the follow-ease term must not fire.
     const state = makeState({ followWinner: false, followSaturated: false });
-    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM)).toBe(false);
+    expect(shouldKeepTicking(state, restingRoot, 5000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
   it('layersAwake is a keep-alive term — true even with everything else at rest', () => {
@@ -178,8 +188,14 @@ describe('shouldKeepTicking', () => {
     // vote into this one bag entry, so the predicate need not know anything
     // about Layers itself, or about the star cut, just this bit.
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAwake: true })).toBe(
-      true,
-    );
+    expect(
+      shouldKeepTicking(
+        state,
+        restingRoot,
+        1000,
+        { ...NO_ANIM, layersAwake: true },
+        CAMERA_DRIVERS,
+      ),
+    ).toBe(true);
   });
 });

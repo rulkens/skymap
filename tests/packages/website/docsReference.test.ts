@@ -40,6 +40,7 @@ import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
 import { SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
+import { shortcutKeys } from '../../../src/utils/input/shortcutKeys';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import { appViewProblem } from '../../../tools/site/utils/appViewProblem';
@@ -60,11 +61,15 @@ function leaves(value: unknown, path = '', out: Record<string, unknown> = {}) {
 }
 
 describe('Controls page', () => {
-  it('lists every key of the app’s shortcut table, and no key that is not in it', () => {
+  it('lists every key of the app’s shortcut table and its exhibits’, and no other key', () => {
     const listed = DOCS_CONTROLS.flatMap((group) =>
       group.rows.flatMap((row) => row.shortcut ?? []),
     );
-    expect(sorted(listed)).toEqual(sorted(Object.keys(SHORTCUTS_BY_KEY)));
+    const exhibitKeys = Object.values(exhibitRegistry).flatMap((exhibit) =>
+      exhibit.body.flatMap((s) => (s.kind.shortcuts ?? []).flatMap((k) => shortcutKeys(k.keys))),
+    );
+    const keys = new Set([...Object.keys(SHORTCUTS_BY_KEY), ...exhibitKeys]);
+    expect(sorted(listed)).toEqual(sorted([...keys]));
   });
 
   it('prints as many keys as a row has shortcuts', () => {
@@ -82,7 +87,7 @@ describe('Settings page', () => {
   // changes: the debug panel's, a tour's or an exhibit's, or nobody's.
   const NOT_IN_PANEL = [
     /^debug\./,
-    /^missions\.craft$/,
+    /^missions\.(craft|speed)$/,
     /^picking\./,
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,

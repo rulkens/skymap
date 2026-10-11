@@ -22,9 +22,6 @@ export const selectCameraTuning = (state: RootState): CameraTuning =>
 export const selectCameraBase = (state: RootState): FramedCameraPose =>
   selectCameraIntent(state).base;
 
-export const selectMissionSpeedIndex = (state: RootState): number | null =>
-  selectCameraIntent(state).mission?.speedIndex ?? null;
-
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;
 

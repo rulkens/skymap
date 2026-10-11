@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MISSION_LEG_WALL_MS } from '../../../../src/data/exhibits/mission/missionLegWallMs';
 import { MISSION_RAMP_MS } from '../../../../src/data/exhibits/mission/missionRampMs';
-import { MISSION_SPEEDS } from '../../../../src/data/exhibits/mission/missionSpeeds';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { buildMissionProfile } from '../../../../src/utils/exhibits/mission/buildMissionProfile';
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
@@ -13,8 +12,6 @@ import type { ClockProfile } from '../../../../src/@types/time/ClockProfile';
 const stops = missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2'));
 const bounds = stops.map((s) => unixMsToJulianDays(s.ms));
 const END = unixMsToJulianDays(Date.parse('2026-10-06'));
-const ONE = MISSION_SPEEDS.indexOf(1);
-const FOUR = MISSION_SPEEDS.indexOf(4);
 /** The profile's integration step, ms. */
 const STEP_MS = 50;
 
@@ -28,8 +25,8 @@ let atOne: ClockProfile;
 let atFour: ClockProfile;
 beforeAll(() => {
   loadVoyagerStopWindows();
-  atOne = buildMissionProfile(stops, 'voyager2', bounds[0]!, END, ONE, 1234);
-  atFour = buildMissionProfile(stops, 'voyager2', bounds[0]!, END, FOUR, 0);
+  atOne = buildMissionProfile(stops, 'voyager2', bounds[0]!, END, 1, 1234);
+  atFour = buildMissionProfile(stops, 'voyager2', bounds[0]!, END, 4, 0);
 });
 
 describe('buildMissionProfile', () => {
@@ -83,7 +80,7 @@ describe('buildMissionProfile', () => {
 
   it('starts mid-leg from the given instant', () => {
     const mid = (bounds[2]! + bounds[3]!) / 2;
-    const p = buildMissionProfile(stops, 'voyager2', mid, END, ONE, 0);
+    const p = buildMissionProfile(stops, 'voyager2', mid, END, 1, 0);
     expect(p.simDays[0]).toBe(mid);
     expect(p.simDays.at(-1)).toBe(END);
   });

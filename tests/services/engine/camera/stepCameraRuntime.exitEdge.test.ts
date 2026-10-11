@@ -16,11 +16,11 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
-import { clearMission, setMission } from '../../../../src/state/camera/cameraSlice';
+import { aimCamera } from '../../../../src/state/camera/cameraSlice';
+import { setMissionCraft } from '../../../../src/state/settings/core/missions/slice';
+import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
-import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -35,24 +35,17 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   // Entry: the exhibit clears the focus and hands the camera to the craft.
   h.store.dispatch(setSimDays({ simDays: unixMsToJulianDays(Date.UTC(1990, 0, 1)), nowMs: 0 }));
   h.focus(null);
-  h.store.dispatch(
-    setMission({
-      craftId: 'voyager1',
-      stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager1')),
-      cruise: { yaw: 0, pitch: 0.26 },
-      offsets: { yaw: 0, pitch: 0, zoom: 1 },
-      speedIndex: 2,
-      reaim: false,
-    }),
-  );
+  h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
+  h.store.dispatch(setMissionCraft('voyager1'));
+  h.store.dispatch(aimCamera({ ease: false }));
   h.frame(30);
   expect(h.state.cameraRuntime.register.winner).toBe('mission');
   const lastEye = displayedEye(h.state);
   const shown = h.state.cameraRuntime.outputs.displayed;
   if (!isWorldArm(shown)) throw new Error('the mission flies the world arm');
 
-  // The hold's `finally` clears the mission; the scene restore puts the home focus back.
-  h.store.dispatch(clearMission());
+  // The takeover ends, which turns the row off; the scene restore puts the home focus back.
+  h.store.dispatch(takeoverEnded());
   h.focus(home);
   h.frame(1);
   expect(h.state.cameraRuntime.register.winner).toBe(successor);

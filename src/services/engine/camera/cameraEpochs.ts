@@ -18,7 +18,7 @@ export const UNSTARTED_EPOCHS: CameraEpochs = {
   autoRotate: { ref: null, startMs: null },
   follow: { ref: null, startMs: null },
   clip: { ref: null, startMs: null },
-  mission: { ref: null, startMs: null },
+  aim: { ref: null, startMs: null },
 };
 
 /** Same `ref` ⇒ `prev` back BY IDENTITY — the no-op guard callers key on. */
@@ -75,11 +75,7 @@ export function advanceEpochs(
     winnerEpoch === 'follow' || winnerDelivers ? focus : prev.follow.ref,
     nowMs,
   );
-  const mission = advanceEpoch(
-    prev.mission,
-    winnerEpoch === 'mission' ? (intent.mission?.stops ?? null) : prev.mission.ref,
-    nowMs,
-  );
+  const aim = advanceEpoch(prev.aim, winnerEpoch === 'aim' ? intent.aim : prev.aim.ref, nowMs);
   const frameTween = advanceEpoch(prev.frameTween, intent.frameTween, nowMs);
 
   if (
@@ -87,10 +83,10 @@ export function advanceEpochs(
     autoRotate === prev.autoRotate &&
     follow === prev.follow &&
     frameTween === prev.frameTween &&
-    mission === prev.mission &&
+    aim === prev.aim &&
     clip === prev.clip
   ) {
     return prev;
   }
-  return { tween, autoRotate, follow, frameTween, clip, mission };
+  return { tween, autoRotate, follow, frameTween, clip, aim };
 }

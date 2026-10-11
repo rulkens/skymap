@@ -2,16 +2,14 @@
  * missionHoldSaga — a timeline exhibit's hold: the clock opens paused at the selected craft's
  * launch (or a linked `t=`) with the mission camera on it (flown to, unless the entry is a cut,
  * while the loop already listens). Run, resume, a flyby step and − / + or a scrub while playing
- * play the mission profile; a step or craft tab eases the camera to the new frame (keeping the
- * visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it there from any
- * listed craft's launch). `finally` clears the mission.
+ * play the mission profile; a step or craft tab re-aims the camera, easing to the new frame
+ * (keeping the visitor's orbit), a tab lifting the clock to that craft's launch (or carrying it
+ * there from any listed craft's launch). The camera row is core's to turn off on exit.
  */
 import { call, cancel, fork, getContext, put, race, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
-import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
-import { NO_MISSION_OFFSETS } from '../../data/exhibits/mission/noMissionOffsets';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { orbitAnglesLookingAlong } from '../../utils/camera/orbitAnglesLookingAlong';
 import { missionCameraFrame } from '../../utils/camera/missionCameraFrame';
@@ -20,22 +18,21 @@ import { missionStops } from '../../utils/exhibits/mission/missionStops';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineEndMs } from '../../utils/exhibits/timeline/timelineEndMs';
-import { clearMission, setMission, setMissionSpeed } from '../camera/cameraSlice';
+import { aimCamera } from '../camera/cameraSlice';
 import { selectOrientation } from '../settings/selectors';
-import { selectMissionCraft } from '../settings/core/missions/selectors';
-import { setMissionCraft } from '../settings/core/missions/slice';
+import { selectMissionCraft, selectMissionSpeed } from '../settings/core/missions/selectors';
+import { setMissionCraft, stepMissionSpeed } from '../settings/core/missions/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectTimeState } from '../time/selectors';
 import { pause, resume, setSimDays, stepToEvent } from '../time/timeSlice';
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from './playMission';
-import { stepMissionSpeed } from './stepMissionSpeed';
-import type { CameraMission } from '../../@types/camera/CameraMission';
 import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { MissionCourse } from '../../@types/missions/MissionCourse';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { MissionTimeline } from '../../@types/exhibits/MissionTimeline';
 import type { Transition } from '../../@types/navigation/Transition';
-import type { RootState, SagaContext } from '../../store/types';
+import type { SagaContext } from '../../store/types';
 
 /** A scrub is a stream of `setSimDays`; the profile is rebuilt once the drag goes quiet. */
 const SCRUB_SETTLE_MS = 150;
@@ -43,29 +40,20 @@ const SCRUB_SETTLE_MS = 150;
 /** A clock this close to a launch counts as at it (a minute, under any float drift). */
 const LAUNCH_TOLERANCE_DAYS = 1 / 1440;
 
-const launchDays = (mission: CameraMission): number => unixMsToJulianDays(mission.stops[0]!.ms);
+const launchDays = (mission: MissionCourse): number => unixMsToJulianDays(mission.stops[0]!.ms);
 
 export function* missionHoldSaga(
-  exhibit: Exhibit,
+  _exhibit: Exhibit,
   timeline: MissionTimeline,
   entry: Transition,
   atLinkedTime: boolean,
 ): Generator {
-  let speedIndex = MISSION_SPEEDS.indexOf(1);
-  const missionOf = (
-    craftId: string,
-    offsets = NO_MISSION_OFFSETS,
-    reaim = false,
-  ): CameraMission => {
-    return {
-      craftId,
-      stops: missionStops(timeline.events.filter((e) => e.bodyId === craftId)),
-      cruise: { yaw: exhibit.pose.yaw, pitch: exhibit.pose.pitch },
-      offsets,
-      speedIndex,
-      reaim,
-    };
-  };
+  const missionOf = (craftId: string): MissionCourse => ({
+    craftId,
+    stops: missionStops(timeline.events.filter((e) => e.bodyId === craftId)),
+    cruise: timeline.cruise,
+  });
+  let speed = yield* select(selectMissionSpeed);
   // The exhibit's snapshot always sets the craft before this saga runs.
   let mission = missionOf((yield* select(selectMissionCraft))!);
   const nowMs = performance.now();
@@ -78,7 +66,7 @@ export function* missionHoldSaga(
     : launchDays(mission);
   yield* put(setSimDays({ simDays: entryDays, nowMs }));
   yield* put(pause({ nowMs }));
-  yield* put(setMission(mission));
+  yield* put(aimCamera({ ease: false }));
 
   let task: Task | null = null;
   let fly: Task | null = null;
@@ -99,13 +87,10 @@ export function* missionHoldSaga(
       });
       if (next.exit) break;
       if (next.speed) {
-        const index = Math.min(
-          MISSION_SPEEDS.length - 1,
-          Math.max(0, speedIndex + next.speed.payload.step),
-        );
-        if (index === speedIndex) continue;
-        speedIndex = index;
-        yield* put(setMissionSpeed(index));
+        // The cluster's reducer has already stepped (and clamped) the factor.
+        const stepped = yield* select(selectMissionSpeed);
+        if (stepped === speed) continue;
+        speed = stepped;
       }
       // Paused, a speed change or scrub only moves the factor or the clock; playing, they
       // rebuild the profile from here. Step, run and resume have set the pause flag already.
@@ -115,7 +100,6 @@ export function* missionHoldSaga(
         task = null;
       }
       const flying = fly?.isRunning() ?? false;
-      const offsets = yield* select((s: RootState) => s.camera.mission?.offsets);
       if (next.tab) {
         const at = performance.now();
         const days = deriveSimDays(yield* select(selectTimeState), at);
@@ -123,20 +107,19 @@ export function* missionHoldSaga(
         const atLaunch = timeline.crafts.some(
           (c) => Math.abs(days - launchDays(missionOf(c.bodyId))) < LAUNCH_TOLERANCE_DAYS,
         );
-        mission = missionOf(next.tab.payload!, offsets, true);
+        mission = missionOf(next.tab.payload!);
         if (atLaunch || days < launchDays(mission)) {
           yield* put(setSimDays({ simDays: launchDays(mission), nowMs: at }));
         }
       }
       // A re-aim while the fly-in still owns the camera eases from where it ends up.
-      if (!next.tab && (next.step || flying)) mission = missionOf(mission.craftId, offsets, true);
-      if (next.step || next.tab || flying) yield* put(setMission(mission));
+      if (next.step || next.tab || flying) yield* put(aimCamera({ ease: true }));
       const event = next.step
         ? timeline.events.find((e) => e.id === next.step!.payload.eventId)
         : undefined;
       const run = next.play !== undefined || next.resume !== undefined;
       if (run || event?.kind === 'flyby' || playing) {
-        task = yield* fork(missionPlaySaga, mission, speedIndex, {
+        task = yield* fork(missionPlaySaga, mission, speed, {
           replayAtEnd: run,
           settleMs: next.scrub ? SCRUB_SETTLE_MS : 0,
           endMs: timelineEndMs(timeline),
@@ -146,7 +129,6 @@ export function* missionHoldSaga(
   } finally {
     if (task !== null) yield* cancel(task);
     if (fly !== null) yield* cancel(fly);
-    yield* put(clearMission());
   }
 }
 
@@ -156,7 +138,7 @@ function* flyIn(pose: CameraPose): Generator {
 }
 
 /** The mission camera's zero-offset pose at `days`, for the fly in; null pre-bootstrap. */
-function* entryPose(mission: CameraMission, days: number): Generator<unknown, CameraPose | null> {
+function* entryPose(mission: MissionCourse, days: number): Generator<unknown, CameraPose | null> {
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const rt = cameraRuntime();
   if (rt === null) return null;

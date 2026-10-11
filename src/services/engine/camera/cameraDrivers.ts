@@ -2,8 +2,9 @@
  * cameraDrivers — the camera-driver table and its resolver. Among the drivers
  * active this frame the highest `priority` wins and ONLY its `pose` is used:
  * one author per frame, no blending; precedence is data, not call order.
- * Priorities: clip 95 > orbitDrag 80 > tween 60 > mission 58 > followApproach 55 >
- * autoRotate 20 > followHold 10 > resting 0 (gaps are headroom). Body focus is
+ * Priorities: clip 95 > orbitDrag 80 > tween 60 > (an exhibit row, lifted in by
+ * `composeControlSchemes`; the mission's is 58) > followApproach 55 > autoRotate 20 >
+ * followHold 10 > resting 0 (gaps are headroom). Body focus is
  * un-braided: the focused body owns the PIVOT (applied by the frame-loop pin to
  * every driver flagged `pivotsOnFocusedBody`), the winning driver owns the
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
@@ -31,7 +32,6 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { missionPose } from './missionPose';
 import { framingPose } from './framingPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
@@ -161,7 +161,7 @@ function followPose(
     distanceTarget = memory.saturated
       ? committed.distance
       : framingPose(focus, ctx.projection.fovYRad, from).distance;
-  } else if (!CAMERA_DRIVERS.find((d) => d.id === ctx.winnerLastFrame)?.ridesWheelTarget) {
+  } else if (!ctx.lastWinnerRidesWheel) {
     distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {
     distanceTarget = ctx.followDistanceTarget;
@@ -220,7 +220,7 @@ function framedClipArm(
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
 
-/** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
+/** Core's seven rows. Constant data: a driver sees the frame only through its `ctx`. */
 export const CAMERA_DRIVERS: readonly CameraDriver[] = [
   {
     id: 'clip',
@@ -262,8 +262,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
     // both arms.
     pivotsOnFocusedBody: true,
-    // A mission reads the drag itself: this row would orbit a frozen point while the craft moves on.
-    isActive: (s) => s.camera.dragging && s.camera.mission === null,
+    isActive: (s, activity) => s.camera.dragging && !activity.dragClaimed,
     // The AUTHORED register, pre-projection (R12b-1): producing the displayed
     // pose here re-pins its tilted angles and walks the eye every held frame.
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
@@ -342,19 +341,6 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         memory: settledMemory(mem),
       };
     },
-  },
-  {
-    id: 'mission',
-    ridesWheelTarget: true,
-    // Above the follow rows (55) so a moving focus cannot pull the camera off the craft, below
-    // tween (60) so a visitor's own focus move still wins while `camera.mission` is set.
-    priority: 58,
-    epoch: 'mission',
-    // Bakes the pose on screen, so the next winner eases from it, not the stale pre-exhibit
-    // `base`; its own epoch makes the follow rows a new author.
-    commitsOnEdge: 'displayed',
-    isActive: (s) => s.camera.mission !== null,
-    pose: missionPose,
   },
   {
     id: 'autoRotate',

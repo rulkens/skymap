@@ -16,12 +16,13 @@ export function readCameraEpochs(
     startMs: epoch.startMs,
     refNull: epoch.ref === null,
   });
-  const { tween, frameTween, autoRotate, follow, clip } = state.cameraRuntime.epochs;
+  const { tween, frameTween, autoRotate, follow, clip, aim } = state.cameraRuntime.epochs;
   return {
     tween: cell(tween),
     frameTween: cell(frameTween),
     autoRotate: cell(autoRotate),
     follow: cell(follow),
     clip: cell(clip),
+    aim: cell(aim),
   };
 }

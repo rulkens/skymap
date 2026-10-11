@@ -1,10 +1,10 @@
 /**
- * missionPose — the mission driver's pose: the mission frame at this frame's instant, looked at
- * along its normal turned by the visitor's offsets. A view change (a step, a craft switch, a
- * hand-off to another stop or view regime) eases from the pose last shown over `MISSION_EASE_MS`
- * of WALL time on the mission epoch, so it reads the same at every clock speed and still finishes
- * on a paused clock. Offsets are read from a live drag or a swallowed wheel notch and hold until
- * the next view change, which resets them. Yaw and pitch come from
+ * missionPose — the mission driver's pose: the selected craft's mission frame at this frame's
+ * instant, looked at along its normal turned by the visitor's offsets. A view change (an easing
+ * re-aim, a hand-off to another stop or view regime) eases from the pose last shown over
+ * `MISSION_EASE_MS` of WALL time on the aim epoch, so it reads the same at every clock speed and
+ * still finishes on a paused clock. Offsets are read from a live drag or a swallowed wheel notch
+ * and hold until the next view change, which resets them. Yaw and pitch come from
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
@@ -13,13 +13,15 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { DriverOutput } from '../../../@types/engine/camera/DriverOutput';
+import type { MissionCameraMemory } from '../../../@types/camera/MissionCameraMemory';
+import type { MissionCourse } from '../../../@types/missions/MissionCourse';
 import type { MissionOffsets } from '../../../@types/camera/MissionOffsets';
+import type { MissionTimeline } from '../../../@types/exhibits/MissionTimeline';
 import { MISSION_EASE_MS } from '../../../data/exhibits/mission/missionEaseMs';
 import { MISSION_SURFACE_STANDOFF } from '../../../data/exhibits/mission/missionSurfaceStandoff';
 import { MISSION_FRAME_MARGIN } from '../../../data/exhibits/mission/missionFrameMargin';
 import { NO_MISSION_OFFSETS } from '../../../data/exhibits/mission/noMissionOffsets';
-import { setMissionOffsets } from '../../../state/camera/cameraSlice';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { blendCameraPose } from '../../../utils/camera/blendCameraPose';
 import { bodyRadiusMpc } from '../../../utils/camera/bodyRadiusMpc';
@@ -28,27 +30,43 @@ import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { missionCameraFrame } from '../../../utils/camera/missionCameraFrame';
 import { missionOffsetsOfView } from '../../../utils/camera/missionOffsetsOfView';
 import { missionViewDirection } from '../../../utils/camera/missionViewDirection';
+import { missionStops } from '../../../utils/exhibits/mission/missionStops';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { sphereFitDistance } from '../../../utils/camera/sphereFitDistance';
 import { lerpVec3 } from '../../../utils/math/lerpVec3';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { smoothstep } from '../../../utils/math/smoothstep';
 
+/** One craft's stops per timeline, by identity: rebuilt only when the data or the craft changes. */
+const STOPS = new WeakMap<MissionTimeline, Map<string, MissionCourse['stops']>>();
+
+function stopsOf(data: MissionTimeline, craftId: string): MissionCourse['stops'] {
+  const byCraft = STOPS.get(data) ?? STOPS.set(data, new Map()).get(data)!;
+  const hit = byCraft.get(craftId);
+  if (hit) return hit;
+  const stops = missionStops(data.events.filter((e) => e.bodyId === craftId));
+  byCraft.set(craftId, stops);
+  return stops;
+}
+
 export function missionPose(
   ctx: DriverCtx,
   mem: FollowMemory | null,
-): {
-  readonly pose: FramedCameraPose;
-  readonly memory: FollowMemory | null;
-  readonly actions?: readonly ReturnType<typeof setMissionOffsets>[];
-} {
-  const mission = ctx.state.camera.mission;
-  if (mission === null) return { pose: ctx.state.camera.base, memory: mem };
+  own: MissionCameraMemory | null,
+  data: MissionTimeline,
+): DriverOutput<MissionCameraMemory> {
+  // The exhibit's snapshot always sets the craft before this row can win.
+  const craftId = ctx.state.settings.missions.craft;
+  if (craftId === null) return { pose: ctx.state.camera.base, memory: mem };
+  const mission: MissionCourse = { craftId, stops: stopsOf(data, craftId), cruise: data.cruise };
+  const token = ctx.state.camera.aim;
   const now = ctx.elapsedMs;
   const { fovYRad, aspect } = ctx.projection;
   const positionOf = (id: string) => ctx.bodies.get(id as BodyId)?.positionMpc;
-  // A new mission record (entry, step, craft switch) also restarts the epoch these times are on.
-  const prev = mem?.mission?.stops === mission.stops ? mem.mission : null;
+  // A new aim token also restarts the epoch these times are on; an easing one keeps the offsets.
+  const sameAim = own !== null && own.aim === token;
+  const prev = sameAim ? own.view : null;
+  const kept = (sameAim || token?.ease) && own !== null ? own.offsets : NO_MISSION_OFFSETS;
   const frame = missionCameraFrame(
     mission,
     ctx.simDays,
@@ -63,7 +81,7 @@ export function missionPose(
   // A new view (another framed stop, or flyby to cruise and back) starts on its auto view; the
   // ease into it below departs from what the visitor saw, so the reset does not snap.
   const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
-  let offsets: MissionOffsets = viewChanged ? NO_MISSION_OFFSETS : mission.offsets;
+  let offsets: MissionOffsets = viewChanged ? NO_MISSION_OFFSETS : kept;
   const dragged = ctx.state.camera.dragging;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
@@ -95,7 +113,7 @@ export function missionPose(
   let easeAtMs = prev?.easeAtMs ?? now;
   let shortfall = prev?.shortfall ?? 1;
   const easing = from !== null && now - easeAtMs < MISSION_EASE_MS;
-  if (prev === null ? mission.reaim : viewChanged) {
+  if (prev === null ? (token?.ease ?? false) : viewChanged) {
     from = ctx.authoredWorld;
     easeAtMs = now;
     shortfall = Math.min(1, from.distance / fitAbout(from.target));
@@ -152,15 +170,12 @@ export function missionPose(
       distanceTarget: shown.distance,
       panOffset: mem?.panOffset ?? [0, 0, 0],
       saturated: from === null,
-      mission: {
-        stops: mission.stops,
-        stop: frame.stop,
-        cruise: frame.cruise,
-        from,
-        easeAtMs,
-        shortfall,
-      },
     },
-    actions: touched || viewChanged ? [setMissionOffsets(offsets)] : undefined,
+    own: {
+      aim: token,
+      offsets: touched || viewChanged ? offsets : kept,
+      view: { stop: frame.stop, cruise: frame.cruise, from, easeAtMs, shortfall },
+    },
+    pivotBody: craftId,
   };
 }

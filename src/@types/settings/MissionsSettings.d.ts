@@ -1,6 +1,6 @@
 /**
  * MissionsSettings — the sampled craft. `trails` is off by default; a timeline exhibit forces it
- * on and the takeover bracket restores it on exit.
+ * on, seeds `speed` at 1× and the takeover bracket restores both on exit.
  */
 
 export type MissionsSettings = {
@@ -8,4 +8,6 @@ export type MissionsSettings = {
   /** A `SAMPLED_BODIES` id whose mission trail and caption stay full strength while the other
    *  sampled craft dim; null = no emphasis. */
   readonly craft: string | null;
+  /** The `MISSION_SPEEDS` factor the mission clock plays at; snapshots carry it, the URL does not. */
+  speed: number;
 };

@@ -34,10 +34,12 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import {
+  aimCamera,
   commitCameraPose,
-  setMission,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { setMissionCraft } from '../../../../src/state/settings/core/missions/slice';
+import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -48,7 +50,6 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
-import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
@@ -404,16 +405,9 @@ describe('the wheel under a mission', () => {
     h.store.dispatch(
       setSimDays({ simDays: unixMsToJulianDays(missionEventMs(neptune)), nowMs: 0 }),
     );
-    h.store.dispatch(
-      setMission({
-        craftId: 'voyager2',
-        stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2')),
-        cruise: { yaw: 0, pitch: 0.26 },
-        offsets: { yaw: 0, pitch: 0, zoom: 1 },
-        speedIndex: 2,
-        reaim: false,
-      }),
-    );
+    h.store.dispatch(takeoverStarted({ kind: 'exhibit', id: 'voyager-missions', entry: 'cut' }));
+    h.store.dispatch(setMissionCraft('voyager2'));
+    h.store.dispatch(aimCamera({ ease: false }));
     h.frame(4);
     expect(h.state.cameraRuntime.register.winner).toBe('mission');
     for (let i = 0; i < 250; i++) h.wheel(-100);

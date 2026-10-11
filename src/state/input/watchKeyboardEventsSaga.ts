@@ -21,23 +21,52 @@
  * default (see `createKeyboardListener`'s "Why preventDefault here, not in the
  * saga"). The listener applies each shortcut's static `preventDefault` flag
  * itself; the channel reports only which key fired.
+ *
+ * ### Exhibit keys
+ *
+ * A running exhibit's section kinds' shortcuts are walked first, with their section's data;
+ * the first non-null `run` wins, else the global row runs. Each key is bound once: hotkeys-js
+ * fires a key bound twice twice, so a kind key the global table already binds is not re-bound.
  */
 import { take, call, put, select } from 'typed-redux-saga';
 
 import { createKeyboardListener } from '../../services/input/createKeyboardListener';
+import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from './keyboardShortcuts';
+import { selectTakeoverSource } from '../takeover/selectors';
 import { asArray } from '../../utils/asArray';
+import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import type { RootState } from '../../store/types';
 
+/** The running exhibit's first kind shortcut on `key` that does something, else null. */
+function exhibitRun(state: RootState, key: string) {
+  const source = selectTakeoverSource(state);
+  if (source?.kind !== 'exhibit') return null;
+  for (const { kind, data } of exhibitRegistry[source.id].body) {
+    for (const shortcut of kind.shortcuts ?? []) {
+      if (!shortcutKeys(shortcut.keys).includes(key)) continue;
+      const actions = shortcut.run(state, data);
+      if (actions !== null) return actions;
+    }
+  }
+  return null;
+}
+
 export function* watchKeyboardEventsSaga() {
-  const channel = yield* call(createKeyboardListener, KEYBOARD_SHORTCUTS);
+  const kindShortcuts = [
+    ...new Set(Object.values(exhibitRegistry).flatMap((e) => e.body.map((s) => s.kind))),
+  ].flatMap((kind) => kind.shortcuts ?? []);
+  const bound = [
+    ...KEYBOARD_SHORTCUTS,
+    ...kindShortcuts.filter((s) => !shortcutKeys(s.keys).some((k) => k in SHORTCUTS_BY_KEY)),
+  ];
+  const channel = yield* call(createKeyboardListener, bound);
   try {
     while (true) {
       const key = yield* take(channel);
-      const shortcut = SHORTCUTS_BY_KEY[key];
-      if (!shortcut) continue;
       const state = yield* select((s: RootState) => s);
-      for (const action of asArray(shortcut.run(state))) yield* put(action);
+      const actions = exhibitRun(state, key) ?? SHORTCUTS_BY_KEY[key]?.run(state) ?? null;
+      for (const action of asArray(actions)) yield* put(action);
     }
   } finally {
     channel.close();

@@ -15,7 +15,6 @@ import {
   toggleDebugPanelOpen,
   toggleUiHidden,
 } from '../../../src/state/ui/uiSlice';
-import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { RootState } from '../../../src/store/types';
@@ -99,16 +98,6 @@ describe('KEYBOARD_SHORTCUTS', () => {
     >;
     expect(stepDown.payload.rateIndex).toBe(0);
     expect(stepUp.payload.rateIndex).toBe(14);
-  });
-
-  it('[ and ] step the mission speed factor while a timeline exhibit runs', () => {
-    const inExhibit = stateWith({
-      time: time(3, false),
-      takeover: { active: { kind: 'exhibit', id: 'voyager-missions', entry: 'cut' } },
-      settings: { missions: { trails: true, craft: null } },
-    } as unknown as Partial<RootState>);
-    expect(byKeys('[').run(inExhibit)).toEqual(stepMissionSpeed({ step: -1 }));
-    expect(byKeys(']').run(inExhibit)).toEqual(stepMissionSpeed({ step: 1 }));
   });
 
   it('\\ returns resume when paused, pause when running', () => {

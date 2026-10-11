@@ -14,7 +14,6 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
-import { ridesWheelTarget } from './ridesWheelTarget';
 import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
@@ -52,6 +51,8 @@ export function replayInput(
     readonly rootState: RootState;
     readonly nowMs: number;
     readonly winnerLastFrame: DriverId;
+    /** That row's `ridesWheelTarget`. */
+    readonly lastWinnerRidesWheel: boolean;
     readonly autoRotateEpoch: Epoch<FramedCameraPose>;
   },
 ): {
@@ -62,7 +63,7 @@ export function replayInput(
   readonly followDistanceTarget: number | null;
   readonly actions: readonly UnknownAction[];
 } {
-  const { ctx, rootState, nowMs, winnerLastFrame } = args;
+  const { ctx, rootState, nowMs, winnerLastFrame, lastWinnerRidesWheel } = args;
   const { bodies, poseBasis, upBasis, pivot, tuning } = ctx;
   // Only camera actions are emitted mid-drain, so every other slice is the
   // snapshot's; the focus row is read once.
@@ -209,7 +210,7 @@ export function replayInput(
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
-          !step.duringGesture && ridesWheelTarget(winnerLastFrame) && followTargetBefore !== null;
+          !step.duringGesture && lastWinnerRidesWheel && followTargetBefore !== null;
         if (!ridesTheFollow && stepRegister(step)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);

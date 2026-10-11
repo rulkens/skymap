@@ -19,3 +19,8 @@ export const selectMissionCraft = createSelector(
   [selectRoute],
   (route: MissionsSettings): string | null => route.craft,
 );
+
+export const selectMissionSpeed = createSelector(
+  [selectRoute],
+  (route: MissionsSettings): number => route.speed,
+);

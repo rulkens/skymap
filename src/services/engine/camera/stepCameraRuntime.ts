@@ -25,6 +25,7 @@ import { pickWinner, elapsedForWinner, settledMemory } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
+import { ridesWheelTarget } from './ridesWheelTarget';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';
@@ -99,11 +100,11 @@ export function stepCameraRuntime(
     stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
   }
   const focus = stored.selectionRows.focus;
-  // A mission runs with no focus, so its craft stands in as the pivot: the wheel floors at the
-  // hull's standoff, not the surfaceless floor hundreds of km out.
-  const mission = stored.camera.mission;
-  const craft = mission && bodies.get(mission.craftId as BodyId);
-  const pivotRow = mission && craft ? bodyRowAt(mission.craftId, craft.positionMpc) : focus;
+  // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
+  // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
+  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody as BodyId);
+  const pivotRow = stand ? bodyRowAt(prev.pivotBody!, stand.positionMpc) : focus;
+  const lastWinnerRidesWheel = ridesWheelTarget(drivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
     fovYRad: stored.settings.camera.fovDeg * (Math.PI / 180),
@@ -146,6 +147,7 @@ export function stepCameraRuntime(
       rootState: stored,
       nowMs,
       winnerLastFrame,
+      lastWinnerRidesWheel,
       autoRotateEpoch: prev.epochs.autoRotate,
     },
   );
@@ -166,10 +168,13 @@ export function stepCameraRuntime(
   // old memory said, so the two are one fact and cannot disagree on phase. An
   // outside commit hands off too: the commit IS the framing, so no approach
   // is owed, whatever the epoch reads.
-  const activity = {
-    approachDone:
-      external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false),
-  };
+  const approachDone =
+    external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false);
+  // A lifted exhibit row reads no activity, so the provisional bag cannot change its answer.
+  const dragClaimed = drivers.some(
+    (d) => d.ridesExhibit === true && d.isActive(rootState, { approachDone, dragClaimed: false }),
+  );
+  const activity = { approachDone, dragClaimed };
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
   const winner = pickWinner(drivers, rootState, activity);
@@ -199,11 +204,7 @@ export function stepCameraRuntime(
     edge.committed === null
       ? rootState
       : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
-  const {
-    pose,
-    memory,
-    actions: driverActions,
-  } = winner.pose(
+  const { pose, memory, own, pivotBody } = winner.pose(
     {
       state: produced,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
@@ -218,6 +219,7 @@ export function stepCameraRuntime(
       // LANDED, not the pose the tween departed from (still `base` this frame).
       committedWorld: releasedWorldArm(produced.camera.base, replayCtx, tuning),
       winnerLastFrame,
+      lastWinnerRidesWheel,
       poseBasis,
       simDays,
       projection,
@@ -227,6 +229,7 @@ export function stepCameraRuntime(
     // Same status a tween or clip has: an outside commit delivers the framing
     // itself, so the follow row that resumes owes it no approach.
     external ? settledMemory(followIn) : followIn,
+    prev.own[winnerId] ?? null,
   );
 
   // The runtime keeps `upBasis`, NOT `poseBasis`: it seeds the next switch's
@@ -256,7 +259,7 @@ export function stepCameraRuntime(
     actions.push(cancelCameraTween());
   }
 
-  actions.push(...(driverActions ?? []), ...edge.actions);
+  actions.push(...edge.actions);
   const foldCtx: RungCtx = { ...rungFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
@@ -300,6 +303,8 @@ export function stepCameraRuntime(
       follow: memory,
       gesture,
       tilt: projected.tilt,
+      own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
+      pivotBody: pivotBody ?? null,
       outputs: {
         displayed: projected.displayed,
         simDays,

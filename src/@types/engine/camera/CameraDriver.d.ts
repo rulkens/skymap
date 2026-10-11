@@ -3,13 +3,12 @@
 import type { DriverActivity } from './DriverActivity';
 import type { DriverCtx } from './DriverCtx';
 import type { DriverId } from './DriverId';
+import type { DriverOutput } from './DriverOutput';
 import type { EpochRow } from './EpochRow';
 import type { FollowMemory } from './FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../../store/types';
 
-export type CameraDriver = {
+export type CameraDriver<Own = unknown> = {
   readonly id: DriverId;
   readonly priority: number;
   // This row re-asserts a moving target every frame, so a committed `base` is invisible
@@ -31,15 +30,10 @@ export type CameraDriver = {
   // pose), so it settles the follow approach's debt instead of leaving it owed
   // for the approach to undo at the row's exit.
   readonly deliversFraming?: boolean;
+  // Set only by `composeControlSchemes` on a lifted exhibit row: while one is active it owns
+  // the drag (`DriverActivity.dragClaimed`), reading the gesture itself.
+  readonly ridesExhibit?: true;
   isActive(s: RootState, activity: DriverActivity): boolean;
-  // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.
-  // `actions` is for a row that reads its own state back off the camera (the mission's offsets).
-  pose(
-    ctx: DriverCtx,
-    mem: FollowMemory | null,
-  ): {
-    readonly pose: FramedCameraPose;
-    readonly memory: FollowMemory | null;
-    readonly actions?: readonly UnknownAction[];
-  };
+  /** `own`: this row's private slot as it last returned it, null before its first. */
+  pose(ctx: DriverCtx, mem: FollowMemory | null, own: Own | null): DriverOutput<Own>;
 };

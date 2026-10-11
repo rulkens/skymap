@@ -21,7 +21,7 @@
  *   - `localBubble`    — the Local Bubble shell's gate.
  *   - `constellations` — constellation figures + their lettering.
  *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
- *   - `missions`       — sampled-craft trails' gate + the selected craft (which stays undimmed).
+ *   - `missions`       — sampled-craft trails' gate, the selected craft (which stays undimmed), the mission clock's speed.
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
  *   - `bodies`         — per-body visibility + caption toggles.
  *   - `blackHoles`     — per-hole caption toggles; a `bodyLabel` cue writes them.

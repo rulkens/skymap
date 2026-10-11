@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
-import type { CameraMission } from '../../../../src/@types/camera/CameraMission';
+import type { DriverCtx } from '../../../../src/@types/engine/camera/DriverCtx';
+import type { MissionCameraMemory } from '../../../../src/@types/camera/MissionCameraMemory';
+import type { MissionOffsets } from '../../../../src/@types/camera/MissionOffsets';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { FollowMemory } from '../../../../src/@types/engine/camera/FollowMemory';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -10,21 +12,21 @@ import type { MissionEvent } from '../../../../src/@types/missions/MissionEvent'
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { MISSION_EASE_MS } from '../../../../src/data/exhibits/mission/missionEaseMs';
 import { MISSION_FLYBY_LEAD_DAYS } from '../../../../src/data/exhibits/mission/missionFlybyLeadDays';
-import { MISSION_SPEEDS } from '../../../../src/data/exhibits/mission/missionSpeeds';
 import { buildMissionProfile } from '../../../../src/utils/exhibits/mission/buildMissionProfile';
 import { interpolateClockProfile } from '../../../../src/utils/time/interpolateClockProfile';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../src/services/engine/camera/missionPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { beginDrag, endDrag, setMission } from '../../../../src/state/camera/cameraSlice';
+import { aimCamera, beginDrag, endDrag } from '../../../../src/state/camera/cameraSlice';
+import { setMissionCraft } from '../../../../src/state/settings/core/missions/slice';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { bodyRelativeState } from '../../../../src/utils/exhibits/mission/bodyRelativeState';
 import { orbitAnglesLookingAlong } from '../../../../src/utils/camera/orbitAnglesLookingAlong';
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
-import { voyagerMissions } from '../../../../src/data/exhibits/voyagerMissions';
+import { voyagerTimeline } from '../../../helpers/missions/voyagerTimeline';
 import { missionEventMs } from '../../../../src/utils/exhibits/timeline/missionEventMs';
 import { bodyRadiusMpc } from '../../../../src/utils/camera/bodyRadiusMpc';
 import { dot3 } from '../../../../src/utils/math/dot3';
@@ -42,32 +44,60 @@ const FRAME_MS = 16;
 
 beforeAll(loadVoyagerStopWindows);
 
+const TIMELINE = voyagerTimeline();
+
+/** What the hold and the visitor leave behind: the craft, the aim's ease and the offsets. */
+type Mission = {
+  readonly craftId: string;
+  readonly offsets: MissionOffsets;
+  readonly reaim: boolean;
+};
+
 function missionOf(
-  offsets = { yaw: 0, pitch: 0, zoom: 1 },
+  offsets: MissionOffsets = { yaw: 0, pitch: 0, zoom: 1 },
   reaim = false,
   craftId = 'voyager2',
-): CameraMission {
-  return {
-    craftId,
-    stops: missionStops(MISSION_EVENTS.filter((e) => e.bodyId === craftId)),
-    cruise: { yaw: voyagerMissions.pose.yaw, pitch: voyagerMissions.pose.pitch },
-    offsets,
-    speedIndex: 2,
-    reaim,
-  };
+): Mission {
+  return { craftId, offsets, reaim };
 }
 
-function ctxAt(mission: CameraMission, simDays: number, winnerLastFrame: DriverId = 'resting') {
+const stopsOf = (craftId: string) =>
+  missionStops(MISSION_EVENTS.filter((e) => e.bodyId === craftId));
+
+/** A store with the craft selected and the aim token set, as the hold leaves it. */
+function storeOf(mission: Mission) {
   const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setMission(mission));
-  return makeDriverCtx({
+  store.dispatch(setMissionCraft(mission.craftId));
+  store.dispatch(aimCamera({ ease: mission.reaim }));
+  return store;
+}
+
+/** The row's slot holding the mission's offsets on the store's aim token, no view yet. */
+function ownOf(store: ReturnType<typeof storeOf>, mission: Mission): MissionCameraMemory {
+  return { aim: store.getState().camera.aim, offsets: mission.offsets, view: null };
+}
+
+/** A ctx carrying the row's first-frame slot along, so a spread copy keeps it. */
+type MissionCtx = DriverCtx & { readonly own: MissionCameraMemory };
+
+function ctxAt(
+  mission: Mission,
+  simDays: number,
+  winnerLastFrame: DriverId = 'resting',
+): MissionCtx {
+  const store = storeOf(mission);
+  const ctx = makeDriverCtx({
     state: store.getState(),
     simDays,
     poseBasis: BASIS,
     projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
     winnerLastFrame,
   });
+  return { ...ctx, own: ownOf(store, mission) };
 }
+
+const poseAt = (ctx: MissionCtx, mem: FollowMemory | null = null) =>
+  missionPose(ctx, mem, ctx.own, TIMELINE);
 
 function inFrustum(eye: Vec3, aim: Vec3, p: Vec3): boolean {
   const fwd = normalize3([aim[0] - eye[0], aim[1] - eye[1], aim[2] - eye[2]]);
@@ -76,7 +106,7 @@ function inFrustum(eye: Vec3, aim: Vec3, p: Vec3): boolean {
 }
 
 function worldPose(ctx: ReturnType<typeof ctxAt>) {
-  const { pose } = missionPose(ctx, null);
+  const { pose } = poseAt(ctx);
   if (pose.frame !== 'absolute') throw new Error('expected the world arm');
   return pose.pose;
 }
@@ -90,7 +120,7 @@ describe('missionPose', () => {
       [pose.target[0] - eye[0], pose.target[1] - eye[1], pose.target[2] - eye[2]],
       ecliptic,
     );
-    expect(view.pitch).toBeCloseTo(voyagerMissions.pose.pitch, 9);
+    expect(view.pitch).toBeCloseTo(TIMELINE.cruise.pitch, 9);
     // Eye beyond the craft on the planet's far side from it at closest approach.
     const { rKm } = bodyRelativeState('voyager2', 'neptune', tc)!;
     const outside = orbitAnglesLookingAlong([-rKm[0], -rKm[1], -rKm[2]], ecliptic);
@@ -113,8 +143,7 @@ describe('missionPose', () => {
     const shown = worldPose(ctxAt(missionOf(want), tc));
     const ctx = ctxAt(missionOf(), tc, 'mission');
     const dragging = { ...ctx.state, camera: { ...ctx.state.camera, dragging: true } };
-    const held = missionPose({ ...ctx, state: dragging, authoredWorld: shown }, null);
-    const payload = (held.actions?.[0] as { payload: typeof want }).payload;
+    const payload = poseAt({ ...ctx, state: dragging, authoredWorld: shown }).own!.offsets;
     expect(payload.yaw).toBeCloseTo(want.yaw, 9);
     expect(payload.pitch).toBeCloseTo(want.pitch, 9);
     expect(payload.zoom).toBeCloseTo(want.zoom, 9);
@@ -122,14 +151,25 @@ describe('missionPose', () => {
 
   it('turns a swallowed wheel notch into a zoom offset', () => {
     const ctx = ctxAt(missionOf(), tc, 'mission');
-    const dist = missionPose(ctx, null).memory!.distanceTarget!;
-    const zoomed = missionPose({ ...ctx, followDistanceTarget: dist * 0.5 }, null);
-    const payload = (zoomed.actions?.[0] as { payload: { zoom: number } }).payload;
+    const dist = poseAt(ctx).memory!.distanceTarget!;
+    const payload = poseAt({ ...ctx, followDistanceTarget: dist * 0.5 }).own!.offsets;
     expect(payload.zoom).toBeCloseTo(0.5, 9);
   });
 
-  it('emits nothing when the offsets did not change', () => {
-    expect(missionPose(ctxAt(missionOf(), tc, 'mission'), null).actions).toBeUndefined();
+  it('keeps the offsets it was handed when nothing touched them', () => {
+    const ctx = ctxAt(missionOf(), tc, 'mission');
+    expect(poseAt(ctx).own!.offsets).toBe(ctx.own.offsets);
+  });
+
+  it('drops the offsets on an entry, keeps them on an easing re-aim', () => {
+    const want = { yaw: 0.4, pitch: -0.25, zoom: 1.8 };
+    const stale = (reaim: boolean) => {
+      const ctx = ctxAt(missionOf(want, reaim), tc, 'mission');
+      // The slot is from an older token: a new entry or re-aim since.
+      return poseAt({ ...ctx, own: { ...ctx.own, aim: { ease: false } } }).own!.offsets;
+    };
+    expect(stale(false)).toEqual({ yaw: 0, pitch: 0, zoom: 1 });
+    expect(stale(true)).toEqual(want);
   });
 
   describe('zooming in at a launch', () => {
@@ -151,9 +191,9 @@ describe('missionPose', () => {
     it('stops in front of the planet and writes that zoom back, so notches do not pile up', () => {
       // Zoom 0.01 puts the eye inside Earth, on the far side of it from the craft.
       const ctx = ctxAt(missionOf(undefined, false, 'voyager1'), t, 'mission');
-      const dist1 = missionPose(ctx, null).memory!.distanceTarget!;
-      const out = missionPose({ ...ctx, followDistanceTarget: dist1 * 0.01 }, null);
-      const zoom = (out.actions?.[0] as { payload: { zoom: number } }).payload.zoom;
+      const dist1 = poseAt(ctx).memory!.distanceTarget!;
+      const out = poseAt({ ...ctx, followDistanceTarget: dist1 * 0.01 });
+      const zoom = out.own!.offsets.zoom;
       expect(zoom).toBeLessThan(0.01);
       if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
       const earth = deriveBodyStates(t).get('earth' as BodyId)!.positionMpc;
@@ -174,9 +214,9 @@ describe('missionPose', () => {
     // The step's first frame (elapsed 0) captures `from`; later frames carry that memory.
     const eased = (elapsedMs: number) => {
       const base = ctxAt(missionOf(undefined, true), tc);
-      const first = missionPose({ ...base, elapsedMs: 0, authoredWorld: from }, null);
+      const first = poseAt({ ...base, elapsedMs: 0, authoredWorld: from });
       const ctx = { ...base, elapsedMs, authoredWorld: from };
-      const { pose } = missionPose(ctx, first.memory);
+      const { pose } = missionPose(ctx, first.memory, first.own!, TIMELINE);
       if (pose.frame !== 'absolute') throw new Error('expected the world arm');
       return pose.pose;
     };
@@ -208,15 +248,15 @@ describe('missionPose', () => {
 
   /** Drives the driver frame by frame as the loop does: memory and the shown pose carried. */
   function drive(
-    mission: CameraMission,
+    mission: Mission,
     frames: number,
     daysAt: (wallMs: number) => number,
     start: CameraPose,
     each: (pose: CameraPose, simDays: number, wallMs: number) => void,
   ) {
-    const store = configureStore({ reducer: rootReducer });
-    store.dispatch(setMission(mission));
+    const store = storeOf(mission);
     let mem: FollowMemory | null = null;
+    let own = ownOf(store, mission);
     let shown = start;
     for (let f = 0; f < frames; f++) {
       const wallMs = f * FRAME_MS;
@@ -230,9 +270,10 @@ describe('missionPose', () => {
         winnerLastFrame: 'mission',
         authoredWorld: shown,
       });
-      const out = missionPose(ctx, mem);
+      const out = missionPose(ctx, mem, own, TIMELINE);
       if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
       mem = out.memory;
+      own = out.own!;
       shown = out.pose.pose;
       each(shown, simDays, wallMs);
     }
@@ -260,16 +301,8 @@ describe('missionPose', () => {
   });
 
   it('keeps the craft in view, smoothly, through the post-flyby hand-off at 4×', () => {
-    const stops = missionOf().stops;
     const from = tc + MISSION_FLYBY_LEAD_DAYS - 0.02;
-    const profile = buildMissionProfile(
-      stops,
-      'voyager2',
-      from,
-      tc + 4000,
-      MISSION_SPEEDS.indexOf(4),
-      0,
-    );
+    const profile = buildMissionProfile(stopsOf('voyager2'), 'voyager2', from, tc + 4000, 4, 0);
     const stopsSeen = new Set<unknown>();
     let out = 0;
     let jump = 0;
@@ -301,19 +334,12 @@ describe('missionPose', () => {
   });
 
   it('a drag turns the view about the moving craft at 1×, zoomed in, and releases in place', () => {
-    const stops = missionOf().stops;
-    const profile = buildMissionProfile(
-      stops,
-      'voyager2',
-      tc - 0.3,
-      tc + 5,
-      MISSION_SPEEDS.indexOf(1),
-      0,
-    );
+    const profile = buildMissionProfile(stopsOf('voyager2'), 'voyager2', tc - 0.3, tc + 5, 1, 0);
     let w0 = 0;
     while (interpolateClockProfile(profile, w0) < tc) w0 += FRAME_MS;
-    const store = configureStore({ reducer: rootReducer });
-    store.dispatch(setMission(missionOf({ yaw: 0, pitch: 0, zoom: 0.05 })));
+    const zoomedIn = missionOf({ yaw: 0, pitch: 0, zoom: 0.05 });
+    const store = storeOf(zoomedIn);
+    let own = ownOf(store, zoomedIn);
     let mem: FollowMemory | null = null;
     let shown: CameraPose | null = null;
     let out = 0;
@@ -332,8 +358,10 @@ describe('missionPose', () => {
           ...(register && { register: absoluteArm(register), authoredWorld: register }),
         }),
         mem,
+        own,
+        TIMELINE,
       );
-      for (const a of r.actions ?? []) store.dispatch(a);
+      own = r.own!;
       if (r.pose.frame !== 'absolute') throw new Error('expected the world arm');
       mem = r.memory;
       shown = r.pose.pose;
@@ -345,7 +373,7 @@ describe('missionPose', () => {
     let f = 1;
     for (; f < 125; f++) frame(f);
     expect(out).toBe(0);
-    expect(Math.abs(store.getState().camera.mission!.offsets.yaw)).toBeGreaterThan(0.2);
+    expect(Math.abs(own.offsets.yaw)).toBeGreaterThan(0.2);
     const held = shown!;
     store.dispatch(endDrag());
     const released = frame(f);
@@ -358,9 +386,9 @@ describe('missionPose', () => {
 
   describe('visitor offsets', () => {
     const want = { yaw: 0.4, pitch: -0.25, zoom: 1.8 };
-    const run = (mission: CameraMission, steps: { ms: number; days?: number }[]) => {
-      const store = configureStore({ reducer: rootReducer });
-      store.dispatch(setMission(mission));
+    const run = (mission: Mission, steps: { ms: number; days?: number }[]) => {
+      const store = storeOf(mission);
+      let own = ownOf(store, mission);
       let mem: FollowMemory | null = null;
       let shown: CameraPose | undefined;
       const poses: CameraPose[] = [];
@@ -374,14 +402,14 @@ describe('missionPose', () => {
           winnerLastFrame: 'mission',
           ...(shown && { authoredWorld: shown }),
         });
-        const out = missionPose(ctx, mem);
+        const out = missionPose(ctx, mem, own, TIMELINE);
         if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
         mem = out.memory;
+        own = out.own!;
         shown = out.pose.pose;
         poses.push(shown);
-        for (const a of out.actions ?? []) store.dispatch(a);
       }
-      return { poses, offsets: store.getState().camera.mission!.offsets };
+      return { poses, offsets: own.offsets };
     };
 
     it('hold through any idle within one view', () => {

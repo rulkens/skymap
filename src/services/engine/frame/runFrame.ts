@@ -340,15 +340,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
-  const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    surfaceTilesAnimating,
-    labelsAnimating,
-    probeDue: state.cubemapCaptures.probe.due,
-    // Read AFTER `renderFrame`: every planner row — core's and every Layer's
-    // — ran inside it, so this is this frame's whole OR-fold, not a stale
-    // pre-render snapshot.
-    layersAwake: snapshot.plans.awake,
-  });
+  const keepTicking = shouldKeepTicking(
+    state,
+    rootState,
+    nowMs,
+    {
+      surfaceTilesAnimating,
+      labelsAnimating,
+      probeDue: state.cubemapCaptures.probe.due,
+      // Read AFTER `renderFrame`: every planner row — core's and every Layer's
+      // — ran inside it, so this is this frame's whole OR-fold, not a stale
+      // pre-render snapshot.
+      layersAwake: snapshot.plans.awake,
+    },
+    deps.controlSchemes.skymap.drivers,
+  );
 
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();

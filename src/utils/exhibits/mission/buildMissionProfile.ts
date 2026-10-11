@@ -12,7 +12,6 @@ import type { ClockProfile } from '../../../@types/time/ClockProfile';
 import { FRAME_CROSSINGS_PER_S } from '../../../data/exhibits/mission/frameCrossingsPerS';
 import { MISSION_LEG_WALL_MS } from '../../../data/exhibits/mission/missionLegWallMs';
 import { MISSION_RAMP_MS } from '../../../data/exhibits/mission/missionRampMs';
-import { MISSION_SPEEDS } from '../../../data/exhibits/mission/missionSpeeds';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { unixMsToJulianDays } from '../../time/unixMsToJulianDays';
 import { bodyPositionMpcAt } from './bodyPositionMpcAt';
@@ -39,11 +38,11 @@ export function buildMissionProfile(
   craftId: string,
   fromDays: number,
   endDays: number,
-  speedIndex: number,
+  /** A `MISSION_SPEEDS` factor. */
+  factor: number,
   startWallMs: number,
 ): ClockProfile {
   const bounds = [...stops.map((s) => unixMsToJulianDays(s.ms)), endDays];
-  const factor = MISSION_SPEEDS[speedIndex]!;
   let t = Math.max(fromDays, bounds[0]!);
   let wall = 0;
   const wallMs = [wall];
