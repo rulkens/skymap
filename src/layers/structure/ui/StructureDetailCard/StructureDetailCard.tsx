@@ -10,9 +10,12 @@ import type { StructureInfo } from '../../../../@types/data/structure/StructureI
 import { formatDistance } from '../../../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../../../utils/format/formatAbellDesignation';
 import { CATEGORY_DISPLAY_INFO } from '../../../../data/structure/categoryDisplayInfo';
+import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
+import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../../../data/palette/cardShotIdByFocusId';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import { InfoTip } from '../../../../components/InfoTip/InfoTip';
@@ -44,6 +47,19 @@ function StructureDetailCard({
   onClose,
 }: StructureDetailCardProps): ReactNode {
   const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
+  const shot = CARD_SHOT_ID_BY_FOCUS_ID.get(target.id);
+  // With a shot the lead rows sit beside it as summary lines (as the body card
+  // does); without one they stay ordinary CardRows.
+  const leadRows = [
+    {
+      label: <InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>,
+      value: formatDistance(distanceMpc),
+    },
+    {
+      label: <InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>,
+      value: formatDistance(target.physicalRadiusMpc),
+    },
+  ];
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
@@ -59,15 +75,21 @@ function StructureDetailCard({
         {target.name}
       </CardRow>
 
+      {shot !== undefined && (
+        <div className={cx(styles.cardSection, styles.cardTopRow)}>
+          <Thumbnail url={cardShotUrl(shot)} alt={`${target.name} thumbnail`} />
+          <div className={styles.cardSummary}>
+            {leadRows.map((row, i) => (
+              <div key={i} className={styles.cardDistLine}>
+                <span>{row.label}</span> {row.value}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.cardSection}>
-        <CardRow
-          label={<InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>}
-          value={formatDistance(distanceMpc)}
-        />
-        <CardRow
-          label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
-          value={formatDistance(target.physicalRadiusMpc)}
-        />
+        {shot === undefined && leadRows.map((row, i) => <CardRow key={i} {...row} />)}
         {target.category === 'nebula' && (
           <CardRow label="Type" value={NEBULA_KIND_LABELS[target.nebulaKind]} />
         )}

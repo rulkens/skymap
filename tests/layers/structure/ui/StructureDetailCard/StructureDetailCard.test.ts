@@ -62,6 +62,20 @@ describe('StructureDetailCard', () => {
     expect(container.textContent).not.toMatch(/Wikipedia/);
   });
 
+  it('shows the captured card shot for a structure with a featured card', () => {
+    const { container } = render(
+      createElement(StructureDetailCard, {
+        target: { ...virgoNoAbell, id: 'galaxy-cluster-virgo-m87' },
+      }),
+    );
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(
+      /\/images\/featured\/cluster-virgo-m87\.webp$/,
+    );
+    cleanup();
+    const bare = render(createElement(StructureDetailCard, { target: virgoNoAbell }));
+    expect(bare.container.querySelector('img')).toBeNull();
+  });
+
   it('shows the Galaxies row when a member count is supplied', () => {
     render(createElement(StructureDetailCard, { target: virgoNoAbell, memberCount: 42 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
