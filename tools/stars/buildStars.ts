@@ -234,8 +234,6 @@ export function buildStarCatalog(inputs: BuildStarInputs): BuildStarResult {
       position: raDecDistToCartesian(row.raDeg, row.decDeg, distPc),
       absMag: absoluteMagnitude(row.gMag, distPc),
       bpRp: row.bpRp,
-      appMag: row.gMag,
-      isSupplement: false,
     });
   }
 
@@ -264,8 +262,6 @@ export function buildStarCatalog(inputs: BuildStarInputs): BuildStarResult {
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.gMag, row.distPc),
       bpRp: row.bpRp,
-      appMag: row.gMag,
-      isSupplement: true,
     });
   }
 
@@ -278,8 +274,6 @@ export function buildStarCatalog(inputs: BuildStarInputs): BuildStarResult {
       position: raDecDistToCartesian(row.raDeg, row.decDeg, row.distPc),
       absMag: absoluteMagnitude(row.hpMag, row.distPc),
       bpRp: bvToBpRp(row.bv),
-      appMag: row.hpMag,
-      isSupplement: false,
     });
   }
 

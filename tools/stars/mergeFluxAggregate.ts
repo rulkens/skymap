@@ -27,9 +27,8 @@
  * never clamp. The record then carries `meanMag = -2.5·log10(Σf / N)`, and the
  * renderer reconstructs the physically-correct summed flux on the GPU by
  * multiplying the record's per-star flux back up by the subtree star count `N`
- * (which the runtime derives from the node table — see the vertex shader and
- * `starOctreeIndex`'s `subtreeCounts`). Summing on read rather than on write keeps the
- * additive-flux photometry exact while keeping every stored magnitude inside
+ * (the node row's `blobCount` — see the vertex shader). Summing on read rather
+ * than on write keeps the additive-flux photometry exact while keeping every stored magnitude inside
  * the single-star window.
  *
  * So this merge carries `(totalFlux, starCount)` up the tree as a running f64
