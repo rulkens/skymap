@@ -105,22 +105,23 @@ describe('advanceEpochs', () => {
     expect(result.tween).toEqual({ ref: tween, startMs: 1000 });
   });
 
-  it('the mission epoch restarts when a re-aim bumps the mission, and only under the mission driver', () => {
-    const mission = { retarget: 3 } as NonNullable<CameraState['mission']>;
+  it('the mission epoch restarts when a new mission record replaces the stops, and only under the mission driver', () => {
+    const stops = [] as unknown as NonNullable<CameraState['mission']>['stops'];
+    const mission = { stops } as NonNullable<CameraState['mission']>;
     const intent = makeCameraState({ mission });
     const args = { intent, focus: null, clip: UNSTARTED_EPOCHS.clip, nowMs: 1000 };
     expect(advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: undefined }).mission).toBe(
       UNSTARTED_EPOCHS.mission,
     );
     const started = advanceEpochs(UNSTARTED_EPOCHS, { ...args, winnerEpoch: 'mission' as const });
-    expect(started.mission).toEqual({ ref: 3, startMs: 1000 });
+    expect(started.mission).toEqual({ ref: stops, startMs: 1000 });
     const bumped = advanceEpochs(started, {
       ...args,
-      intent: makeCameraState({ mission: { ...mission, retarget: 4 } }),
+      intent: makeCameraState({ mission: { ...mission, stops: [...stops] } }),
       winnerEpoch: 'mission' as const,
       nowMs: 1500,
     });
-    expect(bumped.mission).toEqual({ ref: 4, startMs: 1500 });
+    expect(bumped.mission.startMs).toBe(1500);
   });
 
   it('the frameTween epoch advances on a frame no driver owns it', () => {

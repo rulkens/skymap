@@ -94,7 +94,7 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     <ExhibitTimeline
       section={section}
       lanes={lanes}
-      selectedId={emphasis ?? lanes[0]!.bodyId}
+      selectedId={emphasis!}
       simDays={simDays}
       endMs={endMs}
       onSeek={onSeek}

@@ -280,13 +280,18 @@ describe('mission hold loop', () => {
 
   it('a step and a tab switch re-aim the camera with an ease', async () => {
     const { store, step } = await hold();
-    const before = store.getState().camera.mission!.retarget;
+    const entry = store.getState().camera.mission!;
+    expect(entry.reaim).toBe(false);
     step('voyager1-pale-blue-dot');
     await tick();
-    const afterStep = store.getState().camera.mission!.retarget;
-    expect(afterStep).toBeGreaterThan(before);
+    const afterStep = store.getState().camera.mission!;
+    expect(afterStep.reaim).toBe(true);
+    expect(afterStep.stops).not.toBe(entry.stops);
     store.dispatch(setMissionEmphasis('voyager2'));
     await tick();
-    expect(store.getState().camera.mission!.retarget).toBeGreaterThan(afterStep);
+    const afterTab = store.getState().camera.mission!;
+    expect(afterTab.reaim).toBe(true);
+    expect(afterTab.craftId).toBe('voyager2');
+    expect(afterTab.stops).not.toBe(afterStep.stops);
   });
 });

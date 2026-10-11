@@ -77,7 +77,7 @@ export function advanceEpochs(
   );
   const mission = advanceEpoch(
     prev.mission,
-    winnerEpoch === 'mission' ? (intent.mission?.retarget ?? null) : prev.mission.ref,
+    winnerEpoch === 'mission' ? (intent.mission?.stops ?? null) : prev.mission.ref,
     nowMs,
   );
   const frameTween = advanceEpoch(prev.frameTween, intent.frameTween, nowMs);

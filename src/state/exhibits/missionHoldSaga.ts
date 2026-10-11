@@ -52,19 +52,22 @@ export function* missionHoldSaga(
   atLinkedTime: boolean,
 ): Generator {
   let speedIndex = MISSION_SPEEDS.indexOf(1);
-  let retarget = 0;
-  const missionOf = (craftId: string | null, offsets = NO_MISSION_OFFSETS): CameraMission => {
-    const id = craftId ?? timeline.crafts[0]!;
+  const missionOf = (
+    craftId: string,
+    offsets = NO_MISSION_OFFSETS,
+    reaim = false,
+  ): CameraMission => {
     return {
-      craftId: id,
-      stops: missionStops(timeline.events.filter((e) => e.bodyId === id)),
+      craftId,
+      stops: missionStops(timeline.events.filter((e) => e.bodyId === craftId)),
       cruise: { yaw: exhibit.pose.yaw, pitch: exhibit.pose.pitch },
       offsets,
       speedIndex,
-      retarget,
+      reaim,
     };
   };
-  let mission = missionOf(yield* select(selectMissionEmphasis));
+  // The exhibit's snapshot always sets the emphasis before this saga runs.
+  let mission = missionOf((yield* select(selectMissionEmphasis))!);
   const nowMs = performance.now();
   // A linked `t=` is already on the clock; it wins over the launch, kept inside the mission.
   const entryDays = atLinkedTime
@@ -118,17 +121,14 @@ export function* missionHoldSaga(
         const days = deriveSimDays(yield* select(selectTimeState), at);
         // At one craft's launch, the other's launch: each tab then opens on Earth.
         const atLaunch = Math.abs(days - launchDays(mission)) < LAUNCH_TOLERANCE_DAYS;
-        mission = missionOf(next.tab.payload, offsets);
+        mission = missionOf(next.tab.payload!, offsets, true);
         if (atLaunch || days < launchDays(mission)) {
           yield* put(setSimDays({ simDays: launchDays(mission), nowMs: at }));
         }
       }
       // A re-aim while the fly-in still owns the camera eases from where it ends up.
-      if (next.step || next.tab || flying) {
-        retarget += 1;
-        mission = missionOf(mission.craftId, offsets);
-        yield* put(setMission(mission));
-      }
+      if (!next.tab && (next.step || flying)) mission = missionOf(mission.craftId, offsets, true);
+      if (next.step || next.tab || flying) yield* put(setMission(mission));
       const event = next.step
         ? timeline.events.find((e) => e.id === next.step!.payload.eventId)
         : undefined;

@@ -11,7 +11,6 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { SAMPLED_BODIES } from '../../../../data/missions/spacecraftBodies';
 import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
-import { buildMissionTrails } from '../../../bodies/buildMissionTrails';
 import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
 import { trailVertexCount } from '../../../../utils/orbit/trailVertexCount';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
@@ -45,7 +44,6 @@ export const missionTrailsPass: ContentPass = {
     const tracks = renderer.ensureTracks(
       trajectoryRegistry.version(),
       states.get('sun')!.positionMpc,
-      buildMissionTrails,
     );
 
     renderer.beginFrame(pass, {

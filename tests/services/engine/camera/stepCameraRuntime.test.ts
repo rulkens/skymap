@@ -411,7 +411,7 @@ describe('the wheel under a mission', () => {
         cruise: { yaw: 0, pitch: 0.26 },
         offsets: { yaw: 0, pitch: 0, zoom: 1 },
         speedIndex: 2,
-        retarget: 0,
+        reaim: false,
       }),
     );
     h.frame(4);

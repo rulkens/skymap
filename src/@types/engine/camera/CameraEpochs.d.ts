@@ -8,6 +8,7 @@ import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
 import type { FrameTween } from '../../camera/FrameTween';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { SelectionRow } from '../SelectionRow';
+import type { CameraMission } from '../../camera/CameraMission';
 import type { CameraState } from '../../camera/CameraState';
 
 export type CameraEpochs = {
@@ -16,6 +17,6 @@ export type CameraEpochs = {
   readonly autoRotate: Epoch<FramedCameraPose>;
   readonly follow: Epoch<SelectionRow>;
   readonly clip: Epoch<NonNullable<CameraState['clip']>>;
-  /** Ref: the mission's `retarget` count, so a step or craft switch restarts the ease. */
-  readonly mission: Epoch<number>;
+  /** Ref: the mission's `stops`, which every new mission record replaces. */
+  readonly mission: Epoch<CameraMission['stops']>;
 };

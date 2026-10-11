@@ -95,7 +95,7 @@ export function missionPose(
   let easeAtMs = prev?.easeAtMs ?? now;
   let shortfall = prev?.shortfall ?? 1;
   const easing = from !== null && now - easeAtMs < MISSION_EASE_MS;
-  if (prev === null ? mission.retarget > 0 : viewChanged) {
+  if (prev === null ? mission.reaim : viewChanged) {
     from = ctx.authoredWorld;
     easeAtMs = now;
     shortfall = Math.min(1, from.distance / fitAbout(from.target));

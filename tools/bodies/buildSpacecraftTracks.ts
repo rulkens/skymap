@@ -108,21 +108,6 @@ function flybyEvents(craft: SampledTrack, target: string): MissionEvent[] {
   });
 }
 
-/** Steps where consecutive samples disagree with trapezoid velocity integration by > 1,000 km. */
-function reportJumps(track: SampledTrack): void {
-  for (let i = 1; i < track.tDays.length; i++) {
-    const dtS = (track.tDays[i]! - track.tDays[i - 1]!) * 86_400;
-    let sum = 0;
-    for (let a = 0; a < 3; a++) {
-      const step = track.posKm[3 * i + a]! - track.posKm[3 * (i - 1) + a]!;
-      const integrated = 0.5 * (track.velKmS[3 * i + a]! + track.velKmS[3 * (i - 1) + a]!) * dtS;
-      sum += (step - integrated) ** 2;
-    }
-    if (Math.sqrt(sum) > 1000)
-      console.log(`  jump ${jdToIso(track.tDays[i]!)}: ${Math.sqrt(sum).toFixed(0)} km`);
-  }
-}
-
 async function main(): Promise<void> {
   const tracks: SampledTrack[] = [];
   const events: MissionEvent[] = [];
@@ -138,7 +123,6 @@ async function main(): Promise<void> {
       );
       console.log(`${row.id} ${e.date}: blend moved the track by up to ${maxKm.toFixed(0)} km`);
     }
-    reportJumps(dense);
     const kept = decimateHermiteSamples(dense.tDays, dense.posKm, dense.velKmS, TOLERANCE_KM);
     const worst = worstErrorKm(dense, kept);
     console.log(

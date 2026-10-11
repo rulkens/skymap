@@ -51,14 +51,6 @@ describe('stepTimelineEvent', () => {
     expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(V1[k + 1]!));
   });
 
-  it('with no emphasis follows the first craft, as the timeline UI does', () => {
-    // Voyager 2's Saturn flyby (1981-08) is the next event overall; Voyager 1's is later.
-    const state = stateAt('1981-01-01', 'voyager-missions', null);
-    const next = V1.find((e) => missionEventMs(e) > Date.parse('1981-01-01'))!;
-    expect(next.bodyId).toBe('voyager1');
-    expect(stepTimelineEvent(state, 1)).toEqual(stepsTo(next));
-  });
-
   it('does nothing at the ends, or outside a timeline exhibit', () => {
     expect(stepTimelineEvent(stateAt(V1[0]!.iso, 'voyager-missions'), -1)).toBeNull();
     expect(stepTimelineEvent(stateAt(V1.at(-1)!.iso, 'voyager-missions'), 1)).toBeNull();

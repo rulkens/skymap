@@ -356,7 +356,7 @@ describe('CAMERA_DRIVERS — mission', () => {
         cruise: { yaw: 0, pitch: 0 },
         offsets: { yaw: 0, pitch: 0, zoom: 1 },
         speedIndex: 0,
-        retarget: 0,
+        reaim: false,
       }),
     );
     store.dispatch(beginDrag());

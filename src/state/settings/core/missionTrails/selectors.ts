@@ -9,9 +9,6 @@ export const selectRoute = createSelector(
   (settings): MissionTrailsSettings => settings.missionTrails,
 );
 
-/** The whole cluster, under the slice's own name. */
-export const selectMissionTrails = selectRoute;
-
 export const selectMissionTrailsEnabled = createSelector(
   [selectRoute],
   (route: MissionTrailsSettings): boolean => route.enabled,

@@ -11,12 +11,8 @@ import type { MissionTrailFrame } from './MissionTrailFrame';
 import type { MissionTrailGeometry } from './MissionTrailGeometry';
 
 export type MissionTrailRenderer = Renderer & {
-  /** The uploaded tracks, rebuilt via `build(sunMpc)` only when `version` differs. */
-  ensureTracks(
-    version: number,
-    sunMpc: Readonly<Vec3>,
-    build: (sunMpc: Readonly<Vec3>) => readonly MissionTrailGeometry[],
-  ): ReadonlyMap<string, MissionTrailGeometry>;
+  /** The uploaded tracks, rebuilt about `sunMpc` only when `version` differs. */
+  ensureTracks(version: number, sunMpc: Readonly<Vec3>): ReadonlyMap<string, MissionTrailGeometry>;
   beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void;
   /**
    * Draw the first `segmentCount` segments of `id`'s trail, then a head segment

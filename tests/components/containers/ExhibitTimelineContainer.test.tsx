@@ -31,7 +31,7 @@ const missionAt = (speedIndex: number): CameraMission => ({
   cruise: { yaw: 0, pitch: 0 },
   offsets: { yaw: 0, pitch: 0, zoom: 1 },
   speedIndex,
-  retarget: 0,
+  reaim: false,
 });
 
 const section = voyagerMissions.body.find(

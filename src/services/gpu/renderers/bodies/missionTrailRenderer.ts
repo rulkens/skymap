@@ -17,6 +17,7 @@ import vsCode from '../../shaders/bodies/missionTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/missionTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { buildMissionTrails } from '../../../bodies/buildMissionTrails';
 import { MISSION_TRAIL_WIDTH_PX } from '../../../../data/missions/missionTrailStyle';
 import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
 import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';
@@ -131,14 +132,13 @@ export function createMissionTrailRenderer(
   function ensureTracks(
     version: number,
     sunMpc: Readonly<Vec3>,
-    build: (sunMpc: Readonly<Vec3>) => readonly MissionTrailGeometry[],
   ): ReadonlyMap<string, MissionTrailGeometry> {
     if (version === uploadedVersion) return tracks;
     uploadedVersion = version;
     vertexBuffer?.destroy();
     vertexBuffer = null;
     firstVertex.clear();
-    const built = build(sunMpc);
+    const built = buildMissionTrails(sunMpc);
     tracks = new Map(built.map((t) => [t.id, t]));
     const total = built.reduce((sum, t) => sum + t.posMpc.length / 3, 0);
     if (total === 0) return tracks;

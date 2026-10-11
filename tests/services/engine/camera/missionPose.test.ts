@@ -44,7 +44,7 @@ beforeAll(loadVoyagerStopWindows);
 
 function missionOf(
   offsets = { yaw: 0, pitch: 0, zoom: 1 },
-  retarget = 0,
+  reaim = false,
   craftId = 'voyager2',
 ): CameraMission {
   return {
@@ -53,7 +53,7 @@ function missionOf(
     cruise: { yaw: voyagerMissions.pose.yaw, pitch: voyagerMissions.pose.pitch },
     offsets,
     speedIndex: 2,
-    retarget,
+    reaim,
   };
 }
 
@@ -135,7 +135,7 @@ describe('missionPose', () => {
   describe('zooming in at a launch', () => {
     const launch = MISSION_EVENTS.find((e) => e.id === 'voyager1-launch') as MissionEvent;
     const t = unixMsToJulianDays(missionEventMs(launch)) + 1 / 24;
-    const zoomed = missionOf({ yaw: 0, pitch: 0, zoom: 0.01 }, 0, 'voyager1');
+    const zoomed = missionOf({ yaw: 0, pitch: 0, zoom: 0.01 }, false, 'voyager1');
     const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
     it('keeps the eye outside the planet and slides the aim to the craft', () => {
@@ -143,14 +143,14 @@ describe('missionPose', () => {
       const earth = states.get('earth' as BodyId)!.positionMpc;
       const craft = states.get('voyager1' as BodyId)!.positionMpc;
       const pose = worldPose(ctxAt(zoomed, t));
-      const exact = worldPose(ctxAt(missionOf(undefined, 0, 'voyager1'), t));
+      const exact = worldPose(ctxAt(missionOf(undefined, false, 'voyager1'), t));
       expect(dist(eyeMpcOf(pose, BASIS), earth)).toBeGreaterThanOrEqual(bodyRadiusMpc('earth'));
       expect(dist(pose.target, craft)).toBeLessThan(dist(exact.target, craft));
     });
 
     it('stops in front of the planet and writes that zoom back, so notches do not pile up', () => {
       // Zoom 0.01 puts the eye inside Earth, on the far side of it from the craft.
-      const ctx = ctxAt(missionOf(undefined, 0, 'voyager1'), t, 'mission');
+      const ctx = ctxAt(missionOf(undefined, false, 'voyager1'), t, 'mission');
       const dist1 = missionPose(ctx, null).memory!.distanceTarget!;
       const out = missionPose({ ...ctx, followDistanceTarget: dist1 * 0.01 }, null);
       const zoom = (out.actions?.[0] as { payload: { zoom: number } }).payload.zoom;
@@ -159,7 +159,7 @@ describe('missionPose', () => {
       const earth = deriveBodyStates(t).get('earth' as BodyId)!.positionMpc;
       const eye = eyeMpcOf(out.pose.pose, BASIS);
       expect(dist(eye, earth) / bodyRadiusMpc('earth')).toBeCloseTo(1.02, 6);
-      const again = worldPose(ctxAt(missionOf({ yaw: 0, pitch: 0, zoom }, 0, 'voyager1'), t));
+      const again = worldPose(ctxAt(missionOf({ yaw: 0, pitch: 0, zoom }, false, 'voyager1'), t));
       expect(again.distance / out.pose.pose.distance).toBeCloseTo(1, 9);
     });
   });
@@ -173,7 +173,7 @@ describe('missionPose', () => {
     };
     // The step's first frame (elapsed 0) captures `from`; later frames carry that memory.
     const eased = (elapsedMs: number) => {
-      const base = ctxAt(missionOf(undefined, 1), tc);
+      const base = ctxAt(missionOf(undefined, true), tc);
       const first = missionPose({ ...base, elapsedMs: 0, authoredWorld: from }, null);
       const ctx = { ...base, elapsedMs, authoredWorld: from };
       const { pose } = missionPose(ctx, first.memory);
@@ -247,7 +247,7 @@ describe('missionPose', () => {
     const start = worldPose(ctxAt(missionOf(), tc - 30));
     let out = 0;
     drive(
-      missionOf(undefined, 1),
+      missionOf(undefined, true),
       MISSION_EASE_MS / FRAME_MS + 2,
       () => tc - 2,
       start,
