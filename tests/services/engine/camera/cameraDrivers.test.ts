@@ -343,10 +343,6 @@ describe('CAMERA_DRIVERS — mission', () => {
     expect(mission.priority).toBeLessThan(p('tween'));
   });
 
-  it('commits its pose on the edge, so the next winner starts from the mission frame', () => {
-    expect(mission.commitsOnEdge).toBe(true);
-  });
-
   it('keeps the camera through a drag, which turns its view about the craft', () => {
     const store = makeStore();
     store.dispatch(

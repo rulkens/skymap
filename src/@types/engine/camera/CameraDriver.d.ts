@@ -19,9 +19,10 @@ export type CameraDriver = {
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the
   // approach's ease and the hold's saturation share one epoch.
   readonly epoch?: EpochRow;
-  // Bake this row's final register into `camera.base` as it DEACTIVATES, so the
-  // loop freezes the saturated pose instead of snapping back to the old base.
-  readonly commitsOnEdge?: boolean;
+  // Bake this row's final pose into `camera.base` as it DEACTIVATES, so the loop
+  // freezes the saturated pose instead of snapping back to the old base: the
+  // authored register, or the displayed pose when that is what a successor eases from.
+  readonly commitsOnEdge?: 'register' | 'displayed';
   // This row authors ORBIT terms, so `applyFocusedBodyPivot` re-centres its `target`
   // on the focused body; clip / tween keyframe a target of their own and leave it unset.
   readonly pivotsOnFocusedBody?: boolean;

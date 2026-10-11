@@ -194,13 +194,18 @@ export function stepCameraRuntime(
     drivers,
   });
 
+  // The produce reads the edge's commit, so a row that re-reads `base` starts from it.
+  const produced =
+    edge.committed === null
+      ? rootState
+      : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
   const {
     pose,
     memory,
     actions: driverActions,
   } = winner.pose(
     {
-      state: rootState,
+      state: produced,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
       register: drained.register,
       // Both by reference in the world arm, so the follow rows' world numbers
@@ -211,7 +216,7 @@ export function stepCameraRuntime(
       authoredWorld: releasedWorldArm(drained.register, replayCtx, tuning),
       // Post-edge: a follow row taking over from a tween adopts where the tween
       // LANDED, not the pose the tween departed from (still `base` this frame).
-      committedWorld: releasedWorldArm(edge.committed ?? rootState.camera.base, replayCtx, tuning),
+      committedWorld: releasedWorldArm(produced.camera.base, replayCtx, tuning),
       winnerLastFrame,
       poseBasis,
       simDays,

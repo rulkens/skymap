@@ -231,7 +231,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     isActive: (s) => s.camera.clip !== null,
     // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
     // tangents encode through — a fixed reference keeps `evaluateClip`'s
@@ -281,7 +281,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     epoch: 'follow',
     // Bakes the last follow pose into `base` on focus loss, so lower drivers
     // resume from where the camera is.
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
     // NOT arm-gated: the approach's job — ease from where the eye is to the
@@ -299,7 +299,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // pivot pin gives those drivers anyway.
     priority: 10,
     epoch: 'follow',
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     pivotsOnFocusedBody: true,
     // Arm-gated where the approach is not (spec §7): the ARM is the hold — a
     // state that co-rotates with the body keeps it centred structurally, and a
@@ -315,7 +315,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     deliversFraming: true,
     // Bakes the final pose on deactivation; it is already in the CURRENT
     // frame, so the commit never bakes a stale pinned-frame reading.
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     isActive: (s) => s.camera.tween !== null,
     // `tween.frame` (pinned at dispatch) is the STEADY basis `from`/`to` were
     // captured through; `tweenToClip` memoises by reference so
@@ -350,8 +350,9 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // tween (60) so a visitor's own focus move still wins while `camera.mission` is set.
     priority: 58,
     epoch: 'mission',
-    // Bakes the mission pose, so the next winner does not render the stale pre-exhibit `base`.
-    commitsOnEdge: true,
+    // Bakes the pose on screen, so the next winner eases from it, not the stale pre-exhibit
+    // `base`; its own epoch makes the follow rows a new author.
+    commitsOnEdge: 'displayed',
     isActive: (s) => s.camera.mission !== null,
     pose: missionPose,
   },
@@ -360,7 +361,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     followsMovingTarget: false,
     priority: 20,
     epoch: 'autoRotate',
-    commitsOnEdge: true,
+    commitsOnEdge: 'register',
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
     // thing a body-fixed arm expresses.
