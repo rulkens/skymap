@@ -21,16 +21,10 @@
   gap: var(--space-3);
 }
 
-/*
- * Mobile — pin the bar to the full width minus corner offsets so the
- * search pill can flex-grow into the available space while the
- * auto-rotate pill stays at its intrinsic 40 px.  Risk to watch on
- * narrow viewports (see spec): if a pinned InfoCard underlaps the
- * right edge, the toggle's z-index may need a one-notch bump.
- */
+/* Phone: the remaining pills form a cluster against the right corner. */
 @media (max-width: 768px) {
   .root {
-    left: var(--corner-offset);
+    left: auto;
     right: var(--corner-offset);
     transform: none;
   }

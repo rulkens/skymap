@@ -29,8 +29,7 @@
  *
  * Same frosted-glass surface vocabulary as InfoCard / SettingsPanel:
  * `--surface-card-soft`, `--border-card`, `--blur-card`, the cosmic
- * blue accent.  ~280 px wide on desktop; on mobile it flex-grows
- * inside the parent `.root` wrapper (TopBarContainer.module.css).  Positioning
+ * blue accent.  ~280 px wide; desktop only (the phone dock carries search).  Positioning
  * is owned by that wrapper — the trigger itself no longer carries
  * `position: fixed`.  Hidden behind the palette when it's open so
  * the trigger doesn't peek out behind the modal — `hidden` prop

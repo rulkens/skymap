@@ -103,8 +103,7 @@
 
 /*
  * Shortcut chip — `⌘K`, small uppercase rounded badge using the same
- * surface as the alias-source chip in the palette.  Hidden on narrow
- * viewports if the trigger ever gets crowded; full-pill stays.
+ * surface as the alias-source chip in the palette.
  */
 .shortcut {
   flex-shrink: 0;
@@ -114,28 +113,4 @@
   color: var(--color-fg-dim);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wide);
-}
-
-/*
- * Mobile — the InfoCard occupies the top-right corner already; on
- * narrow viewports the trigger pill needs to stay below the corner
- * offset so it doesn't underlap the InfoCard when one is pinned.
- * The mobile breakpoint matches `initialTierFromViewport` for
- * consistency.
- */
-@media (max-width: 768px) {
-  .trigger {
-    /*
-     * Let the wrapper's flex layout drive the width: grow into
-     * available space, shrink without overflowing.  `min-width: 0`
-     * is the canonical "this flex child may shrink below its
-     * content-intrinsic size" escape hatch — without it the
-     * placeholder text's `text-overflow: ellipsis` doesn't kick in
-     * because the child refuses to shrink past its content.
-     */
-    flex: 1;
-    min-width: 0;
-    width: auto;
-    max-width: 280px;
-  }
 }

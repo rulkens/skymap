@@ -123,6 +123,13 @@
   border-bottom: 1px solid var(--border-default);
 }
 
+/* iOS Safari zooms the page on focusing an input under 16px. */
+@media (max-width: 768px) {
+  .input {
+    font-size: var(--font-size-input);
+  }
+}
+
 .input::placeholder {
   color: var(--color-fg-dim);
 }

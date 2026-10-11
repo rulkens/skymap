@@ -9,6 +9,8 @@ function renderDock(overrides: Partial<DockProps> = {}) {
     timeOpen: false,
     layersOpen: false,
     timeLabel: { text: 'Time', glyph: null },
+    onHome: vi.fn<() => void>(),
+    onSearch: vi.fn<() => void>(),
     onTime: vi.fn<() => void>(),
     onLayers: vi.fn<() => void>(),
     ...overrides,
@@ -30,6 +32,20 @@ describe('Dock', () => {
     fireEvent.click(time);
     expect(props.onTime).toHaveBeenCalledTimes(1);
     expect(props.onLayers).not.toHaveBeenCalled();
+  });
+
+  // Home and Search act once; a stray aria-pressed would announce them as stuck toggles.
+  it('routes Home and Search to their own handlers and leaves them without a pressed state', () => {
+    const props = renderDock();
+    const home = screen.getByRole('button', { name: 'Home' });
+    const search = screen.getByRole('button', { name: 'Search' });
+    expect(home).not.toHaveAttribute('aria-pressed');
+    expect(search).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(search);
+    expect(props.onSearch).toHaveBeenCalledTimes(1);
+    expect(props.onHome).not.toHaveBeenCalled();
+    fireEvent.click(home);
+    expect(props.onHome).toHaveBeenCalledTimes(1);
   });
 
   it('names the Time item by its date when the clock is off real time, glyph kept out of the name', () => {
