@@ -33,11 +33,11 @@
  */
 
 import type { TimeState } from '../../@types/time/TimeState';
-import { interpolateMissionProfile } from './interpolateMissionProfile';
+import { interpolateClockProfile } from './interpolateClockProfile';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 
 export function deriveSimDays(time: TimeState, nowMs: number): number {
-  if (time.profile !== null) return interpolateMissionProfile(time.profile, nowMs);
+  if (time.profile !== null) return interpolateClockProfile(time.profile, nowMs);
   if (time.paused) return time.anchor.simDays;
 
   const realDaysElapsed = (nowMs - time.anchor.realMs) / 86_400_000;

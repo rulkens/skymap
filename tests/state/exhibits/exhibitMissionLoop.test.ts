@@ -16,13 +16,7 @@ import { playMission } from '../../../src/state/exhibits/playMission';
 import { stepMissionSpeed } from '../../../src/state/exhibits/stepMissionSpeed';
 import { setMissionEmphasis } from '../../../src/state/settings/core/missionTrails/slice';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import {
-  pause,
-  resume,
-  setSimDays,
-  goLive,
-  stepToMissionEvent,
-} from '../../../src/state/time/timeSlice';
+import { pause, resume, setSimDays, goLive, stepToEvent } from '../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
@@ -69,7 +63,7 @@ async function hold(
   const step = (eventId: string) => {
     const event = MISSION_EVENTS.find((e) => e.id === eventId)!;
     const simDays = unixMsToJulianDays(missionEventStepMs(event));
-    store.dispatch(stepToMissionEvent({ eventId, simDays, nowMs: performance.now() }));
+    store.dispatch(stepToEvent({ eventId, simDays, nowMs: performance.now() }));
   };
   const simDays = () => deriveSimDays(store.getState().time, performance.now());
   return { store, playClip, step, simDays };

@@ -8,7 +8,7 @@ import { buildMissionProfile } from '../../../../src/utils/exhibits/mission/buil
 import { missionStops } from '../../../../src/utils/exhibits/mission/missionStops';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
-import type { MissionProfile } from '../../../../src/@types/time/MissionProfile';
+import type { ClockProfile } from '../../../../src/@types/time/ClockProfile';
 
 const stops = missionStops(MISSION_EVENTS.filter((e) => e.bodyId === 'voyager2'));
 const bounds = stops.map((s) => unixMsToJulianDays(s.ms));
@@ -19,13 +19,13 @@ const FOUR = MISSION_SPEEDS.indexOf(4);
 const STEP_MS = 50;
 
 /** Wall ms each leg took: the profile lands a sample exactly on every boundary it crosses. */
-function legWallMs(p: MissionProfile): number[] {
+function legWallMs(p: ClockProfile): number[] {
   const at = (days: number) => p.wallMs[p.simDays.indexOf(days)]!;
   return [...bounds, END].slice(1).map((to, i) => at(to) - at(bounds[i]!));
 }
 
-let atOne: MissionProfile;
-let atFour: MissionProfile;
+let atOne: ClockProfile;
+let atFour: ClockProfile;
 beforeAll(() => {
   loadVoyagerStopWindows();
   atOne = buildMissionProfile(stops, 'voyager2', bounds[0]!, END, ONE, 1234);

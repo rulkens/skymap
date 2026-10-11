@@ -36,7 +36,7 @@
 import { createSlice, type PayloadAction, type Draft } from '@reduxjs/toolkit';
 
 import { timeRoute } from '../../store/constants';
-import type { MissionProfile } from '../../@types/time/MissionProfile';
+import type { ClockProfile } from '../../@types/time/ClockProfile';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { CONST_J2000 } from '../../data/time/constJ2000';
@@ -137,7 +137,7 @@ const timeSlice = createSlice({
     // Play a mission profile from its first sample, un-paused. The profile arrives stamped
     // (reducers read no clock); the anchor is set to its start so a visitor action that drops
     // the profile re-anchors from a consistent instant.
-    startMissionProfile: (time, action: PayloadAction<{ profile: MissionProfile }>) => {
+    startClockProfile: (time, action: PayloadAction<{ profile: ClockProfile }>) => {
       const { profile } = action.payload;
       time.mode = 'manual';
       time.anchor = { simDays: profile.simDays[0]!, realMs: profile.startWallMs };
@@ -147,7 +147,7 @@ const timeSlice = createSlice({
 
     // A visitor stepping to a timeline event lands the clock there, paused. The dispatch site
     // resolves the event's instant; `eventId` rides along for the hold saga, which plays a flyby.
-    stepToMissionEvent: (
+    stepToEvent: (
       time,
       action: PayloadAction<{ eventId: string; simDays: number; nowMs: number }>,
     ) => {
@@ -160,7 +160,7 @@ const timeSlice = createSlice({
   // stale profile would override the anchor. Matchers run after the case reducer.
   extraReducers: (builder) => {
     builder.addMatcher(
-      (action) => action.type.startsWith(`${timeRoute}/`) && !startMissionProfile.match(action),
+      (action) => action.type.startsWith(`${timeRoute}/`) && !startClockProfile.match(action),
       (time) => {
         time.profile = null;
       },
@@ -176,8 +176,8 @@ export const {
   setSimDays,
   goLive,
   restoreTime,
-  startMissionProfile,
-  stepToMissionEvent,
+  startClockProfile,
+  stepToEvent,
 } = timeSlice.actions;
 
 export default timeSlice.reducer;

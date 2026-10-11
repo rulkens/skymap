@@ -19,8 +19,8 @@ import reducer, {
   goLive,
   setSimDays,
   restoreTime,
-  startMissionProfile,
-  stepToMissionEvent,
+  startClockProfile,
+  stepToEvent,
 } from '../../../src/state/time/timeSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
@@ -125,13 +125,13 @@ describe('mission profile', () => {
   };
   const profiled = reducer(
     manualStart,
-    startMissionProfile({ profile: { ...profile, startWallMs: 50_000 } }),
+    startClockProfile({ profile: { ...profile, startWallMs: 50_000 } }),
   );
 
-  it('startMissionProfile un-pauses, anchors at the first sample and stamps the payload clock', () => {
+  it('startClockProfile un-pauses, anchors at the first sample and stamps the payload clock', () => {
     const paused = reducer(
       { ...manualStart, paused: true },
-      startMissionProfile({ profile: { ...profile, startWallMs: 50_000 } }),
+      startClockProfile({ profile: { ...profile, startWallMs: 50_000 } }),
     );
     expect(paused.paused).toBe(false);
     expect(paused.profile?.startWallMs).toBe(50_000);
@@ -157,8 +157,8 @@ describe('mission profile', () => {
       action: restoreTime({ captured: manualStart, simDays: 2450000, nowMs: 55_000 }),
     },
     {
-      name: 'stepToMissionEvent',
-      action: stepToMissionEvent({ eventId: 'e', simDays: 2450000, nowMs: 55_000 }),
+      name: 'stepToEvent',
+      action: stepToEvent({ eventId: 'e', simDays: 2450000, nowMs: 55_000 }),
     },
   ];
 
@@ -166,10 +166,10 @@ describe('mission profile', () => {
     expect(reducer(profiled, action).profile).toBeNull();
   });
 
-  it('only startMissionProfile keeps a profile: any other time action drops it, others ignore it', () => {
+  it('only startClockProfile keeps a profile: any other time action drops it, others ignore it', () => {
     expect(reducer(profiled, { type: 'time/aFutureReducer' }).profile).toBeNull();
     expect(reducer(profiled, { type: 'camera/anything' }).profile).not.toBeNull();
-    const restarted = startMissionProfile({ profile: { ...profile, startWallMs: 60_000 } });
+    const restarted = startClockProfile({ profile: { ...profile, startWallMs: 60_000 } });
     expect(reducer(profiled, restarted).profile?.startWallMs).toBe(60_000);
   });
 

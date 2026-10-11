@@ -10,7 +10,7 @@ import { delay, put, select } from 'typed-redux-saga';
 import { buildMissionProfile } from '../../utils/exhibits/mission/buildMissionProfile';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
-import { pause, startMissionProfile } from '../time/timeSlice';
+import { pause, startClockProfile } from '../time/timeSlice';
 import { selectTimeState } from '../time/selectors';
 import type { CameraMission } from '../../@types/camera/CameraMission';
 import type { RootState } from '../../store/types';
@@ -43,7 +43,7 @@ export function* missionPlaySaga(
     speedIndex,
     nowMs,
   );
-  yield* put(startMissionProfile({ profile }));
+  yield* put(startClockProfile({ profile }));
   yield* delay(Math.max(0, profile.wallMs.at(-1)! - (performance.now() - nowMs)));
   const still = yield* select((s: RootState) => s.time.profile === profile);
   if (still) yield* put(pause({ nowMs: performance.now() }));

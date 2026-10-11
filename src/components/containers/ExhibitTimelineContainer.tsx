@@ -1,6 +1,6 @@
 /**
  * ExhibitTimelineContainer — store boundary for the exhibit timeline: the sim instant, paused
- * flag, mission profile and emphasised craft in; `setSimDays` (scrub), `stepToMissionEvent`,
+ * flag, mission profile and emphasised craft in; `setSimDays` (scrub), `stepToEvent`,
  * `setMissionEmphasis`, `playMission`, `stepMissionSpeed` and `pause` out (the craft tabs ARE the
  * store's emphasis, so the 3D view dims the other craft). The instant and the profile's live
  * speed are re-derived on a 4 Hz interval, as the TimeBar's readout is, so a running clock
@@ -18,12 +18,12 @@ import { selectMissionSpeedIndex } from '../../state/camera/selectors';
 import { selectTimeState } from '../../state/time/selectors';
 import { selectMissionEmphasis } from '../../state/settings/core/missionTrails/selectors';
 import { setMissionEmphasis } from '../../state/settings/core/missionTrails/slice';
-import { pause, setSimDays, stepToMissionEvent } from '../../state/time/timeSlice';
+import { pause, setSimDays, stepToEvent } from '../../state/time/timeSlice';
 import { MISSION_SPEEDS } from '../../data/exhibits/mission/missionSpeeds';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { formatMissionSpeed } from '../../utils/exhibits/mission/formatMissionSpeed';
 import { formatSimRate } from '../../utils/time/formatSimRate';
-import { missionProfileRate } from '../../utils/time/missionProfileRate';
+import { clockProfileRate } from '../../utils/time/clockProfileRate';
 import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventStepMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
@@ -51,7 +51,7 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     // A finished profile holds its table with slope 0; the ladder label then reads true again.
     return {
       simDays: deriveSimDays(time, now),
-      speed: profile === null ? 0 : missionProfileRate(profile, now),
+      speed: profile === null ? 0 : clockProfileRate(profile, now),
     };
   }, [time, profile]);
   const [{ simDays, speed }, setReading] = useState(read);
@@ -71,7 +71,7 @@ function ExhibitTimelineContainer({ section }: ExhibitTimelineContainerProps): R
     (eventId: string) => {
       const event = section.events.find((e) => e.id === eventId)!;
       const simDays = unixMsToJulianDays(missionEventStepMs(event));
-      dispatch(stepToMissionEvent({ eventId, simDays, nowMs: performance.now() }));
+      dispatch(stepToEvent({ eventId, simDays, nowMs: performance.now() }));
     },
     [dispatch, section.events],
   );

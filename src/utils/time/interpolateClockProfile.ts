@@ -1,8 +1,8 @@
-import type { MissionProfile } from '../../@types/time/MissionProfile';
+import type { ClockProfile } from '../../@types/time/ClockProfile';
 import { countAtOrBefore } from '../math/countAtOrBefore';
 
 /** Sim days on a mission profile's table at wall time `nowMs`, held at the first and last sample outside it. */
-export function interpolateMissionProfile(profile: MissionProfile, nowMs: number): number {
+export function interpolateClockProfile(profile: ClockProfile, nowMs: number): number {
   const { wallMs, simDays } = profile;
   const last = wallMs.length - 1;
   const w = nowMs - profile.startWallMs;

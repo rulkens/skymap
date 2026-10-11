@@ -1,9 +1,9 @@
-import type { MissionProfile } from '../../@types/time/MissionProfile';
+import type { ClockProfile } from '../../@types/time/ClockProfile';
 import { countAtOrBefore } from '../math/countAtOrBefore';
 import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 /** Sim seconds per wall second on the mission table's segment at wall time `nowMs`; 0 outside it. */
-export function missionProfileRate(profile: MissionProfile, nowMs: number): number {
+export function clockProfileRate(profile: ClockProfile, nowMs: number): number {
   const { wallMs, simDays } = profile;
   const last = wallMs.length - 1;
   const w = nowMs - profile.startWallMs;

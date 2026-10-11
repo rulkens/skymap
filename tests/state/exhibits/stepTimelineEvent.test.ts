@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { stepTimelineEvent } from '../../../src/state/exhibits/stepTimelineEvent';
 import { KEYBOARD_SHORTCUTS, SHORTCUTS_BY_KEY } from '../../../src/state/input/keyboardShortcuts';
-import { stepToMissionEvent } from '../../../src/state/time/timeSlice';
+import { stepToEvent } from '../../../src/state/time/timeSlice';
 import { MISSION_EVENTS } from '../../../src/data/missions/missionEvents.generated';
 import { missionEventMs } from '../../../src/utils/exhibits/timeline/missionEventMs';
 import { missionEventStepMs } from '../../../src/utils/exhibits/timeline/missionEventStepMs';
@@ -31,7 +31,7 @@ const stateAt = (
 
 const stepsTo = (e: { id: string }) =>
   expect.objectContaining({
-    type: stepToMissionEvent.type,
+    type: stepToEvent.type,
     payload: expect.objectContaining({ eventId: e.id }),
   });
 

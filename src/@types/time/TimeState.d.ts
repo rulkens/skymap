@@ -20,7 +20,7 @@
  * tracks real time) from a `manual` clock (anchored to a user-chosen instant).
  */
 
-import type { MissionProfile } from './MissionProfile';
+import type { ClockProfile } from './ClockProfile';
 
 export type TimeState = {
   readonly mode: 'live' | 'manual';
@@ -32,5 +32,5 @@ export type TimeState = {
   readonly direction: 1 | -1;
   readonly paused: boolean;
   /** The mission clock's wall→sim table; while set it overrides the anchor, and any time action drops it. */
-  readonly profile: MissionProfile | null;
+  readonly profile: ClockProfile | null;
 };

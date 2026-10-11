@@ -8,7 +8,7 @@
  */
 
 import type { MissionStop } from '../../../@types/missions/MissionStop';
-import type { MissionProfile } from '../../../@types/time/MissionProfile';
+import type { ClockProfile } from '../../../@types/time/ClockProfile';
 import { FRAME_CROSSINGS_PER_S } from '../../../data/exhibits/mission/frameCrossingsPerS';
 import { MISSION_LEG_WALL_MS } from '../../../data/exhibits/mission/missionLegWallMs';
 import { MISSION_RAMP_MS } from '../../../data/exhibits/mission/missionRampMs';
@@ -41,7 +41,7 @@ export function buildMissionProfile(
   endDays: number,
   speedIndex: number,
   startWallMs: number,
-): MissionProfile {
+): ClockProfile {
   const bounds = [...stops.map((s) => unixMsToJulianDays(s.ms)), endDays];
   const factor = MISSION_SPEEDS[speedIndex]!;
   let t = Math.max(fromDays, bounds[0]!);

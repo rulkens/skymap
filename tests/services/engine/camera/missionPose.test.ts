@@ -12,7 +12,7 @@ import { MISSION_EASE_MS } from '../../../../src/data/exhibits/mission/missionEa
 import { MISSION_FLYBY_LEAD_DAYS } from '../../../../src/data/exhibits/mission/missionFlybyLeadDays';
 import { MISSION_SPEEDS } from '../../../../src/data/exhibits/mission/missionSpeeds';
 import { buildMissionProfile } from '../../../../src/utils/exhibits/mission/buildMissionProfile';
-import { interpolateMissionProfile } from '../../../../src/utils/time/interpolateMissionProfile';
+import { interpolateClockProfile } from '../../../../src/utils/time/interpolateClockProfile';
 import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.generated';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../src/services/engine/camera/missionPose';
@@ -277,7 +277,7 @@ describe('missionPose', () => {
     drive(
       missionOf(),
       (MISSION_EASE_MS * 1.5) / FRAME_MS,
-      (w) => interpolateMissionProfile(profile, w),
+      (w) => interpolateClockProfile(profile, w),
       worldPose(ctxAt(missionOf(), from)),
       (p, t) => {
         stopsSeen.add(t > tc + MISSION_FLYBY_LEAD_DAYS);
@@ -311,14 +311,14 @@ describe('missionPose', () => {
       0,
     );
     let w0 = 0;
-    while (interpolateMissionProfile(profile, w0) < tc) w0 += FRAME_MS;
+    while (interpolateClockProfile(profile, w0) < tc) w0 += FRAME_MS;
     const store = configureStore({ reducer: rootReducer });
     store.dispatch(setMission(missionOf({ yaw: 0, pitch: 0, zoom: 0.05 })));
     let mem: FollowMemory | null = null;
     let shown: CameraPose | null = null;
     let out = 0;
     const frame = (f: number) => {
-      const simDays = interpolateMissionProfile(profile, w0 + f * FRAME_MS);
+      const simDays = interpolateClockProfile(profile, w0 + f * FRAME_MS);
       // The drag rung steps last frame's pose; here a steady yaw per frame.
       const register = shown && { ...shown, yaw: shown.yaw + 0.003 };
       const r = missionPose(

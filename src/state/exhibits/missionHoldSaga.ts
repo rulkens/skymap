@@ -25,7 +25,7 @@ import { selectMissionEmphasis } from '../settings/core/missionTrails/selectors'
 import { setMissionEmphasis } from '../settings/core/missionTrails/slice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectTimeState } from '../time/selectors';
-import { pause, resume, setSimDays, stepToMissionEvent } from '../time/timeSlice';
+import { pause, resume, setSimDays, stepToEvent } from '../time/timeSlice';
 import { missionPlaySaga } from './missionPlaySaga';
 import { playMission } from './playMission';
 import { stepMissionSpeed } from './stepMissionSpeed';
@@ -89,7 +89,7 @@ export function* missionHoldSaga(
     for (;;) {
       const next = yield* race({
         exit: take(exitTakeover),
-        step: take(stepToMissionEvent),
+        step: take(stepToEvent),
         tab: take(setMissionEmphasis),
         play: take(playMission),
         resume: take(resume),

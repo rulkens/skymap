@@ -20,8 +20,8 @@ import {
   pause,
   resume,
   setSimDays,
-  startMissionProfile,
-  stepToMissionEvent,
+  startClockProfile,
+  stepToEvent,
 } from '../../../src/state/time/timeSlice';
 import { setMission } from '../../../src/state/camera/cameraSlice';
 import type { CameraMission } from '../../../src/@types/camera/CameraMission';
@@ -125,7 +125,7 @@ describe('ExhibitTimelineContainer', () => {
     expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.parse(firstV1.iso)), 9);
   });
 
-  it('every event step dispatches stepToMissionEvent; a track drag dispatches setSimDays only', () => {
+  it('every event step dispatches stepToEvent; a track drag dispatches setSimDays only', () => {
     const store = mount('1977-08-01');
     const spy = vi.mocked(store.dispatch);
     spy.mockClear();
@@ -139,7 +139,7 @@ describe('ExhibitTimelineContainer', () => {
     fireEvent.click(dot);
     fireEvent.keyDown(screen.getByRole('slider'), { key: 'PageDown' });
     fireEvent.click(screen.getByRole('button', { name: /Previous/ }));
-    const steps = stepped().filter((a) => a.type === stepToMissionEvent.type);
+    const steps = stepped().filter((a) => a.type === stepToEvent.type);
     expect(steps.map((a) => a.payload!.eventId)).toEqual([
       v1[0]!.id,
       v1[3]!.id,
@@ -181,7 +181,7 @@ describe('ExhibitTimelineContainer', () => {
     act(() => {
       store.dispatch(setMission(missionAt(MISSION_SPEEDS.length - 1)));
       store.dispatch(
-        startMissionProfile({
+        startClockProfile({
           profile: {
             startWallMs: start,
             // One sim hour per wall second for a minute.
