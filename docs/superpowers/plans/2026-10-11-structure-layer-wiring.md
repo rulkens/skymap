@@ -275,6 +275,7 @@ The label producers keep their `StructureScale` argument (`'cosmic'` / `'milkyWa
 - [ ] `SettingsPanel.tsx`: `:17,49`, and the header's count of core containers (`:4-5`). `SettingsPanel.test.tsx`'s `vi.mock` of the container now has to reach it through the Layer's `ui` entry: mock the module at its Layer path.
 - [ ] `detailCardTable.ts`: `:31,34`, the `structure` arm `:46-52`, the header mention `:9-10`, and "The four focusable kinds" (`:36-38`) becomes three.
 - [ ] `tests/conventions/layerImportBoundary.test.ts`: delete every `ENGINE_AND_STATE_ALLOWED` row PR 1 added (the structure Layer block); core no longer imports the Layer.
+- [ ] `tests/packages/website/docsReference.test.ts`: drop the `!group.file.startsWith('src/layers/structure/')` exclusion in "covers every section the panel draws" (PR 1 added it because the panel drew the section directly); the registered Layer's `ui` slot now counts it.
 
 **Tests (new)**
 
