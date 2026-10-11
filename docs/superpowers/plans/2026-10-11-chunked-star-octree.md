@@ -290,7 +290,7 @@ Research §10 ruling F defers `tools/stars-rs` (port or drop) to "after timing a
 - [x] Run `NODE_OPTIONS=--max-old-space-size=16384 /usr/bin/time -l npx tsx tools/stars/buildStars.ts --out-dir <scratchpad>/octree-bake` in the background (`run_in_background`), capturing stdout and stderr to the scratchpad.
 - [x] Record: wall-clock seconds, `maximum resident set size` (bytes, from `time -l`), the logged chunk count, `chunkNodeCap`, index node count, index record count, index bytes raw and gzipped (`gzip -6 -c stars.bin | wc -c`), total chunk bytes, and the smallest and largest chunk sizes.
 - [x] If the bake STOPs on a dense cell, record the node (level, morton, count) and stop here: the user rules on the deeper-grid vs dense-leaf-split alternative (spec §10) before Group C can stream real data. Group B still proceeds on fixtures.
-- [ ] Write the numbers into the ledger as `Checkpoint: TS bake timing — <wall> s, <RSS> GB peak, <chunks> chunks, chunkNodeCap <n>, index <bytes>` and ask the user for the ruling F verdict (port `stars-rs` to v2, or drop it) and whether the node count under pure `L(M)` placement wants path compression (spec §10, "node count"). Do not implement either; both are their own plans.
+- [x] Write the numbers into the ledger as `Checkpoint: TS bake timing — <wall> s, <RSS> GB peak, <chunks> chunks, chunkNodeCap <n>, index <bytes>` and ask the user for the ruling F verdict (port `stars-rs` to v2, or drop it) and whether the node count under pure `L(M)` placement wants path compression (spec §10, "node count"). Do not implement either; both are their own plans.
 
 ## Group B: one runtime shape, the cut over a pool
 
@@ -431,7 +431,7 @@ Buffer rows (spec §5.4): `nodes`, `aggList`: `indexNodes + slots·chunkNodeCap`
 
 - [x] Before Task 7 lands (i.e. at the Group A → B boundary, on the Group A HEAD), run the baseline: `npm run perf -- --url http://localhost:<this worktree's port> --scenario star-field --scenario milky-way --scenario solar-system --frames 60` and `npm run perf:cpu -- --url … --scenario star-field` with the Gaia row still `format: 'skst'`; save both outputs to the scratchpad. Read the `perf` skill's interpretation rules (MERGED numbers; Apple Silicon slot sums are not additive).
 - [x] After Task 9: rerun with identical flags. Compare the MERGED totals and the `star-cut` / `star-catalog` / `star-aggregates` slot medians against run noise (~0.5 ms at 60 frames); the opacity doubled, so a measurable delta is possible. **Advisory, not a stop** (user ruling, 2026-10-11): record both tables in the ledger and report the deltas to the user; a regression is flagged for a ruling, and Group C proceeds.
-- [ ] Eye check on v1 (no behaviour change expected): `npm run shot -- '#focus=body-sun' --url …` and `'#focus=star-…'` of a famous star from `famous_stars_meta.json`; send both shots with their deep links as a dash check. The user keeps the verdict.
+- [x] Eye check on v1 (no behaviour change expected): `npm run shot -- '#focus=body-sun' --url …` and `'#focus=star-…'` of a famous star from `famous_stars_meta.json`; send both shots with their deep links as a dash check. The user keeps the verdict.
 
 ## Group C: streaming
 
@@ -495,7 +495,7 @@ Built on `createTileStreamSubsystem<StarChunk, SlotPool>({ slots: new SlotPool(s
 - [x] Test `a landed chunk is uploaded to its slot, counted in fetchedBytes and bumps the epoch; eviction evicts the slot and bumps it again` — stub `fetchChunk` resolving an encoded chunk fixture.
 - [x] Test `a failed fetch marks the chunk failed and never re-enqueues it` (Review Focus 2) — `fetchChunk` resolving null; a second `update` requesting the same ref enqueues nothing and `inFlightCount()` is 0.
 - [x] Test `an in-flight chunk evicted before landing is released, not uploaded` — allocate on frame 1, force eviction by over-requesting on frame 2 with the first key absent from `touched`, resolve the fetch; assert `upload` was never called for the evicted slot.
-- [ ] `create.test.ts`: the runtime exposes an empty `chunkStreams` map at creation.
+- [x] ~~`create.test.ts`: the runtime exposes an empty `chunkStreams` map at creation.~~ Not written: an empty map at creation fails on no real bug (`testing.md`).
 - [x] Commit.
 
 ### Task 13: The CPU planner, the frame wiring and the wake vote
