@@ -3,6 +3,7 @@ import type { NavItem } from '../@types/NavItem';
 
 /** Parallel short nouns, per 12-taste-and-structure 4.2; Home's section headings stay imperative. */
 export const NAV_ITEMS: NavItem[] = [
+  { label: 'Features', path: '/features/', icon: 'features' },
   { label: 'Classrooms', path: '/classroom/', icon: 'classroom' },
   { label: 'Domes and museums', path: '/domes/', icon: 'dome' },
   { label: 'Science', path: '/science/', icon: 'science' },
@@ -31,6 +32,7 @@ export const FOOTER_GROUPS: NavGroup[] = [
     heading: 'The project',
     items: [
       { label: 'Docs', path: '/docs/', icon: 'docs' },
+      { label: 'Features', path: '/features/', icon: 'features' },
       { label: 'About', path: '/about/', icon: 'about' },
       { label: 'Privacy', path: '/privacy/', icon: 'privacy' },
     ],
