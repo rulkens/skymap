@@ -15,14 +15,6 @@ export const VOYAGER_MILESTONES: readonly VoyagerMilestone[] = [
     label: 'Pale Blue Dot',
   },
   {
-    // NASA: Voyager 1 passes Pioneer 10 at 69.4 AU. UNSURE: distance and day.
-    craftId: 'voyager1',
-    id: 'voyager1-pioneer10',
-    kind: 'milestone',
-    iso: '1998-02-17T00:00:00.000Z',
-    label: 'Passes Pioneer 10',
-  },
-  {
     // NASA, announced 2005-05-24. UNSURE: some sources say 2004-12-15.
     craftId: 'voyager1',
     id: 'voyager1-termination-shock',

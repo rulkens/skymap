@@ -90,13 +90,6 @@ export const MISSION_EVENTS: readonly MissionEvent[] = [
     label: 'Pale Blue Dot',
   },
   {
-    id: 'voyager1-pioneer10',
-    bodyId: 'voyager1',
-    kind: 'milestone',
-    iso: '1998-02-17T00:00:00.000Z',
-    label: 'Passes Pioneer 10',
-  },
-  {
     id: 'voyager1-termination-shock',
     bodyId: 'voyager1',
     kind: 'boundary',
