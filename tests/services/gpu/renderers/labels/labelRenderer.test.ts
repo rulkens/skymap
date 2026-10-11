@@ -151,25 +151,6 @@ describe('LabelRenderer occlusion variant', () => {
   });
 });
 
-describe('LabelRenderer (CPU state)', () => {
-  it('drops glyphs not present in metrics', () => {
-    const r = newRenderer();
-    // 'A中A' — 'A' is in metrics (id=65), '中' is not (id=20013).  We
-    // expect only the two 'A' glyphs to be counted; the unknown
-    // character is silently skipped.
-    r.setLabels([{ id: 'x', worldPos: [0, 0, 0], text: 'A中A', pixelSize: 24, font: 'cormorant' }]);
-    expect(r.glyphCount()).toBe(2);
-  });
-
-  it('replaces (not appends) on subsequent setLabels', () => {
-    const r = newRenderer();
-    r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' }]);
-    r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' }]);
-    expect(r.labelCount()).toBe(1);
-    expect(r.glyphCount()).toBe(3);
-  });
-});
-
 function makeLabel(id: string): Label2D {
   return { id, worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' };
 }
@@ -217,27 +198,6 @@ describe('LabelRenderer capacity growth', () => {
     return { ctx, createdBuffers, createBindGroupCalls };
   }
 
-  it('grows the CPU roster past its initial capacity with no truncation', () => {
-    const r = createLabelRenderer(
-      {
-        device: null as unknown as GPUDevice,
-        context: null as unknown as GPUCanvasContext,
-        format: 'rgba16float' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
-      { targetFormat: 'rgba16float', atlases: FIXTURE_ATLASES, textLayout: FIXTURE_TEXT_LAYOUT },
-    );
-
-    // 65 crosses INITIAL_LABEL_CAPACITY (64) — the real growth boundary,
-    // not an artificially small one.
-    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
-    r.setLabels(labels);
-
-    expect(r.labelCount()).toBe(65);
-    expect(r.packedLabels()).toHaveLength(65);
-  });
-
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
     const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
     const r = createLabelRenderer(ctx, {
@@ -266,6 +226,11 @@ describe('LabelRenderer capacity growth', () => {
     const entries = Array.from(lastBindGroup.entries) as GPUBindGroupEntry[];
     const binding1 = entries.find((e) => e.binding === 1)!;
     expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
+
+    // No truncation: the upload after growth covers all 65 labels' f32s (96 B each).
+    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    const storageWrite = writeBuffer.mock.calls.find((c) => c[0] === storageBuffers[1]!.buffer)!;
+    expect(storageWrite[4]).toBe((65 * 96) / 4);
 
     expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
     expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();

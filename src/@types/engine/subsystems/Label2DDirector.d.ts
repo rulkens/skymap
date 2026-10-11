@@ -1,4 +1,5 @@
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { Label2D } from '../../rendering/Label2D';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { TextLayout } from '../../rendering/TextLayout';
 import type { FrameView } from '../frame/FrameView';
@@ -17,6 +18,8 @@ export type Label2DDirector = {
    * never wakes the loop itself.
    */
   runFrame(state: EngineState, ctx: FrameView): boolean;
+  /** The label set last flushed to the renderer; empty before the first flush. */
+  labels(): readonly Label2D[];
   /**
    * Tear down the director.  No-op — the director holds renderer refs
    * and a producers list, but the renderers' lifecycle is the engine's

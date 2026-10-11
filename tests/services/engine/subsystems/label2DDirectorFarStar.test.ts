@@ -66,8 +66,6 @@ function makeLabelStub(): LabelRenderer {
     label: 'foregroundLabelRenderer',
     setLabels: vi.fn<(labels: readonly Label2D[]) => void>(),
     draw: vi.fn<(...args: unknown[]) => void>(),
-    glyphCount: () => 0,
-    labelCount: () => 0,
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }

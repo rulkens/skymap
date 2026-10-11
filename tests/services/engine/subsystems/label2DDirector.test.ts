@@ -105,8 +105,6 @@ function makeLabelStub() {
   return {
     setLabels: vi.fn(),
     render: vi.fn(),
-    glyphCount: () => 0,
-    labelCount: () => 0,
     destroy: vi.fn(),
   };
 }
@@ -163,11 +161,14 @@ describe('label2DDirector', () => {
     dir.registerProducer(makeProducer('pa', [a]));
     dir.registerProducer(makeProducer('pb', [b]));
 
+    expect(dir.labels()).toEqual([]);
+
     // First frame enters at envelope alpha 0; run a second frame past the
     // 300 ms ramp so the flush carries the producers' labels at full alpha.
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([a, b]);
+    expect(dir.labels()).toEqual([a, b]);
     // Neither label carries a leader, so no lines synthesize.
     expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
   });

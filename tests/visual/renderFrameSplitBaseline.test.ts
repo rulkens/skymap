@@ -357,7 +357,6 @@ describe('renderFrame visual baseline', () => {
       upsample: densityUpsample,
     } as unknown as CosmicWebDensityRuntime;
     const labelRenderer = {
-      glyphCount: vi.fn(() => 12),
       ...makeLoggingRenderer(records, 'labels'),
     };
     const markerLineRenderer = {
@@ -548,6 +547,7 @@ describe('renderFrame visual baseline', () => {
             label: 'fadeRegistry',
           },
           clipPlayer: { clipOpacityOf: () => 1 },
+          cosmoLabelDirector: { labels: () => Array.from({ length: 12 }) },
         },
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.

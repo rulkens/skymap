@@ -26,11 +26,11 @@
  *      the atlas fetch + `createLabelRenderer` construction complete
  *      in `initGpu.ts`.
  *
- *   2. `labelRenderer.glyphCount() > 0` — the label director must
- *      have called `setLabels` with at least one label this frame
- *      (e.g. from `produceMilkyWayLabel`).  When the camera is far
- *      from the origin the producer emits an empty label set and
- *      `glyphCount()` returns 0, making this layer a cheap early-return.
+ *   2. `cosmoLabelDirector.labels()` is non-empty — the director must
+ *      have flushed at least one label this frame (e.g. from
+ *      `produceMilkyWayLabel`).  When the camera is far from the origin the
+ *      producer emits an empty label set, making this layer a cheap
+ *      early-return.
  *
  * ### Position among the swap-target layers
  *
@@ -49,7 +49,7 @@ export const labelsPass: ContentPass = {
 
   enabled(state, _ctx, _view) {
     if (state.gpu.labelRenderer === null) return false;
-    return state.gpu.labelRenderer.glyphCount() > 0;
+    return state.subsystems.cosmoLabelDirector.labels().length > 0;
   },
 
   // Pick gate — NARROWER than `enabled`: a drawn label only invites a click
@@ -57,9 +57,8 @@ export const labelsPass: ContentPass = {
   // constellation captions carry no `pickId`) must not pull an r32uint pick
   // target into existence for a draw that would stamp nothing.
   pickEnabled(state, _ctx) {
-    const renderer = state.gpu.labelRenderer;
-    if (renderer === null || renderer.glyphCount() === 0) return false;
-    return hasPickableLabel(renderer.packedLabels());
+    if (state.gpu.labelRenderer === null) return false;
+    return hasPickableLabel(state.subsystems.cosmoLabelDirector.labels());
   },
 
   draw(pass, view, ctx, state) {
@@ -86,14 +85,13 @@ export const labelsPass: ContentPass = {
   // pick quad can't see — so an occluded label stays clickable. Pick wider
   // than draw is the safe direction for a click affordance.
   drawPick(pass, _view, ctx, state) {
-    const renderer = state.gpu.labelRenderer;
     const pickRenderer = state.gpu.labelPickRenderer;
     const textLayout = state.gpu.textLayout;
-    if (renderer === null || pickRenderer === null || textLayout === null) return;
+    if (pickRenderer === null || textLayout === null) return;
 
     const projection = cosmoLabelProjection(ctx);
     const quads = labelPickQuads({
-      labels: renderer.packedLabels(),
+      labels: state.subsystems.cosmoLabelDirector.labels(),
       projection,
       measure: (label) => textLayout.measure(label),
     });

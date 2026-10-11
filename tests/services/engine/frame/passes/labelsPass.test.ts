@@ -16,6 +16,7 @@ import { labelsPass } from '../../../../../src/services/engine/frame/passes/labe
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
+import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
@@ -29,20 +30,21 @@ const VIEW_STUB = {
   sampledDepth: { view: SAMPLED_DEPTH_VIEW, row: null },
 } as unknown as SlabView;
 
-function makeRenderer(glyphCount: number): LabelRenderer {
+function makeRenderer(): LabelRenderer {
   return {
     label: 'labelRenderer',
     setLabels: vi.fn(),
     draw: vi.fn(),
-    measure: vi.fn(() => null),
-    glyphCount: () => glyphCount,
-    labelCount: () => 0,
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }
 
-function makeState(renderer: LabelRenderer | null): EngineState {
-  return { gpu: { labelRenderer: renderer } } as unknown as EngineState;
+function makeState(renderer: LabelRenderer | null, flushedLabelCount = 0): EngineState {
+  const labels = Array.from({ length: flushedLabelCount }) as Label2D[];
+  return {
+    gpu: { labelRenderer: renderer },
+    subsystems: { cosmoLabelDirector: { labels: () => labels } },
+  } as unknown as EngineState;
 }
 
 function makeCtx(
@@ -63,16 +65,17 @@ function makeCtx(
 }
 
 describe('labelsPass.enabled', () => {
-  it('is false when glyphCount() is 0, true otherwise', () => {
+  it('is false when the director flushed no labels, true otherwise', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
-    expect(labelsPass.enabled(makeState(makeRenderer(0)), ctx, VIEW_STUB)).toBe(false);
-    expect(labelsPass.enabled(makeState(makeRenderer(3)), ctx, VIEW_STUB)).toBe(true);
+    expect(labelsPass.enabled(makeState(makeRenderer(), 0), ctx, VIEW_STUB)).toBe(false);
+    expect(labelsPass.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(true);
+    expect(labelsPass.enabled(makeState(null, 3), ctx, VIEW_STUB)).toBe(false);
   });
 });
 
 describe('labelsPass.draw', () => {
   it("passes the foreground:0 colour view (not a depthViewOf lookup) in draw's joint when the body pass ran", () => {
-    const renderer = makeRenderer(3);
+    const renderer = makeRenderer();
     const sentinelColorView = {} as GPUTextureView;
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
@@ -97,7 +100,7 @@ describe('labelsPass.draw', () => {
   });
 
   it('passes undefined when the body pass did NOT run this frame (stale/uninitialised colour)', () => {
-    const renderer = makeRenderer(3);
+    const renderer = makeRenderer();
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set<string>(), viewOf, vi.fn());
 

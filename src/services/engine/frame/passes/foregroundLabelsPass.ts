@@ -19,17 +19,18 @@ export const foregroundLabelsPass: ContentPass = {
   pickTarget: 'overlay',
 
   enabled(state, _ctx, _view) {
-    const renderer = state.gpu.foregroundLabelRenderer;
-    return renderer !== null && renderer.glyphCount() > 0;
+    return (
+      state.gpu.foregroundLabelRenderer !== null &&
+      state.subsystems.foregroundLabelDirector.labels().length > 0
+    );
   },
 
   // Pick gate — NARROWER than `enabled`: the constellation captions carry no
   // `pickId` (they name no selectable object), so a constellations-only frame
   // must not allocate the `pick:overlay` target for a draw that stamps nothing.
   pickEnabled(state) {
-    const renderer = state.gpu.foregroundLabelRenderer;
-    if (renderer === null || renderer.glyphCount() === 0) return false;
-    return hasPickableLabel(renderer.packedLabels());
+    if (state.gpu.foregroundLabelRenderer === null) return false;
+    return hasPickableLabel(state.subsystems.foregroundLabelDirector.labels());
   },
 
   draw(pass, view, ctx, state) {
@@ -60,14 +61,13 @@ export const foregroundLabelsPass: ContentPass = {
   // `bodyGlintsPass.drawPick` widens its own pick to this caption range for
   // the same affordance.
   drawPick(pass, _view, ctx, state) {
-    const renderer = state.gpu.foregroundLabelRenderer;
     const pickRenderer = state.gpu.foregroundLabelPickRenderer;
     const textLayout = state.gpu.textLayout;
-    if (renderer === null || pickRenderer === null || textLayout === null) return;
+    if (pickRenderer === null || textLayout === null) return;
 
     const projection = near0LabelProjection(ctx);
     const quads = labelPickQuads({
-      labels: renderer.packedLabels(),
+      labels: state.subsystems.foregroundLabelDirector.labels(),
       projection,
       measure: (label) => textLayout.measure(label),
     });

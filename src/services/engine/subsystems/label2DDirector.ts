@@ -292,6 +292,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
   let textLayout: TextLayout | null = null;
+  // What `setLabels` last received — the passes read it for their gates and pick quads.
+  let flushedLabels: readonly Label2D[] = [];
   let producers: readonly Label2DProducer[] = [];
   // Signature of the last flushed label set, or null on the first frame.
   // Empty string is a valid signature (no labels) and is distinct from null.
@@ -316,6 +318,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     lineRenderer = line;
     textLayout = layout;
     prevSignature = null; // force the next frame to re-flush
+    flushedLabels = []; // the new renderer holds nothing yet
   }
 
   function registerProducer(producer: Label2DProducer): void {
@@ -802,6 +805,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const sig = signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
+      flushedLabels = labels;
       lineRenderer.setLines(lines);
       prevSignature = sig;
     }
@@ -817,6 +821,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     attachRenderers,
     registerProducer,
     runFrame,
+    labels: () => flushedLabels,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

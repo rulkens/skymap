@@ -236,14 +236,8 @@ export function createLabelRenderer(
   let glyphU32 = new Uint32Array(glyphBuf);
   let labelBuf = new Float32Array(0);
 
-  // Closure-scoped mutable counters — replace the `this.currentGlyphCount`
-  // / `this.currentLabelCount` fields the class form used.  Updated only
-  // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
+  // Glyphs packed by the last `setLabels`; `draw` instances exactly this many.
   let currentGlyphCount = 0;
-  let currentLabelCount = 0;
-  // The rows `setLabels` actually packed, retained so the pick path can
-  // derive its hit rects from exactly what is on screen.
-  let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
   //
@@ -529,11 +523,7 @@ export function createLabelRenderer(
     }
 
     currentGlyphCount = 0;
-    currentLabelCount = 0;
 
-    // Aliases the caller's array — packedLabels() is the pick path's
-    // authority, so the caller must not retain or mutate it after this call.
-    currentLabels = labels;
     for (let li = 0; li < labels.length; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
@@ -561,9 +551,7 @@ export function createLabelRenderer(
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
       // The em rides the same clip units as the matrix `draw` is handed: the
-      // vertex stage sizes glyphs as `worldEmMpc / clip.w`. `currentLabels`
-      // keeps the unscaled rows — the CPU pick path projects those through the
-      // unscaled `Label2DProjection.vp`.
+      // vertex stage sizes glyphs as `worldEmMpc / clip.w`.
       labelBuf[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * clipScale;
 
       // Public colour API is STRAIGHT RGBA — producers write the natural
@@ -634,20 +622,18 @@ export function createLabelRenderer(
         glyphU32[f32Base + 9] = fontIndex;
         currentGlyphCount++;
       }
-
-      currentLabelCount++;
     }
 
     // Upload to GPU only when a real device is present.
     if (!device) return;
 
-    if (storageBuffer && currentLabelCount > 0) {
+    if (storageBuffer && labels.length > 0) {
       device.queue.writeBuffer(
         storageBuffer,
         0,
         labelBuf,
         0,
-        (currentLabelCount * LABEL_DATA_BYTES) / 4,
+        (labels.length * LABEL_DATA_BYTES) / 4,
       );
     }
     if (instanceBuffer && currentGlyphCount > 0) {
@@ -717,14 +703,6 @@ export function createLabelRenderer(
     pass.draw(4, currentGlyphCount, 0, 0);
   }
 
-  function glyphCount(): number {
-    return currentGlyphCount;
-  }
-
-  function labelCount(): number {
-    return currentLabelCount;
-  }
-
   function destroy(): void {
     uniformBuffer?.destroy();
     storageBuffer?.destroy();
@@ -738,9 +716,6 @@ export function createLabelRenderer(
     label: 'labelRenderer',
     setLabels,
     draw,
-    glyphCount,
-    labelCount,
-    packedLabels: () => currentLabels,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at
