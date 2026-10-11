@@ -111,6 +111,8 @@ function octreeOf(
     },
     records: columns(100),
     chunks: Array.from({ length: chunkCount }, (_, i) => ({
+      id: i,
+      recordBase: 100 + 3 * i,
       level: 1,
       morton: i,
       roots: [i],

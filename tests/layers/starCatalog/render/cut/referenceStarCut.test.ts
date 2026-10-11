@@ -262,6 +262,8 @@ function octreeOf(nodes: OctreeNodeTable, grid: OctreeGrid, chunk?: StarChunk): 
     chunks: chunk
       ? [
           {
+            id: 0,
+            recordBase: 0,
             level: 0,
             morton: 0,
             roots: [0],

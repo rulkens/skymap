@@ -55,7 +55,9 @@ export function hoistedStarOctree(): { octree: StarOctree; chunk: StarChunk } {
       [3, 0, 1, 1, 1, 2, NO_CHUNK_REF],
     ]),
     records: columns([0.5, 0.5, 0.5, 0.75, 0.75, 0.75, 0.5, 0.5, 0.5], [3, -5, 2]),
-    chunks: [{ level: 2, morton: 0, roots: [0], hash: 'fixture0', bytes: 0, nodes: 1, records: 2 }],
+    chunks: [
+      { id: 0, level: 2, morton: 0, roots: [0], hash: 'fixture0', bytes: 0, nodes: 1, records: 2, recordBase: 3 },
+    ],
     chunkCapacity: 8,
     chunkNodeCap: 1,
     recordOrdinalBase: Uint32Array.of(3, 5),

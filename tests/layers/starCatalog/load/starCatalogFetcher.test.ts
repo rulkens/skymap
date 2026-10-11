@@ -113,6 +113,8 @@ describe('starCatalogFetcher', () => {
   it("fetches the v2 index by base name, with no tier, when the row's format is octree", async () => {
     row.format = 'octree';
     const chunk = {
+      id: 0,
+      recordBase: 0,
       level: 2,
       morton: 0,
       roots: [0],

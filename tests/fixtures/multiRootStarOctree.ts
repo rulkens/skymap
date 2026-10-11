@@ -56,7 +56,9 @@ export function multiRootStarOctree(): { octree: StarOctree; chunk: StarChunk } 
       [3, 0, 0b1000_0001, 3, 0, 2, NO_CHUNK_REF],
     ]),
     records: columns(new Array(12).fill(0.5)),
-    chunks: [{ level: 2, morton: 0, roots: [1, 0], hash: 'fixture0', bytes: 0, nodes: 2, records: 2 }],
+    chunks: [
+      { id: 0, level: 2, morton: 0, roots: [1, 0], hash: 'fixture0', bytes: 0, nodes: 2, records: 2, recordBase: 4 },
+    ],
     chunkCapacity: 8,
     chunkNodeCap: 2,
     recordOrdinalBase: Uint32Array.of(4, 6),

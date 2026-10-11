@@ -5,7 +5,7 @@ import type { OctreeGrid } from './OctreeGrid';
 import type { OctreeStratify } from './OctreeStratify';
 import type { StatId } from './StatId';
 
-/** The index object's JSON header; the index is also the chunk manifest. */
+/** The index object's JSON header: the catalog's facts, and the refs of the chunks rooted in its rows. */
 export type OctreeIndexHeader = {
   readonly kind: 'index';
   readonly family: OctreeFamily;
@@ -20,5 +20,6 @@ export type OctreeIndexHeader = {
   readonly records: number;
   readonly columns: readonly ColumnSchema[];
   readonly stats: Readonly<Partial<Record<StatId, number>>>;
+  /** Only the chunks rooted in index rows; each chunk's header lists its own. */
   readonly chunks: readonly OctreeChunkRef[];
 };

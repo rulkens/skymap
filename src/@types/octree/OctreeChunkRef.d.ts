@@ -1,9 +1,11 @@
-/** One chunk object as the index's manifest names it; its root rows live in the index. */
+/** One chunk object as its parent object's header names it; its root rows live in that parent. */
 export type OctreeChunkRef = {
+  /** Catalog-global chunk id, 0 … `chunkCount − 1`: what a row's `chunkRef` holds. */
+  readonly id: number;
   /** The first root's level and Morton key: with the hash, the object's file name. */
   readonly level: number;
   readonly morton: number;
-  /** Index rows of the chunk's roots, in Morton order; each names this chunk in its `chunkRef`. */
+  /** Rows of the parent object (the one listing this ref) that root the chunk, in Morton order. */
   readonly roots: readonly number[];
   /** `contentHash8` of the encoded object, part of its file name. */
   readonly hash: string;
@@ -11,4 +13,6 @@ export type OctreeChunkRef = {
   readonly bytes: number;
   readonly nodes: number;
   readonly records: number;
+  /** Catalog-global record ordinal of the chunk's first record. */
+  readonly recordBase: number;
 };

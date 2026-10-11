@@ -40,7 +40,7 @@ describe('collectStarChunks', () => {
     const epochDir = join(dataDir, 'star-catalog/v2');
     const header = writeOctreeCatalog(
       buildOctreeCatalog(
-        makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [-6, 14]), GRID),
+        makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID),
         CAPACITY,
       ),
       {

@@ -105,7 +105,7 @@ describe('octree container format', () => {
   });
 
   it('pads the JSON header so the node table starts on a multiple of 8', () => {
-    const header: OctreeChunkHeader = { kind: 'chunk', level: 3, morton: 17, nodes: 3, records: 5 };
+    const header: OctreeChunkHeader = { kind: 'chunk', level: 3, morton: 17, nodes: 3, records: 5, chunks: [] };
     expect(JSON.stringify(header).length % 8).not.toBe(6);
     const schema = ALL_STORES.slice(0, 3);
     const buf = encodeOctreeObject(header, nodeTable(), schema, ALL_RAW);
@@ -121,7 +121,7 @@ describe('octree container format', () => {
       { id: 'offset', store: 'u16x3', q0: 0, q1: 1 },
       { id: 'colourIndex', store: 'u8', q0: 0, q1: 1 },
     ];
-    const header: OctreeChunkHeader = { kind: 'chunk', level: 1, morton: 0, nodes: 3, records: 5 };
+    const header: OctreeChunkHeader = { kind: 'chunk', level: 1, morton: 0, nodes: 3, records: 5, chunks: [] };
     const raw = new Map<ColumnId, OctreeRawColumn>([
       ['absMag', new Uint8Array([1, 2, 3, 4, 5])],
       ['offset', ALL_RAW.get('offset')!],
@@ -137,7 +137,7 @@ describe('octree container format', () => {
   it('a chunk decodes against the index schema it carries none of', () => {
     const index = indexHeader(ALL_STORES);
     const indexBuf = encodeOctreeObject(index, nodeTable(), ALL_STORES, ALL_RAW);
-    const chunkHeader: OctreeChunkHeader = { kind: 'chunk', level: 4, morton: 9, nodes: 3, records: 5 };
+    const chunkHeader: OctreeChunkHeader = { kind: 'chunk', level: 4, morton: 9, nodes: 3, records: 5, chunks: [] };
     const chunkBuf = encodeOctreeObject(chunkHeader, nodeTable(), ALL_STORES, ALL_RAW);
 
     const decodedIndex = decodeOctreeIndex(indexBuf.buffer as ArrayBuffer);
@@ -155,7 +155,7 @@ describe('octree container format', () => {
 
   it('rejects a wrong magic and a stale version with the regenerate message', () => {
     const schema = ALL_STORES.slice(0, 3);
-    const chunkHeader: OctreeChunkHeader = { kind: 'chunk', level: 4, morton: 9, nodes: 3, records: 5 };
+    const chunkHeader: OctreeChunkHeader = { kind: 'chunk', level: 4, morton: 9, nodes: 3, records: 5, chunks: [] };
     const chunkBuf = encodeOctreeObject(chunkHeader, nodeTable(), schema, ALL_RAW);
     expect(() => decodeOctreeIndex(chunkBuf.buffer as ArrayBuffer)).toThrow(/regenerate/);
 

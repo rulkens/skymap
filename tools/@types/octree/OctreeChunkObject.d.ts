@@ -6,8 +6,12 @@ export type OctreeChunkObject = {
   /** The first root's level and Morton key, which name the object. */
   readonly level: number;
   readonly morton: number;
-  /** Index rows of the chunk's roots, in Morton order. */
+  /** The id of the chunk whose rows hold this chunk's roots; null when the index holds them. */
+  readonly parent: number | null;
+  /** The parent object's rows that root this chunk, in Morton order. */
   readonly roots: readonly number[];
+  /** Catalog-global ordinal of its first record. */
+  readonly recordBase: number;
   readonly nodes: OctreeNodeTable;
   readonly columns: ReadonlyMap<ColumnId, Float32Array>;
 };

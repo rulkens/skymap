@@ -1,8 +1,10 @@
 /**
- * Quantises and encodes every chunk, writes each as `<outDir>/<name>/<level>-<morton>.<hash8>.bin`,
- * then writes the index `<outDir>/<name>.bin` last: the index names every chunk hash, so a
- * reader that sees the new index never meets a chunk that is not on disk yet. The quantiser
- * covers the star schema's stores; `u10x3` and `u64` throw until a column uses them.
+ * Quantises and encodes every object, writing each chunk as
+ * `<outDir>/<name>/<level>-<morton>.<hash8>.bin` and the index `<outDir>/<name>.bin` last. An
+ * object's header names its child chunks' hashes, so children are written before parents (ids
+ * run breadth-first, so descending id order does it): a reader that sees an object never meets
+ * a child not on disk yet. The quantiser covers the star schema's stores; `u10x3` and `u64`
+ * throw until a column uses them.
  */
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -35,18 +37,27 @@ export function writeOctreeCatalog(
 ): OctreeIndexHeader {
   const chunkDir = join(outDir, name);
   fs.mkdirSync(chunkDir, { recursive: true });
-  const chunks: OctreeChunkRef[] = objects.chunks.map((c) => {
+  const refs: OctreeChunkRef[] = [];
+  const kids = new Map<number | null, number[]>();
+  objects.chunks.forEach((c, id) => {
+    if (!kids.has(c.parent)) kids.set(c.parent, []);
+    kids.get(c.parent)!.push(id);
+  });
+  const refsUnder = (parent: number | null) => (kids.get(parent) ?? []).map((id) => refs[id]!);
+  for (let id = objects.chunks.length - 1; id >= 0; id--) {
+    const c = objects.chunks[id]!;
     const nodes = c.nodes.count;
     const records = recordCount(c.nodes);
     const bytes = encodeOctreeObject(
-      { kind: 'chunk', level: c.level, morton: c.morton, nodes, records },
+      { kind: 'chunk', level: c.level, morton: c.morton, nodes, records, chunks: refsUnder(id) },
       c.nodes,
       meta.schema,
       quantise(c.columns, meta.schema),
     );
     const hash = contentHash8(bytes);
     fs.writeFileSync(join(chunkDir, octreeChunkFileName({ ...c, hash })), bytes);
-    return {
+    refs[id] = {
+      id,
       level: c.level,
       morton: c.morton,
       roots: c.roots,
@@ -54,8 +65,9 @@ export function writeOctreeCatalog(
       bytes: bytes.length,
       nodes,
       records,
+      recordBase: c.recordBase,
     };
-  });
+  }
 
   const header: OctreeIndexHeader = {
     kind: 'index',
@@ -67,8 +79,8 @@ export function writeOctreeCatalog(
     nodes: objects.index.nodes.count,
     records: recordCount(objects.index.nodes),
     columns: meta.schema,
-    stats: meta.stats,
-    chunks,
+    stats: { ...meta.stats, chunkCount: objects.chunks.length },
+    chunks: refsUnder(null),
   };
   const index = encodeOctreeObject(
     header,

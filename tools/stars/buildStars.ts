@@ -556,14 +556,12 @@ async function runCli(): Promise<void> {
   const starOutDir = join(outDir, STAR_OCTREE_DATA_PREFIX);
   const header = writeOctreeCatalog(objects, meta, starOutDir, 'stars');
   const t2 = performance.now();
-  const chunkBytes = header.chunks.map((c) => c.bytes);
   process.stderr.write(
-    `stars octree: ${header.chunks.length.toLocaleString()} chunks, ` +
+    `stars octree: ${header.stats.chunkCount?.toLocaleString()} chunks ` +
+      `(${header.chunks.length.toLocaleString()} rooted in the index), ` +
       `chunkNodeCap ${header.chunkNodeCap.toLocaleString()}, ` +
       `index ${header.nodes.toLocaleString()} nodes / ${header.records.toLocaleString()} records / ` +
       `${statSync(join(starOutDir, 'stars.bin')).size.toLocaleString()} B; ` +
-      `chunk bytes total ${chunkBytes.reduce((a, b) => a + b, 0).toLocaleString()}, ` +
-      `min ${Math.min(...chunkBytes).toLocaleString()}, max ${Math.max(...chunkBytes).toLocaleString()}; ` +
       `build ${((t1 - t0) / 1000).toFixed(1)} s, write ${((t2 - t1) / 1000).toFixed(1)} s\n` +
       `  wrote ${join(starOutDir, 'stars.bin')} + ${join(starOutDir, 'stars')}/\n`,
   );
