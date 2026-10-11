@@ -23,6 +23,7 @@ vi.mock('../../../src/services/gpu/device', () => ({
 import { rootReducer } from '../../../src/store/rootReducer';
 import { arrivalSaga } from '../../../src/state/arrival/arrivalSaga';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
@@ -268,6 +269,16 @@ describe('arrivalSaga', () => {
     const target = worldArmOf(h.store.getState().camera.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });
+  });
+
+  it('an exhibit link with a t opens the exhibit at that linked instant', async () => {
+    const h = build();
+    h.arrive({ view: { kind: 'exhibit', id: 'voyager-missions' }, t: Date.UTC(1990, 0, 1) });
+    h.boot();
+    await flush();
+
+    const open = h.recorded.find(openExhibit.match);
+    expect(open?.payload.atLinkedTime).toBe(true);
   });
 
   it('a plain boot arrives at home with the Earth focus', async () => {

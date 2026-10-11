@@ -2,8 +2,8 @@
  * navigateSaga — the one path from a `LinkIntent` to the screen, for the boot
  * arrival (`'cut'`) and every later hash change (`'fly'`). `t` and
  * `orientation` land first, so a subject framed below is framed at the linked
- * instant and in the linked frame; the arrival lands them itself, before the
- * runtime is seeded, and passes only the view. Every camera commit waits for
+ * instant and in the linked frame; the arrival lands them itself before the
+ * runtime is seeded, so here they land a second time, unchanged. Every camera commit waits for
  * the camera runtime (`liveCameraRuntimeSaga`).
  */
 import { all, call, cancelled, delay, getContext, put, race, select, take } from 'typed-redux-saga';
