@@ -6,7 +6,7 @@
 
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 import type { SampledBody } from '../../@types/missions/SampledBody';
-import { VOYAGER_1_GOLD, VOYAGER_2_AMBER } from '../bodies/palette';
+import { VOYAGER_1_LIME, VOYAGER_2_GREEN } from '../bodies/palette';
 import { MISSION_EVENTS } from './missionEvents.generated';
 
 /** Cape Canaveral Launch Complex 41, where both Voyagers' Titan IIIE lifted off. */
@@ -22,13 +22,13 @@ function launchIso(id: string): string {
 export const SAMPLED_BODIES: readonly SampledBody[] = [
   {
     id: 'voyager1',
-    trailColor: VOYAGER_1_GOLD,
+    trailColor: VOYAGER_1_LIME,
     launchIso: launchIso('voyager1'),
     launchPad: CAPE_CANAVERAL_LC41,
   },
   {
     id: 'voyager2',
-    trailColor: VOYAGER_2_AMBER,
+    trailColor: VOYAGER_2_GREEN,
     launchIso: launchIso('voyager2'),
     launchPad: CAPE_CANAVERAL_LC41,
   },
