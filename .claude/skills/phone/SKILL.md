@@ -26,6 +26,8 @@ something a command below does; extend the tool instead.
 | what does the phone show?          | `npm run phone -- shot '<link>' [--wait 15000]`  |
 | what does it download, what fails? | `npm run phone -- net '<link>' [--for 20000]`    |
 | how smooth is it?                  | `npm run phone -- trace '<link>' [--for 5000]`   |
+| reach a UI state (open a panel)    | `npm run phone -- tap '<selector>\|x,y'` then `shot` |
+| scroll / drag a sheet              | `npm run phone -- swipe x,y x,y [--ms 400]` then `shot` |
 | leave it open for the user         | `npm run phone -- open '<link>'`                 |
 
 `shot`, `net` and `trace` without a link reuse the last tab the tool used.
