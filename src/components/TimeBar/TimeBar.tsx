@@ -164,10 +164,10 @@ function TimeBar({
     <div
       className={cx(
         styles.root,
-        styles[mode],
+        row ? styles.row : styles.floating,
+        mode === 'manual' && styles.manual,
         hidden && styles.hidden,
         holdControlsOpen && styles.holdOpen,
-        row && styles.row,
       )}
       aria-hidden={hidden || undefined}
       role="toolbar"

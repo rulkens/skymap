@@ -1,90 +1,40 @@
 /*
  * TimeBar.module.css — the sim clock's transport instrument.
  *
- * The bar lives in the bottom-right HUD rail, stacked under the ScaleBar with
- * its right edge pinned at the corner. Two nested boxes carry the collapse:
- *   - .root is the transparent, full-expanded-width hit surface pinned to the
- *     right corner. It never changes size, so its right-anchored placement
- *     keeps the readout's right edge fixed whether the bar is collapsed or
- *     expanded, and its idle width reaches LEFTWARD over the region where the
- *     controls will appear (sweep the cursor there and the reveal still fires).
- *   - .pill is the visible glass chrome (row-reverse). The readout stays on the
- *     right; the controls' grid track opens leftward as the pill grows past its
- *     rail-width floor.
- *
- * The transport buttons are flat glyphs on the toolbar chrome (no per-button
- * pill), grouped Now | rate | ‹ ⏯ › | readout by thin 1px dividers. All atoms
- * reference tokens from src/styles/global.css.
+ * The base classes lay the controls out open: readout, then Now | rate | ‹ ⏯ ›.
+ * Two sibling variants sit over it and share nothing with each other:
+ *   - .floating: the desktop pill in the bottom-right rail. It owns its
+ *     placement, the glass chrome, the dividers, and the whole collapse/reveal.
+ *   - .row: the phone's static full-width strip, every control at a fixed slot.
+ * A rule that only one variant needs lives under that variant's class.
  */
 
 .root {
-  position: fixed;
-  bottom: var(--corner-offset);
-  right: var(--corner-offset);
-  z-index: 10;
-  transform-origin: bottom right;
-
-  /*
-   * Fixed idle footprint = the expanded pill's width, reserved reaching
-   * leftward from the pinned right edge. It is a deliberate reservation, not
-   * content-derived: the grid trick below zeroes the controls' layout width
-   * when collapsed, so an auto-sized root would shrink to the readout and lose
-   * the reach-ahead hit area. flex-end pins the pill's right edge at the corner
-   * so it grows leftward, keeping the readout anchored across the animation.
-   */
-  width: 30rem;
-  max-width: calc(100vw - 2 * var(--corner-offset));
   display: flex;
-  justify-content: flex-end;
-
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
   font-variant-numeric: tabular-nums;
   user-select: none;
-
   transition:
     opacity var(--duration-base) var(--ease-standard),
     transform var(--duration-base) var(--ease-standard);
 }
 
-/* App-layout gate: fade + settle out, matching the HUD pills' hidden state. */
+/* App-layout gate: fade out, matching the HUD pills' hidden state. */
 .hidden {
   opacity: 0;
-  transform: scale(0.96);
   pointer-events: none;
 }
 
-/*
- * The visible glass chrome. row-reverse keeps the readout (first in DOM, for a
- * sensible focus order) pinned to the right while the controls open to its
- * left. Collapsed, the pill hugs the readout (its intrinsic content width); the
- * ScaleBar above reproduces that outer width from the same mono metrics so the
- * two boxes read as one column. The pill grows past it on expand.
- */
 .pill {
   display: flex;
-  flex-direction: row-reverse;
   align-items: center;
   box-sizing: border-box;
-  height: var(--time-toolbar-height);
-  padding: var(--space-3) var(--space-5);
-
-  background: var(--surface-card-soft);
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
-  border: 1px solid var(--border-card);
-  border-radius: 999px;
-  box-shadow: var(--shadow-card);
 }
 
-/*
- * The time readout doubles as the date-entry trigger. Styled as text rather
- * than a chromed button so it reads as the bar's primary content.
- */
 .readout {
   position: relative;
   font: inherit;
-  padding: var(--space-2) var(--space-3);
   border: none;
   border-radius: var(--radius-md);
   background: none;
@@ -96,138 +46,45 @@
     background var(--duration-color) ease;
 }
 
-.readout:focus-visible {
+.readout:focus-visible,
+.rate:focus-visible {
   color: var(--color-accent);
   background: var(--surface-control);
-}
-
-.readout:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-/*
- * Controls collapse via the grid-template-columns 0fr→1fr trick: the track
- * shrinks to zero width (with .group's min-width: 0) so the pill hugs the
- * readout, then opens leftward to the group's content width on reveal. Opacity
- * trails slightly so the controls fade in after the width has started to open.
- */
 .controls {
   display: grid;
-  grid-template-columns: 0fr;
-  opacity: 0;
-  /* The clip-path leaves the collapsed (invisible) glyphs hit-testable in a
-   * thin zone left of the readout; disable them until the reveal so a click in
-   * the reserved area doesn't land on a hidden button. The root still catches
-   * the hover that triggers the reveal. */
-  pointer-events: none;
-  transition:
-    grid-template-columns var(--duration-base) var(--ease-standard),
-    opacity var(--duration-color) var(--ease-standard) 80ms;
+  grid-template-columns: 1fr;
 }
 
 .group {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
   min-width: 0;
-  /*
-   * Clip the horizontal collapse. The left/right bound keeps the sliding
-   * controls inside the growing track, and any transient horizontal spill during
-   * the animation is masked by the controls' opacity gate. The negative insets
-   * (extending the region past top/bottom and symmetrically on the inline axis)
-   * ARE load-bearing now: CompactInfoTip's hints are plain absolutely-positioned
-   * labels (not fixed/escaping), so they render inside this clip region. -40px
-   * gives ~40px of headroom above the group's own box; a tip is one line plus
-   * padding and border (~26px) plus its --space-2 gap (~4px) ≈ 30px, so it clears
-   * with room to spare.
-   */
-  clip-path: inset(-40px -48px);
 }
 
-/*
- * Live mode is pinned to wall-time, so the transport collapses away and the
- * readout stands alone. Hovering or keyboard-focusing anywhere on the bar
- * (including the reserved hit area) reveals the controls. Manual mode overrides
- * this — the controls are always open. `.holdOpen` is a third way in: a popover
- * anchored to a button inside this strip is rendered outside the pill's DOM, so
- * once it takes focus, :focus-within no longer holds — the strip would collapse
- * and drag the popover's anchor out from under an open interaction. The
- * container drives `.holdOpen` from "is any popover open", independent of
- * hover/focus.
- */
-.live:hover .controls,
-.live:focus-within .controls,
-.manual .controls,
-.holdOpen .controls {
-  grid-template-columns: 1fr;
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/*
- * Now collapser. Mirrors .controls' 0fr→1fr trick at single-button scale: the
- * grid track holds the "return to now" affordance + its trailing divider, open
- * (1fr) in manual and folded to 0 in live so the pill glides narrower as the
- * clock is handed back to wall-time. The inner clips horizontally and drops to
- * min-width: 0 so the track can reach zero. Opacity trails the width, matching
- * .controls.
- */
+/* Now keeps its slot and goes invisible on live; `inert` takes it out of reach. */
 .nowCollapse {
   display: grid;
   grid-template-columns: 1fr;
-  transition:
-    grid-template-columns var(--duration-base) var(--ease-standard),
-    opacity var(--duration-color) var(--ease-standard) 80ms,
-    margin var(--duration-base) var(--ease-standard);
 }
 
 .nowInner {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
   min-width: 0;
   overflow-y: visible;
 }
 
 .nowCollapsed {
-  grid-template-columns: 0fr;
   opacity: 0;
-  /* Cancel .group's inter-item gap so the folded Now leaves no leading space
-     before the rate label (visible on live-hover, when .controls is open). */
-  margin-right: calc(-1 * var(--space-3));
 }
 
-/*
- * Clip horizontally only while collapsed (live mode) or animating shut, so
- * the Now glyph hides as the track narrows to zero — the same class that
- * drives the 1fr→0fr collapse holds through the whole closing transition,
- * so the clip stays active exactly as long as it's needed. Manual mode
- * drops this class immediately, leaving overflow visible so the Now
- * button's CompactInfoTip label (wider than the button) renders whole
- * above it instead of being cropped at the track edge.
- */
-.nowCollapsed .nowInner {
-  overflow-x: clip;
-}
-
-/* Thin vertical rule between control groups. */
-.divider {
-  align-self: stretch;
-  width: 1px;
-  margin: 2px 0;
-  background: var(--border-divider);
-}
-
-/*
- * Rate stepper + play/pause: flat glyph buttons that read as toolbar chrome,
- * not per-button pills. The descendant selector outranks Button's own chrome
- * regardless of stylesheet order, so the transparent fill + hover tint win.
- */
+/* Flat glyph buttons on the toolbar chrome. `.pill .x` outranks Button's own chrome. */
 .pill .step {
   position: relative;
-  min-width: 28px;
-  padding: var(--space-2) var(--space-3);
   line-height: 1;
   background: transparent;
   border: none;
@@ -235,33 +92,17 @@
   color: var(--color-fg-base);
 }
 
-/*
- * A step at the ladder end is inert (it can no longer change the rate). It reads
- * as unavailable: Button's own :disabled rule supplies the dim, the hover tint is
- * already gated off above (:not(:disabled)), and pointer-events: none both drops
- * the idle cursor and suppresses the tooltip (the hover that lifts it can't land).
- */
+/* A step at the ladder end is inert; pointer-events: none also suppresses its tooltip. */
 .pill .step:disabled {
   cursor: default;
   pointer-events: none;
 }
 
-/*
- * The rate label doubles as the rate-selector trigger. Chromeless at rest (no
- * fill, no border) so it reads as the current-speed text, with the same hover
- * tint the flat-glyph steppers use.
- */
 .rate {
   position: relative;
-  /*
-   * Anchor for the rate-selector popover (see RateSelectorPopover.module.css).
-   * Anchor names are page-global — CSS Modules does NOT scope them the way it
-   * hashes class names — so the name is spelled specifically to avoid collision.
-   */
+  /* Anchor names are page-global; CSS Modules does not scope them. */
   anchor-name: --time-rate-label;
   font: inherit;
-  min-width: 6ch;
-  padding: var(--space-2) var(--space-3);
   text-align: center;
   border: none;
   border-radius: var(--radius-md);
@@ -274,24 +115,8 @@
     background var(--duration-color) ease;
 }
 
-.rate:focus-visible {
-  color: var(--color-accent);
-  background: var(--surface-control);
-}
-
-.rate:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/*
- * The "return to now" affordance. Subtle by design: accent-coloured text on the
- * chromeless toolbar, not a filled accent pill — it reads as the way back
- * without shouting.
- */
 .pill .now {
   position: relative;
-  padding: var(--space-2) var(--space-4);
   line-height: 1;
   background: transparent;
   border: none;
@@ -320,7 +145,6 @@
   }
 }
 
-/* Touch: Button's own :hover sticks after a tap; keep only the pressed tint. */
 @media (hover: none) {
   .pill .step:hover:not(:disabled),
   .pill .now:hover:not(:disabled) {
@@ -333,42 +157,146 @@
   }
 }
 
+/* ── .floating: desktop pill ─────────────────────────────────────────── */
+
+.floating {
+  position: fixed;
+  bottom: var(--corner-offset);
+  right: var(--corner-offset);
+  z-index: 10;
+  transform-origin: bottom right;
+  /*
+   * A fixed footprint, not content-derived: the controls collapse to zero
+   * width, so an auto-sized root would shrink to the readout and lose the hit
+   * area where the controls reveal. flex-end pins the readout at the corner.
+   */
+  width: 30rem;
+  max-width: calc(100vw - 2 * var(--corner-offset));
+  justify-content: flex-end;
+}
+
+.floating.hidden {
+  transform: scale(0.96);
+}
+
+/* row-reverse keeps the readout (first in DOM, for focus order) on the right. */
+.floating .pill {
+  flex-direction: row-reverse;
+  height: var(--time-toolbar-height);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+}
+
+.floating .readout {
+  padding: var(--space-2) var(--space-3);
+}
+
 /*
- * Phone row variant (TimeBar given `row`): a full-width row in the bottom
- * stack's flow instead of a floating pill. No hover on touch, so every control
- * is always shown, and each keeps a fixed slot so nothing moves when the mode
- * or the rate label changes: readout takes the slack on the left, then Now,
- * rate, and the three transport buttons at the right edge.
+ * Collapse: the grid track goes 1fr → 0fr so the pill hugs the readout, and
+ * opacity trails the width. pointer-events stay off while folded so a click in
+ * the reserved area cannot land on a hidden button.
  */
+.floating .controls {
+  grid-template-columns: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    grid-template-columns var(--duration-base) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard) 80ms;
+}
+
+/*
+ * Reveal on hover, focus, or manual mode (the clock moved). `.holdOpen` is the
+ * fourth way in: a popover anchored to a button in here renders outside the
+ * pill, so once it takes focus :focus-within no longer holds.
+ */
+.floating:is(:hover, :focus-within, .manual, .holdOpen) .controls {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.floating .group {
+  gap: var(--space-3);
+  /*
+   * Masks the sliding controls during the collapse. The negative insets leave
+   * room above for CompactInfoTip labels (~30px), which render inside this clip.
+   */
+  clip-path: inset(-40px -48px);
+}
+
+/* Now folds the same way, so the pill glides narrower when the clock returns to live. */
+.floating .nowCollapse {
+  transition:
+    grid-template-columns var(--duration-base) var(--ease-standard),
+    opacity var(--duration-color) var(--ease-standard) 80ms,
+    margin var(--duration-base) var(--ease-standard);
+}
+
+.floating .nowInner {
+  gap: var(--space-3);
+}
+
+.floating .nowCollapsed {
+  grid-template-columns: 0fr;
+  /* Cancel .group's gap so the folded Now leaves no space before the rate. */
+  margin-right: calc(-1 * var(--space-3));
+}
+
+/* Clip only while folded: in manual mode Now's tooltip must render whole above it. */
+.floating .nowCollapsed .nowInner {
+  overflow-x: clip;
+}
+
+.floating .divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 0;
+  background: var(--border-divider);
+}
+
+.floating .pill .step {
+  min-width: 28px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.floating .rate {
+  min-width: 6ch;
+  padding: var(--space-2) var(--space-3);
+}
+
+.floating .pill .now {
+  padding: var(--space-2) var(--space-4);
+}
+
+/* ── .row: phone strip ───────────────────────────────────────────────── */
+
 .row {
-  position: static;
   width: 100%;
-  max-width: none;
-  /* Cancel the pill's fade-scale so the row does not offset the stack above. */
-  transform: none;
 }
 
 .row .pill {
-  flex-direction: row;
   height: var(--time-row-height);
-  padding: 0;
   width: 100%;
   background: var(--surface-card-strong);
-  border-width: 1px 0 0;
-  border-radius: 0;
-  box-shadow: none;
+  border-top: 1px solid var(--border-card);
 }
 
-/* The readout sits inside CompactInfoTip's inline-flex wrapper, the pill's first flex item. */
+/* The readout sits inside CompactInfoTip's wrapper, the pill's first flex item; it takes the slack. */
 .row .pill > :first-child {
   flex: 1 1 0;
   min-width: 0;
 }
 
 /*
- * One line as tall as the touch target, wrapping allowed, overflow hidden: when
- * the row is too narrow the trailing words ("UTC", then the time) wrap out of
- * sight whole, where an ellipsis would cut the date mid-number.
+ * One line as tall as the touch target, overflow hidden: when narrow, the
+ * trailing words ("UTC", then the time) wrap out of sight whole, where an
+ * ellipsis would cut the date mid-number.
  */
 .row .readout {
   flex: 1 1 0;
@@ -384,25 +312,6 @@
 
 .row .controls {
   flex: none;
-  grid-template-columns: 1fr;
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.row .group,
-.row .nowInner {
-  gap: 0;
-}
-
-/* Dividers cost width the 360 px row does not have. */
-.row .divider {
-  display: none;
-}
-
-/* Live keeps Now's slot (invisible, inert) so the rate label does not jump when it appears. */
-.row .nowCollapsed {
-  grid-template-columns: 1fr;
-  margin-right: 0;
 }
 
 .row .pill .now,
@@ -426,9 +335,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .root,
-  .controls,
-  .nowCollapse {
+  .floating,
+  .floating .controls,
+  .floating .nowCollapse {
     transition: none;
   }
 }
