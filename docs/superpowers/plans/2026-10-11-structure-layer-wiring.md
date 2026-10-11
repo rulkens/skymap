@@ -339,13 +339,13 @@ structure: {
 
 `create` runs after `createLayers` seeds the key (`createLayers.ts:106-123`), so the boot publish lands in a seeded key. The deferral waits only while the slot is actually loading. Today `loaded()` is true from boot, because the anchors land synchronously, so a slot nobody demands (`'idle'`) must not hold a focus. The pre-seed default is `'idle'` for the same reason. `factsReported` fires for every Layer's facts, which is why `empty` is re-read after each pulse. The spec lists `selectStructureCounts` among P1's deletions; this plan re-points it to the facts key instead, the same move P2 makes for `selectStructureSearchList`. A deleted name would only come back under another one for the container to read.
 
-- [ ] Add `StructureFacts`, the `facts` value, and `create`'s `deps.publish` hand-off to the projection.
-- [ ] `wireStructureProjection.ts`: `emitCounts` (`:58-69`) publishes counts per the contract and stops dispatching `engineStructureCountsChanged`. Rewrite the header's "Structure-count dispatches" section (`:21-29`) to describe the publishes and the four `bulk` states.
-- [ ] `StructuresSectionContainer.tsx`: reads `selectStructureCounts` as today; only its comment (`:36-39`) changes, to name the fact.
-- [ ] Delete `structureCounts` (`CoreEngineSliceState.d.ts:40` and its header note `:5-7`; `engineSlice.ts:43`) and `engineStructureCountsChanged` (`engineSlice.ts:68-76`, export `:174`; drop the `StructureId` import if unused). Re-point `selectStructureCounts` (`selectors.ts:68-69`) and add `selectStructureBulk`. Fix the stale mention in `UseEngineReturn.d.ts:5`.
-- [ ] `watchSelectionRowsSaga.ts`: swap `engineStructureCountsChanged` for `factsReported` in the pulse list (`:80`) and import (`:39`); reword the header lines naming it (`:10-11`).
-- [ ] `watchFocusTweenSaga.ts`: the deferral becomes the contract's final form (`Deferral.pulse` typed `typeof factsReported`); reword the comment block at `:49-57`.
-- [ ] Tests:
+- [x] Add `StructureFacts`, the `facts` value, and `create`'s `deps.publish` hand-off to the projection.
+- [x] `wireStructureProjection.ts`: `emitCounts` (`:58-69`) publishes counts per the contract and stops dispatching `engineStructureCountsChanged`. Rewrite the header's "Structure-count dispatches" section (`:21-29`) to describe the publishes and the four `bulk` states.
+- [x] `StructuresSectionContainer.tsx`: reads `selectStructureCounts` as today; only its comment (`:36-39`) changes, to name the fact.
+- [x] Delete `structureCounts` (`CoreEngineSliceState.d.ts:40` and its header note `:5-7`; `engineSlice.ts:43`) and `engineStructureCountsChanged` (`engineSlice.ts:68-76`, export `:174`; drop the `StructureId` import if unused). Re-point `selectStructureCounts` (`selectors.ts:68-69`) and add `selectStructureBulk`. Fix the stale mention in `UseEngineReturn.d.ts:5`.
+- [x] `watchSelectionRowsSaga.ts`: swap `engineStructureCountsChanged` for `factsReported` in the pulse list (`:80`) and import (`:39`); reword the header lines naming it (`:10-11`).
+- [x] `watchFocusTweenSaga.ts`: the deferral becomes the contract's final form (`Deferral.pulse` typed `typeof factsReported`); reword the comment block at `:49-57`.
+- [x] Tests:
   - `wireStructureProjection.test.ts`, with a `publish` spy over a real store and slot. Fixture: 2 anchor galaxy clusters, 3 bulk galaxy clusters.
     - `publishes anchor counts and bulk 'idle' at boot`: one publish after the synchronous call; galaxy-cluster 2, `bulk: 'idle'`.
     - `publishes bulk 'loading' while the slot loads or commits`: drive the slot through `loading` and `committing`; each publishes `bulk: 'loading'` and no `counts`.
@@ -357,8 +357,8 @@ structure: {
   - Add `another Layer's facts report does not end a structure deferral`: with the row null and `bulk: 'loading'`, dispatch `factsReported({ layer: 'galaxyCatalog', patch: { structureMemberCount: null } })` → tween stays null; then feed the stub and report `bulk: 'ready'` → the tween targets the record's `worldPos`.
   - `StructuresSectionContainer.test.ts:99`: seed the key and report `counts: { 'galaxy-cluster': 42 }` via `factsReported`; the "42" assertion stays.
   - `watchSelectionRowsSaga.test.ts:202`: re-point to `factsReported` and rename the test to `a structure deep link fills on the structure Layer's facts report`.
-- [ ] Verify: `npm run typecheck:fast`; the test files above plus `tests/state/engine`.
-- [ ] Commit.
+- [x] Verify: `npm run typecheck:fast`; the test files above plus `tests/state/engine`.
+- [x] Commit.
 
 ### Task 6 (spec P2): The palette's search list is a Layer fact — `review: yes`
 
@@ -387,11 +387,11 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
   selectEngineFacts(state).structure?.searchList ?? NO_STRUCTURE_SEARCH_LIST;
 ```
 
-- [ ] Add `searchList` to the type and the `facts` value. Each publish that carries `counts` (boot, `ready`, `error`) adds `searchList: store.all().map(toStructureSearchEntry)`; the `dispatch` parameter goes. The boot publish carries the anchors, so a palette opened before the bulk catalog lands still lists them, as today.
-- [ ] Delete `structureSearchList` (`CoreEngineSliceState.d.ts:42-49` and its import if unused; `engineSlice.ts:45`) and `engineStructureSearchListChanged` (`engineSlice.ts:83-91`, export `:176`, the `StructureSearchEntry` import if unused). Rewrite `selectStructureSearchList` (`selectors.ts:79-86`) as in the contract; `CommandPaletteContainer.tsx:64` is unchanged.
-- [ ] Tests: delete `engineSlice.test.ts`'s `engineStructureSearchListChanged` block (`:89-103`). In `wireStructureProjection.test.ts`, the boot, `ready` and `error` tests also assert `searchList` (boot and error: the two anchors' ids; after `ready`: five ids).
-- [ ] Verify: `npm run typecheck:fast`; `npm test -- tests/state/engine tests/layers/structure tests/components/CommandPalette`.
-- [ ] Commit.
+- [x] Add `searchList` to the type and the `facts` value. Each publish that carries `counts` (boot, `ready`, `error`) adds `searchList: store.all().map(toStructureSearchEntry)`; the `dispatch` parameter goes. The boot publish carries the anchors, so a palette opened before the bulk catalog lands still lists them, as today.
+- [x] Delete `structureSearchList` (`CoreEngineSliceState.d.ts:42-49` and its import if unused; `engineSlice.ts:45`) and `engineStructureSearchListChanged` (`engineSlice.ts:83-91`, export `:176`, the `StructureSearchEntry` import if unused). Rewrite `selectStructureSearchList` (`selectors.ts:79-86`) as in the contract; `CommandPaletteContainer.tsx:64` is unchanged.
+- [x] Tests: delete `engineSlice.test.ts`'s `engineStructureSearchListChanged` block (`:89-103`). In `wireStructureProjection.test.ts`, the boot, `ready` and `error` tests also assert `searchList` (boot and error: the two anchors' ids; after `ready`: five ids).
+- [x] Verify: `npm run typecheck:fast`; `npm test -- tests/state/engine tests/layers/structure tests/components/CommandPalette`.
+- [x] Commit.
 
 ### Task 7: The types core no longer reads move into the Layer
 
@@ -409,19 +409,19 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
 
 Spec §5.1 names `StructureStore`, `StructureMarkerRenderer` and `StructureMarkerDescriptor`; `StructureGroupId` and `StructureCatalogReq` follow by the same rule (their only readers are `StructureStore` and the structure slot and fetcher).
 
-- [ ] Before moving, run `npm run refactor -- refs <file>#<Type>` for each. Every `src/` reference must be inside `src/layers/structure/`. Tasks 1, 2 and 4 removed `ResolveDeps`, `MarkerProducer`, `EngineData`, `EngineGpuHandles` and `EngineAssetSlots` as readers. If a core reader remains, stop and report it; that type stays shared.
-- [ ] `npm run move-files -- --manifest <file> --dry`, then without `--dry`. R12's shared types (`StructureId`, `StructureInfo`, `StructureSearchEntry`, `StructureFocusSubsystem`, `StructureCatalogPayload`) do not move.
-- [ ] No new test.
-- [ ] Commit.
+- [x] Before moving, run `npm run refactor -- refs <file>#<Type>` for each. Every `src/` reference must be inside `src/layers/structure/`. Tasks 1, 2 and 4 removed `ResolveDeps`, `MarkerProducer`, `EngineData`, `EngineGpuHandles` and `EngineAssetSlots` as readers. If a core reader remains, stop and report it; that type stays shared.
+- [x] `npm run move-files -- --manifest <file> --dry`, then without `--dry`. R12's shared types (`StructureId`, `StructureInfo`, `StructureSearchEntry`, `StructureFocusSubsystem`, `StructureCatalogPayload`) do not move.
+- [x] No new test.
+- [x] Commit.
 
 ### Task 8: Docs
 
 **Files:** `src/layers/README.md`, `docs/RENDERER.md:27`, `.claude/skills/add-data-source/SKILL.md`
 
-- [ ] `src/layers/README.md`: the `planners?` row (`:21`) drops "joins `CORE_PLANNERS`" (say "appended to `state.planners` by `createLayers`"); the `## Status` paragraph lists `structure` among the formed Layers and `body` as the one settings-only stub.
-- [ ] `docs/RENDERER.md:27`: drop `engine/frame/planners/` from the planner paragraph; planners are Layer rows.
-- [ ] `.claude/skills/add-data-source/SKILL.md`: the structure-category edit surface (the table at `:176-185` and the notes after it) names the Layer's files: rows in `src/layers/structure/sources/` plus `structureSourceRows.ts`, styles in `present/structureMarkerStyles.ts`, the build switch in `load/buildStaticAnchorStructures.ts`, the card in `ui/StructureDetailCard/`. Counts and search come from the Layer's facts with no per-category row.
-- [ ] Commit.
+- [x] `src/layers/README.md`: the `planners?` row (`:21`) drops "joins `CORE_PLANNERS`" (say "appended to `state.planners` by `createLayers`"); the `## Status` paragraph lists `structure` among the formed Layers and `body` as the one settings-only stub.
+- [x] `docs/RENDERER.md:27`: drop `engine/frame/planners/` from the planner paragraph; planners are Layer rows.
+- [x] `.claude/skills/add-data-source/SKILL.md`: the structure-category edit surface (the table at `:176-185` and the notes after it) names the Layer's files: rows in `src/layers/structure/sources/` plus `structureSourceRows.ts`, styles in `present/structureMarkerStyles.ts`, the build switch in `load/buildStaticAnchorStructures.ts`, the card in `ui/StructureDetailCard/`. Counts and search come from the Layer's facts with no per-category row.
+- [x] Commit.
 
 ## Dispatch grouping
 
