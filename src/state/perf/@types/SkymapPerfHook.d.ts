@@ -24,6 +24,8 @@ export type SkymapPerfHook = {
   readonly setPose: (pose: PerfPose) => Promise<void>;
   readonly setStrategy: (s: RenderStrategy) => void;
   readonly collectTimings: (frames: number) => Promise<PerfSample[]>;
+  /** Main-thread ms per `cpuSpans` row, one record per frame, over `frames` frames. */
+  readonly collectCpu: (frames: number) => Promise<Record<string, number>[]>;
   /**
    * Hot-swap the catalog tier and resolve only once the new tier's bins are
    * loaded and committed. Promise-shaped like `setPose`: it dispatches the

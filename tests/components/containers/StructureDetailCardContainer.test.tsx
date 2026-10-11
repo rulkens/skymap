@@ -42,7 +42,7 @@ const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
-  category: 'cluster',
+  category: 'galaxy-cluster',
   worldPos: [10, 0, 0],
   featured: true,
   physicalRadiusMpc: 2.2,

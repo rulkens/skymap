@@ -1,0 +1,119 @@
+---
+/*
+ * CiteCaption — the Cite page's worked example: what to print with one
+ * picture made with skymap. `picture` is a row of data/pressPictures.ts (its
+ * credit line), `cite` the entries of the licence record whose
+ * papers the picture rests on. The caption, the reference list and the
+ * acknowledgements are put together from those rows, the shot's address and
+ * the citation, so the example cannot fall behind any of them.
+ */
+import { APP_BASE } from '../data/appLink';
+import { CITATION } from '../data/citation';
+import { CITE_REFS } from '../data/citeRefs';
+import { dataEntry } from '../data/dataPages';
+import { PRESS_PICTURES } from '../data/pressPictures';
+import { siteShot } from '../data/siteShot';
+import { asksAcknowledgement } from '../utils/asksAcknowledgement';
+import { citationText } from '../utils/citationText';
+import CopyButton from './CopyButton.astro';
+import DocLink from './DocLink.astro';
+import RefLine from './RefLine.astro';
+
+type Props = { picture: string; cite: readonly string[] };
+
+const { picture, cite } = Astro.props;
+const press = PRESS_PICTURES.find((row) => row.shot === picture);
+if (!press) throw new Error(`No press picture "${picture}" (see src/data/pressPictures.ts)`);
+const entries = cite.map((id) => {
+  if (!CITE_REFS[id]) throw new Error(`No reference for "${id}" (see src/data/citeRefs.ts)`);
+  return { ...dataEntry(id), references: CITE_REFS[id] };
+});
+// Two sources can ask for the same paper (the Gaia mission paper); it is listed once.
+const references = [...new Set(entries.flatMap((entry) => entry.references))];
+// The address as the app itself writes it: the camera's exact position is read once and never written back.
+const view = siteShot(picture)
+  .link.split('&')
+  .filter((part) => !part.startsWith('pose='))
+  .join('&');
+const address = `${new URL(Astro.site!).host}${APP_BASE}#${view}`;
+const cited = `${CITATION.authors[0]!.family} ${CITATION.released.slice(0, 4)}`;
+const asking = entries.filter((entry) => asksAcknowledgement(entry.record.fields.Attribution ?? ''));
+const caption = `${siteShot(picture).title}. ${press.credit}. Made with skymap ${CITATION.version} (${cited}), from the view at ${address}.`;
+---
+
+<div class="sample" data-embed>
+  <h3>Under the picture</h3>
+  <div class="row">
+    <p>
+      {caption.replace(`${address}.`, '')}
+      <span class="address">{address}</span>.
+    </p>
+    <CopyButton text={caption} label="Copy the caption" />
+  </div>
+  <h3>In the reference list</h3>
+  <p>{citationText(CITATION)}</p>
+  {
+    references.map((reference) => (
+      <p>
+        <RefLine reference={reference} />
+      </p>
+    ))
+  }
+  {
+    asking.length > 0 && (
+      <>
+        <h3>In the acknowledgements</h3>
+        {asking.map((entry) => (
+          <p>
+            The text {entry.title} asks for, which is <DocLink href={`/docs/credits/#${entry.id}`}>on the credits page</DocLink>.
+          </p>
+        ))}
+      </>
+    )
+  }
+</div>
+
+<style>
+  /* What a reader would print, set apart from the page's own words as a quotation is. */
+  .sample {
+    margin: 0 0 var(--stack);
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--site-text-dim);
+  }
+
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .row p {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .row :global(button) {
+    margin-block: -0.5rem;
+  }
+
+  h3 {
+    margin: 1.25rem 0 0.25rem;
+    font: var(--weight-small) var(--text-small) / 1.45 var(--font-body);
+    color: var(--site-text-dim);
+  }
+
+  h3:first-child {
+    margin-top: 0;
+  }
+
+  p {
+    max-width: var(--doc-measure);
+    margin: 0 0 0.5rem;
+    color: var(--color-fg);
+    overflow-wrap: anywhere;
+  }
+
+  .address {
+    font: 400 0.9375rem / 1.45 var(--font-family-mono);
+  }
+</style>

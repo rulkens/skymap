@@ -1,0 +1,59 @@
+---
+/*
+ * Remark — one true sentence set apart from the page's argument, at most one
+ * a page and never in its opening section. `text` is the sentence as it stands
+ * without script; `live` names a figure worked out in the reader's browser,
+ * which replaces it when the line scrolls into view.
+ */
+type Props = { text: string; live?: 'dome-turn' | 'files-fetched' };
+
+const { text, live } = Astro.props;
+---
+
+<p class="remark" data-remark={live}>{text}</p>
+
+<script>
+  import { domeTurnLine } from '../utils/domeTurnLine';
+  import { filesFetchedLine } from '../utils/filesFetchedLine';
+  import { liveLine } from '../utils/liveLine';
+
+  const SAY: Record<string, () => string> = {
+    'dome-turn': () => domeTurnLine(performance.now() / 1000),
+    // The page itself and everything it asked for, as the browser's own timing list has them.
+    'files-fetched': () =>
+      filesFetchedLine(
+        [...performance.getEntriesByType('navigation'), ...performance.getEntriesByType('resource')]
+          .map((entry) => entry.name)
+          .filter((name) => name.startsWith('http')),
+      ),
+  };
+
+  for (const line of document.querySelectorAll<HTMLElement>('[data-remark]')) {
+    const say = SAY[line.dataset.remark!];
+    if (say) liveLine(line, say);
+  }
+</script>
+
+<style>
+  /* Under a short rule on the page's middle line, where a section's own lead sits: beside the argument, not in it. */
+  .remark {
+    max-width: 30rem;
+    margin: 4rem 0 0 calc((100% + var(--col-gap)) / 2);
+    padding-top: 1.25rem;
+    color: var(--site-text);
+    font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
+    background: linear-gradient(var(--color-accent), var(--color-accent)) left top / 2.5rem 1px no-repeat;
+  }
+
+  /* The figure worked out in the browser makes a longer sentence: room for its four lines, so the swap moves nothing. */
+  .remark[data-remark] {
+    min-height: calc(4lh + 1.25rem);
+  }
+
+  @media (max-width: 900px) {
+    .remark {
+      margin: 3rem 0 0 auto;
+    }
+  }
+</style>

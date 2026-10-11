@@ -1,0 +1,46 @@
+---
+/*
+ * Example — `<Example to="focus=body-saturn" address>Saturn.</Example>` on a
+ * docs page: a link a reader can open, as one block. What it opens (the slot),
+ * then with `address` the address itself as AddressStrip prints it, unboxed
+ * and with its copy control, then the link. `shown` prints a shorter address
+ * than the link carries, for one too long to read. One under another they
+ * make a list, a rule between each.
+ */
+import AddressStrip from './AddressStrip.astro';
+import View from './View.astro';
+
+type Props = { to: string; query?: string; label?: string; address?: boolean; shown?: string };
+
+const { to, query, label = 'Open this view', address = false, shown } = Astro.props;
+---
+
+<div class="example" data-embed>
+  {Astro.slots.has('default') && <p class="what"><slot /></p>}
+  {address && <AddressStrip plain hash={to} query={query} shown={shown} />}
+  <View to={to} query={query}>{label}</View>
+</div>
+
+<style>
+  .example {
+    margin-top: var(--stack);
+    padding-block: 0.875rem 0.25rem;
+    border-top: 1px solid var(--border-divider);
+  }
+
+  .example + .example {
+    margin-top: 0;
+  }
+
+  /* The last of a run closes it with the rule the first opened it with. */
+  .example:not(:has(+ .example)) {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  .what {
+    max-width: none;
+    margin: 0;
+    color: var(--color-fg);
+  }
+</style>

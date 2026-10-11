@@ -2,7 +2,7 @@
  * SplashContainer — store boundary for the splash overlay.
  *
  * Owns the splash's whole state surface (visibility gate, readiness, error
- * mapping, Continue-anyway timer via `useSplash`; load progress from the engine
+ * mapping via `useSplash`; load progress from the engine
  * slice) so that splash state changes re-render only this subtree, not the whole
  * App. The presentational `Splash` imports nothing from `store/` or `state/`.
  *
@@ -36,12 +36,10 @@ function SplashContainer(): ReactNode {
   return (
     <Splash
       blocked={splash.blocked}
-      canContinueAnyway={splash.canContinueAnyway}
       loadProgress={loadProgress}
       error={splash.error}
       onExplore={splash.dismissExplore}
       onTour={onTour}
-      onContinueAnyway={splash.dismissExplore}
       onReload={() => window.location.reload()}
     />
   );

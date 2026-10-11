@@ -109,10 +109,10 @@ describe('ASSET_WIRING demand predicates', () => {
       structures: {
         enabled: true,
         items: {
-          cluster: { enabled: false, labelEnabled: false },
+          'galaxy-cluster': { enabled: false, labelEnabled: false },
           supercluster: { enabled: false, labelEnabled: false },
           void: { enabled: false, labelEnabled: false },
-          group: { enabled: false, labelEnabled: false },
+          'galaxy-group': { enabled: false, labelEnabled: false },
         },
       },
     };
@@ -127,7 +127,7 @@ describe('ASSET_WIRING demand predicates', () => {
               enabled: true,
               items: {
                 ...allHidden.structures.items,
-                cluster: { enabled: true, labelEnabled: false },
+                'galaxy-cluster': { enabled: true, labelEnabled: false },
               },
             },
           },

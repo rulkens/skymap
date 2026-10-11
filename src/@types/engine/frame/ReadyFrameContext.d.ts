@@ -90,7 +90,7 @@ export type ReadyFrameContext = {
    * (`ctx.snapshot.renderTargets.viewOf('cosmic-web-density')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
-  /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */
+  /** Full structure-focus uniform value (produceFocusUniforms, ticked once/frame). */
   focus: FocusUniformsValue;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;

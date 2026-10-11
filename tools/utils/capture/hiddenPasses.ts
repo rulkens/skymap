@@ -8,5 +8,6 @@ export const CAPTURE_HIDDEN_PASSES: readonly string[] = [
   'selection-ring',
   'near0-selection-ring',
   // A focused structure rings itself here, not in `selection-ring`.
-  'structure-markers',
+  'structure-markers-cosmo',
+  'structure-markers-near',
 ];

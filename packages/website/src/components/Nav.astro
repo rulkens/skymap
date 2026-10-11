@@ -1,0 +1,235 @@
+---
+/*
+ * Nav — sticky on every page, so the launch control is never more than a
+ * glance away. Its black ground is a separate layer below the bar, and every
+ * section passes under it. On a page with a hero the ground lies above the
+ * hero and is clear (`--nav-ground`, set by scripts/initFlight.ts), so the
+ * bar floats on the picture, and it comes back before the hero lets go, so
+ * nothing of the hero scrolls up through the bar's labels. Without script
+ * the ground is simply there.
+ */
+import Icon from './Icon.astro';
+import ObjLink from './ObjLink.astro';
+import OpenApp from './OpenApp.astro';
+import { NAV_ITEMS } from '../data/nav';
+import { sitePath } from '../utils/sitePath';
+
+const home = sitePath('/');
+// The page you are on keeps the ring around its icon, like the app's selected object.
+const current = (path: string) => (Astro.url.pathname === sitePath(path) ? 'page' : undefined);
+---
+
+<div class="ground" aria-hidden="true"></div>
+<header class="nav">
+  <a class="mark" href={home}>skymap</a>
+
+  <nav aria-label="Main">
+    <ul class="links">
+      {
+        NAV_ITEMS.map((item) => (
+          <li>
+            <ObjLink size="small" icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
+              {item.label}
+            </ObjLink>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- Phone: the same items behind a disclosure. -->
+    <details class="menu" data-menu>
+      <summary class="ring small"><Icon name="menu" />Menu</summary>
+      <ul>
+        {
+          NAV_ITEMS.map((item) => (
+            <li>
+              <ObjLink icon={item.icon} href={sitePath(item.path)} aria-current={current(item.path)}>
+                {item.label}
+              </ObjLink>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+  </nav>
+
+  <OpenApp size="small" />
+</header>
+
+<script>
+  // A disclosure that stays open over the page is a trap on a phone: Escape and a tap outside close it.
+  const menu = document.querySelector<HTMLDetailsElement>('[data-menu]');
+  if (menu) {
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !menu.open) return;
+      menu.open = false;
+      menu.querySelector('summary')?.focus();
+    });
+    document.addEventListener('click', (event) => {
+      if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
+    });
+  }
+</script>
+
+<style>
+  .ground,
+  .nav {
+    position: sticky;
+    top: 0;
+    height: var(--nav-height);
+  }
+
+  .ground {
+    z-index: 1;
+    margin-bottom: calc(-1 * var(--nav-height));
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  .nav {
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 1.875rem;
+    /* Full width, on the gutter: the bar lines up with the hero's words, which are not in the page column. */
+    padding-inline: var(--gutter);
+    /* The launch control is as far from the right edge as from the top one. */
+    padding-right: calc((var(--nav-height) - var(--tap)) / 2);
+    /* Over a picture the labels sit on stars; the shadow is their local scrim. */
+    text-shadow:
+      0 0 0.75rem #000,
+      0 0 0.25rem #000;
+  }
+
+  /* A hero starts under the bar instead of below it. */
+  :global(.hero-nav) .nav {
+    margin-bottom: calc(-1 * var(--nav-height));
+  }
+
+  :global(.hero-nav) .ground {
+    z-index: 3;
+    opacity: var(--nav-ground, 1);
+  }
+
+  .mark {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    margin-right: auto;
+    font: var(--weight-display) 1.75rem / 1 var(--font-family-display);
+    color: var(--color-fg);
+    text-decoration: none;
+  }
+
+  .mark:hover {
+    color: var(--color-accent);
+  }
+
+  .links,
+  .menu ul {
+    display: flex;
+    gap: 1.875rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .menu {
+    display: none;
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Same breakpoint as site.css. */
+  @media (max-width: 900px) {
+    .nav {
+      gap: 1rem;
+    }
+
+    .links {
+      display: none;
+    }
+
+    .menu {
+      display: block;
+    }
+
+    /* The launch control keeps its place beside the mark; the menu sits at the thumb's edge. */
+    nav {
+      order: 3;
+    }
+
+    /*
+     * With the reader's text size doubled the three controls are wider than a phone. Each grows only as far as
+     * the window's width allows (at the usual size these caps are above the rem values), and its spacing follows
+     * its own text, so the bar never pushes the page sideways.
+     */
+    .nav {
+      gap: min(1rem, 3vw);
+      padding-inline: min(var(--gutter), 5vw);
+    }
+
+    .mark {
+      font-size: min(1.75rem, 9vw);
+    }
+
+    .nav :global(:is(summary.ring.small, .open-app.small)) {
+      --mark: 0.6875em;
+      --gap: 0.625em;
+      font-size: min(var(--text-small), 4.6vw);
+    }
+
+    .nav :global(.open-app.small) {
+      gap: 0.5em;
+      padding-inline: 0.75em 1em;
+    }
+
+    .nav :global(:is(.open-app.small, summary.ring.small) .glyph) {
+      width: 1.25em;
+      height: 1.25em;
+    }
+
+    .menu ul {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      flex-direction: column;
+      gap: 0;
+      padding: 0.5rem var(--gutter) 1.5rem;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--border-divider);
+      text-shadow: none;
+    }
+
+    /* The same face as the bar's links on a wide screen, a size up for the thumb. */
+    .menu li :global(.ring) {
+      width: 100%;
+      min-height: 3.5rem;
+      font: var(--weight-body) var(--text-body) / 1.2 var(--font-body);
+      letter-spacing: 0.01em;
+    }
+
+    /* The open list needs the bar's ground even over a hero. */
+    .nav:has(.menu[open]) {
+      background: var(--color-bg);
+      text-shadow: none;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .nav {
+      gap: min(0.75rem, 3vw);
+    }
+
+    .mark {
+      font-size: min(1.5rem, 9vw);
+    }
+  }
+</style>

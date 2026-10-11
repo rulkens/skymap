@@ -61,6 +61,7 @@ function makeSnapshot(
       cosmicWebFilaments: { ...f.cosmicWebFilaments, intensity: 0.42 },
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       zoneOfAvoidance: { ...f.zoneOfAvoidance, enabled: !f.zoneOfAvoidance.enabled },
+      lightTime: { ...f.lightTime, enabled: !f.lightTime.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },

@@ -62,11 +62,11 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('resolves a structure id immediately (prefix-only, no cloud needed)', async () => {
-    store.dispatch(requestFocus({ id: 'cluster-virgo', transition: 'fly' }));
+    store.dispatch(requestFocus({ id: 'galaxy-cluster-virgo', transition: 'fly' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({
       type: 'structure',
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
     });
   });
 

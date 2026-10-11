@@ -52,4 +52,10 @@ export type StructureMarkerDescriptor = {
    * 0 → ring is skipped.
    */
   readonly ringColor: Vec4;
+  /**
+   * False when the focus sphere excludes this structure's centre. The ring
+   * still draws and keeps its instance slot (pick decode needs the alignment);
+   * only its pick fragment is discarded.
+   */
+  readonly pickable: boolean;
 };

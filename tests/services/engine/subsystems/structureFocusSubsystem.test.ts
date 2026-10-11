@@ -6,7 +6,7 @@ function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
   return {
     id: 'virgo',
     name: 'Virgo Cluster',
-    category: 'cluster',
+    category: 'galaxy-cluster',
     worldPos: [10, 0, 0],
     physicalRadiusMpc: 2,
     featured: true,
@@ -32,6 +32,14 @@ describe('structureFocusSubsystem', () => {
     // No apparent extent → apparent falls back to physical; both radii equal.
     expect(settled.apparentRadiusMpc).toBe(7);
     expect(settled.physicalRadiusMpc).toBe(7);
+  });
+
+  it('lastFocusUniforms returns the produced value without advancing the fade', () => {
+    const sub = makeStructureFocus(0);
+    expect(sub.lastFocusUniforms().blend).toBe(0);
+    sub.update(makeCluster(), 0);
+    const mid = sub.produceFocusUniforms(200);
+    expect(sub.lastFocusUniforms()).toBe(mid);
   });
 
   it('emits apparent (fade outer edge) and physical (core) radii independently', () => {

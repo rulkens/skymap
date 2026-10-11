@@ -1,8 +1,17 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
-import type { R2SyncGroup } from './R2SyncGroup';
+import { dirname, join, relative } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import type { R2SyncGroup } from '../@types/R2SyncGroup';
 import { RCLONE_REMOTE, rcloneEnv, type RcloneCredentials } from './rcloneEnv';
 
 /** Parallel transfers. R2 has no documented per-connection cap; 32 saturates a home uplink. */
@@ -15,6 +24,9 @@ const TRANSFERS = 32;
  * the group's `localRoot`/`keyRoot` must be the prefixes its files hang off —
  * `relative()` here would silently emit `../` escapes otherwise, and rclone
  * would refuse them.
+ *
+ * rclone sets `Content-Encoding` but never compresses, so a `gzipOnWire` group
+ * is copied from a staged tree of gzipped files under the same relative paths.
  *
  * `copy` never deletes, so a stale remote object outlives a shrinking local
  * tree. That is the right default for immutable content and the reason a
@@ -31,18 +43,22 @@ export function uploadViaRclone(
   try {
     const relatives = group.files.map((f) => relative(localRoot, f.localPath));
     writeFileSync(listPath, `${relatives.join('\n')}\n`);
+    const sourceRoot = group.gzipOnWire
+      ? stageGzipped(localRoot, relatives, join(listDir, 'staged'))
+      : localRoot;
 
     console.log(`▶ rclone copy ${group.files.length} file(s) → r2://${bucket}/${keyRoot}`);
     execFileSync(
       'rclone',
       [
         'copy',
-        localRoot,
+        sourceRoot,
         `${RCLONE_REMOTE}:${bucket}/${keyRoot}`,
         '--files-from',
         listPath,
         '--header-upload',
         `Cache-Control: ${group.cacheControl}`,
+        ...(group.gzipOnWire ? ['--header-upload', 'Content-Encoding: gzip'] : []),
         '--transfers',
         String(TRANSFERS),
         '--checkers',
@@ -54,4 +70,17 @@ export function uploadViaRclone(
   } finally {
     rmSync(listDir, { recursive: true, force: true });
   }
+}
+
+function stageGzipped(localRoot: string, relatives: readonly string[], stageRoot: string): string {
+  for (const rel of relatives) {
+    const source = join(localRoot, rel);
+    const staged = join(stageRoot, rel);
+    mkdirSync(dirname(staged), { recursive: true });
+    writeFileSync(staged, gzipSync(readFileSync(source)));
+    // Fresh mtimes would make every later run re-hash and server-side-copy each object.
+    const { atime, mtime } = statSync(source);
+    utimesSync(staged, atime, mtime);
+  }
+  return stageRoot;
 }

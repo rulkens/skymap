@@ -36,17 +36,17 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn(() => [
     {
-      id: 'cluster-virgo',
+      id: 'galaxy-cluster-virgo',
       name: 'Virgo Cluster',
-      category: 'cluster',
+      category: 'galaxy-cluster',
       worldPos: [0, 0, 0.016],
       physicalRadiusMpc: 2.2,
       featured: true,
     },
     {
-      id: 'group-local-group',
+      id: 'galaxy-group-local-group',
       name: 'Local Group',
-      category: 'group',
+      category: 'galaxy-group',
       worldPos: [0, 0, 0],
       physicalRadiusMpc: 0.16,
       apparentRadiusMpc: 0.94,
@@ -58,9 +58,9 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
 vi.mock('../../../../src/services/engine/wiring/structureCatalogToStructures', () => ({
   structureCatalogToStructures: vi.fn((payload: StructureCatalogPayload) =>
     payload.meta.map((m) => ({
-      id: `cluster-bulk-${m.id}`,
+      id: `galaxy-cluster-bulk-${m.id}`,
       name: m.names[0],
-      category: 'cluster',
+      category: 'galaxy-cluster',
       worldPos: [0, 0, 0],
       physicalRadiusMpc: 2,
       featured: false,
@@ -174,10 +174,10 @@ describe('wireStructureProjection → engineStructureCountsChanged', () => {
     expect(spy).toHaveBeenCalledWith(
       engineStructureCountsChanged(
         expect.objectContaining({
-          cluster: expect.any(Number),
+          'galaxy-cluster': expect.any(Number),
           supercluster: expect.any(Number),
           void: expect.any(Number),
-          group: expect.any(Number),
+          'galaxy-group': expect.any(Number),
         }),
       ),
     );

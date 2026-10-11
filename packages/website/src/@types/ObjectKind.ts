@@ -1,0 +1,23 @@
+/** What a row of the object catalogue is. A kind is decided by the app registry the row was read from, never typed per row. */
+export type ObjectKind =
+  | 'sun'
+  | 'planet'
+  | 'moon'
+  | 'spacecraft'
+  | 'model'
+  | 'place'
+  | 'star'
+  | 'sStar'
+  | 'milkyWay'
+  | 'blackHole'
+  | 'galaxy'
+  | 'open-cluster'
+  | 'globular-cluster'
+  | 'nebula'
+  | 'gc-cluster'
+  | 'galaxy-group'
+  | 'galaxy-cluster'
+  | 'supercluster'
+  | 'void'
+  | 'exhibit'
+  | 'tour';

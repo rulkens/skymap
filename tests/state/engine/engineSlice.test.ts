@@ -91,7 +91,7 @@ describe('engineSlice — engineStructureSearchListChanged', () => {
     const first: StructureSearchEntry = {
       id: 'cluster-virgo',
       name: 'Virgo Cluster',
-      category: 'cluster',
+      category: 'galaxy-cluster',
       abell: null,
       description: '',
     };

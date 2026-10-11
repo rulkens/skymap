@@ -1,0 +1,11 @@
+---
+/*
+ * The docs review mode's one include (Base.astro renders it under `import.meta.env.DEV`).
+ * The dynamic import sits behind the same flag inside the script, so the build folds
+ * the branch away and the mode's code never ships.
+ */
+---
+
+<script>
+  if (import.meta.env.DEV) void import('./initReview');
+</script>

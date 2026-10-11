@@ -75,6 +75,7 @@ import { FAMOUS_LABEL_STYLE } from '../../../services/engine/presentation/famous
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
 import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { smoothstep } from '../../../utils/math/smoothstep';
+import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -266,7 +267,9 @@ export function produceFamousGalaxyLabels(
         // Byte-identical to what the famous point batch's pick fragment writes:
         // the meta ⋈ catalog join is index-aligned, so this loop index IS the
         // catalog row the GPU stamps as `@builtin(instance_index)`.
-        pickId: packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET),
+        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)
+          ? packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET)
+          : undefined,
         worldPos: p.worldPos,
         text: p.name,
         font: 'cormorant',

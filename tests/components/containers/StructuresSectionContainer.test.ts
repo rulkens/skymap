@@ -43,10 +43,10 @@ function makeWrapper(store: AppStore) {
 describe('StructuresSectionContainer', () => {
   it('reflects a per-category enabled=false from pre-seeded store state', () => {
     const { store } = createAppStore();
-    // Disable 'cluster' before rendering so the checkbox must read from the store.
+    // Disable 'galaxy-cluster' before rendering so the checkbox must read from the store.
     store.dispatch({
       type: 'settings/structures/setStructureItemEnabled',
-      payload: { id: 'cluster', enabled: false },
+      payload: { id: 'galaxy-cluster', enabled: false },
     });
 
     const { container } = render(createElement(StructuresSectionContainer, null), {
@@ -61,7 +61,9 @@ describe('StructuresSectionContainer', () => {
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
     fireEvent.click(expandButton);
 
-    const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-marker-cluster');
+    const clusterCheckbox = container.querySelector<HTMLInputElement>(
+      '#toggle-marker-galaxy-cluster',
+    );
     expect(clusterCheckbox).not.toBeNull();
     expect(clusterCheckbox!.checked).toBe(false);
   });
@@ -69,7 +71,7 @@ describe('StructuresSectionContainer', () => {
   it('dispatches setStructureItemEnabled and updates the store when a category checkbox is toggled', () => {
     const { store } = createAppStore();
     // Confirm initial state: cluster.enabled is true.
-    expect(selectStructureItems(store.getState())['cluster'].enabled).toBe(true);
+    expect(selectStructureItems(store.getState())['galaxy-cluster'].enabled).toBe(true);
 
     const { container } = render(createElement(StructuresSectionContainer, null), {
       wrapper: makeWrapper(store),
@@ -79,20 +81,22 @@ describe('StructuresSectionContainer', () => {
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
     fireEvent.click(expandButton);
 
-    const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-marker-cluster')!;
+    const clusterCheckbox = container.querySelector<HTMLInputElement>(
+      '#toggle-marker-galaxy-cluster',
+    )!;
     expect(clusterCheckbox).not.toBeNull();
     // cluster starts enabled (checked); a click dispatches enabled=false.
     // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom.
     fireEvent.click(clusterCheckbox);
 
-    expect(selectStructureItems(store.getState())['cluster'].enabled).toBe(false);
+    expect(selectStructureItems(store.getState())['galaxy-cluster'].enabled).toBe(false);
   });
 
   it('reads structureCounts from the engine slice and forwards them to the section body', () => {
     const { store } = createAppStore();
     // Seed the engine slice with a known count — the container reads
     // `selectStructureCounts` internally (no prop threading).
-    store.dispatch(engineStructureCountsChanged({ cluster: 42 }));
+    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 42 }));
 
     const { container } = render(createElement(StructuresSectionContainer, null), {
       wrapper: makeWrapper(store),
@@ -103,7 +107,7 @@ describe('StructuresSectionContainer', () => {
     fireEvent.click(expandButton);
 
     const clusterLabel = container.querySelector<HTMLLabelElement>(
-      'label[for="toggle-marker-cluster"]',
+      'label[for="toggle-marker-galaxy-cluster"]',
     );
     expect(clusterLabel).not.toBeNull();
     expect(clusterLabel!.textContent).toContain('42');

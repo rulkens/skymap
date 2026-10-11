@@ -15,6 +15,7 @@ import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
 import { loadEnvBrdfLut } from '../../gpu/resources/loadEnvBrdfLut';
+import { loadDataManifest } from '../../loading/dataManifest';
 import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
@@ -71,8 +72,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // Sequenced here, before `constructGpuHandles`, exactly as it always ran.
   state.gpu.uiCtx = { device, context, canvas, hdrCapable };
-  state.gpu.fontAtlases = await loadFontAtlases();
-  state.gpu.envBrdfLut = await loadEnvBrdfLut(device);
+  // In parallel, with the manifest `wireSlots` awaits already on its way: each
+  // serial request costs a round trip, ~0.3 s apiece on a slow mobile link.
+  void loadDataManifest();
+  [state.gpu.fontAtlases, state.gpu.envBrdfLut] = await Promise.all([
+    loadFontAtlases(),
+    loadEnvBrdfLut(device),
+  ]);
 
   const handleDeps: GpuHandleConstructDeps = {
     ctx: { device, context, canvas, format, hdrCapable },

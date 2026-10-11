@@ -1,0 +1,22 @@
+---
+/*
+ * The dev feedback overlay's one include (Base.astro renders it under
+ * `import.meta.env.DEV`). The dynamic import sits behind the same flag inside
+ * the script, so even if the tag were bundled, the build folds the branch away
+ * and the overlay's code never ships.
+ */
+---
+
+<!-- Astro's dev toolbar strips the source attributes once it boots, so they are copied before any module runs. -->
+<script is:inline>
+  window.__feedbackSources = new WeakMap();
+  for (const el of document.querySelectorAll('[data-astro-source-file]')) {
+    window.__feedbackSources.set(el, [
+      el.getAttribute('data-astro-source-file'),
+      el.getAttribute('data-astro-source-loc'),
+    ]);
+  }
+</script>
+<script>
+  if (import.meta.env.DEV) void import('./initFeedback');
+</script>

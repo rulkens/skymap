@@ -14,7 +14,7 @@ though it isn't.
 ## Verified current state (2026-07-17, `stars-large.bin`, 12.85M stars)
 
 Diagnostic script: scratch `fluxFill.ts` (reconstructs the orbit pose, runs the
-real `walkStarOctreeCut`, compares cut deposit vs per-star ground truth).
+octree cut (`cut.wesl`: `histogram`/`pickThreshold`/`emit`), compares cut deposit vs per-star ground truth).
 
 - **Flux is conserved, slightly UNDER at distance:** cut/truth = **0.58** at
   5.9 kpc (aggregates attenuate a whole subtree at its centroid distance —

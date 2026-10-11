@@ -16,19 +16,16 @@
 // AA band centred on |uv| == 1, alpha = ringAlpha inside the band,
 // smoothstep AA on each edge — see "Computing the band width" below.
 
-import package::structureMarker::io::Uniforms;
+import package::lib::camera::CameraUniforms;
 import package::structureMarker::io::VsIn;
 import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
-import package::lib::fadeUniforms::FadeUniforms;
-import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
-// @group(1) FadeUniforms — see halo.wesl for the contract.
-@group(1) @binding(0) var<uniform> fade: FadeUniforms;
+@group(0) @binding(0) var<uniform> u: CameraUniforms;
+// No @group(1) — see halo.wesl.
 
 // Ring width in CSS pixels (full visible band, halved for the AA
 // smoothstep on each side).
@@ -68,10 +65,10 @@ fn vs(
   // dome faces rasterise the same world curve at their shared seam.
   let half = radiusMpc * MARKER_RADIUS_RETUNE * RING_QUAD_MARGIN;
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.camPosMpc.xyz, worldPos, corner, half);
+  let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u.cam, worldPos + offset);
+  out.pos = worldToClip(u, worldPos + offset);
   // d == 1 is still the marker radius: RING_QUAD_MARGIN scales the
   // geometry (above) and the uv (here) together, so they cancel.
   out.uv = corner * RING_QUAD_MARGIN;
@@ -85,6 +82,7 @@ fn vs(
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
   out.structureIndex = ii;
+  out.pickable = input.pickable;
   return out;
 }
 
@@ -116,9 +114,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let bandOuter = bandHalfUv + aaUv;
   let bandAlpha = 1.0 - smoothstep(bandInner, bandOuter, distFromRing);
 
-  // applyFade folds in the per-renderer FadeUniforms.opacity
-  // (alpha-only; never attenuates RGB).  Mirrors filaments/fragment.wesl.
-  let a = applyFade(bandAlpha * input.alpha, fade.opacity);
+  let a = bandAlpha * input.alpha;
   // Premultiplied alpha — pipeline blend state is OVER:
   //   (src.color * 1, dst.color * (1 - src.alpha)).
   return vec4<f32>(input.color * a, a);

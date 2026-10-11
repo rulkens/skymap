@@ -7,6 +7,7 @@
  */
 
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
 import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
@@ -59,6 +60,7 @@ export function starCatalogSelectionRow(
       source: pick.sourceCode as StarCatalogSourceType,
       index: pick.localIdx,
     }),
+    encodePick: (ref) => packSelection(ref.source, ref.index + PICK_SENTINEL_OFFSET),
     extractRow: (ref, simDays) => {
       const seededRow = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);
       if (seededRow) {

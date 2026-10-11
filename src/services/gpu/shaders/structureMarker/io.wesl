@@ -1,6 +1,6 @@
 // structureMarker/io.wesl — shared struct definitions for the halo + ring pipelines.
 //
-// Both pipelines (halo, ring) read the same CameraUniforms prefix and
+// Both pipelines (halo, ring) read the same per-frame CameraUniforms and
 // the same per-category SourceUniforms.  Co-locating the structs here
 // (and re-importing them into halo.wesl + ring.wesl) means a layout
 // edit (e.g. adding a uniform field) lands in one place and propagates
@@ -16,15 +16,13 @@
 // layout is identical; importing one authoritative struct definition
 // makes drift structurally impossible.
 //
-// ## Uniforms layout — CameraUniforms prefix + the eye
+// ## Positions are eye-relative
 //
-// The 80-byte CameraUniforms prefix carries viewProj + viewportPx +
-// pxPerRad + one pad.  Bytes 80..95 are 'camPosMpc': the eye in the
-// same absolute-Mpc frame 'positionAndRadius.xyz' uses (w unused,
-// float 23 zero-padded) — the vertex stage needs it to build the
-// eye-facing world basis ('expandBillboardWorld'), which a
-// view-projection matrix alone can't give it.  The CPU-side write
-// site in structureMarkerRenderer.ts allocates 96 bytes.
+// The camera binding is the bare 80-byte CameraUniforms prefix, and
+// 'positionAndRadius.xyz' arrives as 'worldPos - eye', subtracted in f64 on
+// the CPU against a view-projection rebased the same way (see
+// structureMarkerRenderer.ts). The eye is therefore the origin, which is all
+// the eye-facing basis ('expandBillboardWorld') needs.
 //
 // ## Why no per-vertex attribute struct
 //
@@ -34,14 +32,6 @@
 // quadCorner(vi) inline.  The VsIn struct below carries per-instance
 // data only; the vertex stage sources its corner offset from the
 // built-in vertex index, not from a vertex buffer attribute.
-
-import package::lib::camera::CameraUniforms;
-
-struct Uniforms {
-  cam: CameraUniforms,
-  // The eye, absolute Mpc — see the "Uniforms layout" doc above.
-  camPosMpc: vec4<f32>,
-};
 
 // The marker radii in the data were tuned by eye against the old
 // 'worldLenToPx' pixel path, which under-reported apparent size by
@@ -54,12 +44,13 @@ const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 // ── per-instance attributes ───────────────────────────────────────
 //
 // One instance per structure marker.  The CPU writer in
-// structureMarkerRenderer.ts packs each instance into 48 bytes
-// (12 f32 slots) laid out as:
+// structureMarkerRenderer.ts packs each instance into 52 bytes
+// (13 f32 slots) laid out as:
 //
-//   [0..15]  positionAndRadius   vec4<f32>  (centreWorld.xyz, physicalRadiusMpc)
+//   [0..15]  positionAndRadius   vec4<f32>  (eye-relative centre.xyz, physicalRadiusMpc)
 //   [16..31] haloColorAndAlpha   vec4<f32>  (haloRgb, haloAlpha)
 //   [32..47] ringColorAndAlpha   vec4<f32>  (ringRgb, ringAlpha)
+//   [48..51] pickable            f32        (1 = takes a click, 0 = excluded by the focus)
 //
 // Packing the radius into the trailing slot of the world-position
 // vec4 saves a vertex-attribute slot — same trick as markerLines'
@@ -72,7 +63,7 @@ const MARKER_RADIUS_RETUNE: f32 = 0.57735;
 // haloColorAndAlpha, so the fragment is symmetric across the two.
 
 struct VsIn {
-  // shaderLocation 0: world-space centre (xyz) + physicalRadiusMpc (w).
+  // shaderLocation 0: eye-relative centre (xyz) + physicalRadiusMpc (w).
   // Packing them in one vec4 saves a vertex-attribute slot.
   @location(0) positionAndRadius: vec4<f32>,
   // shaderLocation 1: halo RGB (xyz) + haloAlpha (w).
@@ -81,6 +72,9 @@ struct VsIn {
   // haloColorAndAlpha's layout exactly so halo and ring vertex stages
   // pull from symmetric slots.
   @location(2) ringColorAndAlpha: vec4<f32>,
+  // shaderLocation 3: 1 when the ring may be picked, 0 when the focus sphere
+  // excludes its centre.  Read only by the ringPick fragment.
+  @location(3) pickable: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────
@@ -118,4 +112,6 @@ struct VsOut {
   // vertices of one instance share the same value — same idiom as
   // points/io.wesl's `instanceIdx`.
   @location(4) @interpolate(flat) structureIndex: u32,
+  // VsIn.pickable, forwarded flat for the ringPick fragment.
+  @location(5) @interpolate(flat) pickable: f32,
 };

@@ -196,7 +196,7 @@ describe('watchFocusTweenSaga', () => {
     // The anchors group lands: the store is fed and the record resolves.
     structureById['cluster-virgo-m87'] = {
       type: 'structure',
-      category: 'cluster',
+      category: 'galaxy-cluster',
       id: 'cluster-virgo-m87',
       name: 'Virgo Cluster',
       worldPos: [4, 5, 6],
@@ -204,7 +204,7 @@ describe('watchFocusTweenSaga', () => {
       physicalRadiusMpc: 2.2,
     };
     structuresLoadedStub = true;
-    store.dispatch(engineStructureCountsChanged({ cluster: 1 }));
+    store.dispatch(engineStructureCountsChanged({ 'galaxy-cluster': 1 }));
     await flush();
 
     const tween = store.getState()[cameraRoute].tween;

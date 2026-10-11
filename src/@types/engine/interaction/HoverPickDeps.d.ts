@@ -20,10 +20,8 @@
  *
  * ### Why no `requestRender` / scheduler field
  *
- * Hover feeds only the React InfoCard text; there is no hover halo in
- * the rendered scene, so a hover change requires no re-render. Excluding
- * the scheduler from the bag makes this a structural guarantee: the
- * driver cannot accidentally wake the loop.
+ * Hover wakes belong to `watchSelectionWakeSaga`; with no scheduler in the bag
+ * the driver cannot wake the loop.
  */
 
 import type { EnginePickingState } from '../state/EnginePickingState';
