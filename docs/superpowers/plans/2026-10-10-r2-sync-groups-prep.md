@@ -177,14 +177,14 @@ localUploadHash(file: R2Upload, gzipOnWire: boolean): string;
 - [x] When `group.gzipOnWire` is set, `uploadViaRclone` (`:23-57`) writes `gzipSync(bytes)` for each file to `<staging>/<relative(localRoot, localPath)>` in a `mkdtemp` tree, creating parent dirs. It copies each source's atime/mtime onto the staged file with `utimesSync`. Then it runs `rclone copy <staging> …` with the same `--files-from` list and one extra `--header-upload 'Content-Encoding: gzip'`. The `finally` removes the staging tree with the list dir. When the flag is unset, behaviour stays exactly as today.
 - [x] Explain why mtimes are copied in one comment line. Fresh mtimes make rclone re-hash every object on every run and server-side-copy each one to rewrite `X-Amz-Meta-Mtime` (rclone S3 docs, "Modification times").
 - [x] No unit test: the bug class is "header and bytes disagree on the real bucket", which only the probe sees.
-- [ ] **Probe. Ask the user first:** it writes one object to the production bucket and deletes it. On a go:
-  - [ ] From a scratch script outside the repo, call `uploadViaRclone` for one group: `bulk`, `keyRoot: 'data/_probe'`, `cacheControl: NO_CACHE`, `purge: false`, `gzipOnWire: true`, holding one ~1 MB compressible file. Load the R2 S3 credentials the way `syncR2Secure.sh` does.
-  - [ ] rclone exits 0, with no `corrupted on transfer` or `sizes differ` line.
-  - [ ] `curl -sI -H 'Accept-Encoding: gzip' <VITE_DATA_BASE_URL>/data/_probe/<f>` shows `content-encoding: gzip`, and the content length is the gzipped size.
-  - [ ] `curl -s --compressed <url> | cmp - <original>` reports the bytes equal.
-  - [ ] A second identical call reports nothing transferred.
-  - [ ] `rclone deletefile r2:skymap-data/data/_probe/<f>`.
-  - [ ] If any check fails, stop and report which one. The documented candidates are `Cache-Control: no-transform` and `--s3-might-gzip`, but do not apply either without the user's ruling. If the user declines the probe, it becomes the first step of the feature PR's first sync. Note that in the report.
+- [x] **Probe. Ask the user first:** it writes one object to the production bucket and deletes it. On a go:
+  - [x] From a scratch script outside the repo, call `uploadViaRclone` for one group: `bulk`, `keyRoot: 'data/_probe'`, `cacheControl: NO_CACHE`, `purge: false`, `gzipOnWire: true`, holding one ~1 MB compressible file. Load the R2 S3 credentials the way `syncR2Secure.sh` does.
+  - [x] rclone exits 0, with no `corrupted on transfer` or `sizes differ` line.
+  - [x] `curl -sI -H 'Accept-Encoding: gzip' <VITE_DATA_BASE_URL>/data/_probe/<f>` shows `content-encoding: gzip`, and the content length is the gzipped size.
+  - [x] `curl -s --compressed <url> | cmp - <original>` reports the bytes equal.
+  - [x] A second identical call reports nothing transferred.
+  - [x] `rclone deletefile r2:skymap-data/data/_probe/<f>`.
+  - [x] If any check fails, stop and report which one. (Ran 2026-10-11 by the user from `probe.sh`: every check passed.) The documented candidates are `Cache-Control: no-transform` and `--s3-might-gzip`, but do not apply either without the user's ruling. If the user declines the probe, it becomes the first step of the feature PR's first sync. Note that in the report.
 - [x] `docs/DEPLOY.md`, "R2 sync architecture", bullet on `bulk` (`:36`): one sentence on gzip-on-wire by staging, with the probe outcome.
 - [x] The dry-run listing is unchanged (no bulk group sets the flag yet).
 - [x] Commit.
