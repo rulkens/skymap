@@ -89,6 +89,8 @@ describe('chunkOctree', () => {
       rootRows.filter((row) => row >= 0),
     );
     expect(chunks.some((c) => c.roots.length > 1)).toBe(true);
+    const leafKeys = chunks.flatMap((c) => c.roots).map((r) => t.morton[r]! * 8 ** t.level[r]!);
+    expect(leafKeys).toEqual([...leafKeys].sort((a, b) => a - b));
     chunks.forEach((chunk, ref) => {
       let rows = 0;
       let records = 0;

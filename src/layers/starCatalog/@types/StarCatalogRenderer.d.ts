@@ -20,11 +20,15 @@ export type StarCatalogRenderer = Renderer & {
    * size is returned for the chunk stream to match.
    */
   upload(source: SourceType, octree: StarOctree, slots: number): number;
-  /** Land a chunk in a slot: its records and rows, then its root's resident bit. */
+  /** Land a chunk in a slot: its records and rows, then every root's resident bit. */
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
-  /** Free a slot: its root stops refining, then its rows are zeroed. */
+  /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
   evictChunk(source: SourceType, slot: number): void;
-  /** Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. */
+  /**
+   * Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. The
+   * DEV pick overlay records the same draws each frame, so with it on the snapshot follows the
+   * pool again.
+   */
   snapshotPickSlots(): void;
   /**
    * A pool-absolute record index (what the pick draw stamps) as the catalog ordinal, or null

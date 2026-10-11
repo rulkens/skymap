@@ -11,7 +11,7 @@
 // records when its parent refines (the root always), and its blob when it draws
 // its own records and does not refine itself: own + blob is its subtree's whole
 // flux, so the cut conserves light level by level. A chunk root refines only
-// once its chunk is resident; an empty slot's zeroed rows emit nothing.
+// once its chunk is resident; an empty slot has slotRows = 0 and is skipped.
 //
 // ## Folded subtrees
 // Placement by brightness alone leaves sparse outskirts as chains of rows
@@ -42,7 +42,7 @@
 // ## Bindings: writer -> reader
 //   u         CPU each frame -> all three entry points, and vertex.wesl
 //   nodes     CPU at upload  -> all three entry points, and vertex.wesl
-//   nodes     CPU at chunk land/evict: the slot's rows, then the root's row
+//   nodes     CPU at chunk land/evict: the slot's rows, then every root's row
 //   slotRows  CPU at chunk land/evict -> histogram, emit: a slot's live rows
 //   opacity   emit           -> emit (next frame), vertex.wesl; zeroed per slot
 //                               by the CPU when a chunk lands
@@ -91,7 +91,7 @@ const HALF_DIAGONAL: f32 = 0.8660254;
 // Rows each chunk slot holds; the rest of its chunkNodeCap stride is padding.
 @group(0) @binding(7) var<storage, read> slotRows: array<u32>;
 
-// A slot is sized to the largest chunk, so most pool rows are padding: ruling
+// A slot is sized to the row bound, so most pool rows are padding: ruling
 // them out from this small table, before touching 'nodes' or 'opacity', is
 // what keeps the cut's memory traffic at the live rows'.
 fn isPadding(i: u32) -> bool {
@@ -150,6 +150,7 @@ fn offScreen(i: u32, isBlob: bool) -> bool {
 fn histogram(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= u.nodeCount || isPadding(i)) { return; }
+  if (nodes[i].refineDelta == 0u) { return; }
   let proxy = proxyOf(i);
   if (!wantsRefine(i, proxy) || offScreen(i, true)) { return; }
   atomicAdd(&hist[binOf(proxy)], nodes[i].refineDelta);

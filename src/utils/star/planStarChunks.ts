@@ -4,8 +4,8 @@
  * refine candidate) and the refine proxy edge²/dist² ≥ thr². A chunk root the walk would refine
  * requests its chunk (priority = its best root's proxy) when absent, touches it when resident.
  * The walk never enters a chunk. It cannot see the GPU's budget bin, so it may fetch a chunk the
- * budget then declines to open: bytes, never correctness. Only the `limit` best requests are
- * kept: a pool of `limit` slots can never fund more in one frame, and near the Sun hundreds of
+ * budget then declines to open: bytes, never correctness. A chunk whose fetch failed asks for nothing, so it holds no place. Only the `limit` best
+ * requests are kept: a pool of `limit` slots can never fund more in one frame, and near the Sun hundreds of
  * roots want to refine.
  */
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
@@ -33,6 +33,7 @@ export function planStarChunks(
   index: StarOctreeIndex,
   cut: StarCutSpec,
   isResident: (chunkRef: number) => boolean,
+  hasFailed: (chunkRef: number) => boolean,
   limit: number,
 ): StarChunkPlan {
   const { nodes } = octree;
@@ -110,7 +111,7 @@ export function planStarChunks(
     const ref = chunkRef[i]!;
     if (ref !== NO_CHUNK_REF) {
       if (isResident(ref)) touched.push(ref);
-      else offer(ref, proxy);
+      else if (!hasFailed(ref)) offer(ref, proxy);
       continue;
     }
     for (let k = 0; k < OCTANTS; k++) {

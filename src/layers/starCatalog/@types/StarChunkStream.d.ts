@@ -14,6 +14,8 @@ export type StarChunkStream = Destroyable & {
   /** Touches resident chunks, then allocates and enqueues `requests` (descending priority, as the planner orders them) until the pool refuses. */
   update(frame: number, touched: readonly number[], requests: readonly StarChunkRequest[]): void;
   isResident(chunkRef: number): boolean;
+  /** Its fetch came back empty: it is never asked for again. */
+  hasFailed(chunkRef: number): boolean;
   /** The CPU copy while its slot holds it. */
   resident(chunkRef: number): StarChunk | null;
   inFlightCount(): number;

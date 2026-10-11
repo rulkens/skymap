@@ -120,6 +120,7 @@ describe('starCatalogPlanner', () => {
       const stream = {
         update: vi.fn(),
         isResident: () => false,
+        hasFailed: () => false,
         inFlightCount: () => counters.inFlight,
         epoch: () => counters.epoch,
       } as unknown as StarChunkStream;

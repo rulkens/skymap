@@ -107,6 +107,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     slots: deps.slots,
     update,
     isResident: (ref) => residents.has(ref),
+    hasFailed: (ref) => failed.has(ref),
     resident: (ref) => residents.get(ref)?.chunk ?? null,
     inFlightCount: () => stream.inFlightCount(),
     epoch: () => epoch,

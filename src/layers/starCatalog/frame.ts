@@ -85,6 +85,7 @@ export function starCatalogPlanner(
               index,
               inputs.cut,
               stream.isResident,
+              stream.hasFailed,
               stream.slots,
             );
             stream.update(frameIndex, touched, requests);

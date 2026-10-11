@@ -56,16 +56,28 @@ const ONE_VIEW = Float32Array.from([
   ...Array.from({ length: 5 }, () => [0, 0, 1, 1]).flat(),
 ]);
 
-const plan = (planes: Float32Array, resident: readonly number[], limit = 8) =>
+const plan = (
+  planes: Float32Array,
+  resident: readonly number[],
+  limit = 8,
+  failed: readonly number[] = [],
+) =>
   planStarChunks(
     OCTREE,
     starOctreeIndex(OCTREE.nodes, OCTREE.grid),
     cut(planes),
     (ref) => resident.includes(ref),
+    (ref) => failed.includes(ref),
     limit,
   );
 
 describe('planStarChunks', () => {
+  it('a failed chunk holds no place among the limited requests', () => {
+    const { requests, touched } = plan(ONE_VIEW, [], 2, [B]);
+    expect(requests.map((r) => r.chunkRef)).toEqual([A, E]);
+    expect(touched).toEqual([]);
+  });
+
   it('planStarChunks: requests are in descending proxy, a culled chunk is not requested, a resident chunk is touched', () => {
     const { requests, touched } = plan(ONE_VIEW, [A]);
     expect(touched).toEqual([A]);
@@ -95,6 +107,7 @@ describe('planStarChunks', () => {
       shared,
       starOctreeIndex(shared.nodes, shared.grid),
       cut(new Float32Array(0)),
+      () => false,
       () => false,
       8,
     );

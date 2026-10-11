@@ -10,7 +10,7 @@ export const CHUNK_CAPACITY = 32_768;
  * Max node rows in one chunk object: the pool's per-slot row stride, which the cut sweeps every
  * frame. Roots pack under it, so it is also roughly every chunk's size (spec §4, §10).
  */
-export const CHUNK_NODE_CAPACITY = 2_048;
+const CHUNK_NODE_CAPACITY = 2_048;
 
 export function buildOctreeCatalog(
   input: OctreeBuildInput,
