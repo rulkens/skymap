@@ -113,7 +113,7 @@ The `q` pairs reproduce `lutIndexToAbsMag` / `colorIdxToBpRp` (`starCatalogForma
 
 ### 2.5 GPU layout
 
-Columns bake into the GPU record at upload (research §8.5); the shader never dequantises. The 2×u32 star record (`starCatalogRenderer.ts:116`, decoded at `vertex.wesl:191-199`) keeps its width: word 0 = x (16 bits) | y << 16; word 1 = z (16) | absMagIdx << 16 | colorIdx << 23, 3 bits spare. The vertex stage scales the offset by the node's box edge instead of the leaf cell. `CutNode` (`cutIo.wesl:29-36`) gains a seventh word, `slot` (`0xFFFFFFFF` for index rows), and its `bits` word becomes `level | hasBlob << 4 | childrenResident << 5 | ownCount << 8`.
+Columns bake into the GPU record at upload (research §8.5); the shader never dequantises. The 2×u32 star record (`starCatalogRenderer.ts:116`, decoded at `vertex.wesl:191-199`) keeps its width: word 0 = x (16 bits) | y << 16; word 1 = z (16) | absMagIdx << 16 | colorIdx << 23, 3 bits spare. The vertex stage scales the offset by the node's box edge instead of the leaf cell. `CutNode` (`cutIo.wesl:29-36`) keeps six words; its `bits` word becomes `level | hasBlob << 4 | childrenResident << 5 | ownCount << 8`, `subtreeCount` becomes `blobCount`, and a chunk row's `parent` and `firstRecord` are written **pool-absolute** when the row is composed at upload (ruled 2026-10-11, §5.3). The wire format's `firstRecord` stays object-local (§2.3).
 
 ### 2.6 Hard caps (replacing `starCutLayout.ts:27-37,99-118`)
 
@@ -193,8 +193,7 @@ The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then
 ### 5.3 GPU cut over the resident set
 
 - `refines(i)` (`cut.wesl:146-149`) gains `&& childrenResident(i)`. The bit is 1 for every non-chunk-root row and is written for a chunk root's row (one word) when its chunk lands or is evicted.
-- The shader derives bases from `slot` (ruling B): `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`, zero for index rows. The index is never rewritten.
-- A chunk's top rows name their parent with a sentinel resolved through `slotRoot[slot]`, a per-slot u32 written at upload.
+- A chunk's `CutNode` rows are composed on the CPU at upload (the wire columns are packed into GPU words there anyway), so that pass writes each row's `parent` and `firstRecord` pool-absolute: `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`; a chunk's top rows name the chunk root's index row directly. The shader reads them as plain indices; there is no per-node slot word, no base arithmetic and no `slotRoot` table. The index is never rewritten (ruling B's goal). **Ruled 2026-10-11 at plan review**: the spec's earlier `slot` word + shader bases + `slotRoot` sentinel bought nothing once the rows are CPU-composed, and cost a seventh word, two helpers and a binding.
 - The root comes from a `rootNode` uniform, replacing "root is the last node" (`cut.wesl:128`, `starCutLayout.ts:123-124`).
 - An empty or evicted slot's rows are zeroed (`ownCount 0`, no blob, `refineDelta 0`), so `histogram` and `emit` pass over them inert.
 
@@ -212,7 +211,7 @@ Tiers become pool budgets (research §8.4). The source row's `budgets: Record<Ti
 
 ### 5.5 Pick, fade, wake
 
-- **Pick.** The vertex stage emits `recordBase + firstRecord + local`, a pool-absolute index (`pickFragment.wesl:58` is unchanged, 26-bit cap per §2.6). `resolveStarRecord` (`resolveStarRecord.ts:67`) maps it arithmetically to an object and reads that object's decoded columns; the owner node is a binary search on `firstRecord`, which is monotone in row order now.
+- **Pick.** The vertex stage emits `firstRecord + local` (the row's `firstRecord` is already pool-absolute), a pool-absolute index (`pickFragment.wesl:58` is unchanged, 26-bit cap per §2.6). `resolveStarRecord` (`resolveStarRecord.ts:67`) maps it arithmetically to an object and reads that object's decoded columns; the owner node is a binary search on `firstRecord`, which is monotone in row order now.
 - **Pick survives eviction.** Today `resolvePick` stores the raw index (`starCatalogSelectionRow.ts:57-60`). Under pooling, slot reuse would silently rename the selection, so `resolvePick` converts to an object-stable `(objectKey, localRecord)` and `extractRow` returns null when that object is not resident.
 - **Fade** stays keyed by node index (`cutOpacity[nodeIdx]`, `NODE_FADE_MS = 250`, `starNodeFade.ts:7`). Slot reuse zeroes the slot's opacity rows, so a newly landed chunk fades in. That reset is wanted.
 - **Wake.** The vote at `frame.ts:38` ORs in "chunks in flight" and restarts the fade window on any residency change, since a landing chunk changes the cut without changing `sameStarCut`'s inputs (`frame.ts:33`).
