@@ -8,7 +8,7 @@
  * flick, momentum and rubber-banding, so there is no touch listener here.
  *
  * Content decides the behaviour. The selection card passes no `panel`: it rests
- * at the peek and swipes up. A panel (Places, Layers) passes `panel`: no peek
+ * at the peek and swipes up. A panel (Controls, Layers) passes `panel`: no peek
  * snap, the sheet sits expanded on the stack under a fixed title row with a
  * close button, capped so a strip of canvas stays visible, and its body scrolls
  * inside. The sheet is non-modal: `.root` and `.spacer` ignore pointer events

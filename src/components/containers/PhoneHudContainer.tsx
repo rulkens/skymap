@@ -1,7 +1,7 @@
 /**
  * PhoneHudContainer — the phone's bottom HUD: dock, time row and the one sheet.
  *
- * Owns which dock item is open. Places and Layers share the sheet (one at a
+ * Owns which dock item is open. Controls and Layers share the sheet (one at a
  * time) and win over the selection card while open; the time row is
  * independent and can stay open under any sheet. A new selection closes the
  * open panel so the card it asked for shows. Selection is read by identity key,
@@ -31,21 +31,23 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const selected = useAppSelector(selectSelectedFocusable);
   const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
 
-  const [panel, setPanel] = useState<'places' | 'layers' | null>(null);
+  const [panel, setPanel] = useState<'controls' | 'layers' | null>(null);
   const [timeOpen, setTimeOpen] = useState(false);
 
   useEffect(() => setPanel(null), [selectionKey]);
 
   const closePanel = useCallback(() => setPanel(null), []);
-  const closeTime = useCallback(() => setTimeOpen(false), []);
-  const onPlaces = useCallback(() => setPanel((cur) => (cur === 'places' ? null : 'places')), []);
+  const onControls = useCallback(
+    () => setPanel((cur) => (cur === 'controls' ? null : 'controls')),
+    [],
+  );
   const onLayers = useCallback(() => setPanel((cur) => (cur === 'layers' ? null : 'layers')), []);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
 
   let sheet: ReactNode = null;
-  if (panel === 'places') {
+  if (panel === 'controls') {
     sheet = (
-      <MobileSheet resetKey="panel:places" panel={{ title: 'Places', onClose: closePanel }}>
+      <MobileSheet resetKey="panel:controls" panel={{ title: 'Controls', onClose: closePanel }}>
         <NavigationPanelContainer bare />
       </MobileSheet>
     );
@@ -72,13 +74,13 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
       timeOpen={timeOpen}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
-      timeRow={<TimeBarContainer hidden={hidden} onCloseRow={closeTime} />}
+      timeRow={<TimeBarContainer hidden={hidden} row />}
       dock={
         <DockContainer
-          placesOpen={panel === 'places'}
+          controlsOpen={panel === 'controls'}
           timeOpen={timeOpen}
           layersOpen={panel === 'layers'}
-          onPlaces={onPlaces}
+          onControls={onControls}
           onTime={onTime}
           onLayers={onLayers}
         />

@@ -47,10 +47,9 @@
   }
 }
 
-/* Indicator bar plus weight: the open state does not rely on colour. */
+/* Indicator bar: the open state does not rely on colour. */
 .itemOpen {
   color: var(--color-accent);
-  font-weight: 700;
 }
 
 .itemOpen::before {

@@ -1,8 +1,8 @@
 /**
- * Dock — the phone's bottom navigation: Places, Time, Layers, each with an icon
+ * Dock — the phone's bottom navigation: Controls, Time, Layers, each with an icon
  * and a visible label. Presentational: which items are open and the Time label
  * arrive as props; taps leave as callbacks. An open item is marked by an
- * indicator bar and heavier weight, not colour alone.
+ * indicator bar, not colour alone.
  */
 
 import type { ReactNode } from 'react';
@@ -12,7 +12,7 @@ import styles from './Dock.module.css';
 
 // 24-unit stroke icons, one path each.
 const ICON_PATHS = {
-  places: 'M12 21s-6-5.6-6-10a6 6 0 1 1 12 0c0 4.4-6 10-6 10zM12 8.5v5M9.5 11h5',
+  controls: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3',
   time: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
   layers: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5',
 } as const;
@@ -44,31 +44,31 @@ function DockItem({ icon, label, open, onClick }: DockItemProps): ReactNode {
 }
 
 export type DockProps = {
-  readonly placesOpen: boolean;
+  readonly controlsOpen: boolean;
   readonly timeOpen: boolean;
   readonly layersOpen: boolean;
   readonly timeLabel: DockTimeLabel;
-  readonly onPlaces: () => void;
+  readonly onControls: () => void;
   readonly onTime: () => void;
   readonly onLayers: () => void;
 };
 
 function Dock({
-  placesOpen,
+  controlsOpen,
   timeOpen,
   layersOpen,
   timeLabel,
-  onPlaces,
+  onControls,
   onTime,
   onLayers,
 }: DockProps): ReactNode {
   return (
     <nav className={styles.root} aria-label="Dock">
       <DockItem
-        icon="places"
-        label={{ text: 'Places', glyph: null }}
-        open={placesOpen}
-        onClick={onPlaces}
+        icon="controls"
+        label={{ text: 'Controls', glyph: null }}
+        open={controlsOpen}
+        onClick={onControls}
       />
       <DockItem icon="time" label={timeLabel} open={timeOpen} onClick={onTime} />
       <DockItem

@@ -129,9 +129,9 @@ export type TimeBarProps = {
   // longer holds (focus left the pill), the strip collapses, and the anchor
   // moves out from under the open popover mid-interaction.
   readonly holdControlsOpen?: boolean;
-  // Phone row variant: when given, the bar is a full-width row in flow with every
-  // control always visible, plus a close button that calls this.
-  readonly onCloseRow?: () => void;
+  // Phone row variant: a full-width row in flow with every control always
+  // visible at a fixed place. The dock's Time item opens and closes it.
+  readonly row?: boolean;
 };
 
 function TimeBar({
@@ -149,7 +149,7 @@ function TimeBar({
   onRateLabelClick,
   hidden = false,
   holdControlsOpen = false,
-  onCloseRow,
+  row = false,
 }: TimeBarProps): ReactNode {
   const slowerHold = useHoldRepeat(onSlower, slowerDisabled);
   const fasterHold = useHoldRepeat(onFaster, fasterDisabled);
@@ -167,7 +167,7 @@ function TimeBar({
         styles[mode],
         hidden && styles.hidden,
         holdControlsOpen && styles.holdOpen,
-        onCloseRow && styles.row,
+        row && styles.row,
       )}
       aria-hidden={hidden || undefined}
       role="toolbar"
@@ -276,12 +276,6 @@ function TimeBar({
             <span className={styles.divider} aria-hidden="true" />
           </div>
         </div>
-
-        {onCloseRow && (
-          <Button className={styles.close} onClick={onCloseRow} aria-label="Close time controls">
-            <span aria-hidden="true">×</span>
-          </Button>
-        )}
       </div>
     </div>
   );

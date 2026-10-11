@@ -31,8 +31,8 @@ describe('NavigationPanel', () => {
     render(createElement(NavigationPanel, props));
     expect(screen.getByText(/One-finger drag/i)).toBeInTheDocument();
     expect(screen.getByText(/Two-finger pinch/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tap a galaxy/i)).toBeInTheDocument();
-    expect(screen.getByText(/× on info card/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tap an object/i)).toBeInTheDocument();
+    expect(screen.getByText(/× on the card/i)).toBeInTheDocument();
     // Keyboard-only shortcuts should NOT appear on the mobile
     // cheatsheet — they'd be misleading because phones have no Esc /
     // F / H keys.  Use queryByText (not get) so absence doesn't throw.

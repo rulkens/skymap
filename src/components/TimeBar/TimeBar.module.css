@@ -96,7 +96,6 @@
     background var(--duration-color) ease;
 }
 
-.readout:hover,
 .readout:focus-visible {
   color: var(--color-accent);
   background: var(--surface-control);
@@ -236,11 +235,6 @@
   color: var(--color-fg-base);
 }
 
-.pill .step:hover:not(:disabled) {
-  background: var(--surface-control);
-  border-color: transparent;
-}
-
 /*
  * A step at the ladder end is inert (it can no longer change the rate). It reads
  * as unavailable: Button's own :disabled rule supplies the dim, the hover tint is
@@ -280,7 +274,6 @@
     background var(--duration-color) ease;
 }
 
-.rate:hover,
 .rate:focus-visible {
   color: var(--color-accent);
   background: var(--surface-control);
@@ -307,17 +300,45 @@
   letter-spacing: var(--letter-spacing-mid);
 }
 
-.pill .now:hover:not(:disabled) {
-  background: var(--surface-control);
-  border-color: transparent;
-  color: var(--color-accent-bright);
+/* Hover tints only where a pointer can hover: a tap leaves :hover stuck on touch. */
+@media (hover: hover) {
+  .readout:hover,
+  .rate:hover {
+    color: var(--color-accent);
+    background: var(--surface-control);
+  }
+
+  .pill .step:hover:not(:disabled) {
+    background: var(--surface-control);
+    border-color: transparent;
+  }
+
+  .pill .now:hover:not(:disabled) {
+    background: var(--surface-control);
+    border-color: transparent;
+    color: var(--color-accent-bright);
+  }
+}
+
+/* Touch: Button's own :hover sticks after a tap; keep only the pressed tint. */
+@media (hover: none) {
+  .pill .step:hover:not(:disabled),
+  .pill .now:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .pill .step:active:not(:disabled),
+  .pill .now:active:not(:disabled) {
+    background: var(--surface-control-active);
+  }
 }
 
 /*
- * Phone row variant (TimeBar given `onCloseRow`): a full-width row in the
- * bottom stack's flow instead of a floating pill. Every control is always
- * visible (no hover to reveal on touch); the readout leads, the close button
- * trails.
+ * Phone row variant (TimeBar given `row`): a full-width row in the bottom
+ * stack's flow instead of a floating pill. No hover on touch, so every control
+ * is always shown, and each keeps a fixed slot so nothing moves when the mode
+ * or the rate label changes: readout takes the slack on the left, then Now,
+ * rate, and the three transport buttons at the right edge.
  */
 .row {
   position: static;
@@ -330,78 +351,78 @@
 .row .pill {
   flex-direction: row;
   height: var(--time-row-height);
-  padding: 0 var(--space-4);
-  gap: var(--space-2);
+  padding: 0;
   width: 100%;
   background: var(--surface-card-strong);
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
   border-width: 1px 0 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-/* The readout sits inside CompactInfoTip's inline-flex wrapper, which is the pill's first flex item. */
+/* The readout sits inside CompactInfoTip's inline-flex wrapper, the pill's first flex item. */
 .row .pill > :first-child {
   flex: 1 1 0;
   min-width: 0;
 }
 
+/*
+ * One line as tall as the touch target, wrapping allowed, overflow hidden: when
+ * the row is too narrow the trailing words ("UTC", then the time) wrap out of
+ * sight whole, where an ellipsis would cut the date mid-number.
+ */
 .row .readout {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 44px;
+  height: var(--touch-target);
+  line-height: var(--touch-target);
+  /* The date starts on the selection card's left edge. */
+  padding: 0 0 0 var(--space-9);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   text-align: left;
-  padding-left: var(--space-2);
-  padding-right: 0;
 }
 
 .row .controls {
   flex: none;
-}
-
-/* Dividers cost width the 400 px row does not have. */
-.row .divider {
-  display: none;
-}
-
-.row .rate {
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.row .controls {
   grid-template-columns: 1fr;
   opacity: 1;
   pointer-events: auto;
 }
 
-.row .group {
+.row .group,
+.row .nowInner {
   gap: 0;
 }
 
+/* Dividers cost width the 360 px row does not have. */
+.row .divider {
+  display: none;
+}
+
+/* Live keeps Now's slot (invisible, inert) so the rate label does not jump when it appears. */
+.row .nowCollapsed {
+  grid-template-columns: 1fr;
+  margin-right: 0;
+}
+
+.row .pill .now,
 .row .pill .step {
-  min-width: 36px;
-  min-height: 44px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
   padding: 0;
 }
 
-.row .rate,
-.row .pill .now {
-  min-height: 44px;
+/* Larger chevrons; the play/pause glyph (the pressed-state button) is heavy enough already. */
+.row .pill .step:not([aria-pressed]) {
+  font-size: var(--font-size-input);
 }
 
-.row .pill .close {
-  min-width: 40px;
-  min-height: 44px;
+/* Wide enough for the longest ladder label ("10 min/s"), so shorter ones do not shift the row. */
+.row .rate {
+  min-width: 8ch;
+  min-height: var(--touch-target);
   padding: 0;
-  background: transparent;
-  border: none;
-  font-size: var(--font-size-lg);
-  line-height: 1;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

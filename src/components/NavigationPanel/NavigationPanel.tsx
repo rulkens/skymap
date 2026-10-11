@@ -65,10 +65,12 @@ const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
 const MOBILE_ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'One-finger drag', action: 'orbit camera' },
   { key: 'Two-finger pinch', action: 'zoom' },
-  { key: 'Tap a galaxy', action: 'see info' },
-  // Close button on the InfoCard is the touch-equivalent of Esc.
-  { key: '× on info card', action: 'clear selection' },
-  { key: 'Tap a panel title', action: 'expand / collapse' },
+  { key: 'Tap an object', action: 'see info' },
+  { key: 'Swipe the card up', action: 'more details' },
+  { key: 'Focus on the card', action: 'fly to the object' },
+  // Close button on the card is the touch-equivalent of Esc.
+  { key: '× on the card', action: 'clear selection' },
+  { key: 'Search at the top', action: 'find by name' },
 ];
 
 /**

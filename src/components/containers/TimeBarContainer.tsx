@@ -29,8 +29,8 @@ import { useSimInstant } from '../../hooks/useSimInstant';
 export type TimeBarContainerProps = {
   // App-layout gate, mirroring the sibling HUD pills (paletteOpen || splashVisible).
   readonly hidden: boolean;
-  // Phone: render the full-width row with this close handler (see TimeBar).
-  readonly onCloseRow?: () => void;
+  // Phone: render the full-width row (see TimeBar).
+  readonly row?: boolean;
 };
 
 // The date popover is a fixed pane pinned to the bottom-right corner, lifted just
@@ -54,7 +54,7 @@ const ROW_POPOVER_PLACEMENT: CSSProperties = {
   zIndex: 11,
 };
 
-function TimeBarContainer({ hidden, onCloseRow }: TimeBarContainerProps): ReactNode {
+function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const time = useAppSelector(selectTimeState);
   const rateStep = useAppSelector(selectRateStep);
@@ -147,10 +147,10 @@ function TimeBarContainer({ hidden, onCloseRow }: TimeBarContainerProps): ReactN
         // collapsing controls strip; hold it expanded for the duration so the
         // rate popover's CSS anchor doesn't move out from under an open click.
         holdControlsOpen={openPopover !== 'none'}
-        onCloseRow={onCloseRow}
+        row={row}
       />
       {openPopover === 'date' && !hidden && (
-        <div style={onCloseRow ? ROW_POPOVER_PLACEMENT : POPOVER_PLACEMENT}>
+        <div style={row ? ROW_POPOVER_PLACEMENT : POPOVER_PLACEMENT}>
           <DateEntryPopover
             initial={simInstant(time)}
             onCommit={onPopoverCommit}
