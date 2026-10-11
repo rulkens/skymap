@@ -3,7 +3,7 @@
  * along its normal turned by the visitor's offsets. A view change (a step, a craft switch, a
  * hand-off to another stop or view regime) eases from the pose last shown over `MISSION_EASE_MS`
  * of WALL time on the mission epoch, so it reads the same at every clock speed and still finishes
- * on a paused clock. Offsets are read back from a released drag or a swallowed wheel notch and
+ * on a paused clock. Offsets are read from a live drag or a swallowed wheel notch and
  * ease back to zero after `MISSION_EASE_MS` idle. Yaw and pitch come from
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
@@ -71,11 +71,12 @@ export function missionPose(
       : idle === 1
         ? NO_MISSION_OFFSETS
         : { yaw: stored.yaw * keep, pitch: stored.pitch * keep, zoom: stored.zoom ** keep };
-  const dragged = ctx.winnerLastFrame === 'orbitDrag';
+  const dragged = ctx.state.camera.dragging;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
-    // The drag edge committed the dragged register; its view and distance ARE the new offsets.
-    const w = ctx.committedWorld;
+    // The drag rung stepped last frame's pose; its view and distance ARE the new offsets, re-posed
+    // below about this frame's aim, so the craft stays put on screen while the clock plays.
+    const w = ctx.authoredWorld;
     const eye = eyeMpcOf(w, ctx.poseBasis);
     const view = normalize3([w.target[0] - eye[0], w.target[1] - eye[1], w.target[2] - eye[2]]);
     offsets = missionOffsetsOfView(frame, view, w.distance);
@@ -98,13 +99,13 @@ export function missionPose(
         ) * offsets.zoom;
 
   // A first frame eases only after a re-aim (an entry cuts or arrives on a fly-in); a view change
-  // or a drag released mid-ease starts again from what the visitor sees, so nothing jumps.
+  // starts again from what the visitor sees, so nothing jumps.
   let from = prev?.from ?? null;
   let easeAtMs = prev?.easeAtMs ?? now;
   let shortfall = prev?.shortfall ?? 1;
   const easing = from !== null && now - easeAtMs < MISSION_EASE_MS;
   const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
-  if (prev === null ? mission.retarget > 0 : viewChanged || (dragged && easing)) {
+  if (prev === null ? mission.retarget > 0 : viewChanged) {
     from = ctx.authoredWorld;
     easeAtMs = now;
     shortfall = Math.min(1, from.distance / fitAbout(from.target));

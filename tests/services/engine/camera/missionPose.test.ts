@@ -17,7 +17,8 @@ import { MISSION_EVENTS } from '../../../../src/data/missions/missionEvents.gene
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../src/services/engine/camera/missionPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { setMission } from '../../../../src/state/camera/cameraSlice';
+import { beginDrag, endDrag, setMission } from '../../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { flybyNormal } from '../../../../src/utils/exhibits/mission/flybyNormal';
@@ -101,13 +102,14 @@ describe('missionPose', () => {
     expect(inFrustum(eye, pose.target, target)).toBe(true);
   });
 
-  it('writes the offsets a released drag left behind', () => {
+  it('writes the offsets a live drag holds the view at', () => {
     const want = { yaw: 0.4, pitch: -0.25, zoom: 1.8 };
     // The pose the same mission shows once those offsets are in the store.
     const shown = worldPose(ctxAt(missionOf(want), tc));
-    const ctx = ctxAt(missionOf(), tc, 'orbitDrag');
-    const released = missionPose({ ...ctx, committedWorld: shown }, null);
-    const payload = (released.actions?.[0] as { payload: typeof want }).payload;
+    const ctx = ctxAt(missionOf(), tc, 'mission');
+    const dragging = { ...ctx.state, camera: { ...ctx.state.camera, dragging: true } };
+    const held = missionPose({ ...ctx, state: dragging, authoredWorld: shown }, null);
+    const payload = (held.actions?.[0] as { payload: typeof want }).payload;
     expect(payload.yaw).toBeCloseTo(want.yaw, 9);
     expect(payload.pitch).toBeCloseTo(want.pitch, 9);
     expect(payload.zoom).toBeCloseTo(want.zoom, 9);
@@ -291,6 +293,62 @@ describe('missionPose', () => {
     expect(out).toBe(0);
     // Smooth: no frame zooms or moves the eye by more than a tenth of the view.
     expect(jump).toBeLessThan(0.1);
+  });
+
+  it('a drag turns the view about the moving craft at 1×, zoomed in, and releases in place', () => {
+    const stops = missionOf().stops;
+    const profile = buildMissionProfile(
+      stops,
+      'voyager2',
+      tc - 0.3,
+      tc + 5,
+      MISSION_SPEEDS.indexOf(1),
+      0,
+    );
+    let w0 = 0;
+    while (interpolateMissionProfile(profile, w0) < tc) w0 += FRAME_MS;
+    const store = configureStore({ reducer: rootReducer });
+    store.dispatch(setMission(missionOf({ yaw: 0, pitch: 0, zoom: 0.05 })));
+    let mem: FollowMemory | null = null;
+    let shown: CameraPose | null = null;
+    let out = 0;
+    const frame = (f: number) => {
+      const simDays = interpolateMissionProfile(profile, w0 + f * FRAME_MS);
+      // The drag rung steps last frame's pose; here a steady yaw per frame.
+      const register = shown && { ...shown, yaw: shown.yaw + 0.003 };
+      const r = missionPose(
+        makeDriverCtx({
+          state: store.getState(),
+          simDays,
+          elapsedMs: f * FRAME_MS,
+          poseBasis: BASIS,
+          projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
+          winnerLastFrame: 'mission',
+          ...(register && { register: absoluteArm(register), authoredWorld: register }),
+        }),
+        mem,
+      );
+      for (const a of r.actions ?? []) store.dispatch(a);
+      if (r.pose.frame !== 'absolute') throw new Error('expected the world arm');
+      mem = r.memory;
+      shown = r.pose.pose;
+      if (!craftInView(shown, simDays)) out++;
+      return shown;
+    };
+    frame(0);
+    store.dispatch(beginDrag());
+    let f = 1;
+    for (; f < 125; f++) frame(f);
+    expect(out).toBe(0);
+    expect(Math.abs(store.getState().camera.mission!.offsets.yaw)).toBeGreaterThan(0.2);
+    const held = shown!;
+    store.dispatch(endDrag());
+    const released = frame(f);
+    // The aim moves on with the craft as on any frame; the view and its distance hold.
+    expect(Math.abs(released.yaw - held.yaw)).toBeLessThan(0.005);
+    expect(Math.abs(released.pitch - held.pitch)).toBeLessThan(0.005);
+    expect(Math.abs(Math.log(released.distance / held.distance))).toBeLessThan(0.005);
+    expect(out).toBe(0);
   });
 
   describe('visitor offsets', () => {

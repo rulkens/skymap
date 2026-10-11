@@ -42,6 +42,7 @@ import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRo
 import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   beginDrag,
+  setMission,
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
@@ -344,6 +345,23 @@ describe('CAMERA_DRIVERS — mission', () => {
 
   it('commits its pose on the edge, so the next winner starts from the mission frame', () => {
     expect(ride.commitsOnEdge).toBe(true);
+  });
+
+  it('keeps the camera through a drag, which turns its view about the craft', () => {
+    const store = makeStore();
+    store.dispatch(
+      setMission({
+        craftId: 'voyager2',
+        stops: [],
+        cruise: { yaw: 0, pitch: 0 },
+        offsets: { yaw: 0, pitch: 0, zoom: 1 },
+        speedIndex: 0,
+        retarget: 0,
+      }),
+    );
+    store.dispatch(beginDrag());
+    const s = store.getState() as unknown as RootState;
+    expect(pickWinner(CAMERA_DRIVERS, s, APPROACHING).id).toBe('mission');
   });
 });
 

@@ -262,7 +262,8 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // orbits AROUND a moving body; a no-op on a body arm, so one row serves
     // both arms.
     pivotsOnFocusedBody: true,
-    isActive: (s) => s.camera.dragging,
+    // A mission reads the drag itself: this row would orbit a frozen point while the craft moves on.
+    isActive: (s) => s.camera.dragging && s.camera.mission === null,
     // The AUTHORED register, pre-projection (R12b-1): producing the displayed
     // pose here re-pins its tilted angles and walks the eye every held frame.
     pose: (ctx, mem) => ({ pose: ctx.register, memory: mem }),
