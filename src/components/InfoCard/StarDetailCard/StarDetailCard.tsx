@@ -230,6 +230,7 @@ function StarDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Star"
         title={
           // The sheet's peek cuts below the header, so its aliases ride in the name.

@@ -45,6 +45,7 @@ function BlackHoleDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Black hole"
         title={target.label}
         thumbnail={

@@ -105,6 +105,7 @@ function BodyDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Body"
         title={target.label}
         thumbnail={

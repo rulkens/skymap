@@ -53,6 +53,7 @@ function GalaxyDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Galaxy"
         title={
           <>

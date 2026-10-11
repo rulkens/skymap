@@ -60,6 +60,7 @@ function MilkyWayDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Home Galaxy"
         title={target.displayName}
         thumbnail={hasChrome ? undefined : thumbnail}

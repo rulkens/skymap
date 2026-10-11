@@ -53,6 +53,7 @@ function StructureDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Structure"
         title={target.name}
         badge={CATEGORY_DISPLAY_INFO[target.category].label}

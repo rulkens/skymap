@@ -38,6 +38,7 @@ function ZoneOfAvoidanceDetailCard({
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
+        compact={!hasChrome}
         eyebrow="Guide Layer"
         title={target.displayName}
         // The band has no focus id; its picture is the exhibit card's shot.
