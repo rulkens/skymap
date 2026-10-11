@@ -62,6 +62,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
+          'fetch-voyager-windows',
         ],
         family: 'fetch-<source>',
         does: 'One for each source, downloading its raw files into data/raw/: <sources>. The one for structures fetches both cluster catalogues; those for dhm and skraafoto need an API key.',
@@ -96,6 +97,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['build-ephemeris-corrections', 'build-planet-facts'],
         does: 'Fit the corrections to the planets’ and moons’ orbits against JPL Horizons, and compile the facts an info card shows. Both write source files that are committed.',
         manual: 'data/raw/horizons/README.md',
+      },
+      {
+        scripts: ['build-spacecraft-tracks'],
+        does: 'Write the file of Voyager trails from the state vectors and the encounter windows that fetch-horizons and fetch-voyager-windows downloaded.',
+        manual: DATA,
       },
       {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],

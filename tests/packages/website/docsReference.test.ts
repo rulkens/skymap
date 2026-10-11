@@ -82,6 +82,7 @@ describe('Settings page', () => {
   // changes: the debug panel's, a tour's or an exhibit's, or nobody's.
   const NOT_IN_PANEL = [
     /^debug\./,
+    /^missionTrails\.emphasis$/,
     /^picking\./,
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,
@@ -139,6 +140,7 @@ describe('Settings page', () => {
     expect(guides.map((row) => row.name)).toEqual([
       ...LABEL_CATEGORIES.map((category) => CATEGORY_DISPLAY_INFO[category].plural),
       'Orbit trails',
+      'Mission trails',
       ...layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides').map((row) => row.label),
     ]);
   });

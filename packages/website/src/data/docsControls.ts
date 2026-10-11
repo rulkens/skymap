@@ -102,6 +102,18 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         where: ANYWHERE,
       },
       {
+        input: [','],
+        shortcut: [','],
+        does: 'In the Voyager exhibit, moves the clock to the previous event of its timeline.',
+        where: 'In the Voyager exhibit',
+      },
+      {
+        input: ['.'],
+        shortcut: ['.'],
+        does: 'In the Voyager exhibit, moves the clock to the next event of its timeline.',
+        where: 'In the Voyager exhibit',
+      },
+      {
         input: ['Enter'],
         does: 'Moves the clock to the date in the field and closes the box.',
         where: 'The clock’s date box',
