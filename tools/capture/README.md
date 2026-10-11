@@ -31,7 +31,7 @@ from its first capturable copy.
 ## Exhibit cards
 
 A `kind: 'exhibit'` card (`cosmicFlows`, `cosmicWeb`, `solarSystem`, `observableUniverse`) boots on
-`#exhibit=<id>` — the same arrival a deep link gets — so its `exhibitRegistry` entry's `settings`
+`#exhibit=<id>` — the same arrival a deep link gets — so its `APP_EXHIBITS` entry's `settings`
 and `pose` apply themselves before the shot is taken; no `capture` override is needed unless a
 card wants to frame it differently. A `capture.pose` on the card is applied afterward and wins.
 

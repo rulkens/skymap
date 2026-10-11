@@ -10,9 +10,11 @@ import { destroy } from './destroy';
 import { missionTrailsPass } from './passes/missionTrailsPass';
 import { missionTrailsFadeRows } from './present/missionTrailsFadeRows';
 import { missionTrailsSettingsRow } from './ui/missionTrailsSettingsRow';
+import { missionsLayerExhibits } from './exhibits/exhibits';
 
 export const missionsLayer = defineLayer({
   name: 'missions',
+  exhibits: missionsLayerExhibits,
   create,
   destroy,
   passes: (runtime) => [missionTrailsPass(runtime)],

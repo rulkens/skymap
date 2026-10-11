@@ -12,7 +12,7 @@ import ExhibitOverlay from '../ExhibitOverlay/ExhibitOverlay';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { selectExhibitCopyDelaySec } from '../../state/takeover/selectors';
-import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import type { ExhibitId } from '../../@types/exhibits/ExhibitId';
 
 export type ExhibitOverlayContainerProps = {
@@ -21,7 +21,7 @@ export type ExhibitOverlayContainerProps = {
 
 function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
-  const exhibit = exhibitRegistry[id];
+  const exhibit = APP_EXHIBITS[id];
   const enterDelaySec = useAppSelector(selectExhibitCopyDelaySec);
 
   const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);

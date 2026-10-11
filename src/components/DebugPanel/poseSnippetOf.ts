@@ -1,5 +1,5 @@
 /**
- * Paste-ready `exhibitRegistry.ts` pose field, full JS precision like
+ * Paste-ready exhibit-file pose field, full JS precision like
  * `copyTextOf` — an exhibit's framing is Mpc-scale, and a rounded target reads
  * as a different galaxy than the one the curator actually stood at.
  */

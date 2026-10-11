@@ -50,7 +50,7 @@ import {
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
-import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../../src/compositions/appExhibits';
 import type { ExhibitId } from '../../../../src/@types/exhibits/ExhibitId';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -333,7 +333,7 @@ describe('pickWinner', () => {
 });
 
 describe('the mission row, lifted from the timeline kind', () => {
-  const drivers = composeControlSchemes(Object.values(exhibitRegistry)).skymap.drivers;
+  const drivers = composeControlSchemes(Object.values(APP_EXHIBITS)).skymap.drivers;
   const mission = drivers.find((d) => d.id === 'mission')!;
   const inExhibit = (id: ExhibitId) => {
     const store = makeStore();
@@ -863,7 +863,7 @@ describe('orbitDrag — the register comes from the ctx', () => {
 
 describe('CAMERA_DRIVERS — ridesWheelTarget', () => {
   it('is set on exactly the follow rows and the mission', () => {
-    const drivers = composeControlSchemes(Object.values(exhibitRegistry)).skymap.drivers;
+    const drivers = composeControlSchemes(Object.values(APP_EXHIBITS)).skymap.drivers;
     expect(drivers.filter((d) => d.ridesWheelTarget).map((d) => d.id)).toEqual([
       'followApproach',
       'followHold',

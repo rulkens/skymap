@@ -18,7 +18,7 @@ import { openExhibit } from '../exhibits/exhibitActions';
 import { clipBodySaga } from '../camera/clipBodySaga';
 import { startClip } from '../camera/clipActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
-import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../compositions/appExhibits';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
 const startRequests = [startTour, openExhibit, startClip];
@@ -50,7 +50,7 @@ export function* watchTakeoverSaga() {
       body = () => withSceneSnapshotSaga(() => tourBodySaga(tour, action.payload.beats));
     } else if (openExhibit.match(action)) {
       const { id, entry, atLinkedTime = false } = action.payload;
-      const exhibit = exhibitRegistry[id];
+      const exhibit = APP_EXHIBITS[id];
       source = { kind: 'exhibit', id: exhibit.id, entry };
       body = () => withSceneSnapshotSaga(() => exhibitBodySaga(exhibit, entry, atLinkedTime));
     } else if (startClip.match(action)) {

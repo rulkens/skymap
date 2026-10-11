@@ -50,7 +50,7 @@ import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
-import { exhibitRegistry } from '../../../src/data/exhibits/exhibitRegistry';
+import { APP_EXHIBITS } from '../../../src/compositions/appExhibits';
 import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -194,7 +194,7 @@ describe('navigateSaga', () => {
     expect(outcome).toEqual({ ok: true });
     expect(h.playClip).not.toHaveBeenCalled();
     expect(h.commits()).toBe(1);
-    const { fitRadiusMpc } = exhibitRegistry.observableUniverse;
+    const { fitRadiusMpc } = APP_EXHIBITS.observableUniverse;
     expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
       sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
     );
