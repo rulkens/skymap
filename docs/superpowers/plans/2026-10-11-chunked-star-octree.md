@@ -252,13 +252,13 @@ export function writeOctreeCatalog(objects: OctreeObjects, meta: { family: Octre
 
 Rules carried from the spec: a chunk root's index row keeps its own records and blob and gets `chunkRef`; the chunk's table holds only rows strictly below the root, `firstRecord` renumbered object-local, its up-to-eight top rows last; chunks never nest; `chunkNodeCap` = the largest chunk's row count. Chunk file names use `contentHash8` (`tools/utils/data/contentHash8.ts`) of the encoded bytes; `OctreeChunkRef.bytes` is the raw byte length. Quantisation at write: `raw = round((value − q0) / q1)` clamped to the store's range, `offset` fraction × `OFFSET_FRACTION_LEVELS`.
 
-- [ ] Test `chunkOctree: a chunk decodes without any other chunk` (spec §9 "self-containment") — build objects from a ~2000-record fixture at capacity 300; for every chunk: every row's parent (`morton >>> 3` at `level + 1`) is either another row of the same chunk or the chunk root itself; every record's node box lies inside the root's box; `firstRecord` runs 0 … records − 1 contiguously.
-- [ ] Test `chunkOctree: an over-capacity node stays in the index and the split recurses` — assert the index holds the root plus every node over capacity, each chunk root's descendant count ≤ capacity, and chunk roots are never ancestors of one another.
-- [ ] Test `chunkOctree: STOPs when a level-0 node would land in the index` (spec §9 "dense-cell STOP") — 400 records in one level-0 cell at capacity 300: `expect(() => chunkOctree(tree, 300)).toThrow(/level 0/)`.
-- [ ] Test `chunkOctree: STOPs when a node owns more than MAX_OWN_COUNT records` — 8193 same-magnitude records in one cell with a capacity large enough that the split never reaches it.
-- [ ] Test `buildOctreeCatalog → write → decode round-trips the index and every chunk` — write to a temp dir, `decodeOctreeIndex` the index, assert `header.chunks.length` equals the chunk count, `chunkNodeCap` equals the max row count, `stats.starCount` equals the real record count, and one chunk's decoded `offset` column equals the written fraction within 1/65536.
-- [ ] Test `writeOctreeCatalog writes the index last` — a `writeFileSync` spy (`vi.spyOn(fs, 'writeFileSync')`) records the call order; the last path ends with `/<name>.bin`.
-- [ ] Implement. Commit.
+- [x] Test `chunkOctree: a chunk decodes without any other chunk` (spec §9 "self-containment") — build objects from a ~2000-record fixture at capacity 300; for every chunk: every row's parent (`morton >>> 3` at `level + 1`) is either another row of the same chunk or the chunk root itself; every record's node box lies inside the root's box; `firstRecord` runs 0 … records − 1 contiguously.
+- [x] Test `chunkOctree: an over-capacity node stays in the index and the split recurses` — assert the index holds the root plus every node over capacity, each chunk root's descendant count ≤ capacity, and chunk roots are never ancestors of one another.
+- [x] Test `chunkOctree: STOPs when a level-0 node would land in the index` (spec §9 "dense-cell STOP") — 400 records in one level-0 cell at capacity 300: `expect(() => chunkOctree(tree, 300)).toThrow(/level 0/)`.
+- [x] Test `chunkOctree: STOPs when a node owns more than MAX_OWN_COUNT records` — 8193 same-magnitude records in one cell with a capacity large enough that the split never reaches it.
+- [x] Test `buildOctreeCatalog → write → decode round-trips the index and every chunk` — write to a temp dir, `decodeOctreeIndex` the index, assert `header.chunks.length` equals the chunk count, `chunkNodeCap` equals the max row count, `stats.starCount` equals the real record count, and one chunk's decoded `offset` column equals the written fraction within 1/65536.
+- [x] Test `writeOctreeCatalog writes the index last` — a `writeFileSync` spy (`vi.spyOn(fs, 'writeFileSync')`) records the call order; the last path ends with `/<name>.bin`.
+- [x] Implement. Commit.
 
 ### Task 5: `buildStars` bakes the octree, once per catalog
 
