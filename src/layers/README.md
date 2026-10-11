@@ -33,6 +33,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `selection?`    | `present/`                                     |                                                                                                                       |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
+| `exhibits?`     | `exhibits/`                                    | One exhibit per file + `exhibits/exhibits.ts`, the rows array `appExhibits` folds after core's by import              |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -41,6 +42,16 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 - **`@types/`** — the Layer's **own** contract types, one per file, filename = the
   type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
   Layer stay under `src/@types/` instead.
+
+An exhibit's notes are sections, each `section(kind, data)`. A **section kind**
+(`ExhibitSectionKind`) carries its `Component`, and optionally a `hold` (the saga that
+replaces the exhibit's default hold), `shortcuts` (walked ahead of the global table
+while the exhibit runs, handed the section's data) and a `cameraDriver`
+(`ExhibitCameraDriver`: core lifts it into the driver table, turns it on only while an
+exhibit carrying the kind runs, hands `pose` that exhibit's data, and lets it own the
+drag). A kind lives beside its exhibit (`exhibits/<area>/`); the files it reaches that
+read or write the store sit in `ui/` and `sagas/`, which the outbound sweep exempts. An
+exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 ## Rules
 
@@ -88,5 +99,5 @@ and expect both to be ruled on when the Layer structure is cleaned up:
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles` and
-`milkyWay` and `lightTime` are formed. The other two folders (`body`, `structure`) are settings-only
+`milkyWay`, `lightTime` and `missions` are formed. The other two folders (`body`, `structure`) are settings-only
 stubs from prep step (c) and are filled in one Layer at a time.
