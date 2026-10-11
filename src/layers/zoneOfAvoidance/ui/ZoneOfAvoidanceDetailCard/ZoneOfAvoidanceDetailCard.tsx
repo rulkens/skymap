@@ -13,6 +13,8 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { ZoneOfAvoidanceInfo } from '../../../../@types/engine/ZoneOfAvoidanceInfo';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import { cardShotUrl } from '../../../../utils/palette/cardShotUrl';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import styles from '../../../../components/InfoCard/cardChrome.module.css';
@@ -38,6 +40,12 @@ function ZoneOfAvoidanceDetailCard({
       <CardHeader
         eyebrow="Guide Layer"
         title={target.displayName}
+        // The band has no focus id; its picture is the exhibit card's shot.
+        thumbnail={
+          hasChrome ? undefined : (
+            <Thumbnail url={cardShotUrl('zoneOfAvoidance')} alt="Zone of Avoidance thumbnail" />
+          )
+        }
         onClose={isPinned ? onClose : undefined}
       />
 

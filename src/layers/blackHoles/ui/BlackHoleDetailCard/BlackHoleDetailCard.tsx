@@ -13,6 +13,9 @@ import { BODY_FACTS } from '../../../../data/bodies/bodyFacts.generated';
 import { formatDistance } from '../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../utils/format/formatRadiusM';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import { focusShotUrl } from '../../../../utils/palette/focusShotUrl';
+import { encodeBlackHoleFocusId } from '../../present/encodeBlackHoleFocusId';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
@@ -36,6 +39,7 @@ function BlackHoleDetailCard({
 }: BlackHoleDetailCardProps): ReactNode {
   const facts = BODY_FACTS[target.id];
   const [x, y, z] = target.positionMpc;
+  const shotUrl = focusShotUrl(encodeBlackHoleFocusId(target.id));
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
@@ -43,6 +47,11 @@ function BlackHoleDetailCard({
       <CardHeader
         eyebrow="Black hole"
         title={target.label}
+        thumbnail={
+          !hasChrome && shotUrl !== undefined ? (
+            <Thumbnail url={shotUrl} alt={`${target.label} thumbnail`} />
+          ) : undefined
+        }
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.label}`}
         onClose={isPinned ? onClose : undefined}

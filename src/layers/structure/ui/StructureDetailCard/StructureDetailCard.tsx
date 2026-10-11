@@ -12,6 +12,8 @@ import { formatAbellDesignation } from '../../../../utils/format/formatAbellDesi
 import { CATEGORY_DISPLAY_INFO } from '../../../../data/structure/categoryDisplayInfo';
 import { NEBULA_KIND_LABELS } from '../../../../data/structure/nebulaKindLabels';
 import CardHeader from '../../../../components/InfoCard/CardHeader/CardHeader';
+import Thumbnail from '../../../../components/InfoCard/Thumbnail/Thumbnail';
+import { focusShotUrl } from '../../../../utils/palette/focusShotUrl';
 import CardRow from '../../../../components/InfoCard/CardRow/CardRow';
 import DescriptionBlock from '../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
 import WikipediaRow from '../../../../components/InfoCard/WikipediaRow/WikipediaRow';
@@ -44,6 +46,8 @@ function StructureDetailCard({
   onClose,
 }: StructureDetailCardProps): ReactNode {
   const distanceMpc = Math.hypot(target.worldPos[0], target.worldPos[1], target.worldPos[2]);
+  // The structure's own id is its focus id (see URL_HASH_FOR).
+  const shotUrl = focusShotUrl(target.id);
   const outerClass = cx(local.root, isPinned && styles.pinned, !hasChrome && styles.chromeless);
 
   return (
@@ -52,6 +56,11 @@ function StructureDetailCard({
         eyebrow="Structure"
         title={target.name}
         badge={CATEGORY_DISPLAY_INFO[target.category].label}
+        thumbnail={
+          !hasChrome && shotUrl !== undefined ? (
+            <Thumbnail url={shotUrl} alt={`${target.name} thumbnail`} />
+          ) : undefined
+        }
         onFocus={isPinned && onFocus ? () => onFocus(target) : undefined}
         focusAriaLabel={`Focus camera on ${target.name}`}
         onClose={isPinned ? onClose : undefined}
