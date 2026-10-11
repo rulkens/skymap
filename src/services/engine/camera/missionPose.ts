@@ -3,8 +3,8 @@
  * along its normal turned by the visitor's offsets. A view change (a step, a craft switch, a
  * hand-off to another stop or view regime) eases from the pose last shown over `MISSION_EASE_MS`
  * of WALL time on the mission epoch, so it reads the same at every clock speed and still finishes
- * on a paused clock. Offsets are read from a live drag or a swallowed wheel notch and
- * ease back to zero after `MISSION_EASE_MS` idle. Yaw and pitch come from
+ * on a paused clock. Offsets are read from a live drag or a swallowed wheel notch and hold until
+ * the next view change, which resets them. Yaw and pitch come from
  * `orbitAnglesLookingAlong` in the committed basis; an inverse here would drift off-equatorial.
  */
 
@@ -60,17 +60,10 @@ export function missionPose(
   );
   if (frame === null) return { pose: ctx.state.camera.base, memory: mem };
 
-  let inputAtMs = prev?.inputAtMs ?? now;
-  const stored = mission.offsets;
-  const storedIsZero = stored.yaw === 0 && stored.pitch === 0 && stored.zoom === 1;
-  const idle = smoothstep(MISSION_EASE_MS, 2 * MISSION_EASE_MS, now - inputAtMs);
-  const keep = 1 - idle;
-  let offsets: MissionOffsets =
-    idle === 0
-      ? stored
-      : idle === 1
-        ? NO_MISSION_OFFSETS
-        : { yaw: stored.yaw * keep, pitch: stored.pitch * keep, zoom: stored.zoom ** keep };
+  // A new view (another framed stop, or flyby to cruise and back) starts on its auto view; the
+  // ease into it below departs from what the visitor saw, so the reset does not snap.
+  const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
+  let offsets: MissionOffsets = viewChanged ? NO_MISSION_OFFSETS : mission.offsets;
   const dragged = ctx.state.camera.dragging;
   const touched = dragged || ctx.followDistanceTarget !== null;
   if (dragged) {
@@ -81,10 +74,8 @@ export function missionPose(
     const view = normalize3([w.target[0] - eye[0], w.target[1] - eye[1], w.target[2] - eye[2]]);
     offsets = missionOffsetsOfView(frame, view, w.distance);
   } else if (ctx.followDistanceTarget !== null) {
-    // Relative to the eased-back offsets the visitor sees, so a notch mid-ease does not jump.
     offsets = { ...offsets, zoom: ctx.followDistanceTarget / frame.distance };
   }
-  if (touched) inputAtMs = now;
 
   // The distance that fits the craft's frame sphere about `target`, as the exact frame does.
   const craft = positionOf(mission.craftId);
@@ -104,7 +95,6 @@ export function missionPose(
   let easeAtMs = prev?.easeAtMs ?? now;
   let shortfall = prev?.shortfall ?? 1;
   const easing = from !== null && now - easeAtMs < MISSION_EASE_MS;
-  const viewChanged = prev !== null && (frame.stop !== prev.stop || frame.cruise !== prev.cruise);
   if (prev === null ? mission.retarget > 0 : viewChanged) {
     from = ctx.authoredWorld;
     easeAtMs = now;
@@ -161,7 +151,7 @@ export function missionPose(
       from: null,
       distanceTarget: shown.distance,
       panOffset: mem?.panOffset ?? [0, 0, 0],
-      saturated: from === null && storedIsZero,
+      saturated: from === null,
       mission: {
         stops: mission.stops,
         stop: frame.stop,
@@ -169,9 +159,8 @@ export function missionPose(
         from,
         easeAtMs,
         shortfall,
-        inputAtMs,
       },
     },
-    actions: touched || (idle === 1 && !storedIsZero) ? [setMissionOffsets(offsets)] : undefined,
+    actions: touched || viewChanged ? [setMissionOffsets(offsets)] : undefined,
   };
 }

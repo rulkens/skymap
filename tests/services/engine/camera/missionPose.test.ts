@@ -358,51 +358,50 @@ describe('missionPose', () => {
 
   describe('visitor offsets', () => {
     const want = { yaw: 0.4, pitch: -0.25, zoom: 1.8 };
-    const run = (mission: CameraMission, steps: { ms: number; notch?: number }[]) => {
+    const run = (mission: CameraMission, steps: { ms: number; days?: number }[]) => {
       const store = configureStore({ reducer: rootReducer });
       store.dispatch(setMission(mission));
       let mem: FollowMemory | null = null;
-      let last: ReturnType<typeof missionPose> | null = null;
-      for (const { ms, notch } of steps) {
+      let shown: CameraPose | undefined;
+      const poses: CameraPose[] = [];
+      for (const { ms, days = tc } of steps) {
         const ctx = makeDriverCtx({
           state: store.getState(),
-          simDays: tc,
+          simDays: days,
           elapsedMs: ms,
           poseBasis: BASIS,
           projection: { fovYRad: FOV, aspect: ASPECT, near: 0, far: 1 },
           winnerLastFrame: 'mission',
-          followDistanceTarget: notch === undefined ? null : mem!.distanceTarget! * notch,
+          ...(shown && { authoredWorld: shown }),
         });
-        last = missionPose(ctx, mem);
-        mem = last.memory;
-        for (const a of last.actions ?? []) store.dispatch(a);
+        const out = missionPose(ctx, mem);
+        if (out.pose.frame !== 'absolute') throw new Error('expected the world arm');
+        mem = out.memory;
+        shown = out.pose.pose;
+        poses.push(shown);
+        for (const a of out.actions ?? []) store.dispatch(a);
       }
-      return { last: last!, offsets: store.getState().camera.mission!.offsets };
-    };
-    const poseOf = (r: ReturnType<typeof run>) => {
-      if (r.last.pose.frame !== 'absolute') throw new Error('expected the world arm');
-      return r.last.pose.pose;
+      return { poses, offsets: store.getState().camera.mission!.offsets };
     };
 
-    it('holds for the idle wait, then ease back to the auto view', () => {
-      const held = run(missionOf(want), [{ ms: 0 }, { ms: MISSION_EASE_MS - 1 }]);
-      expect(poseOf(held)).toEqual(worldPose(ctxAt(missionOf(want), tc)));
-      const mid = run(missionOf(want), [{ ms: 0 }, { ms: MISSION_EASE_MS * 1.5 }]);
-      expect(poseOf(mid).distance).toBeLessThan(poseOf(held).distance);
-      const back = run(missionOf(want), [{ ms: 0 }, { ms: MISSION_EASE_MS * 2 }]);
-      expect(poseOf(back)).toEqual(worldPose(ctxAt(missionOf(), tc)));
-      expect(back.offsets).toEqual({ yaw: 0, pitch: 0, zoom: 1 });
+    it('hold through any idle within one view', () => {
+      const r = run(missionOf(want), [{ ms: 0 }, { ms: 10_000 }]);
+      expect(r.poses[1]).toEqual(worldPose(ctxAt(missionOf(want), tc)));
+      expect(r.offsets).toEqual(want);
     });
 
-    it('a new input cancels the ease back', () => {
+    it('reset with the ease into the next camera view', () => {
+      const before = tc + MISSION_FLYBY_LEAD_DAYS - 0.02;
+      const after = tc + MISSION_FLYBY_LEAD_DAYS + 0.02;
       const r = run(missionOf(want), [
-        { ms: 0 },
-        { ms: MISSION_EASE_MS * 1.5, notch: 1 },
-        { ms: MISSION_EASE_MS * 2.5 },
+        { ms: 0, days: before },
+        { ms: FRAME_MS, days: after },
+        { ms: FRAME_MS + MISSION_EASE_MS, days: after },
       ]);
-      expect(r.offsets.yaw).toBeGreaterThan(0.1);
-      expect(r.offsets.yaw).toBeLessThan(want.yaw);
-      expect(poseOf(r)).toEqual(worldPose(ctxAt(missionOf(r.offsets), tc)));
+      expect(r.offsets).toEqual({ yaw: 0, pitch: 0, zoom: 1 });
+      // Eased, not snapped: the switch frame still shows the pose before it.
+      expect(r.poses[1]!.distance / r.poses[0]!.distance).toBeCloseTo(1, 6);
+      expect(r.poses[2]).toEqual(worldPose(ctxAt(missionOf(), after)));
     });
   });
 });
