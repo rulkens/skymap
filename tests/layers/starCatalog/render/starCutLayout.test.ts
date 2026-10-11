@@ -3,10 +3,8 @@ import { describe, it, expect } from 'vitest';
 import {
   CAM_CELL_INT_INDEX,
   CAM_FRAC_FLOAT_INDEX,
-  CHUNK_CAPACITY_U32_INDEX,
   CHUNK_NODE_CAP_U32_INDEX,
   INDEX_NODES_U32_INDEX,
-  INDEX_RECORDS_U32_INDEX,
   NODE_COUNT_U32_INDEX,
   NODE_GRID_WORD,
   VIEW_COUNT_U32_INDEX,
@@ -85,16 +83,14 @@ describe('writeStarCutUniforms', () => {
     expect(new Uint32Array(buf)[VIEW_COUNT_U32_INDEX]).toBe(0);
   });
 
-  it('counts the pool rows and names the index and slot strides', () => {
+  it('counts the pool rows and names the index and slot row stride', () => {
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
-    const octree = { ...CATALOG, chunkNodeCap: 7, chunkCapacity: 50 };
+    const octree = { ...CATALOG, chunkNodeCap: 7 };
     writeStarCutUniforms(buf, octree, { slots: 2 }, camAtPc(0), cut);
     const u32 = new Uint32Array(buf);
     expect(u32[NODE_COUNT_U32_INDEX]).toBe(3 + 2 * 7);
     expect(u32[INDEX_NODES_U32_INDEX]).toBe(3);
-    expect(u32[INDEX_RECORDS_U32_INDEX]).toBe(6);
     expect(u32[CHUNK_NODE_CAP_U32_INDEX]).toBe(7);
-    expect(u32[CHUNK_CAPACITY_U32_INDEX]).toBe(50);
   });
 });
 

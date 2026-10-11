@@ -55,7 +55,7 @@ const CUT_MAX_VIEWS: u32 = 6u;
 //   16 camFrac vec3<f32>    28 refineThresholdSq
 //   32 fadeStep  36 drawBudget     40 worldSpread  44 leafMarginRad
 //   48 viewCount 52 nodeCount (pool rows)          56 opacity
-//   60 indexNodes 64 indexRecords  68 chunkNodeCap  72 chunkCapacity  76 pad
+//   60 indexNodes 64 chunkNodeCap  68-76 pad
 //   80 planes    6 unit planes per view, camera-relative Mpc
 struct CutUniforms {
   camCell: vec3<i32>,
@@ -70,10 +70,10 @@ struct CutUniforms {
   nodeCount: u32,
   opacity: f32,
   indexNodes: u32,
-  indexRecords: u32,
   chunkNodeCap: u32,
-  chunkCapacity: u32,
-  _pad: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
   planes: array<vec4<f32>, 36>,
 };
 

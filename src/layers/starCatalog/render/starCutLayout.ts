@@ -87,7 +87,7 @@ export const FLOATS_PER_VIEW = PLANES_PER_VIEW * PLANE_FLOATS;
 
 /**
  * `struct CutUniforms`: an 80-byte head, then the planes. Word slots of the
- * head, in the order `cutIo.wesl` declares them (word 19 is pad).
+ * head, in the order `cutIo.wesl` declares them (words 17–19 are pad).
  */
 export const CAM_CELL_INT_INDEX = 0;
 export const CELL_EDGE_MPC_FLOAT_INDEX = 3;
@@ -101,9 +101,7 @@ export const VIEW_COUNT_U32_INDEX = 12;
 export const NODE_COUNT_U32_INDEX = 13;
 export const OPACITY_FLOAT_INDEX = 14;
 export const INDEX_NODES_U32_INDEX = 15;
-export const INDEX_RECORDS_U32_INDEX = 16;
-export const CHUNK_NODE_CAP_U32_INDEX = 17;
-export const CHUNK_CAPACITY_U32_INDEX = 18;
+export const CHUNK_NODE_CAP_U32_INDEX = 16;
 export const PLANES_FLOAT_INDEX = 20;
 const CUT_UNIFORM_HEAD_BYTES = PLANES_FLOAT_INDEX * WORD_BYTES;
 export const CUT_UNIFORM_BYTES =
@@ -344,9 +342,7 @@ export function writeStarCutUniforms(
   u32[VIEW_COUNT_U32_INDEX] = viewCount;
   u32[NODE_COUNT_U32_INDEX] = octree.nodes.count + pool.slots * octree.chunkNodeCap;
   u32[INDEX_NODES_U32_INDEX] = octree.nodes.count;
-  u32[INDEX_RECORDS_U32_INDEX] = octree.records.count;
   u32[CHUNK_NODE_CAP_U32_INDEX] = octree.chunkNodeCap;
-  u32[CHUNK_CAPACITY_U32_INDEX] = octree.chunkCapacity;
   f32[OPACITY_FLOAT_INDEX] = cut.opacity;
   f32.set(cut.planes.subarray(0, viewCount * FLOATS_PER_VIEW), PLANES_FLOAT_INDEX);
 }

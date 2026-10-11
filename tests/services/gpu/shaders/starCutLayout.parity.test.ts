@@ -152,10 +152,10 @@ describe('struct CutUniforms', () => {
     nodeCount: layout.NODE_COUNT_U32_INDEX,
     opacity: layout.OPACITY_FLOAT_INDEX,
     indexNodes: layout.INDEX_NODES_U32_INDEX,
-    indexRecords: layout.INDEX_RECORDS_U32_INDEX,
     chunkNodeCap: layout.CHUNK_NODE_CAP_U32_INDEX,
-    chunkCapacity: layout.CHUNK_CAPACITY_U32_INDEX,
-    _pad: layout.PLANES_FLOAT_INDEX - 1,
+    _pad0: layout.PLANES_FLOAT_INDEX - 3,
+    _pad1: layout.PLANES_FLOAT_INDEX - 2,
+    _pad2: layout.PLANES_FLOAT_INDEX - 1,
     planes: layout.PLANES_FLOAT_INDEX,
   };
 
@@ -171,9 +171,7 @@ describe('struct CutUniforms', () => {
     const catalog = {
       grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
       nodes: { count: 5 },
-      records: { count: 9 },
       chunkNodeCap: 4,
-      chunkCapacity: 11,
     } as unknown as StarOctree;
     const planes = new Float32Array(FLOATS_PER_VIEW).fill(0.75);
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
@@ -198,9 +196,7 @@ describe('struct CutUniforms', () => {
     expect(u32[at('viewCount')]).toBe(1);
     expect(u32[at('nodeCount')]).toBe(5 + 3 * 4);
     expect(u32[at('indexNodes')]).toBe(5);
-    expect(u32[at('indexRecords')]).toBe(9);
     expect(u32[at('chunkNodeCap')]).toBe(4);
-    expect(u32[at('chunkCapacity')]).toBe(11);
     expect(f32[at('opacity')]).toBe(0.25);
     expect(f32[at('planes')]).toBe(0.75);
   });
