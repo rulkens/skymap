@@ -99,9 +99,9 @@ describe('ExhibitTimelineContainer', () => {
     const store = mount('2026-01-01');
     const titanV1 = section.events.find((e) => e.id === 'voyager1-titan')!;
     const dot = screen.getAllByLabelText(`${titanV1.label}, 1980-11-12`).at(-1)!;
-    expect(screen.queryByText(`${titanV1.label} · 1980-11-12`)).toBeNull();
-    fireEvent.pointerEnter(dot);
-    expect(screen.getByText(`${titanV1.label} · 1980-11-12`)).toBeInTheDocument();
+    expect(dot.parentElement!.querySelector('[role="tooltip"]')).toHaveTextContent(
+      `${titanV1.label} · 1980-11-12`,
+    );
     fireEvent.click(dot);
 
     const time = selectTimeState(store.getState());

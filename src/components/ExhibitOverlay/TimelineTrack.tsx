@@ -5,10 +5,11 @@
  * through `onStep`. A stop's events sit side by side on its boundary. The parent owns the clock.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import cx from 'classnames';
 
+import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
 import { adjacentEventId } from '../../utils/exhibits/timeline/adjacentEventId';
 import { formatEventDate } from '../../utils/exhibits/timeline/formatEventDate';
 import { describeTimelineInstant } from '../../utils/exhibits/timeline/describeTimelineInstant';
@@ -54,7 +55,6 @@ function TimelineTrack({
   onStep,
 }: TimelineTrackProps): ReactNode {
   const labels = useMemo(() => timelineAxisLabels(axis), [axis]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const thumb = timelineFraction(simMs, axis);
   const firstMs = stops[0]!.ms;
   const seek = (ms: number) => onSeekMs(Math.min(endMs, Math.max(firstMs, ms)));
@@ -146,42 +146,34 @@ function TimelineTrack({
                 className={styles.laneFill}
                 style={{ left: pct(from), width: pct(simMs > launchMs ? to - from : 0) }}
               />
-              {mine.map((e) => (
-                <button
-                  type="button"
-                  key={e.id}
-                  // Previous / Next are the accessible twin; the slider's children are presentational.
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
-                  onPointerEnter={() => setHoveredId(e.id)}
-                  onPointerLeave={() => setHoveredId((id) => (id === e.id ? null : id))}
-                  onPointerDown={(ev) => ev.stopPropagation()}
-                  onClick={() => onStep(e.id)}
-                  className={cx(
-                    styles.tick,
-                    styles[e.kind],
-                    missionEventMs(e) <= simMs && styles.passed,
-                    currentId === e.id && styles.current,
-                  )}
-                  style={{ left: dotLeft.get(e.id)?.left }}
-                />
-              ))}
-              {mine
-                .filter((e) => e.id === hoveredId)
-                .map((e) => {
-                  const at = dotLeft.get(e.id);
-                  return (
-                    <span
-                      key={e.id}
-                      className={styles.tip}
-                      // The anchor slides with the fraction, so an end label stays inside the column.
-                      style={{ left: at?.left, translate: `${-(at?.fraction ?? 0.5) * 100}% 0` }}
+              {mine.map((e) => {
+                const at = dotLeft.get(e.id);
+                const fraction = at?.fraction ?? 0.5;
+                return (
+                  <span key={e.id} className={styles.tickAt} style={{ left: at?.left }}>
+                    <CompactInfoTip
+                      label={`${e.label} · ${formatEventDate(e.iso)}`}
+                      align={fraction < 1 / 3 ? 'start' : fraction > 2 / 3 ? 'end' : 'center'}
                     >
-                      {e.label} · {formatEventDate(e.iso)}
-                    </span>
-                  );
-                })}
+                      <button
+                        type="button"
+                        // Previous / Next are the accessible twin; the slider's children are presentational.
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        aria-label={`${e.label}, ${formatEventDate(e.iso)}`}
+                        onPointerDown={(ev) => ev.stopPropagation()}
+                        onClick={() => onStep(e.id)}
+                        className={cx(
+                          styles.tick,
+                          styles[e.kind],
+                          missionEventMs(e) <= simMs && styles.passed,
+                          currentId === e.id && styles.current,
+                        )}
+                      />
+                    </CompactInfoTip>
+                  </span>
+                );
+              })}
             </div>
           );
         })}
