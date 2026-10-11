@@ -60,4 +60,25 @@ describe('createStructureStore', () => {
     arr.push(rec('a2'));
     expect(s.all().map((r) => r.id)).toEqual(['a1']);
   });
+
+  it('queries see every later setGroup/clearGroup (derived data is never stale)', () => {
+    const s = createStructureStore();
+    s.setGroup('bulk', [rec('b1'), rec('v1', 'void')]);
+    // Prime every derived view before mutating.
+    expect(s.all()).toHaveLength(2);
+    expect(s.byCategory('galaxy-cluster')).toHaveLength(1);
+    expect(s.categoryIndexOf('galaxy-cluster', 'b1')).toBe(0);
+
+    s.setGroup('anchors', [rec('a1')]);
+    expect(s.all().map((r) => r.id)).toEqual(['a1', 'b1', 'v1']);
+    expect(s.byCategory('galaxy-cluster').map((r) => r.id)).toEqual(['a1', 'b1']);
+    expect(s.categoryIndexOf('galaxy-cluster', 'b1')).toBe(1);
+    expect(s.categoryIndexOf('void', 'b1')).toBe(-1);
+
+    s.clearGroup('anchors');
+    expect(s.all().map((r) => r.id)).toEqual(['b1', 'v1']);
+    expect(s.byCategory('galaxy-cluster').map((r) => r.id)).toEqual(['b1']);
+    expect(s.categoryIndexOf('galaxy-cluster', 'a1')).toBe(-1);
+    expect(s.categoryIndexOf('galaxy-cluster', 'b1')).toBe(0);
+  });
 });
