@@ -13,7 +13,7 @@ import type { SelectionResolver } from '../../src/@types/engine/selection/Select
 export type GalaxyRowFixture = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
 
 /** What the starCatalog Layer's selection row reads; the real runtime satisfies it. */
-export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer'>;
+export type StarRowFixture = Pick<StarCatalogRuntime, 'renderer' | 'chunkStreams'>;
 
 /**
  * A composed `SelectionResolver` over one fixed `ResolveDeps` — the one-line

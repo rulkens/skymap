@@ -42,7 +42,10 @@
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
-import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
+import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
+import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
+import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
+import { NO_CHUNK_REF, OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
@@ -52,21 +55,20 @@ const SUN: Vec3 = [0, 0, 0];
 
 /**
  * The nearest catalogued star whose heliocentric position lies within
- * `searchRadiusMpc` of `camPosMpc`, or null if none. `recordIdx` is the
- * bin-global record index (what the pick names and `resolveStarRecord` resolves);
- * `positionMpc` and `bpRp` are the reconstructed star; `distanceMpc` is the
- * camera-to-star distance (≤ `searchRadiusMpc`).
+ * `searchRadiusMpc` of `camPosMpc`, or null if none. `ordinal` is the
+ * catalog record ordinal (what `resolveStarRecord` resolves); `positionMpc`
+ * and `bpRp` are the reconstructed star; `distanceMpc` is the camera-to-star
+ * distance (≤ `searchRadiusMpc`). The descent continues into a chunk only while
+ * it is resident: an absent chunk's stars are not drawn either.
  */
 export function nearestResolvableStar(
   octree: StarOctree,
+  resident: StarResidency,
   camPosMpc: Readonly<Vec3>,
   searchRadiusMpc: number,
-): { recordIdx: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null {
-  const { nodes, records } = octree;
-  const n = nodes.count;
+): { ordinal: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null {
+  const n = octree.nodes.count;
   if (n === 0) return null;
-
-  const { childIndex, boxOriginPc, boxEdgePc } = starOctreeIndex(nodes, octree.grid);
 
   // The expanded-box containment test runs in parsecs (the box arrays' unit); the
   // nearest-record compare runs in Mpc (the reconstruction's unit).
@@ -75,74 +77,94 @@ export function nearestResolvableStar(
   const camZPc = camPosMpc[2] * SCALE_UNITS.MPC_TO_PC;
   const radiusPc = searchRadiusMpc * SCALE_UNITS.MPC_TO_PC;
 
-  const radiusSqMpc = searchRadiusMpc * searchRadiusMpc;
-  let bestSqMpc = radiusSqMpc;
-  let bestIdx = -1;
+  let bestSqMpc = searchRadiusMpc * searchRadiusMpc;
+  let bestOrdinal = -1;
   let bestPos: Vec3 | null = null;
   let bestBpRp = 0;
 
-  // Explicit descent stack of node indices — root last per the layout invariant.
-  const stack: number[] = [n - 1];
-  while (stack.length > 0) {
-    const i = stack.pop()!;
+  /** Descend one object (the index, or a chunk) from `stack`; its record `r` is ordinal `ordinalBase + r`. */
+  function scan(
+    nodes: OctreeNodeTable,
+    records: StarColumns,
+    stack: number[],
+    ordinalBase: number,
+  ): void {
+    const { childIndex, boxOriginPc, boxEdgePc } = starOctreeIndex(nodes, octree.grid);
+    while (stack.length > 0) {
+      const i = stack.pop()!;
 
-    // Reject a node whose box, grown by the search radius on every axis, does not
-    // contain the camera — no record inside it can be within range.
-    const o3 = i * 3;
-    const edge = boxEdgePc[i]!;
-    const loX = boxOriginPc[o3]! - radiusPc;
-    const hiX = boxOriginPc[o3]! + edge + radiusPc;
-    if (camXPc < loX || camXPc > hiX) continue;
-    const loY = boxOriginPc[o3 + 1]! - radiusPc;
-    const hiY = boxOriginPc[o3 + 1]! + edge + radiusPc;
-    if (camYPc < loY || camYPc > hiY) continue;
-    const loZ = boxOriginPc[o3 + 2]! - radiusPc;
-    const hiZ = boxOriginPc[o3 + 2]! + edge + radiusPc;
-    if (camZPc < loZ || camZPc > hiZ) continue;
+      // Reject a node whose box, grown by the search radius on every axis, does not
+      // contain the camera — no record inside it can be within range.
+      const o3 = i * 3;
+      const edge = boxEdgePc[i]!;
+      const loX = boxOriginPc[o3]! - radiusPc;
+      const hiX = boxOriginPc[o3]! + edge + radiusPc;
+      if (camXPc < loX || camXPc > hiX) continue;
+      const loY = boxOriginPc[o3 + 1]! - radiusPc;
+      const hiY = boxOriginPc[o3 + 1]! + edge + radiusPc;
+      if (camYPc < loY || camYPc > hiY) continue;
+      const loZ = boxOriginPc[o3 + 2]! - radiusPc;
+      const hiZ = boxOriginPc[o3 + 2]! + edge + radiusPc;
+      if (camZPc < loZ || camZPc > hiZ) continue;
 
-    // Childful: descend into every present child (a blob is a flux mip, never unpacked).
-    if (nodes.childMask[i] !== 0) {
-      const cbase = i * 8;
-      for (let k = 0; k < 8; k++) {
-        const c = childIndex[cbase + k]!;
-        if (c >= 0) stack.push(c);
+      // Childful: descend into every present child (a blob is a flux mip, never
+      // unpacked); a chunk root's children are its chunk's top rows, its last rows.
+      if (nodes.childMask[i] !== 0) {
+        const ref = nodes.chunkRef[i]!;
+        const chunk = ref === NO_CHUNK_REF ? null : resident(ref);
+        if (chunk !== null) {
+          const top: number[] = [];
+          const topLevel = chunk.nodes.level[chunk.nodes.count - 1];
+          for (let c = chunk.nodes.count - 1; c >= 0 && chunk.nodes.level[c] === topLevel; c--) {
+            top.push(c);
+          }
+          scan(chunk.nodes, chunk.records, top, octree.recordOrdinalBase[ref]!);
+        }
+        const cbase = i * 8;
+        for (let k = 0; k < 8; k++) {
+          const c = childIndex[cbase + k]!;
+          if (c >= 0) stack.push(c);
+        }
       }
-    }
 
-    // Own records ARE real stars, reconstructed as resolveStarRecord does.
-    const count = nodes.ownCount[i]!;
-    if (count === 0) continue;
-    const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
-      octree.grid,
-      nodes.morton[i]!,
-      nodes.level[i]!,
-      SUN,
-    );
-    const base = nodes.firstRecord[i]!;
-    for (let r = 0; r < count; r++) {
-      const recordIdx = base + r;
-      const o = 3 * recordIdx;
-      const px = originRelCamMpc[0] + (records.offset[o]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
-      const py =
-        originRelCamMpc[1] + (records.offset[o + 1]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
-      const pz =
-        originRelCamMpc[2] + (records.offset[o + 2]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
-      const dx = px - camPosMpc[0];
-      const dy = py - camPosMpc[1];
-      const dz = pz - camPosMpc[2];
-      const sq = dx * dx + dy * dy + dz * dz;
-      if (sq <= bestSqMpc) {
-        bestSqMpc = sq;
-        bestIdx = recordIdx;
-        bestPos = [px, py, pz];
-        bestBpRp = records.colourIndex[recordIdx]!;
+      // Own records ARE real stars (hoisted ones included), reconstructed as resolveStarRecord does.
+      const count = nodes.ownCount[i]!;
+      if (count === 0) continue;
+      const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
+        octree.grid,
+        nodes.morton[i]!,
+        nodes.level[i]!,
+        SUN,
+      );
+      const base = nodes.firstRecord[i]!;
+      for (let r = base; r < base + count; r++) {
+        const o = 3 * r;
+        const px =
+          originRelCamMpc[0] + (records.offset[o]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
+        const py =
+          originRelCamMpc[1] + (records.offset[o + 1]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
+        const pz =
+          originRelCamMpc[2] + (records.offset[o + 2]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
+        const dx = px - camPosMpc[0];
+        const dy = py - camPosMpc[1];
+        const dz = pz - camPosMpc[2];
+        const sq = dx * dx + dy * dy + dz * dz;
+        if (sq <= bestSqMpc) {
+          bestSqMpc = sq;
+          bestOrdinal = ordinalBase + r;
+          bestPos = [px, py, pz];
+          bestBpRp = records.colourIndex[r]!;
+        }
       }
     }
   }
 
-  if (bestIdx < 0 || bestPos === null) return null;
+  // Root last per the layout invariant.
+  scan(octree.nodes, octree.records, [n - 1], 0);
+
+  if (bestOrdinal < 0 || bestPos === null) return null;
   return {
-    recordIdx: bestIdx,
+    ordinal: bestOrdinal,
     positionMpc: bestPos,
     bpRp: bestBpRp,
     distanceMpc: Math.sqrt(bestSqMpc),

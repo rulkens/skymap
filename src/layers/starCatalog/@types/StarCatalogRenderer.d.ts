@@ -23,6 +23,14 @@ export type StarCatalogRenderer = Renderer & {
   uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
   /** Free a slot: its root stops refining, then its rows are zeroed. */
   evictChunk(source: SourceType, slot: number): void;
+  /**
+   * A pool-absolute record index (what the pick draw stamps) as the catalog ordinal, or null
+   * when its slot is empty or the index names no record. Read through the renderer's own
+   * slot → chunk table, so a pick raced by an eviction resolves to null, never another star.
+   */
+  recordOrdinal(source: SourceType, poolIndex: number): number | null;
+  /** The inverse: null when the ordinal's chunk is not resident. */
+  poolRecordIndex(source: SourceType, ordinal: number): number | null;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
   loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */

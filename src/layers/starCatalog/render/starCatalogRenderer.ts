@@ -19,6 +19,8 @@ import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
 import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
+import { starRecordObject } from '../../../utils/star/starRecordObject';
+import { starRecordOrdinal } from '../../../utils/star/starRecordOrdinal';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -43,6 +45,8 @@ const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 type LoadedStarSource = {
   octree: StarOctree;
   slots: number;
+  /** The chunk ref each slot holds, −1 when empty: the pick's pool index ↔ ordinal map. */
+  chunkOfSlot: Int32Array;
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -137,7 +141,13 @@ export function createStarCatalogRenderer(
       layout: recordsBgl,
       entries: [{ binding: 0, resource: { buffer: recordsBuffer } }],
     });
-    sources.set(source, { octree, slots: poolSlots, recordsBuffer, recordsBindGroup });
+    sources.set(source, {
+      octree,
+      slots: poolSlots,
+      chunkOfSlot: new Int32Array(poolSlots).fill(-1),
+      recordsBuffer,
+      recordsBindGroup,
+    });
   }
 
   function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
@@ -154,10 +164,37 @@ export function createStarCatalogRenderer(
       packStarGpuRecords(chunk.records),
     );
     cut.uploadChunk(source, slot, chunk);
+    entry.chunkOfSlot[slot] = chunk.ref;
   }
 
   function evictChunk(source: SourceType, slot: number): void {
     cut.evictChunk(source, slot);
+    const entry = sources.get(source);
+    if (entry !== undefined) entry.chunkOfSlot[slot] = -1;
+  }
+
+  function recordOrdinal(source: SourceType, poolIndex: number): number | null {
+    const entry = sources.get(source);
+    if (entry === undefined || !Number.isInteger(poolIndex) || poolIndex < 0) return null;
+    const { octree } = entry;
+    const indexRecords = octree.records.count;
+    if (poolIndex < indexRecords) return poolIndex;
+    const slot = Math.floor((poolIndex - indexRecords) / octree.chunkCapacity);
+    const ref = slot < entry.slots ? entry.chunkOfSlot[slot]! : -1;
+    if (ref < 0) return null;
+    const local = poolIndex - indexRecords - slot * octree.chunkCapacity;
+    return local < octree.chunks[ref]!.records ? starRecordOrdinal(octree, ref, local) : null;
+  }
+
+  function poolRecordIndex(source: SourceType, ordinal: number): number | null {
+    const entry = sources.get(source);
+    if (entry === undefined) return null;
+    const at = starRecordObject(entry.octree, ordinal);
+    if (at === null) return null;
+    if (at.chunk === null) return at.local;
+    const slot = entry.chunkOfSlot.indexOf(at.chunk);
+    if (slot < 0) return null;
+    return entry.octree.records.count + slot * entry.octree.chunkCapacity + at.local;
   }
 
   function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {
@@ -230,6 +267,8 @@ export function createStarCatalogRenderer(
     upload,
     uploadChunk,
     evictChunk,
+    recordOrdinal,
+    poolRecordIndex,
     loadedCatalogs,
     drawCut,
     encodeCut,

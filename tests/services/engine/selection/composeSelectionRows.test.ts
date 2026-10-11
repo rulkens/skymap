@@ -104,7 +104,11 @@ function starsFixture(catalog: StarOctree | null): StarRowFixture {
     renderer: {
       loadedCatalogs: () =>
         (catalog ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
+      // No chunks: a pool index is its ordinal.
+      recordOrdinal: (_source: unknown, poolIndex: number) => poolIndex,
+      poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
     },
+    chunkStreams: new Map(),
   } as unknown as StarRowFixture;
 }
 
@@ -236,7 +240,7 @@ describe('extractRow, composed', () => {
   it('survey star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
     const starResolver = selectionResolverOver(deps, galaxies, starsFixture(catalog));
-    const record = resolveStarRecord(catalog, 1)!;
+    const record = resolveStarRecord(catalog, () => null, 1)!;
     expect(
       starResolver.extractRow(
         { type: 'starCatalog', source: Source.GaiaStars, index: 1 },

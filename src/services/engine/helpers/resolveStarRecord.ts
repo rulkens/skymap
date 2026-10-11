@@ -1,43 +1,51 @@
 /**
- * resolveStarRecord — turn a picked star record index into the star it names:
+ * resolveStarRecord — turn a catalog record ordinal into the star it names:
  * heliocentric position in Mpc plus the decoded absolute magnitude and BP-RP.
- * The owner is the row with own records whose `firstRecord` is the largest at
- * or below the index. Rows with own records are strictly increasing in
- * `firstRecord` in both formats (SKST fills its real-star region leaf by leaf; the
- * octree lays records out in row order), so a binary search over that
- * subsequence finds it; a blob record falls past its owner's own range and
- * resolves to null. Reconstruction runs through `starNodeOriginRelCamMpc`, the
- * formula the renderer draws with, so the pick lands where the sprite was.
+ * The ordinal names an object (the index, or a chunk that must be resident)
+ * and a local record, owned by the row with own records whose `firstRecord`
+ * is the largest at or below it: owners rise strictly in both formats (SKST's
+ * aggregate region breaks that over ALL rows), so a binary search finds it.
+ * A blob falls past its owner's own range and resolves to null. Positions go
+ * through `starNodeOriginRelCamMpc`, the formula the renderer draws with.
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
+import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
+import { starRecordObject } from '../../../utils/star/starRecordObject';
 import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
 
-/** Rows that own records, in row order; memoised per immutable octree. */
-const ownerCache = new WeakMap<StarOctree, Uint32Array>();
+/** Rows that own records, in row order; memoised per immutable node table. */
+const ownerCache = new WeakMap<OctreeNodeTable, Uint32Array>();
 
-function ownerRows(octree: StarOctree): Uint32Array {
-  const cached = ownerCache.get(octree);
+function ownerRows(nodes: OctreeNodeTable): Uint32Array {
+  const cached = ownerCache.get(nodes);
   if (cached) return cached;
   const rows: number[] = [];
-  for (let i = 0; i < octree.nodes.count; i++) if (octree.nodes.ownCount[i]! > 0) rows.push(i);
+  for (let i = 0; i < nodes.count; i++) if (nodes.ownCount[i]! > 0) rows.push(i);
   const owners = Uint32Array.from(rows);
-  ownerCache.set(octree, owners);
+  ownerCache.set(nodes, owners);
   return owners;
 }
 
 export function resolveStarRecord(
   octree: StarOctree,
-  recordIndex: number,
+  resident: StarResidency,
+  ordinal: number,
 ): { positionMpc: Vec3; absMag: number; bpRp: number } | null {
-  const { nodes, records } = octree;
-  const owners = ownerRows(octree);
+  const at = starRecordObject(octree, ordinal);
+  if (at === null) return null;
+  const object = at.chunk === null ? octree : resident(at.chunk);
+  if (object === null) return null;
+  const { nodes, records } = object;
+  const recordIndex = at.local;
+  const owners = ownerRows(nodes);
 
-  // Largest owner whose firstRecord ≤ recordIndex; a negative or NaN index never matches.
+  // Largest owner whose firstRecord ≤ recordIndex.
   let lo = 0;
   let hi = owners.length - 1;
   let found = -1;

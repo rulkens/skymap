@@ -209,6 +209,24 @@ describe('starCatalogRenderer chunk pool', () => {
     expect((writes[0]!.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
   });
 
+  it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {
+    const { device } = recordingDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    const octree = { ...octreeOf(), recordOrdinalBase: Uint32Array.of(100, 103, 106, 109) };
+    renderer.upload(Source.GaiaStars, octree, 2);
+    renderer.uploadChunk(Source.GaiaStars, 1, CHUNK);
+    // Chunk 1's third record: pool 100 + 1·50 + 2, ordinal 103 + 2.
+    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBe(105);
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBe(152);
+    expect(renderer.recordOrdinal(Source.GaiaStars, 42)).toBe(42);
+    expect(renderer.recordOrdinal(Source.GaiaStars, 153)).toBeNull(); // past the chunk's records
+    expect(renderer.recordOrdinal(Source.GaiaStars, 100)).toBeNull(); // slot 0 is empty
+
+    renderer.evictChunk(Source.GaiaStars, 1);
+    expect(renderer.recordOrdinal(Source.GaiaStars, 152)).toBeNull();
+    expect(renderer.poolRecordIndex(Source.GaiaStars, 105)).toBeNull();
+  });
+
   it("a landed chunk's opacity rows are zeroed in both the live and the capture state", () => {
     const { device, writes } = recordingDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');

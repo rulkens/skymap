@@ -10,6 +10,11 @@ import {
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
+
+/** No chunk resident: a v1 catalog has none. */
+const NONE: StarResidency = () => null;
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs (a leaf cell's world box is `[mortonCoord, mortonCoord + 1) pc`),
@@ -67,16 +72,16 @@ function dist(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 describe('nearestResolvableStar', () => {
   it('finds the star the camera sits on, at resolveStarRecord’s exact position', async () => {
     const cat = await twoCoreCatalog();
-    const posA = resolveStarRecord(cat, 0)!.positionMpc;
+    const posA = resolveStarRecord(cat, NONE, 0)!.positionMpc;
 
     // Camera a whisker off core A; a generous search radius.
     const cam: Vec3 = [posA[0] + 1e-10, posA[1], posA[2]];
-    const hit = nearestResolvableStar(cat, cam, 0.5 * PC_TO_MPC);
+    const hit = nearestResolvableStar(cat, NONE, cam, 0.5 * PC_TO_MPC);
 
     expect(hit).not.toBeNull();
     // A core-A record, reconstructed to the SAME position resolveStarRecord gives.
-    expect(hit!.recordIdx).toBeGreaterThanOrEqual(0);
-    expect(hit!.recordIdx).toBeLessThan(65);
+    expect(hit!.ordinal).toBeGreaterThanOrEqual(0);
+    expect(hit!.ordinal).toBeLessThan(65);
     for (const axis of [0, 1, 2]) {
       expect(hit!.positionMpc[axis]).toBeCloseTo(posA[axis]!, 18);
     }
@@ -85,31 +90,31 @@ describe('nearestResolvableStar', () => {
 
   it('returns null when every star is beyond the search radius', async () => {
     const cat = await twoCoreCatalog();
-    const posA = resolveStarRecord(cat, 0)!.positionMpc;
+    const posA = resolveStarRecord(cat, NONE, 0)!.positionMpc;
     // 10 pc away, searching only 1 pc — nothing in range.
     const cam: Vec3 = [posA[0] + 10 * PC_TO_MPC, posA[1], posA[2]];
-    expect(nearestResolvableStar(cat, cam, 1 * PC_TO_MPC)).toBeNull();
+    expect(nearestResolvableStar(cat, NONE, cam, 1 * PC_TO_MPC)).toBeNull();
   });
 
   it('returns the NEAREST of two in-range stars', async () => {
     const cat = await twoCoreCatalog();
-    const posA = resolveStarRecord(cat, 0)!.positionMpc;
-    const posB = resolveStarRecord(cat, 65)!.positionMpc;
+    const posA = resolveStarRecord(cat, NONE, 0)!.positionMpc;
+    const posB = resolveStarRecord(cat, NONE, 65)!.positionMpc;
 
     // Camera well inside core A's box (x = 0.9 pc), closer to A than B; a radius
     // that comfortably reaches both cores.
     const cam: Vec3 = [0.9 * PC_TO_MPC, posA[1], posA[2]];
     expect(dist(cam, posA)).toBeLessThan(dist(cam, posB)); // fixture sanity
 
-    const hit = nearestResolvableStar(cat, cam, 1 * PC_TO_MPC);
+    const hit = nearestResolvableStar(cat, NONE, cam, 1 * PC_TO_MPC);
     expect(hit).not.toBeNull();
-    expect(hit!.recordIdx).toBeLessThan(65); // core A won
+    expect(hit!.ordinal).toBeLessThan(65); // core A won
   });
 
   it('finds a star across a LEAF FACE — the expanded-box edge a naive descent misses', async () => {
     const cat = await twoCoreCatalog();
-    const posA = resolveStarRecord(cat, 0)!.positionMpc;
-    const posB = resolveStarRecord(cat, 65)!.positionMpc;
+    const posA = resolveStarRecord(cat, NONE, 0)!.positionMpc;
+    const posB = resolveStarRecord(cat, NONE, 65)!.positionMpc;
 
     // Camera parked just past the x = 1 pc partition, INSIDE core B's box, yet
     // physically NEARER to core A across the shared leaf face. A "descend to the
@@ -121,11 +126,35 @@ describe('nearestResolvableStar', () => {
 
     // Search radius (0.1 pc) exceeds the camera→core-B distance too, so a correct
     // nearest-search has BOTH cores as candidates and must still pick A.
-    const hit = nearestResolvableStar(cat, cam, 0.1 * PC_TO_MPC);
+    const hit = nearestResolvableStar(cat, NONE, cam, 0.1 * PC_TO_MPC);
     expect(hit).not.toBeNull();
-    expect(hit!.recordIdx).toBeLessThan(65); // core A, found across the face
+    expect(hit!.ordinal).toBeLessThan(65); // core A, found across the face
     for (const axis of [0, 1, 2]) {
       expect(hit!.positionMpc[axis]).toBeCloseTo(posA[axis]!, 18);
     }
+  });
+
+  it('finds a hoisted own record above leaf level', () => {
+    const { octree } = hoistedStarOctree();
+    const hit = nearestResolvableStar(
+      octree,
+      NONE,
+      [6 * PC_TO_MPC, 6 * PC_TO_MPC, 6.001 * PC_TO_MPC],
+      0.01 * PC_TO_MPC,
+    );
+    expect(hit!.ordinal).toBe(1);
+  });
+
+  it('ignores stars inside an unresident chunk', () => {
+    const { octree, chunk } = hoistedStarOctree();
+    const cam: Vec3 = [0.5 * PC_TO_MPC, 0.5 * PC_TO_MPC, 0.501 * PC_TO_MPC];
+    expect(nearestResolvableStar(octree, NONE, cam, 0.01 * PC_TO_MPC)).toBeNull();
+    const hit = nearestResolvableStar(
+      octree,
+      (ref) => (ref === 0 ? chunk : null),
+      cam,
+      0.01 * PC_TO_MPC,
+    );
+    expect(hit!.ordinal).toBe(3);
   });
 });

@@ -540,12 +540,12 @@ export function nearestResolvableStar(octree: StarOctree, resident: StarResidenc
 
 `resolveStarRecord`: the owner row is the last row with `firstRecord ≤ local` in the object's table (monotone in row order); a `local` at `firstRecord + ownCount` is the blob and resolves to null (a blob is not a star); position = node box origin + `offset / 65536 · edge` via `starNodeOriginRelCamMpc`. `nearestResolvableStar` walks the index as today, descends into a resident chunk through a chunk-local `starOctreeIndex(chunk.nodes, grid)`, skips an unresident chunk, and considers every node's own records (hoisted stars included), never blobs. `starCatalogSelectionRow`: `resolvePick` maps `pick.localIdx` through `recordOrdinal` and returns null on a miss; `encodePick` maps the ordinal through `poolRecordIndex`, null when not resident; `extractRow` returns null when `resolveStarRecord` does. `fieldStarSpherePass.ts:151,222` passes `starResidency(runtime, source)`.
 
-- [ ] Test `starRecordObject ↔ starRecordOrdinal round-trip across the index and every chunk boundary` — `recordOrdinalBase = [100, 150, 150, 400]` (an empty chunk in the middle); hand-picked ordinals 0, 99, 100, 149, 150, 399 and 400 (→ null).
-- [ ] `resolveStarRecord.test.ts`: keep `round-trips a packed leaf star position within quantisation` over a v1 fixture through `starOctreeFromSkst`; add `resolves a record inside a resident chunk and returns null for the same ordinal once evicted` (spec §9 "pick after eviction") and `a blob ordinal resolves to null`.
-- [ ] `nearestResolvableStar.test.ts`: existing four tests over v1 fixtures keep their values; add `finds a hoisted own record above leaf level` (a stratified fixture with one bright star at level 3) and `ignores stars inside an unresident chunk`.
-- [ ] Test `starCatalogSelectionRow: a pick raced by an eviction resolves to null, never another star` (Review Focus 3) — renderer stub whose `recordOrdinal` returns null for the picked pool index; assert `resolvePick` is null; and `encodePick returns null for an ordinal whose chunk is not resident`.
-- [ ] `fieldStarSpherePass.test.ts`: call-shape update only.
-- [ ] Commit.
+- [x] Test `starRecordObject ↔ starRecordOrdinal round-trip across the index and every chunk boundary` — `recordOrdinalBase = [100, 150, 150, 400]` (an empty chunk in the middle); hand-picked ordinals 0, 99, 100, 149, 150, 399 and 400 (→ null).
+- [x] `resolveStarRecord.test.ts`: keep `round-trips a packed leaf star position within quantisation` over a v1 fixture through `starOctreeFromSkst`; add `resolves a record inside a resident chunk and returns null for the same ordinal once evicted` (spec §9 "pick after eviction") and `a blob ordinal resolves to null`.
+- [x] `nearestResolvableStar.test.ts`: existing four tests over v1 fixtures keep their values; add `finds a hoisted own record above leaf level` (a stratified fixture with one bright star at level 3) and `ignores stars inside an unresident chunk`.
+- [x] Test `starCatalogSelectionRow: a pick raced by an eviction resolves to null, never another star` (Review Focus 3) — renderer stub whose `recordOrdinal` returns null for the picked pool index; assert `resolvePick` is null; and `encodePick returns null for an ordinal whose chunk is not resident`.
+- [x] `fieldStarSpherePass.test.ts`: call-shape update only.
+- [x] Commit.
 
 ### Task 15: DEV-only chunk facts at settle
 

@@ -8,6 +8,11 @@ import {
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
+import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
+
+/** No chunk resident: a v1 catalog has none. */
+const NONE: StarResidency = () => null;
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
 // as parsecs, so the reconstructions below are hand-computable in the same frame.
@@ -59,7 +64,7 @@ describe('resolveStarRecord', () => {
     // ── A star in the DENSE level-0 leaf: exact reconstruction ──────────────
     // recordIndex 3 = the 4th dense star (s=3), stored in cell 0 (grid origin)
     // with the integer offset [3, 1, 2] — no folding, so the position is exact.
-    const dense = resolveStarRecord(cat, 3)!;
+    const dense = resolveStarRecord(cat, NONE, 3)!;
     expect(dense).not.toBeNull();
     expect(dense.positionMpc[0]).toBeCloseTo((3 / 1024) * PC_TO_MPC, 18);
     expect(dense.positionMpc[1]).toBeCloseTo((1 / 1024) * PC_TO_MPC, 18);
@@ -74,7 +79,7 @@ describe('resolveStarRecord', () => {
     // recordIndex 65 = the first fat-leaf record = cell-8 star A. The stored
     // offset is folded (halved) into the level-1 box, so the position matches
     // the pre-merge world within one fat-leaf offset unit (× slack).
-    const fat = resolveStarRecord(cat, STAR_LEAF_CAPACITY + 1)!;
+    const fat = resolveStarRecord(cat, NONE, STAR_LEAF_CAPACITY + 1)!;
     expect(fat).not.toBeNull();
     // Pre-merge world (pc): cell 8 = grid (2,0,0), offset [100,200,300]/1024.
     const wantPc = [2 + 100 / 1024, 0 + 200 / 1024, 0 + 300 / 1024];
@@ -95,7 +100,24 @@ describe('resolveStarRecord', () => {
     const cat = await densePlusSparseCatalog();
     // starCount marks the end of the real-star region; the aggregate records
     // beyond it are never pick targets.
-    expect(resolveStarRecord(cat, cat.starCount)).toBeNull();
-    expect(resolveStarRecord(cat, 10_000)).toBeNull();
+    expect(resolveStarRecord(cat, NONE, cat.starCount)).toBeNull();
+    expect(resolveStarRecord(cat, NONE, 10_000)).toBeNull();
+  });
+
+  it('resolves a record inside a resident chunk and returns null for the same ordinal once evicted', () => {
+    const { octree, chunk } = hoistedStarOctree();
+    // Ordinal 4: chunk 0's second star, (1.5, 1.5, 1.5) pc.
+    const star = resolveStarRecord(octree, (ref) => (ref === 0 ? chunk : null), 4)!;
+    expect(star.positionMpc[0]).toBeCloseTo(1.5 * PC_TO_MPC, 18);
+    expect(star.absMag).toBe(6);
+    expect(resolveStarRecord(octree, NONE, 4)).toBeNull();
+  });
+
+  it('a blob ordinal resolves to null', () => {
+    const { octree } = hoistedStarOctree();
+    expect(resolveStarRecord(octree, NONE, 0)).toBeNull();
+    expect(resolveStarRecord(octree, NONE, 2)).toBeNull();
+    // The hoisted star between the two blobs still resolves, at (6, 6, 6) pc.
+    expect(resolveStarRecord(octree, NONE, 1)!.positionMpc[2]).toBeCloseTo(6 * PC_TO_MPC, 18);
   });
 });
