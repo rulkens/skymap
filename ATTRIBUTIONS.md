@@ -239,6 +239,32 @@ unclear, and no entry here reads them as a licence.
   <https://cdsarc.cds.unistra.fr/ftp/VII/281/ReadMe>,
   <https://vizier.cds.unistra.fr/viz-bin/cat/VII/281>
 
+### REGALADE v2, the all-sky galaxy compilation to 2000 Mpc
+
+<!-- attribution: id=regalade; keys=regalade.*; hosts=cdsarc.cds.unistra.fr -->
+
+- **What:** 71.5 million galaxies over the whole sky with a recommended
+  distance, optical and WISE photometry and ellipse shapes, merged from
+  twelve catalogues.
+- **By:** Tranin et al. 2026, A&A 706, A284.
+- **Licence:** Not stated on VizieR, in the paper or in the authors' GitHub
+  repository. skymap uses the copy CDS serves, and the CDS terms apply to it:
+  "The data retrieved with VizieR are free of usage in a scientific context",
+  and "The commercial usage of the data is subject to rules depending of the
+  origin".
+- **Use:** No licence stated
+- **Attribution:** Cite the paper. Ask the authors (htranin at icc.ub.edu)
+  before redistributing derived `.bin` files.
+- **Upstream:** <https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/706/A284>;
+  <https://github.com/htranin/regalade>
+- **Enters skymap:** `data/raw/regalade/regalade.dat` →
+  `tools/parsers/regalade.ts` (parser only; no `.bin` is built yet).
+- **Modified:** Not yet. The parser derives redshift from the luminosity
+  distance and keeps a subset of the columns.
+- **Checked:** 2026-10-11: <https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/706/A284>,
+  <https://github.com/htranin/regalade>,
+  <https://cds.unistra.fr/vizier-org/licences_vizier.html>
+
 ### HyperLEDA
 
 <!-- attribution: id=hyperleda; keys=hyperleda.* -->
