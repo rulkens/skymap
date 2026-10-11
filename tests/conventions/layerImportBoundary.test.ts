@@ -95,7 +95,6 @@ const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'services/engine/frame/passes/index': 2,
   'services/engine/frame/planners/index': 1,
   'services/engine/gpuHandles/gpuHandleRegistry': 1,
-  'services/engine/presentation/markerProducers': 1,
   'services/engine/wiring/assetWiring': 1,
   'services/engine/wiring/wireStructureProjection': 3,
 };
