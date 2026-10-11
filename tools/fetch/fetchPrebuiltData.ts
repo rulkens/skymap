@@ -10,8 +10,10 @@
  * nothing here has to special-case excluding them. A download lands at
  * `<dest>.part`, renamed into place only on success, so a same-named file
  * on disk is always trustworthy as "already fetched". Star octree chunks are
- * never in the manifest: each manifested v2 index names its own, so they are
- * listed from the index header and fetched after the manifest's files.
+ * never in the manifest: each manifested v2 index names its own, and each chunk
+ * the next depth's, so they are listed by reading headers down the tree (a chunk
+ * not yet on disk is downloaded to read its header, or under `--dry-run` read
+ * over the wire and dropped) and the rest fetched after the manifest's files.
  */
 import {
   createWriteStream,
@@ -28,8 +30,11 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 
 import type { DataManifest } from '../../src/@types/data/DataManifest';
+import type { OctreeChunkHeader } from '../../src/@types/octree/OctreeChunkHeader';
+import type { OctreeChunkRef } from '../../src/@types/octree/OctreeChunkRef';
 import type { OctreeIndexHeader } from '../../src/@types/octree/OctreeIndexHeader';
 import {
+  OCTREE_CHUNK_MAGIC,
   OCTREE_INDEX_MAGIC,
   STAR_OCTREE_DATA_PREFIX,
   starChunkPath,
@@ -68,20 +73,39 @@ async function downloadFile(url: string, destPath: string): Promise<number> {
   return statSync(destPath).size;
 }
 
-/** Every chunk path one star index names; a dry run reads a not-yet-fetched index over the wire. */
-async function starChunkPaths(host: string, logicalPath: string, hashedPath: string) {
-  const destPath = join(DATA_DIR, hashedPath);
-  let buf: ArrayBuffer;
+/** A data file's bytes: from disk when present, else downloaded first, or under a dry run only read. */
+async function dataFileBytes(host: string, path: string, dryRun: boolean): Promise<ArrayBuffer> {
+  const destPath = join(DATA_DIR, path);
+  if (!existsSync(destPath) && !dryRun) await downloadFile(`${host}/data/${path}`, destPath);
   if (existsSync(destPath)) {
     const bytes = readFileSync(destPath);
-    buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-  } else {
-    const res = await fetch(`${host}/data/${hashedPath}`);
-    if (!res.ok) throw new Error(`GET ${host}/data/${hashedPath} -> HTTP ${res.status}`);
-    buf = await res.arrayBuffer();
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   }
-  const { header } = readOctreeHeader<OctreeIndexHeader>(buf, OCTREE_INDEX_MAGIC);
-  return header.chunks.map((ref) => starChunkPath(basename(logicalPath, '.bin'), ref));
+  const res = await fetch(`${host}/data/${path}`);
+  if (!res.ok) throw new Error(`GET ${host}/data/${path} -> HTTP ${res.status}`);
+  return res.arrayBuffer();
+}
+
+/** Every chunk path one star index names, at every depth. */
+async function starChunkPaths(
+  host: string,
+  logicalPath: string,
+  hashedPath: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const binBaseName = basename(logicalPath, '.bin');
+  const index = await dataFileBytes(host, hashedPath, dryRun);
+  const paths: string[] = [];
+  const walk = async (refs: readonly OctreeChunkRef[]) => {
+    for (const ref of refs) {
+      const path = starChunkPath(binBaseName, ref);
+      paths.push(path);
+      const bytes = await dataFileBytes(host, path, dryRun);
+      await walk(readOctreeHeader<OctreeChunkHeader>(bytes, OCTREE_CHUNK_MAGIC).header.chunks);
+    }
+  };
+  await walk(readOctreeHeader<OctreeIndexHeader>(index, OCTREE_INDEX_MAGIC).header.chunks);
+  return paths;
 }
 
 async function main(): Promise<void> {
@@ -99,7 +123,12 @@ async function main(): Promise<void> {
   }));
   for (const logicalPath of selected) {
     if (posix.dirname(logicalPath) !== STAR_OCTREE_DATA_PREFIX) continue;
-    for (const chunkPath of await starChunkPaths(host, logicalPath, manifest[logicalPath]!)) {
+    for (const chunkPath of await starChunkPaths(
+      host,
+      logicalPath,
+      manifest[logicalPath]!,
+      dryRun,
+    )) {
       files.push({ logicalPath: chunkPath, hashedPath: chunkPath });
     }
   }

@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { STAR_COLUMN_SCHEMA } from '../../../../src/data/octree/octreeFormat';
 import { collectStarChunks } from '../../../../tools/deploy/r2/collectStarChunks';
-import { buildOctreeCatalog } from '../../../../tools/octree/buildOctreeCatalog';
+import { chunkOctree } from '../../../../tools/octree/chunkOctree';
+import { stratifyOctree } from '../../../../tools/octree/stratifyOctree';
 import { writeOctreeCatalog } from '../../../../tools/octree/writeOctreeCatalog';
 import { contentHash8 } from '../../../../tools/utils/data/contentHash8';
 import {
@@ -35,13 +36,15 @@ describe('collectStarChunks', () => {
     for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
   });
 
-  it('lists exactly the chunks the index header names, under the stars/ dir', () => {
+  it('lists exactly the chunks the headers name at every depth, under the stars/ dir', () => {
     const dataDir = tempDataDir();
     const epochDir = join(dataDir, 'star-catalog/v2');
     const header = writeOctreeCatalog(
-      buildOctreeCatalog(
-        makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID),
+      // A 40-row bound nests chunks two deep, so some are named only by another chunk.
+      chunkOctree(
+        stratifyOctree(makeOctreeBuildInput(randomOctreeRecords(N, 5, 640, [4, 14]), GRID)),
         CAPACITY,
+        40,
       ),
       {
         family: 'star',
@@ -54,6 +57,7 @@ describe('collectStarChunks', () => {
       epochDir,
       'stars',
     );
+    const baked = fs.readdirSync(join(epochDir, 'stars'));
     const hashed = `stars.${contentHash8(fs.readFileSync(join(epochDir, 'stars.bin')))}.bin`;
     fs.renameSync(join(epochDir, 'stars.bin'), join(epochDir, hashed));
     fs.writeFileSync(join(epochDir, 'stars', '0-0.deadbeef.bin'), 'stale');
@@ -64,11 +68,9 @@ describe('collectStarChunks', () => {
 
     const uploads = collectStarChunks(dataDir);
 
-    expect(header.chunks.length).toBeGreaterThan(1);
+    expect(header.stats.chunkCount).toBeGreaterThan(header.chunks.length);
     expect(uploads.map((u) => u.r2Key).sort()).toEqual(
-      header.chunks
-        .map((c) => `data/star-catalog/v2/stars/${c.level}-${c.morton}.${c.hash}.bin`)
-        .sort(),
+      baked.map((name) => `data/star-catalog/v2/stars/${name}`).sort(),
     );
     for (const { localPath, r2Key } of uploads) {
       expect(fs.existsSync(localPath)).toBe(true);
