@@ -1,10 +1,9 @@
 import type { CdpClient } from './@types/CdpClient';
 import type { CdpEvent } from './@types/CdpEvent';
+import type { PendingCdpCall } from './@types/PendingCdpCall';
 
 const CONNECT_TIMEOUT_MS = 5000;
 const CALL_TIMEOUT_MS = 15_000;
-
-type Pending = { resolve: (value: never) => void; reject: (err: Error) => void };
 
 /**
  * Open the browser-level DevTools WebSocket behind an `adb forward`ed port
@@ -41,7 +40,7 @@ export async function connectCdp(port: number): Promise<CdpClient> {
   });
 
   let nextId = 0;
-  const pending = new Map<number, Pending>();
+  const pending = new Map<number, PendingCdpCall>();
   const listeners: ((event: CdpEvent) => void)[] = [];
   ws.onmessage = (message) => {
     const m = JSON.parse(String(message.data)) as {
