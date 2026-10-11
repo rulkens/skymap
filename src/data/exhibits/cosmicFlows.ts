@@ -41,28 +41,28 @@ export const cosmicFlows: Exhibit = {
   // Local Group with — copied, not imported, since that field's type is
   // `CameraPose | 'live'`.
   pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
-  lede: 'The expansion of the universe carries galaxies apart. Underneath that, each one is also falling towards the mass nearest it.',
+  lede: 'Space is expanding, and that carries galaxies apart. Each galaxy also moves on its own, pulled by the mass around it.',
   body: [
     {
       kind: 'prose',
       heading: 'What you’re seeing',
-      text: 'Each ribbon follows the motion of matter once the expansion is subtracted. They run out of the emptier regions and converge where mass has collected. The Milky Way is being carried along at about 600 km/s, towards the Great Attractor.',
+      text: 'Each ribbon follows the way matter moves once the expansion is taken out. The ribbons leave the emptier regions and meet where mass has collected. The Milky Way moves with them at about 600 km/s.',
     },
     {
       kind: 'prose',
       heading: 'How it was made',
-      text: 'Only the part of a galaxy’s motion along our line of sight can be measured, from the gap between its distance and its redshift. Cosmicflows collected tens of thousands of those distances; a reconstruction fits the three-dimensional field that explains them. What is drawn is the average of ten thousand such fits.',
+      text: 'Only a galaxy’s motion along our line of sight can be measured, as a mismatch between its distance and its redshift, the stretching of its light. Cosmicflows-4 holds those distances for about 56,000 galaxies. The map is the flow that fits them best.',
     },
     {
       kind: 'prose',
       heading: 'Laniakea',
-      text: 'The basin these flows fall into is <a href="https://en.wikipedia.org/wiki/Laniakea_Supercluster">Laniakea</a>, our supercluster — bounded by which way galaxies move rather than by where they sit.',
+      text: '<a href="https://en.wikipedia.org/wiki/Laniakea_Supercluster">Laniakea</a> is our supercluster: the region whose galaxies all flow towards the same place. Its edge is where they start to flow somewhere else.',
     },
     {
       kind: 'key',
       heading: 'Key',
       ramp: FLOW_SPEED_RAMP,
-      ends: ['At rest', FLOW_SPEED_MAX],
+      ends: ['0 km/s', FLOW_SPEED_MAX],
       toggle: {
         label: 'Galaxies',
         onWord: 'shown',
@@ -74,10 +74,9 @@ export const cosmicFlows: Exhibit = {
     {
       kind: 'facts',
       facts: [
-        { label: 'Reconstructed box', value: '1000 Mpc' },
-        { label: 'Grid', value: '128³' },
-        { label: 'Voxel', value: '7.8 Mpc' },
-        { label: 'Hot end', value: FLOW_SPEED_MAX },
+        // 1000 Mpc box on a 128³ grid: 7.8 Mpc per cell, at 3.26 Mly per Mpc.
+        { label: 'Width mapped', value: '3.3 billion light-years' },
+        { label: 'Finest detail', value: '25 million light-years' },
       ],
     },
     {
@@ -91,7 +90,7 @@ export const cosmicFlows: Exhibit = {
           href: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
         },
         {
-          role: 'Catalog',
+          role: 'Catalogue',
           title: 'Cosmicflows-4',
           citation: 'Tully et al. 2023',
           href: 'https://doi.org/10.3847/1538-4357/ac94d8',
