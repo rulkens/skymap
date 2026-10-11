@@ -1,14 +1,17 @@
 // starCatalog/cut.wesl — the per-frame octree cut, on the GPU. Derivation-heavy
-// file: the header carries the scheme. Near cells draw as real leaf stars, far
-// subtrees as one aggregate glow; each node gets an LOD fade and a place in one
-// of two draw lists the vertex stage reads.
+// file: the header carries the scheme. A row owns the records bright enough for
+// its level and, when it has children, one blob standing for all of them; each
+// row gets two LOD fades (own, blob) and places in the two draw lists the vertex
+// stage reads. The pool holds the index's rows, then each chunk slot's rows.
 //
-// ## One flat pass over every node
+// ## One flat pass over every row
 // The refine proxy 'edge^2 / distanceToBox^2' only shrinks going down the tree
 // (a child's edge halves and its box sits inside its parent's), so "every
-// ancestor refined" collapses to "the parent refined": a node is in the cut
-// exactly when its parent refines and it does not, answerable from its own box
-// and its parent's alone.
+// ancestor refined" collapses to "the parent refined". A row draws its own
+// records when its parent refines (the root always), and its blob when it draws
+// its own records and does not refine itself: own + blob is its subtree's whole
+// flux, so the cut conserves light level by level. A chunk root refines only
+// once its chunk is resident; an empty slot's zeroed rows emit nothing.
 //
 // ## Budget as a threshold
 // A best-first refine under an instance budget pops in descending proxy order,
@@ -17,23 +20,25 @@
 // until the budget is spent, and 'emit' refines only bins at or above that one.
 //
 // ## Fades
-// Opacity walks linearly to 1 in the cut and to 0 out of it, and a node draws
+// Each channel walks linearly to 1 when drawn and to 0 when not, and draws
 // while above 0, so a split or merge cross-dissolves. Linear because luminance
-// is linear in opacity: parent*(1-t) + children*t conserves flux. Off-screen
-// nodes keep their fade; only the histogram and the lists skip them.
+// is linear in opacity: blob*(1-t) + children*t conserves flux, channel by
+// channel. Off-screen rows keep their fades; only the histogram and lists skip.
 //
 // ## Draw lists
-// An aggregate's entry is its node index. A leaf holds up to a few thousand
-// records, so it claims 'ceil(count / 8)' blocks of 8 instances, one entry each:
-// node | block << 22. The vertex stage finds its record from 'instance >> 3' with
-// no search and discards the last block's spare instances.
+// A blob's entry is its row index. A row's own records number up to a few
+// thousand, so they claim 'ceil(ownCount / 8)' blocks of 8 instances, one entry
+// each: row | block << 22. The vertex stage finds its record from
+// 'instance >> 3' with no search and discards the last block's spare instances.
 //
 // ## Bindings: writer -> reader
 //   u         CPU each frame -> all three entry points, and vertex.wesl
 //   nodes     CPU at upload  -> all three entry points, and vertex.wesl
-//   opacity   emit           -> emit (next frame), vertex.wesl
-//   leafList  emit           -> vertex.wesl (leaf stream)
-//   aggList   emit           -> vertex.wesl (aggregate stream)
+//   nodes     CPU at chunk land/evict: the slot's rows, then the root's row
+//   opacity   emit           -> emit (next frame), vertex.wesl; zeroed per slot
+//                               by the CPU when a chunk lands
+//   leafList  emit           -> vertex.wesl (leaf stream: own records)
+//   aggList   emit           -> vertex.wesl (aggregate stream: blobs)
 //   draws     CPU at upload (vertex counts); pickThreshold zeroes the instance
 //             counts, emit adds to them -> drawIndirect
 //   hist      histogram adds; pickThreshold drains it and leaves the chosen
@@ -42,8 +47,13 @@
 import package::starCatalog::cutIo::CutNode;
 import package::starCatalog::cutIo::CutUniforms;
 import package::starCatalog::cutIo::nodeEdgeCells;
-import package::starCatalog::cutIo::nodeIsAggregate;
-import package::starCatalog::cutIo::nodeRecordCount;
+import package::starCatalog::cutIo::nodeHasBlob;
+import package::starCatalog::cutIo::nodeChildrenResident;
+import package::starCatalog::cutIo::nodeOwnCount;
+import package::starCatalog::cutIo::rootNode;
+import package::starCatalog::cutIo::OPACITY_CHANNELS;
+import package::starCatalog::cutIo::OWN_OPACITY;
+import package::starCatalog::cutIo::BLOB_OPACITY;
 import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::packLeafEntry;
 import package::starCatalog::cutIo::LEAF_BLOCK_SHIFT;
@@ -81,15 +91,17 @@ fn binOf(proxy: f32) -> u32 {
   return u32(clamp(octaves * CUT_BINS_PER_OCTAVE, 0.0, f32(CUT_BINS - 1u)));
 }
 
-// A refine candidate, before the budget: childful and above the user's Detail.
+// A refine candidate, before the budget: childful, children in the pool, and
+// above the user's Detail.
 fn wantsRefine(i: u32, proxy: f32) -> bool {
-  return nodeIsAggregate(nodes[i].bits) && proxy >= u.refineThresholdSq;
+  let bits = nodes[i].bits;
+  return nodeHasBlob(bits) && nodeChildrenResident(bits) && proxy >= u.refineThresholdSq;
 }
 
 // Outside every view's frustum. The sphere is the box grown by what it can
-// paint past its own edge: an aggregate's glow spread (world), a leaf's
+// paint past its own edge: a blob's glow spread (world), an own record's
 // fixed-pixel dot (angular) — it may only ever over-keep.
-fn offScreen(i: u32) -> bool {
+fn offScreen(i: u32, isBlob: bool) -> bool {
   if (u.viewCount == 0u) { return false; }
   let edge = nodeEdgeCells(nodes[i].bits);
   let center = (nodeMinCells(nodes[i].grid, u.camCell, u.camFrac) + vec3<f32>(edge * 0.5)) * u.cellEdgeMpc;
@@ -97,7 +109,7 @@ fn offScreen(i: u32) -> bool {
   let radius = select(
     halfDiag + length(center) * u.leafMarginRad,
     halfDiag * u.worldSpread,
-    nodeIsAggregate(nodes[i].bits),
+    isBlob,
   );
   for (var v = 0u; v < u.viewCount; v = v + 1u) {
     var outside = false;
@@ -118,14 +130,15 @@ fn histogram(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
   if (i >= u.nodeCount) { return; }
   let proxy = proxyOf(i);
-  if (!wantsRefine(i, proxy) || offScreen(i)) { return; }
+  if (!wantsRefine(i, proxy) || offScreen(i, true)) { return; }
   atomicAdd(&hist[binOf(proxy)], nodes[i].refineDelta);
 }
 
 @compute @workgroup_size(1)
 fn pickThreshold() {
-  // The root's own record is the cut before any refine.
-  var instances = nodeRecordCount(nodes[u.nodeCount - 1u].bits);
+  // The root's own records and blob are the cut before any refine.
+  let rootBits = nodes[rootNode(u.indexNodes)].bits;
+  var instances = nodeOwnCount(rootBits) + select(0u, 1u, nodeHasBlob(rootBits));
   var cutBin = 0u;
   var spent = false;
   for (var b = CUT_BINS; b > 0u; b = b - 1u) {
@@ -154,18 +167,23 @@ fn emit(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (i >= u.nodeCount) { return; }
   let cutBin = atomicLoad(&hist[CUT_BINS]);
 
-  let parent = nodes[i].parent;
-  let inCut = (parent == i || refines(parent, cutBin)) && !refines(i, cutBin);
-  let goal = select(0.0, 1.0, inCut);
-  let op = opacity[i] + clamp(goal - opacity[i], -u.fadeStep, u.fadeStep);
-  opacity[i] = op;
-  if (op <= 0.0 || offScreen(i)) { return; }
+  let bits = nodes[i].bits;
+  let drawOwn = i == rootNode(u.indexNodes) || refines(nodes[i].parent, cutBin);
+  let drawBlob = drawOwn && !refines(i, cutBin);
+  let o = i * OPACITY_CHANNELS;
+  let ownGoal = select(0.0, 1.0, drawOwn);
+  let blobGoal = select(0.0, 1.0, drawBlob);
+  let ownOp = opacity[o + OWN_OPACITY] + clamp(ownGoal - opacity[o + OWN_OPACITY], -u.fadeStep, u.fadeStep);
+  let blobOp = opacity[o + BLOB_OPACITY] + clamp(blobGoal - opacity[o + BLOB_OPACITY], -u.fadeStep, u.fadeStep);
+  opacity[o + OWN_OPACITY] = ownOp;
+  opacity[o + BLOB_OPACITY] = blobOp;
 
-  if (nodeIsAggregate(nodes[i].bits)) {
+  if (blobOp > 0.0 && nodeHasBlob(bits) && !offScreen(i, true)) {
     aggList[atomicAdd(&draws[AGG_INSTANCES], 1u)] = i;
-    return;
   }
-  let blocks = (nodeRecordCount(nodes[i].bits) + (1u << LEAF_BLOCK_SHIFT) - 1u) >> LEAF_BLOCK_SHIFT;
+  let own = nodeOwnCount(bits);
+  if (ownOp <= 0.0 || own == 0u || offScreen(i, false)) { return; }
+  let blocks = (own + (1u << LEAF_BLOCK_SHIFT) - 1u) >> LEAF_BLOCK_SHIFT;
   let first = atomicAdd(&draws[LEAF_INSTANCES], blocks << LEAF_BLOCK_SHIFT) >> LEAF_BLOCK_SHIFT;
   for (var k = 0u; k < blocks; k = k + 1u) {
     leafList[first + k] = packLeafEntry(i, k);

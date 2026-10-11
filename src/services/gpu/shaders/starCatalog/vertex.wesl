@@ -1,8 +1,8 @@
 // starCatalog/vertex.wesl — vertex-pull billboard stage for the survey (Gaia
 // bin) stars. Derivation-heavy file: the header carries the photometry.
 //
-// One instance = one octree record (a leaf star, or an interior node's flux-mip
-// aggregate). cut.wesl leaves a draw list per stream; an instance finds its node
+// One instance = one octree record (a row's own star, or a row's flux-mip blob,
+// the 'aggregate'). cut.wesl leaves a draw list per stream; an instance finds its node
 // from its place in that list with no search, rebuilds the node's
 // camera-relative box from the static node table, and pulls its record from the
 // per-source blob. Bindings: @group(0) u (rebased view-projection + viewport),
@@ -30,7 +30,7 @@
 //      (mergeFluxAggregate stores -2.5*log10(sum/N)), because a summed
 //      magnitude of thousands of stars is 10+ mag past the LUT's single-star
 //      floor and would clamp (a box lattice, and a flux jump at refine).
-//      Multiplying by 'subtreeStarCount' (1.0 for a leaf) recovers the summed
+//      Multiplying by 'blobCount' (1.0 for an own record) recovers the summed
 //      light: EXPOSURE * mean * N equals the sum of the children's
 //      EXPOSURE * flux, and the cut is a covering partition, so nothing counts
 //      twice. Exact below the knee; across it the concave rolloff makes the
@@ -62,8 +62,8 @@
 // A leaf is a point source: its radius is a legibility floor. An aggregate is
 // extended: its radius grows to its box's on-screen footprint (worldLenToPx of
 // the box edge), so adjacent far glows meet edge to edge. 'isAgg' comes from the
-// node's childMask, not its octree level (a fat leaf sits at level > 0 yet is a
-// leaf); a select picks the box extent, 0 for leaves. The user's sizePx slider
+// stream (a row draws its own records and its blob in different lists); a select
+// picks the box extent, 0 for own records. The user's sizePx slider
 // scales it, a spread control that leaves total luminance alone (fact 2).
 //
 // One deliberate exception to fact 2: STAR_GLOW_MAX_PX bounds only the DRAWN
@@ -86,8 +86,8 @@ import package::starCatalog::cutIo::CutNode;
 import package::starCatalog::cutIo::CutUniforms;
 import package::starCatalog::cutIo::CutStream;
 import package::starCatalog::cutIo::nodeEdgeCells;
-import package::starCatalog::cutIo::nodeIsAggregate;
-import package::starCatalog::cutIo::nodeRecordCount;
+import package::starCatalog::cutIo::nodeOwnCount;
+import package::starCatalog::cutIo::OPACITY_CHANNELS;
 import package::starCatalog::cutIo::nodeMinCells;
 import package::starCatalog::cutIo::leafEntryNode;
 import package::starCatalog::cutIo::leafEntryBlock;
@@ -169,8 +169,8 @@ const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // sprite is long gone by framing distance.
 const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 
-// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 instances per
-// entry) and 0 for the aggregate list (one instance per entry).
+// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 own records per
+// entry) and 0 for the aggregate list (one blob per entry, local 0).
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
@@ -181,18 +181,20 @@ fn vs(
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
   let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
-  if (local >= nodeRecordCount(bits)) {
+  let isAgg = cutStream.isBlob == 1u;
+  let ownCount = nodeOwnCount(bits);
+  if (!isAgg && local >= ownCount) {
     // A spare instance of the node's last block: outside the clip volume.
     var skip: VSOut;
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let isAgg = nodeIsAggregate(bits);
   let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
   let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
-  let base = cutNodes[nodeIdx].firstRecord + local;
-  let nodeOpacity = cutOpacity[nodeIdx] * cut.opacity;
-  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].subtreeCount), isAgg);
+  // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.
+  let base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, isAgg);
+  let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
+  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), isAgg);
 
   let w0 = records[base * 2u + 0u];
   let w1 = records[base * 2u + 1u];

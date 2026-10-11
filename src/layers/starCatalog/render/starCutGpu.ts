@@ -29,6 +29,9 @@ import {
   CUT_UNIFORM_BYTES,
   CUT_WORKGROUP,
   LEAF_BLOCK_SHIFT,
+  OPACITY_CHANNELS,
+  STREAM_BLOCK_SHIFT_WORD,
+  STREAM_IS_BLOB_WORD,
   WORD_BYTES,
   initialCutDraws,
   leafListCapacity,
@@ -88,21 +91,23 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   const pickThreshold = pipeline('pickThreshold');
   const emit = pipeline('emit');
 
-  // One per stream, shared by every source: the list's instances-per-entry.
-  const streamShift = (shift: number): GPUBuffer => {
+  // One per stream, shared by every source: the list's instances-per-entry and
+  // whether it draws blobs.
+  const streamUniform = (stream: StarDrawStream, shift: number, isBlob: boolean): GPUBuffer => {
     const buffer = device.createBuffer({
-      label: `star-cut-stream-shift-${shift}`,
+      label: `star-cut-stream-${stream}`,
       size: CUT_STREAM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const words = new Uint32Array(CUT_STREAM_BYTES / WORD_BYTES);
-    words[0] = shift;
+    words[STREAM_BLOCK_SHIFT_WORD] = shift;
+    words[STREAM_IS_BLOB_WORD] = isBlob ? 1 : 0;
     device.queue.writeBuffer(buffer, 0, words);
     return buffer;
   };
   const streamShifts: Record<StarDrawStream, GPUBuffer> = {
-    leaf: streamShift(LEAF_BLOCK_SHIFT),
-    aggregate: streamShift(0),
+    leaf: streamUniform('leaf', LEAF_BLOCK_SHIFT, false),
+    aggregate: streamUniform('aggregate', 0, true),
   };
 
   const sources = new Map<SourceType, StarCutSource>();
@@ -118,8 +123,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
         usage,
       });
     const nodeCount = octree.nodes.count;
-    const opacity = make('opacity', nodeCount, STORAGE);
-    const leafList = make('leaf-list', leafListCapacity(octree), STORAGE);
+    const opacity = make('opacity', nodeCount * OPACITY_CHANNELS, STORAGE);
+    const leafList = make('leaf-list', leafListCapacity(octree, 0), STORAGE);
     const aggList = make('agg-list', nodeCount, STORAGE);
     const draws = make(
       'draws',
@@ -213,7 +218,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     planes: Float32Array,
   ): void {
     const { cut } = inputs;
-    writeStarCutUniforms(uniformScratch, octree, cut.originMpc, {
+    writeStarCutUniforms(uniformScratch, octree, { slots: 0 }, cut.originMpc, {
       refineThreshold: cut.refineThreshold,
       fadeStep,
       drawBudget: row.drawBudget,

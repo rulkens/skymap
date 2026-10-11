@@ -4,10 +4,12 @@
  * are what the GPU addresses by. `cut.wesl`'s header explains the scheme.
  */
 
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
+import { MAX_GRID_BITS, MAX_OWN_COUNT, NO_CHUNK_REF } from '../../../data/octree/octreeFormat';
 import { mortonDecode3 } from '../../../utils/math/mortonDecode3';
 
 /** Every cut buffer is addressed in 4-byte words. */
@@ -18,15 +20,25 @@ export const CUT_NODE_WORDS = 6;
 export const NODE_GRID_WORD = 0;
 export const NODE_FIRST_RECORD_WORD = 1;
 export const NODE_BITS_WORD = 2;
-export const NODE_SUBTREE_COUNT_WORD = 3;
+export const NODE_BLOB_COUNT_WORD = 3;
 export const NODE_PARENT_WORD = 4;
 export const NODE_REFINE_DELTA_WORD = 5;
-/** Octree fan-out; `childIndex` holds this many slots per node. */
-const CHILDREN_PER_NODE = 8;
 /** Bits per axis of `CutNode.grid`, and of `CutNode.bits`'s level. */
 export const GRID_AXIS_BITS = 10;
 export const LEVEL_BITS = 4;
-export const RECORD_COUNT_SHIFT = 8;
+/** `CutNode.bits`: level, then hasBlob, then childrenResident, then ownCount. */
+export const NODE_BLOB_BIT = 1 << LEVEL_BITS;
+export const NODE_RESIDENT_BIT = 1 << (LEVEL_BITS + 1);
+export const OWN_COUNT_SHIFT = 8;
+/** A child's Morton key is its parent's shifted left by this. */
+const OCTANT_BITS = 3;
+/** `level·2^32 + morton`: a level is one byte and a Morton key fits 30 bits. */
+const LEVEL_KEY_STRIDE = 2 ** 32;
+
+/** Two fade channels per row, own records then blob (`opacity[i * 2 + c]`). */
+export const OPACITY_CHANNELS = 2;
+export const OWN_OPACITY = 0;
+export const BLOB_OPACITY = 1;
 
 /** Log-proxy budget bins (`CUT_BINS` in `cut.wesl`), plus the chosen threshold bin. */
 export const CUT_BINS = 1024;
@@ -48,8 +60,10 @@ export const CUT_BINS_PER_OCTAVE = 64;
 export const MIN_DIST_SQ = 1e-15;
 export const HALF_DIAGONAL = 0.8660254;
 
-/** `struct CutStream`: one u32 padded to a uniform's 16 bytes. */
+/** `struct CutStream`: two u32 padded to a uniform's 16 bytes. */
 export const CUT_STREAM_BYTES = 16;
+export const STREAM_BLOCK_SHIFT_WORD = 0;
+export const STREAM_IS_BLOB_WORD = 1;
 
 /** Frusta one cut prunes against (`CUT_MAX_VIEWS`); more views ⇒ no prune. */
 export const CUT_MAX_VIEWS = 6;
@@ -59,8 +73,8 @@ const PLANE_FLOATS = 4;
 export const FLOATS_PER_VIEW = PLANES_PER_VIEW * PLANE_FLOATS;
 
 /**
- * `struct CutUniforms`: a 64-byte head, then the planes. Word slots of the
- * head, in the order `cutIo.wesl` declares them (word 15 is pad).
+ * `struct CutUniforms`: an 80-byte head, then the planes. Word slots of the
+ * head, in the order `cutIo.wesl` declares them (word 19 is pad).
  */
 export const CAM_CELL_INT_INDEX = 0;
 export const CELL_EDGE_MPC_FLOAT_INDEX = 3;
@@ -73,7 +87,11 @@ export const LEAF_MARGIN_RAD_FLOAT_INDEX = 11;
 export const VIEW_COUNT_U32_INDEX = 12;
 export const NODE_COUNT_U32_INDEX = 13;
 export const OPACITY_FLOAT_INDEX = 14;
-export const PLANES_FLOAT_INDEX = 16;
+export const INDEX_NODES_U32_INDEX = 15;
+export const INDEX_RECORDS_U32_INDEX = 16;
+export const CHUNK_NODE_CAP_U32_INDEX = 17;
+export const CHUNK_CAPACITY_U32_INDEX = 18;
+export const PLANES_FLOAT_INDEX = 20;
 const CUT_UNIFORM_HEAD_BYTES = PLANES_FLOAT_INDEX * WORD_BYTES;
 export const CUT_UNIFORM_BYTES =
   CUT_UNIFORM_HEAD_BYTES + CUT_MAX_VIEWS * FLOATS_PER_VIEW * WORD_BYTES;
@@ -91,64 +109,126 @@ export function initialCutDraws(): Uint32Array {
   return draws;
 }
 
-/** The static node table: one `CutNode` per octree node, in catalog order. */
-export function packStarCutNodes(octree: StarOctree): Uint32Array {
-  const { nodes } = octree;
-  const { childIndex } = starOctreeIndex(nodes, octree.grid);
+/**
+ * One object's rows as `CutNode`s into `out` from row 0, `parent` and `firstRecord`
+ * offset by the bases (zero for the index). A row whose parent is not in the table
+ * takes `outerParent(i)`: the index root names itself, a chunk's top rows its root.
+ */
+function packRows(
+  nodes: OctreeNodeTable,
+  out: Uint32Array,
+  bases: { readonly node: number; readonly record: number },
+  outerParent: (i: number) => number,
+): void {
   const n = nodes.count;
-  const blockIndexLimit = 2 ** (32 - LEAF_BLOCK_INDEX_SHIFT);
-  if (n >= 2 ** LEAF_BLOCK_INDEX_SHIFT) {
-    throw new Error(`starCut: ${n} nodes overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit node index`);
-  }
-  const recordsOf = (i: number) => nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
+  const rowByKey = new Map<number, number>();
+  for (let i = 0; i < n; i++)
+    rowByKey.set(nodes.level[i]! * LEVEL_KEY_STRIDE + nodes.morton[i]!, i);
+  const hasBlob = (i: number) => nodes.childMask[i] !== 0;
+  const drawn = (i: number) => nodes.ownCount[i]! + (hasBlob(i) ? 1 : 0);
 
-  const out = new Uint32Array(n * CUT_NODE_WORDS);
+  const childDrawn = new Uint32Array(n);
   for (let i = 0; i < n; i++) {
     const level = nodes.level[i]!;
-    const recordCount = recordsOf(i);
+    const own = nodes.ownCount[i]!;
     if (level >= 2 ** LEVEL_BITS) throw new Error(`starCut: level ${level} overflows`);
-    if (recordCount > blockIndexLimit << LEAF_BLOCK_SHIFT) {
-      throw new Error(`starCut: ${recordCount} records overflow one node's block index`);
+    if (own > MAX_OWN_COUNT) {
+      throw new Error(`starCut: ${own} records overflow one node's block index`);
     }
-    // Leaf-cell units: a level-L node's own Morton cell is 2^L leaf cells wide.
-    const [cx, cy, cz] = mortonDecode3(nodes.morton[i]!);
-    const gx = cx * 2 ** level;
-    const gy = cy * 2 ** level;
-    const gz = cz * 2 ** level;
-    if (Math.max(gx, gy, gz) >= 2 ** GRID_AXIS_BITS) {
-      throw new Error(`starCut: grid wider than ${2 ** GRID_AXIS_BITS} leaf cells per axis`);
-    }
-
-    const isAggregate = nodes.childMask[i] !== 0;
-    let childRecords = 0;
-    const o = i * CUT_NODE_WORDS;
-    // The root is the last node and names itself.
-    if (i === n - 1) out[o + NODE_PARENT_WORD] = i;
-    for (let k = 0; k < CHILDREN_PER_NODE; k++) {
-      const child = childIndex[i * CHILDREN_PER_NODE + k]!;
-      if (child < 0) continue;
-      childRecords += recordsOf(child);
-      out[child * CUT_NODE_WORDS + NODE_PARENT_WORD] = i;
-    }
-    out[o + NODE_GRID_WORD] = gx | (gy << GRID_AXIS_BITS) | (gz << (2 * GRID_AXIS_BITS));
-    out[o + NODE_FIRST_RECORD_WORD] = nodes.firstRecord[i]!;
-    out[o + NODE_BITS_WORD] =
-      level | (isAggregate ? 1 << LEVEL_BITS : 0) | (recordCount << RECORD_COUNT_SHIFT);
-    out[o + NODE_SUBTREE_COUNT_WORD] = isAggregate ? nodes.blobCount[i]! : nodes.ownCount[i]!;
-    out[o + NODE_REFINE_DELTA_WORD] = isAggregate ? childRecords - recordCount : 0;
+    const parentKey =
+      (level + 1) * LEVEL_KEY_STRIDE + Math.floor(nodes.morton[i]! / 2 ** OCTANT_BITS);
+    const local = rowByKey.get(parentKey);
+    out[i * CUT_NODE_WORDS + NODE_PARENT_WORD] =
+      local === undefined ? outerParent(i) : bases.node + local;
+    if (local !== undefined) childDrawn[local]! += drawn(i);
   }
+
+  for (let i = 0; i < n; i++) {
+    const level = nodes.level[i]!;
+    // Leaf-cell units: a level-L node's own Morton cell is 2^L leaf cells wide.
+    const [cx, cy, cz] = mortonDecode3(nodes.morton[i]!).map((c) => c * 2 ** level) as Vec3;
+    const resident = nodes.chunkRef[i] === NO_CHUNK_REF;
+    const o = i * CUT_NODE_WORDS;
+    out[o + NODE_GRID_WORD] = cx | (cy << GRID_AXIS_BITS) | (cz << (2 * GRID_AXIS_BITS));
+    out[o + NODE_FIRST_RECORD_WORD] = bases.record + nodes.firstRecord[i]!;
+    out[o + NODE_BITS_WORD] =
+      level |
+      (hasBlob(i) ? NODE_BLOB_BIT : 0) |
+      (resident ? NODE_RESIDENT_BIT : 0) |
+      (nodes.ownCount[i]! << OWN_COUNT_SHIFT);
+    out[o + NODE_BLOB_COUNT_WORD] = nodes.blobCount[i]!;
+    // The −1 is the row's own blob; its own records stay drawn across a refine.
+    out[o + NODE_REFINE_DELTA_WORD] = hasBlob(i) && resident ? childDrawn[i]! - 1 : 0;
+  }
+}
+
+function checkGrid(bits: number): void {
+  if (bits > MAX_GRID_BITS) {
+    throw new Error(`starCut: grid wider than ${2 ** GRID_AXIS_BITS} leaf cells per axis`);
+  }
+}
+
+/** The index's rows; a chunk root starts unresident (`refineDelta 0`) until its chunk lands. */
+export function packStarCutNodes(octree: StarOctree): Uint32Array {
+  checkGrid(octree.grid.bits);
+  const out = new Uint32Array(octree.nodes.count * CUT_NODE_WORDS);
+  packRows(octree.nodes, out, { node: 0, record: 0 }, (i) => i);
   return out;
 }
 
-/** Entries the leaf list can ever hold: every leaf's blocks at once. */
-export function leafListCapacity(octree: StarOctree): number {
+/** `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; top rows' parent = rootRow. */
+export function packStarChunkNodes(
+  chunk: StarChunk,
+  root: { readonly level: number; readonly morton: number; readonly rootRow: number },
+  pool: { readonly nodeBase: number; readonly recordBase: number },
+  chunkNodeCap: number,
+): Uint32Array {
+  if (chunk.nodes.count > chunkNodeCap) {
+    throw new Error(
+      `starCut: chunk of ${chunk.nodes.count} rows exceeds chunkNodeCap ${chunkNodeCap}`,
+    );
+  }
+  const out = new Uint32Array(chunkNodeCap * CUT_NODE_WORDS);
+  const { level, morton } = chunk.nodes;
+  packRows(chunk.nodes, out, { node: pool.nodeBase, record: pool.recordBase }, (i) => {
+    if (!isTopRow(level[i]!, morton[i]!, root)) {
+      throw new Error(`starCut: chunk row ${i} has no parent in the chunk and is not a top row`);
+    }
+    return root.rootRow;
+  });
+  return out;
+}
+
+/** The chunk root's `refineDelta` once its chunk is resident: Σ top rows (ownCount + hasBlob) − 1. */
+export function chunkRootRefineDelta(
+  chunk: StarChunk,
+  root: { readonly level: number; readonly morton: number },
+): number {
+  const { nodes } = chunk;
+  let sum = 0;
+  for (let i = 0; i < nodes.count; i++) {
+    if (!isTopRow(nodes.level[i]!, nodes.morton[i]!, root)) continue;
+    sum += nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
+  }
+  return sum - 1;
+}
+
+function isTopRow(
+  level: number,
+  morton: number,
+  root: { readonly level: number; readonly morton: number },
+): boolean {
+  return level === root.level - 1 && Math.floor(morton / 2 ** OCTANT_BITS) === root.morton;
+}
+
+/** Leaf-list entries the pool can ever hold: every own block of the index, and of every slot at worst. */
+export function leafListCapacity(octree: StarOctree, slots: number): number {
   let blocks = 0;
   for (let i = 0; i < octree.nodes.count; i++) {
-    if (octree.nodes.childMask[i] === 0) {
-      blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
-    }
+    blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
   }
-  return blocks;
+  // ceil(own / 8) ≤ own / 8 + 1 per row, summed over a chunk's records and rows.
+  return blocks + slots * (octree.chunkCapacity / (1 << LEAF_BLOCK_SHIFT) + octree.chunkNodeCap);
 }
 
 /**
@@ -160,6 +240,7 @@ export function leafListCapacity(octree: StarOctree): number {
 export function writeStarCutUniforms(
   out: ArrayBuffer,
   octree: StarOctree,
+  pool: { readonly slots: number },
   camPosMpc: Readonly<Vec3>,
   cut: {
     readonly refineThreshold: number;
@@ -190,7 +271,11 @@ export function writeStarCutUniforms(
   const views = cut.planes.length / FLOATS_PER_VIEW;
   const viewCount = views <= CUT_MAX_VIEWS ? views : 0;
   u32[VIEW_COUNT_U32_INDEX] = viewCount;
-  u32[NODE_COUNT_U32_INDEX] = octree.nodes.count;
+  u32[NODE_COUNT_U32_INDEX] = octree.nodes.count + pool.slots * octree.chunkNodeCap;
+  u32[INDEX_NODES_U32_INDEX] = octree.nodes.count;
+  u32[INDEX_RECORDS_U32_INDEX] = octree.records.count;
+  u32[CHUNK_NODE_CAP_U32_INDEX] = octree.chunkNodeCap;
+  u32[CHUNK_CAPACITY_U32_INDEX] = octree.chunkCapacity;
   f32[OPACITY_FLOAT_INDEX] = cut.opacity;
   f32.set(cut.planes.subarray(0, viewCount * FLOATS_PER_VIEW), PLANES_FLOAT_INDEX);
 }
