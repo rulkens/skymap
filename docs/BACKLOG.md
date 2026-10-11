@@ -243,6 +243,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Break up `tools/record/record.ts`** `ready` — move the ffmpeg pipe and the preview-build server into `tools/utils/record/`, leaving argv + the frame loop; own PR, smoke a clip before/after.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 - [ ] **Path-based object links with share previews** `needs-design` — `/<kind>/<slug>` paths for identity, hash for view state, so shared links unfurl; needs Worker tag injection and permanent hash aliases. → [details](backlog/2026-10-05-path-based-object-links.md)
+- [ ] **Unify thumbnail lookups on `focusShotUrl`** `needs-verification` — `paletteRows.tsx` appears to build structure shot paths from the focus id, which would 404 (files are named by card id; not yet confirmed in a browser); then move Body/Star cards to the helper and delete `SHOT_CARD_IDS`. → [details](backlog/2026-10-11-thumbnail-lookup-unify.md)
 
 ## Docs & process
 
