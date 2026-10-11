@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { LABEL_DATA_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
@@ -29,26 +30,10 @@ const FIXTURE_METRICS = parseFontMetrics({
 });
 
 // LoadedFontAtlases shape: one entry per registered FontId; bitmaps
-// array stays empty so the renderer's GPU upload branch is skipped
-// (we pass a null device anyway).
+// array stays empty so the renderer's GPU upload branch is skipped.
 const FIXTURE_ATLASES: LoadedFontAtlases = {
   metricsByFont: { cormorant: FIXTURE_METRICS },
   bitmaps: [],
-};
-
-// Build a LabelRenderer with a null device — the factory guards all GPU
-// calls behind `if (device)`, so CPU state is safe to exercise in unit
-// tests without a real WebGPU context.  Mirrors `textureAtlas.test.ts`'s
-// null-device pattern.
-const newRenderer = () => {
-  const ctx = {
-    device: null as unknown as GPUDevice,
-    context: null as unknown as GPUCanvasContext,
-    format: 'rgba16float' as GPUTextureFormat,
-    canvas: null as unknown as HTMLCanvasElement,
-    hdrCapable: false,
-  };
-  return createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
 };
 
 describe('LabelRenderer occlusion variant', () => {
@@ -89,7 +74,9 @@ describe('LabelRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, {
+    createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
       occludeAgainstScene: true,
     });
     return { bindGroupLayouts, pipelineLayouts, renderPipelines };
@@ -142,25 +129,6 @@ describe('LabelRenderer occlusion variant', () => {
   });
 });
 
-describe('LabelRenderer (CPU state)', () => {
-  it('drops glyphs not present in metrics', () => {
-    const r = newRenderer();
-    // 'A中A' — 'A' is in metrics (id=65), '中' is not (id=20013).  We
-    // expect only the two 'A' glyphs to be counted; the unknown
-    // character is silently skipped.
-    r.setLabels([{ id: 'x', worldPos: [0, 0, 0], text: 'A中A', pixelSize: 24, font: 'cormorant' }]);
-    expect(r.glyphCount()).toBe(2);
-  });
-
-  it('replaces (not appends) on subsequent setLabels', () => {
-    const r = newRenderer();
-    r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' }]);
-    r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' }]);
-    expect(r.labelCount()).toBe(1);
-    expect(r.glyphCount()).toBe(3);
-  });
-});
-
 function makeLabel(id: string): Label2D {
   return { id, worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' };
 }
@@ -208,31 +176,38 @@ describe('LabelRenderer capacity growth', () => {
     return { ctx, createdBuffers, createBindGroupCalls };
   }
 
-  it('grows the CPU roster past its initial capacity with no truncation', () => {
-    const r = createLabelRenderer(
-      {
-        device: null as unknown as GPUDevice,
-        context: null as unknown as GPUCanvasContext,
-        format: 'rgba16float' as GPUTextureFormat,
-        canvas: null as unknown as HTMLCanvasElement,
-        hdrCapable: false,
-      },
-      'rgba16float',
-      FIXTURE_ATLASES,
-    );
+  it('writes clipScale into the uniform tail after the 80-byte camera prefix', () => {
+    const { ctx, createdBuffers } = buildTrackingDevice();
+    const r = createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
+    });
+    r.setLabels([makeLabel('a')]);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    const uniformBuffer = createdBuffers.find((b) => b.desc.label === 'label-uniforms')!;
+    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    const lastUniformWrite = () =>
+      writeBuffer.mock.calls
+        .filter((c) => c[0] === uniformBuffer.buffer)
+        .at(-1)![2] as Float32Array;
 
-    // 65 crosses INITIAL_LABEL_CAPACITY (64) — the real growth boundary,
-    // not an artificially small one.
-    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
-    r.setLabels(labels);
-
-    expect(r.labelCount()).toBe(65);
-    expect(r.packedLabels()).toHaveLength(65);
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000);
+    expect(lastUniformWrite()[20]).toBe(1);
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
+    expect(lastUniformWrite()[20]).toBe(3);
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
     const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
+    const r = createLabelRenderer(ctx, {
+      targetFormat: ctx.format,
+      atlases: FIXTURE_ATLASES,
+    });
     const bindGroupCallsAtConstruction = createBindGroupCalls.length;
 
     // 65 crosses INITIAL_LABEL_CAPACITY (64); the next power of two is 128,
@@ -254,6 +229,11 @@ describe('LabelRenderer capacity growth', () => {
     const entries = Array.from(lastBindGroup.entries) as GPUBindGroupEntry[];
     const binding1 = entries.find((e) => e.binding === 1)!;
     expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
+
+    // No truncation: the upload after growth covers all 65 labels' f32s.
+    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    const storageWrite = writeBuffer.mock.calls.find((c) => c[0] === storageBuffers[1]!.buffer)!;
+    expect(storageWrite[4]).toBe((65 * LABEL_DATA_BYTES) / 4);
 
     expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
     expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();

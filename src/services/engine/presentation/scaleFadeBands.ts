@@ -93,7 +93,7 @@ export const SCALE_FADE_BANDS = {
 
   // Keyed on: CAMERA distance from the render origin, Mpc (the Sun sits there,
   // so this IS the caption's own distance). A fade-IN toward the solar system;
-  // `goneAt` equals `foregroundLabelsPass`'s enable gate BY IMPORT so the
+  // `goneAt` equals `labelsNearPass`'s enable gate BY IMPORT so the
   // fade-in cannot pop; `fullAt` = half the gate is the taste knob.
   sunCaption: {
     fullAt: SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC / 2,

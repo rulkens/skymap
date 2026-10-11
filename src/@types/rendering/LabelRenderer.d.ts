@@ -5,7 +5,6 @@
  */
 
 import type { Label2D } from './Label2D';
-import type { LabelBBox } from './LabelBBox';
 import type { Vec2 } from '../math/Vec2';
 import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
@@ -17,29 +16,9 @@ export type LabelRenderer = {
   readonly label: string;
   /**
    * Replace the current label set.  Calling `setLabels([])` clears all
-   * labels.  Re-packs the CPU-side glyph and label scratch buffers and,
-   * if a real GPU device is present, uploads to the GPU storage /
-   * instance buffers.
-   *
-   * Designed to be called by the label director after polling
-   * `produceMilkyWayLabel` + the structure/famous producers whenever the
-   * merged label set changes (e.g. camera distance crosses the Milky Way
-   * fade band threshold). For the "you are here" use-case there will
-   * typically be 1–3 labels so the cost is negligible.
+   * labels.  Re-packs the CPU-side scratch buffers and uploads to the GPU.
    */
   setLabels(labels: readonly Label2D[]): void;
-  /**
-   * Ink bounding box the label's text will occupy, in atlas pixels
-   * relative to the projected anchor (alignment shifts already applied
-   * — see LabelBBox).  Null when the text lays out to no glyphs.
-   *
-   * Lives on the renderer because measurement needs the font metrics
-   * the renderer already owns; the label director scales the box by its
-   * CPU-side reproduction of the shader's em clamp to declutter on
-   * actual text rects rather than anchor points.  Memoized per
-   * (font, alignment, text), so per-frame calls are cheap.
-   */
-  measure(label: Label2D): LabelBBox | null;
   /**
    * Issue the label draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
@@ -52,25 +31,18 @@ export type LabelRenderer = {
    * bodies already cover (that target's alpha) and by whether the sampled
    * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
    * A plain instance ignores it.
+   *
+   * `clipScale` is the clip units of `viewProj` relative to Mpc (default 1):
+   * the NEAR0 overlays rescale their matrix, and the vertex stage must scale
+   * the em into the same units before dividing by `clip.w`.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    scene?: OverlaySceneOcclusion,
+    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void;
-  /** Total glyph count across all active labels. Used by tests + debug HUD. */
-  glyphCount(): number;
-  /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
-  labelCount(): number;
-  /**
-   * The label rows `setLabels` last packed. The pick path derives its hit
-   * rects from this so a label is clickable exactly where it is legible;
-   * nothing else should read it (the GPU buffers hold the authoritative
-   * copy).
-   */
-  packedLabels(): readonly Label2D[];
-  /** Release all GPU resources. No-op if constructed with a null device. */
+  /** Release all GPU resources. */
   destroy(): void;
 };

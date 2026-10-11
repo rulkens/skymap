@@ -1,5 +1,5 @@
 /**
- * labelsPass — MSDF text label draw call.
+ * labelsCosmoPass — MSDF text label draw call.
  *
  * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
  * module header for why marker-lines + labels moved out of the HDR
@@ -22,15 +22,15 @@
  *
  * Two conditions must both hold:
  *
- *   1. `state.gpu.labelRenderer` must be non-null.  It's null until
+ *   1. `state.gpu.labelRendererCosmo` must be non-null.  It's null until
  *      the atlas fetch + `createLabelRenderer` construction complete
  *      in `initGpu.ts`.
  *
- *   2. `labelRenderer.glyphCount() > 0` — the label director must
- *      have called `setLabels` with at least one label this frame
- *      (e.g. from `produceMilkyWayLabel`).  When the camera is far
- *      from the origin the producer emits an empty label set and
- *      `glyphCount()` returns 0, making this layer a cheap early-return.
+ *   2. `cosmoLabelDirector.labels()` is non-empty — the director must
+ *      have flushed at least one label this frame (e.g. from
+ *      `produceMilkyWayLabel`).  When the camera is far from the origin the
+ *      producer emits an empty label set, making this layer a cheap
+ *      early-return.
  *
  * ### Position among the swap-target layers
  *
@@ -43,13 +43,14 @@ import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
+import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
 
-export const labelsPass: ContentPass = {
-  name: 'labels',
+export const labelsCosmoPass: ContentPass = {
+  name: 'labels-cosmo',
 
   enabled(state, _ctx, _view) {
-    if (state.gpu.labelRenderer === null) return false;
-    return state.gpu.labelRenderer.glyphCount() > 0;
+    if (state.gpu.labelRendererCosmo === null) return false;
+    return state.subsystems.cosmoLabelDirector.labels().length > 0;
   },
 
   // Pick gate — NARROWER than `enabled`: a drawn label only invites a click
@@ -57,9 +58,8 @@ export const labelsPass: ContentPass = {
   // constellation captions carry no `pickId`) must not pull an r32uint pick
   // target into existence for a draw that would stamp nothing.
   pickEnabled(state, _ctx) {
-    const renderer = state.gpu.labelRenderer;
-    if (renderer === null || renderer.glyphCount() === 0) return false;
-    return hasPickableLabel(renderer.packedLabels());
+    if (state.gpu.labelRendererCosmo === null) return false;
+    return hasPickableLabel(state.subsystems.cosmoLabelDirector.labels());
   },
 
   draw(pass, view, ctx, state) {
@@ -67,13 +67,9 @@ export const labelsPass: ContentPass = {
     // the joint decides anything here — the depth half is bound because the
     // pipeline layout demands it, and reads as a no-op against the labels'
     // zero cutoff.
-    state.gpu.labelRenderer!.draw(
-      pass,
-      view.vp,
-      view.viewportPx,
-      ctx.drawPxPerRad,
-      overlaySceneOcclusion(ctx, view),
-    );
+    state.gpu.labelRendererCosmo!.draw(pass, view.vp, view.viewportPx, ctx.drawPxPerRad, {
+      scene: overlaySceneOcclusion(ctx, view),
+    });
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
@@ -86,15 +82,15 @@ export const labelsPass: ContentPass = {
   // pick quad can't see — so an occluded label stays clickable. Pick wider
   // than draw is the safe direction for a click affordance.
   drawPick(pass, _view, ctx, state) {
-    const renderer = state.gpu.labelRenderer;
-    const pickRenderer = state.gpu.labelPickRenderer;
-    if (renderer === null || pickRenderer === null) return;
+    const pickRenderer = state.gpu.labelPickRendererCosmo;
+    const fontAtlases = state.gpu.fontAtlases;
+    if (pickRenderer === null || fontAtlases === null) return;
 
     const projection = cosmoLabelProjection(ctx);
     const quads = labelPickQuads({
-      labels: renderer.packedLabels(),
+      labels: state.subsystems.cosmoLabelDirector.labels(),
       projection,
-      measure: (label) => renderer.measure(label),
+      measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
   },

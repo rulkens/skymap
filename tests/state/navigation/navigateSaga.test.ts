@@ -33,6 +33,8 @@ import {
   commitCameraPose,
   startCameraTween,
 } from '../../../src/state/camera/cameraSlice';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../src/state/time/timeSlice';
 import {
   selectFocusRef,
@@ -163,6 +165,22 @@ describe('navigateSaga', () => {
 
     const types = h.recorded.map((a) => a.type);
     expect(types.indexOf(setSimDays.type)).toBeLessThan(types.indexOf(commitCameraPose.type));
+  });
+
+  it('a t= link that supersedes a running exhibit lands at the link instant', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'exhibit', id: 'observableUniverse' } }, 'cut');
+    await flush();
+    const t = Date.UTC(1990, 0, 1);
+
+    await h.navigate({ view: { kind: 'exhibit', id: 'cosmicWeb' }, t }, 'cut');
+    await flush();
+
+    expect(selectTakeoverSource(h.store.getState())).toMatchObject({ id: 'cosmicWeb' });
+    expect(deriveSimDays(h.store.getState().time, performance.now() + 1e7)).toBeCloseTo(
+      unixMsToJulianDays(t),
+      5,
+    );
   });
 
   it('navigate exhibit cut commits the fitted pose and plays no clip', async () => {

@@ -2,7 +2,7 @@
  * produceConstellationCaptions — candidate math for the true-3D constellation
  * stick-figure names.
  *
- * Cases moved from `foregroundLabelsPass.test.ts` (Task 4, spec §12): the
+ * Cases moved from `labelsNearPass.test.ts` (Task 4, spec §12): the
  * producer emits EVERY figure every frame, so the (former) layer-`enabled`
  * demand test now reads the emitted candidates' `fadeAlpha` instead of a
  * boolean gate.
@@ -23,7 +23,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const PC = SCALE_UNITS.PC_TO_MPC;
 
 // Two figures at parsec-scale anchors — the names are the caption ids. Moved
-// verbatim from `foregroundLabelsPass.test.ts`.
+// verbatim from `labelsNearPass.test.ts`.
 const CONSTELLATION_ARTIFACT = {
   version: 1 as const,
   constellations: [
