@@ -5,5 +5,5 @@ export type StarCutSourceInput = {
   readonly source: SourceType;
   /** The source's distance crossfade. */
   readonly opacity: number;
-  readonly budgetTypical: number;
+  readonly drawBudget: number;
 };

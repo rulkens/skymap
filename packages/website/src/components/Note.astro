@@ -1,0 +1,24 @@
+---
+/*
+ * Note — a small, dim paragraph beside the argument: when a page was checked,
+ * whose account a claim is, what a list leaves out. It closes a block, a
+ * little under what it follows; `flow` leaves it among other paragraphs, with
+ * their spacing and measure.
+ */
+type Props = { flow?: boolean };
+
+const { flow = false } = Astro.props;
+---
+
+<p class:list={['note small tap-links', { flow }]}><slot /></p>
+
+<style>
+  .note {
+    color: var(--site-text-dim);
+  }
+
+  .note:not(.flow) {
+    max-width: 34rem;
+    margin: 2rem 0 0;
+  }
+</style>

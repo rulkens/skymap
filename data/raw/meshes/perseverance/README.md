@@ -11,7 +11,7 @@ pre-baked `meshes.perseverance` beside it is what `npm run build-meshes` reads.
 | Model      | "Mars 2020 Perseverance Rover"                                        |
 | Author     | Brian Kumanchik, NASA/JPL-Caltech                                     |
 | Source     | <https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/> |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright"    |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-11                                                            |
 | File       | `Mars 2020 Perseverance Rover.glb`, 4,987,176 bytes                   |
 | sha256     | `10db7c03a5e63a5a3b3e7baa6243aa4918ba045fa8ff0a731d0217491adc727f`    |
@@ -75,7 +75,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 `npm run build-meshes` copies the string below onto the generated
 `MESH_ASSETS.perseverance` row:
 
-> Mars 2020 Perseverance Rover by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources, public domain (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)
+> Mars 2020 Perseverance Rover by Brian Kumanchik, NASA/JPL-Caltech — NASA 3D Resources (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)
 
 ## As inspected (2026-09-11)
 

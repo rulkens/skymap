@@ -1,7 +1,8 @@
 /**
- * parseHorizonsVectorsCsv — the data rows of a Horizons VECTORS result (CSV_FORMAT=YES,
- * VEC_TABLE=1): everything between `$$SOE` and `$$EOE`, columns `JDUT, Calendar, X, Y, Z,`.
- * The calendar column carries no comma of its own, so a plain split is safe.
+ * parseHorizonsVectorsCsv — the data rows of a Horizons VECTORS result (CSV_FORMAT=YES):
+ * everything between `$$SOE` and `$$EOE`. VEC_TABLE=1 columns are `JDUT, Calendar, X, Y, Z,`;
+ * VEC_TABLE=2 appends `VX, VY, VZ,`, returned as velocities. The calendar column carries no
+ * comma of its own, so a plain split is safe.
  */
 
 import type { HorizonsVectorRow } from './@types/HorizonsVectorRow';
@@ -18,13 +19,19 @@ export function parseHorizonsVectorsCsv(result: string): HorizonsVectorRow[] {
     .filter((line) => line.length > 0)
     .map((line) => {
       const cols = line.split(',').map((c) => c.trim());
+      const hasVelocity = cols.length >= 8 && cols[5] !== '';
       const row = {
         jd: Number(cols[0]),
         xKm: Number(cols[2]),
         yKm: Number(cols[3]),
         zKm: Number(cols[4]),
+        ...(hasVelocity && {
+          vxKmS: Number(cols[5]),
+          vyKmS: Number(cols[6]),
+          vzKmS: Number(cols[7]),
+        }),
       };
-      if (![row.jd, row.xKm, row.yKm, row.zKm].every(Number.isFinite)) {
+      if (!Object.values(row).every(Number.isFinite)) {
         throw new Error(`parseHorizonsVectorsCsv: unparseable row "${line}"`);
       }
       return row;

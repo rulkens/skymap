@@ -48,6 +48,12 @@ function makeRuntime(loaded: boolean): StarCatalogRuntime {
       }),
       getFrameCut: () => cut,
     },
+    catalogs: new Map([
+      [
+        Source.GaiaStars,
+        { committed: () => ({ req: { source: Source.GaiaStars, tier: 'medium' } }) },
+      ],
+    ]),
   } as unknown as StarCatalogRuntime;
 }
 

@@ -59,6 +59,11 @@ playwright-report/
 .env.*
 !.env.production
 
+# `wrangler dev` reads local secrets from `.dev.vars` (docs/DEPLOY.md, "Opening
+# the contact form") and keeps its simulated state, including outgoing test mail, in `.wrangler/`.
+.dev.vars
+.wrangler/
+
 # ── OS clutter ────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
@@ -101,6 +106,7 @@ pnpm-debug.log*
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf
+!/data/raw/fonts/OFL.txt
 # Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
 !/data/geo3d/**/*.outline.json
 # Vendored d3-celestial constellation line data — a committed raw JSON the
@@ -208,3 +214,6 @@ ds-bundle/
 # ~300 MB, regenerable on demand — same rationale as the .bin catalogs.  The
 # generator + the images.js manifest stay tracked so the page is reproducible.
 docs/powers-of-ten/images/
+
+# Astro generated types/cache for the website workspace
+packages/website/.astro/

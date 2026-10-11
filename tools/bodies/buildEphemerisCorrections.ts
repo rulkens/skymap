@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * buildEphemerisCorrections — fit each `HORIZONS_BODIES` row's `Horizons − Kepler` residual
+ * buildEphemerisCorrections — fit each `FITTED_BODIES` row's `Horizons − Kepler` residual
  * (1900–2100) into the committed `EPHEMERIS_CORRECTIONS` table. Kepler is the app's own path
  * (`keplerianPositionMpc(propagateElements(row, jd))`), so any element-row or frame edit needs a
  * rerun. A moon (an element row with a non-Sun focus) first fits a ΔM series to 300 km-equivalent
@@ -22,7 +22,9 @@ import { propagateElements } from '../../src/utils/orbit/propagateElements';
 import type { OrbitalElements } from '../../src/@types/scene/OrbitalElements';
 import type { CorrectionSeries } from '../../src/@types/scene/CorrectionSeries';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { FittedBody } from './@types/FittedBody';
 import type { HorizonsBody } from './@types/HorizonsBody';
+import { FITTED_BODIES } from './fittedBodies';
 import { HORIZONS_BODIES } from './horizonsBodies';
 import { fitSinusoidSeries } from '../utils/math/fitSinusoidSeries';
 import { meanAnomalyCorrectionTarget } from '../utils/math/meanAnomalyCorrectionTarget';
@@ -38,6 +40,7 @@ const FIT_STOP_KM = 900;
 const PHASE_STOP_KM = 300;
 const VERIFY_MAX_KM = 1000;
 const MAX_TERMS = 400;
+const MINUTES_PER_DAY = 1440;
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
 
 // ω to 12 significant digits: over the 73,000-day span its phase error stays < 1e-7 rad.
@@ -46,6 +49,12 @@ const fmtOmega = (x: number): string => String(Number(x.toPrecision(12)));
 const fmtKm = (x: number): string => String(Math.round(x * 10) / 10);
 // ΔM to 1e-7 rad: ≤ 0.4 km per rounding even at Iapetus's 3.56M km.
 const fmtRad = (x: number): string => String(Math.round(x * 1e7) / 1e7);
+
+function fetchRowById(id: string): HorizonsBody {
+  const row = HORIZONS_BODIES.find((b) => b.id === id);
+  if (!row) throw new Error(`buildEphemerisCorrections: fitted id "${id}" has no fetch row`);
+  return row;
+}
 
 function readSeries(body: HorizonsBody) {
   const csvPath = join(rawDataPath('horizons'), body.centre, `${body.target}.csv`);
@@ -84,8 +93,9 @@ function emit(
   return { text, shipped };
 }
 
-function buildBody(body: HorizonsBody): { text: string; summary: string } {
-  const { id, fitStep: step, outside } = body;
+function buildBody(fitted: FittedBody): { text: string; summary: string } {
+  const { id, fitStep: step, outside } = fitted;
+  const body = fetchRowById(id);
   const row = elementsById(id);
   const { jd, km } = readSeries(body);
   const startJd = jd[0]!;
@@ -147,7 +157,7 @@ function buildBody(body: HorizonsBody): { text: string; summary: string } {
     maxKm = Math.max(maxKm, Math.hypot(err[0]!, err[1]!, err[2]!));
   }
   const nTerms = fit.terms.length / 7;
-  const summary = `${id}: ${phaseTerms}${nTerms} terms, max ${Math.round(maxKm)} km vs Horizons (${+body.stepDays.toFixed(6)}-day grid)`;
+  const summary = `${id}: ${phaseTerms}${nTerms} terms, max ${Math.round(maxKm)} km vs Horizons (${+(body.stepMinutes / MINUTES_PER_DAY).toFixed(6)}-day grid)`;
   if (maxKm > VERIFY_MAX_KM)
     throw new Error(`buildEphemerisCorrections: ${summary} exceeds ${VERIFY_MAX_KM} km`);
   return { text: `  // ${summary}\n  ${id}: { ${fields.join(', ')} },`, summary };
@@ -155,8 +165,8 @@ function buildBody(body: HorizonsBody): { text: string; summary: string } {
 
 async function main(): Promise<void> {
   const rows: string[] = [];
-  for (const body of HORIZONS_BODIES) {
-    const { text, summary } = buildBody(body);
+  for (const fitted of FITTED_BODIES) {
+    const { text, summary } = buildBody(fitted);
     process.stderr.write(`${summary}\n`);
     rows.push(text);
   }

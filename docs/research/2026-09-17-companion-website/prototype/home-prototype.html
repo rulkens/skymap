@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>skymap — prototype with real footage</title>
+<style>
+  @font-face { font-family: 'Cormorant Garamond'; font-weight: 600; src: url('file:///Users/rulkens/Development/js/skymap/public/fonts/CormorantGaramond-SemiBold.woff2') format('woff2'); }
+  @font-face { font-family: 'Sora'; font-weight: 100; src: url('file:///Users/rulkens/Development/js/skymap/public/fonts/Sora-Thin.woff2') format('woff2'); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #000; }
+  body { color: #dfe6fb; font: 19px/1.65 'Avenir Next', 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+  a { color: inherit; }
+  video { display: block; }
+  .thin { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; }
+
+  /* Every control is a labelled object: the ring the app draws around things in the sky. */
+  .obj { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; font: 600 24px/1.1 'Cormorant Garamond', Georgia, serif; color: #e8eeff; background: none; border: 0; padding: 6px 0; cursor: pointer; }
+  .obj::before { content: ''; width: 15px; height: 15px; flex: none; border: 1px solid #a8d0ff; border-radius: 50%; transition: transform .25s ease, background-color .25s ease; }
+  .obj:hover::before, .obj:focus-visible::before { transform: scale(1.5); background: rgba(168,208,255,.25); }
+  .obj:focus-visible { outline: 1px solid #a8d0ff; outline-offset: 6px; }
+  .obj.big { font-size: clamp(30px, 3.4vw, 48px); gap: 20px; } .obj.big::before { width: 26px; height: 26px; }
+  .obj.small { font-size: 18px; gap: 10px; } .obj.small::before { width: 11px; height: 11px; }
+
+  /* ── The flight: scroll scrubs the real recording ───────────────────────── */
+  .journey { position: relative; height: 900vh; }
+  .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; background: #000; }
+  .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,0) 34%), linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 14%); }
+  nav { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 30px; padding: 22px 44px; }
+  nav .sp { margin-right: auto; }
+
+  .layer { position: absolute; inset: 0; z-index: 3; }
+  .titles { position: absolute; left: 44px; bottom: 50px; pointer-events: none; }
+  .word { margin: 0 0 .12em -0.04em; font-size: clamp(96px, 19vw, 330px); line-height: 1; color: #e8eeff; }
+  .tag { max-width: 26ch; margin: 0; font: 19px/1.5 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: clamp(18px, 1.5vw, 22px); color: #dfe6fb; }
+  .start { position: absolute; right: 84px; bottom: 50px; text-align: right; }
+  .start small { display: block; margin-top: 8px; font-size: 13px; color: #9aa7c9; }
+  .hint { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); font-size: 13px; color: #9aa7c9; }
+
+  .caption { position: absolute; z-index: 3; left: 44px; bottom: 56px; max-width: 760px; opacity: 0; pointer-events: none; text-shadow: 0 0 30px #000, 0 0 8px #000; }
+  .caption b { display: block; font: 600 clamp(40px, 5.4vw, 86px)/1 'Cormorant Garamond', serif; margin-bottom: 14px; }
+  .caption span { font-size: 21px; color: #dfe6fb; }
+  .arrive { position: absolute; z-index: 3; left: 0; right: 0; bottom: 70px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; opacity: 0; pointer-events: none; }
+  .arrive p { margin: 0; max-width: 36ch; font-size: 20px; color: #c3cde8; }
+
+  /* The spine: where you are in the flight, and a way to skip along it. */
+  .spine { position: absolute; z-index: 4; right: 30px; top: 110px; bottom: 110px; width: 15px; }
+  .spine::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; border-left: 1px solid rgba(232,238,255,.28); }
+  .spine i { position: absolute; left: 7px; top: 0; width: 1px; background: #a8d0ff; }
+  .spine button { position: absolute; left: 0; width: 15px; height: 15px; margin-top: -7px; padding: 0; border: 1px solid rgba(168,208,255,.7); border-radius: 50%; background: #000; cursor: pointer; transition: transform .2s ease; }
+  .spine button:hover, .spine button:focus-visible { transform: scale(1.5); outline: none; }
+  .spine button.on { background: #a8d0ff; }
+  .spine button span { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); white-space: nowrap; font: 600 17px/1 'Cormorant Garamond', serif; color: #e8eeff; opacity: 0; transition: opacity .2s ease; pointer-events: none; text-shadow: 0 0 12px #000; }
+  .spine button:hover span, .spine button:focus-visible span { opacity: 1; }
+
+  /* ── The rest of the page ───────────────────────────────────────────────── */
+  main { position: relative; background: #000; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 44px; }
+  h2 { margin: 0 0 22px; font-size: clamp(44px, 5.2vw, 84px); line-height: .98; text-wrap: balance; }
+  p { margin: 0 0 26px; max-width: 44ch; color: #c3cde8; }
+
+  .lead { padding: 170px 0 30px; }
+  .lead h2 { max-width: 16ch; }
+  .lead p { max-width: 52ch; font-size: 22px; }
+  .look { padding: 120px 0 110px; }
+  .look .head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 30px; margin-bottom: 70px; }
+  .look .head p { margin: 0; }
+  .things { display: grid; grid-template-columns: repeat(5, 1fr); gap: 56px 24px; }
+  .thing { display: flex; flex-direction: column; align-items: center; text-align: center; text-decoration: none; }
+  .thing:nth-child(even) { transform: translateY(46px); }
+  .thing .disc { width: 100%; max-width: 168px; aspect-ratio: 1; border-radius: 50%; padding: 9px; border: 1px solid rgba(168,208,255,.45); transition: padding .3s ease, border-color .3s ease; }
+  .thing img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+  .thing:hover .disc, .thing:focus-visible .disc { padding: 2px; border-color: #a8d0ff; }
+  .thing:focus-visible { outline: none; }
+  .thing b { margin-top: 16px; font: 600 23px/1.1 'Cormorant Garamond', serif; color: #e8eeff; }
+  .thing span { margin-top: 5px; font-size: 15px; line-height: 1.3; color: #9aa7c9; }
+
+  .tour { position: relative; margin-top: 70px; }
+  .tour video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .tour::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(270deg, rgba(0,0,0,.85) 0%, rgba(0,0,0,0) 50%); }
+  .tour .over { position: absolute; z-index: 2; right: 44px; bottom: 12%; max-width: 420px; }
+
+  .row { display: grid; grid-template-columns: 6fr 5fr; gap: 80px; align-items: center; padding: 150px 0; }
+  .row.flip > :first-child { order: 2; }
+  .frame { position: relative; }
+  .frame video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .address { position: absolute; left: -22px; right: 40px; bottom: -26px; background: #05070f; border: 1px solid rgba(232,238,255,.28); border-radius: 4px; padding: 16px 20px; font: 15px/1.6 ui-monospace, 'SF Mono', Menlo, monospace; color: #9aa7c9; overflow-wrap: anywhere; }
+  .address b { font-weight: 400; color: #ffd97a; } .address i { font-style: normal; color: #a8d0ff; }
+
+  .dome { width: 100%; max-width: 620px; aspect-ratio: 1; margin: 0 auto; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px rgba(232,238,255,.5), 0 0 0 18px #000, 0 0 0 19px rgba(232,238,255,.18); }
+  .dome video { width: 100%; height: 100%; object-fit: cover; }
+  .formats { list-style: none; margin: 0 0 26px; padding: 0; color: #c3cde8; max-width: 44ch; }
+  .formats li { padding: 10px 0; border-bottom: 1px solid rgba(232,238,255,.14); }
+  .proof { font: 600 24px/1.3 'Cormorant Garamond', serif; color: #e8eeff; }
+
+  .honest { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 60px; padding: 110px 0; border-top: 1px solid rgba(232,238,255,.14); }
+  .honest h2 { font-size: clamp(34px, 3.6vw, 54px); }
+  .honest h3 { margin: 0 0 14px; font: 600 26px/1.1 'Cormorant Garamond', serif; }
+  .honest ul { list-style: none; margin: 0; padding: 0; color: #c3cde8; font-size: 17px; } .honest li { padding: 8px 0; }
+  footer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px 34px; padding: 50px 0 90px; border-top: 1px solid rgba(232,238,255,.14); font-size: 15px; color: #8f9bbd; }
+  footer p { margin: 0 auto 0 0; max-width: none; color: inherit; }
+
+  @media (max-width: 900px) {
+    nav { padding: 16px 20px; gap: 16px; } nav .mid { display: none; }
+    .titles, .caption { left: 20px; } .titles { bottom: 150px; } .start { right: 56px; bottom: 56px; }
+    .spine { right: 14px; } .wrap { padding: 0 20px; }
+    .things { grid-template-columns: repeat(2, 1fr); } .row, .honest { grid-template-columns: 1fr; gap: 50px; padding: 80px 0; } .row.flip > :first-child { order: 0; }
+    .tour .over { position: static; padding: 24px 20px 0; } .address { left: 0; right: 0; }
+  }
+</style>
+
+<body>
+<div class="journey" id="journey">
+  <div class="stage">
+    <video id="flight" src="scrub.mp4" muted playsinline preload="auto"></video>
+    <nav>
+      <span class="sp"></span>
+      <a class="obj small mid" href="#look">Places to start</a>
+      <a class="obj small mid" href="#classroom">In a classroom</a>
+      <a class="obj small mid" href="#dome">On a dome</a>
+      <a class="obj small" href="#">Fly it yourself</a>
+    </nav>
+
+    <div class="layer" id="intro">
+      <div class="titles">
+      <h1 class="word thin">skymap</h1>
+      <p class="tag">The measured universe at true scale. You hold the camera.</p>
+      </div>
+      <div class="start">
+        <a class="obj big" href="#">Fly it yourself</a>
+        <small>Free. No account, nothing to install.</small>
+      </div>
+      <div class="hint">Scroll to pull back</div>
+    </div>
+
+    <div class="caption" id="caption"><b></b><span></span></div>
+    <div class="arrive" id="arrive">
+      <p>In skymap, each of those points is a catalogued star or galaxy at its measured position.</p>
+      <a class="obj big" href="#">Fly it yourself</a>
+    </div>
+    <div class="spine" id="spine"><i id="fill"></i></div>
+  </div>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="lead">
+      <h2 class="thin">A street in Copenhagen and the cosmic web, in the same scene</h2>
+      <p>Start on a street in Copenhagen and pull back. The city shrinks into the Earth, the Earth into a dot beside the Sun, and the scene never cuts or rescales on the way out.</p>
+    </div>
+    <div class="look" id="look">
+      <div class="head">
+        <h2 class="thin">Pick somewhere to start</h2>
+        <p>These are the places I show people first.</p>
+      </div>
+      <div class="things" id="things"></div>
+    </div>
+  </div>
+
+  <div class="tour">
+    <video src="tour.mp4" autoplay muted loop playsinline></video>
+    <div class="over">
+      <h2 class="thin">Take the tour</h2>
+      <p>The Long Way Out is a narrated flight to the edge of what has been mapped, and back home.</p>
+      <a class="obj" href="#">Start the tour</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="row" id="classroom">
+      <div class="frame">
+        <video src="class.mp4" autoplay muted loop playsinline></video>
+        <div class="address">skymap.rulkens.com/app/#focus=<b>jupiter</b>&amp;t=<i>2027-03-14T21:00</i></div>
+      </div>
+      <div>
+        <h2 class="thin">Use it in a classroom</h2>
+        <p>Point the camera at Jupiter, set the date, and copy the address. The whole class opens the link and sees what you see. No accounts, nothing to install.</p>
+        <a class="obj" href="#">Skymap for educators</a>
+      </div>
+    </div>
+
+    <div class="row flip" id="dome">
+      <div class="dome"><video src="flows.mp4" autoplay muted loop playsinline></video></div>
+      <div>
+        <h2 class="thin">Put it on a dome</h2>
+        <p class="proof">In September 2026 I showed skymap in the dome at ‹venue name›.</p>
+        <p>I can make a version for yours: fisheye output, a 4K film, or a build for a single exhibit or kiosk.</p>
+        <a class="obj" href="#">Work with me</a>
+      </div>
+    </div>
+
+    <div class="honest">
+      <h2 class="thin">What is measured, what is drawn</h2>
+      <div>
+        <h3>Measured</h3>
+        <ul><li>Star positions and colours, from Gaia</li><li>Galaxy positions, from SDSS, 2MRS and GLADE</li><li>Planet and moon orbits, from JPL</li><li>Earth's surface, from satellite imagery</li></ul>
+      </div>
+      <div>
+        <h3>Drawn from models</h3>
+        <ul><li>The Milky Way seen from outside</li><li>Atmospheres and how they scatter light</li><li>The filaments traced between galaxies</li></ul>
+      </div>
+    </div>
+
+    <footer>
+      <p>I am Alexander Rulkens and I make skymap by myself. It is open source. Version 0.5.0.</p>
+      <a class="obj small" href="#">How it is built</a>
+      <a class="obj small" href="#">Credits and data</a>
+      <a class="obj small" href="#">Cite skymap</a>
+    </footer>
+  </div>
+</main>
+
+<script>
+(() => {
+  const el = id => document.getElementById(id);
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const video = el('flight'), journey = el('journey');
+  const DURATION = 76.5;
+  // Seconds into the recording where each place is on screen. Read off a contact sheet: approximate.
+  const stops = [
+    [0, 'Earth', ''],
+    [14, 'The Moon', 'Three days by Apollo. 1.3 seconds by light.'],
+    [24, 'The solar system', 'One spacecraft has been to Neptune, once. It took twelve years.'],
+    [31, 'The nearest stars', 'Voyager would need about 75,000 years to reach the first one.'],
+    [36, 'The Milky Way', 'The light from its centre left during the last ice age.'],
+    [41, 'Our neighbours', 'The light from Andromeda is older than our species.'],
+    [46, 'The cosmic web', 'Galaxies gather along threads, with almost nothing between them.'],
+    [53, 'Every galaxy the surveys reached', 'The dark wedges are the parts of the sky nobody has mapped yet.'],
+    [68, 'The observable universe', ''],
+  ];
+
+  const spine = el('spine'), dots = stops.map(([t, name]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.style.top = (t / DURATION * 100) + '%';
+    b.setAttribute('aria-label', 'Go to ' + name); b.innerHTML = '<span>' + name + '</span>';
+    b.addEventListener('click', () => scrollTo({ top: journey.offsetTop + (t / DURATION) * (journey.offsetHeight - innerHeight) + 2, behavior: 'smooth' }));
+    spine.appendChild(b); return b;
+  });
+
+  const intro = el('intro'), cap = el('caption'), arrive = el('arrive'), fill = el('fill');
+  let shown = -1, eased = 0;
+  function frame() {
+    const p = clamp((scrollY - journey.offsetTop) / (journey.offsetHeight - innerHeight));
+    eased += (p - eased) * .12;
+    const t = eased * DURATION;
+    if (video.readyState >= 2 && !video.seeking && Math.abs(video.currentTime - t) > .02) video.currentTime = t;
+    fill.style.height = (eased * 100) + '%';
+    const out = clamp(t / 4); intro.style.opacity = 1 - out; intro.style.pointerEvents = out > .5 ? 'none' : 'auto';
+    let i = 0; stops.forEach((s, k) => { if (t >= s[0] - 1) i = k; });
+    if (i !== shown) { shown = i; cap.firstElementChild.textContent = stops[i][1]; cap.lastElementChild.textContent = stops[i][2]; dots.forEach((d, k) => d.classList.toggle('on', k <= i)); }
+    const since = t - stops[i][0], end = clamp((t - 71) / 3);
+    cap.style.opacity = i === 0 ? 0 : clamp(since + 1) * (1 - end);
+    arrive.style.opacity = end; arrive.style.pointerEvents = end > .6 ? 'auto' : 'none';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  const F = 'file:///Users/rulkens/Development/js/skymap/public/images/featured/';
+  const things = [
+    ['body-earth', 'Earth, tonight', 'here'], ['body-moon', 'The Moon', '1.3 light-seconds'], ['body-saturn', 'Saturn', '80 light-minutes'],
+    ['body-voyager1', 'Voyager 1', '23 light-hours'], ['star-betelgeuse', 'Betelgeuse', 'about 550 light-years'], ['blackhole-sgr-a-star', 'Sagittarius A*', '26,000 light-years'],
+    ['m31', 'Andromeda', '2.5 million light-years'], ['cluster-virgo-m87', 'The Virgo cluster', '54 million light-years'], ['supercluster-laniakea-sc', 'Laniakea', '250 million light-years'], ['observableUniverse', 'The edge', '46 billion light-years'],
+  ];
+  el('things').innerHTML = things.map(([f, name, far]) => `<a class="thing" href="#"><div class="disc"><img src="${F}${f}.webp" alt="" /></div><b>${name}</b><span>${far}</span></a>`).join('');
+})();
+</script>
+</body>
+</html>

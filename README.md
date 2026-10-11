@@ -161,6 +161,6 @@ The live queue is [docs/BACKLOG.md](docs/BACKLOG.md).
 
 If you use skymap in a publication, talk, or derived work, please cite it via [CITATION.cff](CITATION.cff). GitHub's "Cite this repository" sidebar button exposes BibTeX and APA forms.
 
-Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms (CC-BY-SA, public domain, publication citation), all enumerated in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+Skymap's source code is MIT-licensed; see [LICENSE](LICENSE). The catalog data, imagery, and external services it uses carry their own citation requirements and license terms: some are public domain or CC BY, some are non-commercial (Gaia's stars are CC BY-NC, the close-up Earth imagery CC BY-NC-SA), and several state no licence at all. So the MIT licence does not cover what skymap shows, or pictures taken of it. Each source is listed with its terms in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 [CLAUDE.md](CLAUDE.md) at the repo root is onboarding guidance for AI coding assistants. It isn't load-bearing for the build or runtime. It exists because parts of this project were developed with AI assistance, and that context helps future AI-assisted edits.

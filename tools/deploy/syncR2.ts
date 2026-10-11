@@ -10,7 +10,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
-import type { R2SyncGroup } from './r2/R2SyncGroup';
+import type { R2SyncGroup } from './@types/R2SyncGroup';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
@@ -19,6 +19,9 @@ import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
 import { collectTextureImages } from './r2/collectTextureImages';
+import { DATA_FAMILIES } from './r2/dataFamilies';
+import { groupByDataFamily } from './r2/groupByDataFamily';
+import { formatDryRunListing } from './r2/formatDryRunListing';
 import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
@@ -46,22 +49,31 @@ const NO_CACHE = 'public, max-age=0, must-revalidate';
 const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
 
 function buildGroups(): R2SyncGroup[] {
+  const dataFiles = groupByDataFamily(collectDataFiles(DATA_DIR));
   return [
-    {
-      label: 'public/data',
-      files: collectDataFiles(DATA_DIR),
-      transport: { kind: 'wrangler' },
-      // Every upload here is content-hashed by build-data-manifest, so the
-      // bytes at a given key never change — no TTL to wait out, no purge to run.
-      cacheControl: IMMUTABLE,
-      purge: false,
-    },
+    // Every upload here is content-hashed by build-data-manifest, so the
+    // bytes at a given key never change — no TTL to wait out, no purge to run.
+    ...DATA_FAMILIES.flatMap((family): R2SyncGroup[] => {
+      const files = dataFiles.get(family);
+      if (files === undefined) return [];
+      return [
+        {
+          label: `public/data: ${family.label}`,
+          files,
+          transport: { kind: 'wrangler' },
+          cacheControl: IMMUTABLE,
+          purge: false,
+          gzipOnWire: family.gzipOnWire,
+        },
+      ];
+    }),
     {
       label: 'Hi-res famous-galaxy images',
       files: collectHiResImages(HIRES_DIR),
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
+      gzipOnWire: false,
     },
     {
       label: 'Planet-surface textures',
@@ -69,6 +81,7 @@ function buildGroups(): R2SyncGroup[] {
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
+      gzipOnWire: false,
     },
     {
       label: 'Extra files',
@@ -76,6 +89,7 @@ function buildGroups(): R2SyncGroup[] {
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
+      gzipOnWire: false,
     },
     // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
     // key, so an immutable header would hand a restore the pre-edit bytes.
@@ -85,6 +99,7 @@ function buildGroups(): R2SyncGroup[] {
       transport: { kind: 'wrangler' },
       cacheControl: NO_CACHE,
       purge: false,
+      gzipOnWire: false,
     },
     // One tiles group per `SURFACE_TILE_REGISTRY` row, EVERY one of them
     // before EVERY manifest group below — a row whose bake never ran
@@ -97,6 +112,7 @@ function buildGroups(): R2SyncGroup[] {
         transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
         cacheControl: IMMUTABLE,
         purge: false,
+        gzipOnWire: false,
       }),
     ),
     // Each row's manifest is the pointer the runtime reads to discover that
@@ -110,6 +126,7 @@ function buildGroups(): R2SyncGroup[] {
         transport: { kind: 'wrangler' },
         cacheControl: DAY,
         purge: true,
+        gzipOnWire: true,
       }),
     ),
     // Must stay last of all: it's the pointer the runtime reads to resolve
@@ -122,12 +139,18 @@ function buildGroups(): R2SyncGroup[] {
       transport: { kind: 'wrangler' },
       cacheControl: NO_CACHE,
       purge: true,
+      // Manifests are JSON, which gzip shrinks.
+      gzipOnWire: true,
     },
   ];
 }
 
 async function main(): Promise<void> {
   const groups = buildGroups();
+  if (process.argv.includes('--dry-run')) {
+    for (const line of formatDryRunListing(groups)) console.log(line);
+    return;
+  }
   const total = groups.reduce((n, g) => n + g.files.length, 0);
   if (total === 0) {
     console.error(`No matching files in ${DATA_DIR}.  Run npm run build-tiers first.`);

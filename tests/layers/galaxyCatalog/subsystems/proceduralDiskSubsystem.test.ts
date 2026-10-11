@@ -184,9 +184,6 @@ describe('createProceduralDiskSubsystem', () => {
         allocate: () => {
           throw new Error('atlas.allocate not expected');
         },
-        slotUv: () => {
-          throw new Error('atlas.slotUv not expected');
-        },
         upload: () => {
           throw new Error('atlas.upload not expected');
         },
@@ -198,9 +195,6 @@ describe('createProceduralDiskSubsystem', () => {
         },
         inFlightCount: () => {
           throw new Error('atlas.inFlightCount not expected');
-        },
-        getTextureView: () => {
-          throw new Error('atlas.getTextureView not expected');
         },
         setEvictHandler: () => {
           throw new Error('atlas.setEvictHandler not expected');

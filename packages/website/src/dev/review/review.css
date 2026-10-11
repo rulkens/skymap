@@ -1,0 +1,474 @@
+/*
+ * Dev-only docs review mode (part of the overlay `f` turns on). The bar is fixed under the
+ * site's own top bar and the page is pushed down by its height (initReview keeps
+ * --review-bar equal to it), so it covers nothing at the top of a page. The marks are in
+ * the page always but look like nothing until "show marks" is on.
+ */
+html.review-on {
+  --review-bar: 2.75rem;
+  --review-line: rgba(168, 208, 255, 0.5);
+  --review-line-dim: rgba(168, 208, 255, 0.25);
+  scroll-padding-top: calc(var(--nav-height) + var(--review-bar));
+}
+
+html.review-on main {
+  padding-top: var(--review-bar);
+}
+
+/* The page's own sticky columns start under the bar, so it never covers their top. */
+@media (min-width: 901px) {
+  html.review-on .docs-nav,
+  html.review-on .toc {
+    top: calc(var(--nav-height) + var(--review-bar));
+    max-height: calc(100svh - var(--nav-height) - var(--review-bar));
+  }
+}
+
+.review-bar {
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  z-index: 2147483001;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-8);
+  min-height: var(--review-bar);
+  padding: var(--space-2) var(--space-8);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.2 var(--font-body);
+}
+
+.review-bar[hidden],
+.review-confirm-bar[hidden],
+.review-bar button[hidden] {
+  display: none;
+}
+
+.review-name {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.review-job {
+  flex: 2 1 20rem;
+  min-width: 12rem;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.review-words {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.review-counts,
+.review-flag {
+  color: var(--site-text-dim);
+}
+
+/* Gives way first when the bar is full, so the job field keeps its width. */
+.review-keys,
+.review-confirm-bar {
+  flex: 3 1 10rem;
+  min-width: 0;
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+.review-keys {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-confirm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--site-text);
+  font-size: 0.8125rem;
+}
+
+.review-missing {
+  min-width: 0;
+  color: #ffb4a8;
+}
+
+.review-missing:empty,
+.review-flag:empty {
+  display: none;
+}
+
+.review-flag.error {
+  color: #ffb4a8;
+}
+
+.review-toggle,
+.review-bar-button,
+.review-panel-action,
+.review-state,
+.review-note-save,
+.review-segment button {
+  min-height: 24px;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-toggle[aria-pressed='true'],
+.review-state[aria-pressed='true'],
+.review-segment button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: #000;
+}
+
+.review-bar button:disabled,
+.review-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .review-toggle:hover:not(:disabled),
+  .review-bar-button:hover:not(:disabled),
+  .review-panel-action:hover:not(:disabled),
+  .review-state:hover:not(:disabled),
+  .review-note-save:hover:not(:disabled),
+  .review-segment button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+  }
+}
+
+.review-bar :focus-visible,
+.review-panel :focus-visible,
+.review-section-icon:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * On a phone the page's docs menu is sticky under its top bar, so this bar goes to the foot
+ * instead, above the feedback button; its keys wrap and its controls are full-size targets.
+ */
+@media (max-width: 900px) {
+  .review-bar {
+    top: auto;
+    bottom: 0;
+    border-bottom: 0;
+    border-top: 1px solid var(--review-line);
+  }
+
+  html.review-on {
+    scroll-padding-top: 0;
+  }
+
+  html.review-on main {
+    padding-top: 0;
+    padding-bottom: var(--review-bar);
+  }
+
+  html.review-on .fb-dock {
+    bottom: calc(var(--review-bar) + var(--space-8));
+  }
+
+  .review-keys {
+    flex: 1 0 100%;
+    white-space: normal;
+  }
+
+  .review-job {
+    flex: 1 1 100%;
+  }
+
+  .review-toggle,
+  .review-bar-button,
+  .review-panel-action,
+  .review-state,
+  .review-note-save,
+  .review-segment button {
+    min-height: var(--tap);
+  }
+}
+
+.review-marks .review-mark {
+  cursor: pointer;
+}
+
+.review-marks .review-cut {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.review-marks .review-keep {
+  text-decoration: underline;
+  text-decoration-color: #4ade80;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.review-marks .review-rewrite {
+  background: rgba(250, 204, 21, 0.3);
+}
+
+.review-marks .review-good {
+  background: rgba(74, 222, 128, 0.14);
+}
+
+.review-flash {
+  animation: review-flash 1.5s ease-out;
+}
+
+@keyframes review-flash {
+  from {
+    background: rgba(250, 204, 21, 0.6);
+    box-shadow: 0 0 0 0.2em rgba(250, 204, 21, 0.6);
+  }
+  to {
+    background: transparent;
+    box-shadow: 0 0 0 0.2em transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-flash {
+    animation: none;
+    background: rgba(250, 204, 21, 0.6);
+  }
+}
+
+.review-hiding .review-cut,
+.review-hiding .review-cut-section,
+.review-hiding .review-has-after {
+  display: none;
+}
+
+/* The owner's replacement stands in for the original only while the cut text is hidden. */
+.review-after {
+  display: none;
+  white-space: pre-line;
+}
+
+.review-hiding .review-after {
+  display: revert;
+}
+
+/* The entry icon: in the margin of the heading, above it on a narrow page, never in the line. */
+html.review-on #page :is(h1, h2, h3) {
+  position: relative;
+}
+
+.review-section-icon {
+  position: absolute;
+  right: 100%;
+  top: 0.25em;
+  box-sizing: border-box;
+  min-width: 24px;
+  min-height: 24px;
+  margin-right: var(--space-6);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid currentColor;
+  border-radius: var(--space-2);
+  background: var(--color-bg);
+  color: #9aa3b2;
+  font: 600 0.75rem / 1 var(--font-body);
+  cursor: pointer;
+}
+
+.review-section-icon[data-state='good'],
+.review-section-icon[data-state='keep'] {
+  color: #4ade80;
+}
+
+.review-section-icon[data-state='rewrite'] {
+  color: #facc15;
+}
+
+.review-section-icon[data-state='note'] {
+  color: var(--color-accent);
+}
+
+.review-section-count {
+  margin-left: var(--space-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .review-section-icon {
+    right: auto;
+    left: 0;
+    top: -2rem;
+    margin: 0;
+  }
+
+  /* An h1 has no room above it: its icon goes just under it. */
+  #page h1 .review-section-icon {
+    top: 100%;
+  }
+}
+
+/* Beside the article, never over it: its rows scroll to passages that must stay visible. */
+.review-panel {
+  position: fixed;
+  z-index: 2147483001;
+  top: calc(var(--nav-height) + var(--review-bar) + var(--space-8));
+  right: var(--space-8);
+  box-sizing: border-box;
+  width: min(28rem, calc(100vw - 2rem));
+  /* Leaves the feedback dock's corner free under it. */
+  max-height: calc(100vh - var(--nav-height) - var(--review-bar) - 9rem);
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--color-bg);
+  border: 1px solid var(--review-line);
+  color: var(--site-text);
+  font: 400 0.8125rem / 1.4 var(--font-body);
+}
+
+.review-panel:focus {
+  outline: none;
+}
+
+/* On a phone the panel is a sheet over the foot of the page, above the feedback button. */
+@media (max-width: 900px) {
+  .review-panel {
+    top: auto;
+    right: var(--space-8);
+    bottom: calc(var(--review-bar) + 4rem);
+    left: var(--space-8);
+    width: auto;
+    max-height: 55svh;
+  }
+}
+
+.review-panel-title {
+  display: block;
+  color: var(--color-accent);
+}
+
+.review-panel-words {
+  margin-bottom: var(--space-4);
+  color: var(--site-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-panel [hidden] {
+  display: none;
+}
+
+.review-row {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--review-line-dim);
+}
+
+.review-row-applied {
+  opacity: 0.55;
+}
+
+.review-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-row-text {
+  flex: 1 0 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-row-reason,
+.review-note {
+  color: var(--site-text-dim);
+  font-size: 0.75rem;
+}
+
+.review-row-words {
+  margin: var(--space-2) 0;
+}
+
+.review-note {
+  margin-top: var(--space-3);
+}
+
+.review-note textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--review-line);
+  background: #000;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.review-note-save {
+  margin-top: var(--space-2);
+}
+
+/* Two-way control above the one rewrite field: it says which of the two values the field is. */
+.review-segment {
+  display: flex;
+  margin-top: var(--space-3);
+}
+
+.review-segment button {
+  flex: 1;
+}
+
+.review-row-line {
+  margin-top: var(--space-2);
+  color: var(--site-text);
+  font-size: 0.75rem;
+}
+
+.review-panel-foot,
+.review-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--review-line-dim);
+}
+
+.review-confirm {
+  margin-top: var(--space-4);
+  color: var(--site-text);
+}
+
+.review-confirm-text {
+  flex: 1 0 100%;
+}
+
+/* The keys line of the feedback dock gives way to the review bar's when the page has a review. */
+html.review-on .fb-keys {
+  display: none;
+}
+
+/* Shift lets the pointer through the feedback capture layer, so text can be selected for a mark. */
+html.review-select .fb-capture {
+  pointer-events: none;
+}

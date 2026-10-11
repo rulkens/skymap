@@ -549,6 +549,7 @@ describe('composeSelectionRows — picking gate', () => {
     type: 'structure',
     pickSources: [Source.GalaxyCluster],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
+    encodePick: () => null,
     extractRow: () => virgo,
     focusId: {
       claims: (id) => id.startsWith('galaxy-cluster-'),

@@ -208,7 +208,7 @@ export function createTexturedDiskSubsystem(
           return;
         }
 
-        const [u0, v0, u1, v1] = atlas.slotUv(slot);
+        const [u0, v0, u1, v1] = atlas.slots.slotUv(slot);
 
         const distFade = smoothstep(
           APPARENT_SIZE_THRESHOLD_PX,

@@ -1,0 +1,10 @@
+---
+/* ViewLink — the one control that opens a particular view in the app; tests/packages/website/appLinks.test.ts keeps it the only one. */
+import type { HTMLAttributes } from 'astro/types';
+
+import ObjLink from './ObjLink.astro';
+
+type Props = HTMLAttributes<'a'> & { href: string; hang?: boolean };
+---
+
+<ObjLink size="small" icon="view" {...Astro.props}><slot>Open this view</slot></ObjLink>

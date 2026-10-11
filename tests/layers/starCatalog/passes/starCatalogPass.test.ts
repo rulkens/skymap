@@ -54,8 +54,8 @@ function makeFrame(originMpc: Vec3): StarCutInputs {
       worldSpread: 1,
       leafMarginRad: 0.001,
       sources: [
-        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
-        { source: Source.GaiaStars, opacity: 1, budgetTypical: 100 },
+        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
+        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
       ],
     },
     nowMs: 0,

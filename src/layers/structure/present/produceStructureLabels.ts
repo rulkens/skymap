@@ -52,20 +52,14 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import { STRUCTURE_ID_CODES } from '../../../data/structure/structureIds';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import { structurePickId } from '../../../utils/picking/structurePickId';
 import { MARKER_RADIUS_RETUNE } from '../../../data/markerRadiusRetune';
 import { STRUCTURE_LABEL_ABOVE_GAP_PX } from '../data/structureLabelAboveGapPx';
 import { aboveRingAnchor } from '../../../utils/labels/aboveRingAnchor';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
-import {
-  STRUCTURE_MARKER_STYLES,
-  HOVERED_LABEL_WHITEN,
-  SELECTED_LABEL_WHITEN,
-} from './structureMarkerStyles';
-import { lerp } from '../../../utils/math/lerp';
+import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { focusRecession } from '../../../services/engine/presentation/focusRecession';
 import { structureIdOf } from '../../../services/engine/helpers/structureIdOf';
 import { wrapLabelName } from '../../../utils/format/wrapLabelName';
@@ -99,9 +93,6 @@ export function produceStructureLabels(
   const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
   const focusedStructureId = structureIdOf(state.selection.focus);
-  // Ring and label carry the same pick id, so hovering either lights both.
-  const hoveredStructureId = structureIdOf(state.selection.hover);
-  const selectedStructureId = structureIdOf(state.selection.select);
 
   // Clip-owned transient opacity for structure labels — hoisted outside the loop
   // because ALL structure-label categories (`{ kind: 'labelLayer', layer: 'structure',
@@ -228,11 +219,6 @@ export function produceStructureLabels(
     // sizes, so Milky Way labels hang just above the ring's drawn top.
     const above = screenUp !== null;
 
-    // Selected wins over hovered: the later assignment is the stronger cue.
-    let whiten = 0;
-    if (p.id === hoveredStructureId) whiten = HOVERED_LABEL_WHITEN;
-    if (p.id === selectedStructureId) whiten = SELECTED_LABEL_WHITEN;
-
     const centre: Vec3 = [p.worldPos[0] - ox, p.worldPos[1] - oy, p.worldPos[2] - oz];
     let anchor = centre;
     if (above) {
@@ -250,10 +236,7 @@ export function produceStructureLabels(
     // both read from the store's single-sourced `categoryIndexOf`.
     let pickId: number | undefined;
     if (isPickableUnderFocus(p.worldPos, ctx.snapshot.focus)) {
-      pickId = packSelection(
-        STRUCTURE_ID_CODES[p.category],
-        structures.categoryIndexOf(p.category, p.id) + PICK_SENTINEL_OFFSET,
-      );
+      pickId = structurePickId(p.category, structures.categoryIndexOf(p.category, p.id));
     }
 
     labels.push({
@@ -266,12 +249,7 @@ export function produceStructureLabels(
       text: wrapLabelName(p.name),
       font: 'cormorant',
       pixelSize: 0, // unused — superseded by the worldEm sizing model
-      color: [
-        lerp(style.labelColor[0], 1, whiten),
-        lerp(style.labelColor[1], 1, whiten),
-        lerp(style.labelColor[2], 1, whiten),
-        style.labelColor[3],
-      ],
+      color: [...style.labelColor],
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,

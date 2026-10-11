@@ -11,7 +11,7 @@ checksum sidecar (`../meshes.sha256`) are committed. Registered as
 | Model      | "Voyager Probe (B)"                                                |
 | Author     | NASA / Michael D. Carbajal (NASA Headquarters)                     |
 | Source     | <https://science.nasa.gov/3d-resources/voyager-probe-b/>           |
-| Licence    | Public domain — NASA 3D Resources are "free and without copyright" |
+| Licence    | NASA media guidelines; the collection calls its assets "free and without copyright" |
 | Fetch date | 2026-09-11                                                         |
 | File       | `Voyager Probe (B).glb`, 1,720,864 bytes                           |
 | sha256     | `bd86ded828dd3f459293aee4ffc3cd0998d8db67439317c8299650a1174c3289` |
@@ -68,7 +68,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 `npm run build-meshes` copies the string below onto the generated
 `MESH_ASSETS.voyager` row:
 
-> Voyager Probe (B) by NASA / Michael D. Carbajal — NASA 3D Resources, public domain (https://science.nasa.gov/3d-resources/voyager-probe-b/)
+> Voyager Probe (B) by NASA / Michael D. Carbajal — NASA 3D Resources (https://science.nasa.gov/3d-resources/voyager-probe-b/)
 
 ## As inspected (2026-09-11)
 
