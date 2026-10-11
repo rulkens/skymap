@@ -12,9 +12,10 @@ import type { RootState } from '../../../store/types';
 export type CameraDriver = {
   readonly id: DriverId;
   readonly priority: number;
-  // This row re-asserts a moving body's target every frame, so it swallows a committed
-  // `base`: wheel zoom, the commit edge and the keep-ticking wake treat such rows as one author.
-  readonly followsMovingTarget: boolean;
+  // This row re-asserts a moving target every frame, so a committed `base` is invisible
+  // under it: a wheel notch resolves to the row's own distance target instead, and the
+  // keep-ticking wake reads the row's ease.
+  readonly ridesWheelTarget: boolean;
   // The epoch this row's `ctx.elapsedMs` measures on; unset for the rows that
   // read no clock (orbitDrag, resting). Both follow rows name `follow`, so the
   // approach's ease and the hold's saturation share one epoch.

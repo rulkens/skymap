@@ -286,7 +286,7 @@ describe('pickWinner', () => {
     return {
       id,
       priority,
-      followsMovingTarget: false,
+      ridesWheelTarget: false,
       isActive: vi.fn<(s: RootState) => boolean>(() => active),
       pose: vi.fn<CameraDriver['pose']>(() => ({
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
@@ -850,9 +850,9 @@ describe('orbitDrag — the register comes from the ctx', () => {
   });
 });
 
-describe('CAMERA_DRIVERS — followsMovingTarget', () => {
+describe('CAMERA_DRIVERS — ridesWheelTarget', () => {
   it('is set on exactly the follow rows and the mission', () => {
-    expect(CAMERA_DRIVERS.filter((d) => d.followsMovingTarget).map((d) => d.id)).toEqual([
+    expect(CAMERA_DRIVERS.filter((d) => d.ridesWheelTarget).map((d) => d.id)).toEqual([
       'followApproach',
       'followHold',
       'mission',

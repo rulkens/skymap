@@ -14,7 +14,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import { applyWheelZoom } from './applyWheelZoom';
 import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
-import { followsMovingTarget } from './followsMovingTarget';
+import { ridesWheelTarget } from './ridesWheelTarget';
 import { foldToWorld } from './rungs/foldToWorld';
 import { hostOf } from './rungs/hostOf';
 import { isWorldArm } from './rungs/isWorldArm';
@@ -209,9 +209,7 @@ export function replayInput(
         // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         const ridesTheFollow =
-          !step.duringGesture &&
-          followsMovingTarget(winnerLastFrame) &&
-          followTargetBefore !== null;
+          !step.duringGesture && ridesWheelTarget(winnerLastFrame) && followTargetBefore !== null;
         if (!ridesTheFollow && stepRegister(step)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
