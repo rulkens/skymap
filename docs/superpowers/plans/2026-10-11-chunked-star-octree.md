@@ -581,7 +581,7 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 
 - [x] `dataFamilyOf.test.ts`: add `STARS_V2_INDEX` and `STARS_V2_CHUNKS` expectations; TRACKED rows `star-catalog/v2/stars.bin`, `star-catalog/v2/stars.a3f19c2e.bin`, `star-catalog/v2/stars/6-12345.a3f19c2e.bin`; UNTRACKED `star-catalog/v2/stars/6-12345.bin.part`, `stars/6-12345.a3f19c2e.bin` (wrong dir), `star-catalog/v1/stars.bin`.
 - [x] Test `collectStarChunks lists exactly the chunks the index header names, under the stars/ dir` and `returns [] without an index` — a temp `public/data` with a manifest naming a hashed index written by `writeOctreeCatalog`.
-- [ ] `npm run sync-r2 -- --dry-run` (no credentials, no network) lists the index under `public/data: star-catalog-v2-index` with `gzip=true` and every chunk under `Star octree chunks` as `bulk … gzip=true`, before `data/manifest.json`. Paste three lines into the ledger. Never run a real sync from this plan.
+- [x] `npm run sync-r2 -- --dry-run` (no credentials, no network) lists the index under `public/data: star-catalog-v2-index` with `gzip=true` and every chunk under `Star octree chunks` as `bulk … gzip=true`, before `data/manifest.json`. Paste three lines into the ledger. Never run a real sync from this plan.
 - [x] Commit.
 
 ### Task 17: Docs follow the format
@@ -600,12 +600,12 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 
 **Files:** none committed; ledger. Ask the user before the bake writes into the main checkout's `public/data`.
 
-- [ ] With the user's go: `npm run build-stars` from the main checkout (the worktree's `public/data` is a symlink; `build-data-manifest` skips a symlinked tree, so the manifest must be built where the tree is real). Confirm `public/data/star-catalog/v2/stars.<h8>.bin` and `stars/` exist and `manifest.json` names the index.
-- [ ] Restart this worktree's dev server (a directory created after Vite started serves HTML, not bytes).
+- [x] With the user's go: `npm run build-stars` from the main checkout (the worktree's `public/data` is a symlink; `build-data-manifest` skips a symlinked tree, so the manifest must be built where the tree is real). Confirm `public/data/star-catalog/v2/stars.<h8>.bin` and `stars/` exist and `manifest.json` names the index.
+- [x] Restart this worktree's dev server (a directory created after Vite started serves HTML, not bytes).
 - [ ] Eye checks (deep links, dash check, the user's verdict): `#focus=body-sun` cold (the sky before any chunk lands: blobs, then chunks fade in as the DEV log settles); a famous star `#focus=star-…` (the chunk lands, the field-star sphere resolves); hold the camera still 10 s and confirm the Network tab shows no repeat chunk requests; move away and back and confirm the chunk re-fetches only after eviction; pick a field star, move the camera until its chunk evicts, confirm the InfoCard clears instead of renaming.
-- [ ] Perf: `npm run perf` and `perf:cpu` at `star-field`, `milky-way`, `solar-system`, `--frames 60`, `--url` this worktree, with the row at `format: 'octree'`, then at `format: 'skst'` (edit the row, HMR), alternating A-B-A-B (the `perf` skill's paired-baseline recipe), per tier via `--compare-tiers` once each. Same `drawBudget` for both.
-- [ ] The A/B table (spec §5.6), one row per pose and tier: GPU ms, CPU ms, bytes on the wire to settle (index + chunks, cold, from the DEV log), chunks fetched / total, index size raw and gzipped. Put it in the ledger and summarise in the PR description.
-- [ ] Report the first-bake findings against spec §10: node count under pure `L(M)` (does `chunkNodeCap` or the index size argue for path compression), tiny-chunk count (does capacity splitting leave many small chunks), and whether `slots` per tier and `chunkCapacity` want a retune. These are rulings for the user, not changes in this plan.
+- [x] Perf: `npm run perf` and `perf:cpu` at `star-field`, `milky-way`, `solar-system`, `--frames 60`, `--url` this worktree, with the row at `format: 'octree'`, then at `format: 'skst'` (edit the row, HMR), alternating A-B-A-B (the `perf` skill's paired-baseline recipe), per tier via `--compare-tiers` once each. Same `drawBudget` for both.
+- [x] The A/B table (spec §5.6), one row per pose and tier: GPU ms, CPU ms, bytes on the wire to settle (index + chunks, cold, from the DEV log), chunks fetched / total, index size raw and gzipped. Put it in the ledger and summarise in the PR description.
+- [x] Report the first-bake findings against spec §10: node count under pure `L(M)` (does `chunkNodeCap` or the index size argue for path compression), tiny-chunk count (does capacity splitting leave many small chunks), and whether `slots` per tier and `chunkCapacity` want a retune. These are rulings for the user, not changes in this plan.
 
 ## Definition of Done
 
