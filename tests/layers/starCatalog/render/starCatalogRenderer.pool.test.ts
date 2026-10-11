@@ -52,10 +52,19 @@ function recordingDevice() {
     queue: {
       submit: vi.fn(),
       writeBuffer: vi.fn(
-        (buf: { label: string }, offset: number, data: ArrayBufferView | ArrayBuffer) => {
-          // writeBuffer copies at the call, so the record does too.
-          const copy = ArrayBuffer.isView(data) ? (data as Uint32Array).slice() : data.slice(0);
-          writes.push({ label: buf.label, offset, bytes: data.byteLength, data: copy });
+        (
+          buf: { label: string },
+          offset: number,
+          data: ArrayBufferView | ArrayBuffer,
+          from = 0,
+          count?: number,
+        ) => {
+          // writeBuffer copies at the call, so the record does too; a typed array's
+          // `from`/`count` are in elements.
+          const copy = ArrayBuffer.isView(data)
+            ? (data as Uint32Array).slice(from, count === undefined ? undefined : from + count)
+            : data.slice(0);
+          writes.push({ label: buf.label, offset, bytes: copy.byteLength, data: copy });
         },
       ),
     },
@@ -155,6 +164,12 @@ const RECORDS = `star-catalog-records-${Source.GaiaStars}`;
 const OPACITY = `star-cut-opacity-${Source.GaiaStars}`;
 const SLOT_ROWS = `star-cut-slot-rows-${Source.GaiaStars}`;
 const ROW_BYTES = CUT_NODE_WORDS * WORD_BYTES;
+/** A root's residency writes: its `bits` word, then its `refineDelta` word. */
+const rootWords = (row: number) => [
+  [NODES, row * ROW_BYTES + NODE_BITS_WORD * WORD_BYTES],
+  [NODES, row * ROW_BYTES + NODE_REFINE_DELTA_WORD * WORD_BYTES],
+];
+const word = (w: Write) => (w.data as Uint32Array)[0]!;
 
 describe('starCatalogRenderer chunk pool', () => {
   it('upload sizes the pool from the index and the slot count', () => {
@@ -201,20 +216,20 @@ describe('starCatalogRenderer chunk pool', () => {
       [NODES, nodeBase * ROW_BYTES, 7 * ROW_BYTES],
       [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
       [OPACITY, nodeBase * OPACITY_CHANNELS * 4, 7 * OPACITY_CHANNELS * 4],
-      [NODES, 1 * ROW_BYTES, ROW_BYTES],
+      ...rootWords(1).map((w) => [...w, WORD_BYTES]),
     ]);
     expect([...(writes[2]!.data as Uint32Array)]).toEqual([CHUNK.nodes.count]);
-    const rootRow = writes.at(-1)!.data as Uint32Array;
-    expect(rootRow[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
+    expect(word(writes.at(-2)!) & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
 
     writes.length = 0;
     renderer.evictChunk(Source.GaiaStars, 1);
     expect(writes.map((w) => [w.label, w.offset, w.bytes])).toEqual([
-      [NODES, 1 * ROW_BYTES, ROW_BYTES],
+      ...rootWords(1).map((w) => [...w, WORD_BYTES]),
       [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
     ]);
-    expect([...(writes[1]!.data as Uint32Array)]).toEqual([0]);
-    expect((writes[0]!.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
+    expect([...(writes[2]!.data as Uint32Array)]).toEqual([0]);
+    expect(word(writes[0]!) & NODE_RESIDENT_BIT).toBe(0);
+    expect(word(writes[1]!)).toBe(0);
   });
 
   it('a chunk with several roots marks every root resident last and clears every root first', () => {
@@ -255,26 +270,26 @@ describe('starCatalogRenderer chunk pool', () => {
       [NODES, 10 * ROW_BYTES],
       [SLOT_ROWS, 0],
       [OPACITY, 10 * OPACITY_CHANNELS * 4],
-      [NODES, 1 * ROW_BYTES],
-      [NODES, 2 * ROW_BYTES],
+      ...rootWords(1),
+      ...rootWords(2),
     ]);
-    const roots = writes.slice(-2).map((w) => w.data as Uint32Array);
-    expect(roots.map((r) => r[NODE_BITS_WORD]! & NODE_RESIDENT_BIT)).toEqual([
+    const roots = writes.slice(-4).map(word);
+    expect([roots[0]! & NODE_RESIDENT_BIT, roots[2]! & NODE_RESIDENT_BIT]).toEqual([
       NODE_RESIDENT_BIT,
       NODE_RESIDENT_BIT,
     ]);
-    expect(roots.map((r) => r[NODE_REFINE_DELTA_WORD])).toEqual([3 - 1, 2 - 1]);
+    expect([roots[1], roots[3]]).toEqual([3 - 1, 2 - 1]);
 
     writes.length = 0;
     renderer.evictChunk(Source.GaiaStars, 0);
     expect(writes.map((w) => [w.label, w.offset])).toEqual([
-      [NODES, 1 * ROW_BYTES],
-      [NODES, 2 * ROW_BYTES],
+      ...rootWords(1),
+      ...rootWords(2),
       [SLOT_ROWS, 0],
     ]);
-    for (const w of writes.slice(0, 2)) {
-      expect((w.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
-    }
+    expect([word(writes[0]!) & NODE_RESIDENT_BIT, word(writes[2]!) & NODE_RESIDENT_BIT]).toEqual([
+      0, 0,
+    ]);
   });
 
   it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {

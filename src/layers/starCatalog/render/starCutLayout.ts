@@ -174,17 +174,36 @@ function packRows(
     out[o + NODE_GRID_WORD] = cx | (cy << GRID_AXIS_BITS) | (cz << (2 * GRID_AXIS_BITS));
     out[o + NODE_FIRST_RECORD_WORD] = bases.record + nodes.firstRecord[i]!;
     const folded = isFolded(i);
-    out[o + NODE_BITS_WORD] =
-      level |
-      (hasBlob(i) ? NODE_BLOB_BIT : 0) |
-      (resident ? NODE_RESIDENT_BIT : 0) |
-      (folded ? NODE_FOLDED_BIT : 0) |
-      (nodes.ownCount[i]! << OWN_COUNT_SHIFT);
+    out[o + NODE_BITS_WORD] = rowBits(nodes, i, folded, resident);
     out[o + NODE_BLOB_COUNT_WORD] = nodes.blobCount[i]!;
     // The −1 is the row's own blob; its own records stay drawn across a refine.
     // A folded row's cost is already in its unfolded ancestor's delta.
     out[o + NODE_REFINE_DELTA_WORD] = hasBlob(i) && resident && !folded ? childDrawn[i]! - 1 : 0;
   }
+}
+
+function rowBits(nodes: OctreeNodeTable, i: number, folded: boolean, resident: boolean): number {
+  return (
+    nodes.level[i]! |
+    (nodes.childMask[i] !== 0 ? NODE_BLOB_BIT : 0) |
+    (resident ? NODE_RESIDENT_BIT : 0) |
+    (folded ? NODE_FOLDED_BIT : 0) |
+    (nodes.ownCount[i]! << OWN_COUNT_SHIFT)
+  );
+}
+
+/**
+ * A chunk root's two residency words, `bits` then `refineDelta`, into `out`: as packed
+ * (unresident, delta 0) when `refineDelta` is null, else resident with it. A root never folds.
+ */
+export function writeChunkRootWords(
+  out: Uint32Array,
+  nodes: OctreeNodeTable,
+  row: number,
+  refineDelta: number | null,
+): void {
+  out[0] = rowBits(nodes, row, false, refineDelta !== null);
+  out[1] = refineDelta ?? 0;
 }
 
 /** Never a chunk root: its children may be absent, and only an unfolded row reads residency. */

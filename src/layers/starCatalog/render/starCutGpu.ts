@@ -18,6 +18,7 @@ import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { StarCutSourceInput } from '../@types/StarCutSourceInput';
 import type { StarCutDraw } from '../@types/StarCutDraw';
 import type { StarDrawStream } from '../@types/StarDrawStream';
+import type { StarChunkHost } from '../@types/StarChunkHost';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import cutCode from '../../../services/gpu/shaders/starCatalog/cut.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -29,7 +30,6 @@ import {
   CUT_NODE_WORDS,
   NODE_BITS_WORD,
   NODE_REFINE_DELTA_WORD,
-  NODE_RESIDENT_BIT,
   checkStarPoolCaps,
   chunkRootRefineDeltas,
   packStarChunkNodes,
@@ -44,6 +44,7 @@ import {
   initialCutDraws,
   leafListCapacity,
   packStarCutNodes,
+  writeChunkRootWords,
   writeStarCutUniforms,
 } from './starCutLayout';
 
@@ -126,7 +127,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   const sources = new Map<SourceType, StarCutSource>();
   const uniformScratch = new ArrayBuffer(CUT_UNIFORM_BYTES);
   // writeBuffer copies at the call, so landings and evictions reuse these instead of allocating.
-  const rootRowScratch = new Uint32Array(CUT_NODE_WORDS);
+  const rootWordsScratch = new Uint32Array(2);
   const slotRowsScratch = new Uint32Array(1);
   let zeroOpacity = new Float32Array(0);
   // The inputs whose capture cut is already submitted: six faces draw one cut.
@@ -236,7 +237,6 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       slots,
       nodes,
       slotRows,
-      indexRows: packed,
       live: createState(`${source}`, octree, slots, nodes, slotRows),
       capture: null,
     });
@@ -250,15 +250,24 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     return entry;
   }
 
-  /** One index row as uploaded, or with its chunk marked resident. */
-  function writeRootRow(entry: StarCutSource, row: number, refineDelta: number | null): void {
-    const words = rootRowScratch;
-    words.set(entry.indexRows.subarray(row * CUT_NODE_WORDS, (row + 1) * CUT_NODE_WORDS));
-    if (refineDelta !== null) {
-      words[NODE_BITS_WORD] = words[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;
-      words[NODE_REFINE_DELTA_WORD] = refineDelta;
-    }
-    device.queue.writeBuffer(entry.nodes, row * CUT_NODE_WORDS * WORD_BYTES, words);
+  /** A root's two residency words in its host's rows: as packed, or with its chunk resident. */
+  function writeRootWords(
+    entry: StarCutSource,
+    host: StarChunkHost,
+    row: number,
+    refineDelta: number | null,
+  ): void {
+    writeChunkRootWords(rootWordsScratch, host.nodes, row, refineDelta);
+    const at = (host.nodeBase + row) * CUT_NODE_WORDS;
+    const { queue } = device;
+    queue.writeBuffer(entry.nodes, (at + NODE_BITS_WORD) * WORD_BYTES, rootWordsScratch, 0, 1);
+    queue.writeBuffer(
+      entry.nodes,
+      (at + NODE_REFINE_DELTA_WORD) * WORD_BYTES,
+      rootWordsScratch,
+      1,
+      1,
+    );
   }
 
   function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
@@ -288,13 +297,17 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       device.queue.writeBuffer(state.opacity, nodeBase * OPACITY_CHANNELS * WORD_BYTES, zeros);
     }
     const deltas = chunkRootRefineDeltas(chunk, roots);
-    roots.forEach((root, k) => writeRootRow(entry, root.rootRow, deltas[k]!));
+    const host = { nodes: octree.nodes, nodeBase: 0 };
+    octree.chunks[chunk.ref]!.roots.forEach((row, k) =>
+      writeRootWords(entry, host, row, deltas[k]!),
+    );
   }
 
   function evictChunk(source: SourceType, slot: number, chunkRef: number): void {
     const entry = slotOf(source, slot);
     // Every root stops refining before its rows go; a landing rewrites every row of the slot.
-    for (const rootRow of entry.octree.chunks[chunkRef]!.roots) writeRootRow(entry, rootRow, null);
+    const host = { nodes: entry.octree.nodes, nodeBase: 0 };
+    for (const row of entry.octree.chunks[chunkRef]!.roots) writeRootWords(entry, host, row, null);
     writeSlotRows(entry, slot, 0);
   }
 
