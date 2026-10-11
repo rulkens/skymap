@@ -4,7 +4,7 @@
  * each kept sample, reach as far as every skipped sample stays in tolerance, keep that last
  * one and go on. First and last samples are always kept.
  */
-import { hermitePositionKm } from './hermitePositionKm';
+import { hermiteSegmentKm } from '../../../src/utils/orbit/hermiteSegmentKm';
 
 export function decimateHermiteSamples(
   t: Float64Array,
@@ -20,7 +20,7 @@ export function decimateHermiteSamples(
     for (let cand = from + 2; cand < n; cand++) {
       let fits = true;
       for (let k = from + 1; k < cand && fits; k++) {
-        const [x, y, z] = hermitePositionKm(t, pos, vel, from, cand, t[k]!);
+        const [x, y, z] = hermiteSegmentKm(t, pos, vel, from, cand, t[k]!);
         fits = Math.hypot(x - pos[3 * k]!, y - pos[3 * k + 1]!, z - pos[3 * k + 2]!) <= tolKm;
       }
       if (!fits) break;

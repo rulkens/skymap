@@ -9,33 +9,12 @@
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { countAtOrBefore } from '../math/countAtOrBefore';
-
-const SECONDS_PER_DAY = 86_400;
+import { hermiteSegmentKm } from './hermiteSegmentKm';
 
 export function hermiteTrackAt(track: SampledTrack, tDays: number): Vec3 {
   const { tDays: ts, posKm, velKmS } = track;
   const last = ts.length - 1;
   if (tDays >= ts[last]!) return [posKm[3 * last]!, posKm[3 * last + 1]!, posKm[3 * last + 2]!];
-
   const lo = countAtOrBefore(ts, tDays) - 1;
-
-  const spanDays = ts[lo + 1]! - ts[lo]!;
-  const spanS = spanDays * SECONDS_PER_DAY;
-  const s = (tDays - ts[lo]!) / spanDays;
-  const s2 = s * s;
-  const s3 = s2 * s;
-  const h00 = 2 * s3 - 3 * s2 + 1;
-  const h10 = s3 - 2 * s2 + s;
-  const h01 = -2 * s3 + 3 * s2;
-  const h11 = s3 - s2;
-
-  const out: Vec3 = [0, 0, 0];
-  for (let k = 0; k < 3; k++) {
-    out[k] =
-      h00 * posKm[3 * lo + k]! +
-      h10 * spanS * velKmS[3 * lo + k]! +
-      h01 * posKm[3 * (lo + 1) + k]! +
-      h11 * spanS * velKmS[3 * (lo + 1) + k]!;
-  }
-  return out;
+  return hermiteSegmentKm(ts, posKm, velKmS, lo, lo + 1, tDays);
 }
