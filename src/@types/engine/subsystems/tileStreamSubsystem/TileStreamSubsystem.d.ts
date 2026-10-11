@@ -1,15 +1,24 @@
 /**
- * TileStreamSubsystem<T> — shared GPU texture atlas + fetch queue for
- * streaming payload `T` into a fixed-size atlas on demand. Owns the LRU
- * atlas, the priority-queued fetcher, failure memoisation and an eviction
- * hook; has no catalog awareness, per-frame planning, or opinion about
- * what `T` is — see `TileStreamDeps<T>` for the payload-specific seam.
+ * TileStreamSubsystem<T, S> — fetch queue for streaming payload `T` into a
+ * fixed-capacity slot store `S` on demand. Owns the priority-queued fetcher,
+ * failure memoisation and the store's eviction hook; has no catalog
+ * awareness, per-frame planning, or opinion about what `T` is or what backs
+ * `S` — see `TileStreamDeps<T, S>` for the seams.
  */
 
 import type { Destroyable } from '../../../rendering/Destroyable';
+import type { SlotStore } from '../../../cache/SlotStore';
 import type { TileStreamFetchInput } from './TileStreamFetchInput';
 
-export type TileStreamSubsystem<T> = Destroyable & {
+export type TileStreamSubsystem<T, S extends SlotStore> = Destroyable & {
+  /**
+   * The store the stream allocates into, for reads its own methods don't
+   * cover (an atlas's `slotUv`, its texture view). The stream owns the
+   * store's evict handler: subscribe through `setEvictHandler` below, never
+   * on the store, or the stream's loaded/failed sets go stale.
+   */
+  readonly slots: S;
+
   /**
    * Allocate or refresh an LRU slot.  Returns slot index, or null when
    * every slot is in use AND none can be evicted.  Bumps the LRU clock
@@ -30,13 +39,7 @@ export type TileStreamSubsystem<T> = Destroyable & {
   touch(key: string, atFrame: number): number | null;
 
   /**
-   * UV rect `[u0, v0, u1, v1]` for a slot — feeds the renderer instance
-   * buffer.
-   */
-  slotUv(slot: number): readonly [number, number, number, number];
-
-  /**
-   * Write `payload` into the slot the atlas holds for `key` RIGHT NOW (via
+   * Write `payload` into the slot the store holds for `key` RIGHT NOW (via
    * `TileStreamDeps.upload`), and record the key as loaded.  Returns that
    * slot, or `null` when the key holds no slot at all — evicted during the
    * fetch's round trip, or never allocated; `payload` is then handed to
@@ -57,7 +60,7 @@ export type TileStreamSubsystem<T> = Destroyable & {
   enqueueFetch(input: TileStreamFetchInput<T>): void;
 
   /**
-   * Whether the key's payload is in the atlas (`isLoaded`) or its fetch
+   * Whether the key's payload is in the store (`isLoaded`) or its fetch
    * permanently failed (`isFailed`). Both suppress further fetches.
    */
   isLoaded(key: string): boolean;
@@ -71,14 +74,11 @@ export type TileStreamSubsystem<T> = Destroyable & {
   inFlightCount(): number;
 
   /**
-   * Atlas slots currently claimed by a key (loaded or still in flight) — the
-   * atlas's own ground truth for a "used / capacity" debug readout, as
+   * Slots currently claimed by a key (loaded or still in flight) — the
+   * store's own ground truth for a "used / capacity" debug readout, as
    * opposed to a caller's parallel bookkeeping going stale under eviction.
    */
   occupiedCount(): number;
-
-  /** Texture view bound by the LOD-2 renderers (called once at wireSlots). */
-  getTextureView(): GPUTextureView;
 
   /**
    * Optional handler called when LRU evicts a slot.  The

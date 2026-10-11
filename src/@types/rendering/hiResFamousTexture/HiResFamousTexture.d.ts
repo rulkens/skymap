@@ -14,7 +14,7 @@
  * contending with the atlas's LRU.
  *
  * LRU policy is by *recent apparent diameter in pixels*, not by
- * `lastSeenFrame` (what `TextureAtlas` uses): the galaxy with the
+ * `lastSeenFrame` (what `SlotPool` uses): the galaxy with the
  * smallest recorded diameter is the one the camera is moving away from
  * fastest, so it loses first. See ADR 0002's "eviction policy" and the
  * design spec's "LRU eviction during crossfade" edge case.

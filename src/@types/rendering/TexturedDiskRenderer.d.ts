@@ -20,9 +20,8 @@ export type TexturedDiskRenderer = {
    */
   readonly label: string;
   /**
-   * Bind the atlas texture view. Must be called once after
-   * `atlas.initTexture()`; the bind group can be reused across frames
-   * because the atlas's underlying texture doesn't change identity.
+   * Bind the atlas texture view, once; the bind group can be reused across
+   * frames because the atlas's underlying texture doesn't change identity.
    */
   bindAtlas(atlasView: GPUTextureView): void;
   /**
