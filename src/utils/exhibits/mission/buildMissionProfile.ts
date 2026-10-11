@@ -18,8 +18,8 @@ import { unixMsToJulianDays } from '../../time/unixMsToJulianDays';
 import { bodyPositionMpcAt } from './bodyPositionMpcAt';
 import { bodyRelativeState } from './bodyRelativeState';
 import { missionFrame } from './missionFrame';
+import { SECONDS_PER_DAY } from '../../../data/time/secondsPerDay';
 
-const SECONDS_PER_DAY = 86_400;
 const STEP_MS = 50;
 const RAMP = Math.exp(STEP_MS / MISSION_RAMP_MS);
 

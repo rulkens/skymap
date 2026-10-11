@@ -28,9 +28,9 @@ import { missionEventStepMs } from '../../utils/exhibits/timeline/missionEventSt
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { timelineLanes } from '../../utils/exhibits/timeline/timelineLanes';
 import type { ExhibitTimelineSection } from '../../@types/exhibits/ExhibitTimelineSection';
+import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 const REFRESH_MS = 250;
-const SECONDS_PER_DAY = 86_400;
 
 export type ExhibitTimelineContainerProps = {
   readonly section: ExhibitTimelineSection;

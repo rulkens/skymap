@@ -6,8 +6,7 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-
-const SECONDS_PER_DAY = 86_400;
+import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 export function hermiteSegmentKm(
   tDays: Float64Array,

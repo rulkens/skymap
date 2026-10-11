@@ -13,15 +13,15 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { orientationForBody } from '../../data/bodies/orientationForBody';
 import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../data/scaleUnits';
+import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 import { surfacePointBodyFixed } from '../geo/surfacePointBodyFixed';
 import { dot3 } from '../math/dot3';
 import { normalize3 } from '../math/normalize3';
 import { rotateVec3ByTightMat3 } from '../math/rotateVec3ByTightMat3';
 import { unixMsToJulianDays } from '../time/unixMsToJulianDays';
+import { bodyVelocityKmS } from './bodyVelocityKmS';
 import { hermiteTrackAt } from './hermiteTrackAt';
 
-const SECONDS_PER_DAY = 86_400;
-const DIFF_HALF_STEP_S = 60;
 // Earth's IAU-pole row never reads the position map.
 const NO_POSITIONS = new Map<string, Vec3>();
 
@@ -43,15 +43,12 @@ export function sampledCraftPositionMpc(
   // difference.
   const sun0 = positionAt('sun', t0);
   const earth0 = positionAt('earth', t0);
-  const halfDays = DIFF_HALF_STEP_S / SECONDS_PER_DAY;
-  const earthBefore = positionAt('earth', t0 - halfDays);
-  const earthAfter = positionAt('earth', t0 + halfDays);
+  const earthVelKmS = bodyVelocityKmS('earth', t0, positionAt);
   const joinKm: Vec3 = [0, 0, 0];
   const joinVelKmS: Vec3 = [0, 0, 0];
   for (let i = 0; i < 3; i++) {
     joinKm[i] = track.posKm[i]! + (sun0[i]! - earth0[i]!) / k;
-    const earthVelKmS = (earthAfter[i]! - earthBefore[i]!) / k / (2 * DIFF_HALF_STEP_S);
-    joinVelKmS[i] = track.velKmS[i]! - earthVelKmS;
+    joinVelKmS[i] = track.velKmS[i]! - earthVelKmS[i]!;
   }
 
   const groundKm = SCENE_EARTH.surface.datumRadiusM * 1e-3;

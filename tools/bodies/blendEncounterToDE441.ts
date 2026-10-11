@@ -13,8 +13,8 @@ import { julianDaysToUnixMs } from '../../src/utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
 import { encounterBlendWeight } from '../utils/math/encounterBlendWeight';
 import { encounterBlendWeightRate } from '../utils/math/encounterBlendWeightRate';
+import { SECONDS_PER_DAY } from '../../src/data/time/secondsPerDay';
 
-const SECONDS_PER_DAY = 86_400;
 const key = (jd: number): number => Math.round(julianDaysToUnixMs(jd));
 
 export function blendEncounterToDE441(

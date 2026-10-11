@@ -7,8 +7,7 @@
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { countAtOrBefore } from '../math/countAtOrBefore';
-
-const SECONDS_PER_DAY = 86_400;
+import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 export function hermiteTrackVelAt(track: SampledTrack, tDays: number): Vec3 {
   const { tDays: ts, posKm, velKmS } = track;

@@ -1,5 +1,6 @@
 import type { MissionProfile } from '../../@types/time/MissionProfile';
 import { countAtOrBefore } from '../math/countAtOrBefore';
+import { SECONDS_PER_DAY } from '../../data/time/secondsPerDay';
 
 /** Sim seconds per wall second on the mission table's segment at wall time `nowMs`; 0 outside it. */
 export function missionProfileRate(profile: MissionProfile, nowMs: number): number {
@@ -10,5 +11,5 @@ export function missionProfileRate(profile: MissionProfile, nowMs: number): numb
 
   const lo = countAtOrBefore(wallMs, w) - 1;
   const hi = lo + 1;
-  return ((simDays[hi]! - simDays[lo]!) * 86_400) / ((wallMs[hi]! - wallMs[lo]!) / 1000);
+  return ((simDays[hi]! - simDays[lo]!) * SECONDS_PER_DAY) / ((wallMs[hi]! - wallMs[lo]!) / 1000);
 }
