@@ -14,7 +14,7 @@ import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
 import { layerUiContents } from '../../utils/layer/layerUiContents';
 import TierChipContainer from '../containers/TierChipContainer';
-import StructuresSectionContainer from '../containers/StructuresSectionContainer';
+import StructuresSectionContainer from '../../layers/structure/ui/StructuresSectionContainer';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
 import EarthSectionContainer from '../containers/EarthSectionContainer';

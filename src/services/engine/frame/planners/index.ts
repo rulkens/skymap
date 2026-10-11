@@ -8,6 +8,6 @@
  */
 
 import type { FrameContentPlanner } from '../../../../@types/engine/frame/FrameContentPlanner';
-import { structureMarkersPlanner } from './structureMarkersPlanner';
+import { structureMarkersPlanner } from '../../../../layers/structure/frame';
 
 export const CORE_PLANNERS: readonly FrameContentPlanner<unknown>[] = [structureMarkersPlanner];

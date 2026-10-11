@@ -13,7 +13,7 @@ import { createRenderTargets } from '../../gpu/renderTargets';
 import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../data/structure/structureIdsByScale';
-import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../../layers/structure/render/structureMarkerRenderer';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';

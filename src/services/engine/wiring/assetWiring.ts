@@ -11,7 +11,7 @@
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
+import { createStructureCatalogSlot } from '../../../layers/structure/load/structureCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';

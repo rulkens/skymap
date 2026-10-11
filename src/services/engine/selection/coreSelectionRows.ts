@@ -5,7 +5,7 @@
  * cloud lands.
  */
 
-import { structureSelectionRow } from './structureSelectionRow';
+import { structureSelectionRow } from '../../../layers/structure/present/structureSelectionRow';
 import { bodySelectionRow } from './bodySelectionRow';
 import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';

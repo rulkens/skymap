@@ -30,13 +30,13 @@
  */
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
-import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
-import { structureCatalogToStructures } from './structureCatalogToStructures';
+import { buildStaticAnchorStructures } from '../../../layers/structure/load/buildStaticAnchorStructures';
+import { structureCatalogToStructures } from '../../../layers/structure/load/structureCatalogToStructures';
 import {
   engineStructureCountsChanged,
   engineStructureSearchListChanged,
 } from '../../../state/engine/engineSlice';
-import { toStructureSearchEntry } from '../../../utils/structure/toStructureSearchEntry';
+import { toStructureSearchEntry } from '../../../layers/structure/load/toStructureSearchEntry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';

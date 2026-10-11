@@ -22,7 +22,7 @@ import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { buildAliasIndex } from './load/buildAliasIndex';
 import { STRUCTURE_IDS_BY_SCALE } from '../../data/structure/structureIdsByScale';
-import { structureMemberCount } from '../../utils/structure/structureMemberCount';
+import { structureMemberCount } from './present/structureMemberCount';
 
 export function galaxyCatalogPlanner(
   runtime: GalaxyCatalogRuntime,

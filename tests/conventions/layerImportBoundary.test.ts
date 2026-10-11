@@ -86,7 +86,20 @@ function assertSweep(
   assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
-const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {};
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
+  // structure Layer PR 1 (#879) moved the files; core still wires them until PR 2
+  // (docs/superpowers/plans/2026-10-11-structure-layer-wiring.md) registers the Layer
+  // and deletes every row below.
+  'services/engine/data/createEngineData': 1,
+  'services/engine/engine': 1,
+  'services/engine/frame/passes/index': 2,
+  'services/engine/frame/planners/index': 1,
+  'services/engine/gpuHandles/gpuHandleRegistry': 1,
+  'services/engine/presentation/markerProducers': 1,
+  'services/engine/selection/coreSelectionRows': 1,
+  'services/engine/wiring/assetWiring': 1,
+  'services/engine/wiring/wireStructureProjection': 3,
+};
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
   const files = [...walk('src/services/engine'), ...walk('src/state')];
