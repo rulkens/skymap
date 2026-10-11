@@ -65,7 +65,7 @@ Five failure modes the compiler does not catch, each with the check that pins it
   { "from": "src/data/sources/supercluster.ts", "to": "src/layers/structure/sources/supercluster.ts" },
   { "from": "src/data/sources/void.ts", "to": "src/layers/structure/sources/void.ts" },
 
-  { "from": "src/services/engine/data/createStructureStore.ts", "to": "src/layers/structure/render/createStructureStore.ts" },
+  { "from": "src/services/engine/data/createStructureStore.ts", "to": "src/layers/structure/load/createStructureStore.ts" },
   { "from": "src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts", "to": "src/layers/structure/render/structureMarkerRenderer.ts" },
   { "from": "src/services/engine/frame/passes/createStructureMarkersPass.ts", "to": "src/layers/structure/render/createStructureMarkersPass.ts" },
 
@@ -176,7 +176,7 @@ export const STRUCTURE_SOURCE_ROWS = [
 - [x] Add this index line to `docs/BACKLOG.md` under `## Engine & State`, directly after the **Derive `SettingsSnapshot` from the Layer registry** line (the other Layer-contract item):
 
   ```markdown
-  - [x] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
+  - [ ] **Layer dependency DAG** `needs-design` — an explicit `Layer.dependsOn` with typed access to another Layer's facts; trigger = the second cross-Layer read. → [details](backlog/2026-10-11-layer-dependency-dag.md)
   ```
 
 - [x] Create the detail file with this content:
@@ -242,7 +242,7 @@ One dispatch for Tasks 1–2 (the move and the fold read the same files), the co
 
 **Deliverables**
 
-- `src/layers/structure/` holds `sources/` (eight rows + `structureSourceRows.ts`), `render/` (`createStructureStore`, `structureMarkerRenderer`, `createStructureMarkersPass`), `load/` (fetcher, slot, `structureCatalogToStructures`, `wireStructureProjection`, `buildStaticAnchorStructures`, `toStructureSearchEntry`), `passes/` (cosmo and near), `frame.ts`, `present/` (both producers, styles, visible bands, selection row, pick resolver), `data/` (scale titles, label gap), `ui/` (section, its container, both cards, the card container), `@types/` (`PickStructureStore`, `StructureMarkersPassSpec`), and its existing `state/`.
+- `src/layers/structure/` holds `sources/` (eight rows + `structureSourceRows.ts`), `render/` (`structureMarkerRenderer`, `createStructureMarkersPass`), `load/` (fetcher, `createStructureStore`, slot, `structureCatalogToStructures`, `wireStructureProjection`, `buildStaticAnchorStructures`, `toStructureSearchEntry`), `passes/` (cosmo and near), `frame.ts`, `present/` (both producers, styles, visible bands, selection row, pick resolver), `data/` (scale titles, label gap), `ui/` (section, its container, both cards, the card container), `@types/` (`PickStructureStore`, `StructureMarkersPassSpec`), and its existing `state/`.
 - `src/layers/galaxyCatalog/present/structureMemberCount.ts`, `structureMembership.ts` and their two types under `src/layers/galaxyCatalog/@types/`.
 - `src/data/sources.ts` folds `STRUCTURE_SOURCE_ROWS`; `UNFORMED_SOURCE_REGISTRY` holds only the three body rows.
 - `src/layers/README.md` has no "Unsettled" section and carries the two ruling paragraphs.

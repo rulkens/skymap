@@ -1,5 +1,5 @@
 import type { EngineData } from '../../../@types/engine/data/EngineData';
-import { createStructureStore } from '../../../layers/structure/render/createStructureStore';
+import { createStructureStore } from '../../../layers/structure/load/createStructureStore';
 import { createBodyStore } from './createBodyStore';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';

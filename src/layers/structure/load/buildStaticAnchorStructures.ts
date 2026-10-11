@@ -4,7 +4,7 @@
  *
  * ### Why a separate module?
  *
- * `services/engine/wiring/wireStructureProjection.ts` writes the result into the
+ * `wireStructureProjection.ts` writes the result into the
  * engine's structure store, where the label/ring overlays read it to know where
  * to draw. It is the only importer, but the mapping it performs is a shared
  * contract with the URL: the composed resolver's `resolveFocusId` decodes

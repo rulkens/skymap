@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStructureStore } from '../../../../src/layers/structure/render/createStructureStore';
+import { createStructureStore } from '../../../../src/layers/structure/load/createStructureStore';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 
