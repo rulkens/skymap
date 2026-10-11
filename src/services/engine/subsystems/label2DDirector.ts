@@ -294,8 +294,6 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   // Signature of the last flushed label set, or null on the first frame.
   // Empty string is a valid signature (no labels) and is distinct from null.
   let prevSignature: string | null = null;
-  // Pick ids of the last flushed label set; rebuilt only when a flush happens.
-  let flushedPickIds: ReadonlySet<number> = new Set();
   // The director's cross-frame animation state: label id → ramp/filter
   // record, one map per envelope arm.  Only one is ever populated — which
   // arm runs is fixed by `config.envelope.mode` for this instance's whole
@@ -751,10 +749,6 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     });
   }
 
-  function hasLabelFor(pickId: number): boolean {
-    return flushedPickIds.has(pickId);
-  }
-
   function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
@@ -803,7 +797,6 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       labelRenderer.setLabels(labels);
       lineRenderer.setLines(lines);
       prevSignature = sig;
-      flushedPickIds = new Set(labels.flatMap((l) => (l.pickId === undefined ? [] : [l.pickId])));
     }
 
     return anyAwake || anyRamping;
@@ -817,7 +810,6 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     attachRenderers,
     registerProducer,
     runFrame,
-    hasLabelFor,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

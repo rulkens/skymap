@@ -16,8 +16,6 @@ export type Label2DDirector = {
    * never wakes the loop itself.
    */
   runFrame(state: EngineState, ctx: FrameView): boolean;
-  /** Whether the last flushed label set carries a label for this packed pick id. */
-  hasLabelFor(pickId: number): boolean;
   /**
    * Tear down the director.  No-op — the director holds renderer refs
    * and a producers list, but the renderers' lifecycle is the engine's

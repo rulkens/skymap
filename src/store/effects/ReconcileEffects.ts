@@ -17,8 +17,6 @@
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key) and returns the rendered pose + sim instant for
  *                    the share-URL log, or null when the camera isn't ready
- *   isLabelled     — whether a label for the ref is on screen (the last flushed
- *                    label sets), so a hover that changes no pixels can skip a frame
  *   applySwapFormat — reconfigures the swap chain to the given format and
  *                    rebuilds the renderers whose pipelines bake it (the HDR
  *                    display toggle and display-capability changes)
@@ -31,7 +29,6 @@
  * effect is added here.
  */
 
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 export type ReconcileEffects = {
@@ -39,5 +36,4 @@ export type ReconcileEffects = {
   syncFades: () => void;
   logCameraState: () => { readonly framed: FramedCameraPose; readonly simDays: number } | null;
   applySwapFormat: (desired: GPUTextureFormat) => void;
-  isLabelled: (ref: SelectionRef | null) => boolean;
 };

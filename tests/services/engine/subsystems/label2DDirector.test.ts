@@ -328,7 +328,7 @@ describe('label2DDirector', () => {
       expect(flushed.color![0]).toBeGreaterThan(0.9);
     });
 
-    it('re-uploads when only the hover changes at a fixed label set, and tracks flushed pick ids', () => {
+    it('re-uploads when only the hover changes at a fixed label set', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       dir.attachRenderers(labelStub as never, makeLineStub() as never);
@@ -339,8 +339,6 @@ describe('label2DDirector', () => {
 
       dir.runFrame(makeHighlightState('earth', null), makeCtx(500));
       expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
-      expect(dir.hasLabelFor(7)).toBe(true);
-      expect(dir.hasLabelFor(8)).toBe(false);
     });
   });
 
