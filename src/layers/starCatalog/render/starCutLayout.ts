@@ -10,7 +10,13 @@ import type { StarChunkRoot } from '../@types/StarChunkRoot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { MAX_GRID_BITS, MAX_OWN_COUNT, NO_CHUNK_REF } from '../../../data/octree/octreeFormat';
+import {
+  LEVEL_KEY_STRIDE,
+  MAX_GRID_BITS,
+  MAX_OWN_COUNT,
+  NO_CHUNK_REF,
+  OCTANT_BITS,
+} from '../../../data/octree/octreeFormat';
 import { SELECTION_SOURCE_SHIFT } from '../../../data/selectionEncoding';
 import { mortonDecode3 } from '../../../utils/math/mortonDecode3';
 
@@ -40,10 +46,6 @@ export const NODE_FOLDED_BIT = 1 << (LEVEL_BITS + 2);
  */
 export const STAR_FOLD_RECORDS = 64;
 export const OWN_COUNT_SHIFT = 8;
-/** A child's Morton key is its parent's shifted left by this. */
-const OCTANT_BITS = 3;
-/** `level·2^32 + morton`: a level is one byte and a Morton key fits 30 bits. */
-const LEVEL_KEY_STRIDE = 2 ** 32;
 
 /** Two fade channels per row, own records then blob (`opacity[i * 2 + c]`). */
 export const OPACITY_CHANNELS = 2;
@@ -81,7 +83,7 @@ export const STREAM_IS_BLOB_WORD = 1;
 /** Frusta one cut prunes against (`CUT_MAX_VIEWS`); more views ⇒ no prune. */
 export const CUT_MAX_VIEWS = 6;
 const PLANES_PER_VIEW = 6;
-const PLANE_FLOATS = 4;
+export const PLANE_FLOATS = 4;
 /** Floats one view contributes to `planes`: six vec4 planes. */
 export const FLOATS_PER_VIEW = PLANES_PER_VIEW * PLANE_FLOATS;
 

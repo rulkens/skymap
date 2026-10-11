@@ -7,12 +7,10 @@
 import type { OctreeGrid } from '../../@types/octree/OctreeGrid';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
+import { LEVEL_KEY_STRIDE, OCTANTS } from '../../data/octree/octreeFormat';
 import { mortonDecode3 } from '../math/mortonDecode3';
 
 const cache = new WeakMap<OctreeNodeTable, StarOctreeIndex>();
-const OCTANTS = 8;
-/** `level·2^32 + morton`: a level is one byte and a Morton key fits 30 bits. */
-const LEVEL_KEY_STRIDE = 2 ** 32;
 
 export function starOctreeIndex(nodes: OctreeNodeTable, grid: OctreeGrid): StarOctreeIndex {
   const cached = cache.get(nodes);

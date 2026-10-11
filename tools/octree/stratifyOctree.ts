@@ -8,17 +8,19 @@
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeBuildInput } from '../@types/octree/OctreeBuildInput';
 import type { StratifiedOctree } from '../@types/octree/StratifiedOctree';
-import { MAX_GRID_BITS, NO_CHUNK_REF } from '../../src/data/octree/octreeFormat';
+import {
+  LEVEL_KEY_STRIDE,
+  MAX_GRID_BITS,
+  NO_CHUNK_REF,
+  OCTANT_BITS,
+  OCTANTS,
+} from '../../src/data/octree/octreeFormat';
 import { mortonDecode3 } from '../../src/utils/math/mortonDecode3';
 import { mortonEncode3 } from '../../src/utils/math/mortonEncode3';
 import { aggregateMeanAbsMag, fluxFromAbsMag } from '../stars/mergeFluxAggregate';
 import { COLUMN_AGGREGATE } from './columnAggregate';
 import { levelForMagnitude } from './levelForMagnitude';
 
-/** `level·2^30 + morton` sorts as (level, morton), the row order; exact far below 2^53. */
-const LEVEL_KEY_STRIDE = 2 ** 30;
-const OCTANTS = 8;
-const OCTANT_BITS = 3;
 const OCTANT_MASK = 0b111;
 const AXES = 3;
 

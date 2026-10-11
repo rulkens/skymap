@@ -12,15 +12,18 @@ import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarResidency } from '../../../@types/data/starCatalog/StarResidency';
 import type { StarColumns } from '../../../@types/data/starCatalog/StarColumns';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
-import { NO_CHUNK_REF, OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
+import {
+  NO_CHUNK_REF,
+  OCTANT_BITS,
+  OCTANTS,
+  OFFSET_FRACTION_LEVELS,
+} from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
-/** A child's Morton key is its parent's shifted left by this. */
-const OCTANT_BITS = 3;
 
 /**
  * The nearest catalogued star whose heliocentric position lies within
@@ -93,8 +96,8 @@ export function nearestResolvableStar(
           }
           scan(c, chunk.records, top, octree.recordOrdinalBase[ref]!);
         }
-        const cbase = i * 8;
-        for (let k = 0; k < 8; k++) {
+        const cbase = i * OCTANTS;
+        for (let k = 0; k < OCTANTS; k++) {
           const c = childIndex[cbase + k]!;
           if (c >= 0) stack.push(c);
         }

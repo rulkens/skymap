@@ -7,7 +7,7 @@
 import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { OctreeNodeTable } from '../../@types/octree/OctreeNodeTable';
-import { NO_CHUNK_REF, STAR_COLUMN_SCHEMA } from '../../data/octree/octreeFormat';
+import { NO_CHUNK_REF, OCTANTS, STAR_COLUMN_SCHEMA } from '../../data/octree/octreeFormat';
 import {
   colorIdxToBpRp,
   lutIndexToAbsMag,
@@ -15,7 +15,6 @@ import {
 } from '../../data/starCatalog/starCatalogFormat';
 import { starOctreeIndex } from './starOctreeIndex';
 
-const OCTANTS = 8;
 /** 10-bit v1 offset → 16-bit fraction of the box. */
 const OFFSET_WIDEN_SHIFT = 6;
 // The v1 record is two 24-bit halves (`packStarRecord`); offsetZ straddles them.

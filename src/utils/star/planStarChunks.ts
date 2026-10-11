@@ -13,18 +13,17 @@ import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
 import type { StarOctreeIndex } from '../../layers/starCatalog/@types/StarOctreeIndex';
 import type { StarChunkPlan } from '../../layers/starCatalog/@types/StarChunkPlan';
 import type { StarChunkRequest } from '../../layers/starCatalog/@types/StarChunkRequest';
-import { NO_CHUNK_REF } from '../../data/octree/octreeFormat';
+import { NO_CHUNK_REF, OCTANTS } from '../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import {
   CUT_MAX_VIEWS,
   FLOATS_PER_VIEW,
   HALF_DIAGONAL,
   MIN_DIST_SQ,
+  PLANE_FLOATS,
 } from '../../layers/starCatalog/render/starCutLayout';
 
-const OCTANTS = 8;
 const AXES = 3;
-const PLANE_FLOATS = 4;
 
 export function planStarChunks(
   octree: StarOctree,

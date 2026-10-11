@@ -66,6 +66,11 @@ export const OFFSET_FRACTION_LEVELS = 65536;
 export const MAX_OWN_COUNT = 8192;
 /** Morton keys must fit 30 bits of a u32. */
 export const MAX_GRID_BITS = 10;
+/** Children per node; a child's Morton key is its parent's shifted left by `OCTANT_BITS`. */
+export const OCTANTS = 8;
+export const OCTANT_BITS = 3;
+/** `level·2^32 + morton`: a unique row key that sorts as (level, morton), exact in an f64. */
+export const LEVEL_KEY_STRIDE = 2 ** 32;
 
 export const STAR_OCTREE_DATA_PREFIX = 'star-catalog/v2';
 

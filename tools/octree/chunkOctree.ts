@@ -11,11 +11,13 @@ import type { ColumnId } from '../../src/@types/octree/ColumnId';
 import type { OctreeNodeTable } from '../../src/@types/octree/OctreeNodeTable';
 import type { OctreeObjects } from '../@types/octree/OctreeObjects';
 import type { StratifiedOctree } from '../@types/octree/StratifiedOctree';
-import { MAX_OWN_COUNT, NO_CHUNK_REF } from '../../src/data/octree/octreeFormat';
+import {
+  MAX_OWN_COUNT,
+  NO_CHUNK_REF,
+  OCTANT_BITS,
+  OCTANTS,
+} from '../../src/data/octree/octreeFormat';
 
-const OCTANTS = 8;
-/** A child's Morton key is its parent's shifted left by this. */
-const OCTANT_BITS = 3;
 const IN_INDEX = -1;
 
 export function chunkOctree(
