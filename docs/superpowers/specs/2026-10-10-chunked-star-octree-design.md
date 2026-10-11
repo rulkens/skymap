@@ -196,7 +196,7 @@ The CPU cannot see the GPU's budget bin, so it may fetch a chunk the budget then
 - `refines(i)` (`cut.wesl:146-149`) gains `&& childrenResident(i)`. The bit is 1 for every non-chunk-root row and is written for a chunk root's row (one word) when its chunk lands or is evicted.
 - A chunk's `CutNode` rows are composed on the CPU at upload (the wire columns are packed into GPU words there anyway), so that pass writes each row's `parent` and `firstRecord` pool-absolute: `nodeBase = indexNodes + slot·chunkNodeCap`, `recordBase = indexRecords + slot·chunkCapacity`; a chunk's top rows name the chunk root's index row directly. The shader reads them as plain indices; there is no per-node slot word, no base arithmetic and no `slotRoot` table. The index is never rewritten (ruling B's goal). **Ruled 2026-10-11 at plan review**: the spec's earlier `slot` word + shader bases + `slotRoot` sentinel bought nothing once the rows are CPU-composed, and cost a seventh word, two helpers and a binding.
 - The root comes from a `rootNode` uniform, replacing "root is the last node" (`cut.wesl:128`, `starCutLayout.ts:123-124`).
-- An empty or evicted slot's rows are zeroed (`ownCount 0`, no blob, `refineDelta 0`), so `histogram` and `emit` pass over them inert.
+- A `slotRows` table (one u32 per slot, written at land and evict) holds each slot's live row count; `histogram` and `emit` return on a row past it before reading `nodes` or `opacity`, so the padding up to `chunkNodeCap` (most of the pool: the largest chunk sets the stride) and an empty slot cost no memory traffic. A landing rewrites all of its slot's rows.
 
 ### 5.4 Buffer sizing and budgets
 

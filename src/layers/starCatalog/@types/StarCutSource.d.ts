@@ -9,6 +9,8 @@ export type StarCutSource = {
   readonly slots: number;
   /** `indexNodes + slots·chunkNodeCap` rows. */
   readonly nodes: GPUBuffer;
+  /** One u32 per slot: the resident chunk's row count, 0 when empty (`cut.wesl` skips the rest). */
+  readonly slotRows: GPUBuffer;
   /** The packed index rows as uploaded (chunk roots unresident), to rewrite one root row. */
   readonly indexRows: Uint32Array;
   /** Index row of each chunk's root, by chunk ref. */

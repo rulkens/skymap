@@ -144,6 +144,8 @@ export function referenceStarCut(
   const step = (o: number, goal: number) =>
     (opacity[o] = opacity[o]! + Math.min(Math.max(goal - opacity[o]!, -fadeStep), fadeStep));
   for (let i = 0; i < nodeCount; i++) {
+    // Padding: cut.wesl rules it out by its slot's live row count; a real row is never all zero.
+    if (bitsOf(i) === 0) continue;
     const parent = nodes[i * CUT_NODE_WORDS + NODE_PARENT_WORD]!;
     const drawOwn = i === root || refines(parent);
     const drawBlob = drawOwn && !refines(i);

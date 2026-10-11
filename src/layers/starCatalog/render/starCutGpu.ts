@@ -78,6 +78,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       computeEntry(4, 'storage'),
       computeEntry(5, 'storage'),
       computeEntry(6, 'storage'),
+      computeEntry(7, 'read-only-storage'),
     ],
   });
   const drawBgl = device.createBindGroupLayout({
@@ -133,6 +134,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     octree: StarOctree,
     slots: number,
     nodes: GPUBuffer,
+    slotRows: GPUBuffer,
   ): StarCutState {
     const make = (name: string, words: number, usage: number): GPUBuffer =>
       device.createBuffer({
@@ -189,6 +191,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
           bind(4, aggList),
           bind(5, draws),
           bind(6, hist),
+          bind(7, slotRows),
         ],
       }),
       drawBindGroups: {
@@ -203,6 +206,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     const entry = sources.get(source);
     if (entry === undefined) return;
     entry.nodes.destroy();
+    entry.slotRows.destroy();
     entry.live.buffers.forEach((buffer) => buffer.destroy());
     entry.capture?.buffers.forEach((buffer) => buffer.destroy());
     sources.delete(source);
@@ -219,6 +223,11 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       usage: STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(nodes, 0, packed);
+    const slotRows = device.createBuffer({
+      label: `star-cut-slot-rows-${source}`,
+      size: Math.max(1, slots) * WORD_BYTES,
+      usage: STORAGE | GPUBufferUsage.COPY_DST,
+    });
     const rootRowOfChunk = new Int32Array(octree.chunks.length).fill(-1);
     octree.nodes.chunkRef.forEach((ref, row) => {
       if (ref !== NO_CHUNK_REF) rootRowOfChunk[ref] = row;
@@ -227,10 +236,11 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       octree,
       slots,
       nodes,
+      slotRows,
       indexRows: packed,
       rootRowOfChunk,
       rootRowOfSlot: new Int32Array(slots).fill(-1),
-      live: createState(`${source}`, octree, slots, nodes),
+      live: createState(`${source}`, octree, slots, nodes, slotRows),
       capture: null,
     });
   }
@@ -271,6 +281,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     const previous = entry.rootRowOfSlot[slot]!;
     if (previous >= 0) writeRootRow(entry, previous, null);
     device.queue.writeBuffer(entry.nodes, nodeBase * CUT_NODE_WORDS * WORD_BYTES, rows);
+    writeSlotRows(entry, slot, chunk.nodes.count);
     const zeros = new Float32Array(octree.chunkNodeCap * OPACITY_CHANNELS);
     for (const state of [entry.live, entry.capture]) {
       if (state === null) continue;
@@ -284,16 +295,14 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     const entry = slotOf(source, slot);
     const rootRow = entry.rootRowOfSlot[slot]!;
     if (rootRow < 0) return;
-    // The root stops refining before its rows go.
+    // The root stops refining before its rows go; a landing rewrites every row of the slot.
     writeRootRow(entry, rootRow, null);
-    const { octree } = entry;
-    const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
-    device.queue.writeBuffer(
-      entry.nodes,
-      nodeBase * CUT_NODE_WORDS * WORD_BYTES,
-      new Uint32Array(octree.chunkNodeCap * CUT_NODE_WORDS),
-    );
+    writeSlotRows(entry, slot, 0);
     entry.rootRowOfSlot[slot] = -1;
+  }
+
+  function writeSlotRows(entry: StarCutSource, slot: number, rows: number): void {
+    device.queue.writeBuffer(entry.slotRows, slot * WORD_BYTES, Uint32Array.of(rows));
   }
 
   /** Write one cut's uniforms and record its three dispatches into `pass`. */
@@ -376,6 +385,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
         entry.octree,
         entry.slots,
         entry.nodes,
+        entry.slotRows,
       );
       // No frustum (six faces see every direction) and no fade (one static frame).
       dispatch(pass, entry, entry.capture, inputs, row, 1, NO_PLANES);

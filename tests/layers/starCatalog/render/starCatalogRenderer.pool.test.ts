@@ -149,6 +149,7 @@ function frame(nowMs: number): StarCutInputs {
 const NODES = `star-cut-nodes-${Source.GaiaStars}`;
 const RECORDS = `star-catalog-records-${Source.GaiaStars}`;
 const OPACITY = `star-cut-opacity-${Source.GaiaStars}`;
+const SLOT_ROWS = `star-cut-slot-rows-${Source.GaiaStars}`;
 const ROW_BYTES = CUT_NODE_WORDS * WORD_BYTES;
 
 describe('starCatalogRenderer chunk pool', () => {
@@ -194,9 +195,11 @@ describe('starCatalogRenderer chunk pool', () => {
     expect(landed).toEqual([
       [RECORDS, recordBase * 8, 3 * 8],
       [NODES, nodeBase * ROW_BYTES, 7 * ROW_BYTES],
+      [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
       [OPACITY, nodeBase * OPACITY_CHANNELS * 4, 7 * OPACITY_CHANNELS * 4],
       [NODES, 1 * ROW_BYTES, ROW_BYTES],
     ]);
+    expect([...(writes[2]!.data as Uint32Array)]).toEqual([CHUNK.nodes.count]);
     const rootRow = writes.at(-1)!.data as Uint32Array;
     expect(rootRow[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(NODE_RESIDENT_BIT);
 
@@ -204,8 +207,9 @@ describe('starCatalogRenderer chunk pool', () => {
     renderer.evictChunk(Source.GaiaStars, 1);
     expect(writes.map((w) => [w.label, w.offset, w.bytes])).toEqual([
       [NODES, 1 * ROW_BYTES, ROW_BYTES],
-      [NODES, nodeBase * ROW_BYTES, 7 * ROW_BYTES],
+      [SLOT_ROWS, 1 * WORD_BYTES, WORD_BYTES],
     ]);
+    expect([...(writes[1]!.data as Uint32Array)]).toEqual([0]);
     expect((writes[0]!.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
   });
 
