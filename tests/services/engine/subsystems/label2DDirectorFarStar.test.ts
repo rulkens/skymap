@@ -84,6 +84,8 @@ function makeLineStub(): MarkerLineRenderer {
 
 function makeState(): EngineState {
   return {
+    selection: { hover: null, select: null },
+    selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
     gpu: { texturedBodyRenderer: null },
     data: {

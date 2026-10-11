@@ -1,0 +1,73 @@
+---
+/*
+ * CreditEntry — one source on the credits page: its name with how it may be
+ * used beside it (the `Use` terms, a column to run an eye down), who made it,
+ * and the credit its holder asks for, the holder's own words set apart with a
+ * control that copies them. Its terms in full are on its data page. Every
+ * word but the labels is the licence record's.
+ */
+import type { DataEntry } from '../@types/DataEntry';
+import DocLink from './DocLink.astro';
+import RecordText from './RecordText.astro';
+import Row from './Row.astro';
+import UseTerms from './UseTerms.astro';
+
+type Props = { entry: DataEntry };
+
+const { entry } = Astro.props;
+const { bullets, use } = entry.record;
+---
+
+<section class="credit" data-embed>
+  <header>
+    <h3 id={entry.id}><RecordText text={entry.record.heading} phrase /></h3>
+    <p><UseTerms use={use} /></p>
+  </header>
+  <dl>
+    <Row label="Made by"><RecordText text={bullets.By ?? ''} /></Row>
+    <Row label="Credit to give"><RecordText text={bullets.Attribution ?? ''} lift copy /></Row>
+    <Row label="Terms in full">
+      <p class="small tap-links"><DocLink href={entry.href}>{entry.title}</DocLink></p>
+    </Row>
+  </dl>
+</section>
+
+<style>
+  .credit {
+    margin: 0 0 2.5rem;
+  }
+
+  h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  header {
+    padding-bottom: 0.75rem;
+  }
+
+  header p,
+  dl,
+  .small {
+    max-width: none;
+    margin: 0;
+  }
+
+  /* The name on the columns a row's words stand on, the terms in the last two: one edge down the whole page. */
+  @media (min-width: 700px) {
+    header {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+      column-gap: var(--col-gap);
+      align-items: end;
+    }
+
+    h3 {
+      grid-column: 1 / -3;
+    }
+
+    header p {
+      grid-column: -3 / -1;
+    }
+  }
+</style>

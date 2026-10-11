@@ -36,6 +36,7 @@ import {
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
+import type { SlotStore } from '../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
@@ -48,7 +49,7 @@ export type ProceduralDiskDeps = {
    * curated WebP is loaded in the atlas, that instance's `procFadeOut` ramps
    * down. Omit it (e.g. in tests) and `procFadeOut` stays 1.0 throughout.
    */
-  readonly atlas?: TileStreamSubsystem<ImageBitmap>;
+  readonly atlas?: TileStreamSubsystem<ImageBitmap, SlotStore>;
 };
 
 export function createProceduralDiskSubsystem(

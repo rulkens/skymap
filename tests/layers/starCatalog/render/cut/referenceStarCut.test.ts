@@ -61,7 +61,7 @@ function run(camCells: Vec3, over: Over = {}) {
   writeStarCutUniforms(buf, CATALOG, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
-    budgetTypical: over.budget ?? 1_000_000,
+    drawBudget: over.budget ?? 1_000_000,
     worldSpread: over.worldSpread ?? 1,
     leafMarginRad: 0,
     opacity: 1,

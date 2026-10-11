@@ -11,6 +11,7 @@ import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem
 import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
+import type { TextureAtlas } from '../../../services/gpu/resources/textureAtlas';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
@@ -21,7 +22,7 @@ export function wireImpostorSubsystems(deps: {
   readonly requestRender: () => void;
   readonly texturedDiskRenderer: TexturedDiskRenderer;
 }): {
-  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap>;
+  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap, TextureAtlas>;
   readonly texturedDisks: TexturedDiskSubsystem;
   readonly proceduralDisks: ProceduralDiskSubsystem;
   readonly diskPlannerWalk: DiskPlannerWalk;
@@ -50,7 +51,7 @@ export function wireImpostorSubsystems(deps: {
   // Half of the renderer's `composeAtlasBindGroup()` gate — the `hiResFamous`
   // slot's commit fires the other half, and until both land the textured-disk
   // pipeline has no bind group and skips every draw call.
-  deps.texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  deps.texturedDiskRenderer.bindAtlas(galaxyAtlas.slots.getTextureView());
 
   return { galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk };
 }

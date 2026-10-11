@@ -1,0 +1,67 @@
+---
+/*
+ * UseLegend — the twelve `Use` terms with the one-line meaning the licence
+ * record gives each at its head, shown once on a page that prints the terms.
+ * With `sources` every term is followed by the sources that carry it, which
+ * is the list of all sources grouped by what may be done with them.
+ */
+import type { AttributionUse } from '../../../../tools/@types/io/AttributionUse';
+import DocLink from './DocLink.astro';
+import RecordText from './RecordText.astro';
+import Row from './Row.astro';
+import UseTerms from './UseTerms.astro';
+import { DATA_ENTRIES, DATA_USES } from '../data/dataPages';
+
+type Props = { sources?: boolean };
+
+const { sources = false } = Astro.props;
+const terms = (Object.keys(DATA_USES) as AttributionUse[]).map((term) => ({
+  term,
+  entries: DATA_ENTRIES.filter((entry) => entry.record.use.includes(term)),
+}));
+---
+
+<dl data-embed>
+  {
+    terms.map(({ term, entries }) => (
+      <Row>
+        <UseTerms slot="label" use={[term]} />
+        <p>
+          <RecordText text={DATA_USES[term]} phrase />
+        </p>
+        {sources && (
+          <p class="small tap-links">
+            {entries.length} {entries.length === 1 ? 'source' : 'sources'}:{' '}
+            {entries.map((entry, i) => (
+              <>
+                {i > 0 && ', '}
+                <DocLink href={entry.href}>{entry.title}</DocLink>
+              </>
+            ))}
+            .
+          </p>
+        )}
+      </Row>
+    ))
+  }
+</dl>
+
+<style>
+  dl {
+    margin: 0 0 var(--stack);
+  }
+
+  p {
+    max-width: var(--doc-measure);
+    margin: 0 0 0.5rem;
+  }
+
+  /* The record writes a term's meaning as the rest of a line that the term began. */
+  p:not(.tap-links)::first-letter {
+    text-transform: uppercase;
+  }
+
+  .small {
+    color: var(--site-text-dim);
+  }
+</style>

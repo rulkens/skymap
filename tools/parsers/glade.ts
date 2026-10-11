@@ -100,6 +100,7 @@ import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyD
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
+import { parseFloatOrNaN } from '../utils/math/parseFloatOrNaN';
 
 /**
  * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's
@@ -183,35 +184,6 @@ export type GladeResult = {
  * out up front turns that silent failure into a counted skip.
  */
 const MIN_LINE_LEN = 256;
-
-/**
- * Tolerant float parser that recognises GLADE's "missing value" sentinels.
- *
- * The VII/281 ReadMe documents the sentinel as `?=-`, but actual rows in
- * the data file use a *run* of dashes that fills the column width — so a
- * 6-byte field is `---   ` and a 4-byte one is `--`. Treating any
- * dash-only string (any length) as "missing" is therefore the correct
- * tolerant rule, matching what the catalog actually emits rather than
- * what the ReadMe literally says.
- *
- * Empty strings (the field was all spaces) are also missing. Any other
- * unparseable content collapses to NaN, which is the canonical
- * "missing-value" sentinel for downstream `ParsedRecord` magnitudes.
- *
- * This helper is *not* used for RA/Dec — those are guaranteed populated
- * by the catalog construction process, and treating a malformed RA as
- * NaN would mask a corrupted download with a quiet skip. RA/Dec use a
- * plain `parseFloat` + `Number.isFinite` check instead.
- */
-function parseFloatOrNaN(s: string): number {
-  const trimmed = s.trim();
-  // Empty cell or any run of dashes (`-`, `--`, `---`, ...) is a sentinel.
-  // The `^-+$` regex requires the *entire* trimmed string be dashes,
-  // so a real negative number like `-0.001` is *not* matched.
-  if (trimmed === '' || /^-+$/.test(trimmed)) return NaN;
-  const v = parseFloat(trimmed);
-  return Number.isFinite(v) ? v : NaN;
-}
 
 /**
  * Magnitude columns get a second gate on top of `parseFloatOrNaN`.

@@ -1,0 +1,14 @@
+---
+/* Keys — a key or a chord on a docs page: `<Keys of="Shift+/" />`. Each key is drawn as one (`kbd` in styles/site.css) and the chord never breaks across lines. */
+type Props = { of: string };
+
+const keys = Astro.props.of.split('+').map((key) => key.trim());
+---
+
+<span class="keys">{keys.map((key, i) => <>{i > 0 && ' + '}<kbd>{key}</kbd></>)}</span>
+
+<style>
+  .keys {
+    white-space: nowrap;
+  }
+</style>

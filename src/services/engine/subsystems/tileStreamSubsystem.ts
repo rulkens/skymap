@@ -1,12 +1,9 @@
 /**
- * tileStreamSubsystem — generic atlas + fetch-queue infrastructure for
- * streaming a payload `T` into a GPU texture atlas. Extracted from
- * `thumbnailSubsystem.ts` (2026-05-12) and generalised over payload
- * (2026-09-15, terrain F1) so the height stream, whose payload carries a
- * header beside its bitmap, reuses it alongside the galaxy and albedo
- * atlases — see `TileStreamDeps<T>` for the upload/release seam.
+ * tileStreamSubsystem — fetch queue streaming payload `T` into the slot store
+ * `S` it is handed. Store-agnostic: the galaxy and surface streams pass a
+ * `TextureAtlas`; see `TileStreamDeps<T, S>` for the upload/release seam.
  *
- * `isLoaded`/`isFailed` mean "payload is in the atlas" / "fetch permanently
+ * `isLoaded`/`isFailed` mean "payload is in the store" / "fetch permanently
  * failed", not "the fetch resolved": a key can be evicted mid-fetch, so
  * `upload()` is the single writer of `loadedKeys` — marking a key loaded on
  * resolution instead would suppress retries for a key with no pixels behind
@@ -16,30 +13,20 @@
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { TileStreamDeps } from '../../../@types/engine/subsystems/TileStreamDeps';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import { TextureAtlas } from '../../gpu/resources/textureAtlas';
+import type { SlotStore } from '../../../@types/cache/SlotStore';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 import type { TileStreamFetchInput } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamFetchInput';
 
-export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStreamSubsystem<T> {
+export function createTileStreamSubsystem<T, S extends SlotStore>(
+  deps: TileStreamDeps<T, S>,
+): TileStreamSubsystem<T, S> {
   const {
-    device,
-    atlasSide,
-    slotSide,
-    format,
-    label,
+    slots,
     concurrency,
     requestRender,
     upload: uploadPayload,
     release: releasePayload,
   } = deps;
-
-  const atlas = new TextureAtlas(device, {
-    atlasSide,
-    slotSide,
-    format,
-    label,
-  });
-  atlas.initTexture();
 
   // `undefined` falls through to the queue's own default, so a caller that
   // has no opinion keeps today's behaviour.
@@ -53,10 +40,10 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
   const failedKeys = new Set<string>();
 
   let userEvictHandler: ((key: string) => void) | undefined;
-  // Wire the atlas's eviction notification: clear our own membership
+  // Wire the store's eviction notification: clear our own membership
   // sets AND forward to the consumer-supplied handler (the LOD-2
   // planner uses that to clear its bitmapReadyTime map).
-  atlas.setEvictHandler((key) => {
+  slots.setEvictHandler((key) => {
     loadedKeys.delete(key);
     failedKeys.delete(key);
     userEvictHandler?.(key);
@@ -64,30 +51,28 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
 
   let destroyed = false;
 
-  const subsystem: TileStreamSubsystem<T> = {
+  const subsystem: TileStreamSubsystem<T, S> = {
+    slots,
     allocate(key, atFrame) {
-      return atlas.allocate(key, atFrame);
+      return slots.allocate(key, atFrame);
     },
     touch(key, atFrame) {
-      return atlas.touch(key, atFrame);
-    },
-    slotUv(slot) {
-      return atlas.slotUv(slot);
+      return slots.touch(key, atFrame);
     },
     upload(key, payload) {
       // Re-asked here rather than trusted from allocate time: the caller has
       // been holding this key across a network round trip, and its slot may
       // since have been recycled under a different key.
-      const slot = atlas.slotOf(key);
+      const slot = slots.slotOf(key);
       if (slot === undefined) {
         // Nowhere to write this payload — release it exactly as a payload
         // arriving post-destroy does (see `enqueueFetch` below).
         releasePayload(payload);
         return null;
       }
-      uploadPayload(atlas, slot, payload);
+      uploadPayload(slots, slot, payload);
       // The one place `loadedKeys` is written, so "loaded" and "has a
-      // payload in the atlas" are the same fact by construction.
+      // payload in the store" are the same fact by construction.
       loadedKeys.add(key);
       return slot;
     },
@@ -130,20 +115,17 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
       return queue.inFlightCount();
     },
     occupiedCount() {
-      return atlas.occupiedCount();
-    },
-    getTextureView() {
-      return atlas.getTextureView();
+      return slots.occupiedCount();
     },
     setEvictHandler(handler) {
       userEvictHandler = handler;
     },
     destroy() {
       destroyed = true;
-      // Drop our own atlas-eviction subscription (the constructor wired
-      // it up).  Without this, the underlying atlas would call back
+      // Drop our own store-eviction subscription (the constructor wired
+      // it up).  Without this, the underlying store would call back
       // into our set-clearing closure post-destroy.
-      atlas.setEvictHandler(undefined);
+      slots.setEvictHandler(undefined);
       userEvictHandler = undefined;
       loadedKeys.clear();
       failedKeys.clear();

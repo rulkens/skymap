@@ -67,7 +67,7 @@ export const CELL_EDGE_MPC_FLOAT_INDEX = 3;
 export const CAM_FRAC_FLOAT_INDEX = 4;
 export const REFINE_THRESHOLD_SQ_FLOAT_INDEX = 7;
 export const FADE_STEP_FLOAT_INDEX = 8;
-export const BUDGET_TYPICAL_U32_INDEX = 9;
+export const DRAW_BUDGET_U32_INDEX = 9;
 export const WORLD_SPREAD_FLOAT_INDEX = 10;
 export const LEAF_MARGIN_RAD_FLOAT_INDEX = 11;
 export const VIEW_COUNT_U32_INDEX = 12;
@@ -160,7 +160,7 @@ export function writeStarCutUniforms(
   cut: {
     readonly refineThreshold: number;
     readonly fadeStep: number;
-    readonly budgetTypical: number;
+    readonly drawBudget: number;
     readonly worldSpread: number;
     readonly leafMarginRad: number;
     readonly opacity: number;
@@ -180,7 +180,7 @@ export function writeStarCutUniforms(
   f32[CELL_EDGE_MPC_FLOAT_INDEX] = catalog.cellEdgePc * SCALE_UNITS.PC_TO_MPC;
   f32[REFINE_THRESHOLD_SQ_FLOAT_INDEX] = cut.refineThreshold * cut.refineThreshold;
   f32[FADE_STEP_FLOAT_INDEX] = cut.fadeStep;
-  u32[BUDGET_TYPICAL_U32_INDEX] = cut.budgetTypical;
+  u32[DRAW_BUDGET_U32_INDEX] = cut.drawBudget;
   f32[WORLD_SPREAD_FLOAT_INDEX] = cut.worldSpread;
   f32[LEAF_MARGIN_RAD_FLOAT_INDEX] = cut.leafMarginRad;
   const views = cut.planes.length / FLOATS_PER_VIEW;

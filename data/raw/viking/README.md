@@ -8,7 +8,7 @@ Global albedo source for Mars's surface-tile `albedo` product (z3–z7).
 | Upstream | <https://planetarymaps.usgs.gov/mosaic/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif> (302 → `asc-pds-services` S3)                 |
 | Fetched  | 2026-09-15, by hand (no fetcher)                                                                                                   |
 | Baked    | `Mars_Viking_MDIM21_ClrMosaic_global_232m_cog.tif` (1,315,920,588 B), converted 2026-09-17                                         |
-| Licence  | Public domain (US government work). Cite: USGS Astrogeology Science Center, _Mars Viking Colorized Global Mosaic 232m v2_ (2014).  |
+| Licence  | "Public domain" in its USGS record. Cite: USGS Astrogeology Science Center, _Mars Viking Colorized Global Mosaic 232m v2_ (2014).  |
 
 ## Grid
 

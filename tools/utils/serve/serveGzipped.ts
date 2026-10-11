@@ -4,7 +4,7 @@ import { createSecureServer } from 'node:http2';
 import type { AddressInfo } from 'node:net';
 import { extname, join, normalize } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { shouldGzipOnWire } from '../../deploy/r2/shouldGzipOnWire';
+import { dataFamilyOf } from '../../deploy/r2/dataFamilyOf';
 import type { CertPair } from '../../@types/serve/CertPair';
 import type { StaticServerHandle } from '../../@types/serve/StaticServerHandle';
 
@@ -22,12 +22,13 @@ const MIME: Record<string, string> = {
 // Node's 10 MB default resets every stream (ENHANCE_YOUR_CALM) once the queued
 // response bodies pass it, which a few concurrent catalog downloads do at once.
 const H2_SESSION_MEMORY_MB = 1024;
-const TEXT_EXTENSIONS: readonly string[] = ['.html', '.js', '.css', '.svg'];
+const TEXT_EXTENSIONS: readonly string[] = ['.html', '.js', '.css', '.svg', '.json'];
+const DATA_PREFIX = '/data/';
 
 /**
  * Serve `dir` on a free localhost port with production's wire sizes: the
  * shell's text assets gzipped as Cloudflare would, data files gzipped per the
- * R2 upload policy (`shouldGzipOnWire`). `vite preview` compresses nothing, so
+ * R2 upload policy (`DATA_FAMILIES`). `vite preview` compresses nothing, so
  * a throttled load against it overstates every download by 2-3x. With `certs`
  * it speaks HTTP/2 over TLS as Cloudflare does (browsers only negotiate h2 over
  * TLS); without, HTTP/1.1, whose six-connection limit queues the chunks.
@@ -51,7 +52,10 @@ export async function serveGzipped(
     }
     const ext = extname(file);
     res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream');
-    if (TEXT_EXTENSIONS.includes(ext) || shouldGzipOnWire(file)) {
+    const dataFamily = path.startsWith(DATA_PREFIX)
+      ? dataFamilyOf(path.slice(DATA_PREFIX.length))
+      : null;
+    if (TEXT_EXTENSIONS.includes(ext) || dataFamily?.gzipOnWire === true) {
       let body = gzipped.get(file);
       if (body === undefined) {
         body = gzipSync(readFileSync(file), { level: 6 });

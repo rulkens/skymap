@@ -148,7 +148,11 @@ describe('foregroundLabelsPass.enabled', () => {
       }),
     };
     dir.registerProducer(producer);
-    const state = { subsystems: {} } as unknown as EngineState;
+    const state = {
+      subsystems: {},
+      selection: { hover: null, select: null },
+      selectionKindRows: [],
+    } as unknown as EngineState;
     const layerState = makeState(labelRenderer, lineRenderer);
 
     // Demand present: a brand-new id seeds AT its target — no ramp needed —

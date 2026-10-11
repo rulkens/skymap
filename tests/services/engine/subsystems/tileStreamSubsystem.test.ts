@@ -5,7 +5,6 @@
  * callers while staying agnostic to the generic machinery.
  *
  * Coverage focus:
- *   - allocate() returns distinct slot indices for distinct keys
  *   - enqueueFetch() is idempotent for an in-flight key
  *   - setEvictHandler fires on LRU eviction with the ousted key
  *   - inFlightCount() tracks pending fetches
@@ -22,10 +21,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTileStreamSubsystem } from '../../../../src/services/engine/subsystems/tileStreamSubsystem';
 import type { TileStreamDeps } from '../../../../src/@types/engine/subsystems/TileStreamDeps';
+import type { TextureAtlasConfig } from '../../../../src/@types/rendering/TextureAtlasConfig';
+import { TextureAtlas } from '../../../../src/services/gpu/resources/textureAtlas';
 
-type Deps = Omit<TileStreamDeps<ImageBitmap>, 'device' | 'requestRender' | 'upload' | 'release'>;
-
-const TEST_ATLAS_CONFIG: Deps = {
+const TEST_ATLAS_CONFIG: TextureAtlasConfig = {
   atlasSide: 32,
   slotSide: 8,
   format: 'rgba8unorm-srgb',
@@ -52,8 +51,8 @@ function makeFakeBitmap(): ImageBitmap {
  *  atlas, so `release` calls are directly assertable (unlike the real
  *  `uploadBitmapToAtlas`/`closeBitmap`, which just close the bitmap). */
 function makeBitmapDeps(): {
-  upload: TileStreamDeps<ImageBitmap>['upload'];
-  release: TileStreamDeps<ImageBitmap>['release'];
+  upload: TileStreamDeps<ImageBitmap, TextureAtlas>['upload'];
+  release: TileStreamDeps<ImageBitmap, TextureAtlas>['release'];
   released: ImageBitmap[];
 } {
   const released: ImageBitmap[] = [];
@@ -70,25 +69,10 @@ describe('createTileStreamSubsystem', () => {
     device = makeFakeDevice();
   });
 
-  it('allocate returns distinct slots for distinct keys', () => {
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
-      requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
-      ...makeBitmapDeps(),
-    });
-    const s1 = atlas.allocate('a', 1);
-    const s2 = atlas.allocate('b', 1);
-    expect(s1).not.toBeNull();
-    expect(s2).not.toBeNull();
-    expect(s1).not.toBe(s2);
-  });
-
   it('enqueueFetch is idempotent for an in-flight key', () => {
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...makeBitmapDeps(),
     });
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>(() => {})); // hangs
@@ -108,10 +92,9 @@ describe('createTileStreamSubsystem', () => {
   it('wakes the render loop on every settle, arrival and failure alike', async () => {
     for (const payload of [makeFakeBitmap(), null]) {
       const requestRender = vi.fn();
-      const atlas = createTileStreamSubsystem<ImageBitmap>({
-        device,
+      const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+        slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
         requestRender,
-        ...TEST_ATLAS_CONFIG,
         ...makeBitmapDeps(),
       });
       atlas.allocate('k', 1);
@@ -134,10 +117,9 @@ describe('createTileStreamSubsystem', () => {
     // bound.  A regression that stopped threading `concurrency` through to the
     // queue would leave every consumer on the shared default and show up only
     // as a crowded Network tab — nothing else observes it.
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...makeBitmapDeps(),
       concurrency: 1,
     });
@@ -148,10 +130,9 @@ describe('createTileStreamSubsystem', () => {
   });
 
   it('setEvictHandler fires when LRU recycles a slot', () => {
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...makeBitmapDeps(),
     });
     const evicted: string[] = [];
@@ -165,10 +146,9 @@ describe('createTileStreamSubsystem', () => {
 
   it('upload reports the slot it wrote, and only then is the key loaded', () => {
     const deps = makeBitmapDeps();
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...deps,
     });
     const slot = atlas.allocate('k', 1)!;
@@ -194,7 +174,7 @@ describe('createTileStreamSubsystem', () => {
    * 3 → [8,8,0].
    */
   describe('a payload arriving after its slot was recycled', () => {
-    const TINY_ATLAS: Deps = {
+    const TINY_ATLAS: TextureAtlasConfig = {
       atlasSide: 16,
       slotSide: 8,
       format: 'rgba8unorm-srgb',
@@ -228,10 +208,9 @@ describe('createTileStreamSubsystem', () => {
     it('writes into the slot the key holds NOW, not the one it was allocated', async () => {
       const { device: recording, origins } = makeRecordingDevice();
       const deps = makeBitmapDeps();
-      const atlas = createTileStreamSubsystem<ImageBitmap>({
-        device: recording,
+      const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+        slots: new TextureAtlas(recording, TINY_ATLAS),
         requestRender: () => {},
-        ...TINY_ATLAS,
         ...deps,
       });
 
@@ -284,10 +263,9 @@ describe('createTileStreamSubsystem', () => {
     it('leaves a key unloaded and releases a payload with nowhere to go', async () => {
       const { device: recording } = makeRecordingDevice();
       const deps = makeBitmapDeps();
-      const atlas = createTileStreamSubsystem<ImageBitmap>({
-        device: recording,
+      const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+        slots: new TextureAtlas(recording, TINY_ATLAS),
         requestRender: () => {},
-        ...TINY_ATLAS,
         ...deps,
       });
 
@@ -330,10 +308,9 @@ describe('createTileStreamSubsystem', () => {
   });
 
   it('destroy clears the eviction handler', () => {
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...makeBitmapDeps(),
     });
     const handler = vi.fn();
@@ -347,10 +324,9 @@ describe('createTileStreamSubsystem', () => {
 
   it('release fires for a payload that resolves after destroy()', async () => {
     const deps = makeBitmapDeps();
-    const atlas = createTileStreamSubsystem<ImageBitmap>({
-      device,
+    const atlas = createTileStreamSubsystem<ImageBitmap, TextureAtlas>({
+      slots: new TextureAtlas(device, TEST_ATLAS_CONFIG),
       requestRender: () => {},
-      ...TEST_ATLAS_CONFIG,
       ...deps,
     });
     let settle!: (bitmap: ImageBitmap | null) => void;

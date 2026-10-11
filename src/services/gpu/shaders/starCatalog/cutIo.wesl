@@ -41,7 +41,7 @@ const CUT_MAX_VIEWS: u32 = 6u;
 // Per-source, per-frame. std140 offsets:
 //    0 camCell vec3<i32>    12 cellEdgeMpc
 //   16 camFrac vec3<f32>    28 refineThresholdSq
-//   32 fadeStep  36 budgetTypical  40 worldSpread  44 leafMarginRad
+//   32 fadeStep  36 drawBudget     40 worldSpread  44 leafMarginRad
 //   48 viewCount 52 nodeCount      56 opacity      60 pad
 //   64 planes    6 unit planes per view, camera-relative Mpc
 struct CutUniforms {
@@ -50,7 +50,7 @@ struct CutUniforms {
   camFrac: vec3<f32>,
   refineThresholdSq: f32,
   fadeStep: f32,
-  budgetTypical: u32,
+  drawBudget: u32,
   worldSpread: f32,
   leafMarginRad: f32,
   viewCount: u32,

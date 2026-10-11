@@ -26,11 +26,14 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build",
+    "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build && npm run site:build",
     "build-data-manifest": "tsx tools/deploy/buildDataManifest.ts",
     "structure-audit": "tsx tools/structure-audit/structureAudit.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
@@ -113,6 +116,16 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "move-files": "tsx tools/dev/moveFiles.ts",
+    "site": "npm run dev --workspace @skymap/website",
+    "site:build": "npm run build --workspace @skymap/website",
+    "site:check": "npm run check --workspace @skymap/website",
+    "site:media": "tsx tools/site/buildHeroMedia.ts",
+    "site:links": "tsx tools/site/checkSiteLinks.ts",
+    "site:external": "tsx tools/site/checkExternalLinks.ts",
+    "site:repeats": "vitest run tests/packages/website/factRepeats.test.ts",
+    "site:fold": "tsx tools/site/checkFold.ts",
+    "site:shots": "tsx tools/site/shootSiteShots.ts",
+    "site:loops": "tsx tools/site/shootSiteLoops.ts",
     "perf": "tsx tools/perf/measurePerf.ts",
     "perf:cpu": "tsx tools/perf/cpuPerf.ts",
     "preview": "vite preview",
@@ -127,8 +140,8 @@
     "sync-r2-secure": "bash tools/deploy/syncR2Secure.sh",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json",
-    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json && npm run site:check",
+    "typecheck:fast": "tsgo --noEmit && tsgo --noEmit --project tsconfig.tools.json && npm run site:check"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "4.7.2",
@@ -153,7 +166,7 @@
     "jsdom": "27.0.1",
     "msdf-bmfont-xml": "2.8.0",
     "prettier": "3.8.3",
-    "sharp": "0.35.3",
+    "sharp": "0.35.5",
     "ts-morph": "28.0.0",
     "tsx": "4.21.0",
     "typescript": "6.0.3",
@@ -163,7 +176,7 @@
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
     "wgslender": "1.4.1",
-    "wrangler": "4.123.0",
+    "wrangler": "4.148.0",
     "xatlas-wasm": "0.1.3"
   },
   "dependencies": {

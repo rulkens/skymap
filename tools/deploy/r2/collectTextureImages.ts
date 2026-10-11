@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 
 /**
  * The tiered planet-surface textures — one `<body>-<size>.{jpg,webp}` per

@@ -139,7 +139,7 @@ describe('struct CutUniforms', () => {
     camFrac: layout.CAM_FRAC_FLOAT_INDEX,
     refineThresholdSq: layout.REFINE_THRESHOLD_SQ_FLOAT_INDEX,
     fadeStep: layout.FADE_STEP_FLOAT_INDEX,
-    budgetTypical: layout.BUDGET_TYPICAL_U32_INDEX,
+    drawBudget: layout.DRAW_BUDGET_U32_INDEX,
     worldSpread: layout.WORLD_SPREAD_FLOAT_INDEX,
     leafMarginRad: layout.LEAF_MARGIN_RAD_FLOAT_INDEX,
     viewCount: layout.VIEW_COUNT_U32_INDEX,
@@ -168,7 +168,7 @@ describe('struct CutUniforms', () => {
     writeStarCutUniforms(buf, catalog, [0, 0, 0], {
       refineThreshold: 0.5,
       fadeStep: 0.125,
-      budgetTypical: 777,
+      drawBudget: 777,
       worldSpread: 3.5,
       leafMarginRad: 0.0625,
       opacity: 0.25,
@@ -180,7 +180,7 @@ describe('struct CutUniforms', () => {
     expect(f32[at('cellEdgeMpc')]).toBeCloseTo(2e-6, 12);
     expect(f32[at('refineThresholdSq')]).toBe(0.25);
     expect(f32[at('fadeStep')]).toBe(0.125);
-    expect(u32[at('budgetTypical')]).toBe(777);
+    expect(u32[at('drawBudget')]).toBe(777);
     expect(f32[at('worldSpread')]).toBe(3.5);
     expect(f32[at('leafMarginRad')]).toBe(0.0625);
     expect(u32[at('viewCount')]).toBe(1);
