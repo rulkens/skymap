@@ -19,7 +19,7 @@ import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
-import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
+import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../data/palette/cardShotIdByFocusId';
 import { bodyRowChip } from './utils/bodyRowChip';
 import { actionForRow } from './utils/actionForRow';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
@@ -33,8 +33,9 @@ import styles from './ResultsList.module.css';
  */
 function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
   const action = actionForRow(row);
-  if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
-    return <img className={styles.thumb} src={cardShotUrl(action.focusId)} alt="" loading="lazy" />;
+  const shot = action.kind === 'focus' ? CARD_SHOT_ID_BY_FOCUS_ID.get(action.focusId) : undefined;
+  if (shot !== undefined) {
+    return <img className={styles.thumb} src={cardShotUrl(shot)} alt="" loading="lazy" />;
   }
   return (
     <span className={styles.glyph} aria-hidden="true">

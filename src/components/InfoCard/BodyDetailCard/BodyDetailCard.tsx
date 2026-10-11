@@ -30,7 +30,7 @@ import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { cardShotUrl } from '../../../utils/palette/cardShotUrl';
-import { SHOT_CARD_IDS } from '../../../data/palette/shotCardIds';
+import { CARD_SHOT_ID_BY_FOCUS_ID } from '../../../data/palette/cardShotIdByFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';
@@ -71,8 +71,8 @@ function BodyDetailCard({
   // decides whether a radius row means anything at all. A miss just drops the
   // row (the absent-row pattern below), not a render-time throw.
   const seed = SCENE_BODIES.find((b) => b.id === target.id);
-  const shotId = `${BODY_FOCUS_PREFIX}${target.id}`;
-  const hasShot = SHOT_CARD_IDS.has(shotId);
+  const shot = CARD_SHOT_ID_BY_FOCUS_ID.get(`${BODY_FOCUS_PREFIX}${target.id}`);
+  const hasShot = shot !== undefined;
 
   // The lead rows — the "where / how big" facts — sit beside the card shot as
   // summary lines (the galaxy card's layout, one line per 20 px of the 80 px
@@ -113,7 +113,7 @@ function BodyDetailCard({
 
       {hasShot && (
         <div className={cx(styles.cardSection, styles.cardTopRow)}>
-          <Thumbnail url={cardShotUrl(shotId)} alt={`${target.label} thumbnail`} />
+          <Thumbnail url={cardShotUrl(shot)} alt={`${target.label} thumbnail`} />
           <div className={styles.cardSummary}>
             {leadRows.map((row, i) => (
               <div key={i} className={styles.cardDistLine}>
