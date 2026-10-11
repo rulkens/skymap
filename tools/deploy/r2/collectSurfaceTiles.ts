@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { R2Upload } from './R2Upload';
+import type { R2Upload } from '../@types/R2Upload';
 
 /**
  * One `SURFACE_TILE_REGISTRY` row's baked virtual-texture tiles, enumerated

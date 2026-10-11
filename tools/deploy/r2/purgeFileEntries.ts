@@ -1,5 +1,5 @@
 import r2Cors from '../r2Cors.json';
-import type { CachePurgeFile } from './CachePurgeFile';
+import type { CachePurgeFile } from '../@types/CachePurgeFile';
 
 const CORS_ORIGINS = r2Cors.rules.flatMap((rule) => rule.allowed.origins);
 
