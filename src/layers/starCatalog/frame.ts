@@ -65,15 +65,15 @@ export function starCatalogPlanner(
           streams.push({ stream, octree });
           residencyChanged ||= observeEpoch(stream);
         }
-        // Between plans the pool keeps its last requests; only a moved cut, a landing or
-        // eviction, or the interval while chunks are wanted or in flight re-walks the index.
+        // Between plans the pool keeps its last requests. A landing or eviction re-plans at
+        // once; a moved cut, or chunks wanted or in flight, every STAR_PLAN_INTERVAL_FRAMES, so
+        // a moving eye pays one plan per interval and a stopped one still gets a plan at rest.
         for (const { stream } of streams) inFlight += stream.inFlightCount();
         const due =
           plannedCut === null ||
           residencyChanged ||
-          !sameStarCut(inputs.cut, plannedCut) ||
-          ((wantedChunks || inFlight > 0) &&
-            frameIndex - plannedFrame >= STAR_PLAN_INTERVAL_FRAMES);
+          (frameIndex - plannedFrame >= STAR_PLAN_INTERVAL_FRAMES &&
+            (wantedChunks || inFlight > 0 || !sameStarCut(inputs.cut, plannedCut)));
         if (due) {
           plannedCut = inputs.cut;
           plannedFrame = frameIndex;

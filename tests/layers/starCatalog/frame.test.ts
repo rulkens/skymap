@@ -141,7 +141,7 @@ describe('starCatalogPlanner', () => {
       expect(plan(11 * NODE_FADE_MS)).toBe(false);
     });
 
-    it('walks the index on a moved cut, then only every STAR_PLAN_INTERVAL_FRAMES while a chunk is in flight', () => {
+    it('plans on a first cut, then only every STAR_PLAN_INTERVAL_FRAMES while a chunk is in flight or the eye moves, and once at rest', () => {
       const { stream, counters } = stubStream();
       const planner = starCatalogPlanner(makeRuntime(true, stream));
       const frame = (t: number) =>
@@ -163,10 +163,16 @@ describe('starCatalogPlanner', () => {
       expect(walks).toHaveBeenCalledTimes(3);
       expect(stream.update).toHaveBeenCalledTimes(3);
 
+      counters.inFlight = 0;
       frame(100);
       walks.mockClear();
-      planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC + 500), 101)], STATE);
-      expect(walks).toHaveBeenCalledTimes(1); // the cut moved
+      const at = (xPc: number, t: number) =>
+        planner.plan(SNAPSHOT, [makeView(camAtPc(xPc), t)], STATE);
+      for (let i = 0; i < 2 * STAR_PLAN_INTERVAL_FRAMES; i++) at(MID_BAND_PC + 10 * i, 101 + i);
+      expect(walks).toHaveBeenCalledTimes(2); // moving: on the first move, then one interval on
+      const restPc = MID_BAND_PC + 10 * (2 * STAR_PLAN_INTERVAL_FRAMES - 1);
+      for (let i = 0; i < STAR_PLAN_INTERVAL_FRAMES; i++) at(restPc, 200 + i);
+      expect(walks).toHaveBeenCalledTimes(3); // stopped past the last plan's pose: one plan at rest
     });
 
     it('re-arms the fade window when a chunk lands', () => {
