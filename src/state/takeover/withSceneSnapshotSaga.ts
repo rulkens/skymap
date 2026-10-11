@@ -12,7 +12,7 @@ import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { DEFAULT_FOV_DEG } from '../../data/defaults';
 
 export function* withSceneSnapshotSaga(body: () => Generator): Generator {
-  const snapshot = yield* select(captureScene);
+  const snapshot = yield* select(captureScene, performance.now());
 
   // Every beat pose and exhibit pose is authored against the default lens, and
   // a fit-derived distance (`sphereFitDistance`) silently clamps at

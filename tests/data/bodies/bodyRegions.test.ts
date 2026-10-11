@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { SCENE_ANCHORS } from '../../../src/data/bodies/sceneAnchors';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../src/data/places/galacticCentre';
 import { BODY_REGIONS } from '../../../src/data/bodies/bodyRegions';
+import { POSITION_DRIVERS } from '../../../src/data/bodies/positionDrivers';
+import { regionOfBody } from '../../../src/utils/regions/regionOfBody';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -11,6 +13,21 @@ import { regionRelativeDistanceMpc } from '../../../src/utils/regions/regionRela
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {
+  it('every position driver belongs to exactly one region', () => {
+    for (const driver of POSITION_DRIVERS) {
+      const holders = BODY_REGIONS.filter((r) => r.memberIds.includes(driver.id));
+      expect(holders, driver.id).toHaveLength(1);
+      expect(regionOfBody(driver.id), driver.id).not.toBeNull();
+    }
+  });
+
+  it('region membership is unchanged', () => {
+    // Captured before membership moved onto the position drivers' host walk.
+    expect(Object.fromEntries(BODY_REGIONS.map((r) => [r.id, r.memberIds]))).toEqual(
+      {"solar-system": ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "miranda", "ariel", "umbriel", "titania", "oberon", "puck", "triton", "proteus", "nereid", "charon", "whale", "petunias", "voyager1", "voyager2", "hubble", "curiosity", "perseverance", "spirit", "opportunity", "soendermarken"], "solar-neighbourhood": ["proxima-centauri", "alpha-centauri", "barnards-star", "wolf-359", "lalande-21185", "sirius", "luyten-726-8", "ross-154", "ross-248", "epsilon-eridani", "lacaille-9352", "ross-128", "ez-aquarii", "61-cygni", "procyon", "struve-2398", "groombridge-34", "epsilon-indi", "tau-ceti", "kapteyns-star", "altair", "vega", "fomalhaut", "pollux", "canopus", "arcturus", "capella", "rigel", "achernar", "betelgeuse", "hadar", "acrux", "aldebaran", "antares", "spica", "deneb", "mimosa", "regulus", "adhara", "castor", "shaula", "gacrux", "bellatrix", "elnath", "miaplacidus", "alnilam", "alnair", "alnitak", "alioth", "dubhe", "mirfak", "wezen", "gamma-velorum", "sargas", "kaus-australis", "avior", "alkaid", "menkalinan", "atria", "alhena", "peacock", "alsephina", "mirzam", "polaris", "alphard", "hamal", "diphda", "mizar", "nunki", "menkent", "alpheratz", "mirach", "rasalhague", "algieba", "kochab", "saiph", "denebola", "algol", "tiaki", "muhlifain", "aspidiske", "suhail", "alphecca", "mintaka", "sadr", "eltanin", "schedar", "naos", "almach", "caph", "izar", "alpha-lupi", "epsilon-centauri", "dschubba", "larawag", "eta-centauri", "merak", "ankaa", "girtab", "enif", "scheat", "sabik", "phecda", "aludra", "alderamin", "markeb", "gamma-cassiopeiae", "markab", "aljanah", "acrab", "mira", "albireo", "delta-cephei", "eta-carinae", "51-pegasi", "vy-canis-majoris", "uy-scuti", "t-coronae-borealis"], "galactic-centre": ["galactic-centre", "s1", "s2", "s4", "s6", "s8", "s9", "s12", "s13", "s14", "s17", "s18", "s19", "s21", "s22", "s23", "s24", "s29", "s31", "s33", "s38", "s39", "s42", "s54", "s55", "s60", "s66", "s67", "s71", "s83", "s85", "s87", "s89", "s91", "s96", "s97", "s145", "s175", "r34", "r44", "s301"]},
+    );
+  });
+
   it('solar-system and solar-neighbourhood share an anchor but not an extent', () => {
     // The distinction the whole plan rests on: anchor is a position, extent is a
     // scale. Collapsing the two rows — or deriving one extent for both — passes
