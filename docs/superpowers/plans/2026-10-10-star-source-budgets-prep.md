@@ -50,29 +50,29 @@ readonly budgets: StarSourceBudgets;
 
 `drawBudget` today has only `typical` (`SurveyStarCatalogSourceEntry.d.ts:23`), so the per-tier object has only `drawBudget`.
 
-- [ ] Add `StarSourceBudgets`. Its doc line says what the per-tier object governs (the cut's instance budget) and that `slots` joins it with the octree pool.
-- [ ] `SurveyStarCatalogSourceEntry.d.ts:20-23`: replace both fields with `budgets`.
-- [ ] `gaia-stars.ts:29-36`: delete `tiered: true` and `drawBudget`; add `budgets` with `small`, `medium` and `large` each `{ drawBudget: 1_500_000 }`. Keep the rationale comment at `:30-35` above `budgets`, reworded for a per-tier row. Drop its stale "Task 12 tunes both" sentence.
-- [ ] `starCatalogFetcher.ts`: delete the "Filename: tiered vs untiered" header block (`:12-19`), the re-bind and its comment (`:61-70`), and the ternary (`:71-73`). The name is `${entry.binBaseName}-${req.tier}.bin` on the guard-narrowed `entry`. Drop the `SurveyStarCatalogSourceEntry` import if unused. Rewrite the type-guard paragraph (`:28-36`) so it no longer names `tiered`.
-- [ ] `StarCatalogReq.d.ts:8-9`: `tier` always selects the `-<tier>.bin` variant; drop "when the source ships tiered".
-- [ ] `starCutInputs.ts`: widen the runtime parameter to `Pick<StarCatalogRuntime, 'renderer' | 'catalogs'>` (`:28`). Per in-band source, read the tier from `runtime.catalogs.get(source)?.committed()?.req.tier` and pass `entry.budgets[tier].drawBudget` where `:63` passes `entry.drawBudget.typical`. A source with no committed request is skipped: the renderer holds a catalog only after its slot commits, so this never drops a source across a frame. Leave the field name `budgetTypical` here; Task 2 renames it.
-- [ ] `starCutInputs.test.ts:19-25`: add a `catalogs` map to the stub runtime, its slot's `committed()` returning a request at `'medium'`. The two existing tests keep their expected values.
-- [ ] Add the test `the cut reads the budget of the tier its catalog was committed at`. Mock the Gaia row's `budgets` to three distinct values (`vi.mock` of `src/layers/starCatalog/sources/gaia-stars.ts` with `importOriginal`, overriding only `budgets`). The stub slot's `committed()` returns `'small'` and its `lastRequest()` returns `'large'`; assert the source row carries `small`'s value. It fails if the cut reads the in-flight request or a fixed tier.
-- [ ] `docs/BACKLOG.md:168`: the item names a `hardCap` that does not exist. Reword it to lowering `budgets.small.drawBudget` in `gaia-stars.ts`; keep its tag and the WebKit clause.
-- [ ] No new fetcher test: `starCatalogFetcher.test.ts:55-76` already asserts `stars-medium.bin`, and the untiered branch had no test.
-- [ ] Commit.
+- [x] Add `StarSourceBudgets`. Its doc line says what the per-tier object governs (the cut's instance budget) and that `slots` joins it with the octree pool.
+- [x] `SurveyStarCatalogSourceEntry.d.ts:20-23`: replace both fields with `budgets`.
+- [x] `gaia-stars.ts:29-36`: delete `tiered: true` and `drawBudget`; add `budgets` with `small`, `medium` and `large` each `{ drawBudget: 1_500_000 }`. Keep the rationale comment at `:30-35` above `budgets`, reworded for a per-tier row. Drop its stale "Task 12 tunes both" sentence.
+- [x] `starCatalogFetcher.ts`: delete the "Filename: tiered vs untiered" header block (`:12-19`), the re-bind and its comment (`:61-70`), and the ternary (`:71-73`). The name is `${entry.binBaseName}-${req.tier}.bin` on the guard-narrowed `entry`. Drop the `SurveyStarCatalogSourceEntry` import if unused. Rewrite the type-guard paragraph (`:28-36`) so it no longer names `tiered`.
+- [x] `StarCatalogReq.d.ts:8-9`: `tier` always selects the `-<tier>.bin` variant; drop "when the source ships tiered".
+- [x] `starCutInputs.ts`: widen the runtime parameter to `Pick<StarCatalogRuntime, 'renderer' | 'catalogs'>` (`:28`). Per in-band source, read the tier from `runtime.catalogs.get(source)?.committed()?.req.tier` and pass `entry.budgets[tier].drawBudget` where `:63` passes `entry.drawBudget.typical`. A source with no committed request is skipped: the renderer holds a catalog only after its slot commits, so this never drops a source across a frame. Leave the field name `budgetTypical` here; Task 2 renames it.
+- [x] `starCutInputs.test.ts:19-25`: add a `catalogs` map to the stub runtime, its slot's `committed()` returning a request at `'medium'`. The two existing tests keep their expected values.
+- [x] Add the test `the cut reads the budget of the tier its catalog was committed at`. Mock the Gaia row's `budgets` to three distinct values (`vi.mock` of `src/layers/starCatalog/sources/gaia-stars.ts` with `importOriginal`, overriding only `budgets`). The stub slot's `committed()` returns `'small'` and its `lastRequest()` returns `'large'`; assert the source row carries `small`'s value. It fails if the cut reads the in-flight request or a fixed tier.
+- [x] `docs/BACKLOG.md:168`: the item names a `hardCap` that does not exist. Reword it to lowering `budgets.small.drawBudget` in `gaia-stars.ts`; keep its tag and the WebKit clause.
+- [x] No new fetcher test: `starCatalogFetcher.test.ts:55-76` already asserts `stars-medium.bin`, and the untiered branch had no test.
+- [x] Commit.
 
 ### Task 2: Rename the cut uniform `budgetTypical` to `drawBudget` — `review: yes`
 
 **Files:** `src/layers/starCatalog/@types/StarCutSourceInput.d.ts`, `src/layers/starCatalog/render/starCutLayout.ts`, `src/layers/starCatalog/render/starCutGpu.ts`, `src/layers/starCatalog/render/cut/starCutInputs.ts`, `src/services/gpu/shaders/starCatalog/cutIo.wesl`, `src/services/gpu/shaders/starCatalog/cut.wesl`, `tests/helpers/starCatalog/referenceStarCut.ts`, `tests/services/gpu/shaders/starCutLayout.parity.test.ts`, `tests/layers/starCatalog/render/starCutGpu.test.ts`, `tests/layers/starCatalog/render/starCutLayout.test.ts`, `tests/layers/starCatalog/render/cut/sameStarCut.test.ts`, `tests/layers/starCatalog/render/cut/referenceStarCut.test.ts`, `tests/layers/starCatalog/passes/starCatalogPass.test.ts`, `tests/layers/starCatalog/passes/starAggregatesPass.test.ts`
 
-- [ ] Rename the TS symbols with `npm run refactor` (see `.claude/skills/refactor/SKILL.md` for the rename subcommand): `StarCutSourceInput.budgetTypical` (`StarCutSourceInput.d.ts:8`) → `drawBudget`, the `writeStarCutUniforms` parameter field (`starCutLayout.ts:163`) → `drawBudget`, and `BUDGET_TYPICAL_U32_INDEX` (`starCutLayout.ts:70`) → `DRAW_BUDGET_U32_INDEX`. The CLI does not reach WGSL or string keys, so then search the files above for `budgetTypical` and `BUDGET_TYPICAL` and finish by hand.
-- [ ] WGSL by hand: the `CutUniforms` field (`cutIo.wesl:53`), the offset comment (`cutIo.wesl:44`) and its read (`cut.wesl:134`). Field order and type are unchanged, so the struct layout is unchanged.
-- [ ] The parity test's name map (`starCutLayout.parity.test.ts:142,171,183`) keys on the WGSL field name; rename the key with the field.
-- [ ] No new test: the parity test already fails if the TS index and the WGSL field disagree.
-- [ ] Search `src/` and `tests/` for `budgetTypical` and `BUDGET_TYPICAL`: zero hits.
-- [ ] `npm run build` passes (shader specifiers are invisible to `tsc`).
-- [ ] Commit.
+- [x] Rename the TS symbols with `npm run refactor` (see `.claude/skills/refactor/SKILL.md` for the rename subcommand): `StarCutSourceInput.budgetTypical` (`StarCutSourceInput.d.ts:8`) → `drawBudget`, the `writeStarCutUniforms` parameter field (`starCutLayout.ts:163`) → `drawBudget`, and `BUDGET_TYPICAL_U32_INDEX` (`starCutLayout.ts:70`) → `DRAW_BUDGET_U32_INDEX`. The CLI does not reach WGSL or string keys, so then search the files above for `budgetTypical` and `BUDGET_TYPICAL` and finish by hand.
+- [x] WGSL by hand: the `CutUniforms` field (`cutIo.wesl:53`), the offset comment (`cutIo.wesl:44`) and its read (`cut.wesl:134`). Field order and type are unchanged, so the struct layout is unchanged.
+- [x] The parity test's name map (`starCutLayout.parity.test.ts:142,171,183`) keys on the WGSL field name; rename the key with the field.
+- [x] No new test: the parity test already fails if the TS index and the WGSL field disagree.
+- [x] Search `src/` and `tests/` for `budgetTypical` and `BUDGET_TYPICAL`: zero hits.
+- [x] `npm run build` passes (shader specifiers are invisible to `tsc`).
+- [x] Commit.
 
 ## Definition of Done
 

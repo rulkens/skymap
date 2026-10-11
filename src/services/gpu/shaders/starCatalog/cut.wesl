@@ -131,7 +131,7 @@ fn pickThreshold() {
   for (var b = CUT_BINS; b > 0u; b = b - 1u) {
     let cost = atomicExchange(&hist[b - 1u], 0u);
     if (spent) { continue; }
-    if (instances >= u.budgetTypical) {
+    if (instances >= u.drawBudget) {
       cutBin = b;
       spent = true;
       continue;

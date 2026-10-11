@@ -36,7 +36,7 @@ function frame(nowMs: number): StarCutInputs {
       refineThreshold: 0.05,
       worldSpread: 1,
       leafMarginRad: 0,
-      sources: [{ source: Source.GaiaStars, opacity: 1, budgetTypical: 10 }],
+      sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 10 }],
     },
     nowMs,
     sizePx: 2.5,

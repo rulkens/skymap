@@ -1,7 +1,7 @@
 /**
  * `starCutInputs` — what the frame reduces to for the GPU cut: frustum planes
- * per view, and the angular cull margin sized for
- * the widest view.
+ * per view, the angular cull margin sized for the widest view, and each
+ * source's budget at the tier its catalog was committed at.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -15,14 +15,42 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogSettings } from '../../../../../src/@types/settings/StarCatalogSettings';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { Tier } from '../../../../../src/@types/data/Tier';
 
-const RUNTIME = {
-  renderer: {
-    loadedCatalogs: vi.fn(() =>
-      [{ source: Source.GaiaStars, catalog: {} as StarCatalog }][Symbol.iterator](),
-    ),
-  },
-} as unknown as StarCatalogRuntime;
+// Distinct per tier so a test can tell which tier's budget the cut read.
+vi.mock('../../../../../src/layers/starCatalog/sources/gaia-stars', async (importOriginal) => {
+  const mod =
+    await importOriginal<
+      typeof import('../../../../../src/layers/starCatalog/sources/gaia-stars')
+    >();
+  return {
+    GAIA_STARS_ENTRY: {
+      ...mod.GAIA_STARS_ENTRY,
+      budgets: {
+        small: { drawBudget: 100 },
+        medium: { drawBudget: 200 },
+        large: { drawBudget: 300 },
+      },
+    },
+  };
+});
+
+function runtime(committedTier: Tier, requestedTier: Tier = committedTier): StarCatalogRuntime {
+  const slot = {
+    committed: () => ({ kind: 'ready', req: { source: Source.GaiaStars, tier: committedTier } }),
+    lastRequest: () => ({ source: Source.GaiaStars, tier: requestedTier }),
+  };
+  return {
+    renderer: {
+      loadedCatalogs: vi.fn(() =>
+        [{ source: Source.GaiaStars, catalog: {} as StarCatalog }][Symbol.iterator](),
+      ),
+    },
+    catalogs: new Map([[Source.GaiaStars, slot]]),
+  } as unknown as StarCatalogRuntime;
+}
+
+const RUNTIME = runtime('medium');
 
 const SETTINGS = {
   enabled: true,
@@ -58,5 +86,13 @@ describe('starCutInputs', () => {
   it('sizes the leaf margin for the widest view (fewest pixels per radian)', () => {
     const inputs = starCutInputs(RUNTIME, SETTINGS, [view(600), view(300)]);
     expect(inputs!.cut.leafMarginRad).toBeCloseTo(STAR_PICK_MIN_RADIUS_PX / 300, 12);
+  });
+
+  it('the cut reads the budget of the tier its catalog was committed at', () => {
+    // Mid-reload: the slot still holds the small catalog while large is in flight.
+    const inputs = starCutInputs(runtime('small', 'large'), SETTINGS, [view(600)]);
+    expect(inputs!.cut.sources).toEqual([
+      expect.objectContaining({ source: Source.GaiaStars, drawBudget: 100 }),
+    ]);
   });
 });

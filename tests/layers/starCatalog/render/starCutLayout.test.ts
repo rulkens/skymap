@@ -47,7 +47,7 @@ describe('writeStarCutUniforms', () => {
   const cut = {
     refineThreshold: 0.05,
     fadeStep: 0.1,
-    budgetTypical: 100,
+    drawBudget: 100,
     worldSpread: 1,
     leafMarginRad: 0.001,
     opacity: 1,
