@@ -94,7 +94,7 @@ vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', (
 }));
 
 // ── Import after mocks ─────────────────────────────────────────────────
-import { wireStructureProjection } from '../../../../src/layers/structure/load/wireStructureProjection';
+import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 
 // ── Fake slot helper ───────────────────────────────────────────────────
 

@@ -65,7 +65,7 @@ import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
-import { wireStructureProjection } from '../../../layers/structure/load/wireStructureProjection';
+import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';

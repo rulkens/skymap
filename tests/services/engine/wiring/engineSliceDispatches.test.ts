@@ -81,7 +81,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
-import { wireStructureProjection } from '../../../../src/layers/structure/load/wireStructureProjection';
+import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
 
