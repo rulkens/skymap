@@ -4,6 +4,7 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from './StarDrawStream';
@@ -13,8 +14,15 @@ import type { StarCutDraw } from './StarCutDraw';
 export type StarCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
   readonly drawBgl: GPUBindGroupLayout;
-  /** Build a source's buffers; an empty octree releases them. */
-  upload(source: SourceType, octree: StarOctree): void;
+  /**
+   * Build a source's pool-sized buffers (index rows, then `slots` chunk slots);
+   * an empty octree releases them. Throws, creating nothing, past a pool cap.
+   */
+  upload(source: SourceType, octree: StarOctree, slots: number): void;
+  /** Write a landed chunk's rows into `slot`, zero its fades, then mark its root resident. */
+  uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
+  /** Mark the slot's root unresident, then zero the slot's rows. */
+  evictChunk(source: SourceType, slot: number): void;
   /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(
     encoder: GPUCommandEncoder,

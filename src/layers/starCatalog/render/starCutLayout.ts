@@ -10,6 +10,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { MAX_GRID_BITS, MAX_OWN_COUNT, NO_CHUNK_REF } from '../../../data/octree/octreeFormat';
+import { SELECTION_SOURCE_SHIFT } from '../../../data/selectionEncoding';
 import { mortonDecode3 } from '../../../utils/math/mortonDecode3';
 
 /** Every cut buffer is addressed in 4-byte words. */
@@ -47,6 +48,9 @@ export const CUT_HIST_WORDS = CUT_BINS + 1;
 export const LEAF_BLOCK_SHIFT = 3;
 /** A leaf-list entry is `node | block << LEAF_BLOCK_INDEX_SHIFT`. */
 export const LEAF_BLOCK_INDEX_SHIFT = 22;
+/** Pool rows the leaf-list entry can name, and pool records the pick's 26-bit index can (strict `<`). */
+export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_BLOCK_INDEX_SHIFT;
+export const POOL_RECORD_INDEX_LIMIT = 2 ** SELECTION_SOURCE_SHIFT;
 /** Two indirect draw records (leaf, then aggregate), four u32 each. */
 export const CUT_DRAWS_WORDS = 8;
 /** u32 words per indirect draw record; the aggregate record follows the leaf's. */
@@ -219,6 +223,23 @@ function isTopRow(
   root: { readonly level: number; readonly morton: number },
 ): boolean {
   return level === root.level - 1 && Math.floor(morton / 2 ** OCTANT_BITS) === root.morton;
+}
+
+/** Throws, naming the largest slot count that fits, when `slots` would overflow a pool cap; never clamps. */
+export function checkStarPoolCaps(octree: StarOctree, slots: number): void {
+  const fit = (index: number, stride: number, limit: number) =>
+    stride === 0 ? Infinity : Math.floor((limit - 1 - index) / stride);
+  const fits = Math.min(
+    fit(octree.nodes.count, octree.chunkNodeCap, POOL_NODE_INDEX_LIMIT),
+    fit(octree.records.count, octree.chunkCapacity, POOL_RECORD_INDEX_LIMIT),
+  );
+  if (slots > fits) {
+    const n = Math.max(0, fits);
+    throw new Error(
+      `star pool: ${slots} slots overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit row or ` +
+        `${SELECTION_SOURCE_SHIFT}-bit record index; only ${n} slot${n === 1 ? '' : 's'} fit`,
+    );
+  }
 }
 
 /** Leaf-list entries the pool can ever hold: every own block of the index, and of every slot at worst. */

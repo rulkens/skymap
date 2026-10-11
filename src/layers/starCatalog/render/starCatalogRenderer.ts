@@ -11,13 +11,14 @@
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
-import { packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
+import { GPU_RECORD_WORDS, packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -34,10 +35,14 @@ import {
   writeStarFocus,
 } from './starCatalogLayout';
 import { createStarCutGpu } from './starCutGpu';
+import { WORD_BYTES } from './starCutLayout';
+
+const GPU_RECORD_BYTES = GPU_RECORD_WORDS * WORD_BYTES;
 
 /** One committed catalog's GPU records + the octree kept for the layer. */
 type LoadedStarSource = {
   octree: StarOctree;
+  slots: number;
   /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
@@ -109,11 +114,13 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  function upload(source: SourceType, octree: StarOctree): void {
+  function upload(source: SourceType, octree: StarOctree, slots: number): void {
+    const poolSlots = Math.min(slots, octree.chunks.length);
+    // Throws past a pool cap before anything below is created or released.
+    cut.upload(source, octree, poolSlots);
     // Empty octree is the unload signal (a tier swap that drops the bin);
     // `createBuffer({size:0})` is forbidden.
     const packed = octree.records.count === 0 ? null : packStarGpuRecords(octree.records);
-    cut.upload(source, octree);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
@@ -121,7 +128,7 @@ export function createStarCatalogRenderer(
 
     const recordsBuffer = device.createBuffer({
       label: `star-catalog-records-${source}`,
-      size: packed.byteLength,
+      size: (octree.records.count + poolSlots * octree.chunkCapacity) * GPU_RECORD_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(recordsBuffer, 0, packed);
@@ -130,7 +137,27 @@ export function createStarCatalogRenderer(
       layout: recordsBgl,
       entries: [{ binding: 0, resource: { buffer: recordsBuffer } }],
     });
-    sources.set(source, { octree, recordsBuffer, recordsBindGroup });
+    sources.set(source, { octree, slots: poolSlots, recordsBuffer, recordsBindGroup });
+  }
+
+  function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
+    const entry = sources.get(source);
+    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+      throw new Error(`starCatalogRenderer: no slot ${slot} for source ${source}`);
+    }
+    const { octree } = entry;
+    // The records land before the cut marks the chunk's root resident.
+    const recordBase = octree.records.count + slot * octree.chunkCapacity;
+    device.queue.writeBuffer(
+      entry.recordsBuffer,
+      recordBase * GPU_RECORD_BYTES,
+      packStarGpuRecords(chunk.records),
+    );
+    cut.uploadChunk(source, slot, chunk);
+  }
+
+  function evictChunk(source: SourceType, slot: number): void {
+    cut.evictChunk(source, slot);
   }
 
   function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {
@@ -201,6 +228,8 @@ export function createStarCatalogRenderer(
   const renderer: StarCatalogRenderer = {
     label: 'starCatalogRenderer',
     upload,
+    uploadChunk,
+    evictChunk,
     loadedCatalogs,
     drawCut,
     encodeCut,

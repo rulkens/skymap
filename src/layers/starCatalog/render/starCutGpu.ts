@@ -9,6 +9,7 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCutGpu } from '../@types/StarCutGpu';
 import type { StarCutState } from '../@types/StarCutState';
@@ -21,10 +22,18 @@ import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimes
 import cutCode from '../../../services/gpu/shaders/starCatalog/cut.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../data/starNodeFade';
+import { NO_CHUNK_REF } from '../../../data/octree/octreeFormat';
 import {
   AGG_DRAW_BYTE_OFFSET,
   CUT_DRAWS_WORDS,
   CUT_HIST_WORDS,
+  CUT_NODE_WORDS,
+  NODE_BITS_WORD,
+  NODE_REFINE_DELTA_WORD,
+  NODE_RESIDENT_BIT,
+  checkStarPoolCaps,
+  chunkRootRefineDelta,
+  packStarChunkNodes,
   CUT_STREAM_BYTES,
   CUT_UNIFORM_BYTES,
   CUT_WORKGROUP,
@@ -40,6 +49,10 @@ import {
 } from './starCutLayout';
 
 const NO_PLANES = new Float32Array(0);
+
+function poolRows(octree: StarOctree, slots: number): number {
+  return octree.nodes.count + slots * octree.chunkNodeCap;
+}
 
 export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   const STORAGE = GPUBufferUsage.STORAGE;
@@ -115,17 +128,22 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   // The inputs whose capture cut is already submitted: six faces draw one cut.
   let capturedFor: StarCutInputs | null = null;
 
-  function createState(label: string, octree: StarOctree, nodes: GPUBuffer): StarCutState {
+  function createState(
+    label: string,
+    octree: StarOctree,
+    slots: number,
+    nodes: GPUBuffer,
+  ): StarCutState {
     const make = (name: string, words: number, usage: number): GPUBuffer =>
       device.createBuffer({
         label: `star-cut-${name}-${label}`,
         size: Math.max(1, words) * WORD_BYTES,
         usage,
       });
-    const nodeCount = octree.nodes.count;
-    const opacity = make('opacity', nodeCount * OPACITY_CHANNELS, STORAGE);
-    const leafList = make('leaf-list', leafListCapacity(octree, 0), STORAGE);
-    const aggList = make('agg-list', nodeCount, STORAGE);
+    const rows = poolRows(octree, slots);
+    const opacity = make('opacity', rows * OPACITY_CHANNELS, STORAGE);
+    const leafList = make('leaf-list', leafListCapacity(octree, slots), STORAGE);
+    const aggList = make('agg-list', rows, STORAGE);
     const draws = make(
       'draws',
       CUT_DRAWS_WORDS,
@@ -158,6 +176,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     return {
       buffers: [opacity, leafList, aggList, draws, hist, uniforms],
       uniforms,
+      opacity,
       draws,
       computeBindGroup: device.createBindGroup({
         label: `star-cut-compute-bg-${label}`,
@@ -189,28 +208,98 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     sources.delete(source);
   }
 
-  function upload(source: SourceType, octree: StarOctree): void {
+  function upload(source: SourceType, octree: StarOctree, slots: number): void {
+    if (octree.records.count > 0) checkStarPoolCaps(octree, slots);
     const packed = octree.records.count === 0 ? null : packStarCutNodes(octree);
     release(source);
     if (packed === null) return;
     const nodes = device.createBuffer({
       label: `star-cut-nodes-${source}`,
-      size: packed.byteLength,
+      size: poolRows(octree, slots) * CUT_NODE_WORDS * WORD_BYTES,
       usage: STORAGE | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(nodes, 0, packed);
+    const rootRowOfChunk = new Int32Array(octree.chunks.length).fill(-1);
+    octree.nodes.chunkRef.forEach((ref, row) => {
+      if (ref !== NO_CHUNK_REF) rootRowOfChunk[ref] = row;
+    });
     sources.set(source, {
       octree,
+      slots,
       nodes,
-      live: createState(`${source}`, octree, nodes),
+      indexRows: packed,
+      rootRowOfChunk,
+      rootRowOfSlot: new Int32Array(slots).fill(-1),
+      live: createState(`${source}`, octree, slots, nodes),
       capture: null,
     });
+  }
+
+  function slotOf(source: SourceType, slot: number): StarCutSource {
+    const entry = sources.get(source);
+    if (entry === undefined || slot < 0 || slot >= entry.slots) {
+      throw new Error(`starCut: no slot ${slot} for source ${source}`);
+    }
+    return entry;
+  }
+
+  /** One index row as uploaded, or with its chunk marked resident. */
+  function writeRootRow(entry: StarCutSource, row: number, refineDelta: number | null): void {
+    const words = entry.indexRows.slice(row * CUT_NODE_WORDS, (row + 1) * CUT_NODE_WORDS);
+    if (refineDelta !== null) {
+      words[NODE_BITS_WORD] = words[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;
+      words[NODE_REFINE_DELTA_WORD] = refineDelta;
+    }
+    device.queue.writeBuffer(entry.nodes, row * CUT_NODE_WORDS * WORD_BYTES, words);
+  }
+
+  function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
+    const entry = slotOf(source, slot);
+    const { octree } = entry;
+    const ref = octree.chunks[chunk.ref]!;
+    const rootRow = entry.rootRowOfChunk[chunk.ref]!;
+    const root = { level: ref.level, morton: ref.morton, rootRow };
+    const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
+    const rows = packStarChunkNodes(
+      chunk,
+      root,
+      { nodeBase, recordBase: octree.records.count + slot * octree.chunkCapacity },
+      octree.chunkNodeCap,
+    );
+    // Rows and fades first, the root's resident bit last: no frame refines a
+    // root over another chunk's rows.
+    const previous = entry.rootRowOfSlot[slot]!;
+    if (previous >= 0) writeRootRow(entry, previous, null);
+    device.queue.writeBuffer(entry.nodes, nodeBase * CUT_NODE_WORDS * WORD_BYTES, rows);
+    const zeros = new Float32Array(octree.chunkNodeCap * OPACITY_CHANNELS);
+    for (const state of [entry.live, entry.capture]) {
+      if (state === null) continue;
+      device.queue.writeBuffer(state.opacity, nodeBase * OPACITY_CHANNELS * WORD_BYTES, zeros);
+    }
+    writeRootRow(entry, rootRow, chunkRootRefineDelta(chunk, root));
+    entry.rootRowOfSlot[slot] = rootRow;
+  }
+
+  function evictChunk(source: SourceType, slot: number): void {
+    const entry = slotOf(source, slot);
+    const rootRow = entry.rootRowOfSlot[slot]!;
+    if (rootRow < 0) return;
+    // The root stops refining before its rows go.
+    writeRootRow(entry, rootRow, null);
+    const { octree } = entry;
+    const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
+    device.queue.writeBuffer(
+      entry.nodes,
+      nodeBase * CUT_NODE_WORDS * WORD_BYTES,
+      new Uint32Array(octree.chunkNodeCap * CUT_NODE_WORDS),
+    );
+    entry.rootRowOfSlot[slot] = -1;
   }
 
   /** Write one cut's uniforms and record its three dispatches into `pass`. */
   function dispatch(
     pass: GPUComputePassEncoder,
-    octree: StarOctree,
+    { octree, slots }: StarCutSource,
     state: StarCutState,
     inputs: StarCutInputs,
     row: StarCutSourceInput,
@@ -218,7 +307,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     planes: Float32Array,
   ): void {
     const { cut } = inputs;
-    writeStarCutUniforms(uniformScratch, octree, { slots: 0 }, cut.originMpc, {
+    writeStarCutUniforms(uniformScratch, octree, { slots }, cut.originMpc, {
       refineThreshold: cut.refineThreshold,
       fadeStep,
       drawBudget: row.drawBudget,
@@ -230,7 +319,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     device.queue.writeBuffer(state.uniforms, 0, uniformScratch);
     state.lastMs = inputs.nowMs;
 
-    const groups = Math.ceil(octree.nodes.count / CUT_WORKGROUP);
+    const groups = Math.ceil(poolRows(octree, slots) / CUT_WORKGROUP);
     pass.setBindGroup(0, state.computeBindGroup);
     pass.setPipeline(histogram);
     pass.dispatchWorkgroups(groups);
@@ -263,7 +352,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
           : Math.min(inputs.nowMs - lastMs, NODE_FADE_MAX_DT_MS);
       dispatch(
         pass,
-        entry.octree,
+        entry,
         entry.live,
         inputs,
         row,
@@ -282,9 +371,14 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     const encoder = device.createCommandEncoder({ label: 'star-cut-capture' });
     const pass = encoder.beginComputePass({ label: 'star-cut-capture' });
     for (const { row, entry } of present) {
-      entry.capture ??= createState(`${row.source}-capture`, entry.octree, entry.nodes);
+      entry.capture ??= createState(
+        `${row.source}-capture`,
+        entry.octree,
+        entry.slots,
+        entry.nodes,
+      );
       // No frustum (six faces see every direction) and no fade (one static frame).
-      dispatch(pass, entry.octree, entry.capture, inputs, row, 1, NO_PLANES);
+      dispatch(pass, entry, entry.capture, inputs, row, 1, NO_PLANES);
     }
     pass.end();
     device.queue.submit([encoder.finish()]);
@@ -311,6 +405,15 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     streamShifts.aggregate.destroy();
   }
 
-  const cutGpu: StarCutGpu = { drawBgl, upload, encode, submitCapture, drawOf, destroy };
+  const cutGpu: StarCutGpu = {
+    drawBgl,
+    upload,
+    uploadChunk,
+    evictChunk,
+    encode,
+    submitCapture,
+    drawOf,
+    destroy,
+  };
   return cutGpu;
 }

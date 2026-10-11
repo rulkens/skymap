@@ -12,7 +12,7 @@ export type StarCatalogPickResources = {
   /** `@group(1)`: the GPU cut's node table, fades and one draw list. */
   readonly drawBgl: GPUBindGroupLayout;
   readonly recordsBgl: GPUBindGroupLayout;
-  /** `null` when the source has no catalog. */
+  /** Pool-sized (index records, then each chunk slot's); `null` when the source has no catalog. */
   recordsBindGroup(source: SourceType): GPUBindGroup | null;
   /** The frame cut's leaf list; `null` until a frame has cut the source. */
   leafDraw(source: SourceType): StarCutDraw | null;

@@ -25,7 +25,9 @@ export function createStarCatalogSlot(
     commit: async (octree) => {
       // Replaces any previous upload for this source — a tier reload
       // re-commits the new-resolution catalog.
-      renderer.upload(source, octree);
+      // No chunk slots yet: SKST has no chunks, and the tier's pool size arrives
+      // with the octree format.
+      renderer.upload(source, octree, 0);
     },
   });
   slot.subscribe((s) => {

@@ -6,6 +6,7 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCutInputs } from './StarCutInputs';
@@ -13,8 +14,15 @@ import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 
 export type StarCatalogRenderer = Renderer & {
-  /** Commit one catalog's records and octree to per-source GPU buffers, replacing any earlier upload. */
-  upload(source: SourceType, octree: StarOctree): void;
+  /**
+   * Commit one catalog's index to pool-sized per-source GPU buffers, replacing any earlier
+   * upload; `slots = min(slots, octree.chunks.length)` chunk slots follow the index.
+   */
+  upload(source: SourceType, octree: StarOctree, slots: number): void;
+  /** Land a chunk in a slot: its records and rows, then its root's resident bit. */
+  uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void;
+  /** Free a slot: its root stops refining, then its rows are zeroed. */
+  evictChunk(source: SourceType, slot: number): void;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
   loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */

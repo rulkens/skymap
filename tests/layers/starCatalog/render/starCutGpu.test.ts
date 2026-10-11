@@ -81,7 +81,7 @@ function setup() {
   };
   const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
   const gpu = createStarCutGpu(device as unknown as GPUDevice);
-  gpu.upload(Source.GaiaStars, CATALOG);
+  gpu.upload(Source.GaiaStars, CATALOG, 0);
   const encode = (nowMs: number) => gpu.encode(encoder, frame(nowMs), () => ({}));
   return { gpu, device, encoder, encode, fadeSteps };
 }
@@ -120,7 +120,7 @@ describe('starCutGpu lifecycle', () => {
     encode(0);
     expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).not.toBeNull();
 
-    gpu.upload(Source.GaiaStars, EMPTY);
+    gpu.upload(Source.GaiaStars, EMPTY, 0);
     expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
     const passesBefore = vi.mocked(encoder.beginComputePass).mock.calls.length;
     encode(16);
