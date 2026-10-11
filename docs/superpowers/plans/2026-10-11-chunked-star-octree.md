@@ -143,9 +143,9 @@ export type DecodedOctreeObject<H extends OctreeIndexHeader | OctreeChunkHeader>
 | `starChunkPath(binBaseName, ref)` | function | `` `${STAR_OCTREE_DATA_PREFIX}/${binBaseName}/${ref.level}-${ref.morton}.${ref.hash}.bin` `` |
 | `starIndexPath(binBaseName)` | function     | `` `${STAR_OCTREE_DATA_PREFIX}/${binBaseName}.bin` ``   |
 
-- [ ] Create the `@types/octree/` files; each header is one line of purpose plus units on non-obvious fields.
-- [ ] Create `columnIds.ts`, `statIds.ts` and `octreeFormat.ts` with the table above. Packing comments for `u10x3` (x bits 0–9, y 10–19, z 20–29) and `u16x3` (x 0–15, y 16–31, z 32–47, little-endian over 6 bytes) go in `octreeFormat.ts`.
-- [ ] Commit.
+- [x] Create the `@types/octree/` files; each header is one line of purpose plus units on non-obvious fields.
+- [x] Create `columnIds.ts`, `statIds.ts` and `octreeFormat.ts` with the table above. Packing comments for `u10x3` (x bits 0–9, y 10–19, z 20–29) and `u16x3` (x 0–15, y 16–31, z 32–47, little-endian over 6 bytes) go in `octreeFormat.ts`.
+- [x] Commit.
 
 ### Task 2: Encode and decode an octree object, `review: yes`
 
