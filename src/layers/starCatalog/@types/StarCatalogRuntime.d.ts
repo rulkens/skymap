@@ -6,7 +6,7 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
 import type { FamousStarsPayload } from './FamousStarsPayload';
@@ -19,7 +19,7 @@ import type { StarCatalogFacts } from './StarCatalogFacts';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
-  readonly catalogs: ReadonlyMap<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
+  readonly catalogs: ReadonlyMap<SourceType, AssetSlot<StarOctree, StarCatalogReq>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;

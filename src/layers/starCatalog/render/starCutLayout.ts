@@ -4,7 +4,7 @@
  * are what the GPU addresses by. `cut.wesl`'s header explains the scheme.
  */
 
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
@@ -92,32 +92,34 @@ export function initialCutDraws(): Uint32Array {
 }
 
 /** The static node table: one `CutNode` per octree node, in catalog order. */
-export function packStarCutNodes(catalog: StarCatalog): Uint32Array {
-  const { nodes } = catalog;
-  const { childIndex, subtreeCounts } = starOctreeIndex(catalog);
-  const n = nodes.length;
+export function packStarCutNodes(octree: StarOctree): Uint32Array {
+  const { nodes } = octree;
+  const { childIndex } = starOctreeIndex(nodes, octree.grid);
+  const n = nodes.count;
   const blockIndexLimit = 2 ** (32 - LEAF_BLOCK_INDEX_SHIFT);
   if (n >= 2 ** LEAF_BLOCK_INDEX_SHIFT) {
     throw new Error(`starCut: ${n} nodes overflow the ${LEAF_BLOCK_INDEX_SHIFT}-bit node index`);
   }
+  const recordsOf = (i: number) => nodes.ownCount[i]! + (nodes.childMask[i] !== 0 ? 1 : 0);
 
   const out = new Uint32Array(n * CUT_NODE_WORDS);
   for (let i = 0; i < n; i++) {
-    const node = nodes[i]!;
-    if (node.level >= 2 ** LEVEL_BITS) throw new Error(`starCut: level ${node.level} overflows`);
-    if (node.recordCount > blockIndexLimit << LEAF_BLOCK_SHIFT) {
-      throw new Error(`starCut: ${node.recordCount} records overflow one node's block index`);
+    const level = nodes.level[i]!;
+    const recordCount = recordsOf(i);
+    if (level >= 2 ** LEVEL_BITS) throw new Error(`starCut: level ${level} overflows`);
+    if (recordCount > blockIndexLimit << LEAF_BLOCK_SHIFT) {
+      throw new Error(`starCut: ${recordCount} records overflow one node's block index`);
     }
     // Leaf-cell units: a level-L node's own Morton cell is 2^L leaf cells wide.
-    const [cx, cy, cz] = mortonDecode3(node.mortonIndex);
-    const gx = cx * 2 ** node.level;
-    const gy = cy * 2 ** node.level;
-    const gz = cz * 2 ** node.level;
+    const [cx, cy, cz] = mortonDecode3(nodes.morton[i]!);
+    const gx = cx * 2 ** level;
+    const gy = cy * 2 ** level;
+    const gz = cz * 2 ** level;
     if (Math.max(gx, gy, gz) >= 2 ** GRID_AXIS_BITS) {
       throw new Error(`starCut: grid wider than ${2 ** GRID_AXIS_BITS} leaf cells per axis`);
     }
 
-    const isAggregate = node.childMask !== 0;
+    const isAggregate = nodes.childMask[i] !== 0;
     let childRecords = 0;
     const o = i * CUT_NODE_WORDS;
     // The root is the last node and names itself.
@@ -125,24 +127,26 @@ export function packStarCutNodes(catalog: StarCatalog): Uint32Array {
     for (let k = 0; k < CHILDREN_PER_NODE; k++) {
       const child = childIndex[i * CHILDREN_PER_NODE + k]!;
       if (child < 0) continue;
-      childRecords += nodes[child]!.recordCount;
+      childRecords += recordsOf(child);
       out[child * CUT_NODE_WORDS + NODE_PARENT_WORD] = i;
     }
     out[o + NODE_GRID_WORD] = gx | (gy << GRID_AXIS_BITS) | (gz << (2 * GRID_AXIS_BITS));
-    out[o + NODE_FIRST_RECORD_WORD] = node.firstRecord;
+    out[o + NODE_FIRST_RECORD_WORD] = nodes.firstRecord[i]!;
     out[o + NODE_BITS_WORD] =
-      node.level | (isAggregate ? 1 << LEVEL_BITS : 0) | (node.recordCount << RECORD_COUNT_SHIFT);
-    out[o + NODE_SUBTREE_COUNT_WORD] = subtreeCounts[i]!;
-    out[o + NODE_REFINE_DELTA_WORD] = isAggregate ? childRecords - node.recordCount : 0;
+      level | (isAggregate ? 1 << LEVEL_BITS : 0) | (recordCount << RECORD_COUNT_SHIFT);
+    out[o + NODE_SUBTREE_COUNT_WORD] = isAggregate ? nodes.blobCount[i]! : nodes.ownCount[i]!;
+    out[o + NODE_REFINE_DELTA_WORD] = isAggregate ? childRecords - recordCount : 0;
   }
   return out;
 }
 
 /** Entries the leaf list can ever hold: every leaf's blocks at once. */
-export function leafListCapacity(catalog: StarCatalog): number {
+export function leafListCapacity(octree: StarOctree): number {
   let blocks = 0;
-  for (const node of catalog.nodes) {
-    if (node.childMask === 0) blocks += Math.ceil(node.recordCount / (1 << LEAF_BLOCK_SHIFT));
+  for (let i = 0; i < octree.nodes.count; i++) {
+    if (octree.nodes.childMask[i] === 0) {
+      blocks += Math.ceil(octree.nodes.ownCount[i]! / (1 << LEAF_BLOCK_SHIFT));
+    }
   }
   return blocks;
 }
@@ -155,7 +159,7 @@ export function leafListCapacity(catalog: StarCatalog): number {
  */
 export function writeStarCutUniforms(
   out: ArrayBuffer,
-  catalog: StarCatalog,
+  octree: StarOctree,
   camPosMpc: Readonly<Vec3>,
   cut: {
     readonly refineThreshold: number;
@@ -172,12 +176,12 @@ export function writeStarCutUniforms(
   const f32 = new Float32Array(out);
   for (let a = 0; a < 3; a++) {
     const cells =
-      (camPosMpc[a]! * SCALE_UNITS.MPC_TO_PC - catalog.gridOrigin[a]!) / catalog.cellEdgePc;
+      (camPosMpc[a]! * SCALE_UNITS.MPC_TO_PC - octree.grid.origin[a]!) / octree.grid.cellEdge;
     const whole = Math.max(-CAM_CELL_LIMIT, Math.min(CAM_CELL_LIMIT, Math.floor(cells)));
     i32[CAM_CELL_INT_INDEX + a] = whole;
     f32[CAM_FRAC_FLOAT_INDEX + a] = cells - whole;
   }
-  f32[CELL_EDGE_MPC_FLOAT_INDEX] = catalog.cellEdgePc * SCALE_UNITS.PC_TO_MPC;
+  f32[CELL_EDGE_MPC_FLOAT_INDEX] = octree.grid.cellEdge * SCALE_UNITS.PC_TO_MPC;
   f32[REFINE_THRESHOLD_SQ_FLOAT_INDEX] = cut.refineThreshold * cut.refineThreshold;
   f32[FADE_STEP_FLOAT_INDEX] = cut.fadeStep;
   u32[DRAW_BUDGET_U32_INDEX] = cut.drawBudget;
@@ -186,7 +190,7 @@ export function writeStarCutUniforms(
   const views = cut.planes.length / FLOATS_PER_VIEW;
   const viewCount = views <= CUT_MAX_VIEWS ? views : 0;
   u32[VIEW_COUNT_U32_INDEX] = viewCount;
-  u32[NODE_COUNT_U32_INDEX] = catalog.nodes.length;
+  u32[NODE_COUNT_U32_INDEX] = octree.nodes.count;
   f32[OPACITY_FLOAT_INDEX] = cut.opacity;
   f32.set(cut.planes.subarray(0, viewCount * FLOATS_PER_VIEW), PLANES_FLOAT_INDEX);
 }

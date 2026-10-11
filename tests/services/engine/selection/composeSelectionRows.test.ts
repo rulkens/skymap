@@ -27,8 +27,8 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
@@ -37,7 +37,8 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 
@@ -98,11 +99,11 @@ const deps: ResolveDeps = {
 };
 
 /** The starCatalog Layer's slice of the composed resolver — its own live read. */
-function starsFixture(catalog: StarCatalog | null): StarRowFixture {
+function starsFixture(catalog: StarOctree | null): StarRowFixture {
   return {
     renderer: {
       loadedCatalogs: () =>
-        (catalog ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
+        (catalog ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
     },
   } as unknown as StarRowFixture;
 }
@@ -304,7 +305,7 @@ describe('extractRow, composed', () => {
   });
 });
 
-async function makeStarCatalog(): Promise<StarCatalog> {
+async function makeStarCatalog(): Promise<StarOctree> {
   const octree = buildStarOctree(
     [
       { mortonIndex: 0, offset: [3, 1, 2], absMag: 5, bpRp: 0.3 },
@@ -312,7 +313,7 @@ async function makeStarCatalog(): Promise<StarCatalog> {
     ],
     { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] },
   );
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 // ─── resolveFocusId / focusIdOf (was resolveFocusId.test.ts) ────────────────

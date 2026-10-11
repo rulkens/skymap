@@ -112,7 +112,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
@@ -144,11 +144,11 @@ const OFF_FRACTION = 0.8;
  * fresh catalog object — starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */
-const presentByCatalog = new WeakMap<StarCatalog, PresentStar | null>();
+const presentByCatalog = new WeakMap<StarOctree, PresentStar | null>();
 
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
-function currentCatalog(runtime: Pick<StarCatalogRuntime, 'renderer'>): StarCatalog | null {
-  for (const { catalog } of runtime.renderer.loadedCatalogs()) return catalog;
+function currentCatalog(runtime: Pick<StarCatalogRuntime, 'renderer'>): StarOctree | null {
+  for (const { octree } of runtime.renderer.loadedCatalogs()) return octree;
   return null;
 }
 

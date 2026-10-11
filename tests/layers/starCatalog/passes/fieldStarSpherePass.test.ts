@@ -23,10 +23,11 @@ import { resolveStarRecord } from '../../../../src/services/engine/helpers/resol
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../src/services/engine/frame/partitionStarsByResolution';
@@ -56,14 +57,14 @@ function sorted(stars: OctreeLeafStar[]): OctreeLeafStar[] {
  * AU-scale resolve radius, so only record 1 is ever in range. Built through the
  * real octree + encode/decode path so the reconstruction matches the runtime.
  */
-async function threeStarCatalog(): Promise<StarCatalog> {
+async function threeStarCatalog(): Promise<StarOctree> {
   const stars: OctreeLeafStar[] = [
     { mortonIndex: 0, offset: [100, 100, 100], absMag: 5, bpRp: 0.3 },
     { mortonIndex: 0, offset: [500, 500, 500], absMag: 4, bpRp: 0.65 },
     { mortonIndex: 0, offset: [900, 900, 900], absMag: 3, bpRp: 0.9 },
   ];
   const octree = buildStarOctree(sorted(stars), GRID);
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 /** Distance (Mpc) at which a solar-radius sphere subtends `px` — the gate inversion. */
@@ -95,13 +96,13 @@ function makeCtx(camPos: Vec3): FrameView {
  * renderer (`draw`).
  */
 function makeRuntime(
-  catalog: StarCatalog | null,
+  catalog: StarOctree | null,
   overrides: Record<string, unknown> = {},
 ): StarCatalogRuntime {
   const renderer =
     catalog === null
       ? { loadedCatalogs: () => [] }
-      : { loadedCatalogs: () => [{ source: Source.GaiaStars, catalog }] };
+      : { loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }] };
   return {
     renderer,
     starRenderer: { draw: vi.fn() },

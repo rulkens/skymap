@@ -2,27 +2,25 @@
  * The standalone home of the star renderer's f64-rebase precision seam
  * (`resolveStarRecord` uses it; `cutIo.wesl` keeps the same discipline on the
  * GPU against catastrophic cancellation). f64 the whole way, narrowed to f32
- * only in the returned `Vec3`. One formula for leaves and aggregates via
- * `2^level` — inverts the box scaling `buildStarOctree` applies when
- * quantizing an aggregate's flux centroid. No division, so a node coincident
- * with the camera yields `[0, 0, 0]`, no divide-by-zero guard.
+ * only in the returned `Vec3`. One formula for every level via `2^level`. No
+ * division, so a node coincident with the camera yields `[0, 0, 0]`, no
+ * divide-by-zero guard.
  */
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../@types/data/starCatalog/StarCatalogNode';
+import type { OctreeGrid } from '../../@types/octree/OctreeGrid';
 import { mortonDecode3 } from '../math/mortonDecode3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 
 export function starNodeOriginRelCamMpc(
-  catalog: StarCatalog,
-  node: StarCatalogNode,
-  camPosMpc: Vec3,
+  grid: OctreeGrid,
+  morton: number,
+  level: number,
+  camPosMpc: Readonly<Vec3>,
 ): { originRelCamMpc: Vec3; cellScaleMpc: number } {
-  const boxCells = 2 ** node.level;
-  const boxEdgePc = catalog.cellEdgePc * boxCells;
+  const boxEdgePc = grid.cellEdge * 2 ** level;
 
-  const [gx, gy, gz] = catalog.gridOrigin;
-  const [cx, cy, cz] = mortonDecode3(node.mortonIndex);
+  const [gx, gy, gz] = grid.origin;
+  const [cx, cy, cz] = mortonDecode3(morton);
 
   const pcToMpc = SCALE_UNITS.PC_TO_MPC;
   const originRelCamMpc: Vec3 = [
@@ -31,7 +29,5 @@ export function starNodeOriginRelCamMpc(
     (gz + cz * boxEdgePc) * pcToMpc - camPosMpc[2],
   ];
 
-  const cellScaleMpc = boxEdgePc * pcToMpc;
-
-  return { originRelCamMpc, cellScaleMpc };
+  return { originRelCamMpc, cellScaleMpc: boxEdgePc * pcToMpc };
 }

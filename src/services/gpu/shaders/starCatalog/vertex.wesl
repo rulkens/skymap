@@ -8,21 +8,17 @@
 // per-source blob. Bindings: @group(0) u (rebased view-projection + viewport),
 // @group(1) cut* (cutIo.wesl structs and this stream's list), @group(2) records.
 //
-// ## Record unpack (the inverse of packStarRecord)
+// ## Record unpack (the inverse of packStarGpuRecords)
 //
-// The on-disk 6-byte record is two independent 24-bit halves (JS bitwise ops are
-// signed-32; see starCatalogFormat.ts). The renderer repacks each into two u32,
-// 'lo' = bytes 0..2 and 'hi' = bytes 3..5:
-//
-//   offsetX = lo bits 0..9      offsetY = lo bits 10..19
-//   offsetZ = lo bits 20..23 (low 4) | hi bits 0..5 (high 6)   <- the straddle trap
-//   absMagIdx = hi bits 6..12 (7)   colorIdx = hi bits 13..18 (6)
+// Two u32 per record, offsets a 16-bit fraction of the owning node's box:
+//   w0 = x (bits 0..15) | y (16..31)
+//   w1 = z (bits 0..15) | absMagIdx (16..22) | colorIdx (23..28)
 //
 // ## World reconstruction
 //
 // cutIo.wesl's camera split makes node-minus-camera integer-exact, so the origin
 // arrives small and the f32 math is well-conditioned:
-//   worldRelCam = originRelCamMpc + (offset / 1024) * cellScaleMpc
+//   worldRelCam = originRelCamMpc + (offset / 65536) * cellScaleMpc
 //
 // ## Flux-integrated glow
 //
@@ -130,8 +126,15 @@ const STAR_COLORIDX_MIN: f32 = -0.6;
 // (4.4 - (-0.6)) / 64
 const STAR_COLORIDX_STEP: f32 = 0.078125;
 
-// Reciprocal of 1024: offset 0..1023 spans one box.
-const OFFSET_SCALE: f32 = 0.0009765625;
+// Reciprocal of 65536 (OFFSET_FRACTION_LEVELS): offset 0..65535 spans one box.
+const OFFSET_SCALE: f32 = 0.0000152587890625;
+// packStarGpuRecords' word layout.
+const OFFSET_MASK: u32 = 0xffffu;
+const GPU_Y_SHIFT: u32 = 16u;
+const GPU_ABSMAG_SHIFT: u32 = 16u;
+const GPU_ABSMAG_MASK: u32 = 0x7fu;
+const GPU_COLOR_SHIFT: u32 = 23u;
+const GPU_COLOR_MASK: u32 = 0x3fu;
 
 // Pick pass only: floors the billboard radius so a sub-pixel star still covers a
 // clickable pixel at its true screen position. Geometry only; the pick fragment
@@ -191,15 +194,14 @@ fn vs(
   let nodeOpacity = cutOpacity[nodeIdx] * cut.opacity;
   let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].subtreeCount), isAgg);
 
-  // Two u32 per record in the repacked blob.
-  let lo = records[base * 2u + 0u];
-  let hi = records[base * 2u + 1u];
+  let w0 = records[base * 2u + 0u];
+  let w1 = records[base * 2u + 1u];
 
-  let ox = f32(lo & 0x3ffu);
-  let oy = f32((lo >> 10u) & 0x3ffu);
-  let oz = f32(((lo >> 20u) & 0xfu) | ((hi & 0x3fu) << 4u));
-  let absMagIdx = (hi >> 6u) & 0x7fu;
-  let colorIdx = (hi >> 13u) & 0x3fu;
+  let ox = f32(w0 & OFFSET_MASK);
+  let oy = f32(w0 >> GPU_Y_SHIFT);
+  let oz = f32(w1 & OFFSET_MASK);
+  let absMagIdx = (w1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
+  let colorIdx = (w1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
   let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
   let worldRelCam = originRelCamMpc + offset * cellScaleMpc;

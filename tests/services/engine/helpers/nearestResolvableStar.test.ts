@@ -4,9 +4,10 @@ import { resolveStarRecord } from '../../../../src/services/engine/helpers/resol
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -55,7 +56,7 @@ async function twoCoreCatalog() {
     stars.push({ mortonIndex: 1, offset: [100, 500, 500], absMag: 4, bpRp: 0.5 });
   }
   const octree = buildStarOctree(sorted(stars), GRID);
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 /** Squared Mpc distance between two positions. */

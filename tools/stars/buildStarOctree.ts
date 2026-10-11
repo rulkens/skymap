@@ -8,7 +8,7 @@
  * (`starCatalogFormat.ts`). It groups the sorted stars into leaf cells, builds
  * aggregate levels bottom-up by flux-merging groups of ≤8 sibling cells, packs
  * every leaf and aggregate into a 6-byte record, and returns a pure
- * `StarCatalog`. No I/O — the caller owns fetching, sorting, and writing.
+ * `SkstCatalog`. No I/O — the caller owns fetching, sorting, and writing.
  *
  * ── The build, level by level ─────────────────────────────────────────────
  *
@@ -105,8 +105,8 @@
  * indexes region one, an aggregate's indexes region two.
  */
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../src/@types/data/starCatalog/StarCatalogNode';
+import type { SkstCatalog } from '../../src/@types/data/starCatalog/SkstCatalog';
+import type { SkstNode } from '../../src/@types/data/starCatalog/SkstNode';
 import { mortonDecode3 } from '../../src/utils/math/mortonDecode3';
 import {
   packStarRecord,
@@ -232,7 +232,7 @@ function aggregateOffset(centroid: Vec3, morton: number, level: number): Vec3 {
 export function buildStarOctree(
   stars: readonly OctreeLeafStar[],
   grid: StarOctreeGrid,
-): StarCatalog {
+): SkstCatalog {
   // Nodes are collected as they are emitted, in no particular order, then sorted
   // into (level, morton) node order at the end. A node is emitted either as an
   // aggregate (the moment its parent group exceeds capacity) or as a leaf/fat
@@ -360,7 +360,11 @@ export function buildStarOctree(
           const bz = (oct >> 2) & 1;
           for (const r of child.records!) {
             records.push({
-              offset: [foldOffset(r.offset[0], bx), foldOffset(r.offset[1], by), foldOffset(r.offset[2], bz)],
+              offset: [
+                foldOffset(r.offset[0], bx),
+                foldOffset(r.offset[1], by),
+                foldOffset(r.offset[2], bz),
+              ],
               absMagIdx: r.absMagIdx,
               colorIdx: r.colorIdx,
             });
@@ -401,7 +405,7 @@ export function buildStarOctree(
   // Region one holds real-star records (leaves + fat leaves, in node order),
   // region two holds one aggregate record each — so a leaf's firstRecord indexes
   // region one and an aggregate's indexes region two (offset by starCount).
-  const nodes: StarCatalogNode[] = new Array(emitted.length);
+  const nodes: SkstNode[] = new Array(emitted.length);
   const realStarRecords: LeafRecord[] = [];
   const aggregateRecords: LeafRecord[] = [];
   for (let n = 0; n < emitted.length; n++) {

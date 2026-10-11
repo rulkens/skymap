@@ -1,7 +1,7 @@
 /**
  * starCatalogRenderer — the survey (Gaia bin) stars as additive point sprites in
- * the depthless HDR accumulation. Its own pipeline: records are 6-byte cell
- * quantized octree records, vertex-pulled and rebuilt against their node's box.
+ * the depthless HDR accumulation. Its own pipeline: records are two u32 each
+ * (`packStarGpuRecords`), vertex-pulled and rebuilt against their node's box.
  * `upload` commits a catalog once; the per-frame cut is taken on the GPU
  * (`starCutGpu`) from the inputs `setFrameCut` holds, and each stream draws with
  * one `drawIndirect`. Leaves go to full-res HDR (`fs`), aggregates LINEAR to the
@@ -11,13 +11,13 @@
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StarCatalogRenderer } from '../@types/StarCatalogRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogCutDrawArgs } from '../@types/StarCatalogCutDrawArgs';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from '../@types/StarDrawStream';
-import { RECORD_BYTES } from '../../../data/starCatalog/starCatalogFormat';
+import { packStarGpuRecords } from '../../../utils/star/packStarGpuRecords';
 import vsCode from '../../../services/gpu/shaders/starCatalog/vertex.wesl?static';
 import fsCode from '../../../services/gpu/shaders/starCatalog/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
@@ -37,8 +37,8 @@ import { createStarCutGpu } from './starCutGpu';
 
 /** One committed catalog's GPU records + the octree kept for the layer. */
 type LoadedStarSource = {
-  catalog: StarCatalog;
-  /** The repacked record blob (`array<u32>`, two u32 per record). */
+  octree: StarOctree;
+  /** `packStarGpuRecords`' blob (`array<u32>`, two u32 per record). */
   recordsBuffer: GPUBuffer;
   /** `@group(2)` bind group over `recordsBuffer`, built at upload. */
   recordsBindGroup: GPUBindGroup;
@@ -109,29 +109,11 @@ export function createStarCatalogRenderer(
 
   const sources = new Map<SourceType, LoadedStarSource>();
 
-  /**
-   * Repack 6-byte records into two u32 each (`lo` = on-disk bytes 0..2, `hi` =
-   * bytes 3..5; the record is two independent 24-bit halves, JS bitwise ops
-   * being signed-32). Costs 8/6 VRAM, buys aligned addressing in the shader.
-   */
-  function repackRecords(records: Uint8Array): Uint32Array {
-    const total = records.length / RECORD_BYTES;
-    const out = new Uint32Array(total * 2);
-    for (let r = 0; r < total; r++) {
-      const at = r * RECORD_BYTES;
-      const lo = records[at]! | (records[at + 1]! << 8) | (records[at + 2]! << 16);
-      const hi = records[at + 3]! | (records[at + 4]! << 8) | (records[at + 5]! << 16);
-      out[r * 2] = lo >>> 0;
-      out[r * 2 + 1] = hi >>> 0;
-    }
-    return out;
-  }
-
-  function upload(source: SourceType, catalog: StarCatalog): void {
-    // Empty catalog is the unload signal (a tier swap that drops the bin);
+  function upload(source: SourceType, octree: StarOctree): void {
+    // Empty octree is the unload signal (a tier swap that drops the bin);
     // `createBuffer({size:0})` is forbidden.
-    const packed = catalog.records.length === 0 ? null : repackRecords(catalog.records);
-    cut.upload(source, catalog);
+    const packed = octree.records.count === 0 ? null : packStarGpuRecords(octree.records);
+    cut.upload(source, octree);
     // GPU buffers are fixed-size — destroy and reallocate on replace.
     sources.get(source)?.recordsBuffer.destroy();
     sources.delete(source);
@@ -148,12 +130,12 @@ export function createStarCatalogRenderer(
       layout: recordsBgl,
       entries: [{ binding: 0, resource: { buffer: recordsBuffer } }],
     });
-    sources.set(source, { catalog, recordsBuffer, recordsBindGroup });
+    sources.set(source, { octree, recordsBuffer, recordsBindGroup });
   }
 
-  function* loadedCatalogs(): IterableIterator<{ source: SourceType; catalog: StarCatalog }> {
+  function* loadedCatalogs(): IterableIterator<{ source: SourceType; octree: StarOctree }> {
     for (const [source, entry] of sources) {
-      yield { source, catalog: entry.catalog };
+      yield { source, octree: entry.octree };
     }
   }
 

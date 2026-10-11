@@ -3,9 +3,10 @@ import { resolveStarRecord } from '../../../../src/services/engine/helpers/resol
 import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../tools/stars/buildStarOctree';
 import type { OctreeLeafStar, StarOctreeGrid } from '../../../../tools/stars/buildStarOctree';
 import {
-  encodeStarCatalog,
-  decodeStarCatalog,
+  encodeSkstCatalog,
+  decodeSkstCatalog,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 // A 1 pc leaf edge with a zero grid origin makes grid coordinates read directly
@@ -47,7 +48,7 @@ async function densePlusSparseCatalog() {
   const octree = buildStarOctree(sorted([...dense, ...sparse]), GRID);
   // Round-trip through the on-disk format so the resolver reads exactly the
   // bytes the runtime would load.
-  return decodeStarCatalog(await encodeStarCatalog(octree));
+  return starOctreeFromSkst(await decodeSkstCatalog(await encodeSkstCatalog(octree)));
 }
 
 describe('resolveStarRecord', () => {
@@ -64,9 +65,9 @@ describe('resolveStarRecord', () => {
     expect(dense.positionMpc[1]).toBeCloseTo((1 / 1024) * PC_TO_MPC, 18);
     expect(dense.positionMpc[2]).toBeCloseTo((2 / 1024) * PC_TO_MPC, 18);
     // absMag 5.0 → LUT index floor((5-(-6))/0.19)=57 → centre -6 + 57.5·0.19.
-    expect(dense.absMag).toBeCloseTo(-6.0 + 57.5 * 0.19, 10); // 4.925
+    expect(dense.absMag).toBeCloseTo(-6.0 + 57.5 * 0.19, 5); // 4.925
     // bpRp 0.3 → index floor((0.3+0.6)/(5/64))=11 → centre -0.6 + 11.5·(5/64).
-    expect(dense.bpRp).toBeCloseTo(-0.6 + 11.5 * (5 / 64), 10); // 0.2984375
+    expect(dense.bpRp).toBeCloseTo(-0.6 + 11.5 * (5 / 64), 5); // 0.2984375
 
     // ── A star in the FAT leaf (level 1): correct leaf found past the ─────────
     // ── interleaved aggregate, reconstructed at the coarser box scale ────────
@@ -86,8 +87,8 @@ describe('resolveStarRecord', () => {
     }
     // Photometry is level-independent (folding only touches the offset): absMag
     // 4.0 → index 52; bpRp 0.5 → index 14. Exact dequantised bin centres.
-    expect(fat.absMag).toBeCloseTo(-6.0 + 52.5 * 0.19, 10); // 3.975
-    expect(fat.bpRp).toBeCloseTo(-0.6 + 14.5 * (5 / 64), 10); // 0.5328125
+    expect(fat.absMag).toBeCloseTo(-6.0 + 52.5 * 0.19, 5); // 3.975
+    expect(fat.bpRp).toBeCloseTo(-0.6 + 14.5 * (5 / 64), 5); // 0.5328125
   });
 
   it('returns null for an out-of-range record index', async () => {

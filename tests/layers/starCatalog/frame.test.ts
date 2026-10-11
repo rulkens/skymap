@@ -11,7 +11,7 @@ import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarC
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../src/@types/data/starCatalog/StarOctree';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
@@ -37,12 +37,12 @@ function makeView(camPos: Vec3, nowMs: number): FrameView {
 }
 
 function makeRuntime(loaded: boolean): StarCatalogRuntime {
-  const catalog = { starCount: 0 } as unknown as StarCatalog;
+  const catalog = { starCount: 0 } as unknown as StarOctree;
   let cut: StarCutInputs | null = null;
   return {
     renderer: {
       loadedCatalogs: () =>
-        (loaded ? [{ source: Source.GaiaStars, catalog }] : [])[Symbol.iterator](),
+        (loaded ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
       setFrameCut: vi.fn((c: StarCutInputs | null) => {
         cut = c;
       }),

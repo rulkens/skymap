@@ -24,12 +24,11 @@
  * ── Why reconstruct through the SHARED starNodeOriginRelCamMpc formula ────────
  *
  * A leaf's records are reconstructed to world Mpc EXACTLY the way
- * `resolveStarRecord` does — `starNodeOriginRelCamMpc(catalog, node, SUN)` for
- * the node's heliocentric origin, plus the record's in-cell offset scaled by the
- * cell. Sharing that one formula is what guarantees the sphere lands where the
+ * `resolveStarRecord` does — `starNodeOriginRelCamMpc(grid, morton, level, SUN)`
+ * for the node's heliocentric origin, plus the record's offset scaled by the
+ * box. Sharing that one formula is what guarantees the sphere lands where the
  * sprite drew and where the pick resolves; a second derivation off the index's
- * box arrays could drift and place the sphere off the star. The node OBJECT
- * `catalog.nodes[i]` that call needs aligns 1:1 with the flat index arrays.
+ * box arrays could drift and place the sphere off the star.
  *
  * ── Why it is cheap enough to run every frame ─────────────────────────────────
  *
@@ -42,13 +41,8 @@
  * neighbour the camera. All math is plain f64 JS numbers.
  */
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
-import {
-  unpackStarRecord,
-  colorIdxToBpRp,
-  RECORD_BYTES,
-  STAR_OFFSET_LEVELS,
-} from '../../../data/starCatalog/starCatalogFormat';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import { OFFSET_FRACTION_LEVELS } from '../../../data/octree/octreeFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
 import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
@@ -64,16 +58,15 @@ const SUN: Vec3 = [0, 0, 0];
  * camera-to-star distance (≤ `searchRadiusMpc`).
  */
 export function nearestResolvableStar(
-  catalog: StarCatalog,
+  octree: StarOctree,
   camPosMpc: Readonly<Vec3>,
   searchRadiusMpc: number,
 ): { recordIdx: number; positionMpc: Vec3; bpRp: number; distanceMpc: number } | null {
-  const { nodes, records } = catalog;
-  const n = nodes.length;
+  const { nodes, records } = octree;
+  const n = nodes.count;
   if (n === 0) return null;
 
-  const { childIndex, childMask, firstRecord, recordCount, boxOriginPc, boxEdgePc } =
-    starOctreeIndex(catalog);
+  const { childIndex, boxOriginPc, boxEdgePc } = starOctreeIndex(nodes, octree.grid);
 
   // The expanded-box containment test runs in parsecs (the box arrays' unit); the
   // nearest-record compare runs in Mpc (the reconstruction's unit).
@@ -107,30 +100,33 @@ export function nearestResolvableStar(
     const hiZ = boxOriginPc[o3 + 2]! + edge + radiusPc;
     if (camZPc < loZ || camZPc > hiZ) continue;
 
-    if (childMask[i] !== 0) {
-      // Aggregate: descend into every present child (its records are a flux mip,
-      // not real stars, so it is never unpacked here).
+    // Childful: descend into every present child (a blob is a flux mip, never unpacked).
+    if (nodes.childMask[i] !== 0) {
       const cbase = i * 8;
       for (let k = 0; k < 8; k++) {
         const c = childIndex[cbase + k]!;
         if (c >= 0) stack.push(c);
       }
-      continue;
     }
 
-    // Leaf (childMask === 0): its records ARE real stars. Reconstruct each via
-    // the shared node-origin formula (camera at the Sun ⇒ heliocentric origin),
-    // then the in-cell offset scaled by the cell — bit-identical to
-    // resolveStarRecord's reconstruction.
-    const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(catalog, nodes[i]!, SUN);
-    const base = firstRecord[i]!;
-    const count = recordCount[i]!;
+    // Own records ARE real stars, reconstructed as resolveStarRecord does.
+    const count = nodes.ownCount[i]!;
+    if (count === 0) continue;
+    const { originRelCamMpc, cellScaleMpc } = starNodeOriginRelCamMpc(
+      octree.grid,
+      nodes.morton[i]!,
+      nodes.level[i]!,
+      SUN,
+    );
+    const base = nodes.firstRecord[i]!;
     for (let r = 0; r < count; r++) {
       const recordIdx = base + r;
-      const { offset, colorIdx } = unpackStarRecord(records, recordIdx * RECORD_BYTES);
-      const px = originRelCamMpc[0] + (offset[0] / STAR_OFFSET_LEVELS) * cellScaleMpc;
-      const py = originRelCamMpc[1] + (offset[1] / STAR_OFFSET_LEVELS) * cellScaleMpc;
-      const pz = originRelCamMpc[2] + (offset[2] / STAR_OFFSET_LEVELS) * cellScaleMpc;
+      const o = 3 * recordIdx;
+      const px = originRelCamMpc[0] + (records.offset[o]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
+      const py =
+        originRelCamMpc[1] + (records.offset[o + 1]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
+      const pz =
+        originRelCamMpc[2] + (records.offset[o + 2]! / OFFSET_FRACTION_LEVELS) * cellScaleMpc;
       const dx = px - camPosMpc[0];
       const dy = py - camPosMpc[1];
       const dz = pz - camPosMpc[2];
@@ -139,7 +135,7 @@ export function nearestResolvableStar(
         bestSqMpc = sq;
         bestIdx = recordIdx;
         bestPos = [px, py, pz];
-        bestBpRp = colorIdxToBpRp(colorIdx);
+        bestBpRp = records.colourIndex[recordIdx]!;
       }
     }
   }

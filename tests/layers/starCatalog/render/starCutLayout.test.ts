@@ -13,12 +13,12 @@ import {
   writeStarCutUniforms,
 } from '../../../../src/layers/starCatalog/render/starCutLayout';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 
 // Two level-0 leaves under one level-1 aggregate root. Morton puts x on the
 // lowest bit: leaves 8 and 9 sit at x cells 2 and 3, their parent (morton 1,
 // level 1) at x = 1 coarse cell = leaf cell 2.
-const CATALOG: StarCatalog = {
+const CATALOG = starOctreeFromSkst({
   starCount: 5,
   nodeCount: 3,
   mortonBitsPerAxis: 9,
@@ -30,7 +30,7 @@ const CATALOG: StarCatalog = {
     { mortonIndex: 1, level: 1, childMask: 0b11, firstRecord: 5, recordCount: 1 },
   ],
   records: new Uint8Array(6 * 6),
-};
+});
 
 describe('packStarCutNodes', () => {
   const words = packStarCutNodes(CATALOG);

@@ -20,12 +20,13 @@ import {
   writeStarCutUniforms,
 } from '../../../../../src/layers/starCatalog/render/starCutLayout';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { starOctreeFromSkst } from '../../../../../src/utils/star/starOctreeFromSkst';
 
 const ROOT = 6;
 const NODE_MASK = 0x3fffff;
-const CATALOG: StarCatalog = {
+const CATALOG: SkstCatalog = {
   starCount: 21,
   nodeCount: 7,
   mortonBitsPerAxis: 9,
@@ -42,7 +43,8 @@ const CATALOG: StarCatalog = {
   ],
   records: new Uint8Array(24 * 6),
 };
-const NODES = packStarCutNodes(CATALOG);
+const OCTREE = starOctreeFromSkst(CATALOG);
+const NODES = packStarCutNodes(OCTREE);
 const LEAVES = [0, 1, 2, 3];
 
 type Over = {
@@ -58,7 +60,7 @@ type Over = {
 function run(camCells: Vec3, over: Over = {}) {
   const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
   const camMpc = camCells.map((c) => c * SCALE_UNITS.PC_TO_MPC) as unknown as Vec3;
-  writeStarCutUniforms(buf, CATALOG, camMpc, {
+  writeStarCutUniforms(buf, OCTREE, camMpc, {
     refineThreshold: over.threshold ?? 2,
     fadeStep: over.fadeStep ?? 1,
     drawBudget: over.budget ?? 1_000_000,

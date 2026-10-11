@@ -45,7 +45,7 @@ function starDriver(poseId: string | null, radiusM: number): DriverGeometry {
 
 /** The first (only, in v1) committed Gaia catalog, or null before it lands. */
 function currentCatalog(runtime: Pick<StarCatalogRuntime, 'renderer'>) {
-  for (const { catalog } of runtime.renderer.loadedCatalogs()) return catalog;
+  for (const { octree } of runtime.renderer.loadedCatalogs()) return octree;
   return null;
 }
 

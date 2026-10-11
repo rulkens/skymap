@@ -16,7 +16,8 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { StarCatalogSettings } from '../../../../src/@types/settings/StarCatalogSettings';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -43,8 +44,8 @@ function makeCtx(offscreenView: GPUTextureView, camPos: Readonly<Vec3>): FrameVi
   } as unknown as FrameView;
 }
 
-function makeCatalog(): StarCatalog {
-  return {
+function makeCatalog(): StarOctree {
+  return starOctreeFromSkst({
     starCount: 1,
     nodeCount: 1,
     mortonBitsPerAxis: 9,
@@ -52,11 +53,11 @@ function makeCatalog(): StarCatalog {
     gridOrigin: [0, 0, 0],
     nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
     records: new Uint8Array(6),
-  };
+  });
 }
 
 function makeRuntime(upsample: unknown): StarCatalogRuntime {
-  const loaded = [{ source: Source.GaiaStars, catalog: makeCatalog() }];
+  const loaded = [{ source: Source.GaiaStars, octree: makeCatalog() }];
   const renderer = {
     upload: vi.fn(),
     loadedCatalogs: vi.fn(() => loaded[Symbol.iterator]()),

@@ -1,5 +1,5 @@
 /**
- * starCatalogFetcher — `Fetcher<StarCatalog, StarCatalogReq>`.
+ * starCatalogFetcher — `Fetcher<StarOctree, StarCatalogReq>`.
  *
  * ONE fetcher for EVERY `starCatalog` row of the SOURCE_REGISTRY, keyed by
  * `req.source`. Unlike the galaxy fetcher — which reaches for
@@ -11,10 +11,11 @@
  *
  * ### Async decode
  *
- * Unlike the galaxy catalogs, `decodeStarCatalog` is *async*: the on-disk
+ * Unlike the galaxy catalogs, `decodeSkstCatalog` is *async*: the on-disk
  * `.bin` is run through the sealed compression codec (`starBinCodec.ts`),
  * so decode inflates before parsing and the fetcher must await it — a
- * synchronous return would hand back an unresolved promise.
+ * synchronous return would hand back an unresolved promise. The v1 catalog
+ * then adapts to the shared `StarOctree` the renderer draws.
  *
  * ### Type guard, not a cast
  *
@@ -31,15 +32,16 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { StarCatalogReq } from '../../../@types/loading/StarCatalogReq';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import {
-  decodeStarCatalog,
+  decodeSkstCatalog,
   STAR_CATALOG_DATA_PREFIX,
 } from '../../../data/starCatalog/starCatalogFormat';
+import { starOctreeFromSkst } from '../../../utils/star/starOctreeFromSkst';
 import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
 
-export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
+export const starCatalogFetcher: Fetcher<StarOctree, StarCatalogReq> = async (
   req,
   signal,
   onProgress,
@@ -54,5 +56,5 @@ export const starCatalogFetcher: Fetcher<StarCatalog, StarCatalogReq> = async (
     signal,
     onProgress,
   );
-  return decodeStarCatalog(buf);
+  return starOctreeFromSkst(await decodeSkstCatalog(buf));
 };

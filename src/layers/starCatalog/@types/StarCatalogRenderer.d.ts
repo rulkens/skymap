@@ -6,7 +6,7 @@
 
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCutInputs } from './StarCutInputs';
 import type { StarCatalogCutDrawArgs } from './StarCatalogCutDrawArgs';
@@ -14,9 +14,9 @@ import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimes
 
 export type StarCatalogRenderer = Renderer & {
   /** Commit one catalog's records and octree to per-source GPU buffers, replacing any earlier upload. */
-  upload(source: SourceType, catalog: StarCatalog): void;
+  upload(source: SourceType, octree: StarOctree): void;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
-  loadedCatalogs(): Iterable<{ source: SourceType; catalog: StarCatalog }>;
+  loadedCatalogs(): Iterable<{ source: SourceType; octree: StarOctree }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
   /** The frame's one cut: set by the Layer's planner, encoded by `encodeCut`, read by every `drawCut` and the pick draw. */

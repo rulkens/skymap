@@ -2,14 +2,14 @@
  * starCutGpu — the per-frame octree cut as three compute dispatches: one small
  * uniform per source, then the GPU decides, fades and lists every node
  * (`cut.wesl`). Draws read the lists via `drawIndirect`; the cut's size never
- * reaches JS. Each state's buffers are sized once to the catalog's worst case
+ * reaches JS. Each state's buffers are sized once to the octree's worst case
  * when built (live at upload, capture at the first capture). Nothing tells a
  * compute row a capture is scheduled, so the first capture face submits its cut
  * on its own encoder, queued ahead of the frame's.
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { StarCutGpu } from '../@types/StarCutGpu';
 import type { StarCutState } from '../@types/StarCutState';
 import type { StarCutSource } from '../@types/StarCutSource';
@@ -110,16 +110,16 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   // The inputs whose capture cut is already submitted: six faces draw one cut.
   let capturedFor: StarCutInputs | null = null;
 
-  function createState(label: string, catalog: StarCatalog, nodes: GPUBuffer): StarCutState {
+  function createState(label: string, octree: StarOctree, nodes: GPUBuffer): StarCutState {
     const make = (name: string, words: number, usage: number): GPUBuffer =>
       device.createBuffer({
         label: `star-cut-${name}-${label}`,
         size: Math.max(1, words) * WORD_BYTES,
         usage,
       });
-    const nodeCount = catalog.nodes.length;
+    const nodeCount = octree.nodes.count;
     const opacity = make('opacity', nodeCount, STORAGE);
-    const leafList = make('leaf-list', leafListCapacity(catalog), STORAGE);
+    const leafList = make('leaf-list', leafListCapacity(octree), STORAGE);
     const aggList = make('agg-list', nodeCount, STORAGE);
     const draws = make(
       'draws',
@@ -184,8 +184,8 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     sources.delete(source);
   }
 
-  function upload(source: SourceType, catalog: StarCatalog): void {
-    const packed = catalog.records.length === 0 ? null : packStarCutNodes(catalog);
+  function upload(source: SourceType, octree: StarOctree): void {
+    const packed = octree.records.count === 0 ? null : packStarCutNodes(octree);
     release(source);
     if (packed === null) return;
     const nodes = device.createBuffer({
@@ -195,9 +195,9 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     });
     device.queue.writeBuffer(nodes, 0, packed);
     sources.set(source, {
-      catalog,
+      octree,
       nodes,
-      live: createState(`${source}`, catalog, nodes),
+      live: createState(`${source}`, octree, nodes),
       capture: null,
     });
   }
@@ -205,7 +205,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   /** Write one cut's uniforms and record its three dispatches into `pass`. */
   function dispatch(
     pass: GPUComputePassEncoder,
-    catalog: StarCatalog,
+    octree: StarOctree,
     state: StarCutState,
     inputs: StarCutInputs,
     row: StarCutSourceInput,
@@ -213,7 +213,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     planes: Float32Array,
   ): void {
     const { cut } = inputs;
-    writeStarCutUniforms(uniformScratch, catalog, cut.originMpc, {
+    writeStarCutUniforms(uniformScratch, octree, cut.originMpc, {
       refineThreshold: cut.refineThreshold,
       fadeStep,
       drawBudget: row.drawBudget,
@@ -225,7 +225,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     device.queue.writeBuffer(state.uniforms, 0, uniformScratch);
     state.lastMs = inputs.nowMs;
 
-    const groups = Math.ceil(catalog.nodes.length / CUT_WORKGROUP);
+    const groups = Math.ceil(octree.nodes.count / CUT_WORKGROUP);
     pass.setBindGroup(0, state.computeBindGroup);
     pass.setPipeline(histogram);
     pass.dispatchWorkgroups(groups);
@@ -258,7 +258,7 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
           : Math.min(inputs.nowMs - lastMs, NODE_FADE_MAX_DT_MS);
       dispatch(
         pass,
-        entry.catalog,
+        entry.octree,
         entry.live,
         inputs,
         row,
@@ -277,9 +277,9 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
     const encoder = device.createCommandEncoder({ label: 'star-cut-capture' });
     const pass = encoder.beginComputePass({ label: 'star-cut-capture' });
     for (const { row, entry } of present) {
-      entry.capture ??= createState(`${row.source}-capture`, entry.catalog, entry.nodes);
+      entry.capture ??= createState(`${row.source}-capture`, entry.octree, entry.nodes);
       // No frustum (six faces see every direction) and no fade (one static frame).
-      dispatch(pass, entry.catalog, entry.capture, inputs, row, 1, NO_PLANES);
+      dispatch(pass, entry.octree, entry.capture, inputs, row, 1, NO_PLANES);
     }
     pass.end();
     device.queue.submit([encoder.finish()]);

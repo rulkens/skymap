@@ -4,7 +4,7 @@
  */
 
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalog } from '../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { StarDrawStream } from './StarDrawStream';
 import type { StarCutInputs } from './StarCutInputs';
@@ -13,8 +13,8 @@ import type { StarCutDraw } from './StarCutDraw';
 export type StarCutGpu = {
   /** `@group(1)` of `vertex.wesl`'s pipelines. */
   readonly drawBgl: GPUBindGroupLayout;
-  /** Build a source's buffers; an empty catalog releases them. */
-  upload(source: SourceType, catalog: StarCatalog): void;
+  /** Build a source's buffers; an empty octree releases them. */
+  upload(source: SourceType, octree: StarOctree): void;
   /** One compute pass: every source in `inputs` gets this frame's cut. */
   encode(
     encoder: GPUCommandEncoder,

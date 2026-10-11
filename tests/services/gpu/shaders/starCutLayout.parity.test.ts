@@ -24,7 +24,8 @@ import {
   packStarCutNodes,
   writeStarCutUniforms,
 } from '../../../../src/layers/starCatalog/render/starCutLayout';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 
 function shader(file: string): string {
   return readFileSync(join(process.cwd(), 'src/services/gpu/shaders/starCatalog', file), 'utf-8');
@@ -159,10 +160,9 @@ describe('struct CutUniforms', () => {
 
   it('writeStarCutUniforms lands each value where the struct says', () => {
     const catalog = {
-      cellEdgePc: 2,
-      gridOrigin: [0, 0, 0],
-      nodes: new Array(5),
-    } as unknown as StarCatalog;
+      grid: { bits: 9, cellEdge: 2, origin: [0, 0, 0] },
+      nodes: { count: 5 },
+    } as unknown as StarOctree;
     const planes = new Float32Array(FLOATS_PER_VIEW).fill(0.75);
     const buf = new ArrayBuffer(CUT_UNIFORM_BYTES);
     writeStarCutUniforms(buf, catalog, [0, 0, 0], {
@@ -209,7 +209,7 @@ describe('struct CutNode', () => {
   });
 
   it('packStarCutNodes lands each value where the struct says', () => {
-    const catalog: StarCatalog = {
+    const catalog = starOctreeFromSkst({
       starCount: 3,
       nodeCount: 2,
       mortonBitsPerAxis: 9,
@@ -220,7 +220,7 @@ describe('struct CutNode', () => {
         { mortonIndex: 0, level: 1, childMask: 0b10, firstRecord: 43, recordCount: 1 },
       ],
       records: new Uint8Array(6 * 44),
-    };
+    });
     const words = packStarCutNodes(catalog);
     const at = (node: number, name: string) =>
       words[node * CUT_NODE_WORDS + fields.find((f) => f.name === name)!.byteOffset / WORD_BYTES];

@@ -61,8 +61,8 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../@types/data/starCatalog/StarCatalogNode';
+import type { SkstCatalog } from '../../@types/data/starCatalog/SkstCatalog';
+import type { SkstNode } from '../../@types/data/starCatalog/SkstNode';
 import { compressStarBin, decompressStarBin } from './starBinCodec';
 
 /** File magic "SKST" (little-endian ASCII), distinct from the galaxy "SKMP". */
@@ -280,7 +280,7 @@ export function unpackStarRecord(
  * Serialize `cat` into a compressed `.bin` payload: header + node table +
  * record blob through `compressStarBin`. Async because the codec is.
  */
-export async function encodeStarCatalog(cat: StarCatalog): Promise<ArrayBuffer> {
+export async function encodeSkstCatalog(cat: SkstCatalog): Promise<ArrayBuffer> {
   const { starCount, nodeCount, mortonBitsPerAxis, cellEdgePc, gridOrigin, nodes, records } = cat;
   if (nodes.length !== nodeCount) throw new Error('nodes length mismatch');
   if (records.length % RECORD_BYTES !== 0)
@@ -328,12 +328,12 @@ export async function encodeStarCatalog(cat: StarCatalog): Promise<ArrayBuffer> 
 }
 
 /**
- * Inflate and parse a `.bin` payload produced by {@link encodeStarCatalog}.
+ * Inflate and parse a `.bin` payload produced by {@link encodeSkstCatalog}.
  * Fails loudly on a wrong magic or an unknown version — the header is the
  * single source of truth for "do I understand this file?". Async because
  * the codec is.
  */
-export async function decodeStarCatalog(buf: ArrayBuffer): Promise<StarCatalog> {
+export async function decodeSkstCatalog(buf: ArrayBuffer): Promise<SkstCatalog> {
   const plain = await decompressStarBin(new Uint8Array(buf));
   const dv = new DataView(plain.buffer, plain.byteOffset, plain.byteLength);
 
@@ -358,7 +358,7 @@ export async function decodeStarCatalog(buf: ArrayBuffer): Promise<StarCatalog> 
     dv.getFloat64(40, true),
   ];
 
-  const nodes: StarCatalogNode[] = new Array(nodeCount);
+  const nodes: SkstNode[] = new Array(nodeCount);
   for (let i = 0; i < nodeCount; i++) {
     const base = HEADER_BYTES + i * NODE_BYTES;
     const mortonIndex = dv.getUint32(base + 0, true);
@@ -389,7 +389,7 @@ export async function decodeStarCatalog(buf: ArrayBuffer): Promise<StarCatalog> 
 }
 
 /** The empty catalog — zero stars, zero nodes. The renderer's initial state. */
-export function emptyStarCatalog(): StarCatalog {
+export function emptyStarCatalog(): SkstCatalog {
   return {
     starCount: 0,
     nodeCount: 0,

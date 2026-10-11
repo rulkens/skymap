@@ -8,10 +8,10 @@ import { createStarCutGpu } from '../../../../src/layers/starCatalog/render/star
 import { FADE_STEP_FLOAT_INDEX } from '../../../../src/layers/starCatalog/render/starCutLayout';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../../src/data/starNodeFade';
 import { Source } from '../../../../src/data/source';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/@types/StarCutInputs';
 
-const CATALOG: StarCatalog = {
+const CATALOG = starOctreeFromSkst({
   starCount: 1,
   nodeCount: 1,
   mortonBitsPerAxis: 9,
@@ -19,14 +19,16 @@ const CATALOG: StarCatalog = {
   gridOrigin: [0, 0, 0],
   nodes: [{ mortonIndex: 0, level: 0, childMask: 0, firstRecord: 0, recordCount: 1 }],
   records: new Uint8Array(6),
-};
-const EMPTY: StarCatalog = {
-  ...CATALOG,
+});
+const EMPTY = starOctreeFromSkst({
   starCount: 0,
   nodeCount: 0,
+  mortonBitsPerAxis: 9,
+  cellEdgePc: 1,
+  gridOrigin: [0, 0, 0],
   nodes: [],
   records: new Uint8Array(0),
-};
+});
 
 function frame(nowMs: number): StarCutInputs {
   return {

@@ -1,7 +1,7 @@
 /**
  * Unit test for starCatalogFetcher: resolves the requested (source, tier)
  * to the right `<binBaseName>-<tier>.bin` filename and inflates the response
- * into a StarCatalog. We stub fetchWithProgress to avoid a real network call
+ * into a SkstCatalog. We stub fetchWithProgress to avoid a real network call
  * and feed it a synthetic in-memory bin — the round-trip proves the fetcher
  * awaits the async (inflating) decode rather than handing back raw bytes.
  */
@@ -14,12 +14,13 @@ vi.mock('../../../../src/services/loading/fetchWithProgress', () => ({
 
 import { starCatalogFetcher } from '../../../../src/layers/starCatalog/load/starCatalogFetcher';
 import {
-  encodeStarCatalog,
+  encodeSkstCatalog,
   packStarRecord,
 } from '../../../../src/data/starCatalog/starCatalogFormat';
 import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
+import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
 import { Source } from '../../../../src/data/sources';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { SkstCatalog } from '../../../../src/@types/data/starCatalog/SkstCatalog';
 
 /**
  * A tiny hand-authored catalog — one aggregate over two leaves — kept
@@ -27,7 +28,7 @@ import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCa
  * "parse a large tree", so a couple of records is enough to prove the
  * round-trip survives the fetch → decode hop.
  */
-function synthCatalog(): StarCatalog {
+function synthCatalog(): SkstCatalog {
   const records = new Uint8Array([
     ...packStarRecord([12, 340, 7], 63, 31),
     ...packStarRecord([1023, 0, 512], 100, 5),
@@ -54,7 +55,7 @@ describe('starCatalogFetcher', () => {
 
   it('fetches <binBaseName>-<tier>.bin and decodes it', async () => {
     const cat = synthCatalog();
-    vi.mocked(fetchWithProgress).mockResolvedValueOnce(await encodeStarCatalog(cat));
+    vi.mocked(fetchWithProgress).mockResolvedValueOnce(await encodeSkstCatalog(cat));
 
     const decoded = await starCatalogFetcher(
       { source: Source.GaiaStars, tier: 'medium' },
@@ -67,12 +68,8 @@ describe('starCatalogFetcher', () => {
     const url = vi.mocked(fetchWithProgress).mock.calls[0]![0];
     expect(url).toContain('stars-medium.bin');
 
-    // The catalog round-trips through the fetch → async-decode hop.
-    expect(decoded.starCount).toBe(cat.starCount);
-    expect(decoded.nodeCount).toBe(cat.nodeCount);
-    // A spot-checked node survives field-for-field.
-    expect(decoded.nodes[0]).toEqual(cat.nodes[0]);
-    expect(Array.from(decoded.records)).toEqual(Array.from(cat.records));
+    // The catalog round-trips through the fetch → async-decode → adapter hop.
+    expect(decoded).toEqual(starOctreeFromSkst(cat));
   });
 
   it('throws when the requested source is not a star catalog', async () => {

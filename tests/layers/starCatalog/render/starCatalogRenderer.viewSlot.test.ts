@@ -13,7 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/render/starCatalogRenderer';
 import { Source } from '../../../../src/data/sources';
 import { STAR_FOCUS_AT_REST } from '../../../fixtures/starFocusAtRest';
-import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarOctree } from '../../../../src/@types/data/starCatalog/StarOctree';
 import type { StarCatalogCutDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogCutDrawArgs';
 
 // The cut's own GPU resources are not under test; stub it to always have a list.
@@ -42,7 +42,14 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-const CATALOG = { records: new Uint8Array(2 * 6) } as unknown as StarCatalog;
+const CATALOG = {
+  records: {
+    count: 2,
+    offset: new Uint16Array(6),
+    absMag: new Float32Array(2),
+    colourIndex: new Float32Array(2),
+  },
+} as unknown as StarOctree;
 
 function args(viewSlot: number): StarCatalogCutDrawArgs {
   return {
