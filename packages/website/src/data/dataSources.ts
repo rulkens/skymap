@@ -316,6 +316,20 @@ export const DATA_SOURCES: readonly DataSource[] = [
     askHref: 'https://archive.stsci.edu/dss/acknowledging.html',
   },
   {
+    id: '2mass-images',
+    entries: ['2mass-images'],
+    group: IMAGERY,
+    name: '2MASS image cutout',
+    gives: 'The picture of the star cluster Trumpler 14',
+    release: 'CDS 2MASS colour tiles',
+    licence:
+      'No licence stated for the images. IRSA says most of its data is public, with no usage restrictions. Acknowledge 2MASS.',
+    href: 'https://irsa.ipac.caltech.edu/data_use_terms.html',
+    evidence: ATTRIBUTIONS,
+    ask: 'This publication makes use of data products from the Two Micron All Sky Survey, which is a joint project of the University of Massachusetts and the Infrared Processing and Analysis Center/California Institute of Technology, funded by the National Aeronautics and Space Administration and the National Science Foundation.',
+    askHref: 'https://www.ipac.caltech.edu/2mass/releases/allsky/faq.html',
+  },
+  {
     id: 'solar-system-scope',
     entries: ['solar-system-scope'],
     group: IMAGERY,

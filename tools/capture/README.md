@@ -34,8 +34,10 @@ already exists.
 
 `npm run capture-structures` writes the 204×204 shot for every featured open cluster, globular
 cluster, nebula and Galactic Centre anchor that has none, by fetching a DSS2 colour cutout from the
-CDS `hips2fits` service (centred on the anchor, field of view 1.3× its angular diameter, clamped to
-0.1°–8°). It needs no dev server. `--force <focusId…>` refetches the named ones. DSS2 is a red/blue
+CDS `hips2fits` service (centred on the anchor, field of view a per-category multiple of its angular
+diameter from `structureCutoutMargin.ts` — 10× for globular clusters, whose seed radius is about the
+half-light radius — clamped to 0.1°–8°). `structureCutoutOverrides.ts` swaps survey and field for one
+anchor (Trumpler 14 uses 2MASS, since DSS2 saturates in Carina). It needs no dev server. `--force <focusId…>` refetches the named ones. DSS2 is a red/blue
 photographic survey, so dust-obscured fields (the Galactic Centre clusters) come out near-black;
 those are left as they are.
 

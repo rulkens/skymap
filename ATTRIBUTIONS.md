@@ -1076,6 +1076,34 @@ paying a fee."
   <https://archive.stsci.edu/dss/acknowledging.html>,
   <https://alasky.cds.unistra.fr/DSS/DSSColor/properties>
 
+### 2MASS image cutout (one shipped image)
+
+<!-- attribution: id=2mass-images -->
+
+- **What:** A 2MASS colour cutout of the open cluster Trumpler 14 from CDS
+  `hips2fits`, used where the DSS2 plates saturate (in the Carina Nebula).
+- **By:** The Two Micron All Sky Survey (University of Massachusetts and
+  IPAC/Caltech); "Colored & Healpixed by CDS" for the tile set.
+- **Licence:** Not stated for the images. The survey's archive, IRSA, says:
+  "Most data served by IRSA is public, with no usage restrictions." (it does
+  not name 2MASS in that sentence). The 2MASS pages read state no licence for
+  the image data products.
+- **Use:** No licence stated
+- **Attribution:** The standard acknowledgement for use of the 2MASS data
+  products: "This publication makes use of data products from the Two Micron
+  All Sky Survey, which is a joint project of the University of Massachusetts
+  and the Infrared Processing and Analysis Center/California Institute of
+  Technology, funded by the National Aeronautics and Space Administration and
+  the National Science Foundation." The primary journal reference is
+  Skrutskie et al. 2006, AJ 131, 1163 (see entry: 2mass-xsc).
+- **Upstream:** `https://alasky.cds.unistra.fr/hips-image-services/hips2fits`
+- **Enters skymap:** `tools/capture/captureStructureCutouts.ts`, through the
+  `STRUCTURE_CUTOUT_OVERRIDES` row for Trumpler 14.
+- **Modified:** Yes. Resampled to 204×204 pixels and re-encoded as webp.
+- **Checked:** 2026-10-11, from the 2MASS and IRSA wording already recorded
+  under 2MASS Extended Source Catalog (XSC); the 2MASS image terms were not
+  fetched again.
+
 ### StarNet2 (star removal)
 
 <!-- attribution: id=starnet; keys=starnet.weights -->
