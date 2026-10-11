@@ -1,9 +1,17 @@
-# Capture — palette-card thumbnails
+# Capture — palette-card and structure thumbnails
 
 `npm run capture-featured` drives a running dev server headlessly and writes one 204×204 webp
 thumbnail per capturable card in `src/data/palette/featuredTabs.ts` to
 `<cardId>.webp` under `public/` + `CARD_IMAGE_DIR` (`src/data/palette/cardImageDir.ts`), which is
 the path `cardImageSrc` reads by default.
+
+The same run also shoots every featured **cosmic-scale** structure (galaxy cluster, supercluster,
+void, galaxy group — the registry rows with `scale: 'cosmic'`) onto its focus id, with the selection
+kept, to `public/images/structures/<focusId>.webp` (`STRUCTURE_SHOT_DIR`,
+`src/data/structure/structureShotDir.ts`). Milky Way-scale structures are not shot from the app;
+`npm run capture-structures` cuts them from the DSS2 sky survey instead (see below). A target
+carries its own output path, so skip-existing and `--force <id>` work the same for both; `--force`
+takes a card id or a structure focus id.
 
 ## Prerequisites
 
@@ -21,6 +29,15 @@ npm run capture-featured -- --force body-hubble body-earth # recapture named car
 
 A second run with no `--force` captures nothing and exits 0 — it skips any card whose webp
 already exists.
+
+## Milky Way structures: sky cutouts
+
+`npm run capture-structures` writes the 204×204 shot for every featured open cluster, globular
+cluster, nebula and Galactic Centre anchor that has none, by fetching a DSS2 colour cutout from the
+CDS `hips2fits` service (centred on the anchor, field of view 1.3× its angular diameter, clamped to
+0.1°–8°). It needs no dev server. `--force <focusId…>` refetches the named ones. DSS2 is a red/blue
+photographic survey, so dust-obscured fields (the Galactic Centre clusters) come out near-black;
+those are left as they are.
 
 ## Skip rules
 
