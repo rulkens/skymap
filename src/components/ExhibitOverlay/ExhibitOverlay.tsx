@@ -10,6 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import StopIcon from '../TourOverlay/StopIcon';
 import ExhibitNoteSection from './ExhibitNoteSection';
+import { exhibitSectionHasRule } from '../../utils/exhibits/exhibitSectionHasRule';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import type { ExhibitToggle } from '../../@types/exhibits/ExhibitToggle';
 import styles from './ExhibitOverlay.module.css';
@@ -61,7 +62,7 @@ function ExhibitOverlay({
             >
               {/* The data blocks sit behind a hairline; it separates sections,
                   so it is the column's presentation, not a section's content. */}
-              {section.kind === 'facts' || section.kind === 'sources' ? (
+              {exhibitSectionHasRule(section) ? (
                 <div className={styles.rule} aria-hidden="true" />
               ) : null}
               <ExhibitNoteSection section={section} toggleOn={toggleOn} onToggle={onToggle} />
