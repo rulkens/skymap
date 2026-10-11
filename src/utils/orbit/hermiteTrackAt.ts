@@ -8,6 +8,7 @@
 
 import type { SampledTrack } from '../../@types/scene/SampledTrack';
 import type { Vec3 } from '../../@types/math/Vec3';
+import { countAtOrBefore } from '../math/countAtOrBefore';
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -16,14 +17,7 @@ export function hermiteTrackAt(track: SampledTrack, tDays: number): Vec3 {
   const last = ts.length - 1;
   if (tDays >= ts[last]!) return [posKm[3 * last]!, posKm[3 * last + 1]!, posKm[3 * last + 2]!];
 
-  // Largest i with ts[i] <= tDays; the interval is [i, i + 1].
-  let lo = 0;
-  let hi = last;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (ts[mid]! <= tDays) lo = mid;
-    else hi = mid;
-  }
+  const lo = countAtOrBefore(ts, tDays) - 1;
 
   const spanDays = ts[lo + 1]! - ts[lo]!;
   const spanS = spanDays * SECONDS_PER_DAY;

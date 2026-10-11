@@ -12,7 +12,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { SAMPLED_BODIES } from '../../../../data/missions/spacecraftBodies';
 import { trajectoryRegistry } from '../../../bodies/trajectoryRegistry';
 import { spacecraftPresent } from '../../../../utils/scene/spacecraftPresent';
-import { trailVertexCount } from '../../../../utils/orbit/trailVertexCount';
+import { countAtOrBefore } from '../../../../utils/math/countAtOrBefore';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { sampledDepthBinding } from '../sampledDepthBinding';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -59,7 +59,7 @@ export const missionTrailsPass: ContentPass = {
       const track = tracks.get(id);
       if (track === undefined) continue;
       const dim = emphasisDim(state.settings.missionTrails.emphasis, id);
-      const k = trailVertexCount(track.tDays, ctx.snapshot.simDays);
+      const k = countAtOrBefore(track.tDays, ctx.snapshot.simDays);
       if (k === 0) continue;
       // Past the last vertex the craft is held on it: no head segment to draw.
       const head = k < track.tDays.length ? states.get(id)!.positionMpc : null;
