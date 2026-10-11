@@ -54,6 +54,7 @@ export function starCatalogPlanner(
             index,
             inputs.cut,
             stream.isResident,
+            stream.slots,
           );
           stream.update(frameIndex, touched, requests);
           inFlight += stream.inFlightCount();

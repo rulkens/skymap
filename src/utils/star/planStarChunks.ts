@@ -5,7 +5,9 @@
  * edge²/dist² ≥ thr². A chunk root the walk would refine is a request
  * (priority = proxy) when absent, touched when resident. The walk never enters
  * a chunk. It cannot see the GPU's budget bin, so it may fetch a chunk the
- * budget then declines to open: bytes, never correctness.
+ * budget then declines to open: bytes, never correctness. Only the `limit`
+ * best requests are kept: a pool of `limit` slots can never fund more in one
+ * frame, and near the Sun ~1,900 roots want to refine.
  */
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
@@ -30,34 +32,37 @@ export function planStarChunks(
   index: StarOctreeIndex,
   cut: StarCutSpec,
   isResident: (chunkRef: number) => boolean,
+  limit: number,
 ): StarChunkPlan {
   const { nodes } = octree;
   const requests: StarChunkRequest[] = [];
   const touched: number[] = [];
   if (nodes.count === 0) return { requests, touched };
 
-  const camPc = cut.originMpc.map((v) => v * SCALE_UNITS.MPC_TO_PC);
+  // Scalars hoisted out of the walk, which runs every frame the eye moves.
+  const [cx, cy, cz] = cut.originMpc.map((v) => v * SCALE_UNITS.MPC_TO_PC) as [
+    number,
+    number,
+    number,
+  ];
   const thrSq = cut.refineThreshold * cut.refineThreshold;
   // `MIN_DIST_SQ` is in leaf cells²; the walk measures in parsecs.
   const minDistSqPc = MIN_DIST_SQ * octree.grid.cellEdge * octree.grid.cellEdge;
-  const views = cut.planes.length / FLOATS_PER_VIEW;
-  const viewCount = views <= CUT_MAX_VIEWS ? views : 0;
+  const { planes } = cut;
+  const views = planes.length / FLOATS_PER_VIEW;
+  const planeFloats = views <= CUT_MAX_VIEWS ? planes.length : 0;
+  const radiusPerEdgePc = SCALE_UNITS.PC_TO_MPC * HALF_DIAGONAL * cut.worldSpread;
+  const { boxOriginPc, boxEdgePc, childIndex } = index;
+  const { childMask, chunkRef } = nodes;
 
-  const offScreen = (i: number, edgePc: number): boolean => {
-    if (viewCount === 0) return false;
-    const center = [0, 0, 0];
-    for (let a = 0; a < AXES; a++) {
-      center[a] =
-        (index.boxOriginPc[i * AXES + a]! + edgePc / 2 - camPc[a]!) * SCALE_UNITS.PC_TO_MPC;
-    }
-    const radius = edgePc * SCALE_UNITS.PC_TO_MPC * HALF_DIAGONAL * cut.worldSpread;
-    for (let v = 0; v < viewCount; v++) {
+  // Planes are camera-relative Mpc; the box centre is rebased the same way.
+  const offScreen = (x: number, y: number, z: number, edgePc: number): boolean => {
+    if (planeFloats === 0) return false;
+    const radius = edgePc * radiusPerEdgePc;
+    for (let v = 0; v < planeFloats; v += FLOATS_PER_VIEW) {
       let outside = false;
-      for (let p = v * FLOATS_PER_VIEW; p < (v + 1) * FLOATS_PER_VIEW; p += PLANE_FLOATS) {
-        const { planes } = cut;
-        const d =
-          planes[p]! * center[0]! + planes[p + 1]! * center[1]! + planes[p + 2]! * center[2]!;
-        if (d + planes[p + 3]! < -radius) {
+      for (let p = v; p < v + FLOATS_PER_VIEW; p += PLANE_FLOATS) {
+        if (planes[p]! * x + planes[p + 1]! * y + planes[p + 2]! * z + planes[p + 3]! < -radius) {
           outside = true;
           break;
         }
@@ -67,31 +72,44 @@ export function planStarChunks(
     return true;
   };
 
-  const stack = [nodes.count - 1];
-  while (stack.length > 0) {
-    const i = stack.pop()!;
-    if (nodes.childMask[i] === 0) continue;
-    const edgePc = index.boxEdgePc[i]!;
-    let distSq = 0;
-    for (let a = 0; a < AXES; a++) {
-      const lo = index.boxOriginPc[i * AXES + a]! - camPc[a]!;
-      const d = Math.max(lo, -(lo + edgePc), 0);
-      distSq += d * d;
-    }
-    const proxy = (edgePc * edgePc) / Math.max(distSq, minDistSqPc);
-    if (proxy < thrSq || offScreen(i, edgePc)) continue;
+  // Kept in descending priority, at most `limit` long.
+  const offer = (chunkRef: number, priority: number): void => {
+    if (requests.length === limit && !(priority > requests[limit - 1]!.priority)) return;
+    let at = requests.length;
+    while (at > 0 && requests[at - 1]!.priority < priority) at--;
+    requests.splice(at, 0, { chunkRef, priority });
+    if (requests.length > limit) requests.pop();
+  };
 
-    const ref = nodes.chunkRef[i]!;
+  const stack = new Int32Array(nodes.count);
+  let top = 0;
+  stack[top++] = nodes.count - 1;
+  while (top > 0) {
+    const i = stack[--top]!;
+    if (childMask[i] === 0) continue;
+    const edgePc = boxEdgePc[i]!;
+    const lx = boxOriginPc[i * AXES]! - cx;
+    const ly = boxOriginPc[i * AXES + 1]! - cy;
+    const lz = boxOriginPc[i * AXES + 2]! - cz;
+    const dx = Math.max(lx, -(lx + edgePc), 0);
+    const dy = Math.max(ly, -(ly + edgePc), 0);
+    const dz = Math.max(lz, -(lz + edgePc), 0);
+    const proxy = (edgePc * edgePc) / Math.max(dx * dx + dy * dy + dz * dz, minDistSqPc);
+    if (proxy < thrSq) continue;
+    const half = edgePc / 2;
+    const toMpc = SCALE_UNITS.PC_TO_MPC;
+    if (offScreen((lx + half) * toMpc, (ly + half) * toMpc, (lz + half) * toMpc, edgePc)) continue;
+
+    const ref = chunkRef[i]!;
     if (ref !== NO_CHUNK_REF) {
       if (isResident(ref)) touched.push(ref);
-      else requests.push({ chunkRef: ref, priority: proxy });
+      else offer(ref, proxy);
       continue;
     }
     for (let k = 0; k < OCTANTS; k++) {
-      const child = index.childIndex[i * OCTANTS + k]!;
-      if (child >= 0) stack.push(child);
+      const child = childIndex[i * OCTANTS + k]!;
+      if (child >= 0) stack[top++] = child;
     }
   }
-  requests.sort((a, b) => b.priority - a.priority);
   return { requests, touched };
 }

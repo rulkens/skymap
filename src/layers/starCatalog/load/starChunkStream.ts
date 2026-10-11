@@ -80,7 +80,6 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
     const misses = requests.filter(
       (r) => !failed.has(r.chunkRef) && stream.touch(String(r.chunkRef), frame) === null,
     );
-    misses.sort((a, b) => b.priority - a.priority);
     for (const { chunkRef, priority } of misses) {
       const key = String(chunkRef);
       if (stream.allocate(key, frame) === null) break;
@@ -104,6 +103,7 @@ export function createStarChunkStream(deps: StarChunkStreamDeps): StarChunkStrea
   }
 
   return {
+    slots: deps.slots,
     update,
     isResident: (ref) => residents.has(ref),
     resident: (ref) => residents.get(ref)?.chunk ?? null,

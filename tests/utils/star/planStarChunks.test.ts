@@ -56,9 +56,13 @@ const ONE_VIEW = Float32Array.from([
   ...Array.from({ length: 5 }, () => [0, 0, 1, 1]).flat(),
 ]);
 
-const plan = (planes: Float32Array, resident: readonly number[]) =>
-  planStarChunks(OCTREE, starOctreeIndex(OCTREE.nodes, OCTREE.grid), cut(planes), (ref) =>
-    resident.includes(ref),
+const plan = (planes: Float32Array, resident: readonly number[], limit = 8) =>
+  planStarChunks(
+    OCTREE,
+    starOctreeIndex(OCTREE.nodes, OCTREE.grid),
+    cut(planes),
+    (ref) => resident.includes(ref),
+    limit,
   );
 
 describe('planStarChunks', () => {
@@ -72,5 +76,12 @@ describe('planStarChunks', () => {
   it('planStarChunks: with no planes (more than CUT_MAX_VIEWS) nothing is culled', () => {
     const { requests } = plan(new Float32Array(0), [A]);
     expect(requests.map((r) => r.chunkRef).sort()).toEqual([B, C, E]);
+  });
+
+  it('planStarChunks: keeps only the limit best requests, in descending proxy', () => {
+    // A 1.31 first; B and C tie at 0.98; E, the weakest, is dropped.
+    const refs = plan(new Float32Array(0), [], 3).requests.map((r) => r.chunkRef);
+    expect(refs[0]).toBe(A);
+    expect(refs.slice(1).sort()).toEqual([B, C]);
   });
 });

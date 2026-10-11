@@ -9,7 +9,9 @@ import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarChunkRequest } from './StarChunkRequest';
 
 export type StarChunkStream = Destroyable & {
-  /** One call per frame: touches resident chunks, allocates and enqueues requests in descending priority until the pool refuses. */
+  /** Pool size: the most chunks it holds, and so the most one update can fund. */
+  readonly slots: number;
+  /** Touches resident chunks, then allocates and enqueues `requests` (descending priority, as the planner orders them) until the pool refuses. */
   update(frame: number, touched: readonly number[], requests: readonly StarChunkRequest[]): void;
   isResident(chunkRef: number): boolean;
   /** The CPU copy while its slot holds it. */

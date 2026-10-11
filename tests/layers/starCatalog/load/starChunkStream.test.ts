@@ -88,8 +88,8 @@ describe('starChunkStream', () => {
       1,
       [],
       [
-        { chunkRef: 0, priority: 3 },
         { chunkRef: 1, priority: 9 },
+        { chunkRef: 0, priority: 3 },
         { chunkRef: 2, priority: 1 },
       ],
     );
