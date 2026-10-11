@@ -37,7 +37,6 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
       return state.gpu.focusBgl!;
     },
     fontAtlases,
-    textLayout: state.gpu.textLayout!,
     get envBrdfLut() {
       return state.gpu.envBrdfLut!;
     },

@@ -1,14 +1,18 @@
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { Label2D } from '../../rendering/Label2D';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
-import type { TextLayout } from '../../rendering/TextLayout';
+import type { LabelBBox } from '../../rendering/LabelBBox';
 import type { FrameView } from '../frame/FrameView';
 import type { EngineState } from '../state/EngineState';
 import type { Label2DProducer } from './Label2DProducer';
 
 export type Label2DDirector = {
   /** Wire in the renderers once initGpu has constructed them. Idempotent. */
-  attachRenderers(label: LabelRenderer, line: MarkerLineRenderer, textLayout: TextLayout): void;
+  attachRenderers(
+    label: LabelRenderer,
+    line: MarkerLineRenderer,
+    measure: (label: Label2D) => LabelBBox | null,
+  ): void;
   /** Register a producer.  Order of registration = order of merging. */
   registerProducer(producer: Label2DProducer): void;
   /**

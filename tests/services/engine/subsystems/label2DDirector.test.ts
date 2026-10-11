@@ -153,7 +153,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     // Distinct world positions so the two anchors don't collide on screen.
     const a: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
@@ -178,7 +178,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
     dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
 
     // The envelope animates alpha during the first 300 ms, so flushes
@@ -196,7 +196,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
     dir.registerProducer(makeProducer('p', [], true));
 
     expect(dir.runFrame(makeState(), makeCtx())).toBe(true);
@@ -213,7 +213,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     // Producer whose output flips fadeAlpha between calls but keeps
     // the same id (same scenario as youAreHere mid-fade).
@@ -252,7 +252,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     let color: [number, number, number, number] = [0.5, 0.6, 0.7, 1];
     dir.registerProducer({
@@ -282,7 +282,7 @@ describe('label2DDirector', () => {
       const dir = createLabel2DDirector(config);
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub.measure);
       dir.registerProducer(makeProducer('p', labels));
       dir.runFrame(state, ctx);
       return { dir, flushed: flushedLabels(labelStub).at(-1)![0]! };
@@ -318,7 +318,7 @@ describe('label2DDirector', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub.measure);
       dir.registerProducer(makeProducer('p', labels));
       dir.runFrame(makeHighlightState('earth', null), makeCtx(300));
       const flushed = flushedLabels(labelStub).at(-1)!;
@@ -344,7 +344,7 @@ describe('label2DDirector', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
-      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, textLayoutStub.measure);
       dir.registerProducer(makeProducer('p', [BASE]));
       dir.runFrame(makeHighlightState(null, null), makeCtx(300));
       dir.runFrame(makeHighlightState(null, null), makeCtx(400));
@@ -360,7 +360,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     let pickId: number | undefined = 7;
     dir.registerProducer({
@@ -389,7 +389,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     let tipY = 0.5;
     const producer: Label2DProducer = {
@@ -435,7 +435,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     let anchorY = 0;
     const producer: Label2DProducer = {
@@ -467,7 +467,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(100));
@@ -481,7 +481,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     // Two labels at the same world point (both project to screen centre, so
     // within the 48 px margin). The higher-prominence one wins.
@@ -505,7 +505,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     const big: Label2D = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100, leader: SAMPLE_LEADER };
     const small: Label2D = {
@@ -547,7 +547,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // Baseline-aligned text: the rect spans 30 px UP from the anchor.
       textLayoutStub.measure.mockImplementation(() => ({
@@ -574,7 +574,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // Wide centered text: 300 px across the anchor.
       textLayoutStub.measure.mockImplementation(() => ({
@@ -601,7 +601,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const textLayoutStub = makeTextLayoutStub();
     const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+    dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
     // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
     // NDC). The off-screen one is accepted unconditionally and never blocks.
@@ -625,7 +625,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
       dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
 
       dir.runFrame(makeState(), makeCtx(0));
@@ -647,7 +647,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -673,7 +673,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
       const dimmed: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.5 };
       dir.registerProducer(makeProducer('p', [dimmed]));
 
@@ -695,7 +695,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // fadeAlpha: 0.8 so the flushed line's alpha (envelope × producer) is
       // distinguishable from either factor alone.
@@ -758,7 +758,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       // Producer is never awake — every vote below comes from the envelope.
@@ -778,7 +778,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -815,7 +815,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // Same world point, same prominence — the padded rects fully overlap,
       // so exactly one survives. Only registration order can break the tie.
@@ -835,7 +835,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // No `lift` field — isolates the envelope seed from the lift stage.
       const caption: Label2D = { ...SAMPLE_LABEL, fadeAlpha: 0.4 };
@@ -858,7 +858,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       const zeroTarget: Label2D = {
         ...SAMPLE_LABEL,
@@ -886,7 +886,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let labels: Label2D[] = [{ ...SAMPLE_LABEL, fadeAlpha: 0.4 }];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -919,7 +919,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // `big` always wins a collision (higher prominence); its worldPos
       // toggles between far-from-`small` (no contest) and on top of it
@@ -990,7 +990,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let fadeAlpha = 1;
       dir.registerProducer({
@@ -1034,7 +1034,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       const bodyLabel: Label2D = {
         ...SAMPLE_LABEL,
@@ -1076,7 +1076,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       let labels: Label2D[] = [SAMPLE_LABEL];
       dir.registerProducer({ id: 'p', produceLabels: () => ({ labels, awake: false }) });
@@ -1098,7 +1098,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // Same world point (screen separation 0, well inside the 48 px margin)
       // — declutter culls one. Both carry `lift`, so if the lift stage ran
@@ -1146,7 +1146,7 @@ describe('label2DDirector', () => {
       const labelStub = makeLabelStub();
       const textLayoutStub = makeTextLayoutStub();
       const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub as never);
+      dir.attachRenderers(labelStub as never, lineStub as never, textLayoutStub.measure);
 
       // No `lift` field, no `kind` discriminant anywhere in sight — the
       // constellation caption's shape, not its label.

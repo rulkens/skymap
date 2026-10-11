@@ -92,7 +92,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        textLayout: deps.textLayout,
         occludeAgainstScene: true,
       }),
   },
@@ -131,7 +130,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        textLayout: deps.textLayout,
         occludeAgainstScene: true,
       }),
   },

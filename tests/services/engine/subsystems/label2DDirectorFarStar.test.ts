@@ -50,7 +50,6 @@ import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../src/@types/rendering/LabelRenderer';
-import type { TextLayout } from '../../../../src/@types/rendering/TextLayout';
 import type { MarkerLineRenderer } from '../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
@@ -207,10 +206,9 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const eyeB: Vec3 = [eyeA[0] + 1e-15, eyeA[1], eyeA[2]];
 
     const labelStub = makeLabelStub();
-    const textLayout = { measure: () => null } as unknown as TextLayout;
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub, textLayout);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     const state = makeState();
 
@@ -248,10 +246,9 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const slab = makeRealNear0Slab(eye, star.worldPos);
 
     const labelStub = makeLabelStub();
-    const textLayout = { measure: () => null } as unknown as TextLayout;
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub, textLayout);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
@@ -291,10 +288,9 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const slab = makeRealNear0Slab(eye, star.worldPos);
 
     const labelStub = makeLabelStub();
-    const textLayout = { measure: () => null } as unknown as TextLayout;
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
-    dir.attachRenderers(labelStub, lineStub, textLayout);
+    dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;

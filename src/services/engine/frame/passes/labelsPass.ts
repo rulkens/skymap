@@ -43,6 +43,7 @@ import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
+import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
 
 export const labelsPass: ContentPass = {
   name: 'labels',
@@ -82,14 +83,14 @@ export const labelsPass: ContentPass = {
   // than draw is the safe direction for a click affordance.
   drawPick(pass, _view, ctx, state) {
     const pickRenderer = state.gpu.labelPickRenderer;
-    const textLayout = state.gpu.textLayout;
-    if (pickRenderer === null || textLayout === null) return;
+    const fontAtlases = state.gpu.fontAtlases;
+    if (pickRenderer === null || fontAtlases === null) return;
 
     const projection = cosmoLabelProjection(ctx);
     const quads = labelPickQuads({
       labels: state.subsystems.cosmoLabelDirector.labels(),
       projection,
-      measure: (label) => textLayout.measure(label),
+      measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
   },

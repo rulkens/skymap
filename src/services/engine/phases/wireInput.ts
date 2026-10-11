@@ -61,9 +61,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     get fontAtlases() {
       return state.gpu.fontAtlases!;
     },
-    get textLayout() {
-      return state.gpu.textLayout!;
-    },
     get envBrdfLut() {
       return state.gpu.envBrdfLut!;
     },

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { packLabels } from '../../../../../src/services/gpu/renderers/labels/packLabels';
-import { createTextLayout } from '../../../../../src/services/gpu/labelLayout/createTextLayout';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import {
   GLYPH_INSTANCE_BYTES,
@@ -30,7 +29,6 @@ const METRICS = parseFontMetrics({
     },
   ],
 });
-const TEXT_LAYOUT = createTextLayout({ cormorant: METRICS });
 const LABEL_SLOTS = LABEL_DATA_BYTES / 4;
 const GLYPH_SLOTS = GLYPH_INSTANCE_BYTES / 4;
 
@@ -41,7 +39,7 @@ function pack(labels: Label2D[], maxGlyphs = 64) {
   const glyphU32 = new Uint32Array(glyphBuf);
   const glyphCount = packLabels({
     labels,
-    textLayout: TEXT_LAYOUT,
+    metricsByFont: { cormorant: METRICS },
     layerIndexOf: { cormorant: 0 } as never,
     labelF32,
     glyphF32,

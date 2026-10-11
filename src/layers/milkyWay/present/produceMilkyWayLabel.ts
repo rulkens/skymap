@@ -20,6 +20,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../services/engine/presentation/liftedLabelPlacement';
+import { textLayoutOf } from '../../../services/gpu/labelLayout/textLayoutOf';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
@@ -108,13 +109,14 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
     pxPerRad: ctx.drawPxPerRad,
   });
   const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
+  const fontAtlases = state.gpu.fontAtlases;
   const placement = liftedLabelPlacement({
     anchorWorldPos: [0, 0, 0],
     vp: ctx.vp,
     viewportPx,
     pxPerRad: ctx.drawPxPerRad,
     subjectSizePx: sizePx,
-    textBbox: state.gpu.textLayout?.measure(label) ?? null,
+    textBbox: fontAtlases ? textLayoutOf(fontAtlases.metricsByFont, label).bbox : null,
     worldEmMpc: style.worldEmMpc,
     minPixelSize: style.minPixelSize,
     maxPixelSize: style.maxPixelSize,

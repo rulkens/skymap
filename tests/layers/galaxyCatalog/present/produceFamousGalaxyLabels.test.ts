@@ -24,12 +24,19 @@ import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/Famou
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
+// The producers only read the ink bbox; real glyph metrics would pin the
+// fixtures to a font file, so the layout is mocked to report a chosen box.
+const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
+vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
+  textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
+}));
+
 // Convenience factory used wherever the test doesn't care about wake behavior.
 function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
 
-// Measured ink bbox the textLayout stub reports (atlas px, anchor-relative,
+// Measured ink bbox the textLayoutOf mock reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px BELOW the
 // baseline anchor (a descender), which the producer scales by the em clamp to
 // place the line top — nonzero so the tests bite on that scaling.
@@ -46,7 +53,7 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
 // opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
-// visibility gate, and `state.gpu.textLayout.measure` for the caption's ink
+// visibility gate, and the text layout bbox for the caption's ink
 // bbox (which places the leader-line top). The fixture supplies all four; the
 // `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
@@ -60,10 +67,10 @@ function makeState(
 ): EngineState {
   const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
-  const bbox = opts.bbox ?? MEASURED_BBOX;
+  layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    gpu: { textLayout: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { fontAtlases: { metricsByFont: {} } },
     subsystems: {
       fades,
       // clipPlayer is non-nullable; return factor 1 so the clip channel is

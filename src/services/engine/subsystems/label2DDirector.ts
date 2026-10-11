@@ -95,7 +95,7 @@
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
-import type { TextLayout } from '../../../@types/rendering/TextLayout';
+import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -185,7 +185,7 @@ function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
 /**
  * `bboxOverlap` declutter arm (COSMO). Reads each label's shared `clipW` to
  * reproduce the vertex shader's em clamp on the CPU, places the measured
- * text rect (`textLayout.measure` — real glyph ink, alignment shifts
+ * text rect (`measure` — real glyph ink, alignment shifts
  * applied), and accepts a label in rank order when its padded rect
  * intersects no already-accepted rect.  Two labels collide when their padded
  * rects INTERSECT — a label merely anchored near another (e.g. just below a
@@ -199,7 +199,7 @@ function sortByProminenceDesc(labels: readonly Label2D[]): number[] {
  * sort-independent).
  */
 function declutterByBboxOverlap(
-  textLayout: TextLayout,
+  measure: (label: Label2D) => LabelBBox | null,
   labels: readonly Label2D[],
   projected: readonly Label2DProjected[],
   projection: Label2DProjection,
@@ -212,7 +212,7 @@ function declutterByBboxOverlap(
   const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
     if (!p.screenPx) return null;
-    const bbox = textLayout.measure(label);
+    const bbox = measure(label);
     if (!bbox) return null;
     return labelScreenRect({
       label,
@@ -291,7 +291,7 @@ function declutterByScreenSeparationArm(
 export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
-  let textLayout: TextLayout | null = null;
+  let measureText: ((label: Label2D) => LabelBBox | null) | null = null;
   // What `setLabels` last received — the passes read it for their gates and pick quads.
   let flushedLabels: readonly Label2D[] = [];
   let producers: readonly Label2DProducer[] = [];
@@ -312,11 +312,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   function attachRenderers(
     label: LabelRenderer,
     line: MarkerLineRenderer,
-    layout: TextLayout,
+    measure: (label: Label2D) => LabelBBox | null,
   ): void {
     labelRenderer = label;
     lineRenderer = line;
-    textLayout = layout;
+    measureText = measure;
     prevSignature = null; // force the next frame to re-flush
     flushedLabels = []; // the new renderer holds nothing yet
   }
@@ -442,7 +442,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     switch (policy.mode) {
       case 'bboxOverlap':
         survivors = declutterByBboxOverlap(
-          textLayout!,
+          measureText!,
           labels,
           projected,
           projection,
@@ -659,7 +659,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const slab = ctx.slabs[policy.slab];
     if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
     const projection = config.project(ctx); // memoised per ctx — free here
-    const layout = textLayout!;
+    const measure = measureText!;
 
     const out: Label2D[] = [];
     for (const label of labels) {
@@ -702,7 +702,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         viewportPx: projection.viewportPx,
         pxPerRad: projection.pxPerRad,
         subjectSizePx: lift.subjectSizePx,
-        textBbox: layout.measure(label),
+        textBbox: measure(label),
         worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,

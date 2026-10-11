@@ -11,17 +11,18 @@ import {
   LABEL_MIN_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../../../data/labels/labelSizingDefaults';
+import { textLayoutOf } from '../../labelLayout/textLayoutOf';
 import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/labelBufferStrides';
 
 /** Returns the glyph count written; glyphs past `maxGlyphs` are dropped. */
 export function packLabels(args: PackLabelsArgs): number {
-  const { labels, textLayout, layerIndexOf, labelF32, glyphF32, glyphU32, maxGlyphs } = args;
+  const { labels, metricsByFont, layerIndexOf, labelF32, glyphF32, glyphU32, maxGlyphs } = args;
   let glyphCount = 0;
 
   for (let li = 0; li < labels.length; li++) {
     const label = labels[li]!;
     // No font fallback — Label.font is required at the type level.
-    const quads = textLayout.layout(label);
+    const quads = textLayoutOf(metricsByFont, label).quads;
 
     // Write the per-label storage record unconditionally — even when
     // `quads` is empty.  Keeping the per-label index stable

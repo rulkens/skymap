@@ -1,10 +1,10 @@
 import type { FontId } from '../data/FontId';
 import type { Label2D } from './Label2D';
-import type { TextLayout } from './TextLayout';
+import type { LoadedFontAtlases } from './LoadedFontAtlases';
 
 export type PackLabelsArgs = {
   readonly labels: readonly Label2D[];
-  readonly textLayout: TextLayout;
+  readonly metricsByFont: LoadedFontAtlases['metricsByFont'];
   /** FontId to texture-array layer, resolved once per label. */
   readonly layerIndexOf: Readonly<Record<FontId, number>>;
   /** Per-label storage records; must hold `labels.length * LABEL_DATA_BYTES`. */

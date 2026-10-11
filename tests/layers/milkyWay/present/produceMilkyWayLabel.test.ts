@@ -14,10 +14,16 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { LabelBBox } from '../../../../src/@types/rendering/LabelBBox';
 
-// Measured ink bbox the textLayout stub reports (atlas px, anchor-relative,
+// The producers only read the ink bbox; real glyph metrics would pin the
+// fixtures to a font file, so the layout is mocked to report a chosen box.
+const layout = vi.hoisted(() => ({ bbox: null as LabelBBox | null }));
+vi.mock('../../../../src/services/gpu/labelLayout/textLayoutOf', () => ({
+  textLayoutOf: () => ({ quads: [], bbox: layout.bbox }),
+}));
+
+// Measured ink bbox the textLayoutOf mock reports (atlas px, anchor-relative,
 // +Y down). maxY = 12 puts the text's true bottom 12 atlas px below the
 // baseline anchor (a descender — 'You are here' has one), which the producer
 // scales by the em clamp to place the stem top.
@@ -32,21 +38,21 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // Minimal state: the producer reads settings.milkyWay.labelEnabled,
 // settings.labels.focusedOnly (+ selection.focus for the solo gate), the fade
 // registry (opacityOf only — the producer is a pure reader), and
-// state.gpu.textLayout.measure for the caption's ink bbox (which places
+// the text layout bbox for the caption's ink bbox (which places
 // the stem top).
 function makeState(
   labelEnabled: boolean,
   layerOpacity: number,
   opts: { focusedOnly?: boolean; focus?: { type: string } | null; bbox?: LabelBBox } = {},
 ): EngineState {
-  const bbox = opts.bbox ?? MEASURED_BBOX;
+  layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     settings: {
       milkyWay: { enabled: true, labelEnabled },
       labels: { focusedOnly: opts.focusedOnly ?? false },
     },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    gpu: { textLayout: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
+    gpu: { fontAtlases: { metricsByFont: {} } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,

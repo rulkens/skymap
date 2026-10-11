@@ -76,7 +76,6 @@ import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontA
 import { FONT_IDS } from '../../../../data/fonts';
 import type { FontId } from '../../../../@types/data/FontId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { TextLayout } from '../../../../@types/rendering/TextLayout';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
 import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
@@ -154,11 +153,10 @@ export function createLabelRenderer(
   init: {
     targetFormat: GPUTextureFormat;
     atlases: LoadedFontAtlases;
-    textLayout: TextLayout;
     occludeAgainstScene?: boolean;
   },
 ): LabelRenderer {
-  const { targetFormat, atlases, textLayout } = init;
+  const { targetFormat, atlases } = init;
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
@@ -484,7 +482,7 @@ export function createLabelRenderer(
 
     currentGlyphCount = packLabels({
       labels,
-      textLayout,
+      metricsByFont,
       layerIndexOf,
       labelF32: labelBuf,
       glyphF32,

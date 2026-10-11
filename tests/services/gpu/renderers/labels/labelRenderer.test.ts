@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { LABEL_DATA_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
-import { createTextLayout } from '../../../../../src/services/gpu/labelLayout/createTextLayout';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
@@ -37,7 +36,6 @@ const FIXTURE_ATLASES: LoadedFontAtlases = {
   metricsByFont: { cormorant: FIXTURE_METRICS },
   bitmaps: [],
 };
-const FIXTURE_TEXT_LAYOUT = createTextLayout(FIXTURE_ATLASES.metricsByFont);
 
 // Build a LabelRenderer with a null device — the factory guards all GPU
 // calls behind `if (device)`, so CPU state is safe to exercise in unit
@@ -54,7 +52,6 @@ const newRenderer = () => {
   return createLabelRenderer(ctx, {
     targetFormat: ctx.format,
     atlases: FIXTURE_ATLASES,
-    textLayout: FIXTURE_TEXT_LAYOUT,
   });
 };
 
@@ -99,7 +96,6 @@ describe('LabelRenderer occlusion variant', () => {
     createLabelRenderer(ctx, {
       targetFormat: ctx.format,
       atlases: FIXTURE_ATLASES,
-      textLayout: FIXTURE_TEXT_LAYOUT,
       occludeAgainstScene: true,
     });
     return { bindGroupLayouts, pipelineLayouts, renderPipelines };
@@ -204,7 +200,6 @@ describe('LabelRenderer capacity growth', () => {
     const r = createLabelRenderer(ctx, {
       targetFormat: ctx.format,
       atlases: FIXTURE_ATLASES,
-      textLayout: FIXTURE_TEXT_LAYOUT,
     });
     r.setLabels([makeLabel('a')]);
     const pass = {
@@ -232,7 +227,6 @@ describe('LabelRenderer capacity growth', () => {
     const r = createLabelRenderer(ctx, {
       targetFormat: ctx.format,
       atlases: FIXTURE_ATLASES,
-      textLayout: FIXTURE_TEXT_LAYOUT,
     });
     const bindGroupCallsAtConstruction = createBindGroupCalls.length;
 

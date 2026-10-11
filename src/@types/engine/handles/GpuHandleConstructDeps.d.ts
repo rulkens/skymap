@@ -3,7 +3,6 @@ import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 import type { GpuContext } from '../../rendering/GpuContext';
 import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
-import type { TextLayout } from '../../rendering/TextLayout';
 
 // Shared prerequisites every row's `construct` may read — and ONLY what a
 // row may read: a `construct` closure must close over nothing but its
@@ -25,7 +24,6 @@ export type GpuHandleConstructDeps = {
   readonly sourceBgl: SourceUniformsBgl;
   readonly focusBgl: FocusUniformsBgl;
   readonly fontAtlases: LoadedFontAtlases;
-  readonly textLayout: TextLayout;
   /** The split-sum environment BRDF, fetched + uploaded once by `initGpu`. */
   readonly envBrdfLut: GPUTexture;
 };

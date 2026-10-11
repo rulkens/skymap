@@ -14,7 +14,6 @@ import { trackGpuMemory } from '../../gpu/memory/trackGpuMemory';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
-import { createTextLayout } from '../../gpu/labelLayout/createTextLayout';
 import { loadEnvBrdfLut } from '../../gpu/resources/loadEnvBrdfLut';
 import { loadDataManifest } from '../../loading/dataManifest';
 import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
@@ -57,8 +56,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   );
   deps.phaseLocals = { device, context, format, unwatchHdrCapability };
 
-  // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases/textLayout/envBrdfLut: the
-  // 9 `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built
+  // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases/envBrdfLut: the
+  // 7 `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built
   // here, not as rows. All but uiCtx/timingService also feed `handleDeps` below.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
@@ -81,15 +80,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     loadEnvBrdfLut(device),
   ]);
 
-  state.gpu.textLayout = createTextLayout(state.gpu.fontAtlases!.metricsByFont);
-
   const handleDeps: GpuHandleConstructDeps = {
     ctx: { device, context, canvas, format, hdrCapable },
     fadeBgl: state.gpu.fadeBgl!,
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
     fontAtlases: state.gpu.fontAtlases!,
-    textLayout: state.gpu.textLayout!,
     envBrdfLut: state.gpu.envBrdfLut!,
   };
   // Complement of wireInput.ts's filter below, by construction: this phase

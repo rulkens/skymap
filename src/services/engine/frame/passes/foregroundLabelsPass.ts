@@ -13,6 +13,7 @@ import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
+import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
 
 export const foregroundLabelsPass: ContentPass = {
   name: 'foreground-labels',
@@ -67,14 +68,14 @@ export const foregroundLabelsPass: ContentPass = {
   // the same affordance.
   drawPick(pass, _view, ctx, state) {
     const pickRenderer = state.gpu.foregroundLabelPickRenderer;
-    const textLayout = state.gpu.textLayout;
-    if (pickRenderer === null || textLayout === null) return;
+    const fontAtlases = state.gpu.fontAtlases;
+    if (pickRenderer === null || fontAtlases === null) return;
 
     const projection = near0LabelProjection(ctx);
     const quads = labelPickQuads({
       labels: state.subsystems.foregroundLabelDirector.labels(),
       projection,
-      measure: (label) => textLayout.measure(label),
+      measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
     pickRenderer.draw(pass, quads, projection.viewportPx);
   },
