@@ -146,14 +146,17 @@
 
 .infoCardFull.chromeless .headerRoot {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: minmax(0, auto) auto 1fr auto;
   grid-template-areas:
     'name name name actions'
     'eyebrow badge . actions';
   column-gap: var(--space-4);
-  align-items: start;
-  /* Same height with or without a thumbnail, so the peek cuts at one place. */
-  min-height: calc(var(--thumbnail-size-header) + var(--space-4));
+  row-gap: var(--space-1);
+  align-content: center;
+  align-items: center;
+  /* One height for every card (thumbnail or not, one name line or two), so the
+     peek always ends on the header's bottom edge: see --mobile-sheet-peek. */
+  height: var(--sheet-header-height);
 }
 
 .infoCardFull.chromeless .headerBar,
@@ -168,23 +171,35 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  /* First line centred on the 44px actions beside it. */
-  padding-block: calc((var(--touch-target) - 1lh) / 2) var(--space-1);
-  /* Hold the name off the actions column. */
-  padding-right: var(--space-4);
+  /* Break between words; the desktop card's break-all splits catalogue numbers. */
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--line-height-tight);
 }
 
+/* Same size as the name, dimmer: one size fewer in the peek. */
+.infoCardFull.chromeless .headerRoot .headlineAlias {
+  font-size: inherit;
+}
+
+/* The meta line stays one line: on a narrow phone the eyebrow gives way, the badge does not. */
 .infoCardFull.chromeless .headerRoot .sourceBadge {
   grid-area: badge;
+  white-space: nowrap;
 }
 
 .infoCardFull.chromeless .headerEyebrow {
   grid-area: eyebrow;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .infoCardFull.chromeless .headerActions {
   grid-area: actions;
+  align-self: center;
   display: flex;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -196,7 +211,7 @@
 }
 
 .infoCardFull.chromeless .headerRoot.headerWithThumbnail {
-  grid-template-columns: auto auto auto 1fr auto;
+  grid-template-columns: auto minmax(0, auto) auto 1fr auto;
   grid-template-areas:
     'thumb name name name actions'
     'thumb eyebrow badge . actions';
@@ -538,8 +553,18 @@ details:not([open]) > .detailsSummary::before {
 .closeButton:active {
   background: var(--surface-control-active);
 }
-/* Phone sheet: both header actions are full-size touch targets. */
-.infoCardFull.chromeless .focusButton,
+/* Phone sheet: Focus keeps its pill; ::after grows the hit area to the touch target. */
+.infoCardFull.chromeless .focusButton {
+  position: relative;
+  margin-left: 0;
+}
+
+.infoCardFull.chromeless .focusButton::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-6)) calc(-1 * var(--space-2));
+}
+
 .infoCardFull.chromeless .closeButton {
   margin-left: 0;
   min-width: var(--touch-target);

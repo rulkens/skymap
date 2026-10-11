@@ -314,9 +314,12 @@
    */
   --time-toolbar-height: 2.5rem;
 
-  /** Collapsed-peek height of the mobile info-card bottom sheet.
-   *  Single source for the sheet's peek snap AND the scale-bracket lift. */
-  --mobile-sheet-peek: 88px;
+  /** Phone selection-card header: two name lines plus the type line; fits the thumbnail. */
+  --sheet-header-height: 56px;
+  /** Collapsed-peek height of the mobile info-card bottom sheet: the grabber
+   *  strip (16px), the header, and the gap under it, so the peek ends where the
+   *  header does. Single source for the peek snap AND the scale-bracket lift. */
+  --mobile-sheet-peek: calc(var(--space-8) + var(--sheet-header-height) + var(--space-4));
   /** Minimum tap target on touch surfaces. */
   --touch-target: 44px;
   /** Detail-card thumbnail: full size in the card body, compact in the phone sheet header. */
@@ -334,7 +337,7 @@
     var(--dock-item-height) + max(var(--space-4), env(safe-area-inset-bottom, 0px))
   );
   --time-row-height: 2.75rem;
-  /** Panel sheets (Places, Layers) leave a strip of canvas visible above them. */
+  /** Panel sheets (Controls, Layers) leave a strip of canvas visible above them. */
   --sheet-panel-max-height: 60dvh;
   --z-bottom-stack: 10;
 
