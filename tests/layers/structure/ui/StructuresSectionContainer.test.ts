@@ -94,7 +94,9 @@ describe('StructuresSectionContainer', () => {
 
   it("reads the structure Layer's counts fact and forwards it to the section body", () => {
     const { store } = createAppStore();
-    store.dispatch(layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'idle' } }));
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, searchList: [], bulk: 'idle' } }),
+    );
     store.dispatch(
       factsReported({ layer: 'structure', patch: { counts: { 'galaxy-cluster': 42 } } }),
     );

@@ -179,19 +179,14 @@ describe('watchFocusTweenSaga', () => {
     expect(sagaErrors).toEqual([]);
   });
 
-  // Regression: `#focus=cluster-virgo-m87` (a durable structure id) resolves
-  // statically, so `updateSelectionFocus` fires at bootstrap — but
-  // `structureSelectionRow`'s `extractRow` (`structures.byId`) returns null
-  // until `wireStructureProjection`'s anchors group lands, which happens later
-  // in the async bootstrap phase sequence than `setSagaContext`. Before this
-  // fix the saga's deferral loop only covered `ref.type === 'star'`, so a
-  // structure ref fell straight to the no-op and the camera never moved. The
-  // saga must instead defer while the Layer's `bulk` fact is 'loading', on
-  // `factsReported` — the pulse `wireStructureProjection` publishes through
-  // on every slot change — and re-extract once the store is fed.
+  // A durable structure id resolves at bootstrap, before the store holds its
+  // record; the wait is gated on `bulk === 'loading'`, the slot that will feed it.
   it('defers a structure focus whose store has not loaded, then plants it once the store is fed', async () => {
     store.dispatch(
-      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
     );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
@@ -214,7 +209,10 @@ describe('watchFocusTweenSaga', () => {
     // The deferral guard checks the slot's status, not row-ness, so this exits
     // rather than looping forever waiting for a pulse that never recurs.
     store.dispatch(
-      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
     );
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-does-not-exist' }));
@@ -231,7 +229,9 @@ describe('watchFocusTweenSaga', () => {
   // With no bulk category on, the slot is never demanded and sits 'idle';
   // waiting on it would hold the focus forever.
   it('a structure focus does not wait while the bulk slot is idle', async () => {
-    store.dispatch(layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'idle' } }));
+    store.dispatch(
+      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, searchList: [], bulk: 'idle' } }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
@@ -247,7 +247,10 @@ describe('watchFocusTweenSaga', () => {
   // `bulk` rather than end on the first pulse.
   it("another Layer's facts report does not end a structure deferral", async () => {
     store.dispatch(
-      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
     );
     store.dispatch(
       layerFactsSeeded({ layer: 'galaxyCatalog', facts: { structureMemberCount: null } }),

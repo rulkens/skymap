@@ -23,7 +23,7 @@ export function wireStructureProjection(
 ): void {
   const { store, slot } = runtime;
 
-  function publishCounts(bulk: StructureFacts['bulk']): void {
+  function publishStore(bulk: StructureFacts['bulk']): void {
     publish({
       counts: Object.fromEntries(STRUCTURE_IDS.map((id) => [id, store.byCategory(id).length])),
       searchList: store.all().map(toStructureSearchEntry),
@@ -35,15 +35,15 @@ export function wireStructureProjection(
   // `${category}-${seed}` ids a `#focus=` deep link decodes to (the resolver's
   // `resolveFocusId`) cannot drift from the ids stored here.
   store.setGroup('anchors', buildStaticAnchorStructures());
-  publishCounts('idle');
+  publishStore('idle');
 
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       store.setGroup('bulk', structureCatalogToStructures(s.value));
-      publishCounts('ready');
+      publishStore('ready');
     } else if (s.kind === 'error') {
       store.clearGroup('bulk');
-      publishCounts('error');
+      publishStore('error');
     } else {
       publish({ bulk: s.kind === 'idle' ? 'idle' : 'loading' });
     }

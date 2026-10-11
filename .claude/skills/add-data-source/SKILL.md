@@ -62,7 +62,7 @@ the `Source` code enum stays global, per the layer-composition spec). Adding a
 tenth survey is a new row file plus a line in that list, not a new Layer.
 
 A genuinely **new Layer** (a new family with its own renderers/settings/passes,
-like the planned `starCatalog` or `structure` Layers) is a much bigger edit —
+like `starCatalog` or `structure`) is a much bigger edit —
 see `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §9 for the
 folder shape, and don't start one for what's really a tenth catalog.
 

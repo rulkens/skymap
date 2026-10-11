@@ -1,50 +1,14 @@
 /**
- * produceStructureLabels — per-frame text labels for the extended structures
- * (every cosmic and Milky Way category), read from the Layer's structure store.
- *
- * Applies the marker close-approach / far-distance fades, the featured +
- * visibility gates, and the anchor (ring centre, or just above the ring's
- * drawn top for the categories whose style asks for it). Famous-galaxy labels
- * come from `produceFamousGalaxyLabels` instead — a split that also carries the
- * deep-zoom exemption: THIS producer rides the `surveyDeepZoom` band
- * (structure labels dissolve with their rings on the descent into the solar
- * system), while famous labels stay visible with the famous points they name.
- * The exemption is per-producer, not per-label — no flag to thread through the
- * loop.
- *
- * ### Per-category opacity × focused-exempt recession bakes into fadeAlpha
- *
- * Each label's final `fadeAlpha` is the distance fade multiplied by two
- * composed strands (see `focusRecession.ts`): the per-category toggle's
- * opacity (`opacityOf({labelLayer, structure, item})`, read from the
- * FadeRegistry) and the focus recession factor. The authoritative gate is the
- * `structures.items[cat].labelEnabled` boolean: a category that is both
- * DISABLED and fully faded (opacity 0) is skipped wholesale — the only
- * legitimate all-or-nothing skip — while a still-fading disabled category keeps
- * emitting so its fade-out tail draws to completion. The FOCUSED structure's
- * own label is exempt from recession (factor 1): a faded ring never carries a
- * bright label, but the thing under inspection keeps its label. The marker pass
- * (`produceStructureMarkers`) bakes the mirror of this into each ring's alpha.
- *
- * ### Pure reader of the per-category opacity
- *
- * The producer only READS `fades.opacityOf({labelLayer, structure, item})`
- * — the visibility bridge (`syncVisibilityFades`) is the sole writer of each
- * category's intent opacity, seeding and ramping it from the category's
- * `labelEnabled` setting. The producer never drives a fade of its own.
- *
- * ### No declutter here — the director owns it
- *
- * A producer-local screen-space declutter could only de-collide
- * structure-vs-structure labels; it couldn't see the famous or you-are-here
- * labels. This producer therefore emits EVERY surviving candidate, tagging each
- * with a
- * `prominencePx` (the ring's apparent radius) as the declutter sort key, and
- * the `label2DDirector` declutters across ALL producers in its merge
- * step. Decluttering by apparent size (not a flat significance) keeps the
- * large structure under the camera while a small distant label sweeping past
- * during an orbit yields, instead of culling-then-releasing the structure
- * being inspected (flicker).
+ * produceStructureLabels — per-frame labels for every structure category, read
+ * from the Layer's store: close-approach / far fades, featured + visibility
+ * gates, anchored at the ring centre or just above its drawn top. It rides the
+ * `surveyDeepZoom` band, which famous-galaxy labels (their own producer) do not.
+ * `fadeAlpha` = distance fade × category opacity × focus recession, the focused
+ * structure exempt from recession; a disabled category is skipped only once
+ * fully faded, so its fade-out tail still draws. Opacity is only READ here
+ * (`syncVisibilityFades` writes it). Every candidate is emitted with
+ * `prominencePx` = ring apparent radius: the `label2DDirector` declutters
+ * across all producers, so the large structure under the camera wins.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';

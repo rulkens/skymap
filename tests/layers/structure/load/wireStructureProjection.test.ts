@@ -85,17 +85,6 @@ describe('wireStructureProjection', () => {
     vi.clearAllMocks();
   });
 
-  it('lands the bulk group when the slot resolves, keeping the anchors', async () => {
-    vi.mocked(structureCatalogFetcher).mockResolvedValueOnce(threeClusters as never);
-    const { runtime } = wire();
-    expect(runtime.store.byId('galaxy-cluster-virgo')).not.toBeNull();
-
-    await runtime.slot.load({});
-
-    expect(runtime.store.byId('galaxy-cluster-bulk-coma')).not.toBeNull();
-    expect(runtime.store.byId('galaxy-cluster-virgo')).not.toBeNull();
-  });
-
   it("publishes anchor counts and bulk 'idle' at boot", () => {
     const { published } = wire();
 
@@ -131,6 +120,18 @@ describe('wireStructureProjection', () => {
       searchList: [...ANCHOR_IDS, ...BULK_IDS],
       bulk: 'ready',
     });
+  });
+
+  // A cancel with nothing committed rolls the slot back to 'idle'; a stale
+  // 'loading' there would hold a structure focus deferral forever.
+  it("publishes bulk 'idle' when a load in flight is cancelled", () => {
+    vi.mocked(structureCatalogFetcher).mockReturnValueOnce(new Promise(() => {}) as never);
+    const { runtime, published } = wire();
+
+    void runtime.slot.load({});
+    runtime.slot.cancel();
+
+    expect(published.at(-1)!.patch).toEqual({ bulk: 'idle' });
   });
 
   it("publishes anchor-only counts and bulk 'error' when the slot rejects", async () => {

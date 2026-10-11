@@ -72,11 +72,10 @@ export const selectStructureCounts = (state: RootState): Partial<Record<Structur
   selectEngineFacts(state).structure?.counts ?? NO_STRUCTURE_COUNTS;
 
 /**
- * The structure Layer's bulk-slot status. Spelled inline because core never
- * imports a Layer's `@types`; `'idle'` before the seed, since an undemanded
- * slot must not hold a focus deferral.
+ * The structure Layer's bulk-slot status; `'idle'` before the seed, as an
+ * undemanded slot must not hold a focus deferral.
  */
-export const selectStructureBulk = (state: RootState): 'idle' | 'loading' | 'ready' | 'error' =>
+export const selectStructureBulk = (state: RootState) =>
   selectEngineFacts(state).structure?.bulk ?? 'idle';
 
 /** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */

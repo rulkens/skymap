@@ -32,17 +32,12 @@
  * The input `category` is therefore typed `StructureId` — a famous
  * category can't reach this lookup by construction.
  *
- * ### Why a narrowed `structures` param rather than the full `EngineState`
- *
- * The helper only needs `byCategory`.  The narrowed param shape
- * (`PickStructureStore`) keeps the test stubs trivial (no need to construct a
- * full `EngineState` to assert a pure lookup) and avoids coupling this module
- * to the full `StructureStore` import.
+ * The `structures` param is narrowed to `byCategory`, so a test stubs one method.
  */
 
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import type { PickStructureStore } from '../@types/PickStructureStore';
+import type { StructureStore } from '../@types/StructureStore';
 
 type PickStructureInput = {
   readonly category: StructureId;
@@ -50,7 +45,7 @@ type PickStructureInput = {
 };
 
 export function resolveStructureFromPick(
-  structures: PickStructureStore,
+  structures: Pick<StructureStore, 'byCategory'>,
   input: PickStructureInput,
 ): StructureInfo | null {
   const records = structures.byCategory(input.category);

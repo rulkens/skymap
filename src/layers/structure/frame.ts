@@ -4,8 +4,7 @@
  * `produceStructureMarkers` against the view's own eye; the result is the
  * descriptor list both marker passes upload and draw. Per view because sizing
  * and culling depend on where THIS eye is: a dome face and the canvas would
- * keep different lists. Never votes awake or settling — the list is a pure
- * function of the pose, nothing in it animates. The list is handed on in
+ * keep different lists. The list is handed on in
  * `store.all()` order, never sorted, filtered or deduped: ring pick indices
  * depend on it (`produceStructureMarkers`' header holds the contract).
  */

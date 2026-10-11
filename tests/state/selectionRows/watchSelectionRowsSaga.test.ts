@@ -203,7 +203,10 @@ describe('watchSelectionRowsSaga', () => {
   it("a structure deep link fills on the structure Layer's facts report", async () => {
     structure = null;
     store.dispatch(
-      layerFactsSeeded({ layer: 'structure', facts: { counts: {}, bulk: 'loading' } }),
+      layerFactsSeeded({
+        layer: 'structure',
+        facts: { counts: {}, searchList: [], bulk: 'loading' },
+      }),
     );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();

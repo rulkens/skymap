@@ -29,7 +29,7 @@ import { selectStructureBulk } from '../engine/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import type { RootState, SagaContext } from '../../store/types';
+import type { SagaContext } from '../../store/types';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
@@ -46,32 +46,13 @@ export function* watchFocusTweenSaga() {
         yield* take(engineStatusChanged);
       }
 
-      // A structure deep link resolves its ref statically at bootstrap (a
-      // durable id), before its backing store is fed, so the row comes back
-      // null until that store's first commit. `NOT_YET_LOADED` states the one
-      // rule ("is this ref's store still empty?") once, keyed on `ref.type` —
-      // each entry pairs a store-empty selector with the action that pulses
-      // the instant the store is fed. A structure waits only while its bulk
-      // slot is loading: an idle (undemanded), ready or failed slot will not
-      // fill the row, so a garbage id falls through to the no-op below.
-      // `factsReported` pulses for every Layer's facts, which is why `empty`
-      // is re-read after each one. `takeLatest` discards this waiter if a
-      // newer focus supersedes it.
-      type Deferral = {
-        /** True while the ref's store may still be filling. */
-        empty(state: RootState): boolean;
-        pulse: typeof factsReported;
-      };
-      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
-        {
-          structure: {
-            empty: (state) => selectStructureBulk(state) === 'loading',
-            pulse: factsReported,
-          },
-        };
-      // `ref.type` never changes across retries, so the deferral (if any) is
-      // looked up once; only `empty` is re-selected per pulse.
-      const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;
+      // A structure deep link resolves statically at bootstrap, so its row is
+      // null until the store is fed. It waits only while the bulk slot is
+      // loading: an idle (undemanded), ready or failed slot will not fill the
+      // row, so a garbage id falls through to the no-op below. `bulk` is re-read
+      // after every `factsReported`, which pulses for every Layer's facts.
+      // `takeLatest` discards this waiter if a newer focus supersedes it.
+      const waitsOnBulk = action.payload?.type === 'structure';
 
       // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
       // `watchGoHomeSaga` uses, so a body row's position matches where the
@@ -83,8 +64,8 @@ export function* watchFocusTweenSaga() {
         action.payload,
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
-      while (row === null && deferral !== undefined && (yield* select(deferral.empty))) {
-        yield* take(deferral.pulse);
+      while (row === null && waitsOnBulk && (yield* select(selectStructureBulk)) === 'loading') {
+        yield* take(factsReported);
         row = selection.extractRow(
           action.payload,
           deriveSimDays(yield* select(selectTimeState), performance.now()),
