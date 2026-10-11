@@ -489,12 +489,12 @@ readonly chunkStreams: Map<SourceType, StarChunkStream>;
 
 Built on `createTileStreamSubsystem<StarChunk, SlotPool>({ slots: new SlotPool(slots), concurrency: STAR_CHUNK_CONCURRENCY, requestRender, upload, release })` with `STAR_CHUNK_CONCURRENCY = 4` in `src/data/starChunkStream.ts` (the `SURFACE_TILE_CONCURRENCY` precedent). Keys are `String(chunkRef)`. The fetcher decodes with `decodeOctreeChunk(buf, indexHeader)` → `starColumnsOf` → `StarChunk`; a failed fetch resolves null, which the stream marks failed and never retries (Review Focus 2). The stream owns the store's evict handler (P1 rule) and forwards it to `deps.evict` after dropping its CPU copy. When `slots === 0` (`octree.chunks.length === 0`) `createStarCatalogSlot` creates no stream (Review Focus 4). `destroy.ts` destroys every stream before the renderers.
 
-- [ ] Test `update touches resident chunks and requests in descending priority until the pool refuses` (spec §9 "planner request order", the stream half) — `slots 2`, three requests with priorities 3, 9, 1 on frame 1; assert fetches were enqueued for 9 then 3 and the priority-1 request was dropped without an allocation; on frame 2 with both resident in `touched`, assert no new fetch and no eviction.
-- [ ] Test `a landed chunk is uploaded to its slot, counted in fetchedBytes and bumps the epoch; eviction evicts the slot and bumps it again` — stub `fetchChunk` resolving an encoded chunk fixture.
-- [ ] Test `a failed fetch marks the chunk failed and never re-enqueues it` (Review Focus 2) — `fetchChunk` resolving null; a second `update` requesting the same ref enqueues nothing and `inFlightCount()` is 0.
-- [ ] Test `an in-flight chunk evicted before landing is released, not uploaded` — allocate on frame 1, force eviction by over-requesting on frame 2 with the first key absent from `touched`, resolve the fetch; assert `upload` was never called for the evicted slot.
+- [x] Test `update touches resident chunks and requests in descending priority until the pool refuses` (spec §9 "planner request order", the stream half) — `slots 2`, three requests with priorities 3, 9, 1 on frame 1; assert fetches were enqueued for 9 then 3 and the priority-1 request was dropped without an allocation; on frame 2 with both resident in `touched`, assert no new fetch and no eviction.
+- [x] Test `a landed chunk is uploaded to its slot, counted in fetchedBytes and bumps the epoch; eviction evicts the slot and bumps it again` — stub `fetchChunk` resolving an encoded chunk fixture.
+- [x] Test `a failed fetch marks the chunk failed and never re-enqueues it` (Review Focus 2) — `fetchChunk` resolving null; a second `update` requesting the same ref enqueues nothing and `inFlightCount()` is 0.
+- [x] Test `an in-flight chunk evicted before landing is released, not uploaded` — allocate on frame 1, force eviction by over-requesting on frame 2 with the first key absent from `touched`, resolve the fetch; assert `upload` was never called for the evicted slot.
 - [ ] `create.test.ts`: the runtime exposes an empty `chunkStreams` map at creation.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 13: The CPU planner, the frame wiring and the wake vote
 

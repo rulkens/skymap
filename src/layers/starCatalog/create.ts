@@ -9,6 +9,8 @@
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
+import type { StarChunkStream } from './@types/StarChunkStream';
+import type { SourceType } from '../../@types/data/SourceType';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
@@ -73,9 +75,14 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
+  const chunkStreams = new Map<SourceType, StarChunkStream>();
   const catalogs = new Map(
     STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-      ([source]) => [source, createStarCatalogSlot(source, renderer)] as const,
+      ([source]) =>
+        [
+          source,
+          createStarCatalogSlot(source, renderer, chunkStreams, deps.requestRender),
+        ] as const,
     ),
   );
 
@@ -83,6 +90,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   return {
     catalogs,
+    chunkStreams,
     famousStarsMeta,
     renderer,
     pickRenderer,

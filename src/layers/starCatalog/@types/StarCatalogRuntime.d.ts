@@ -16,10 +16,13 @@ import type { StarRenderer } from './StarRenderer';
 import type { StarPointRenderer } from './StarPointRenderer';
 import type { StarAggregateUpsample } from './StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
+import type { StarChunkStream } from './StarChunkStream';
 
 export type StarCatalogRuntime = {
   /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
   readonly catalogs: ReadonlyMap<SourceType, AssetSlot<StarOctree, StarCatalogReq>>;
+  /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
+  readonly chunkStreams: Map<SourceType, StarChunkStream>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
