@@ -22,7 +22,6 @@ import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimes
 import cutCode from '../../../services/gpu/shaders/starCatalog/cut.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../data/starNodeFade';
-import { NO_CHUNK_REF } from '../../../data/octree/octreeFormat';
 import {
   AGG_DRAW_BYTE_OFFSET,
   CUT_DRAWS_WORDS,
@@ -32,7 +31,7 @@ import {
   NODE_REFINE_DELTA_WORD,
   NODE_RESIDENT_BIT,
   checkStarPoolCaps,
-  chunkRootRefineDelta,
+  chunkRootRefineDeltas,
   packStarChunkNodes,
   CUT_STREAM_BYTES,
   CUT_UNIFORM_BYTES,
@@ -228,18 +227,13 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       size: Math.max(1, slots) * WORD_BYTES,
       usage: STORAGE | GPUBufferUsage.COPY_DST,
     });
-    const rootRowOfChunk = new Int32Array(octree.chunks.length).fill(-1);
-    octree.nodes.chunkRef.forEach((ref, row) => {
-      if (ref !== NO_CHUNK_REF) rootRowOfChunk[ref] = row;
-    });
     sources.set(source, {
       octree,
       slots,
       nodes,
       slotRows,
       indexRows: packed,
-      rootRowOfChunk,
-      rootRowOfSlot: new Int32Array(slots).fill(-1),
+      chunkOfSlot: new Int32Array(slots).fill(-1),
       live: createState(`${source}`, octree, slots, nodes, slotRows),
       capture: null,
     });
@@ -266,20 +260,20 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
   function uploadChunk(source: SourceType, slot: number, chunk: StarChunk): void {
     const entry = slotOf(source, slot);
     const { octree } = entry;
-    const ref = octree.chunks[chunk.ref]!;
-    const rootRow = entry.rootRowOfChunk[chunk.ref]!;
-    const root = { level: ref.level, morton: ref.morton, rootRow };
+    const roots = octree.chunks[chunk.ref]!.roots.map((rootRow) => ({
+      level: octree.nodes.level[rootRow]!,
+      morton: octree.nodes.morton[rootRow]!,
+      rootRow,
+    }));
     const nodeBase = octree.nodes.count + slot * octree.chunkNodeCap;
     const rows = packStarChunkNodes(
       chunk,
-      root,
+      roots,
       { nodeBase, recordBase: octree.records.count + slot * octree.chunkCapacity },
       octree.chunkNodeCap,
     );
-    // Rows and fades first, the root's resident bit last: no frame refines a
+    // Rows and fades first, every root's resident bit last: no frame refines a
     // root over another chunk's rows.
-    const previous = entry.rootRowOfSlot[slot]!;
-    if (previous >= 0) writeRootRow(entry, previous, null);
     device.queue.writeBuffer(entry.nodes, nodeBase * CUT_NODE_WORDS * WORD_BYTES, rows);
     writeSlotRows(entry, slot, chunk.nodes.count);
     const zeros = new Float32Array(octree.chunkNodeCap * OPACITY_CHANNELS);
@@ -287,18 +281,19 @@ export function createStarCutGpu(device: GPUDevice): StarCutGpu {
       if (state === null) continue;
       device.queue.writeBuffer(state.opacity, nodeBase * OPACITY_CHANNELS * WORD_BYTES, zeros);
     }
-    writeRootRow(entry, rootRow, chunkRootRefineDelta(chunk, root));
-    entry.rootRowOfSlot[slot] = rootRow;
+    const deltas = chunkRootRefineDeltas(chunk, roots);
+    roots.forEach((root, k) => writeRootRow(entry, root.rootRow, deltas[k]!));
+    entry.chunkOfSlot[slot] = chunk.ref;
   }
 
   function evictChunk(source: SourceType, slot: number): void {
     const entry = slotOf(source, slot);
-    const rootRow = entry.rootRowOfSlot[slot]!;
-    if (rootRow < 0) return;
-    // The root stops refining before its rows go; a landing rewrites every row of the slot.
-    writeRootRow(entry, rootRow, null);
+    const ref = entry.chunkOfSlot[slot]!;
+    if (ref < 0) return;
+    // Every root stops refining before its rows go; a landing rewrites every row of the slot.
+    for (const rootRow of entry.octree.chunks[ref]!.roots) writeRootRow(entry, rootRow, null);
     writeSlotRows(entry, slot, 0);
-    entry.rootRowOfSlot[slot] = -1;
+    entry.chunkOfSlot[slot] = -1;
   }
 
   function writeSlotRows(entry: StarCutSource, slot: number, rows: number): void {

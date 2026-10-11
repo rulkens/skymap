@@ -25,7 +25,7 @@ import {
   NODE_BLOB_COUNT_WORD,
   NODE_FOLDED_BIT,
   OWN_COUNT_SHIFT,
-  chunkRootRefineDelta,
+  chunkRootRefineDeltas,
   packStarChunkNodes,
   packStarCutNodes,
   writeStarCutUniforms,
@@ -260,7 +260,17 @@ function octreeOf(nodes: OctreeNodeTable, grid: OctreeGrid, chunk?: StarChunk): 
       colourIndex: new Float32Array(0),
     },
     chunks: chunk
-      ? [{ level: 0, morton: 0, hash: '', bytes: 0, nodes: chunk.nodes.count, records: 0 }]
+      ? [
+          {
+            level: 0,
+            morton: 0,
+            roots: [0],
+            hash: '',
+            bytes: 0,
+            nodes: chunk.nodes.count,
+            records: 0,
+          },
+        ]
       : [],
     chunkCapacity: chunk ? 16 : 0,
     chunkNodeCap: chunk ? chunk.nodes.count : 0,
@@ -400,14 +410,14 @@ describe('referenceStarCut over own records and blobs', () => {
     chunk,
   );
   const root = { level: 1, morton: 0, rootRow: 0 };
-  const chunkRows = packStarChunkNodes(chunk, root, { nodeBase: 1, recordBase: 3 }, 2, 0);
+  const chunkRows = packStarChunkNodes(chunk, [root], { nodeBase: 1, recordBase: 3 }, 2, 0);
   const poolOf = (resident: boolean) => {
     const pool = new Uint32Array(3 * CUT_NODE_WORDS);
     pool.set(packStarCutNodes(octree, 0));
     pool.set(chunkRows, CUT_NODE_WORDS);
     if (resident) {
       pool[NODE_BITS_WORD] = pool[NODE_BITS_WORD]! | NODE_RESIDENT_BIT;
-      pool[NODE_REFINE_DELTA_WORD] = chunkRootRefineDelta(chunk, root, 0);
+      pool[NODE_REFINE_DELTA_WORD] = chunkRootRefineDeltas(chunk, [root], 0)[0]!;
     }
     return pool;
   };

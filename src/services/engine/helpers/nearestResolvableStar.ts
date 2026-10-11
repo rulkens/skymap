@@ -52,6 +52,8 @@ import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCa
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
+/** A child's Morton key is its parent's shifted left by this. */
+const OCTANT_BITS = 3;
 
 /**
  * The nearest catalogued star whose heliocentric position lies within
@@ -108,17 +110,21 @@ export function nearestResolvableStar(
       if (camZPc < loZ || camZPc > hiZ) continue;
 
       // Childful: descend into every present child (a blob is a flux mip, never
-      // unpacked); a chunk root's children are its chunk's top rows, its last rows.
+      // unpacked); a chunk root's children are the chunk's rows one level down
+      // under its key. A chunk holds several roots, maybe at several levels.
       if (nodes.childMask[i] !== 0) {
         const ref = nodes.chunkRef[i]!;
         const chunk = ref === NO_CHUNK_REF ? null : resident(ref);
         if (chunk !== null) {
           const top: number[] = [];
-          const topLevel = chunk.nodes.level[chunk.nodes.count - 1];
-          for (let c = chunk.nodes.count - 1; c >= 0 && chunk.nodes.level[c] === topLevel; c--) {
-            top.push(c);
+          const c = chunk.nodes;
+          const topLevel = nodes.level[i]! - 1;
+          for (let k = c.count - 1; k >= 0 && c.level[k]! >= topLevel; k--) {
+            if (c.level[k] === topLevel && c.morton[k]! >>> OCTANT_BITS === nodes.morton[i]) {
+              top.push(k);
+            }
           }
-          scan(chunk.nodes, chunk.records, top, octree.recordOrdinalBase[ref]!);
+          scan(c, chunk.records, top, octree.recordOrdinalBase[ref]!);
         }
         const cbase = i * 8;
         for (let k = 0; k < 8; k++) {

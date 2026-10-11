@@ -6,6 +6,7 @@
 
 import type { StarChunk } from '../../../@types/data/starCatalog/StarChunk';
 import type { StarOctree } from '../../../@types/data/starCatalog/StarOctree';
+import type { StarChunkRoot } from '../@types/StarChunkRoot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OctreeNodeTable } from '../../../@types/octree/OctreeNodeTable';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -136,8 +137,7 @@ function packRows(
   const isFolded = (i: number) => foldedRow(nodes, i, foldRecords);
   const n = nodes.count;
   const rowByKey = new Map<number, number>();
-  for (let i = 0; i < n; i++)
-    rowByKey.set(nodes.level[i]! * LEVEL_KEY_STRIDE + nodes.morton[i]!, i);
+  for (let i = 0; i < n; i++) rowByKey.set(nodeKey(nodes.level[i]!, nodes.morton[i]!), i);
   const hasBlob = (i: number) => nodes.childMask[i] !== 0;
 
   const localParent = new Int32Array(n);
@@ -148,9 +148,7 @@ function packRows(
     if (own > MAX_OWN_COUNT) {
       throw new Error(`starCut: ${own} records overflow one node's block index`);
     }
-    const parentKey =
-      (level + 1) * LEVEL_KEY_STRIDE + Math.floor(nodes.morton[i]! / 2 ** OCTANT_BITS);
-    localParent[i] = rowByKey.get(parentKey) ?? -1;
+    localParent[i] = rowByKey.get(parentKey(level, nodes.morton[i]!)) ?? -1;
   }
 
   // A folded row names its nearest unfolded ancestor as parent, so `refines`
@@ -221,10 +219,10 @@ export function packStarCutNodes(octree: StarOctree, foldRecords = STAR_FOLD_REC
   return out;
 }
 
-/** `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; top rows' parent = rootRow. */
+/** `chunkNodeCap` rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; a top row's parent is its root's index row. */
 export function packStarChunkNodes(
   chunk: StarChunk,
-  root: { readonly level: number; readonly morton: number; readonly rootRow: number },
+  roots: readonly StarChunkRoot[],
   pool: { readonly nodeBase: number; readonly recordBase: number },
   chunkNodeCap: number,
   foldRecords = STAR_FOLD_RECORDS,
@@ -236,42 +234,45 @@ export function packStarChunkNodes(
   }
   const out = new Uint32Array(chunkNodeCap * CUT_NODE_WORDS);
   const { level, morton } = chunk.nodes;
+  const rootRowByKey = new Map(roots.map((r) => [nodeKey(r.level, r.morton), r.rootRow]));
   packRows(
     chunk.nodes,
     out,
     { node: pool.nodeBase, record: pool.recordBase },
     (i) => {
-      if (!isTopRow(level[i]!, morton[i]!, root)) {
+      const rootRow = rootRowByKey.get(parentKey(level[i]!, morton[i]!));
+      if (rootRow === undefined) {
         throw new Error(`starCut: chunk row ${i} has no parent in the chunk and is not a top row`);
       }
-      return root.rootRow;
+      return rootRow;
     },
     foldRecords,
   );
   return out;
 }
 
-/** The chunk root's `refineDelta` once its chunk is resident: Σ top rows' instances − 1. */
-export function chunkRootRefineDelta(
+/** Each root's `refineDelta` once its chunk is resident, in `roots` order: Σ its top rows' instances − 1. */
+export function chunkRootRefineDeltas(
   chunk: StarChunk,
-  root: { readonly level: number; readonly morton: number },
+  roots: readonly Pick<StarChunkRoot, 'level' | 'morton'>[],
   foldRecords = STAR_FOLD_RECORDS,
-): number {
+): number[] {
   const { nodes } = chunk;
-  let sum = 0;
+  const rootOfKey = new Map(roots.map((r, k) => [nodeKey(r.level, r.morton), k]));
+  const deltas = roots.map(() => -1);
   for (let i = 0; i < nodes.count; i++) {
-    if (!isTopRow(nodes.level[i]!, nodes.morton[i]!, root)) continue;
-    sum += drawnOnRefine(nodes, i, foldRecords);
+    const k = rootOfKey.get(parentKey(nodes.level[i]!, nodes.morton[i]!));
+    if (k !== undefined) deltas[k]! += drawnOnRefine(nodes, i, foldRecords);
   }
-  return sum - 1;
+  return deltas;
 }
 
-function isTopRow(
-  level: number,
-  morton: number,
-  root: { readonly level: number; readonly morton: number },
-): boolean {
-  return level === root.level - 1 && Math.floor(morton / 2 ** OCTANT_BITS) === root.morton;
+function nodeKey(level: number, morton: number): number {
+  return level * LEVEL_KEY_STRIDE + morton;
+}
+
+function parentKey(level: number, morton: number): number {
+  return nodeKey(level + 1, Math.floor(morton / 2 ** OCTANT_BITS));
 }
 
 /** Throws, naming the largest slot count that fits, when `slots` would overflow a pool cap; never clamps. */

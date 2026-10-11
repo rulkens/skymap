@@ -84,4 +84,21 @@ describe('planStarChunks', () => {
     expect(refs[0]).toBe(A);
     expect(refs.slice(1).sort()).toEqual([B, C]);
   });
+
+  it("planStarChunks: a chunk with several roots is requested once, at its best root's proxy", () => {
+    // B and E share chunk B: E's weaker proxy must not repeat it (the stream would fund it twice).
+    const shared = {
+      ...OCTREE,
+      nodes: { ...OCTREE.nodes, chunkRef: Uint32Array.from([A, B, C, B, D, NO_CHUNK_REF]) },
+    } as StarOctree;
+    const { requests } = planStarChunks(
+      shared,
+      starOctreeIndex(shared.nodes, shared.grid),
+      cut(new Float32Array(0)),
+      () => false,
+      8,
+    );
+    expect(requests.map((r) => r.chunkRef).sort()).toEqual([A, B, C]);
+    expect(requests.find((r) => r.chunkRef === B)!.priority).toBeCloseTo(256 / 260, 6);
+  });
 });

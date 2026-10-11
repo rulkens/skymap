@@ -12,6 +12,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { StarResidency } from '../../../../src/@types/data/starCatalog/StarResidency';
 import { hoistedStarOctree } from '../../../fixtures/hoistedStarOctree';
+import { multiRootStarOctree } from '../../../fixtures/multiRootStarOctree';
 
 /** No chunk resident: a v1 catalog has none. */
 const NONE: StarResidency = () => null;
@@ -156,5 +157,18 @@ describe('nearestResolvableStar', () => {
       0.01 * PC_TO_MPC,
     );
     expect(hit!.ordinal).toBe(3);
+  });
+
+  it("descends into each of a chunk's roots, whatever their levels", () => {
+    const { octree, chunk } = multiRootStarOctree();
+    const near = (pc: number) =>
+      nearestResolvableStar(
+        octree,
+        (ref) => (ref === 0 ? chunk : null),
+        [pc * PC_TO_MPC, pc * PC_TO_MPC, (pc + 0.001) * PC_TO_MPC],
+        0.01 * PC_TO_MPC,
+      );
+    expect(near(4.5)!.ordinal).toBe(4);
+    expect(near(0.5)!.ordinal).toBe(5);
   });
 });

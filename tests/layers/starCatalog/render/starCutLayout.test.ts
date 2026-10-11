@@ -14,7 +14,7 @@ import {
   CUT_MAX_VIEWS,
   CUT_UNIFORM_BYTES,
   FLOATS_PER_VIEW,
-  chunkRootRefineDelta,
+  chunkRootRefineDeltas,
   packStarChunkNodes,
   packStarCutNodes,
   writeStarCutUniforms,
@@ -122,7 +122,7 @@ describe('packStarChunkNodes', () => {
       },
     };
     const root = { level: 2, morton: 0, rootRow: 7 };
-    const words = packStarChunkNodes(chunk, root, { nodeBase: 40, recordBase: 1000 }, 6, 0);
+    const words = packStarChunkNodes(chunk, [root], { nodeBase: 40, recordBase: 1000 }, 6, 0);
     // Words: grid, firstRecord, bits (level | blob 16 | resident 32 | own << 8), blobCount,
     // parent, refineDelta.
     expect([...words]).toEqual([
@@ -132,6 +132,6 @@ describe('packStarChunkNodes', () => {
       ...[2, 1007, 1 | 32 | (4 << 8), 0, 7, 0],
       ...new Array(2 * CUT_NODE_WORDS).fill(0),
     ]);
-    expect(chunkRootRefineDelta(chunk, root, 0)).toBe(1 + 1 + 4 - 1);
+    expect(chunkRootRefineDeltas(chunk, [root], 0)).toEqual([1 + 1 + 4 - 1]);
   });
 });

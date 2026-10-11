@@ -10,6 +10,7 @@ import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/re
 import {
   CUT_NODE_WORDS,
   NODE_BITS_WORD,
+  NODE_REFINE_DELTA_WORD,
   NODE_RESIDENT_BIT,
   OPACITY_CHANNELS,
   WORD_BYTES,
@@ -101,6 +102,7 @@ function octreeOf(
     chunks: Array.from({ length: chunkCount }, (_, i) => ({
       level: 1,
       morton: i,
+      roots: [i],
       hash: '',
       bytes: 0,
       nodes: 1,
@@ -211,6 +213,66 @@ describe('starCatalogRenderer chunk pool', () => {
     ]);
     expect([...(writes[1]!.data as Uint32Array)]).toEqual([0]);
     expect((writes[0]!.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
+  });
+
+  it('a chunk with several roots marks every root resident last and clears every root first', () => {
+    const { device, writes } = recordingDevice();
+    const renderer = createStarCatalogRenderer(device, 'rgba16float');
+    const base = octreeOf({ chunks: 2 });
+    // Chunk 1 holds the roots at index rows 1 and 2 (level 1, Morton 1 and 2).
+    const octree: StarOctree = {
+      ...base,
+      nodes: {
+        ...base.nodes,
+        chunkRef: Uint32Array.from({ length: 10 }, (_, i) =>
+          i < 3 ? Math.min(i, 1) : NO_CHUNK_REF,
+        ),
+      },
+      chunks: [base.chunks[0]!, { ...base.chunks[1]!, roots: [1, 2], nodes: 2, records: 5 }],
+    };
+    const chunk: StarChunk = {
+      ref: 1,
+      nodes: {
+        count: 2,
+        morton: Uint32Array.of(8, 16),
+        level: Uint8Array.of(0, 0),
+        childMask: Uint8Array.of(0, 0),
+        firstRecord: Uint32Array.of(0, 3),
+        ownCount: Uint32Array.of(3, 2),
+        blobCount: Uint32Array.of(0, 0),
+        chunkRef: Uint32Array.of(NO_CHUNK_REF, NO_CHUNK_REF),
+      },
+      records: columns(5),
+    };
+    renderer.upload(Source.GaiaStars, octree, 2);
+
+    writes.length = 0;
+    renderer.uploadChunk(Source.GaiaStars, 0, chunk);
+    expect(writes.map((w) => [w.label, w.offset])).toEqual([
+      [RECORDS, 100 * 8],
+      [NODES, 10 * ROW_BYTES],
+      [SLOT_ROWS, 0],
+      [OPACITY, 10 * OPACITY_CHANNELS * 4],
+      [NODES, 1 * ROW_BYTES],
+      [NODES, 2 * ROW_BYTES],
+    ]);
+    const roots = writes.slice(-2).map((w) => w.data as Uint32Array);
+    expect(roots.map((r) => r[NODE_BITS_WORD]! & NODE_RESIDENT_BIT)).toEqual([
+      NODE_RESIDENT_BIT,
+      NODE_RESIDENT_BIT,
+    ]);
+    expect(roots.map((r) => r[NODE_REFINE_DELTA_WORD])).toEqual([3 - 1, 2 - 1]);
+
+    writes.length = 0;
+    renderer.evictChunk(Source.GaiaStars, 0);
+    expect(writes.map((w) => [w.label, w.offset])).toEqual([
+      [NODES, 1 * ROW_BYTES],
+      [NODES, 2 * ROW_BYTES],
+      [SLOT_ROWS, 0],
+    ]);
+    for (const w of writes.slice(0, 2)) {
+      expect((w.data as Uint32Array)[NODE_BITS_WORD]! & NODE_RESIDENT_BIT).toBe(0);
+    }
   });
 
   it("recordOrdinal and poolRecordIndex map a resident chunk's records both ways, and nothing once evicted", () => {

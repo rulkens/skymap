@@ -11,12 +11,10 @@ export type StarCutSource = {
   readonly nodes: GPUBuffer;
   /** One u32 per slot: the resident chunk's row count, 0 when empty (`cut.wesl` skips the rest). */
   readonly slotRows: GPUBuffer;
-  /** The packed index rows as uploaded (chunk roots unresident), to rewrite one root row. */
+  /** The packed index rows as uploaded (chunk roots unresident), to rewrite a chunk's root rows. */
   readonly indexRows: Uint32Array;
-  /** Index row of each chunk's root, by chunk ref. */
-  readonly rootRowOfChunk: Int32Array;
-  /** Index row of the root whose chunk fills each slot, −1 when empty. */
-  readonly rootRowOfSlot: Int32Array;
+  /** The chunk ref each slot holds, −1 when empty: its roots are the rows a landing or eviction rewrites. */
+  readonly chunkOfSlot: Int32Array;
   readonly live: StarCutState;
   /** Built on the first capture: most sessions never bake a sky cubemap. */
   capture: StarCutState | null;

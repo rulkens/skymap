@@ -1,13 +1,12 @@
 /**
- * Walks the index from the root with the cut's own tests: frustum (every
- * view's six planes, `cut.planes`, rebased about `cut.originMpc`, the box grown
- * as `cut.wesl`'s `offScreen` grows a refine candidate) and the refine proxy
- * edge²/dist² ≥ thr². A chunk root the walk would refine is a request
- * (priority = proxy) when absent, touched when resident. The walk never enters
- * a chunk. It cannot see the GPU's budget bin, so it may fetch a chunk the
- * budget then declines to open: bytes, never correctness. Only the `limit`
- * best requests are kept: a pool of `limit` slots can never fund more in one
- * frame, and near the Sun ~1,900 roots want to refine.
+ * Walks the index from the root with the cut's own tests: frustum (every view's six planes,
+ * `cut.planes`, rebased about `cut.originMpc`, the box grown as `cut.wesl`'s `offScreen` grows a
+ * refine candidate) and the refine proxy edge²/dist² ≥ thr². A chunk root the walk would refine
+ * requests its chunk (priority = its best root's proxy) when absent, touches it when resident.
+ * The walk never enters a chunk. It cannot see the GPU's budget bin, so it may fetch a chunk the
+ * budget then declines to open: bytes, never correctness. Only the `limit` best requests are
+ * kept: a pool of `limit` slots can never fund more in one frame, and near the Sun hundreds of
+ * roots want to refine.
  */
 import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from '../../layers/starCatalog/@types/StarCutSpec';
@@ -72,9 +71,16 @@ export function planStarChunks(
     return true;
   };
 
-  // Kept in descending priority, at most `limit` long.
+  // Kept in descending priority, at most `limit` long. A chunk with several roots is offered
+  // once per root and keeps its best root's priority: a repeat would fund it twice.
   const offer = (chunkRef: number, priority: number): void => {
     if (requests.length === limit && !(priority > requests[limit - 1]!.priority)) return;
+    for (let k = 0; k < requests.length; k++) {
+      if (requests[k]!.chunkRef !== chunkRef) continue;
+      if (requests[k]!.priority >= priority) return;
+      requests.splice(k, 1);
+      break;
+    }
     let at = requests.length;
     while (at > 0 && requests[at - 1]!.priority < priority) at--;
     requests.splice(at, 0, { chunkRef, priority });
