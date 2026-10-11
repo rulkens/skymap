@@ -13,10 +13,12 @@ import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContent
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
+import type { StarOctree } from '../../@types/data/starCatalog/StarOctree';
 import type { StarCutSpec } from './@types/StarCutSpec';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { StarChunkStream } from './@types/StarChunkStream';
 import { NODE_FADE_MS } from '../../data/starNodeFade';
+import { STAR_PLAN_INTERVAL_FRAMES } from '../../data/starPlanIntervalFrames';
 import { starCutInputs } from './render/cut/starCutInputs';
 import { sameStarCut } from './render/cut/sameStarCut';
 import { planStarChunks } from '../../utils/star/planStarChunks';
@@ -31,6 +33,16 @@ export function starCatalogPlanner(
   let frameIndex = 0;
   // A landing chunk changes the cut without changing `sameStarCut`'s inputs.
   const seenEpoch = new WeakMap<StarChunkStream, number>();
+  // The cut and frame of the last chunk plan, and whether it left chunks wanted.
+  let plannedCut: StarCutSpec | null = null;
+  let plannedFrame = 0;
+  let wantedChunks = false;
+  const observeEpoch = (stream: StarChunkStream): boolean => {
+    const epoch = stream.epoch();
+    if (seenEpoch.get(stream) === epoch) return false;
+    seenEpoch.set(stream, epoch);
+    return true;
+  };
   return {
     name: 'star-catalog',
     scope: 'once',
@@ -42,26 +54,47 @@ export function starCatalogPlanner(
 
       let inFlight = 0;
       let residencyChanged = false;
-      if (inputs !== null) {
+      if (inputs === null) plannedCut = null;
+      else {
+        const streams: { stream: StarChunkStream; octree: StarOctree }[] = [];
         for (const { source, octree } of runtime.renderer.loadedCatalogs()) {
           const stream = runtime.chunkStreams.get(source);
           if (stream === undefined || !inputs.cut.sources.some((s) => s.source === source)) {
             continue;
           }
-          const index = starOctreeIndex(octree.nodes, octree.grid);
-          const { touched, requests } = planStarChunks(
-            octree,
-            index,
-            inputs.cut,
-            stream.isResident,
-            stream.slots,
-          );
-          stream.update(frameIndex, touched, requests);
-          inFlight += stream.inFlightCount();
-          const epoch = stream.epoch();
-          if (seenEpoch.get(stream) !== epoch) {
-            seenEpoch.set(stream, epoch);
-            residencyChanged = true;
+          streams.push({ stream, octree });
+          residencyChanged ||= observeEpoch(stream);
+        }
+        // Between plans the pool keeps its last requests; only a moved cut, a landing or
+        // eviction, or the interval while chunks are wanted or in flight re-walks the index.
+        for (const { stream } of streams) inFlight += stream.inFlightCount();
+        const due =
+          plannedCut === null ||
+          residencyChanged ||
+          !sameStarCut(inputs.cut, plannedCut) ||
+          ((wantedChunks || inFlight > 0) &&
+            frameIndex - plannedFrame >= STAR_PLAN_INTERVAL_FRAMES);
+        if (due) {
+          plannedCut = inputs.cut;
+          plannedFrame = frameIndex;
+          wantedChunks = false;
+          for (const { stream, octree } of streams) {
+            const index = starOctreeIndex(octree.nodes, octree.grid);
+            const { touched, requests } = planStarChunks(
+              octree,
+              index,
+              inputs.cut,
+              stream.isResident,
+              stream.slots,
+            );
+            stream.update(frameIndex, touched, requests);
+            wantedChunks ||= requests.length > 0;
+          }
+          // The update may have enqueued fetches or evicted for them.
+          inFlight = 0;
+          for (const { stream } of streams) {
+            inFlight += stream.inFlightCount();
+            residencyChanged ||= observeEpoch(stream);
           }
         }
       }

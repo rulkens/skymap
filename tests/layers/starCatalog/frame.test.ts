@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
+import { planStarChunks } from '../../../src/utils/star/planStarChunks';
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';
 import type { StarCatalogRuntime } from '../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../../../src/layers/starCatalog/@types/StarCutInputs';
@@ -18,7 +19,14 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { Source } from '../../../src/data/source';
 import { mat4d } from 'wgpu-matrix';
 import { makeSlab } from '../../fixtures/makeSlab';
+import { STAR_PLAN_INTERVAL_FRAMES } from '../../../src/data/starPlanIntervalFrames';
 import { EYE_SLACK_MPC, NODE_FADE_MS } from '../../../src/data/starNodeFade';
+
+vi.mock('../../../src/utils/star/planStarChunks', async (original) => {
+  const { planStarChunks: real } =
+    await original<typeof import('../../../src/utils/star/planStarChunks')>();
+  return { planStarChunks: vi.fn(real) };
+});
 
 const MID_BAND_PC = 1_000; // inside Gaia's crossfade band
 
@@ -129,7 +137,34 @@ describe('starCatalogPlanner', () => {
       expect(plan(10 * NODE_FADE_MS)).toBe(true);
       counters.inFlight = 0;
       expect(plan(11 * NODE_FADE_MS)).toBe(false);
+    });
+
+    it('walks the index on a moved cut, then only every STAR_PLAN_INTERVAL_FRAMES while a chunk is in flight', () => {
+      const { stream, counters } = stubStream();
+      const planner = starCatalogPlanner(makeRuntime(true, stream));
+      const frame = (t: number) =>
+        planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC), t)], STATE);
+      const walks = vi.mocked(planStarChunks);
+      walks.mockClear();
+
+      frame(0);
+      expect(walks).toHaveBeenCalledTimes(1);
+      for (let i = 1; i < 10; i++) frame(i);
+      expect(walks).toHaveBeenCalledTimes(1); // unchanged camera, nothing in flight
+
+      counters.inFlight = 1;
+      frame(10); // the interval since the first walk has long passed
+      expect(walks).toHaveBeenCalledTimes(2);
+      for (let i = 11; i < 10 + STAR_PLAN_INTERVAL_FRAMES; i++) frame(i);
+      expect(walks).toHaveBeenCalledTimes(2);
+      frame(10 + STAR_PLAN_INTERVAL_FRAMES);
+      expect(walks).toHaveBeenCalledTimes(3);
       expect(stream.update).toHaveBeenCalledTimes(3);
+
+      frame(100);
+      walks.mockClear();
+      planner.plan(SNAPSHOT, [makeView(camAtPc(MID_BAND_PC + 500), 101)], STATE);
+      expect(walks).toHaveBeenCalledTimes(1); // the cut moved
     });
 
     it('re-arms the fade window when a chunk lands', () => {
