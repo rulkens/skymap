@@ -4,8 +4,8 @@
  * eye it was rebased about, in f64; the renderer splits the eye into hi/lo.
  */
 
-import type { Vec3 } from '../../math/Vec3';
-import type { SampledDepthBinding } from '../SampledDepthBinding';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { SampledDepthBinding } from '../../../@types/rendering/SampledDepthBinding';
 
 export type MissionTrailFrame = {
   readonly vp: Float32Array;

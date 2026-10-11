@@ -76,13 +76,6 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
-  fadeLayerRow({
-    key: 'missionTrails',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'missionTrails' }),
-    seed: (s) => (s.missionTrails.enabled ? 1 : 0),
-    intent: (s) => s.missionTrails.enabled,
-  }),
 ] satisfies readonly FadeLayer<unknown>[];
 
 // Called once at bootstrap from `wireSlots`. `register` is idempotent, so manifest

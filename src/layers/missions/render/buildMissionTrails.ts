@@ -4,13 +4,13 @@
  * version changes, never per frame.
  */
 
-import type { Vec3 } from '../../@types/math/Vec3';
-import type { MissionTrailGeometry } from '../../@types/rendering/missionTrailRenderer/MissionTrailGeometry';
-import { SAMPLED_BODIES } from '../../data/missions/spacecraftBodies';
-import { MISSION_TRAIL_MAX_SAG_KM } from '../../data/missions/missionTrailStyle';
-import { tessellateTrack } from '../../utils/orbit/tessellateTrack';
-import { trackKmToWorldMpc } from '../../utils/orbit/trackKmToWorldMpc';
-import { trajectoryRegistry } from './trajectoryRegistry';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
+import { SAMPLED_BODIES } from '../../../data/missions/spacecraftBodies';
+import { MISSION_TRAIL_MAX_SAG_KM } from '../../../data/missions/missionTrailStyle';
+import { tessellateTrack } from '../../../utils/orbit/tessellateTrack';
+import { trackKmToWorldMpc } from '../../../utils/orbit/trackKmToWorldMpc';
+import { trajectoryRegistry } from '../../../services/bodies/trajectoryRegistry';
 
 export function buildMissionTrails(sunMpc: Readonly<Vec3>): MissionTrailGeometry[] {
   const out: MissionTrailGeometry[] = [];

@@ -17,6 +17,7 @@ import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 import { lightTimeLayer } from '../layers/lightTime/layer';
 import { localBubbleLayer } from '../layers/localBubble/layer';
 import { milkyWayLayer } from '../layers/milkyWay/layer';
+import { missionsLayer } from '../layers/missions/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
@@ -27,6 +28,7 @@ export const APP_COMPOSITION = {
     cosmicWebDensityLayer,
     cosmicWebFilamentsLayer,
     flowLayer,
+    missionsLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     lightTimeLayer,
@@ -42,6 +44,7 @@ export const APP_COMPOSITION = {
     typeof cosmicWebDensityLayer,
     typeof cosmicWebFilamentsLayer,
     typeof flowLayer,
+    typeof missionsLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof lightTimeLayer,

@@ -11,7 +11,7 @@ import {
   TRAIL_UNIFORM_OFFSETS,
   TRAIL_VERTEX_STRIDE,
   endpointAttributes,
-} from '../../../../src/services/gpu/renderers/bodies/missionTrailRenderer';
+} from '../../../../src/layers/missions/render/missionTrailRenderer';
 
 const io = readFileSync(
   join(process.cwd(), 'src/services/gpu/shaders/bodies/missionTrail/io.wesl'),

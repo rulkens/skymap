@@ -8,19 +8,22 @@
  * @module
  */
 
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { MissionTrailRenderer } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailRenderer';
-import type { MissionTrailFrame } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailFrame';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { MissionTrailGeometry } from '../../../../@types/rendering/missionTrailRenderer/MissionTrailGeometry';
-import vsCode from '../../shaders/bodies/missionTrail/vertex.wesl?static';
-import fsCode from '../../shaders/bodies/missionTrail/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { buildMissionTrails } from '../../../bodies/buildMissionTrails';
-import { MISSION_TRAIL_WIDTH_PX } from '../../../../data/missions/missionTrailStyle';
-import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
-import { OCCLUDER_UNIFORM_BYTES, createTrailOcclusionUniforms } from './trailOcclusionUniforms';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { MissionTrailRenderer } from '../@types/MissionTrailRenderer';
+import type { MissionTrailFrame } from '../@types/MissionTrailFrame';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { MissionTrailGeometry } from '../@types/MissionTrailGeometry';
+import vsCode from '../../../services/gpu/shaders/bodies/missionTrail/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/bodies/missionTrail/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { buildMissionTrails } from './buildMissionTrails';
+import { MISSION_TRAIL_WIDTH_PX } from '../../../data/missions/missionTrailStyle';
+import { writeHiLoVertex } from '../../../utils/math/writeHiLoVertex';
+import {
+  OCCLUDER_UNIFORM_BYTES,
+  createTrailOcclusionUniforms,
+} from '../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 
 /** One vertex record: posHi (3 floats) then posLo (3 floats). */
 export const TRAIL_VERTEX_STRIDE = 24;

@@ -207,7 +207,6 @@ export function createEngine(
       domeResampleRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
-      missionTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
       // initGpu swaps in the device-aware service. Consumers gate on `.enabled`.
       timingService: createDisabledGpuTimingService(),

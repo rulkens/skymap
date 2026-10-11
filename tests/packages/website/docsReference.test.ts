@@ -140,7 +140,6 @@ describe('Settings page', () => {
     expect(guides.map((row) => row.name)).toEqual([
       ...LABEL_CATEGORIES.map((category) => CATEGORY_DISPLAY_INFO[category].plural),
       'Orbit trails',
-      'Mission trails',
       ...layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides').map((row) => row.label),
     ]);
   });

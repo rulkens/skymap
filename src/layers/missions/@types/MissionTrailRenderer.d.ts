@@ -5,8 +5,8 @@
  * `drawTrail` per craft, which take positional arguments so nothing allocates.
  */
 
-import type { Vec3 } from '../../math/Vec3';
-import type { Renderer } from '../Renderer';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { MissionTrailFrame } from './MissionTrailFrame';
 import type { MissionTrailGeometry } from './MissionTrailGeometry';
 

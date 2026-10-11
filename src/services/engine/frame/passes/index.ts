@@ -25,7 +25,6 @@ import { meshBodiesPass } from './meshBodiesPass';
 import { ringsPass } from './ringsPass';
 import { bodyGlintsPass } from './bodyGlintsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
-import { missionTrailsPass } from './missionTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
 import { aerialPerspectivePass } from './aerialPerspectivePass';
@@ -41,7 +40,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   structureMarkersCosmoPass,
   structureMarkersNearPass,
   orbitTrailsPass,
-  missionTrailsPass,
   bodyGlintsPass,
   selectionRingPass,
   near0SelectionRingPass,
