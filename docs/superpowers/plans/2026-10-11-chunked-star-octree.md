@@ -23,7 +23,7 @@ Tasks are executed in four grouped dispatches, in order. Each group ends in a st
 | Group | Tasks   | State at the end                                                                                             |
 | ----- | ------- | ------------------------------------------------------------------------------------------------------------ |
 | A     | 1 to 6  | Container codec, bake pipeline and `buildStars` v2 exist and are tested; the TS bake timing ruling is asked.  |
-| B     | 7 to 10 | Both formats decode to `StarOctree`; the cut draws own + blob over a (still empty) pool; v1 renders as on main; perf neutral. |
+| B     | 7 to 10 | Both formats decode to `StarOctree`; the cut draws own + blob over a (still empty) pool; v1 renders as on main; perf before/after reported (advisory). |
 | C     | 11 to 15 | `format: 'octree'` streams chunks; planner, residency writes, pick, wake, dev-only chunk facts.               |
 | D     | 16 to 18 | Deploy rows and bulk group, `fetch-data` pulls chunks, docs, the v2 bake into `public/data`, eye checks, the A/B table. |
 
@@ -45,7 +45,7 @@ Group A's Task 6 is a **checkpoint**: it reports numbers to the user and continu
 
 ## Rulings made at plan time
 
-Each is a choice the spec left open; the user may overrule any at plan review.
+Rulings 1 to 8 were choices the spec left open; **all eight were accepted as-is by the user at the 2026-10-11 plan review.** Ruling 9 is the user's own, made at that review; the spec (§2.5, §5.3) was amended to match in the same worktree. Implementation go was given for groups A to D in order.
 
 1. **Two fade channels per node.** The spec's second cut predicate (`drawOwn = parentRefines`, `drawBlob = drawOwn && !refines(self)`) means a node's own records and its blob are in the cut under different conditions, so each needs its own opacity ramp: `opacity` holds two f32 per node row (own, blob). Flux conservation across a refine holds channel by channel.
 2. **The pick index is the catalog-global record ordinal**, not a `(chunk, record)` pair: index records first (0 … `indexRecords − 1`), then each chunk's records in `header.chunks` order. `starRecordObject(octree, ordinal)` is one binary search over a prefix sum. `StarCatalogRef.index` and the `#focus=star-…` deep link keep their shape; the ordinal is stable per bake, and a pool-absolute index never leaves the GPU side.
@@ -55,6 +55,7 @@ Each is a choice the spec left open; the user may overrule any at plan review.
 6. **A chunk's CPU copy stays resident with its slot** (the stream payload is kept in a per-slot map until eviction), so picks and the field-star sphere read a resident chunk's decoded columns without a second fetch. ~250 KB per slot at 32 k records.
 7. **A/B chunk measurements are a DEV-only console line** at settle (in-flight back to 0): `fetched / total` chunks and bytes. No DebugPanel row: the A/B is one measurement campaign, not a product surface.
 8. **`buildStarOctree.ts` stays** (the v1 TS tree builder): the v1 adapter's test needs a v1 fixture with aggregates, and `encodeSkstCatalog` stays with it. Both are `/feature-done` deletion candidates under ruling E, with the reader.
+9. **No per-node slot word, no shader base helpers, no `slotRoot` table (user ruling, 2026-10-11).** A chunk's `CutNode` rows are composed on the CPU at upload, where the slot is known, so `parent` and `firstRecord` are written pool-absolute there; a chunk's top rows name the chunk root's index row directly. `CutNode` stays at six words, the shader reads plain indices, and the index is still never rewritten (ruling B's goal).
 
 ## Review focus
 
@@ -64,7 +65,7 @@ Inputs the spec implies but no §9 test names; each line's test lives in the tas
 2. **A chunk fetch that fails** (local dev with no chunks on disk, a 404 after a re-bake): the chunk root keeps drawing as a glow, the key is marked failed and never re-enqueued, nothing throws into the frame. Test in Task 12.
 3. **A pick raced by an eviction** (the slot is reused between the pick draw and the readback): `resolvePick` returns null, never another star's ref; `extractRow` of an evicted ordinal returns null. Test in Task 14.
 4. **An index with zero chunks** (a small bake, a test fixture, every v1 catalog): no stream, no pool rows, the cut still draws, `loadedCatalogs()` still lists it. Test in Task 9 (zero slots); the slot factory's no-stream branch (Task 12) is one line, covered by its review.
-5. **Slot reuse ordering**: a landing chunk's `slotRoot[slot]` and rows are written before the root row's resident bit, so no frame sees a resident bit over the previous occupant's parent sentinel. Test in Task 12 (write order on a recording device).
+5. **Slot reuse ordering**: a landing chunk's rows and records are written before the root row's resident bit, so no frame refines a root over the previous occupant's rows. Test in Task 9 (write order on a recording device).
 
 ---
 
@@ -336,23 +337,24 @@ v1 adapter rules (spec §5.1): a leaf (`childMask === 0`) → `ownCount = record
 - [ ] Test `packStarGpuRecords: word layout round-trips the shader's unpack` — port `recordRepackUnpackParity.test.ts`'s TS twin of `vertex.wesl`'s decode to the new 16/16 + 16/7/6 layout; the test asserts, for hand-picked records including the max of every field, that `unpack(pack(r)) === r`. Delete `recordRepackUnpackParity.test.ts` once its parity half lives here.
 - [ ] `npm run typecheck:fast` passes (the renderer still compiles against `StarOctree` only after Task 9; keep `renderer.upload` typed to `StarOctree` from this task and adapt call sites minimally). Commit.
 
-### Task 8: Cut layout and shaders: own + blob, residency, slot bases, `review: yes`
+### Task 8: Cut layout and shaders: own + blob, residency, pool-absolute rows, `review: yes`
 
 `review: yes`: TS↔WGSL contract and the cut's correctness.
 
 **Files:** `src/layers/starCatalog/render/starCutLayout.ts`, `src/services/gpu/shaders/starCatalog/cutIo.wesl`, `cut.wesl`, `vertex.wesl`, `pickFragment.wesl` (unchanged semantics, verify only), `tests/helpers/starCatalog/referenceStarCut.ts`, `tests/helpers/starCatalog/@types/ReferenceStarCut.ts`, `tests/services/gpu/shaders/starCutLayout.parity.test.ts`, `tests/layers/starCatalog/render/starCutLayout.test.ts`, `tests/layers/starCatalog/render/cut/referenceStarCut.test.ts`
 
-**Contract: `CutNode`, 7 words (`CUT_NODE_WORDS = 7`, stride 28 B)**
+**Contract: `CutNode`, 6 words (`CUT_NODE_WORDS = 6`, stride 24 B, unchanged)**
 
 | Word | Constant                 | Content                                                                   |
 | ---- | ------------------------ | ------------------------------------------------------------------------- |
 | 0    | `NODE_GRID_WORD`         | box min corner in leaf cells, `x \| y << 10 \| z << 20` (unchanged)       |
-| 1    | `NODE_FIRST_RECORD_WORD` | object-local first record                                                 |
+| 1    | `NODE_FIRST_RECORD_WORD` | **pool-absolute** first record: the wire value plus `indexRecords + slot·chunkCapacity` for a chunk row, unchanged for an index row |
 | 2    | `NODE_BITS_WORD`         | `level \| hasBlob << 4 \| childrenResident << 5 \| ownCount << 8`         |
 | 3    | `NODE_BLOB_COUNT_WORD`   | real records the blob stands for (was `subtreeCount`)                     |
-| 4    | `NODE_PARENT_WORD`       | object-local parent row; the index root names itself; `CHUNK_TOP_PARENT = 0xffffffff` on a chunk's top rows |
+| 4    | `NODE_PARENT_WORD`       | **pool-absolute** parent row; the index root names itself; a chunk's top rows name the chunk root's index row |
 | 5    | `NODE_REFINE_DELTA_WORD` | `Σ_children (ownCount + hasBlob) − 1`; 0 for a childless node and for a chunk root whose chunk is absent |
-| 6    | `NODE_SLOT_WORD`         | pool slot of the row's chunk; `NO_SLOT = 0xffffffff` for index rows       |
+
+No per-node slot word, no shader base arithmetic, no `slotRoot` table (user ruling, 2026-10-11): a chunk's rows are composed on the CPU at upload, where the slot is known, so the bases are folded in there and the shader reads plain indices. The index rows are never rewritten by this (their bases are zero).
 
 Bits constants: `NODE_BLOB_BIT = 1 << LEVEL_BITS`, `NODE_RESIDENT_BIT = 1 << (LEVEL_BITS + 1)`, `OWN_COUNT_SHIFT = 8` (renamed from `RECORD_COUNT_SHIFT`). `childrenResident` is 1 on every row that is not an unresident chunk root.
 
@@ -362,17 +364,18 @@ Bits constants: `NODE_BLOB_BIT = 1 << LEVEL_BITS`, `NODE_RESIDENT_BIT = 1 << (LE
 
 **Opacity:** `OPACITY_CHANNELS = 2`, `OWN_OPACITY = 0`, `BLOB_OPACITY = 1`; row `i`'s channels at `i * 2 + c`.
 
-**cutIo.wesl helpers:** `nodeHasBlob(bits)`, `nodeChildrenResident(bits)`, `nodeOwnCount(bits)`, `nodeBase(slot, u) = select(0, u.indexNodes + slot * u.chunkNodeCap, slot != NO_SLOT)`, `recordBase(slot, u)` likewise with `indexRecords`/`chunkCapacity`, `rootNode(u) = u.indexNodes − 1`, `parentOf(i, u, slotRoot)` = `select(nodeBase + parent, slotRoot[slot], parent == CHUNK_TOP_PARENT)` and the root for the root. New binding in `cut.wesl`: `@group(0) @binding(7) var<storage, read> slotRoot: array<u32>`.
+**cutIo.wesl helpers:** `nodeHasBlob(bits)`, `nodeChildrenResident(bits)`, `nodeOwnCount(bits)`, `rootNode(u) = u.indexNodes − 1`. `parent` and `firstRecord` are read as they are. No new binding.
 
-**cut.wesl predicates** (spec §3, §5.3): `wantsRefine(i) = nodeHasBlob && nodeChildrenResident && proxy ≥ thrSq`; `refines(i, cutBin)` as today over that; `pickThreshold` starts from `nodeOwnCount(root) + hasBlob(root)`; `emit`: `drawOwn = (i == root) || refines(parentOf(i))`, `drawBlob = drawOwn && !refines(i)`; each channel walks toward its goal by `fadeStep`; own records claim `ceil(ownCount / 8)` leaf-list blocks when the own channel is above 0, the blob pushes one agg-list entry when the blob channel is above 0. Zeroed pool rows (`ownCount 0`, no blob, `refineDelta 0`) pass through inert.
+**cut.wesl predicates** (spec §3, §5.3): `wantsRefine(i) = nodeHasBlob && nodeChildrenResident && proxy ≥ thrSq`; `refines(i, cutBin)` as today over that; `pickThreshold` starts from `nodeOwnCount(root) + hasBlob(root)`; `emit`: `drawOwn = (i == root) || refines(nodes[i].parent)`, `drawBlob = drawOwn && !refines(i)`; each channel walks toward its goal by `fadeStep`; own records claim `ceil(ownCount / 8)` leaf-list blocks when the own channel is above 0, the blob pushes one agg-list entry when the blob channel is above 0. Zeroed pool rows (`ownCount 0`, no blob, `refineDelta 0`) pass through inert.
 
-**vertex.wesl:** record index = `recordBase(slot) + firstRecord + select(local, ownCount, isBlob)`; the spare-instance clip tests `local >= ownCount` for own records; the offset scales by the node box edge (`nodeEdgeCells · cellEdgeMpc`, already so) with `OFFSET_SCALE = 1 / 65536`; decode `x = w0 & 0xffff`, `y = w0 >> 16`, `z = w1 & 0xffff`, `absMagIdx = (w1 >> 16) & 0x7f`, `colorIdx = (w1 >> 23) & 0x3f`; flux multiplier `blobCount` when `isBlob`; opacity reads the channel the stream names; `out.recordIdx` is the pool-absolute record index (so `pickFragment.wesl:58` is unchanged).
+**vertex.wesl:** record index = `firstRecord + select(local, ownCount, isBlob)` (already pool-absolute); the spare-instance clip tests `local >= ownCount` for own records; the offset scales by the node box edge (`nodeEdgeCells · cellEdgeMpc`, already so) with `OFFSET_SCALE = 1 / 65536`; decode `x = w0 & 0xffff`, `y = w0 >> 16`, `z = w1 & 0xffff`, `absMagIdx = (w1 >> 16) & 0x7f`, `colorIdx = (w1 >> 23) & 0x3f`; flux multiplier `blobCount` when `isBlob`; opacity reads the channel the stream names; `out.recordIdx` is the pool-absolute record index (so `pickFragment.wesl:58` is unchanged).
 
 **TS packers:**
 
 ```ts
-export function packStarCutNodes(octree: StarOctree): Uint32Array;        // index rows: slot NO_SLOT, chunk roots unresident
-export function packStarChunkNodes(chunk: StarChunk, root: { level: number; morton: number }, slot: number, chunkNodeCap: number): Uint32Array; // chunkNodeCap rows, zero-padded
+export function packStarCutNodes(octree: StarOctree): Uint32Array;        // index rows; chunk roots unresident
+/** chunkNodeCap rows, zero-padded; parent and firstRecord pool-absolute from nodeBase/recordBase; top rows' parent = rootRow. */
+export function packStarChunkNodes(chunk: StarChunk, root: { level: number; morton: number; rootRow: number }, pool: { nodeBase: number; recordBase: number }, chunkNodeCap: number): Uint32Array;
 export function chunkRootRefineDelta(chunk: StarChunk, root: { level: number; morton: number }): number; // Σ top rows (ownCount + hasBlob) − 1
 export function leafListCapacity(octree: StarOctree, slots: number): number; // index blocks + slots·(chunkCapacity/8 + chunkNodeCap)
 export function writeStarCutUniforms(out, octree: StarOctree, pool: { slots: number }, camPosMpc, cut): void;
@@ -380,12 +383,12 @@ export function writeStarCutUniforms(out, octree: StarOctree, pool: { slots: num
 
 Hard caps at pack time (spec §2.6): `grid.bits ≤ MAX_GRID_BITS`, every level `< 2^LEVEL_BITS`, every `ownCount ≤ MAX_OWN_COUNT`; the pool-wide node and record caps are checked in Task 9 where `slots` is known.
 
-- [ ] Update the parity test's `expected` map and struct checks for the new constants, the seventh word, the 80-byte head and the `slotRoot` binding; it must fail before the WESL edit and pass after.
-- [ ] Update `referenceStarCut` to model the new predicates and both channels (`ReferenceStarCut.opacity` becomes `Float32Array` of 2·n; `leafEntries` from own records; `aggregates` from blobs; `slotRoot` and `slot` bases modelled). Existing membership, budget, prune, block and fade tests keep their assertions over v1-shaped fixtures (adapted through `starOctreeFromSkst`): a v1 leaf has own only, a v1 aggregate blob only, so the expected lists are unchanged.
+- [ ] Update the parity test's `expected` map and struct checks for the new constants, the renamed words and the 80-byte head; it must fail before the WESL edit and pass after.
+- [ ] Update `referenceStarCut` to model the new predicates and both channels (`ReferenceStarCut.opacity` becomes `Float32Array` of 2·n; `leafEntries` from own records; `aggregates` from blobs; it runs over the pool table as packed, index rows then chunk rows). Existing membership, budget, prune, block and fade tests keep their assertions over v1-shaped fixtures (adapted through `starOctreeFromSkst`): a v1 leaf has own only, a v1 aggregate blob only, so the expected lists are unchanged.
 - [ ] Test `referenceStarCut: refineDelta equals the instance count a refine adds, against a brute-force cut` (spec §9) — a stratified fixture where nodes carry both own records and a blob (build it with Task 3's `stratifyOctree`, no chunks): for a camera that refines exactly one node, the instance count of the cut with that node refined minus the count without equals its packed `refineDelta`.
 - [ ] Test `referenceStarCut: a chunk root with an unresident chunk never refines, however near the camera` — camera inside the root's box, resident bit clear; assert the root draws own + blob and no child entries appear.
 - [ ] Test `referenceStarCut: a refining node keeps drawing its own records while its blob fades out` — assert own channel → 1 and blob channel → 0 over successive steps for the refined node, and its children's own channels → 1.
-- [ ] Test `packStarChunkNodes: top rows carry the parent sentinel, inner rows an object-local parent, every row the slot` — a two-level chunk fixture; also assert the padding rows past `nodes.count` are all zero.
+- [ ] Test `packStarChunkNodes: top rows name the root's index row, inner rows a pool-absolute parent, every firstRecord carries the record base` — a two-level chunk fixture at `nodeBase 40, recordBase 1000, rootRow 7`; hand-computed expected words; also assert the padding rows past `nodes.count` are all zero.
 - [ ] `starCutLayout.test.ts`: `packs grid in LEAF cells…` keeps its assertion against the new word count; `writeStarCutUniforms` tests gain the four pool words at their indices.
 - [ ] Edit the three WESL files; `npm run build` (shader specifiers are invisible to `tsc`); the parity test passes. Commit.
 
@@ -408,24 +411,24 @@ export const POOL_NODE_INDEX_LIMIT = 2 ** LEAF_BLOCK_INDEX_SHIFT; // 2^22 rows p
 export const POOL_RECORD_INDEX_LIMIT = 2 ** SELECTION_SOURCE_SHIFT; // 2^26 records pool-wide
 ```
 
-Buffer rows (spec §5.4): `nodes`, `aggList`: `indexNodes + slots·chunkNodeCap`; `opacity`: that × `OPACITY_CHANNELS` (live and capture states each); `records` (renderer): `(indexRecords + slots·chunkCapacity) × GPU_RECORD_WORDS`; `leafList`: `leafListCapacity(octree, slots)`; `slotRoot`: `max(1, slots)` words. `upload` throws before creating anything when a pool cap is exceeded, naming the largest `slots` that fits. `slots` is `budgets[tier].slots` capped by the chunk count, passed by `createStarCatalogSlot`'s commit from `req.tier` (`starCatalogSlot.ts:24-28`) — the slot factory gains the entry lookup it already has by `source`.
+Buffer rows (spec §5.4): `nodes`, `aggList`: `indexNodes + slots·chunkNodeCap`; `opacity`: that × `OPACITY_CHANNELS` (live and capture states each); `records` (renderer): `(indexRecords + slots·chunkCapacity) × GPU_RECORD_WORDS`; `leafList`: `leafListCapacity(octree, slots)`. `upload` throws before creating anything when a pool cap is exceeded, naming the largest `slots` that fits. `slots` is `budgets[tier].slots` capped by the chunk count, passed by `createStarCatalogSlot`'s commit from `req.tier` (`starCatalogSlot.ts:24-28`) — the slot factory gains the entry lookup it already has by `source`.
 
-`uploadChunk` write order, all `queue.writeBuffer` outside any encode: (1) `slotRoot[slot]` = the chunk root's index row; (2) chunk rows at `(indexNodes + slot·chunkNodeCap)·CUT_NODE_WORDS` words; (3) packed records at `(indexRecords + slot·chunkCapacity)·GPU_RECORD_WORDS` words; (4) zero the slot's opacity rows in the live state and, if built, the capture state; (5) the root's index row rewritten with `NODE_RESIDENT_BIT` set and `refineDelta = chunkRootRefineDelta(...)`. `evictChunk`: the root row rewritten with the bit clear and `refineDelta 0`, then the slot's rows zeroed. The renderer keeps the packed index rows (`Uint32Array` from `packStarCutNodes`) per source to rewrite one row.
+`uploadChunk` write order, all `queue.writeBuffer` outside any encode: (1) chunk rows from `packStarChunkNodes(chunk, { …root, rootRow }, { nodeBase: indexNodes + slot·chunkNodeCap, recordBase: indexRecords + slot·chunkCapacity }, chunkNodeCap)` at `nodeBase·CUT_NODE_WORDS` words; (2) packed records at `recordBase·GPU_RECORD_WORDS` words; (3) zero the slot's opacity rows in the live state and, if built, the capture state; (4) the root's index row rewritten with `NODE_RESIDENT_BIT` set and `refineDelta = chunkRootRefineDelta(...)`. `evictChunk`: the root row rewritten with the bit clear and `refineDelta 0`, then the slot's rows zeroed. The renderer keeps the packed index rows (`Uint32Array` from `packStarCutNodes`) per source to rewrite one row.
 
-- [ ] Test `upload sizes the pool from the index and the slot count` — a recording device stub (the pattern in `starCutGpu.test.ts:1-86`); an octree with 10 index rows, 100 index records, 3 chunks, `chunkNodeCap 7`, `chunkCapacity 50`, `slots 2`: assert `nodes` is `(10 + 14)·28` bytes, `opacity` `24·2·4`, `records` `(100 + 100)·8`, `slotRoot` 8.
+- [ ] Test `upload sizes the pool from the index and the slot count` — a recording device stub (the pattern in `starCutGpu.test.ts:1-86`); an octree with 10 index rows, 100 index records, 3 chunks, `chunkNodeCap 7`, `chunkCapacity 50`, `slots 2`: assert `nodes` is `(10 + 14)·24` bytes, `opacity` `24·2·4`, `records` `(100 + 100)·8`.
 - [ ] Test `upload throws naming the slot count that fits when the record cap is exceeded` (Review Focus 1) — `chunkCapacity 2^25`, `slots 3`: `toThrow(/1 slot/)`.
-- [ ] Test `an index with no chunks gets no pool rows and still draws` (Review Focus 4) — `chunks: []`, `slots 256`: `slotRoot` 4 bytes, `nodes` sized to the index, `drawOf` non-null after one encode.
-- [ ] Test `uploadChunk writes slotRoot and the rows before the root's resident bit; evictChunk clears the bit first` (Review Focus 5) — record `writeBuffer` calls (buffer label, byte offset, length); assert the order above and that the root-row write's bits word has the resident bit.
+- [ ] Test `an index with no chunks gets no pool rows and still draws` (Review Focus 4) — `chunks: []`, `slots 256`: `nodes` sized to the index, `drawOf` non-null after one encode.
+- [ ] Test `uploadChunk writes the rows and records before the root's resident bit; evictChunk clears the bit first` (Review Focus 5) — record `writeBuffer` calls (buffer label, byte offset, length); assert the order above and that the root-row write's bits word has the resident bit.
 - [ ] Test `a landed chunk's opacity rows are zeroed in both the live and the capture state` — build the capture state first via `submitCapture`, then `uploadChunk`; assert two zero writes at the slot's opacity offset.
 - [ ] Existing `starCutGpu.test.ts` tests (`fade step`, `capture cut`, `lifecycle`) keep their assertions with `upload(source, octree, 0)`.
 - [ ] Implement; `starSourcesInBand.ts:21` and `starCatalogSelectionRow.ts` read `octree` from `loadedCatalogs()`; the slot factory's ready log (`starCatalogSlot.ts:31-37`) reads `nodes.count`. Tests whose stubs build `loadedCatalogs()` entries or `StarCatalog` fixtures (`starCutInputs`, `starSourcesInBand`, `produceStarCaptions`, `starCatalogPass`, `starAggregateUpsamplePass`, `sceneSStars`, `composeSelectionRows`, the two saga tests) change shape only, through `starOctreeFromSkst` where a real fixture is needed; expected values stay. Commit.
 
-### Task 10: Perf gate: v1 through the new cut is neutral
+### Task 10: Perf check (advisory): v1 through the new cut
 
 **Files:** none committed; ledger + scratchpad.
 
 - [ ] Before Task 7 lands (i.e. at the Group A → B boundary, on the Group A HEAD), run the baseline: `npm run perf -- --url http://localhost:<this worktree's port> --scenario star-field --scenario milky-way --scenario solar-system --frames 60` and `npm run perf:cpu -- --url … --scenario star-field` with the Gaia row still `format: 'skst'`; save both outputs to the scratchpad. Read the `perf` skill's interpretation rules (MERGED numbers; Apple Silicon slot sums are not additive).
-- [ ] After Task 9: rerun with identical flags. The MERGED totals and `star-cut` / `star-catalog` / `star-aggregates` slot medians must sit within run noise (~0.5 ms at 60 frames); the node stride grew 24 → 28 B and the opacity doubled, so a measurable regression here is a finding, not a tuning target. Record both tables in the ledger.
+- [ ] After Task 9: rerun with identical flags. Compare the MERGED totals and the `star-cut` / `star-catalog` / `star-aggregates` slot medians against run noise (~0.5 ms at 60 frames); the opacity doubled, so a measurable delta is possible. **Advisory, not a stop** (user ruling, 2026-10-11): record both tables in the ledger and report the deltas to the user; a regression is flagged for a ruling, and Group C proceeds.
 - [ ] Eye check on v1 (no behaviour change expected): `npm run shot -- '#focus=body-sun' --url …` and `'#focus=star-…'` of a famous star from `famous_stars_meta.json`; send both shots with their deep links as a dash check. The user keeps the verdict.
 
 ## Group C: streaming
@@ -587,7 +590,7 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 
 - [ ] `DATA.md` "Binary formats": a row `SKOI / SKOC | ASCII | 1 | Chunked octree container: 10-byte framing + JSON header + 24 B node rows + columnar records; index per catalog, one object per chunk | octreeFormat.ts`; "`public/data/` layout": `star-catalog/v2/`: `stars.bin` + `stars/<level>-<morton>.<hash>.bin`; "Stars (Gaia DR3)": `build-stars` emits the v2 index and chunks, one bake for every tier, and the 16 GB heap note updated with Task 6's measured peak; the re-run table gains a Stars row (`fetch-gaia` / `build-stars`).
 - [ ] `DEPLOY.md` "R2 sync architecture": the chunk bulk group, its gzip-on-wire, that it runs before the manifests, and that old chunk objects stay in R2 after a re-bake (pruning is manual). Cache Rule paragraph: chunks are `.bin` too, so every chunk fetch is an origin hit until the rule lands.
-- [ ] `RENDERER.md` "Renderer quick map": one bullet for the star cut over the pool (own + blob per node, the resident bit, slot bases, two fade channels, index never rewritten). "Things that have bitten us": the three traps this plan found — residency writes never inside an encode; `slotRoot` before rows before the root's bit; a pick index is pool-absolute and only the ordinal survives a slot reuse.
+- [ ] `RENDERER.md` "Renderer quick map": one bullet for the star cut over the pool (own + blob per node, the resident bit, chunk rows composed pool-absolute at upload, two fade channels, index never rewritten). "Things that have bitten us": the three traps this plan found — residency writes never inside an encode; rows and records before the root's resident bit; a pick index is pool-absolute and only the ordinal survives a slot reuse.
 - [ ] `ATTRIBUTIONS.md:401-402` Gaia "Enters skymap": `npm run build-stars` → `public/data/star-catalog/v2/`.
 - [ ] `tools/stars-rs/README.md`: one line noting it still emits SKST v1 (`star-catalog/v1/`) and that v2 is TS-only pending ruling F.
 - [ ] `docs/BACKLOG.md`: confirm no chunked-octree line remains (#868 removed it); leave `Star drawBudget small-tier mobile cap` (`:169`) as is.
@@ -610,7 +613,7 @@ Why the chunk row's regex sees no hash: `logicalDataName` strips exactly eight l
 
 - `src/data/octree/` (`octreeFormat.ts`, `columnIds.ts`, `statIds.ts`, `readOctreeHeader.ts`, `decodeOctreeIndex.ts`, `decodeOctreeChunk.ts`) and `src/@types/octree/` (13 types); `tools/octree/` (`encodeOctreeObject`, `levelForMagnitude`, `stratifyOctree`, `columnAggregate`, `chunkOctree`, `buildOctreeCatalog`, `writeOctreeCatalog`) with `tools/@types/octree/`.
 - `StarOctree`, `StarColumns`, `StarChunk`; `starOctreeFromSkst`, `starOctreeFromIndex`, `starColumnsOf`, `packStarGpuRecords`, `starRecordObject` / `starRecordOrdinal`, `planStarChunks`; `SkstCatalog`, `SkstNode`, `decodeSkstCatalog`, `encodeSkstCatalog` (no unmarked v1 name remains).
-- `CutNode` at 7 words with the `slot` word, two opacity channels, `slotRoot`, the 80-byte `CutUniforms` head; `cut.wesl` with own + blob predicates and the resident bit; `vertex.wesl` on the 16-bit box offset and pool-absolute record index.
+- `CutNode` at 6 words with pool-absolute `parent` and `firstRecord` on chunk rows, two opacity channels, the 80-byte `CutUniforms` head; `cut.wesl` with own + blob predicates and the resident bit; `vertex.wesl` on the 16-bit box offset and pool-absolute record index.
 - `StarCatalogRenderer.upload(source, octree, slots)`, `uploadChunk`, `evictChunk`, `recordOrdinal`, `poolRecordIndex`; `createStarChunkStream`; `StarCatalogRuntime.chunkStreams`.
 - `SurveyStarCatalogSourceEntry.format`, `StarSourceBudgets[tier].slots`; Gaia at `format: 'octree'`.
 - `buildStars` without `TIER_BUDGET_BYTES` / `buildTier`; `public/data/star-catalog/v2/stars.bin` + `stars/` from one bake.
